@@ -378,7 +378,7 @@ We get the following (or similar) output:
 /*! \page p_tut_5 Step 5: Kill L4 task
 An terminated L4 task does not automatically release all resources it
 uses but we have to kill it explicitly. The \e exit() function of the
-OSKit support libraries does nothing else than going into \e l4_sleep()
+support libraries does nothing else than going into \e l4_sleep()
 forever.
 
 \todo Kill L4 task automatically on exit() when started by L4 loader.
@@ -480,6 +480,11 @@ The following information can be find there (see the
 \par nosuperpages
   Make sure that the binary is mapped using 4kB pages. Useful for performance
   comparisons.
+
+\par all_sects_writable
+  Map all program segments writable to application. Normally this is
+  switched off and read-only program segments (e.g., text segment) are
+  mapped read-only.
 
 \par rebootable
   Allows the application to reboot the machine.
@@ -612,7 +617,7 @@ system.
 
 
 \par Requires:
-OSKit 1.0, rmgr, names, l4util, l4sys, DICE, L4 environment
+roottask, names, l4util, l4sys, DICE, L4 environment
 \author		Frank Mehnert
 */
 

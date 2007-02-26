@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEPrimaryExpression.cpp
- *    \brief   contains the implementation of the class CFEPrimaryExpression
+ *  \brief   contains the implementation of the class CFEPrimaryExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -26,8 +26,11 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FEPrimaryExpression.h"
+#include "FEPrimaryExpression.h"
 #include "File.h"
+#include "Compiler.h"
+#include <sstream>
+
 
 CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, long int nValue)
 :CFEExpression(nType)
@@ -125,7 +128,7 @@ CFEPrimaryExpression::~CFEPrimaryExpression()
 }
 
 /** returns the integer value of the expression
- *    \return the integer value of the expression
+ *  \return the integer value of the expression
  * Depending on which type this expression is the return value is:
  * - the return value of the operand,
  * - the integer value or
@@ -156,7 +159,7 @@ long CFEPrimaryExpression::GetIntValue()
         return (int) m_fValue;
         break;
     default:
-        TRACE("CFEPrimaryExpression::GetIntValue unrecognized\n");
+	CCompiler::Warning("CFEPrimaryExpression::GetIntValue unrecognized\n");
         break;
     }
     return 0;
@@ -171,7 +174,7 @@ long CFEPrimaryExpression::GetIntValue()
  * - the requested type is the integer type or
  * - the requested type is either float or double
  */
-bool CFEPrimaryExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEPrimaryExpression::IsOfType(unsigned int nType)
 {
     switch (GetType())
     {
@@ -197,7 +200,7 @@ bool CFEPrimaryExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /** returns the float value of this expression
- *    \return the float value of this expression
+ *  \return the float value of this expression
  */
 long double CFEPrimaryExpression::GetFloatValue()
 {
@@ -205,7 +208,7 @@ long double CFEPrimaryExpression::GetFloatValue()
 }
 
 /** returns the operand of the expression
- *    \return the operand of the expression
+ *  \return the operand of the expression
  */
 CFEExpression *CFEPrimaryExpression::GetOperand()
 {
@@ -213,50 +216,11 @@ CFEExpression *CFEPrimaryExpression::GetOperand()
 }
 
 /** create a copy of this object
- *    \return a reference to the new object
+ *  \return a reference to the new object
  */
 CObject *CFEPrimaryExpression::Clone()
 {
     return new CFEPrimaryExpression(*this);
-}
-
-/** serialize this object
- *    \param pFile the file to serialize from/to
- */
-void CFEPrimaryExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        switch (m_nType)
-        {
-        case EXPR_INT:
-            pFile->PrintIndent("<expression>%d</expression>\n", m_nValue);
-            break;
-        case EXPR_UINT:
-            pFile->PrintIndent("<expression>%d</expression>\n", m_nuValue);
-            break;
-#if SIZEOF_LONG_LONG > 0
-        case EXPR_LLONG:
-            pFile->PrintIndent("<expression>%d</expression>\n", m_nlValue);
-            break;
-        case EXPR_ULLONG:
-            pFile->PrintIndent("<expression>%d</expression>\n", m_nulValue);
-            break;
-#endif
-        case EXPR_FLOAT:
-            pFile->PrintIndent("<expression>%f</expression>\n", m_fValue);
-            break;
-        case EXPR_PAREN:
-            pFile->PrintIndent("<parenthesis_expression>\n");
-            pFile->IncIndent();
-            GetOperand()->Serialize(pFile);
-            pFile->DecIndent();
-            pFile->PrintIndent("</parenthesis_expression>\n");
-            break;
-        default:
-            break;
-        }
-    }
 }
 
 /** \brief print the object to a string
@@ -265,30 +229,44 @@ void CFEPrimaryExpression::Serialize(CFile * pFile)
 string CFEPrimaryExpression::ToString()
 {
     string ret;
-    char sNumber[12];
     switch (m_nType)
     {
     case EXPR_INT:
-        snprintf(sNumber, 12, "%ld", m_nValue);
-        ret += sNumber;
+	{
+	    std::ostringstream os;
+	    os << m_nValue;
+	    ret += os.str();
+	}
         break;
     case EXPR_UINT:
-        snprintf(sNumber, 12, "%ld", m_nuValue);
-        ret += sNumber;
+	{
+	    std::ostringstream os;
+	    os << m_nuValue;
+	    ret += os.str();
+	}
         break;
 #if SIZEOF_LONG_LONG > 0
     case EXPR_LLONG:
-        snprintf(sNumber, 12, "%lld", m_nlValue);
-        ret += sNumber;
+	{
+	    std::ostringstream os;
+	    os << m_nlValue;
+	    ret += os.str();
+	}
         break;
     case EXPR_ULLONG:
-        snprintf(sNumber, 12, "%lld", m_nulValue);
-        ret += sNumber;
+	{
+	    std::ostringstream os;
+	    os << m_nulValue;
+	    ret += os.str();
+	}
         break;
 #endif
     case EXPR_FLOAT:
-        snprintf(sNumber, 12, "%Lf", m_fValue);
-        ret += sNumber;
+	{
+	    std::ostringstream os;
+	    os << m_fValue;
+	    ret += os.str();
+	}
         break;
     case EXPR_PAREN:
         ret += "(";

@@ -106,11 +106,9 @@ l4events_send_short_open_message(l4_threadid_t *id,
       return -L4EVENTS_ERROR_OTHER;
 
   ipc_error = l4_ipc_reply_and_wait(l4events_server,
-				    L4_IPC_SHORT_MSG,
-				    *w1, *w2,
+				    L4_IPC_SHORT_MSG, *w1, *w2,
 				    id,
-				    L4_IPC_SHORT_MSG,
-				    w1, w2,
+				    L4_IPC_SHORT_MSG, w1, w2,
 				    timeout, &result);
 
   if (!ipc_error)
@@ -145,7 +143,7 @@ l4events_send_recv_message(l4_umword_t w1, message_t* msg, l4_timeout_t timeout)
 
   ipc_error = l4_ipc_call(l4events_server,
 			  L4_IPC_SHORT_MSG, w1, 0,
-			  msg,&msg->cr, &msg->str.w1,
+			  msg, &msg->cr, &msg->str.w1,
 			  timeout, &result);
 
   if (!ipc_error)

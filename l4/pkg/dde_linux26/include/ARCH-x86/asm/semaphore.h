@@ -1,3 +1,5 @@
+/* Mostly copied from Linux. See the DDE_LINUX define for diffs */
+
 #ifndef _I386_SEMAPHORE_H
 #define _I386_SEMAPHORE_H
 
@@ -264,7 +266,8 @@ static inline int down_interruptible(struct semaphore * sem)
  */
 static inline int down_trylock(struct semaphore * sem)
 {
-	return l4semaphore_try_down(&sem->l4_sema);
+	/* l4semaphore_try_down returns 1 if it could get the semaphore */
+	return !l4semaphore_try_down(&sem->l4_sema);
 }
 
 static inline void up(struct semaphore * sem)

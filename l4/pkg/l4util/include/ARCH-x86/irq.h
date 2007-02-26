@@ -44,7 +44,7 @@ l4util_sti (void)
  * interrupt flag 
  */
 static inline void
-l4util_flags_save (unsigned *flags)
+l4util_flags_save (l4_umword_t *flags)
 {
   __asm__ __volatile__ ("pushfl ; popl %0 " :"=g" (*flags) : :"memory");
 }
@@ -52,7 +52,7 @@ l4util_flags_save (unsigned *flags)
 /** Restore processor flags. Can be used to restore the interrupt flag
  */
 static inline void
-l4util_flags_restore (unsigned *flags)
+l4util_flags_restore (l4_umword_t *flags)
 {
   __asm__ __volatile__ ("pushl %0 ; popfl" : :"g" (*flags) : "memory");
 }

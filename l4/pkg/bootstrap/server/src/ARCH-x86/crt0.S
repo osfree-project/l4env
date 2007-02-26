@@ -3,27 +3,23 @@
 	.section .init
 
 	.globl	_start
-	.globl	start
 _start:
-start:
 #ifdef REALMODE_LOADING
 	cld
 	cli
-	mov $(3 * 8), %eax
-	mov %eax, %ds
-	mov %eax, %es
-	mov %eax, %fs
-	mov %eax, %gs
-
+	mov	$(3 * 8), %eax
+	mov	%eax, %ds
+	mov	%eax, %es
+	mov	%eax, %fs
+	mov	%eax, %gs
 	lss	_stack_seg, %esp
 #else
 	leal	_stack,%esp
 #endif
-	pushl   %esi             /* Pointer to real mode or Xen start_info pointer */
+	pushl   %esi	/* Pointer to real mode or Xen start_info pointer */
 	pushl	%eax
 	pushl	%ebx
 
-// just drop that for xen
 #ifndef XEN
 	/* initialize vector for exception 6 */
 	movl	$trap6_entry,%eax
@@ -36,15 +32,13 @@ start:
 	/* load tiny interrupt descriptor table to catch exception 6 */
 	lidtl	_idtdesc
 #endif
-	
-	pushl	$_exit
 
+	pushl	$_exit
 	jmp	startup
 
 	/* Show an error message and wait for keypress to reboot. */
 trap6_entry:
 	pusha
-	
 	cld
 
 	/* print out warning */
@@ -52,16 +46,16 @@ trap6_entry:
 	movl	$(0xb8000 + (24*80*2)), %edi
 	movb	$0x0F, %ah
 	
-tp60:	/* read next character from string */
+1:	/* read next character from string */
 	lodsb
 
 	/* check for end-of-string */
 	cmpb	$0, %al
-	je	tp62
+	je	3f
 	
 	/* check for newline */
 	cmpb	$'\n', %al
-	jne	tp61
+	jne	2f
 	
 	pushl	%eax
 	pushl	%esi
@@ -82,16 +76,16 @@ tp60:	/* read next character from string */
 	
 	/* jump to new line */
 	movl	$(0xb8000 + (24*80*2)), %edi
-	jmp	tp60
+	jmp	1b
 	
-tp61:	/* print character */
+2:	/* print character */
 	stosw
-	jmp	tp60
+	jmp	1b
 
-tp62:	/* wait for keypress */
+3:	/* wait for keypress */
 	inb	$0x64, %al
 	testb	$0x01, %al
-	je	tp62
+	je	3b
 
 	movb	%al, %ah
 
@@ -100,7 +94,7 @@ tp62:	/* wait for keypress */
 	
 	/* ignore PS/2 mouse events */
 	testb	$0x20, %ah
-	jne	tp62
+	jne	3b
 
 	jmp	reboot
 
@@ -119,11 +113,13 @@ trap6_warning:
         /* MultiBoot header - see multiboot.h.  */
 	.p2align(2)
 
+#define MULTIBOOT_MEMORY_INFO 0x00000002
 _mb_header:
         .long   0x1BADB002		/* magic */
-        .long   0			/* flags: AOUT_KLUDGE */
-        .long   0 - 0x1BADB002
+        .long   MULTIBOOT_MEMORY_INFO	/* flags: AOUT_KLUDGE */
+        .long   0 - 0x1BADB002 - MULTIBOOT_MEMORY_INFO
 
+#ifndef XEN
 	.word	0
 _idtdesc:
 	.word	(7*8)-1
@@ -145,6 +141,7 @@ _idt_selector:
 	.byte	0xee
 _idt_offset_high:
 	.word	0
+#endif
 
 #ifdef REALMODE_LOADING
 _stack_seg:
@@ -153,9 +150,6 @@ _stack_seg:
 #endif
 
 	.bss
-
-
 	.space	8192
 	.globl	_stack
 _stack:
-

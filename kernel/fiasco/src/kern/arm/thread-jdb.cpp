@@ -10,71 +10,9 @@ public:
 
 IMPLEMENTATION [arm-debug]:
 
-#include <cstdio>
-#include <simpleio.h>
-#include "kdb_ke.h"
-#include "cpu_lock.h"
-#include "vkey.h"
-#include "static_init.h"
+#include <cstring>
 
 Thread::Dbg_extension_entry Thread::dbg_extension[64];
-
-static void outchar(Thread *, Entry_frame *r)
-{ putchar(r->r[0] & 0xff); }
-
-static void outstring(Thread *, Entry_frame *r)
-{ putstr((char*)r->r[0]); }
-
-static void outnstring(Thread *, Entry_frame *r)
-{ putnstr((char*)r->r[0], r->r[1]); }
-
-static void outdec(Thread *, Entry_frame *r)
-{ printf("%d", r->r[0]); }
-
-static void outhex(Thread *, Entry_frame *r)
-{ printf("%08x", r->r[0]); }
-
-static void outhex20(Thread *, Entry_frame *r)
-{ printf("%05x", r->r[0] & 0xfffff); }
-
-static void outhex16(Thread *, Entry_frame *r)
-{ printf("%04x", r->r[0] & 0xffff); }
-
-static void outhex12(Thread *, Entry_frame *r)
-{ printf("%03x", r->r[0] & 0xfff); }
-
-static void outhex8(Thread *, Entry_frame *r)
-{ printf("%02x", r->r[0] & 0xff); }
-
-static void inchar(Thread *, Entry_frame *r)
-{
-  r->r[0] = Vkey::get();
-  Vkey::clear();
-}
-
-static void do_cli(Thread *, Entry_frame *r)
-{ r->psr |= 128; }
-
-static void do_sti(Thread *, Entry_frame *r)
-{ r->psr &= ~128; }
-
-static void init_dbg_extensions()
-{
-  Thread::dbg_extension[0x01] = &outchar;
-  Thread::dbg_extension[0x02] = &outstring;
-  Thread::dbg_extension[0x03] = &outnstring;
-  Thread::dbg_extension[0x04] = &outdec;
-  Thread::dbg_extension[0x05] = &outhex;
-  Thread::dbg_extension[0x06] = &outhex20;
-  Thread::dbg_extension[0x07] = &outhex16;
-  Thread::dbg_extension[0x08] = &outhex12;
-  Thread::dbg_extension[0x09] = &outhex8;
-  Thread::dbg_extension[0x0d] = &inchar;
-  Thread::dbg_extension[0x32] = &do_cli;
-  Thread::dbg_extension[0x33] = &do_sti;
-}
-
-STATIC_INITIALIZER(init_dbg_extensions);
 
 extern "C" void sys_kdb_ke()
 {

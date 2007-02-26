@@ -74,6 +74,7 @@ typedef struct
 #define APP_STOP	0x00000800	/**< stop app just before start */
 #define APP_CONT	0x00001000	/**< ensure that we cont only once */
 #define APP_NOSUPER	0x00002000	/**< don't page superpages */
+#define APP_ALL_WRITBLE	0x00004000	/**< all sections writable */
 #define APP_MSG_IO	0x00010000	/**< internal pager flag */
   l4_addr_t		image;		/**< attached image */
   l4_size_t		sz_image;	/**< size of attached image */
@@ -89,6 +90,8 @@ typedef struct
   l4_uint32_t		prio;		/**< priority of thread 0. */
   l4_uint32_t		mcp;		/**< mcp of thread 0. */
   l4_taskid_t		owner;		/**< owner of that task. */
+  l4_threadid_t         caphandler;     /**< capability fault handler */
+  cfg_cap_t             *caplist;       /**< list of capabilities */
 } app_t;
 
 #define HERE_TO_APP(addr, base) \

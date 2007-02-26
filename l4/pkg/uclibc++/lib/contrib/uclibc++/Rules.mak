@@ -1,6 +1,6 @@
 # Rules.mak
 
-# Copyright Garrett Kajmowicz, 2004
+# Copyright Garrett Kajmowicz, 2004-2006
 # Copyright (C) 2000 by Lineo, inc.
 # Copyright (C) 2000-2002 Erik Andersen <andersen@uclibc.org>
 #
@@ -49,8 +49,8 @@ HOSTCXXFLAGS=-O2 -Wall
 # Unless you hang out with the gods, you should probably leave all
 # this stuff alone.
 MAJOR_VERSION:=0
-MINOR_VERSION:=1
-SUBLEVEL:=12
+MINOR_VERSION:=2
+SUBLEVEL:=1
 VERSION:=$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBLEVEL)
 # Ensure consistent sort order, 'gcc -print-search-dirs' behavior, etc.
 # LC_ALL:= C
@@ -148,7 +148,9 @@ CXXFLAGS:=$(CFLAGS)
 LIBGCC:=$(shell $(CC) -print-libgcc-file-name)
 LIBGCC_DIR:=$(dir $(LIBGCC))
 
-GCC_VERSION:=$(shell $(CC) -dumpversion | cut -c1-3)
+#GCC_VERSION?=$(shell $(CC) -dumpversion | cut -c1-3)
+GCC_MAJOR_VER?=$(shell $(CC) -dumpversion | cut -c1)
+#GCC_MINOR_VER?=$(shell $(CC) -dumpversion | cut -c3)
 
 GEN_LIBS:=
 ifneq ($(LIBGCC_DIR),$(UCLIBCXX_RUNTIME_LIBDIR))
@@ -162,12 +164,12 @@ GEN_LIBS += -lc -lgcc
 LIBS := $(GEN_LIBS)
 STATIC_LIBS := $(GEN_LIBS)
 #ifeq ($(UCLIBCXX_EXCEPTION_SUPPORT),y)
-ifeq ($(GCC_VERSION),4.0)
+ifneq ($(GCC_MAJOR_VER),3)
 LIBS += $(call check_as_needed)
 endif
 ifneq ($(IMPORT_LIBGCC_EH),y)
   STATIC_LIBS += -lgcc_eh
-ifneq ($(GCC_VERSION),4.0)
+ifeq ($(GCC_MAJOR_VER),3)
   LIBS += -lgcc_eh
 endif
 endif

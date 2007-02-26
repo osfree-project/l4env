@@ -9,19 +9,12 @@
 namespace std {
   using ::putchar;
   using ::puts;
-  //  using ::putstr;
-  //  using ::putnstr;
   using ::printf;
   using ::sprintf;
   using ::snprintf;
-  using ::asprintf;
-  using ::sscanf;
-  //  using ::scanf;
   using ::vprintf;
   using ::vsprintf;
   using ::vsnprintf;
-  using ::vscanf;
-  using ::vsscanf;
 };
 #endif
 

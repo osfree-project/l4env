@@ -1,4 +1,5 @@
 # -*- Makefile -*-
+# vim:set ft=make:
 #
 # DROPS (Dresden Realtime OPerating System) Component
 #

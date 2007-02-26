@@ -97,13 +97,13 @@ Virq::hit()
   if (_queued++ == 0)	// increase hit counter
     {
       set_receiver (_irq_thread);
-      sender_enqueue(_irq_thread->sender_list());
+      sender_enqueue(_irq_thread->sender_list(), _irq_thread->sched()->prio());
       
       // if the thread is waiting for this interrupt, make it ready;
       // this will cause it to run irq->receiver_ready(), which
       // handles the rest
 
-      // XXX careful!  This code may run in midst of an ipc_send_regs
+      // XXX careful!  This code may run in midst of a do_ipc()
       // operation (or similar)!
 
       if (_irq_thread->sender_ok (this))

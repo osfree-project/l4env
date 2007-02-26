@@ -1,7 +1,29 @@
 Build ORe to run under FiascoUX
 CONFIG_ORE_UX_ONLY
   Enable this option if you want to run ORe with FiascoUX.
-  This will include no support for real hardware. However,
-  UX applications may use ORe for local communication.
+  This will include no support for real hardware. A dummy
+  eth0 device will be provided by the eth0ux driver.
 
+Build ORe with support for the events server
+CONFIG_ORE_EVENTS
+  Enable this option to have a separate ORe thread wait
+  for EXIT messages via the events server. ORe can use
+  this information to close connections of terminated
+  clients.
+
+Set receive quota
+CONFIG_ORE_RX_QUOTA
+  This is the maximum # of received packets ORe will store
+  for a client. If the limit is reached and more packets
+  arrive, older packets will be dropped and get lost.
+
+Switch on additional debugging features
+CONFIG_ORE_DEBUGGING
+  Adds features for debugging ORe.
+
+Periodical dump of the connection table
+CONFIG_ORE_DUMPER
+  Adds another thread to ORe that periodically dumps the
+  internal connection table to the LOG console. Only use
+  if you are debugging ORe.
 

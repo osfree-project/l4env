@@ -50,17 +50,35 @@ extern void ovl_window_close(int win_id);
 
 /*** SET THE SIZE AND POSITION OF AN OVERLAY WINDOW ***
  *
- * \param win_id   id of overlay window to reposition
- * \param x,y,w,h  new position and size of the window
+ * \param win_id     id of overlay window to reposition
+ * \param x,y,w,h    new position and size of the window
+ * \param do_redraw  perform redraw if set to one
  */
 extern void ovl_window_place(int win_id, int x, int y, int w, int h);
 
 
-/*** TOP THE SPECIFIED OVERLAY WINDOW ***
+/*** POSITION OVERLAY WINDOW IN WINDOW STACK ***
  *
- * \param win_id  id of overlay window to top
+ * \param neighbor  neighbor view id or
+ *                 -1  top or bottom of view stack
+ * \param behind    0  insert view in front or
+ *                  1  behind the specified neightbor
+ *
+ * To insert a view at the top of the view stack, specify
+ * neighbor = -1 and behind = 1. To insert a view at the
+ * bottom of the view stack, specify neighbor = -1 and
+ * behind = 0.
  */
-extern void ovl_window_top(int win_id);
+extern void ovl_window_stack(int win_id, int neighbor_id, int behind,
+                             int do_redraw);
+
+
+/*** SET TITLE OF OVERLAY WINDOW ***/
+extern void ovl_window_title(int win_id, const char *title);
+
+
+/*** DEFINE OVERLAY WINDOW THAT IS USED AS BACKGROUND ***/
+extern void ovl_set_background(int bg_win_id);
 
 
 /*************************

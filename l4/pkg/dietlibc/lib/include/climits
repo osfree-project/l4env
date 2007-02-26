@@ -15,7 +15,7 @@
 #define CLIMITS_INCLUDE
 
 extern "C" {
-#include <l4/minilibc/limits.h>
+#include <limits.h>
 }
 #endif //CLIMITS_INCLUDE
 

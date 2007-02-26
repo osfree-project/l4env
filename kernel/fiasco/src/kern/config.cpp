@@ -42,23 +42,13 @@ public:
   static void init();
   static void init_arch();
 
-  static const unsigned max_threads();
-
   // global kernel configuration
-  static const unsigned kernel_version_id = 0x01004444; // "DD\000\001"
-
-  /* These constants must be defined in the arch part.
-     
-  // the default uart to use for serial console
-  static unsigned const default_console_uart = xxx;
-  static unsigned const default_console_uart_baudrate = 115200;
-
-  */
+  static const unsigned kernel_version_id = 0x87004444; // "DD\000\001"
 
   static const Mword thread_block_size = THREAD_BLOCK_SIZE;
-  
+
   static const bool conservative = false;
-  static const bool monitor_page_faults = conservative;
+  static const bool monitor_page_faults = false;
 
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH
   static const bool deceit_bit_disables_switch = true;
@@ -113,11 +103,7 @@ public:
   static const unsigned boot_taskno = 4;
 
   enum {
-#ifndef CONFIG_KIP_SYSCALLS
-    Kip_syscalls = 0,
-#else
     Kip_syscalls = 1,
-#endif
 #ifdef CONFIG_SMALL_SPACES
     Small_spaces = 1,
 #else
@@ -133,13 +119,18 @@ public:
 #else
     Have_frame_ptr = 1,
 #endif
-    Mapdb_ram_only = 1,
+    Mapdb_ram_only = 0,
 #ifdef CONFIG_DEBUG_KERNEL_PAGE_FAULTS
     Log_kernel_page_faults = 1,
 #else
     Log_kernel_page_faults = 0,
 #endif
 
+#ifdef CONFIG_JDB
+    Jdb = 1,
+#else
+    Jdb = 0,
+#endif
 #ifdef CONFIG_JDB_LOGGING
     Jdb_logging = 1,
 #else
@@ -149,11 +140,6 @@ public:
     Jdb_accounting = 1,
 #else
     Jdb_accounting = 0,
-#endif
-#ifdef CONFIG_MULTI_IRQ_ATTACH
-    Multi_irq_attach = 1,
-#else
-    Multi_irq_attach = 0,
 #endif
   };
 };
@@ -194,10 +180,11 @@ INTERFACE:
 #define ARCH_NAME "x86"
 #endif
 
+INTERFACE[ia32,ux,amd64]:
 #define CONFIG_KERNEL_VERSION_STRING \
   GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"             \
   GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                 \
-                           "microkernel (C) 1998-2005 TU Dresden\\n"            \
+                           "microkernel (C) 1998-2006 TU Dresden\\n"            \
                            "Rev: " CODE_VERSION " compiled with gcc " COMPILER \
                             " for " CONFIG_IA32_TARGET                         \
   GREETING_COLOR_ANSI_OFF
@@ -260,19 +247,12 @@ KIP_KERNEL_FEATURE("deceit_bit_disables_switch");
 KIP_KERNEL_FEATURE("asm_ipc_shortcut");
 #endif
 
-KIP_KERNEL_ABI_VERSION("1");
+KIP_KERNEL_ABI_VERSION("7");
 
 // define some constants which need a memory representation
 const L4_uid Config::kernel_id( L4_uid::Nil );
 const L4_uid Config::sigma0_id( sigma0_taskno, 0, 0, boot_taskno );
 const L4_uid Config::boot_id  ( boot_taskno, 0, 0, kernel_taskno );
-
-IMPLEMENT static inline NEEDS ["l4_types.h"]
-unsigned const
-Config::max_threads()
-{
-  return L4_uid::max_threads();
-}
 
 // class variables
 bool Config::esc_hack = false;

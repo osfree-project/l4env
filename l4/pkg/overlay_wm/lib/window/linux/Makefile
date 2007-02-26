@@ -12,7 +12,7 @@ SERVERIDL      = window_listener.idl
 
 PRIVATE_INCDIR = $(PKGDIR)/include \
                  $(PKGDIR)/lib/window/include \
-                 $(L4DIR)/tool/dice/include
+                 $(DICE_INCDIR)
 
 vpath window.c $(PKGDIR)/lib/window/common
 

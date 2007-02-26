@@ -8,7 +8,7 @@ SUBSYSTEMS := 	ABI LIBAMM KERNEL LIBK DRIVERS MINILIBC \
 
 
 PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH) serial   \
-                           h3800
+                           h3800 jdb_thread_names noncont_mem
 
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
@@ -18,13 +18,11 @@ ifeq ("$(CONFIG_KDB)","y")
   PREPROCESS_PARTS	+= debug gdb 
 endif
 ifeq ("$(CONFIG_JDB)","y")
-  PREPROCESS_PARTS	+= debug jdb 
+  PREPROCESS_PARTS	+= debug jdb log
 endif
-ifeq ("$(CONFIG_JDB_THREAD_NAMES)","y")
-  PREPROCESS_PARTS	+= jdb_thread_names
-endif
-ifeq ("$(CONFIG_SYSCALL_ITER)","y")
-  PREPROCESS_PARTS	+= syscall_iter
+
+ifeq ("$(CONFIG_TASK_CAPS)","y")
+  PREPROCESS_PARTS      += caps
 endif
 
 ifeq ("$(CONFIG_PF_XSCALE)","y")
@@ -38,8 +36,33 @@ ifeq ("$(CONFIG_PF_SA1100)","y")
 endif
 
 ifeq ("$(CONFIG_PF_ISG)","y")
-  PREPROCESS_PARTS	  += isg 926
-  CONFIG_KERNEL_LOAD_ADDR := 0xc0000000
+  SUBSYSTEMS += LIBUART
+  OBJECTS_LIBUART	  += usif.o usart.o 
+  PREPROCESS_PARTS	  += isg 926 libuart
+  ifeq ("$(CONFIG_ISG_PF_1)","y")
+    CONFIG_KERNEL_LOAD_ADDR := 0x40000000
+    PREPROCESS_PARTS	  += isg_1
+  endif
+  ifeq ("$(CONFIG_ISG_PF_2)","y")
+    CONFIG_KERNEL_LOAD_ADDR := 0x40000000
+    PREPROCESS_PARTS	  += isg_2
+  endif
+  ifeq ("$(CONFIG_ISG_PF_3)","y")
+    CONFIG_KERNEL_LOAD_ADDR := 0x40000000
+    PREPROCESS_PARTS	  += isg_3
+  endif
+endif
+
+ifeq ("$(CONFIG_PF_INTEGRATOR)","y")
+  SUBSYSTEMS += LIBUART
+  PREPROCESS_PARTS        += integrator 926 libuart
+  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
+endif
+
+ifeq ("$(CONFIG_PF_REALVIEW)","y")
+  SUBSYSTEMS += LIBUART
+  PREPROCESS_PARTS        += realview 926 libuart
+  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
 endif
 
 #
@@ -48,6 +71,13 @@ endif
 
 PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
 
+ifeq ("$(filter LIBUART, $(SUBSYSTEMS))","LIBUART")
+  LIBUART			:= uart/libuart.a
+endif
+OBJECTS_LIBUART		+= uart_integrator.o
+VPATH_LIBUART		:= $(srcdir)/lib/uart \
+			   $(srcdir)/lib/uart/arm
+PRIVATE_INCDIR += lib/uart
 
 #
 # DRIVERS Subsystem
@@ -56,12 +86,13 @@ DRIVERS 		:= libdrivers.a libgluedriverslibc.a
 VPATH			+= drivers/$(CONFIG_XARCH) drivers
 PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
 INTERFACES_DRIVERS 	:= sa1100 mux_console console uart filter_console \
-			   gdb_server h3xxx io mmu reset
+			   gdb_server h3xxx io mmu reset processor delayloop
 io_IMPL			:= io io-arm
 mmu_IMPL		:= mmu mmu-arm
-uart_IMPL		:= uart uart-sa1100 uart-16550
+uart_IMPL		:= uart uart-sa1100 uart-16550 uart-integrator
 reset_IMPL		:= reset-arm
-CXXSRC_DRIVERS		:= glue_libc.cc
+processor_IMPL		:= processor processor-arm
+CXXSRC_DRIVERS		:= glue_libc.cc 
 NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
 
 #
@@ -71,18 +102,15 @@ MINILIBC	:= libc.a
 VPATH		+= lib/minilibc/$(CONFIG_XARCH) lib/minilibc
 PRIVATE_INCDIR	+= lib/minilibc/$(CONFIG_XARCH)/include lib/minilibc/include
 CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
-		   memchr.c \
-		   panic.c strchr.c strcmp.c strcpy.c strlen.c strncmp.c \
-		   strncpy.c strstr.c __assert_fail.c printf.c __v_printf.c \
-		   vprintf.c strtol.c strtoul.c __lltostr.c \
-		   __ltostr.c putchar.c puts.c getchar.c gets.c __v_scanf.c \
-		   vsscanf.c sscanf.c construction.c sprintf.c snprintf.c \
-		   vsnprintf.c vsprintf.c longjmp.c \
-		   isalnum.c isalpha.c isascii.c isblank.c \
+		   memchr.c panic.c strchr.c strcmp.c strcpy.c strlen.c \
+		   strncmp.c strncpy.c strstr.c __assert_fail.c printf.c \
+		   __v_printf.c vprintf.c strtol.c strtoul.c __lltostr.c \
+		   __ltostr.c putchar.c puts.c getchar.c gets.c \
+		   construction.c sprintf.c snprintf.c vsnprintf.c vsprintf.c \
+		   longjmp.c isalnum.c isalpha.c isascii.c isblank.c \
 		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
-		   ispunct.c isspace.c isupper.c isxdigit.c \
-		   strspn.c strcspn.c tolower.c
-
+		   ispunct.c isspace.c isupper.c isxdigit.c strspn.c \
+		   strcspn.c tolower.c
 ASSRC_MINILIBC	:= setjmp.S
 NOOPT		+= $(patsubst %.o, %, $(OBJ_MINILIBC))
 
@@ -115,12 +143,13 @@ INTERFACES_JABI		:= jdb_ktrace
 ABI 		:= libabi.a
 VPATH 		+= abi/$(CONFIG_XARCH) abi 
 
-INTERFACES_ABI 	:= kip l4_types utcb
+INTERFACES_ABI 	:= kip l4_types utcb 
 
-l4_types_IMPL 	:= l4_types l4_types-32bit l4_types-iofp l4_types-debug
+l4_types_IMPL 	:= l4_types l4_types-32bit l4_types-iofp l4_types-caps \
+		   l4_types-debug
 
 # x0!=32Bit UIDs
-kip_IMPL	:= kip kip-arm
+kip_IMPL	:= kip kip-debug kip-arm
 
 
 #
@@ -128,8 +157,8 @@ kip_IMPL	:= kip kip-arm
 #
 KERNEL 		:= fiasco
 KERNEL_EXTRA 	:= Symbols
-VPATH 		+= kern/$(CONFIG_XARCH) kern
-PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH) kern
+VPATH 		+= kern/$(CONFIG_XARCH) kern kern/shared
+PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH) kern kern/shared
 
 INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			kernel_uart pagetable kern_types mem_layout \
@@ -139,14 +168,15 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			cpu_lock irq sender startup \
 			entry_frame irq_alloc helping_lock switch_lock \
 			kmem_slab_simple region kmem_slab slab_cache_anon \
-			thread_state context sched_context \
-			fpu fpu_state mapdb map_util space space_index \
+			thread_state context sched_context fpu fpu_state \
+			mapdb map_util mem_space space space_index \
 			space_index_util task thread_lock receiver timer \
 			timeout ipc_timeout deadline_timeout timeslice_timeout \
 			dirq fpu_alloc long_msg kernel_thread pic cmdline \
-			activation \
 			preemption k_sa1100 list_alloc trap_state warn \
-			bootstrap virq uart_console vkey kern_lib_page
+			bootstrap virq uart_console vkey kern_lib_page \
+			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
+			cap_space cap_space_alloc
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch
@@ -159,24 +189,29 @@ entry_frame_IMPL  	:= entry_frame entry_frame-arm                       \
 			   entry_frame-abs-timeout-hack
 globals_IMPL	  	:= globals globals-arch
 irq_IMPL		:= irq irq-generic irq-ipc
+kernel_task_IMPL	:= kernel_task kernel_task-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std
-kernel_uart_IMPL  	:= kernel_uart kernel_uart-sa1100
+kernel_uart_IMPL  	:= kernel_uart kernel_uart-arm
+map_util_IMPL		:= map_util map_util-mem map_util-caps
 mapdb_IMPL		:= mapdb-arm mapdb
-mem_layout_IMPL		:= mem_layout mem_layout-arm
+mem_layout_IMPL		:= mem_layout mem_layout-arm mem_layout-noncont
+mem_space_IMPL		:= mem_space-arm mem_space-user
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-arm
 pagetable_IMPL	  	:= pagetable pagetable-arch
 paging_IMPL	  	:= paging paging-arch
-pic_IMPL		:= pic pic-sa1100
-space_IMPL		:= space space-user
+pic_IMPL		:= pic pic-arm
+space_IMPL		:= space space-caps
 startup_IMPL		:= startup startup-arm
 thread_IMPL	  	:= thread thread-list thread-arm thread-syscall \
 			   thread-jdb thread-ipc thread-msg thread-msg-arm \
-			   thread-pagefault 
+			   thread-pagefault  thread-log thread-lookup
 timer_IMPL		:= timer timer-arm
 vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
+tb_entry_IMPL		:= tb_entry tb_entry-arm
 
 ifeq ("$(CONFIG_PF_ISG)","y")
+  VPATH_LIBUART	+= $(srcdir)/lib/uart/isg
   VPATH	+= kern/arm/isg drivers/arm/isg
   # DRIVERS
   uart_IMPL		+= uart-isg
@@ -199,9 +234,11 @@ JDB_INTERFACES		:= jdb_handler_queue jdb_module jdb_pic            \
 			   jdb_timeout jdb_dump jdb_ptab                   \
 			   jdb_attach_irq jdb_table                        \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region   \
-			   jdb_kern_info_kip jdb_mapdb
+			   jdb_kern_info_kip jdb_mapdb                     \
+			   jdb_trace jdb_trace_set jdb_entry_frame         \
+			   jdb_thread_names
 
-			   
+
 JDB_TBUF_IFS		:= jdb_tbuf jdb_tbuf_init jdb_tbuf_output          \
 			   jdb_tbuf_show jdb_tbuf_events                   \
 			   tb_entry tb_entry_output
@@ -209,17 +246,16 @@ JDB_TBUF_IFS		:= jdb_tbuf jdb_tbuf_init jdb_tbuf_output          \
 GDB_INTERFACES          := gdb
 
 
-ifeq ("$(CONFIG_JDB_THREAD_NAMES)","y")
-JDB_INTERFACES		+= jdb_thread_names
-endif
-
 ifeq ("$(CONFIG_JDB)","y")
-INTERFACES_KERNEL 	+= $(JDB_INTERFACES) $(DBG_INTERFACES)
+INTERFACES_KERNEL 	+= $(JDB_INTERFACES) $(JDB_TBUF_IFS) $(DBG_INTERFACES)
 jdb_IMPL		:= jdb jdb-arm jdb-ansi jdb-thread
 jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-arm
 jdb_dump_entry_frame_IMPL:= jdb_dump_entry_frame-arm
 jdb_tcb_IMPL		:= jdb_tcb jdb_tcb-arm
-jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-arm
+jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux-arm jdb_ptab-arm
+jdb_screen_IMPL		:= jdb_screen jdb_screen-ia32-ux-arm
+jdb_entry_frame_IMPL	:= jdb_entry_frame-arm
+jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-arm
 thread_IMPL		+= thread-debug 
 endif
 

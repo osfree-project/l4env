@@ -21,7 +21,7 @@ iomap_init(void)
 }
 
 int
-iomap_alloc_port(unsigned port, owner_t owner)
+iomap_alloc_port(l4_addr_t port, owner_t owner)
 {
   owner_t *p = __iomap + port;
 
@@ -35,13 +35,13 @@ iomap_alloc_port(unsigned port, owner_t owner)
 }
 
 owner_t
-iomap_owner_port(unsigned port)
+iomap_owner_port(l4_addr_t port)
 {
   return __iomap[port];
 }
 
 int
-iomap_free_port(unsigned port, owner_t owner)
+iomap_free_port(l4_addr_t port, owner_t owner)
 {
   owner_t *p = __iomap + port;
 

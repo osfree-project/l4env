@@ -50,8 +50,8 @@ __notification_thread(void * data)
     {
       l4blk_notify_wait_call(&drv->notify_id, drv->handle,
                              &handle, &status, &error, &_env);
-      if (_env.major != CORBA_NO_EXCEPTION)
-	LOG_Error("IPC error calling driver (%d)", _env.major);
+      if (DICE_HAS_EXCEPTION(&_env))
+	LOG_Error("IPC error calling driver (%d)", DICE_EXCEPTION_MAJOR(&_env));
       else
 	/* set request status */
 	blkclient_set_request_status(handle,status,error);

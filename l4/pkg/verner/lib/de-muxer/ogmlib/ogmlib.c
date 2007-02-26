@@ -18,6 +18,7 @@
 /* std/L4 */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdarg.h>
 
 /* ogg stuff */
@@ -33,10 +34,10 @@
 #include "drops-compat.h"
 
 /* printf for floating point */
-#warning Remove these lines when printf can do floating point output!
-#undef printf
-#define printf cr7_printf
-#include "cr7libc.h"
+// #warning Remove these lines when printf can do floating point output!
+// #undef printf
+// #define printf cr7_printf
+// #include "cr7libc.h"
 
 /* 
  * shortcut defines

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEWaitAnyFunction.h
- *    \brief   contains the declaration of the class CBEWaitAnyFunction
+ *  \file    dice/src/be/BEWaitAnyFunction.h
+ *  \brief   contains the declaration of the class CBEWaitAnyFunction
  *
- *    \date    01/21/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/21/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,9 +32,9 @@
 
 #include "be/BEInterfaceFunction.h"
 
-/**    \class CBEWaitAnyFunction
- *    \ingroup backend
- *    \brief the wait-any function class for the back-end
+/** \class CBEWaitAnyFunction
+ *  \ingroup backend
+ *  \brief the wait-any function class for the back-end
  *
  * This class contains the code to write a wait-any function
  */
@@ -43,35 +43,32 @@ class CBEWaitAnyFunction : public CBEInterfaceFunction
 // Constructor
 public:
     /** \brief constructor
-     *    \param bOpenWait true if this waiting for any sender
-     *    \param bReply true if we send a reply before waiting
+     *  \param bOpenWait true if this waiting for any sender
+     *  \param bReply true if we send a reply before waiting
      */
     CBEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CBEWaitAnyFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEWaitAnyFunction(CBEWaitAnyFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+	    bool bMarshal);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(string sTypeName);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
 
 protected:
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual bool WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
+    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteParameter(CBEFile * pFile, 
+	CBETypedDeclarator * pParameter, bool bUseConst = true);
 
 protected:
     /** \var bool m_bOpenWait

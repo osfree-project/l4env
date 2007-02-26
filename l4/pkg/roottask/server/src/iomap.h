@@ -13,8 +13,8 @@
 #include "types.h"
 
 void    iomap_init(void);
-int     iomap_alloc_port(unsigned port, owner_t owner);
-owner_t iomap_owner_port(unsigned port);
-int     iomap_free_port(l4_addr_t address, owner_t owner);
+int     iomap_alloc_port(l4_addr_t port, owner_t owner);
+owner_t iomap_owner_port(l4_addr_t port);
+int     iomap_free_port(l4_addr_t port, owner_t owner);
 
 #endif

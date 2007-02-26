@@ -54,7 +54,7 @@
  *                                             the region list and calling the
  *                                             region mapper thread
  * \retval addr          start address of region
- *	
+ *
  * \return 0 on success (dataspace attached to region), error code otherwise:
  *         - -#L4_ENOMEM  out of memory allocating region descriptor
  *         - -#L4_EINVAL  invalid dataspace id
@@ -79,8 +79,9 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
     return -L4_EINVAL;
 
   LOGdL(DEBUG_ATTACH, 
-        "DS %u at "l4util_idfmt", offset 0x%x, addr 0x%08x, size %u, area 0x%x",
-        ds->id, l4util_idstr(ds->manager), ds_offs, *addr, size, area);
+        "DS %u at "l4util_idfmt", offset 0x%lx, addr 0x"l4_addr_fmt
+	", size %lu, area 0x%x", ds->id, l4util_idstr(ds->manager), ds_offs,
+	*addr, (l4_addr_t)size, area);
   
   /* Check alignments of ds_offs. If ds_offs is not page aligned, recalculate
    * ds_offs and size to fit page boundaries and attach that larger area of 
@@ -94,8 +95,8 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
   map_offs = ds_offs - start_offs;
   size += map_offs;
 
-  LOGd(DEBUG_ATTACH, "aligned to offs 0x%x, map_offs 0x%x, size %u",
-       start_offs, map_offs, size);
+  LOGd(DEBUG_ATTACH, "aligned to offs 0x%lx, map_offs 0x%lx, size %lu",
+       start_offs, map_offs, (l4_addr_t)size);
 
   /* allocate and setup new region descriptor */
   r = l4rm_region_desc_alloc();
@@ -120,7 +121,8 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
       return ret;
     }
 
-  LOGd(DEBUG_ATTACH, "attached to region 0x%08x-0x%08x", r->start, r->end);
+  LOGd(DEBUG_ATTACH, "attached to region 0x"l4_addr_fmt"-0x"l4_addr_fmt,
+       r->start, r->end);
 
   /* unlock region list */
   l4rm_unlock_region_list_direct(flags);
@@ -128,11 +130,14 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
   if ((flags & L4RM_MAP) && !(flags & L4RM_MODIFY_DIRECT))
     {
       /* immediately map attached region */
-      LOGd(DEBUG_ATTACH, 
-           "map attached region, region 0x%08x-0x%08x, size 0x%x, " \
-           "rights 0x%02x", r->start, r->end, size, rights);
+      LOGd(DEBUG_ATTACH,
+           "map attached region, region 0x"l4_addr_fmt"-0x"l4_addr_fmt
+           ", size 0x%lx, rights 0x%02x", r->start, r->end, (l4_addr_t)size,
+           rights);
 
-      ret = l4dm_map((void *)r->start, size, rights);
+      /* we don't need to use l4dm_map() here since we already know
+       * which dataspace is attached -- saves one l4rm_lookup */
+      ret = l4dm_map_ds(ds, start_offs, r->start, size, rights);
       if (ret < 0)
 	LOG_printf("map attached region failed (%d), ignored!\n",ret);
     }

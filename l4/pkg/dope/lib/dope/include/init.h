@@ -16,7 +16,7 @@
 #ifndef _DOPELIB_INIT_H_
 #define _DOPELIB_INIT_H_
 
-struct dopelib_mutex *dopelib_cmdf_mutex;
-struct dopelib_mutex *dopelib_cmd_mutex;
+extern struct dopelib_mutex *dopelib_cmdf_mutex;
+extern struct dopelib_mutex *dopelib_cmd_mutex;
 
 #endif /* _DOPELIB_LISTENER_H_ */

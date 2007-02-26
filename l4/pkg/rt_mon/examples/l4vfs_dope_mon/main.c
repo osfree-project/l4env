@@ -165,7 +165,7 @@ void press_callback(dope_event *e, void *arg)
         {
             // remove all grand childs
             temp = node->first_child;
-            while(temp)
+            while (temp)
             {
                 tree_node_remove_childs(temp);
                 temp = temp->next;
@@ -249,8 +249,8 @@ int main(int argc, char* argv[])
     dope_cmd(app_id, "buffer_grid = new Grid()");
     dope_cmd(app_id, "buffer_grid.rowconfig(0)");
     dope_cmd(app_id, "buffer_grid.rowconfig(1)");
-    dope_cmd(app_id, "buffer_grid.columunconfig(0)");
-    dope_cmd(app_id, "buffer_grid.columunconfig(1)");
+    dope_cmd(app_id, "buffer_grid.columnconfig(0)");
+    dope_cmd(app_id, "buffer_grid.columnconfig(1)");
     dope_cmd(app_id, "main_frame = new Frame(-scrollx yes -scrolly yes"
                      " -content buffer_grid)");
     dope_cmdf(app_id, "buffer_grid.place(tree_container_%d, -column 0 -row 0)",

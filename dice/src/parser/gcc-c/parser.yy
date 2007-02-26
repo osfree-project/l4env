@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "defines.h"
 #include "Compiler.h"
@@ -53,9 +52,9 @@ void gcc_cerror2(const char *fmt, ...);
 #include "fe/FEFunctionDeclarator.h"
 #include "fe/FEUnionCase.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEUnionType.h"
+#include "fe/FEEnumType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
 
@@ -65,7 +64,7 @@ void gcc_cerror2(const char *fmt, ...);
 
 #include <typeinfo>
 #include <string>
-using namespace std;
+#include <cassert>
 
 #include "parser.h"
 int gcc_clex(YYSTYPE*);
@@ -166,15 +165,13 @@ int nParseErrorGCC_C = 0;
 
 %token SIZEOF ENUM STRUCT UNION IF ELSE WHILE DO FOR SWITCH CASE DEFAULT
 %token BREAK CONTINUE RETURN GOTO ASM_KEYWORD TYPEOF ALIGNOF
-%token ATTRIBUTE LABEL
+%token ATTRIBUTE 
 %token REALPART IMAGPART
 %token CONST VOLATILE RESTRICT BYCOPY BYREF
 %token IN OUT INOUT ONEWAY AUTO
 %token EXTERN REGISTER STATIC INLINE TYPEDEF
 
-%token IDENTIFIER SIZEOF
-
-%token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOID
+%token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE VOID
 
 /* gcc tokens */
 %token LONGLONG
@@ -371,20 +368,27 @@ postfix_expression:
         $$ = NULL;
         if ($1)
             delete $1;
-        if ($3)
+        if ($3) {
+	    while (!$3->empty()) {
+	        delete $3->back();
+		$3->pop_back();
+	    }
             delete $3;
+	}
     }
     | postfix_expression DOT IDENTIFIER
     {
         $$ = NULL;
         if ($1)
             delete $1;
+	delete $3;
     }
     | postfix_expression POINTSAT IDENTIFIER
     {
         $$ = NULL;
         if ($1)
             delete $1;
+	delete $3;
     }
     | postfix_expression INCR
     {
@@ -415,9 +419,9 @@ postfix_expression:
 argument_expression_list:
       assignment_expression
     {
-    $$ = new vector<CFEExpression*>();
+        $$ = new vector<CFEExpression*>();
         if ($1)
-        $$->push_back($1);
+            $$->push_back($1);
     }
     | argument_expression_list COMMA assignment_expression
     {
@@ -722,8 +726,13 @@ equality_expression:
             $1->SetParent($$);
             $3->SetParent($$);
             $$->SetSourceLine(gLineNumber);
-        } else
+        } else {
+	    if ($1)
+	        delete $1;
+	    if ($3)
+	        delete $3;
             $$ = NULL;
+	}
     }
     | equality_expression NOTEQUAL relational_expression
     {
@@ -733,8 +742,13 @@ equality_expression:
             $1->SetParent($$);
             $3->SetParent($$);
             $$->SetSourceLine(gLineNumber);
-        } else
+        } else {
+	    if ($1)
+	        delete $1;
+	    if ($3)
+	        delete $3;
             $$ = NULL;
+	}
     }
     ;
 
@@ -890,6 +904,8 @@ expression:
     }
     | expression COMMA assignment_expression
     {
+        if ($1)
+	    delete $1;
         $$ = $3;
     }
     /* gcc extension */
@@ -915,44 +931,46 @@ constant_expression:
 declaration:
       declaration_specifiers SEMICOLON
     {
-        CFETypeSpec *pType = NULL;
-    if (!$1->empty())
-    {
-        pType = *($1->begin());
-        $1->erase($1->begin());
-    }
-        if (dynamic_cast<CFETaggedStructType*>(pType) ||
-            dynamic_cast<CFETaggedUnionType*>(pType) ||
-            dynamic_cast<CFETaggedEnumType*>(pType))
-        {
-            // now add tagged decl to scope
-            if (!CParser::GetCurrentFile())
-            {
-                CCompiler::GccError(NULL, 0, "Fatal Error: current file vanished (typedef)");
-                YYABORT;
-            }
-            if (pCurFileComponent)
-            {
-                if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                    ((CFELibrary*)pCurFileComponent)->AddTaggedDecl((CFEConstructedType*)pType);
-                else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                    ((CFEInterface*)pCurFileComponent)->AddTaggedDecl((CFEConstructedType*)pType);
-                else
-                {
-                    TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
-                    assert(false);
-                }
-            }
-            else
-                CParser::GetCurrentFile()->AddTaggedDecl((CFEConstructedType*)pType);
-        }
-        // discard the rest of the specifiers
-        while (!$1->empty())
-        {
-            delete $1->back();
-            $1->pop_back();
-        }
-        delete $1;
+	CFETypeSpec *pType = NULL;
+	if (!$1->empty())
+	{
+	    pType = *($1->begin());
+	    $1->erase($1->begin());
+	}
+	CFEConstructedType *pT = dynamic_cast<CFEConstructedType*>(pType);
+	if (pT && !pT->GetTag().empty())
+	{
+	    // now add tagged decl to scope
+	    if (!CParser::GetCurrentFile())
+	    {
+		CCompiler::GccError(NULL, 0, 
+		    "Fatal Error: current file vanished (typedef)");
+		YYABORT;
+	    }
+	    if (pCurFileComponent)
+	    {
+		if (dynamic_cast<CFELibrary*>(pCurFileComponent))
+		    ((CFELibrary*)pCurFileComponent)->m_TaggedDeclarators.Add(pT);
+		else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
+		    ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add(pT);
+		else
+		{
+		    CCompiler::GccError(NULL, 0, 
+		        "current file component is unknown type: %s\n", 
+		        typeid(*pCurFileComponent).name());
+		    assert(false);
+		}
+	    }
+	    else
+		CParser::GetCurrentFile()->m_TaggedDeclarators.Add(pT);
+	}
+	// discard the rest of the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
     }
     | declaration_specifiers init_declarator_list SEMICOLON
     {
@@ -971,7 +989,7 @@ declaration:
         }
         delete $2;
     }
-    | function_attribute declaration_specifiers init_declarator_list SEMICOLON
+    | function_attribute_list declaration_specifiers init_declarator_list SEMICOLON
     {
         // discard the specifiers
         while (!$2->empty())
@@ -1004,7 +1022,8 @@ declaration:
                 {
                     if (pRoot->FindUserDefinedType((*iter)->GetName()) != NULL)
                     {
-                        gcc_cerror2("\"%s\" has already been defined as type.",(*iter)->GetName().c_str());
+                        gcc_cerror2("\"%s\" has already been defined as type.",
+			    (*iter)->GetName().c_str());
                         YYABORT;
                     }
                 }
@@ -1039,17 +1058,19 @@ declaration:
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTypedef(pTypedef);
+                ((CFELibrary*)pCurFileComponent)->m_Typedefs.Add(pTypedef);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTypedef(pTypedef);
+                ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add(pTypedef);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddTypedef(pTypedef);
+            CParser::GetCurrentFile()->m_Typedefs.Add(pTypedef);
     }
     ;
 
@@ -1308,14 +1329,21 @@ char_type
 struct_or_union_specifier:
       STRUCT LBRACE struct_declaration_list RBRACE type_attribute_opt
     {
-        $$ = new CFEStructType($3);
+        $$ = new CFEStructType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         if ($3)
             delete $3;
     }
+    | STRUCT type_attribute_list LBRACE struct_declaration_list RBRACE
+    {
+        $$ = new CFEStructType(string(), $4);
+        $$->SetSourceLine(gLineNumber);
+        if ($4)
+            delete $4;
+    }
     | STRUCT IDENTIFIER LBRACE struct_declaration_list RBRACE type_attribute_opt
     {
-        $$ = new CFETaggedStructType(*$2, $4);
+        $$ = new CFEStructType(*$2, $4);
         delete $2;
         if ($4)
             delete $4;
@@ -1323,7 +1351,7 @@ struct_or_union_specifier:
     }
     | STRUCT IDENTIFIER
     {
-        $$ = new CFETaggedStructType(*$2);
+        $$ = new CFEStructType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1331,30 +1359,32 @@ struct_or_union_specifier:
     {
         // a declare struct is used here
         // that's why we get a typename
-        $$ = new CFETaggedStructType(*$2);
+        $$ = new CFEStructType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
     | UNION LBRACE union_body RBRACE type_attribute_opt
     {
-        $$ = new CFEUnionType($3);
+        $$ = new CFEUnionType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         delete $3;
     }
+    | UNION type_attribute_list LBRACE union_body RBRACE
+    {
+        $$ = new CFEUnionType(string(), $4);
+        $$->SetSourceLine(gLineNumber);
+        delete $4;
+    }
     | UNION IDENTIFIER LBRACE union_body RBRACE type_attribute_opt
     {
-        CFEUnionType *body = new CFEUnionType($4);
-        delete $4;
-        body->SetSourceLine(gLineNumber);
-        $$ = new CFETaggedUnionType(*$2, body);
-        // set parent relationship
-        body->SetParent($$);
-        delete $2;
+        $$ = new CFEUnionType(*$2, $4);
         $$->SetSourceLine(gLineNumber);
+        delete $2;
+	delete $4;
     }
     | UNION IDENTIFIER
     {
-        $$ = new CFETaggedUnionType(*$2);
+        $$ = new CFEUnionType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1362,7 +1392,7 @@ struct_or_union_specifier:
     {
         // union was declared before and is used
         // here. That's why we get a typename
-        $$ = new CFETaggedUnionType(*$2);
+        $$ = new CFEUnionType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1370,12 +1400,17 @@ struct_or_union_specifier:
     /* empty structs */
     | STRUCT LBRACE RBRACE
     {
-        $$ = new CFEStructType(NULL);
+        $$ = new CFEStructType(string(), NULL);
+        $$->SetSourceLine(gLineNumber);
+    }
+    | STRUCT type_attribute_list LBRACE RBRACE
+    {
+        $$ = new CFEStructType(string(), NULL);
         $$->SetSourceLine(gLineNumber);
     }
     | STRUCT IDENTIFIER LBRACE RBRACE
     {
-        $$ = new CFETaggedStructType(*$2);
+        $$ = new CFEStructType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1390,8 +1425,8 @@ union_body:
     }
     | union_arm
     {
-        $$ = new vector<CFEUnionCase*>();
-    $$->push_back($1);
+	$$ = new vector<CFEUnionCase*>();
+	$$->push_back($1);
     }
     ;
 
@@ -1422,8 +1457,9 @@ struct_declaration_list:
     | SEMICOLON
     {
         /* empty element */
-        /* this check is here and not in struct_declaration, because struct_declaration is
-         * also used in union_arm and must not be empty there
+	/* this check is here and not in struct_declaration, because
+	 * struct_declaration is also used in union_arm and must not be empty
+	 * there
          */
         $$ = new vector<CFETypedDeclarator*>();
     }
@@ -1453,6 +1489,27 @@ struct_declaration:
         $$ = new CFETypedDeclarator(TYPEDECL_FIELD, pType, $2);
         pType->SetParent($$);
         delete $2;
+        $$->SetSourceLine(gLineNumber);
+        // delete rest of type vector
+        while (!$1->empty())
+        {
+            delete $1->back();
+            $1->pop_back();
+        }
+        delete $1;
+    }
+    /* gcc extension: unnamed fields */
+    | specifier_qualifier_list SEMICOLON
+    {
+        // extract type (should be 1.)
+        CFETypeSpec *pType = NULL;
+        if (!$1->empty())
+        {
+            pType = *($1->begin());
+            $1->erase($1->begin());
+        }
+        $$ = new CFETypedDeclarator(TYPEDECL_FIELD, pType, NULL);
+        pType->SetParent($$);
         $$->SetSourceLine(gLineNumber);
         // delete rest of type vector
         while (!$1->empty())
@@ -1531,33 +1588,33 @@ struct_declarator:
 enum_specifier:
       ENUM LBRACE enumerator_list RBRACE type_attribute_opt
     {
-        $$ = new CFEEnumType($3);
+        $$ = new CFEEnumType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         delete $3;
     }
     | ENUM IDENTIFIER LBRACE enumerator_list RBRACE type_attribute_opt
     {
-        $$ = new CFETaggedEnumType(*$2, $4);
+        $$ = new CFEEnumType(*$2, $4);
         delete $2;
         delete $4;
         $$->SetSourceLine(gLineNumber);
     }
     | ENUM LBRACE enumerator_list COMMA RBRACE type_attribute_opt
     {
-        $$ = new CFEEnumType($3);
+        $$ = new CFEEnumType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         delete $3;
     }
     | ENUM IDENTIFIER LBRACE enumerator_list COMMA RBRACE type_attribute_opt
     {
-        $$ = new CFETaggedEnumType(*$2, $4);
+        $$ = new CFEEnumType(*$2, $4);
         delete $2;
         delete $4;
         $$->SetSourceLine(gLineNumber);
     }
     | ENUM IDENTIFIER
     {
-        $$ = new CFETaggedEnumType(*$2, NULL);
+        $$ = new CFEEnumType(*$2, NULL);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1565,7 +1622,7 @@ enum_specifier:
     {
         // the enum has been declared before, but is
         // used here. That's why we get the typename
-        $$ = new CFETaggedEnumType(*$2, NULL);
+        $$ = new CFEEnumType(*$2, NULL);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -1620,11 +1677,11 @@ declarator:
     }
     /* gcc extension */
     /* variable attributes */
-    | direct_declarator variable_attribute
+    | direct_declarator variable_attribute_list
     {
         $$ = $1;
     }
-    | pointer direct_declarator variable_attribute
+    | pointer direct_declarator variable_attribute_list
     {
         if ($2)
             $2->SetStars($1);
@@ -1633,8 +1690,18 @@ declarator:
     ;
 
 /* gcc extension */
+variable_attribute_list:
+      variable_attribute
+    | variable_attribute_list variable_attribute
+    ;
+    
 variable_attribute:
       ATTRIBUTE LPAREN LPAREN variable_attributes_list RPAREN RPAREN
+    /* we put the asm statement here, so we do not have to introduce
+     * additional rules for declarators with as statements. Also asm
+     * statements may appear in arbitrary sequence with attributes.
+     */
+    | asm_statement_bare
     ;
 
 /* gcc_extension */
@@ -1683,7 +1750,7 @@ direct_declarator:
     {
         $$ = $1;
     }
-    | function_declarator function_attribute
+    | function_declarator function_attribute_list
     {
         $$ = $1;
     }
@@ -1968,6 +2035,8 @@ direct_abstract_declarator:
     }
     | LBRACKET assignment_expression RBRACKET
     {
+        if ($2)
+	    delete $2;
         $$ = NULL;
     }
     | LBRACKET RBRACKET
@@ -1976,6 +2045,8 @@ direct_abstract_declarator:
     }
     | direct_abstract_declarator LBRACKET assignment_expression RBRACKET
     {
+        if ($3)
+	    delete $3;
         $$ = $1;
     }
     | direct_abstract_declarator LBRACKET RBRACKET
@@ -2058,6 +2129,9 @@ designator_list:
 designator:
       LBRACKET constant_expression RBRACKET
     | DOT IDENTIFIER
+    {
+        delete $2;
+    }
     ;
 
 /* A.2.3 Statements */
@@ -2195,6 +2269,9 @@ iteration_statement:
 
 jump_statement:
       GOTO IDENTIFIER SEMICOLON
+    {
+        delete $2;
+    }
     | CONTINUE SEMICOLON
     | BREAK SEMICOLON
     | RETURN expression_opt SEMICOLON
@@ -2213,9 +2290,13 @@ jump_statement:
     ;
 
 /* gcc extension */
+asm_statement_bare:
+      ASM_KEYWORD VOLATILE LPAREN asm_statement_interior RPAREN
+    | ASM_KEYWORD LPAREN asm_statement_interior RPAREN
+    ;
+
 asm_statement:
-      ASM_KEYWORD VOLATILE LPAREN asm_statement_interior RPAREN SEMICOLON
-    | ASM_KEYWORD LPAREN asm_statement_interior RPAREN SEMICOLON
+      asm_statement_bare SEMICOLON
     ;
 
 asm_statement_interior:
@@ -2285,7 +2366,7 @@ file:
     | translation_unit
     | error
     {
-        fprintf(stderr, "Error while parsing C input file \"%s\":%d\n", sInFileName.c_str(), gLineNumber);
+	gcc_cerror2("Error while parsing C input file \"%s\":%d\n", sInFileName.c_str(), gLineNumber);
         errcount++;
         YYABORT;
     }
@@ -2320,62 +2401,114 @@ function_definition:
       function_specifier compound_statement opt_semicolon
     /* gcc extension */
     /* function attributes */
-    | function_specifier function_attribute compound_statement opt_semicolon
+    | function_specifier function_attribute_list compound_statement opt_semicolon
     ;
 
 /* Dice specific */
 function_specifier:
-      declaration_specifiers function_declarator
+      declaration_specifiers function_attribute_list function_declarator
     {
-        // discard the specifiers
-        while (!$1->empty())
-    {
-            delete $1->back();
-        $1->pop_back();
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($3)
+	    delete $3;
     }
-        delete $1;
-        // delete the function declarator
-        if ($2)
-            delete $2;
+    | declaration_specifiers function_attribute_list function_declarator declaration_list
+    {
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($3)
+	    delete $3;
+    }
+    | declaration_specifiers pointer function_attribute_list function_declarator
+    {
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($4)
+	    delete $4;
+    }
+    | declaration_specifiers pointer function_attribute_list function_declarator declaration_list
+    {
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($4)
+	    delete $4;
+    }
+    | declaration_specifiers function_declarator
+    {
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($2)
+	    delete $2;
     }
     | declaration_specifiers function_declarator declaration_list
     {
-        // discard the specifiers
-        while (!$1->empty())
-    {
-            delete $1->back();
-        $1->pop_back();
-    }
-        delete $1;
-        // delete the function declarator
-        if ($2)
-            delete $2;
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($2)
+	    delete $2;
     }
     | declaration_specifiers pointer function_declarator
     {
-        // discard the specifiers
-        while (!$1->empty())
-    {
-            delete $1->back();
-        $1->pop_back();
-    }
-        delete $1;
-        // delete the function declarator
-        if ($3)
-            delete $3;
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($3)
+	    delete $3;
     }
     | declaration_specifiers pointer function_declarator declaration_list
     {
-        // discard the specifiers
-        while (!$1->empty())
-    {
-            delete $1->back();
-        $1->pop_back();
-    }
-        delete $1;
-        // delete the function declarator
-        if ($3)
-            delete $3;
+	// discard the specifiers
+	while (!$1->empty())
+	{
+	    delete $1->back();
+	    $1->pop_back();
+	}
+	delete $1;
+	// delete the function declarator
+	if ($3)
+	    delete $3;
     }
     ;
 
@@ -2385,6 +2518,13 @@ declaration_list:
     ;
 
 /* gcc extension */
+function_attribute_list:
+      function_attribute
+    | asm_statement_bare
+    | function_attribute_list function_attribute
+    | function_attribute_list asm_statement_bare
+    ;
+
 function_attribute:
       ATTRIBUTE LPAREN LPAREN function_attributes_list RPAREN RPAREN
     ;
@@ -2410,7 +2550,7 @@ attribute_parameter_list:
 
 /* gcc extension */
 attribute_parameter:
-      /* IDENTIFIER /* covered by expression */
+      /* IDENTIFIER : covered by expression */
       expression
     {
         if ($1)
@@ -2454,10 +2594,15 @@ function_attribute_keyword:
 /* gcc extension */
 type_attribute_opt:
       /* empty */
-    | type_attribute
+    | type_attribute_list
     ;
 
 /* gcc extension */
+type_attribute_list:
+      type_attribute
+    | type_attribute_list type_attribute
+    ;
+
 type_attribute:
       ATTRIBUTE LPAREN LPAREN type_attributes_list RPAREN RPAREN
     ;

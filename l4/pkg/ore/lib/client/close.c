@@ -4,11 +4,15 @@
 #include "local.h"
 
 // perform open actions
-void ore_do_close(l4ore_handle_t handle)
+void ore_do_close(int handle)
 {
   DICE_DECLARE_ENV(_dice_corba_env);
-  _dice_corba_env.malloc            = (dice_malloc_func)malloc;
-  _dice_corba_env.free              = (dice_free_func)free;
+  _dice_corba_env.malloc = (dice_malloc_func)malloc;
+  _dice_corba_env.free   = (dice_free_func)free;
+  l4ore_handle_t channel = descriptor_table[handle].remote_worker_thread;
 
-  ore_ore_close_call(&ore_server, handle, &_dice_corba_env);
+  ore_manager_close_call(&descriptor_table[handle].remote_manager_thread, 
+		                 &channel, &_dice_corba_env);
+
+  // TODO: dispose dataspaces ?
 }

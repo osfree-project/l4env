@@ -113,6 +113,15 @@ determineAndSetupImport (control_struct_t * control)
 	  control->streaminfo.vi.fourCC = vid_fourcc2int ("MPG1");
 	  control->streaminfo.vi.framerate = 25.00;
 	}
+#if H264_SLICE_SCHEDULE
+	/* resort to raw H.264, FIXME: replace with MPEG4 demuxer */
+	else if (1)
+	{
+	  plugin_id =
+	    find_plugin_by_name (PLUG_NAME_RAW, PLUG_MODE_IMPORT,
+				 STREAM_TYPE_VIDEO);
+	}
+#endif
 
       }				/* end autodetect plugin */
       else
@@ -435,6 +444,24 @@ containerProbeVideoFile (const char *filename,
     return 0;
 #endif /* end build w/ mpeg */
   }
+
+#if H264_SLICE_SCHEDULE
+  /* FIXME: we need to add support for MPEG4 container to get real H.264 demuxing */
+  /* this is a raw H.264 stream */
+  else if (1)
+  {
+    *vid_tracks = 1;
+    *aud_tracks = 0;
+    /* FIXME: hardcoded crap ahead */
+    streaminfo->vi.format = VID_FMT_FOURCC;
+    streaminfo->vi.fourCC = vid_fourcc2int("H264");
+    streaminfo->vi.colorspace = VID_YV12;
+    streaminfo->vi.xdim = 704;
+    streaminfo->vi.ydim = 576;
+    streaminfo->vi.framerate = 25.00;
+    streaminfo->seekable = 0;
+  }
+#endif
 
   /* it is an WAVE */
   else if (probe_wave (filename))

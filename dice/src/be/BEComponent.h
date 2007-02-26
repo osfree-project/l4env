@@ -57,13 +57,12 @@ protected:
     CBEComponent(CBEComponent &src);
 
 public:
-    virtual void Write(CBEContext *pContext);
+    virtual void Write(void);
 
 protected:
-    virtual bool NeedServerLoop(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual void SetFileType(CBEContext *pContext, int nHeaderOrImplementation);
-    virtual bool CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext);
-    virtual bool CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * pContext);
+    virtual bool NeedServerLoop(CFEInterface *pFEInterface);
+    virtual void CreateBackEndHeader(CFEFile * pFEFile);
+    virtual void CreateBackEndImplementation(CFEFile * pFEFile);
 };
 
 #endif // !__DICE_BECOMPONENT_H__

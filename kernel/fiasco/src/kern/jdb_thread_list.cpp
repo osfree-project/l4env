@@ -5,7 +5,7 @@ IMPLEMENTATION [jdb_thread_names]:
 static inline
 const char*
 get_thread_name(Global_id id)
-{ return Jdb_thread_names::lookup(id)->name(); }
+{ return Jdb_thread_names::lookup(id, true)->name(); }
 
 IMPLEMENTATION [!jdb_thread_names]:
 
@@ -17,9 +17,9 @@ get_thread_name(Global_id)
 
 IMPLEMENTATION:
 
+#include <climits>
 #include <cstring>
 #include <cstdio>
-#include <limits.h>
 
 #include "jdb.h"
 #include "jdb_core.h"
@@ -34,6 +34,8 @@ IMPLEMENTATION:
 
 class Jdb_list_threads : public Jdb_module
 {
+public:
+  Jdb_list_threads() FIASCO_INIT;
 private:
   static char subcmd;
   static char long_output;
@@ -77,7 +79,7 @@ Jdb_thread_list::init(char pr, Thread *t_head)
 
 // return string describing current sorting mode of list
 PUBLIC static inline NOEXPORT
-const char* const
+const char*
 Jdb_thread_list::get_mode_str(void)
 {
   static const char * const mode_str[] =
@@ -386,7 +388,7 @@ Jdb_thread_list::complete_show(void (*show)(Thread *t))
   return _count;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_list_threads::Jdb_list_threads()
   : Jdb_module("INFO")
 {}
@@ -528,9 +530,9 @@ Jdb_list_threads::list_threads(Thread *t_start, char pr)
       return;
     }
 
-  // make sure that we have a valid starting point
-  if ((pr=='r') && (!t_current->in_ready_list()))
-    t_current = kernel_thread;
+  // enqueue current, which may not be in the ready list due to lazy queueing
+  if (!t_current->in_ready_list())
+    t_current->ready_enqueue();
 
   Jdb::clear_screen();
   show_header();
@@ -563,30 +565,36 @@ Jdb_list_threads::list_threads(Thread *t_start, char pr)
 	      switch (int c=Jdb_core::getchar())
 		{
 		case KEY_CURSOR_UP:
+		case 'k':
 		  if (y > 0)
 		    y--;
 		  else
 		    redraw = Jdb_thread_list::line_back();
 		  break;
 		case KEY_CURSOR_DOWN:
+		case 'j':
 		  if (y < y_max)
 		    y++;
 		  else
 		    redraw = Jdb_thread_list::line_forw();
 		  break;
 		case KEY_PAGE_UP:
+		case 'K':
 		  if (!(redraw = Jdb_thread_list::page_back()))
 		    y = 0;
 		  break;
 		case KEY_PAGE_DOWN:
+		case 'J':
 		  if (!(redraw = Jdb_thread_list::page_forw()))
 		    y = y_max;
 		  break;
 		case KEY_CURSOR_HOME:
+		case 'H':
 		  redraw = Jdb_thread_list::goto_home();
 		  y = 0;
 		  break;
 		case KEY_CURSOR_END:
+		case 'L':
 		  redraw = Jdb_thread_list::goto_end();
 		  y = y_max;
 		  break;
@@ -649,7 +657,7 @@ Jdb_list_threads::show_thread_list()
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_list_threads::cmds() const
 {
   static Cmd cs[] =
@@ -662,7 +670,7 @@ Jdb_list_threads::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_list_threads::num_cmds() const
 {
   return 2;

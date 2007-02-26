@@ -105,15 +105,15 @@ dmphys_close(dmphys_dataspace_t * ds)
  *                        close a dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_close_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_close_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
 
-  LOGdL(DEBUG_CLOSE, "close ds %u", ds_id);
+  LOGdL(DEBUG_CLOSE, "close ds %lu", ds_id);
 
   /* get dataspace descriptor, check if caller owns the dataspace */
   ret = dmphys_ds_get_check_owner(ds_id, *_dice_corba_obj, &ds);
@@ -121,14 +121,14 @@ if_l4dm_generic_close_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: client "l4util_idfmt" does not own dataspace %u "
+	LOGL("DMphys: client "l4util_idfmt" does not own dataspace %lu "
 	     "(owner is "l4util_idfmt")",
 	     l4util_idstr(*_dice_corba_obj), ds_id,
 	     l4util_idstr(dsmlib_get_owner(ds->desc)));
-#endif      
+#endif
       return ret;
     }
 
@@ -155,20 +155,23 @@ if_l4dm_generic_close_component(CORBA_Object _dice_corba_obj,
  *         - -#L4_EINVAL  invalid client id
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_close_all_component(CORBA_Object _dice_corba_obj,
-                                    const l4_threadid_t *client,
-                                    l4_uint32_t flags,
-                                    CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_close_all_component (CORBA_Object _dice_corba_obj,
+                                     const l4_threadid_t *client,
+                                     unsigned long flags,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   if (l4_is_invalid_id(*client))
     return -L4_EINVAL;
 
-  /* We should check whether the caller is allowd to close all dataspaces.
-   * close_all can be used e.g. by a loader/task-server to release all 
-   * dataspaces created by a client after the client has exited. 
-   * Therefore we should allow close_all for non-owners of dataspaces, but
-   * only for those we trust. */
+  /* Only threads from within dm_phys are allowed to call this function. This
+   * is especially the events thread that will receive death notifications and
+   * then calls this function. Therefore we test the caller for being one of
+   * our own threads.
+   */
+  if (!l4_task_equal(*_dice_corba_obj, l4_myself()))
+      return -L4_EPERM;
+
   LOGdL(DEBUG_CLOSE, "close all dataspaces owned by "l4util_idfmt
       		     ", caller "l4util_idfmt"\n",
 		     l4util_idstr(*client), l4util_idstr(*_dice_corba_obj));

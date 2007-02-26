@@ -1,6 +1,7 @@
 INTERFACE:
 
 #include "l4_types.h"
+#include "utcb.h"
 
 /**
  * Encapsulation of syscall data.
@@ -179,7 +180,15 @@ public:
   /// set the old preempter id
   void old_preempter(L4_uid id);
 
+  /// get the task-capability-fault handler id
+  L4_uid cap_handler(const Utcb* utcb) const;
+
+  /// set the old task-capability-fault handler id
+  void old_cap_handler(L4_uid id, Utcb* utcb);
+
   Mword alien() const;
+
+  Mword trigger_exception() const;
 };
 
 /**
@@ -216,8 +225,24 @@ public:
   /// get the mask, say rights for the unmap
   Mword map_mask() const;
 
-  /// returns true if the operation is a downgrade
+  /// returns true if the operation is a downgrade (removes write, but
+  /// not read permission).
   bool downgrade() const;
+
+  /// returns true if the operation does not remove read or write
+  /// permission.  Overrides downgrade().
+  bool no_unmap() const;
+
+  /// returns true if the operation returns and resets accessed and
+  /// dirty flags.
+  bool reset_references() const;
+
+  /// returns task to which the unmap should be restricted, or 0 if
+  /// there is no restriction
+  Task_num restricted() const;
+
+  /// set return value
+  void ret (Mword status);
 };
 
 /**
@@ -244,13 +269,23 @@ public:
   /// get the pager id (active)
   L4_uid pager() const; 
 
+  /// get the pager id (active)
+  L4_uid cap_handler(const Utcb*) const; 
+
   /// get the task id of the new task
   L4_uid dst() const;
 
   /// set the new tasks id
   void new_taskid( L4_uid id );
 
+  /// get the alien flag
   Mword alien() const;
+
+  /// should task capabilities be enabled for the new task?
+  Mword enable_task_caps() const;
+
+  /// get the trigger_exception flag
+  Mword trigger_exception() const;
 };
 
 /**
@@ -285,7 +320,7 @@ public:
 };
 
 /**
- * thread_schedule specific interpretation of syscall data
+ * thread_privctrl specific interpretation of syscall data
  */
 class Sys_thread_privctrl_frame : public Syscall_frame
 {
@@ -297,20 +332,6 @@ public:
 };
 
 extern "C" void Entry_frame_Syscall_frame_cast_problem();
-
-
-//-----------------------------------------------------------------------------
-INTERFACE[v2-lipc]:
-
-EXTENSION class Sys_ipc_frame
-{
-public:
-  /// set the sender local id
-  void snd_utcb(Mword w);
-
-  /// set the timeout
-  void timeout(Mword t);
-};
 
 
 //-----------------------------------------------------------------------------

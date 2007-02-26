@@ -6,7 +6,6 @@
  ****************************************************************/
 
 #include "ore-local.h"
-#include <linux/etherdevice.h>
 
 static ore_mac broadcast_mac = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -18,9 +17,32 @@ int mac_equal(ore_mac mac1, ore_mac mac2)
   return (memcmp(mac1, mac2, 6) == 0);
 }
 
+/******************************************************************************
+ * Determine whether a MAC is a broadcast address.
+ ******************************************************************************/
 int mac_is_broadcast(ore_mac mac)
 {
   return (memcmp(mac, broadcast_mac, 6) == 0);
+}
+
+/******************************************************************************
+ * Find the channel number belonging to a specific thread id.
+ ******************************************************************************/
+int find_channel_for_threadid(l4_threadid_t t, int start)
+{
+  int i;
+
+  for (i = (start >= 0) ? start : 0; i < ORE_CONFIG_MAX_CONNECTIONS; i++)
+    {
+      // skip unused connections
+      if (ore_connection_table[i].in_use == 0)
+        continue;
+    
+      if (l4_task_equal(ore_connection_table[i].owner, t))
+        return i;       
+    }
+
+  return -1;
 }
 
 /******************************************************************************
@@ -28,7 +50,7 @@ int mac_is_broadcast(ore_mac mac)
  * with the same MAC, users may specify a start value from which line to search
  * the connection_table.
  ******************************************************************************/
-l4ore_handle_t find_channel_for_skb(struct sk_buff *skb, int start)
+int find_channel_for_skb(struct sk_buff *skb, int start)
 {
   int i;
 
@@ -55,14 +77,14 @@ l4ore_handle_t find_channel_for_skb(struct sk_buff *skb, int start)
   return -1;
 }
 
-/* Find channel for mac address. This is used, when we do not have a
- * skb to get information from.
- */
-l4ore_handle_t find_channel_for_mac(ore_mac mac)
+/******************************************************************************
+ * Find the channel number for a specific MAC address.                        *
+ ******************************************************************************/
+int find_channel_for_mac(ore_mac mac, int start)
 {
   int i = 0;
 
-  for (i = 0; i < ORE_CONFIG_MAX_CONNECTIONS; i++)
+  for (i = (start > 0) ? start : 0; i < ORE_CONFIG_MAX_CONNECTIONS; i++)
     {
       // skip unused connections
       if (ore_connection_table[i].in_use == 0)
@@ -71,43 +93,85 @@ l4ore_handle_t find_channel_for_mac(ore_mac mac)
       if (mac_equal(ore_connection_table[i].mac, mac))
         return i;
       // check broadcast
-      if (mac_equal(mac, broadcast_mac)
-          && ore_connection_table[i].config.rw_broadcast)
+      if (ore_connection_table[i].config.rw_broadcast && 
+	      mac_equal(mac, broadcast_mac))
         return i;
     }
 
   return -1;
 }
 
-int local_deliver(rxtx_entry_t *ent)
+/******************************************************************************
+ * Find the channel served by a worker thread.                                *
+ ******************************************************************************/
+int find_channel_for_worker(l4ore_handle_t worker)
 {
-  struct sk_buff *new_buf;
-  // ent is a SEND entry (== a raw packet). Therefore we cannot
-  // use find_channel_for_skb() here.
-  int i = find_channel_for_mac(ent->buf->data);
-
-  LOGd(ORE_DEBUG_COMPONENTS, "Trying local delivery...");
-
-  if (i < 0)
-    return -1;
-
-  LOGd(ORE_DEBUG_COMPONENTS, "Local delivery necessary.");
-  new_buf = skb_clone(ent->buf, GFP_KERNEL);
-
-  // build an rx skb
-  // --> type_trans will only be performed once
-  new_buf->protocol = eth_type_trans(new_buf, ore_connection_table[i].dev);
-
-  // call the channels' netif_rx() to deliver packets
-  do
+    int i=0;
+    for (i=0; i < ORE_CONFIG_MAX_CONNECTIONS; i++)
     {
-      new_buf->dev = ore_connection_table[i].dev;
-      ore_connection_table[i].netif_rx_func(i, new_buf);
-      i = find_channel_for_skb(new_buf, i + 1);
+        if (!ore_connection_table[i].in_use)
+            continue;
+        if (l4_thread_equal(ore_connection_table[i].worker, worker))
+            return i;
     }
-  while (i >= 0);
 
-  kfree_skb(new_buf);
+    return -1;
+}
+
+/******************************************************************************
+ * Perform sanity checks for send and receive:                                *
+ *  - check ownership of connection                                           *
+ *  - check if connection is marked "in use"                                  *
+ ******************************************************************************/
+int sanity_check_rxtx(int handle, l4_threadid_t client)
+{
+  if (!l4_task_equal(ore_connection_table[handle].owner, client))
+    {
+      LOG_Error(l4util_idfmt" is not owner of connection %d", 
+              l4util_idstr(client), handle);
+      return -L4_EBADF;
+    }
+  
+  if (ore_connection_table[handle].in_use == 0)
+    {
+      LOG_Error("Trying to send via unused connection.");
+      return -L4_EBADF;
+    }
 
   return 0;
+}
+
+/******************************************************************************
+ * Perform everything necessary to free an rxtx_entry.
+ ******************************************************************************/
+void free_rxtx_entry(rxtx_entry_t *e)
+{
+    // don't let the evil users fool us...
+    if (e == NULL)
+        return;
+
+    // if there is an skb inside, call kfree_skb
+    if (e->skb)
+        kfree_skb(e->skb);
+
+    // the skb may be freed now _OR_ kfree_skb only decremented the usage
+    // counter --> free e only if the belonging skb was freed. Otherwise the
+    // entry is still located within another rx_list and must not be deleted.
+    if (!e->skb || atomic_read(&e->skb->users) < 2)
+        kfree(e);
+}
+
+/******************************************************************************
+ * Clear a list of rxtx entries.
+ ******************************************************************************/
+void clear_rxtx_list(struct list_head *h)
+{
+    struct list_head *p, *n;
+
+    list_for_each_safe(p, n, h)
+    {
+        rxtx_entry_t *entry = list_entry(p, rxtx_entry_t, list);
+        free_rxtx_entry(entry);
+        list_del(p);
+    }
 }

@@ -35,14 +35,14 @@ l4_threadid_t if_tid;
  *************************************/
 
 /*** OPEN NEW VIRTUAL CONSOLE ***/
-l4_int32_t
+long
 con_if_openqry_component(CORBA_Object _dice_corba_obj,
-                         l4_uint32_t sbuf1_size,
-                         l4_uint32_t sbuf2_size,
-                         l4_uint32_t sbuf3_size,
-                         l4_uint8_t priority,
+                         unsigned long sbuf1_size,
+                         unsigned long sbuf2_size,
+                         unsigned long sbuf3_size,
+                         unsigned char priority,
                          l4_threadid_t *vcid,
-                         l4_int16_t vfbmode,
+                         short vfbmode,
                          CORBA_Server_Environment *_dice_corba_env) {
 
 	/* start vc server thread */
@@ -52,7 +52,7 @@ con_if_openqry_component(CORBA_Object _dice_corba_obj,
 
 
 /*** CLOSE ALL VIRTUAL CONSOLES THAT BELONG TO THE SPECIFIED CLIENT ***/
-l4_int32_t
+long
 con_if_close_all_component(CORBA_Object _dice_corba_obj,
                            const l4_threadid_t *client,
                            CORBA_Server_Environment *_dice_corba_env) {

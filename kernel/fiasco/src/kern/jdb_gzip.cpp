@@ -92,7 +92,7 @@ Jdb_gzip::write(char const *str, size_t len)
 }
 
 PUBLIC static
-Console* const
+Console*
 Jdb_gzip::console()
 {
   static Jdb_gzip c;

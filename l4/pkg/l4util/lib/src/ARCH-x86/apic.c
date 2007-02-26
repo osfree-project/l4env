@@ -125,7 +125,7 @@ apic_activate_by_io(void)
 {
   char old_21, old_A1;
   unsigned long tmp_val;
-  l4_uint32_t flags;
+  l4_umword_t flags;
 
   /* mask 8259 interrupts */
   old_21 = l4util_in8(0x21); 

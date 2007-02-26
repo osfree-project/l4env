@@ -15,7 +15,7 @@ public:
 
     Tlb( unsigned long mask = -1UL, unsigned long tag = -1UL, 
 	 unsigned long addr = 0 )
-      : mask(mask), addr(addr)
+      : mask(mask), addr(addr), tag (tag)
     {}
     
     bool valid() const

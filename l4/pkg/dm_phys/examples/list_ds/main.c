@@ -66,9 +66,10 @@ main(int argc, char **argv)
 	}
 
       if_l4dm_generic_list_call(&dm_id, &tid, L4DM_SAME_TASK, &env);
-      if (env.major != CORBA_NO_EXCEPTION)
+      if (DICE_HAS_EXCEPTION(&env))
 	{
-	  printf("Error listing l4 task \"%s\" (exc %d)\n",argv[i],env.major);
+	  printf("Error listing l4 task \"%s\" (exc %d)\n",argv[i],
+	      DICE_EXCEPTION_MAJOR(&env));
 	  exit(-1);
 	}
     }

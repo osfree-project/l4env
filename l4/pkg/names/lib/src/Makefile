@@ -7,7 +7,7 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 
-SYSTEMS	= x86-l4v2 x86-l4x0 arm-l4x0
+SYSTEMS	= x86-l4v2 arm-l4x0 amd64-l4v2
 
 TARGET	= lib$(PKGNAME).a
 MODE	= sigma0

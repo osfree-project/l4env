@@ -47,7 +47,8 @@ int main(int argc, char **argv) {
 			overlay_name = argv[i+1];
 	}
 	
-	dope_init();
+	if (dope_init()) return -1;
+
 	sprintf(dopeapp_name, "Fiasco->DOpE->%s", overlay_name);
 	app_id = dope_init_app(dopeapp_name);
 	

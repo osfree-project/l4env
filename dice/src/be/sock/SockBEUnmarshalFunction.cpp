@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/sock/SockBEUnmarshalFunction.cpp
- *    \brief   contains the implementation of the class CSockBEUnmarshalFunction
+ *  \file    dice/src/be/sock/SockBEUnmarshalFunction.cpp
+ *  \brief   contains the implementation of the class CSockBEUnmarshalFunction
  *
- *    \date    11/28/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    11/28/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
@@ -28,8 +28,8 @@
 #include "be/sock/SockBEUnmarshalFunction.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
-#include "be/BEMsgBufferType.h"
 #include "be/BEDeclarator.h"
+#include "be/BEMsgBuffer.h"
 
 CSockBEUnmarshalFunction::CSockBEUnmarshalFunction()
 {
@@ -40,34 +40,23 @@ CSockBEUnmarshalFunction::CSockBEUnmarshalFunction(CSockBEUnmarshalFunction & sr
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CSockBEUnmarshalFunction::~CSockBEUnmarshalFunction()
 {
 
 }
 
 /** \brief remove references from message buffer
- *  \param pFEInterface the front-end interface to use as reference
- *  \param pContext the context of the create process
+ *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-bool CSockBEUnmarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext)
+bool
+CSockBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEUnmarshalFunction::AddMessageBuffer(pFEInterface, pContext))
+    if (!CBEUnmarshalFunction::MsgBufferInitialization(pMsgBuffer))
         return false;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
+    CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
+    pDecl->SetStars(0);
     return true;
 }
 
-/** \brief writes the additional parameters after the "normal" parameters
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma should be written first
- */
-void CSockBEUnmarshalFunction::WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma)
-{
-    m_bCastMsgBufferOnCall = false;
-    CBEUnmarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
-}

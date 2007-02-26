@@ -1,17 +1,25 @@
 INTERFACE:
 
-#include <stddef.h>		// size_t
+#include <cstddef>		// size_t
 #include "helping_lock.h"	// Helping_lock
 
 #include "slab_cache_anon.h"		// slab_cache_anon
 
 class Kmem_slab_simple : public slab_cache_anon
 {
+  friend class Jdb_kern_info_memory;
+
   // DATA
   Helping_lock _lock;
+  Kmem_slab_simple* _reap_next;
+
+  // STATIC DATA
+  static Kmem_slab_simple* reap_list;
 };
 
 IMPLEMENTATION:
+
+Kmem_slab_simple* Kmem_slab_simple::reap_list;
 
 // Kmem_slab_simple -- A type-independent slab cache allocator for Fiasco,
 // derived from a generic slab cache allocator (slab_cache_anon in
@@ -22,16 +30,18 @@ IMPLEMENTATION:
 //-
 
 #include <cassert>
-
-#include "panic.h"
 #include "config.h"
+#include "atomic.h"
+#include "panic.h"
 #include "mapped_alloc.h"
 
 // We only support slab size == PAGE_SIZE.
 PUBLIC
-Kmem_slab_simple::Kmem_slab_simple(unsigned elem_size, unsigned alignment)
-  : slab_cache_anon(Config::PAGE_SIZE, elem_size, alignment)
+Kmem_slab_simple::Kmem_slab_simple(unsigned elem_size, unsigned alignment,
+				   char const *name)
+  : slab_cache_anon(Config::PAGE_SIZE, elem_size, alignment, name)
 {
+  enqueue_reap_list();
 }
 
 // Specializations providing their own block_alloc()/block_free() can
@@ -39,9 +49,20 @@ Kmem_slab_simple::Kmem_slab_simple(unsigned elem_size, unsigned alignment)
 PROTECTED
 Kmem_slab_simple::Kmem_slab_simple(unsigned long slab_size, 
 				   unsigned elem_size, 
-				   unsigned alignment)
-  : slab_cache_anon(slab_size, elem_size, alignment)
-{}
+				   unsigned alignment,
+				   char const *name)
+  : slab_cache_anon(slab_size, elem_size, alignment, name)
+{
+  enqueue_reap_list();
+}
+
+void
+Kmem_slab_simple::enqueue_reap_list()
+{
+  do {
+    _reap_next = reap_list;
+  } while (! cas (&reap_list, _reap_next, this));
+}
 
 PUBLIC
 Kmem_slab_simple::~Kmem_slab_simple()
@@ -68,11 +89,11 @@ Kmem_slab_simple::free(void *cache_entry) // return initialized member to cache
 }
 
 PUBLIC
-bool 
+unsigned long
 Kmem_slab_simple::reap()
 {
   if (_lock.test())
-    return false;		// this cache is locked -- can't get memory now
+    return 0;			// this cache is locked -- can't get memory now
 
   Helping_lock_guard guard(&_lock);
   return slab_cache_anon::reap();
@@ -133,11 +154,36 @@ Kmem_slab_simple::operator new(size_t size)
 
 PUBLIC
 void 
-Kmem_slab_simple::operator delete(void *block, size_t size)
+Kmem_slab_simple::operator delete(void *block) 
 {
-  assert(size<=sizeof(Kmem_slab_simple));
-  (void)size; // prevent gcc warning
   *((void**)block) = slab_mem;
   slab_mem = block;
 }
 
+// 
+// Memory reaper
+// 
+PUBLIC static
+size_t
+Kmem_slab_simple::reap_all (bool desperate)
+{
+  size_t freed = 0;
+
+  for (Kmem_slab_simple* alloc = reap_list;
+       alloc;
+       alloc = alloc->_reap_next)
+    {
+      size_t got;
+      do
+	{
+	  got = alloc->reap();
+	  freed += got;
+	}
+      while (desperate && got);
+    }
+
+  return freed;
+}
+
+static Mapped_alloc_reaper 
+  kmem_slab_simple_reaper (Kmem_slab_simple::reap_all);

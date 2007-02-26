@@ -14,26 +14,26 @@ int main(void)
   return 0;
 }
 
-void 
+void
 hello_test_f1_component(CORBA_Object _dice_corba_obj,
-    l4_uint32_t t1,
-    l4_uint32_t *t2,
+    unsigned long t1,
+    unsigned long *t2,
     CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("hello: f1: %d\n", t1);
+  printf("hello: f1: %ld\n", t1);
   *t2 = t1 * 10;
 }
 
-l4_uint16_t 
+unsigned short
 hello_test_f2_component(CORBA_Object _dice_corba_obj,
-    l4_int32_t t1,
+    long t1,
     CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("hello: f2: %d\n", t1);
+  printf("hello: f2: %ld\n", t1);
   return (l4_int16_t)t1;
 }
 
-l4_uint32_t 
+unsigned long
 hello_test_f3_component(CORBA_Object _dice_corba_obj,
     const char* s,
     CORBA_Server_Environment *_dice_corba_env)

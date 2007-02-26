@@ -27,12 +27,10 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-
+#include <cassert>
 #include <string>
-using namespace std;
 #include "fe/FEFile.h"
 
 #include "parser/gcc-cxx/parser.h"
@@ -65,7 +63,7 @@ extern bool bExpectFileName;
 int prevTokenCXX = 0;
 %}
 
-%option noyywrap
+%option noyywrap nounput
 
 /* some rules */
 Id                [a-zA-Z_][a-zA-Z0-9_]*

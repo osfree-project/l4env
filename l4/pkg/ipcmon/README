@@ -1,0 +1,194 @@
+User-space architecture for the Fiasco IPC monitoring extension
+===============================================================
+
+Overview
+--------
+
+Fiasco introduces a so-called IPC monitoring feature. With this it is
+possible to allow/deny communication between L4 servers. This works as
+follows: A task can be created in monitored mode by turning on the 
+L4_TASK_NEW_IPC_MONITOR bit when calling task_new(). It will then receive
+rights to communicate with:
+
+* its creator
+* itself
+* L4_NIL_ID (for l4_sleep())
+
+Whenever communication to another task is started, a capability fault is
+raised. This fault is sent to an external capfault handler which may reply
+to it using a capability flexpage in a similar manner like for I/O page 
+faults. Initially the capfault handler is the creator of a task. It can
+be changed using an extension of the inter_task_ex_regs() system call.
+
+For a detailed description of the IPC monitoring features see 
+<ADD REFERENCE HERE>.
+
+Purpose
+-------
+
+This package implements a user-space interface for IPC rights management.
+The ipc_mon server is meant to serve as capfault handler for monitored 
+applications. Isolation between different compartments of L4 can be 
+established by running multiple instances of ipc_mon.
+
+Interface
+---------
+
+allow(l4_threadid_t src, l4_threadid_t dest);
+--> Allows communication between src and dest.
+
+deny(l4_threadid_t src, l4_threadid_t dest);
+--> Revokes any previously allowed communication rights between src and dest.
+
+For convenience reaons, the client library also provides functions where
+dest is a string that refers to a task that registered under this string at
+the names server:
+
+allow(l4_threadid_t src, char *dest);
+deny(l4_threadid_t src, char *dest);
+
+Design alternatives
+-------------------
+
+Assume, some task is dynamically started in monitored mode. In the general 
+case the following partners are involved in this scenario:
+
+Initiator 		I		(e.g., loader)
+Task-Server 	S		(e.g., simple_ts)
+Roottask 		R		(e.g., roottask)
+Pager 			P		(e.g., loader, dm_*)
+IPC monitor 	M		(e.g., ipcmon)
+The new task	T
+
+Creating a task works like this:
+
+I calls S to create a task with Pager P in monitored mode.
+S creates a task at R, handing over Pager P and the monitor flag.
+
+Now, T is running and posseses IPC rights for R, T and 0. Executing the first
+instruction, it will raise a page fault, which results in IPC to P. Since no
+right for P is owned, this produces a capfault IPC to R. 
+
+What we have to do now is:
+* let T have a comm. right to M
+* ex_regs T so that M becomes its capfault handler
+* (let T have a comm. right to P) --> this decision can be postponed until
+  the real capfault handler is set up
+
+Alternatives to do so, are described below.
+
+Initiator-centric
+- - - - - - - - -
+It is possible for I to circumvent S in the L4v2 case. I can directly get a 
+new task from R, become its chief and call sys_task_new() on this task. In 
+this case I is the task's creator and can therefore receive IPC from the
+newly created task. Hence, it is able to handle initial capfaults and setup
+the monitor.
+
+Disadvantage: This does not work for L4v4, where R is the only task in the
+system that is allowed to create new tasks.
+
+Roottask-centric
+- - - - - - - - -
+R can be adapted to handle capability faults. By adjusting the roottask 
+interface and handing over M's id to R, R is able to react upon the first 
+capfault raised by T:
+
+- ex_regs T and let M be the monitor, use the NOCANCEL flag
+  to not interrupt the current capfault IPC.
+- thereafter answer the capfault with a comm. right to M
+
+First answering the capfault and then calling ex_regs does not work,
+because in the meantime T might run and raise a new capfault which then
+is not directed to M, but still to R.
+
+Protocol for caphandler setup
+-----------------------------
+
+With the design alternatives in mind, setting a task's caphandler works
+the following way:
+
+1. I creates a task by calling S which then calls R. This call hands over
+   the task's new caphandler to R.
+
+   Result: R knows about the complete state of the new task.
+
+2. R creates the task with the RAISE_EXCEPTION flag set. To be able to handle
+   this initial exception, R becomes the task's pager, the real pager as well
+   as EIP, ESP and cap handler are stored at R. 
+
+   PROBLEM: I might have used the RAISE_EXCEPTION flag too (as well as other
+		    flags. Therefore, we need to store these flags at R and use them
+			during the thread_ex_regs() later on.
+
+   Result: T is created and will raise an exception, so that R can setup 
+   		   everything for monitoring.
+
+3. T raises its first exception. R uses the extended thread_ex_regs() to
+   set up M as the capability handler for T. Furthermore, the real EIP and ESP
+   are set, as well as the real pager that I intended to be used for T.
+   
+   The ex_regs() is carried out with the NO_CANCEL flag set, so that we can 
+   still send a reply to T's exception IPC after the ex_regs. We need this, 
+   because we now answer the exception with a capability to the caphandler.
+
+   Result: M is registered as T's capfault handler. T owns a capability to M, 
+   		   so that the capfaults can be delivered.
+
+Problems
+--------
+
+The dynamic loader
+- - - - - - - - - -
+loader dynamically loads binaries. It then serves as the pager for launched
+tasks. Since a task needs to be able to communicate with its pager, all tasks
+have rights to talk to the loader and therefore all dynamically loaded tasks
+can themselves start new applications.
+
+Solution: Isolation of dynamic loading and paging.
+
+The IPC monitor
+- - - - - - - -
+A single IPC monitor is insecure. Reason: a monitored task needs to have a 
+capability for the monitor, because it needs to be able to send page faults
+to the monitor. Then, the task is also able to call the deny/allow functions,
+thereby changing its own rights.
+
+Solutions:
+1. Implement some kind of security policy inside the monitor.
+2. Split the monitor into a CAP_Storage and a CAP_Enforcement task. 
+   CAP_Storage manages configuration data and only communicates with loader 
+   and the CAP_Enforcement. CAP_Enforcement handles capability faults from
+   monitored tasks by querying CAP_Storage.
+
+The names server
+- - - - - - - - -
+The names server stores mappings between strings and L4 threadids. Every L4
+thread may register using an arbitrary name. If two threads try to register
+the same name, the first one wins. This means, an attacker can replace a 
+given service by registering itself under the service's name.
+
+Solution: ... ?
+
+The task server
+- - - - - - - -
+The L4 task server architecture is crap.
+
+Solution: kill simple_ts!!!!
+
+FAQ
+---
+1) Why doesn't the task always possess rights to communicate with its pager?
+* Evil task A might change its pager using thread_ex_regs() to evil task B and
+  both may communicate.
+
+2) So then lets only allow communication rights for the pager set during
+   task_new()?
+* Task A may now create task B and setup the pager to be task C. Thus, task A
+  can communicate with task B because it is the creator, task C can communicate
+  with B since it is the pager --> A and C can communicate through the proxy B.
+
+3) Can't we do task_new() and then directly ex_regs() the new task to have a new
+   pager?
+* No, because the task does not have a right to communicate with the IPC monitor
+  yet.

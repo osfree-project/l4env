@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/v2/L4V2BEClassFactory.cpp
- *    \brief   contains the implementation of the class CL4V2BEClassFactory
+ *  \file    dice/src/be/l4/v2/L4V2BEClassFactory.cpp
+ *  \brief   contains the implementation of the class CL4V2BEClassFactory
  *
- *    \date    02/07/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/07/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -27,39 +27,24 @@
  */
 
 #include "L4V2BEClassFactory.h"
-#include "L4V2BECallFunction.h"
-#include "L4V2BESndFunction.h"
-#include "L4V2BEMarshaller.h"
 #include "L4V2BESizes.h"
+#include "L4V2BEMsgBuffer.h"
+#include "L4V2BEDispatchFunction.h"
 #include "L4V2BEIPC.h"
-#include "L4V2BEReplyFunction.h"
 
+#include "Compiler.h"
 #include "be/BEContext.h"
+#include <iostream>
 
-CL4V2BEClassFactory::CL4V2BEClassFactory(bool bVerbose)
-: CL4BEClassFactory(bVerbose)
+CL4V2BEClassFactory::CL4V2BEClassFactory()
+: CL4BEClassFactory()
 {
 }
 
-CL4V2BEClassFactory::CL4V2BEClassFactory(CL4V2BEClassFactory & src)
-: CL4BEClassFactory(src)
-{
-}
-
-/**    \brief the destructor of this class */
+/** \brief the destructor of this class */
 CL4V2BEClassFactory::~CL4V2BEClassFactory()
 {
 
-}
-
-/**    \brief creates a new instance of the class CBECallFunction
- *    \return a reference to the new instance
- */
-CBECallFunction *CL4V2BEClassFactory::GetNewCallFunction()
-{
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4BECallFunction\n");
-    return new CL4V2BECallFunction();
 }
 
 /** \brief creates a new sizes class
@@ -67,29 +52,8 @@ CBECallFunction *CL4V2BEClassFactory::GetNewCallFunction()
  */
 CBESizes * CL4V2BEClassFactory::GetNewSizes()
 {
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4V2BESizes\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BESizes\n");
     return new CL4V2BESizes();
-}
-
-/** \brief create a new send function class
- *  \return a reference to the new instance
- */
-CBESndFunction* CL4V2BEClassFactory::GetNewSndFunction()
-{
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4V2BESndFunction\n");
-    return new CL4V2BESndFunction();
-}
-
-/** \brief create a new marshaller class
- *  \return a reference to the new instance
- */
-CBEMarshaller* CL4V2BEClassFactory::GetNewMarshaller(CBEContext* pContext)
-{
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4V2BEMarshaller\n");
-    return new CL4V2BEMarshaller();
 }
 
 /** \brief create a new IPC class
@@ -97,17 +61,26 @@ CBEMarshaller* CL4V2BEClassFactory::GetNewMarshaller(CBEContext* pContext)
  */
 CBECommunication* CL4V2BEClassFactory::GetNewCommunication()
 {
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4V2BEIPC\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BEIPC\n");
     return new CL4V2BEIPC();
 }
 
-/** \brief create a new reply function class
- *  \return a reference to the new instance
+/** \brief creates a new dispatch function
+ *  \return a reference to the newly created object
  */
-CBEReplyFunction* CL4V2BEClassFactory::GetNewReplyFunction()
+CBEDispatchFunction* CL4V2BEClassFactory::GetNewDispatchFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V2BEClassFactory: created class CL4V2BEReplyFunction\n");
-    return new CL4V2BEReplyFunction();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V2BEClassFactory: created class CL4V2BEDispatchFunction\n");
+    return new CL4V2BEDispatchFunction();
 }
+
+/** \brief creates a new message buffer class
+ *  \return a reference to the newly created object
+ */
+CBEMsgBuffer* CL4V2BEClassFactory::GetNewMessageBuffer()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BEMsgBuffer\n");
+    return new CL4V2BEMsgBuffer();
+}
+

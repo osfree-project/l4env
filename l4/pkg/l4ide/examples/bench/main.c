@@ -14,11 +14,9 @@
 
 /* L4/DROPS includes */
 #include <l4/sys/types.h>
-#include <l4/sys/ipc.h>
 #include <l4/sys/kernel.h>
-#include <l4/sys/syscalls.h>
 #include <l4/log/l4log.h>
-#include <l4/l4rm/l4rm.h>
+#include <l4/sigma0/kip.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/thread/thread.h>
 #include <l4/semaphore/semaphore.h>
@@ -105,6 +103,7 @@ done(l4blk_request_t * request, int status, int error);
 static void
 __map_kernel_info_page(void)
 {
+#if 0
   l4_threadid_t chief;
   int error;
   l4_umword_t dummy;
@@ -121,7 +120,7 @@ __map_kernel_info_page(void)
       Panic("no area available to map kernel info page (%d)\n",error);
       return;
     }
-  LOG_printf("mapping kernel info page to 0x%08x\n",addr);
+  LOG_printf("mapping kernel info page to 0x%08lx\n",addr);
   
   /* map kernel info page */
   error = l4_ipc_call(chief,L4_IPC_SHORT_MSG,1,1,
@@ -142,6 +141,9 @@ __map_kernel_info_page(void)
   
   /* done */
   kinfo = (l4_kernel_info_t *)addr;
+#else
+  kinfo = l4sigma0_kip_map(L4_INVALID_ID);
+#endif
 }
 
 /*****************************************************************************/

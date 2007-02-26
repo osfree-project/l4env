@@ -1,11 +1,12 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BEMarshaller.cpp
- *    \brief    contains the implementation of the class CL4V4BEMarshaller
+ *    \brief   contains the implementation of the class CL4V4BEMarshaller
  *
- *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2004
+ *    \date    06/01/2006
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2006
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,182 +27,243 @@
  */
 
 #include "L4V4BEMarshaller.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEType.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BEDeclarator.h"
 #include "be/BEFunction.h"
-#include "be/BEMsgBufferType.h"
-#include "File.h"
+#include "be/BEType.h"
+#include "be/BEStructType.h"
+#include "be/BEMsgBuffer.h"
+#include "be/BEClassFactory.h"
+#include "be/l4/L4BENameFactory.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
+#include "Attribute-Type.h"
+#include "be/BEFile.h"
+#include <sstream>
+using std::ostringstream;
+#include <cassert>
 
 CL4V4BEMarshaller::CL4V4BEMarshaller()
  : CL4BEMarshaller()
 {
 }
 
-/** deletes the instance of this class */
+/** destroys the object */
 CL4V4BEMarshaller::~CL4V4BEMarshaller()
 {
 }
 
-/** \brief writes the assignment of a declarator to the msgbuffer or the other \
- *           way around
- *    \param pType the type of the current parameter
- *    \param nStartOffset the offset where to start in the message buffer
- *    \param bUseConstOffset true if nStartOffset should be used
- *    \param nAlignment the alignment of the parameter (if we do alignment)
- *    \param pContext the context of the whole writing
+/** \brief tests if this parameter should be marshalled
+ *  \param pFunction the function the parameter belongs to
+ *  \param pParameter the parameter (!) to be tested
+ *  \param nDirection the direction of the marshalling
+ *  \return true if this parameter should be skipped
  *
- * For V4 we can use the convenience interface to marshal parameters
+ * Do not skip any parameters for V4 (all parameters have to be stuffed into
+ * the message buffer).
+ */
+bool
+CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
+    CBETypedDeclarator *pParameter,
+    int nDirection)
+{
+    return CBEMarshaller::DoSkipParameter(pFunction, pParameter, nDirection);
+}
+
+/** \brief marshal an indirect string parameter
+ *  \param pParameter the member to test for refstring marshalling
+ *  \param pStack the declarator stack so far
+ *  \return true if we marshalled a refstring
+ *
+ * A refstring parameter can be identified by its ATTR_REF attribute. A
+ * pointer to this parameter has then to be assigned to the snd_str element of
+ * the indirect part member. The size has to be assigned to the snd_size
+ * element (for sending). For receiving the address of the receive buffer can
+ * be used to set the address of the receive buffer. 
+ *
+ * We have to use the rcv_str member to set incoming strings, because snd_str
+ * is not se properly.
+ */
+bool
+CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CL4BEMarshaller::%s called for %s\n", __func__, 
+	pParameter->m_Declarators.First()->GetName().c_str());
+
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+    CBETypedDeclarator *pMember = FindMarshalMember(pStack);
+    if (!pMember)
+    {
+	CCompiler::Warning("%s: could not find member for parameter %s\n",
+	    __func__, pParameter->m_Declarators.First()->GetName().c_str());
+    }
+    assert(pMember);
+    // check the member for the ref attribute, because we might have made some
+    // parameters to ref's after adding them to the message buffer
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4BEMarshaller::%s member with%s [ref] attribute\n", __func__,
+	pMember->m_Attributes.Find(ATTR_REF) ? "" : "out");
+    if (!pMember->m_Attributes.Find(ATTR_REF))
+	return false;
+    CBEType *pType = pParameter->GetType();
+    // try to find respective member and assign
+    if (m_bMarshal)
+    {
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pStack);
+	// write access to snd_str part of indirect string
+	*m_pFile << " = L4_StringItem ( (";
+	// size with max constraint
+	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
+	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
+	    pParameter->m_Attributes.Find(ATTR_STRING))
+	    *m_pFile << "+1"; // tranmist terminating zero
+	*m_pFile << " > ";
+	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	*m_pFile << ") ? ";
+	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	*m_pFile << " : ";
+	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
+	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
+	    pParameter->m_Attributes.Find(ATTR_STRING))
+	    *m_pFile << "+1"; // tranmist terminating zero
+	*m_pFile << ", (void *)(";
+	// if type of member and parameter are different, cast to member type
+	WriteParameter(pParameter, pStack, true);
+	*m_pFile << ") );\n";
+    }
+    else if (
+	!(pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT) &&
+	    m_pFile->IsOfFileType(FILETYPE_CLIENT)) &&
+	!(pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER) &&
+	    m_pFile->IsOfFileType(FILETYPE_COMPONENT)) )
+    {
+	// only unmarshal refstrings if not preallocated, because preallocated
+	// refstrings are already assigned to rcv_str.
+	// also: check if parameter is return parameter, because we cannot
+	// make a pointer from it. Instead, dereference the refstring.
+	bool bReturn = pParameter == m_pFunction->GetReturnVariable();
+	*m_pFile << "\t";
+	WriteParameter(pParameter, pStack, !bReturn);
+	*m_pFile << " = ";
+	if (bReturn)
+	    *m_pFile << "*";
+	// cast to type of parameter
+	pType->WriteCast(m_pFile, true);
+	// access message buffer
+	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
+	    pStack);
+	// append receive member
+	*m_pFile << ".X.str.string_ptr;\n";
+
+	// We do unmarshal the size parameter, because the actually
+	// transmitted size might be smaller than the size of the receive
+	// buffer we provided.
+	// But we only do this, if the size parameter is a parameter of the
+	// function.
+    }
+
+    return true;
+}
+
+/** \brief writes the access to a refstring member in the message buffer
+ *  \param nDirection the direction of the parameter
+ *  \param pMsgBuffer the message buffer containing the members
+ *  \param pMember the member to access
+ *
+ * For derived interfaces the offset into the message buffer where indirect
+ * strings may start can vary greatly. For marshalling we cannot directly use
+ * the indirect part member, but have to use an offset into the word buffer
+ * (size dope's word value) and cast that location to a stringdope. (This only
+ * applies when marshalling at server side.)
+ *
+ * To allow multiple indirect strings, we first have to know at which position
+ * in the indirect string list the current member is.
  */
 void
-CL4V4BEMarshaller::WriteAssignment(CBEType *pType,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    int nAlignment,
-    CBEContext *pContext)
+CL4V4BEMarshaller::WriteRefstringCastMember(int nDirection,
+    CBEMsgBuffer *pMsgBuffer,
+    CBETypedDeclarator *pMember)
 {
-    // get current decl
-    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.back();
-    // get name of msg_t
-    string sMsgBuffer =
-        pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    // true if parameter is pointer
-    bool bUsePointer = m_pParameter->IsString();
-    // check if msgbuffer is pointer
-    bool bVarMsgBuf = false;
-    if (m_pFunction && m_pFunction->GetMessageBuffer())
-    {
-        CBEMsgBufferType *pMsgBuf = m_pFunction->GetMessageBuffer();
-        bVarMsgBuf = pMsgBuf->IsVariableSized();
-        if (!bVarMsgBuf && pMsgBuf->GetAlias())
-            bVarMsgBuf = pMsgBuf->GetAlias()->GetStars() > 0;
-    }
-    // marshal
-    string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-    if (m_bMarshal)
-    {
-        *m_pFile << "\tL4_MsgAppendWord (" << ((bVarMsgBuf) ? "" : "&") <<
-            sMsgBuffer << ", ";
-        // if declarators original type is different from the type, we
-        // cast the message buffer to, then we have to cast the declarator
-        // to that type
-        bool bUsePointer = m_pParameter->IsString();
-        if (m_pType && pType && (m_pType->GetFEType() != pType->GetFEType()))
-        {
-            if ((m_pType->IsSimpleType() && pType->IsSimpleType()) ||
-                (pCurrent->pDeclarator->GetStars() == 0))
-                pType->WriteCast(m_pFile, false, pContext);
-            else
-            {
-                // if parameter or transmit_as type are not simple,
-                // we use the indirection of pointers to cast the
-                // declarator
-                *m_pFile << "*";
-                pType->WriteCast(m_pFile, true, pContext);
-                bUsePointer = true;
-            }
-        }
-        CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-            bUsePointer, false, pContext);
-        *m_pFile << ");\n";
-    }
-    else
-    {
-        // if the declarators original type is different from the type, we
-        // cast the message buffer to, then we have to cast the message buffer
-        // to that type instead
-        if (!bUseConstOffset && nAlignment)
-            *m_pFile << "\t" << sOffsetVar << " += " << nAlignment << ";\n";
-        if (m_pType && !m_pType->IsVoid() &&
-            pType && (m_pType->GetFEType() != pType->GetFEType()) )
-        {
-            *m_pFile << "\t";
-            CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-                m_pParameter->IsString(), false, pContext);
-            *m_pFile << " = ";
+    assert(pMember);
+    assert(pMsgBuffer);
 
-            if ((m_pType->IsSimpleType() && pType->IsSimpleType()) ||
-                (pCurrent->pDeclarator->GetStars() == 0))
-                pType->WriteCast(m_pFile, false, pContext);
-            else
-            {
-                // if parameter or transmit_as type are not simple,
-                // we use the indirection of pointers to cast the
-                // declarator
-                m_pFile->Print("*");
-                pType->WriteCast(m_pFile, true, pContext);
-                bUsePointer = true;
-            }
-            *m_pFile << " L4_MsgWord (" << ((bVarMsgBuf) ? "" : "&") <<
-                sMsgBuffer << ", " << sOffsetVar << "/4 );\n";
-        }
-        else
-        {
-            *m_pFile << "\t";
-            CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-                m_pParameter->IsString(), false, pContext);
-            *m_pFile << " = L4_MsgWord (" <<  ((bVarMsgBuf) ? "" : "&") <<
-                sMsgBuffer << ", " << (nStartOffset + nAlignment) / 4 << " );\n";
-        }
+    // get index in refstring field
+    CBEStructType *pStruct = GetStruct(m_pFunction, nDirection);
+    assert(pStruct);
+    // iterate members of struct, when member of struct matches pMember, then
+    // stop counting, otherwise: if member of struct is of type refstring
+    // increment counter
+    int nIndex = -1;
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = pStruct->m_Members.begin();
+	 iter != pStruct->m_Members.end();
+	 iter++)
+    {
+	/* increment first, so nIndex is at zero if we have only one member */
+	if ((*iter)->m_Attributes.Find(ATTR_REF))
+	    nIndex++;
+	if ((*iter) == pMember)
+	    break;
     }
+    assert (nIndex >= 0);
+
+    // dereference pointer to L4_StringItem
+    *m_pFile << "(*";
+
+    // write type cast for restring
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
+    pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
+    pType->WriteCast(m_pFile, true);
+    delete pType;
+
+    // access to the strings is done using the generic struct, the word member
+    // using the size-dope's word count plus the index from above as index
+    // into the word member and casting the result to a string dope.
+    //
+    // ((L4_Msg_t*)<msgbuf>)->msg[((L4_Msg_t*)<msgbuf>)->tag.X.u + nIndex]
+    *m_pFile << "&( ((L4_Msg_t*)";
+    pMsgBuffer->WriteAccessToVariable(m_pFile, m_pFunction, true);
+    *m_pFile << ")->msg[((L4_Msg_t*)";
+    pMsgBuffer->WriteAccessToVariable(m_pFile, m_pFunction, true);
+    *m_pFile << ")->tag.X.u";
+    ostringstream os;
+    os << nIndex;
+    if (nIndex > 0)
+	*m_pFile << " + " << os.str();
+    *m_pFile << "] ))";
 }
 
-/** \brief marshals a constant integer value into the message buffer
- *  \param nBytes the number of bytes this value should use
- *  \param nValue the value itself
- *  \param nStartOffset the offset into the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used
- *  \param bIncOffsetVariable true if the offset variable has to be incremented by this function
- *  \param pContext the context of the marshalling
- *  \return the number of bytes marshalled
+/** \brief test if zero flexpage and marshal if so
+ *  \param pMember the parameter to marshal
+ *  \return true if zero flexpage marshalled
  */
-int
-CL4V4BEMarshaller::MarshalValue(int nBytes,
-    int nValue,
-    int nStartOffset,
-    bool & bUseConstOffset,
-    bool bIncOffsetVariable,
-    CBEContext * pContext)
+bool
+CL4V4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
 {
-    // first create the respective BE type
-    CBEType *pType = pContext->GetClassFactory()->GetNewType(TYPE_INTEGER);
-    pType->SetParent(m_pParameter);
-    if (!pType->CreateBackEnd(false, nBytes, TYPE_INTEGER, pContext))
-    {
-        delete pType;
-        return 0;
-    }
-    // get name of msg_t
-    string sMsgBuffer =
-        pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    // check if msgbuffer is pointer
-    bool bVarMsgBuf = false;
-    if (m_pFunction && m_pFunction->GetMessageBuffer())
-    {
-        CBEMsgBufferType *pMsgBuf = m_pFunction->GetMessageBuffer();
-        bVarMsgBuf = pMsgBuf->IsVariableSized();
-        if (!bVarMsgBuf && pMsgBuf->GetAlias())
-            bVarMsgBuf = pMsgBuf->GetAlias()->GetStars() > 0;
-    }
-    // now check for marshalling/unmarshalling
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
+    if (!pMember->m_Declarators.Find(sName))
+	return false;
+
+    // get message buffer
+    CBEMsgBuffer *pMsgBuffer = pMember->GetSpecificParent<CBEMsgBuffer>();
+    assert(pMsgBuffer);
+    
     if (m_bMarshal)
     {
-        *m_pFile << "\tL4_MsgPutWord ( " << ((bVarMsgBuf) ? "" : "&") <<
-            sMsgBuffer << ", ";
-        if (bUseConstOffset)
-             *m_pFile << nStartOffset;
-        else
-        {
-            string sOffsetVar =
-                pContext->GetNameFactory()->GetOffsetVariable(pContext);
-            // L4_MsgPutWord ( msgbuf, offset, value )
-            *m_pFile << sOffsetVar;
-
-        }
-        *m_pFile << ", " << nValue << " );\n";
+	// zero raw member
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	*m_pFile << ".raw = 0;\n";
     }
-    // we don't do anything when unmarshalling, we skip this fixed value
-    return nBytes;
+
+    return true;
 }
+

@@ -17,22 +17,18 @@ inline void l4_sleep_forever(void) __attribute__((noreturn));
 
 void l4_sleep_forever()
 {
-  l4_msgdope_t result;
-  l4_umword_t dummy;
-  for (;;) {
-    l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
-                   L4_IPC_NEVER, &result);
-  }
+  for (;;)
+    l4_ipc_sleep(L4_IPC_NEVER);
 }
 
-inline void l4_touch_ro(const void*addr, unsigned size);
+inline void l4_touch_ro(const void*addr, unsigned long size);
 
-inline void l4_touch_ro(const void*addr, unsigned size)
+inline void l4_touch_ro(const void*addr, unsigned long size)
 { 
   volatile const char *bptr, *eptr;
 
-  bptr = (const char*)(((unsigned)addr) & L4_PAGEMASK);
-  eptr = (const char*)(((unsigned)addr+size-1) & L4_PAGEMASK);
+  bptr = (const char*)(((unsigned long)addr) & L4_PAGEMASK);
+  eptr = (const char*)(((unsigned long)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE) {
     (void)(*bptr);
   }
@@ -40,15 +36,15 @@ inline void l4_touch_ro(const void*addr, unsigned size)
 
 
 /** Touch data areas to force mapping read-write */
-inline void l4_touch_rw(const void*addr, unsigned size);
+inline void l4_touch_rw(const void*addr, unsigned long size);
 
-inline void l4_touch_rw(const void*addr, unsigned size)
+inline void l4_touch_rw(const void*addr, unsigned long size)
 {
   volatile char *bptr;
   volatile const char *eptr;
       
-  bptr = (char*)(((unsigned)addr) & L4_PAGEMASK);
-  eptr = (const char*)(((unsigned)addr+size-1) & L4_PAGEMASK);
+  bptr = (char*)(((unsigned long)addr) & L4_PAGEMASK);
+  eptr = (const char*)(((unsigned long)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE) {
     char x = *bptr; 
     *bptr = x;

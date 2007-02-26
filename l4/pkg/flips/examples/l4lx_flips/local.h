@@ -1,31 +1,82 @@
+/**
+ * \file   flips/examples/l4lx_flips/local.h
+ * \brief  Internal interfaces
+ *
+ * \date   02/03/2006
+ * \author Jens Syckor <js712688@inf.tu-dresden.de>
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ *
+ */
+/* (c) 2006 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
+#ifndef __FLIPS_EXAMPLES_L4LX_FLIPS_LOCAL_H_
+#define __FLIPS_EXAMPLES_L4LX_FLIPS_LOCAL_H_
+
+/*** L4-SPECIFIC INCLUDES ***/
 #include <l4/sys/types.h>
-#include <l4/l4vfs/types.h>
 
-/* THREAD ENTRY */
-typedef struct {
-	l4_threadid_t worker_tid; /* worker thread id */
-	l4_threadid_t owner_tid;  /* owner thread id == the client */
-	object_handle_t fd;       /* object_handle for the client file object */
-	void *private_data;       /* pointer to private data of each thread entry */
-} thread_entry_t;
+/***************************/
+/*** SELECT NOTIFICATONS ***/
+/***************************/
 
-typedef struct notify_private
-{
-	int mode;                 /* selected non-blocking operations */
-	l4_threadid_t notif_tid;  /* notify listener thread id */
-} notif_private_t;
+#include <sys/select.h>
 
-/** THREAD TABLE MANIPULATION **/
-thread_entry_t tt_get_entry(int, l4_threadid_t);
-int tt_get_entry_id(int, l4_threadid_t);
-int tt_get_next_free_entry(void);
-void tt_free_entry(int, l4_threadid_t);
-void tt_fill_entry(int, thread_entry_t);
-void tt_init(void);
+struct notify_fd_set {
+	fd_set readfds;
+	fd_set writefds;
+	fd_set exceptfds;
 
-void * tt_entry_get_private_data(thread_entry_t *);
-void tt_entry_set_private_data(thread_entry_t *, void *);
+	l4_threadid_t notifier;
+};
 
-/** NOTIFY INTERFACE **/
-void internal_notify_request(int, int, l4_threadid_t *, l4_threadid_t *);
-void internal_notify_clear(int, int, l4_threadid_t *, l4_threadid_t *);
+void notify_init_fd_set(struct notify_fd_set *fds);
+void notify_request(struct notify_fd_set *fds, int fd, int mode, const l4_threadid_t notifier);
+void notify_clear(struct notify_fd_set *fds, int fd, int mode, const l4_threadid_t notifier);
+void notify_select_thread(struct notify_fd_set *fds);
+
+/***********************/
+/*** THREAD HANDLING ***/
+/***********************/
+
+#include <l4/util/sll.h>
+#include <semaphore.h>
+
+/* session thread and client information */
+struct session_thread_info {
+	sem_t started;                   /* startup synchronization */
+	pthread_t session_thread;        /* pthread ID of session thread */
+	pthread_t select_thread;         /* pthread ID of select worker */
+	struct notify_fd_set select_fds; /* file descriptor set for select */
+	l4_threadid_t session_l4thread;  /* L4 thread ID of session thread */
+	l4_threadid_t select_l4thread;   /* L4 thread ID of select thread */
+
+	/* exit event handling */
+	l4_taskid_t partner;             /* client task */
+	slist_t *elem;                   /* session list element */
+};
+
+/**********************
+ *** EVENTS SUPPORT ***
+ **********************/
+
+#include <pthread.h>
+
+void init_events(slist_t **sl, pthread_mutex_t *l);
+
+/*****************/
+/*** DEBUGGING ***/
+/*****************/
+
+#include <stdio.h>
+
+#define D(args...)                        \
+	do {                                  \
+		fprintf(stderr, "%s: ", LOG_tag); \
+		fprintf(stderr, args);            \
+		fprintf(stderr, "\n");            \
+	} while (0)
+
+#endif

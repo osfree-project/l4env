@@ -19,12 +19,12 @@ class Bsod_m
   : public Jdb_module
 {
 public:
-
+  Bsod_m() FIASCO_INIT;
 };
 
 static Bsod_m bsod_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-PUBLIC
+IMPLEMENT
 Bsod_m::Bsod_m()
   : Jdb_module("GENERAL")
 {}
@@ -82,4 +82,3 @@ Jdb_module::Cmd const *const Bsod_m::cmds() const
 
   return cs;
 }
-

@@ -1,13 +1,17 @@
 INTERFACE [ia32]:
 
+class Kernel_task;
+
 EXTENSION class Kmem
 {
 protected:
-  static Pdir *kdir asm ("KMEM_KDIR"); ///< Kernel page directory
+  static Pdir        *kdir asm ("KMEM_KDIR"); ///< Kernel page directory
+
+  friend class Kernel_task;
 
 private:
-  static Address user_max();
-  static Unsigned8 *io_bitmap_delimiter;
+  static Address     user_max();
+  static Unsigned8   *io_bitmap_delimiter;
 };
 
 INTERFACE [ia32-smas]:
@@ -16,7 +20,7 @@ EXTENSION class Kmem
 {
 private:
   /** Current size of user gdt entry. */
-  static Unsigned32 volatile current_user_gdt asm ("KMEM_CURRENT_GDT");    
+  static Unsigned32 volatile current_user_gdt asm ("KMEM_CURRENT_GDT");
 };
 
 //---------------------------------------------------------------------------
@@ -33,6 +37,7 @@ IMPLEMENTATION [ia32]:
 
 // static class variables
 Unsigned8    *Kmem::io_bitmap_delimiter;
+Unsigned32   tmp_phys_pte[2] = { ~0UL, ~0UL };
 
 /** Initialize a new task's page directory from the current master copy
     of kernel page tables (the global page directory).
@@ -42,7 +47,7 @@ void
 Kmem::dir_init(Pdir *d)
 {
   Cpu::memcpy_mwords (d->lookup(mem_user_max), kdir->lookup(mem_user_max),
-	              (((~0 - mem_user_max + 1) >> Pd_entry::Shift) 
+	              (((~0 - mem_user_max + 1) >> Pd_entry::Shift)
 		        * sizeof(Pd_entry)) / sizeof(Mword));
 }
 
@@ -50,19 +55,25 @@ Kmem::dir_init(Pdir *d)
     @param win number of IPC window (0 or 1)
     @return IPC window's virtual address */
 PUBLIC static inline NEEDS["mem_layout.h"]
-Address 
+Address
 Kmem::ipc_window(unsigned win)
 {
-  return win == 0 
+  return win == 0
     ? Mem_layout::Ipc_window0
     : Mem_layout::Ipc_window1;
 }
+
+/** Return number of IPC slots to copy */
+PUBLIC static inline
+unsigned
+Kmem::ipc_slots(void)
+{ return 2; }
 
 IMPLEMENT inline NEEDS["mem_layout.h"]
 Mword
 Kmem::is_io_bitmap_page_fault(Address addr)
 {
-  return (addr >= Mem_layout::Io_bitmap && 
+  return (addr >= Mem_layout::Io_bitmap &&
 	  addr <= Mem_layout::Io_bitmap + L4_fpage::Io_port_max / 8);
 }
 
@@ -131,17 +142,17 @@ Kmem::virt_to_phys (const void *addr)
 // helper functions
 //
 
-// set a 4k-mapping, not-cached/write-through
+// Establish a 4k-mapping
 PUBLIC static
 void
-Kmem::map_devpage_4k(Address phys, Address virt,
-    		     bool cached, bool global, Address *offs=0)
+Kmem::map_phys_page(Address phys, Address virt,
+		    bool cached, bool global, Address *offs=0)
 {
   Pt_entry *e  = kdir->lookup(virt)->ptab()->lookup(virt);
   Unsigned32 pte = phys & Config::PAGE_MASK;
 
-  *e = pte | Pt_entry::Valid | Pt_entry::Writable 
-	   | Pt_entry::Referenced | Pt_entry::Dirty 
+  *e = pte | Pt_entry::Valid | Pt_entry::Writable
+	   | Pt_entry::Referenced | Pt_entry::Dirty
 	   | (cached ? 0 : (Pt_entry::Write_through | Pt_entry::Noncacheable))
 	   | (global ? Pt_entry::global() : 0);
   Mem_unit::tlb_flush(virt);
@@ -149,6 +160,38 @@ Kmem::map_devpage_4k(Address phys, Address virt,
   if (offs)
     *offs = phys - pte;
 }
+
+// Only used for initialization and kernel debugger
+PUBLIC static
+Address
+Kmem::map_phys_page_tmp(Address phys, Mword idx)
+{
+  Unsigned32 pte = phys & Pt_entry::Pfn;
+  Address    virt;
+
+  switch (idx)
+    {
+    case 0:  virt = Mem_layout::Kmem_tmp_page_1; break;
+    case 1:  virt = Mem_layout::Kmem_tmp_page_2; break;
+    default: return ~0UL;
+    }
+
+  static Unsigned32 tmp_phys_pte[2] = { ~0UL, ~0UL };
+
+  if (pte != tmp_phys_pte[idx])
+    {
+      // map two consecutive pages as to be able to access
+      map_phys_page(phys,        virt,        false, true);
+      map_phys_page(phys+0x1000, virt+0x1000, false, true);
+      tmp_phys_pte[idx] = pte;
+    }
+
+  return virt + phys - pte;
+}
+
+PUBLIC static inline 
+Address Kmem::kernel_image_start()
+{ return virt_to_phys (&Mem_layout::image_start) & Config::PAGE_MASK; }
 
 IMPLEMENT inline Address Kmem::kcode_start()
 { return virt_to_phys (&Mem_layout::start) & Config::PAGE_MASK; }
@@ -177,9 +220,12 @@ Kmem::init()
   mem_max  = (Boot_info::mbi_virt()->mem_upper + 1024) << 10;
   mem_max &= Config::PAGE_MASK;
 
-  // limit to 1GB
-  if (mem_max > 1<<30)
-    mem_max = 1<<30;
+  if (Config::old_sigma0_adapter_hack)
+    {
+      // limit to 1GB (old Sigma0 protocol limitation)
+      if (mem_max > 1<<30)
+	mem_max = 1<<30;
+    }
 
   // startup for himem_alloc
   _himem = mem_max;
@@ -227,31 +273,24 @@ Kmem::init()
 
   // first 4MB page
   kdir->map_superpage(0, Mem_layout::Boot_state_start, himem_alloc,
-		      Pd_entry::Valid | Pd_entry::Writable |
-	      	      Pd_entry::Referenced | Pd_entry::global());
+                      Pd_entry::Valid | Pd_entry::Writable |
+                      Pd_entry::Referenced | Pd_entry::global());
 
   // map the last 64MB of physical memory as kernel memory
-  for (Address phys = kphys_start, virt = Mem_layout::Physmem; 
+  for (Address phys = kphys_start, virt = Mem_layout::Physmem;
        phys < kphys_end;
        phys += Config::SUPERPAGE_SIZE, virt += Config::SUPERPAGE_SIZE)
     kdir->map_superpage(phys, virt, himem_alloc,
-			Pd_entry::Valid | Pd_entry::Writable |
-		      	Pd_entry::Referenced | Pd_entry::global());
-
-  // map the whole physical memory one-to-one
-  for (Address phys = 0, virt = 0; phys < mem_max;
-       phys += Config::SUPERPAGE_SIZE, virt += Config::SUPERPAGE_SIZE)
-    kdir->map_superpage(phys, virt, himem_alloc,
-			Pd_entry::Valid | Pd_entry::Writable |
-		      	Pd_entry::Referenced | Pd_entry::global());
+                        Pd_entry::Valid | Pd_entry::Writable |
+                        Pd_entry::Referenced | Pd_entry::global());
 
   // The service page directory entry points to an universal usable
-  // page table which is currently used for the Local APIC and the 
+  // page table which is currently used for the Local APIC and the
   // jdb adapter page.
   assert((Mem_layout::Service_page & ~Config::SUPERPAGE_MASK) == 0);
 
   pt_phys = himem_alloc();
-  *(kdir->lookup(Mem_layout::Service_page)) = pt_phys 
+  *(kdir->lookup(Mem_layout::Service_page)) = pt_phys
 					| Pd_entry::Valid | Pd_entry::Writable
 					| Pd_entry::Referenced | Pd_entry::User
 					| Pd_entry::global();
@@ -261,7 +300,7 @@ Kmem::init()
   // Sorry about the bare numbers. See corresponding code in space_context.
   if (Config::Small_spaces)
     {
-      *(kdir->lookup(Mem_layout::Smas_area))    = 
+      *(kdir->lookup(Mem_layout::Smas_area))    =
 	    ((mem_user_max-1) >> 12) & 0xFFF00;
       *(kdir->lookup(Mem_layout::Smas_version)) = 0;
     }
@@ -284,8 +323,8 @@ Kmem::init()
       // 16-bit range from io_bitmap
       *(kdir->lookup(Mem_layout::Io_bitmap - Config::SUPERPAGE_SIZE))
 	= (cpu_page & Config::SUPERPAGE_MASK)
-	| Pd_entry::Superpage | Pd_entry::Valid 
-	| Pd_entry::Writable | Pd_entry::Referenced 
+	| Pd_entry::Superpage | Pd_entry::Valid
+	| Pd_entry::Writable | Pd_entry::Referenced
 	| Pd_entry::Dirty | Pd_entry::global();
 
       cpu_page_vm = (cpu_page & ~Config::SUPERPAGE_MASK)
@@ -311,17 +350,17 @@ Kmem::init()
   if (Config::enable_io_protection)
     {
       // the IO bitmap must be followed by one byte containing 0xff
-      // if this byte is not present, then one gets page faults 
+      // if this byte is not present, then one gets page faults
       // (or general protection) when accessing the last port
       // at least on a Pentium 133.
       //
-      // Therefore we write 0xff in the first byte of the cpu_page 
+      // Therefore we write 0xff in the first byte of the cpu_page
       // and map this page behind every IO bitmap
-      io_bitmap_delimiter = 
+      io_bitmap_delimiter =
 	reinterpret_cast<Unsigned8 *>(alloc_from_page(& cpu_page_vm, 1));
 
       // did we really get the first byte ??
-      assert((reinterpret_cast<Address>(io_bitmap_delimiter) 
+      assert((reinterpret_cast<Address>(io_bitmap_delimiter)
 	       & ~Config::PAGE_MASK) == 0);
       *io_bitmap_delimiter = 0xff;
     }
@@ -330,19 +369,19 @@ Kmem::init()
   Cpu::init_gdt (alloc_from_page(&cpu_page_vm, Gdt::gdt_max), user_max());
 
   // allocate the task segment for the double fault handler
-  Cpu::init_tss_dbf (alloc_from_page(& cpu_page_vm, sizeof(Tss)), 
+  Cpu::init_tss_dbf (alloc_from_page(& cpu_page_vm, sizeof(Tss)),
 		     virt_to_phys(kdir));
 
   // Allocate the task segment as the last thing from cpu_page_vm
-  // because with IO protection enabled the task segment includes the 
+  // because with IO protection enabled the task segment includes the
   // rest of the page and the following IO bitmat (2 pages).
   //
   // Allocate additional 256 bytes for emergency stack right beneath
   // the tss. It is needed if we get an NMI or debug exception at
-  // entry_sysenter/entry_sysenter_c/entry_sysenter_log.
+  // entry_sys_fast_ipc/entry_sys_fast_ipc_c/entry_sys_fast_ipc_log.
   Address tss_mem  = alloc_from_page (&cpu_page_vm, sizeof(Tss) + 256);
   size_t  tss_size;
-  
+
   if (Config::enable_io_protection)
     // this is actually tss_size +1, including the io_bitmap_delimiter byte
     tss_size = Mem_layout::Io_bitmap + (L4_fpage::Io_port_max / 8) - tss_mem;
@@ -370,31 +409,13 @@ Kmem::init()
   // and finally initialize the TSS
   Cpu::set_tss();
 
-  Cpu::init_sysenter(reinterpret_cast<Address>(kernel_esp()));
-
-  // CPU initialization done
-
-  // allocate the kernel info page
-  Kip *kinfo = static_cast<Kip*>(phys_to_virt (himem_alloc()));
-
-  // initialize global pointer to the KIP
-  Kip::init_global_kip (kinfo);
-
-  // initialize kernel info page from prototype
-  char *sub = strstr (Cmdline::cmdline(), " proto=");
-  if (sub)
-    {
-      Address proto = strtoul(sub + 7, 0, 0);
-      if (proto)
-	Cpu::memcpy_mwords (kinfo, Mem_layout::boot_data((void*)proto),
-			    Config::PAGE_SIZE / sizeof(Mword));
-    }
+  Cpu::init_sysenter(reinterpret_cast<Address>(kernel_sp()));
 }
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [ia32-!smas]:
 
-IMPLEMENT inline Address Kmem::user_max() { return (Address) -1; }
+IMPLEMENT inline Address Kmem::user_max() { return ~0UL; }
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [ia32-smas]:
@@ -412,13 +433,13 @@ Kmem::get_current_user_gdt()
 
 /** Set user data and code segment.
  *  Segments are set only if the content would really change.
- *  This is all bitswitching to be effective, will be explained soon. 
+ *  This is all bitswitching to be effective, will be explained soon.
  *
  *  Encoding of Pdir entry:
  *  +------28------24------20------16------12------08------04---+--00
  *  |   base31:24   |       |     limit31:20        | base23:18 |   |
  *  +---------------+-------+-------+-------+-------+-------+---+---+
- *  
+ *
  *  @return true, if GDT has been changed.
  */
 PUBLIC static inline NEEDS["cpu.h","gdt.h","std_macros.h"]
@@ -428,11 +449,11 @@ Kmem::set_gdt_user (Unsigned32 gdtinfo)
   current_user_gdt = gdtinfo;
 
   Cpu::get_gdt()->set_raw(Gdt::gdt_code_user/8,
-			  (gdtinfo & 0x0000FC00) | 0x000003FF,
-		    	  (gdtinfo & 0xFF0F00FC) | 0x00C0FB00);
+                          (gdtinfo & 0x0000FC00) | 0x000003FF,
+                          (gdtinfo & 0xFF0F00FC) | 0x00C0FB00);
   Cpu::get_gdt()->set_raw(Gdt::gdt_data_user/8,
-			  (gdtinfo & 0x0000FC00) | 0x000003FF,
-		     	  (gdtinfo & 0xFF0F00FC) | 0x00C0F300);
+                          (gdtinfo & 0x0000FC00) | 0x000003FF,
+                          (gdtinfo & 0xFF0F00FC) | 0x00C0F300);
 
   barrier();
 
@@ -450,7 +471,7 @@ Kmem::update_smas_window (Address virt, Unsigned32 entry, bool flush)
   *(kdir->lookup(virt)) = entry;
 
   // Increment version of small space window in master copy.
-  if (flush) 
+  if (flush)
     atomic_add ((Mword*) kdir->lookup (Mem_layout::Smas_version), 2U);
 }
 

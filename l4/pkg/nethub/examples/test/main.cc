@@ -98,10 +98,10 @@ static char *rcv_packet = 0;
 static unsigned snd_packet_len = 0;
 static unsigned rcv_packet_len = 0;
 
-extern char _binary____snd_packets_src_start;
-extern char _binary____rcv_packets_src_start;
-extern char _binary____snd_packets_src_end;
-extern char _binary____rcv_packets_src_end;
+extern char _binary_snd_packets_src_start;
+extern char _binary_rcv_packets_src_start;
+extern char _binary_snd_packets_src_end;
+extern char _binary_rcv_packets_src_end;
 
 Mapper_thread mapper;
 Snd_thread s;
@@ -408,8 +408,8 @@ void Snd_thread::run()
   Wakeup_guard guard(main);
   L4::cout << "Snd thread is " << self() << '\n';
   unsigned long w2;
-  char *snd_packets_end = &_binary____snd_packets_src_end;
-  snd_packet = &_binary____snd_packets_src_start;
+  char *snd_packets_end = &_binary_snd_packets_src_end;
+  snd_packet = &_binary_snd_packets_src_start;
   
   L4::cout << "Sender (" << self() << ") thread is up\n";
   while(1)
@@ -487,7 +487,7 @@ void Rcv_thread::run()
   };
   unsigned long w2;
 
-  rcv_packet = &_binary____rcv_packets_src_start;
+  rcv_packet = &_binary_rcv_packets_src_start;
   
   L4::cout << "Receiver (" << self() << ") thread is up\n";
   while (1) 
@@ -615,7 +615,7 @@ void Rcv_thread::run()
 	}
 #endif 
       rcv_packet += rcv_packet_len;
-      if (rcv_packet >= &_binary____rcv_packets_src_end) 
+      if (rcv_packet >= &_binary_rcv_packets_src_end) 
 	{
 	  L4::cout << "Test done\nSUCCESS\n";
 	  return;

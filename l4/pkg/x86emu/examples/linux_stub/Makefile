@@ -11,7 +11,7 @@ all install::
 endif
 endif
 MODE		= l4linux_kern
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_C		= emu.c
 LIBS		= -lx86emu

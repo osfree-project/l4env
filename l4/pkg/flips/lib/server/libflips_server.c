@@ -1,6 +1,7 @@
 /*** GENERAL INCLUDES ***/
 #include <errno.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -48,13 +49,14 @@ void l4vfs_connection_close_connection_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: ACCEPT A CONNECTION TO A SOCKET
  */
-l4_int32_t l4vfs_net_io_accept_component(CORBA_Object _dice_corba_obj,
-                                         object_handle_t s,
-                                         l4_int8_t addr[16],
-                                         l4_int32_t *addrlen,
-                                         l4_int32_t *actual_len,
-                                         l4_int16_t *_dice_reply,
-                                         CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_accept_component (CORBA_Object _dice_corba_obj,
+                               object_handle_t s,
+                               char addr[16],
+                               int *addrlen,
+                               int *actual_len,
+                               short *_dice_reply,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -72,11 +74,12 @@ l4_int32_t l4vfs_net_io_accept_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: BIND
  */
-l4_int32_t l4vfs_net_io_bind_component(CORBA_Object _dice_corba_obj,
-                                object_handle_t s,
-                                const l4_int8_t addr[16],
-                                l4_int32_t addrlen,
-                                CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_bind_component (CORBA_Object _dice_corba_obj,
+                             object_handle_t s,
+                             const char addr[16],
+                             int addrlen,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -89,12 +92,13 @@ l4_int32_t l4vfs_net_io_bind_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: CONNECT
  */
-l4_int32_t l4vfs_net_io_connect_component(CORBA_Object _dice_corba_obj,
-                                          object_handle_t s,
-                                          const l4_int8_t addr[16],
-                                          l4_int32_t addrlen,
-                                          l4_int16_t *_dice_reply,
-                                          CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_connect_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t s,
+                                const char addr[16],
+                                int addrlen,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -107,11 +111,12 @@ l4_int32_t l4vfs_net_io_connect_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: GETSOCKNAME
  */
-l4_int32_t l4vfs_net_io_getsockname_component(CORBA_Object _dice_corba_obj,
-                                              object_handle_t s,
-                                              l4_int8_t name[4096],
-                                              l4_int32_t *len,
-                                              CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_getsockname_component (CORBA_Object _dice_corba_obj,
+                                    object_handle_t s,
+                                    char name[4096],
+                                    int *len,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -136,16 +141,17 @@ l4_int32_t l4vfs_net_io_listen_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: RECVFROM
  */
-l4_int32_t l4vfs_net_io_recvfrom_component(CORBA_Object _dice_corba_obj,
-                                           object_handle_t s,
-                                           l4_int8_t **buf,
-                                           l4_int32_t *len,
-                                           l4_int32_t flags,
-                                           l4_int8_t from[128],
-                                           l4_int32_t *fromlen,
-                                           l4_int32_t *actual_fromlen,
-                                           l4_int16_t *_dice_reply,
-                                           CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_recvfrom_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t s,
+                                 char **buf,
+                                 int *len,
+                                 int flags,
+                                 char from[128],
+                                 int *fromlen,
+                                 int *actual_fromlen,
+                                 short *_dice_reply,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -171,13 +177,14 @@ l4_int32_t l4vfs_net_io_recvfrom_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: RECV
  */
-l4_int32_t l4vfs_net_io_recv_component(CORBA_Object _dice_corba_obj,
-                                       object_handle_t s,
-                                       l4_int8_t **buf,
-                                       l4_int32_t *len,
-                                       l4_int32_t flags,
-                                       l4_int16_t *_dice_reply,
-                                       CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_recv_component (CORBA_Object _dice_corba_obj,
+                             object_handle_t s,
+                             char **buf,
+                             int *len,
+                             int flags,
+                             short *_dice_reply,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -195,13 +202,14 @@ l4_int32_t l4vfs_net_io_recv_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: SEND
  */
-l4_int32_t l4vfs_net_io_send_component(CORBA_Object _dice_corba_obj,
-                                       object_handle_t s,
-                                       const l4_int8_t *msg,
-                                       l4_int32_t len,
-                                       l4_int32_t flags,
-                                       l4_int16_t *_dice_reply,
-                                       CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_send_component (CORBA_Object _dice_corba_obj,
+                             object_handle_t s,
+                             const char *msg,
+                             int len,
+                             int flags,
+                             short *_dice_reply,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -212,19 +220,20 @@ l4_int32_t l4vfs_net_io_send_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: SENDMSG
  */
-l4_int32_t l4vfs_net_io_sendmsg_component(CORBA_Object _dice_corba_obj,
-                                          object_handle_t s,
-                                          const l4_int8_t msg_name[8192],
-                                          l4_int32_t msg_namelen,
-                                          const l4_int8_t *msg_iov,
-                                          l4_int32_t msg_iovlen,
-                                          l4_int32_t msg_iov_size,
-                                          const l4_int8_t *msg_control,
-                                          l4_int32_t msg_controllen,
-                                          l4_int32_t msg_flags,
-                                          l4_int32_t flags,
-                                          l4_int16_t *_dice_reply,
-                                          CORBA_Server_Environment *_dice_corba_env)
+int
+l4vfs_net_io_sendmsg_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t s,
+                                const char msg_name[8192],
+                                int msg_namelen,
+                                const char *msg_iov,
+                                int msg_iovlen,
+                                int msg_iov_size,
+                                const char *msg_control,
+                                int msg_controllen,
+                                int msg_flags,
+                                int flags,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
 	int err, i;
 	struct msghdr msg;
@@ -265,15 +274,16 @@ l4_int32_t l4vfs_net_io_sendmsg_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: SENDTO
  */
-l4_int32_t l4vfs_net_io_sendto_component(CORBA_Object _dice_corba_obj,
-                                         object_handle_t s,
-                                         const l4_int8_t  *msg,
-                                         l4_int32_t len,
-                                         l4_int32_t flags,
-                                         const l4_int8_t *to,
-                                         l4_int32_t tolen,
-                                         l4_int16_t *_dice_reply,
-                                         CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_sendto_component (CORBA_Object _dice_corba_obj,
+                               object_handle_t s,
+                               const char *msg,
+                               int len,
+                               int flags,
+                               const char *to,
+                               int tolen,
+                               short *_dice_reply,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
 	int ret;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -321,17 +331,70 @@ l4_int32_t l4vfs_net_io_socket_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: SETSOCKOPT
  */
-l4_int32_t l4vfs_net_io_setsockopt_component(CORBA_Object _dice_corba_obj,
-                                             object_handle_t s,
-                                             l4_int32_t level,
-                                             l4_int32_t optname, 
-                                             const l4_int8_t *optval,
-                                             l4_int32_t optlen,
-                                             CORBA_Server_Environment * _dice_corba_env)
+int
+l4vfs_net_io_setsockopt_component (CORBA_Object _dice_corba_obj,
+                                   object_handle_t s,
+                                   int level,
+                                   int optname,
+                                   const char *optval,
+                                   int optlen,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
 		return -1;
 	err = setsockopt(s,level,optname,optval,optlen);
+	return err;
+}
+
+/** IDL INTERFACE: GETSOCKOPT
+ */
+int
+l4vfs_net_io_getsockopt_component (CORBA_Object _dice_corba_obj,
+                                   object_handle_t s,
+                                   int level,
+                                   int optname,
+                                   char *optval,
+                                   int *optlen,
+				   int *actual_optlen,
+                                   CORBA_Server_Environment *_dice_corba_env)
+{
+	int err;
+	if (!client_owns_sid(CORBA_Object, s))
+		return -1;
+
+	*actual_optlen = *optlen;
+	
+	err = getsockopt(s,level,optname,optval,actual_optlen);
+	
+	/* compute size of addr to send */
+	if (*optlen > *actual_optlen)
+	        *optlen = *actual_optlen;
+
+	return err;
+}
+
+/** IDL INTERFACE: GETPEERNAME
+ */
+int
+l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
+                                    object_handle_t s,
+                                    char addr[120],
+                                    int *addrlen,
+                                    int *actual_len,
+                                    CORBA_Server_Environment *_dice_corba_env)
+{
+	int err;
+	if (!client_owns_sid(CORBA_Object, s))
+		return -1;
+
+	*actual_len = *addrlen;
+	err = getpeername(s,(struct sockaddr *) addr,actual_len);
+	LOG("Flips code %s", inet_ntoa(((struct sockaddr_in *)addr)->sin_addr));
+
+	/* compute size of addr to send */
+	if (*addrlen > *actual_len)
+	        *addrlen = *actual_len;
+
 	return err;
 }

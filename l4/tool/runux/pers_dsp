@@ -1,0 +1,27 @@
+#! /bin/bash
+# generic script with l4env basics
+
+#[ -n "$UXRES" ] || UXRES=640x480@16
+
+. ${0%/*}/generic.inc
+
+for module in "$@" ; do
+  if [ "${module#-}" = "$module" ];
+  then
+    args[${#args[*]}]="-l"
+  fi
+  args[${#args[*]}]="$module"
+done
+
+fiasco \
+	-l "names"\
+	-l log \
+	-l dm_phys \
+	-l pers_dsp" -m 64 -n hello" \
+	-l pers_dsp_create \
+	-l pers_dsp_mgmt \
+	-l pers_dsp_use1 \
+	-l pers_dsp_use2 \
+	-l pers_dsp_use3 \
+	-l pers_dsp_use4 \
+	"${args[@]}"

@@ -1,11 +1,14 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-MODE		= libc
+CXXFLAGS_amd64-l4v2 += -mcmodel=medium
+CFLAGS_amd64-l4v2 += -mcmodel=medium
+
+MODE		= tiny
 LIBCLIBS	= -nostdlib $(GCCLIB)
-LIBCINCDIR	= -nostdinc
+#LIBCINCDIR	= -nostdinc
 SRC_CC		= io_backend.cc
-SYSTEMS		= x86-l4x0 x86-l4v2 arm-l4x0
+SYSTEMS		= amd64-l4v2 x86-l4v2 arm-l4x0
 TARGET		= libcxx_linux_io
 
 include $(L4DIR)/pkg/cxx/lib/Makefile.inc

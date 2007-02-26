@@ -4,7 +4,7 @@
 # Makefile for the demo of the names server
 #
 
-SYSTEMS := x86-l4v2 x86-l4x0 arm-l4x0
+SYSTEMS := x86-l4v2 arm-l4x0
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 

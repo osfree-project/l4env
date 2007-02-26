@@ -6,21 +6,36 @@ SECTIONS
   _start = .;
   PROVIDE (_start = .);
   
-  _mbi = .;
-  PROVIDE (_mbi = .);
-  . += 0x4000;
-
   .init :
   {
     *(.init)
-    init.o(.text .rodata .data .bss COMMON)
-    lines.o(.text .rodata .data .bss COMMON)
-    symbols.o(.text .rodata .data .bss COMMON)
-    cfg-parse.o(.text .rodata .data .bss COMMON)
-    exec.o(.text .rodata .data .bss COMMON)
-    bootquota.o(.text .rodata .data .bss COMMON)
-    boot_error.o(.text .rodata .data .bss COMMON)
+    init.o(.text .rodata .data)
+    lines.o(.text .rodata .data)
+    symbols.o(.text .rodata .data)
+    cfg-parse.o(.text .rodata .data)
+    exec.o(.text .rodata .data)
+    bootquota.o(.text .rodata .data)
+    boot_error.o(.text .rodata .data)
+    module.o(.text .rodata .data)
+    *cp-demangle.o(.text .rodata .data)
+    *cplus-dem.o(.text .rodata .data)
+    *safe-ctype.o(.text .rodata .data)
   } =0x9090
+
+  .init.bss :
+  {
+    init.o(.bss COMMON)
+    lines.o(.bss COMMON)
+    symbols.o(.bss COMMON)
+    cfg-parse.o(.bss COMMON)
+    exec.o(.bss COMMON)
+    bootquota.o(.bss COMMON)
+    boot_error.o(.bss COMMON)
+    module.o(.bss COMMON)
+    *cp-demangle.o(.bss COMMON)
+    *cplus-dem.o(.bss COMMON)
+    *safe-ctype.o(.bss COMMON)
+  }
 
   . = ALIGN(0x1000);
 

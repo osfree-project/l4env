@@ -68,7 +68,7 @@ Region::init (Address begin, Address end)
   // Make sure our slab cache only uses single-page slabs (slab_size =
   // PAGE_SIZE).  See note above declaration of amm_entry_cache for
   // more information.
-  amm_entry_cache = new Kmem_slab_simple(sizeof(Amm_entry), 4);
+  amm_entry_cache = new Kmem_slab_simple(sizeof(Amm_entry), 4, "Amm_entry");
 
   amm_init_gen(&region_amm, AMM_FREE, 0, amm_alloc_func, amm_free_func, 0, 0);
   check (amm_modify(&region_amm, 0, mem_alloc_region, AMM_RESERVED, 0) == 0);
@@ -125,7 +125,7 @@ Region::return_pages(Address address, size_t size)
   assert( amm_find_gen(&region_amm, &address, size, AMM_ALLOCATED, -1,
 		       0, 0, AMM_EXACT_ADDR) );
 
-  check ( amm_modify(&region_amm, address, size, AMM_FREE, 0) != 0);
+  check ( amm_modify(&region_amm, address, size, AMM_FREE, 0) == 0);
 }
 
 

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEClass.h
- *    \brief   contains the declaration of the class CL4BEClass
+ *  \brief   contains the declaration of the class CL4BEClass
  *
  *    \date    01/29/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -49,7 +49,7 @@ public:
     virtual ~CL4BEClass();
 
 protected: // Protected methods
-    virtual void WriteHelperFunctions(CBEHeaderFile * pFile, CBEContext * pContext);
+    virtual void WriteHelperFunctions(CBEHeaderFile * pFile);
 };
 
 #endif

@@ -14,6 +14,10 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
+
+#ifndef SERVER_LIB_H
+#define SERVER_LIB_H
+
 #include "l4/events/events.h"
 
 /*****************************************************************************/
@@ -85,3 +89,4 @@ int send_timeout(l4_threadid_t server);
 /*****************************************************************************/
 void server_loop(void* server_param);
 
+#endif

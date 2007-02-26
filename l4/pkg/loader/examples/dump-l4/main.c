@@ -61,7 +61,7 @@ dump_l4env_infopage(l4env_infopage_t *env)
 	  pos++;
 	}
 
-      printf("  %s ds %3d: %08x-%08x ",
+      printf("  %s ds %3d: %08lx-%08lx ",
 	   pos_str, l4exc->ds.id, l4exc->addr, l4exc->addr+l4exc->size);
       for (j=1, k=0; j<=L4_DSTYPE_ERRLINK; j<<=1, k++)
 	{
@@ -171,7 +171,7 @@ main(int argc, char **argv)
 	  unsigned int *ptr;
 	  l4dm_dataspace_t ds;
 	  l4_addr_t fpage_addr;
-	  l4_addr_t fpage_size;
+	  l4_size_t fpage_size;
 	  CORBA_Environment env = dice_default_environment;
 
 	  if ((error = l4loader_app_info_call(&loader_id, 0, 0, &fname,

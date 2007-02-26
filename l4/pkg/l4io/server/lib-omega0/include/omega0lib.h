@@ -17,6 +17,9 @@
 #define __L4IO_SERVER_LIB_OMEGA0_INCLUDE_OMEGA0LIB_H_
 
 /** OMEGA0lib initialization. */
-int OMEGA0_init(int use_spec);
+int  OMEGA0_init(int use_spec);
+
+/** free ressources of a client. */
+void OMEGA0_free_ressources(l4_threadid_t client);
 
 #endif

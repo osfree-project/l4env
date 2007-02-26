@@ -16,7 +16,9 @@
 
 // needed for str* functions
 #if !defined(LINUX_ON_L4) && !defined(CONFIG_L4_LINUX)
+#if !defined(L4API_l4x2) && !defined(L4API_l4v4)
 #include <string.h>
+#endif
 #endif
 
 #undef _dice_alloca
@@ -27,15 +29,52 @@
     -1) & ~(sizeof (unsigned long) -1)))
 #endif
 
+#undef _dice_memcpy
+#ifdef __GNUC__
+#define _dice_memcpy(to,from,size)   \
+    __builtin_memcpy(to, from, size)
+#else
+#define _dice_memcpy(to,from,size)   \
+    { int _i = size; while (_i--) *to = *from; }
+#endif
+
+#undef _dice_max
+#ifdef __GNUC__
+#define _dice_max(a,b) \
+    ({int _a = (a), _b = (b); _a > _b ? _a : _b; })
+#else
+#define _dice_max(a,b) \
+    ((a) > (b) ? (a) : (b))
+#endif
+
+// do some optimization if possible
+#if (__GNUC__ >= 3)
+#define DICE_EXPECT_TRUE(exp)  __builtin_expect((exp),1)
+#define DICE_EXPECT_FALSE(exp) __builtin_expect((exp),0)
+#else
+#define DICE_EXPECT_TRUE(exp)  (exp)
+#define DICE_EXPECT_FALSE(exp) (exp)
+#endif
+
 #define DICE_REPLY    1
 #define DICE_NO_REPLY 2
+#define DICE_DEFERRED_REPLY 2
+#define DICE_NEVER_REPLY 3
 
 #ifndef DICE_IID_BITS
+#if !defined(L4API_l4x2) && !defined(L4API_l4v4)
 #define DICE_IID_BITS 20
+#else
+#define DICE_IID_BITS 12
+#endif
 #endif
 
 #ifndef DICE_FID_MASK
+#if !defined(L4API_l4x2) && !defined(L4API_l4v4)
 #define DICE_FID_MASK 0xfffff
+#else
+#define DICE_FID_MASK 0xfff
+#endif
 #endif
 
 #ifndef DICE_STR
@@ -60,10 +99,16 @@ void CORBA_free(void *ptr);
 #endif
 
 
-/* testsuite functions and macros */
-#if defined(DICE_TESTSUITE)
-#include "dice/dice-testsuite.h"
-#endif
+/* defines needed in environment initialization */
+#define CORBA_NO_EXCEPTION      0
+#define CORBA_USER_EXCEPTION    1
+#define CORBA_SYSTEM_EXCEPTION  2
+
+#define CORBA_DICE_EXCEPTION_NONE 0
+#define CORBA_DICE_EXCEPTION_WRONG_OPCODE 1
+#define CORBA_DICE_EXCEPTION_IPC_ERROR 2
+#define CORBA_DICE_INTERNAL_IPC_ERROR 3
+#define CORBA_DICE_EXCEPTION_COUNT 4
 
 #if defined(L4API_linux)
 #include "dice/dice-sockets.h"
@@ -104,40 +149,24 @@ void CORBA_free(void *ptr);
 #endif /* __cplusplus */
 #endif /* !DICE_DECLARE_SERVER_ENV */
 
-/* common functions for the CORBA environement */
-#define CORBA_NO_EXCEPTION      0
-#define CORBA_USER_EXCEPTION    1
-#define CORBA_SYSTEM_EXCEPTION  2
-
-#define CORBA_DICE_EXCEPTION_NONE 0
-#define CORBA_DICE_EXCEPTION_WRONG_OPCODE 1
-#define CORBA_DICE_EXCEPTION_IPC_ERROR 2
-#define CORBA_DICE_INTERNAL_IPC_ERROR 3
-#define CORBA_DICE_EXCEPTION_COUNT 4
-
-static CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT+1] = { "none", "wrong opcode", "ipc error", "internal ipc error", 0 };
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* common functions for the CORBA environement */
+static CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT+1] = { "none", "wrong opcode", "ipc error", "internal ipc error", 0 };
+
 static inline
 void CORBA_exception_free(CORBA_Environment *ev)
 {
-  if (ev->major != CORBA_NO_EXCEPTION)
+    if (DICE_HAS_EXCEPTION(ev))
     {
-#ifdef L4API_linux
-      //ev->free(ev->param);
-      ev->param = 0;
-#else
-      //ev->free(ev->_p.param);    
-      ev->_p.param = 0;
-#endif
+       	//ev->free(DICE_EXCEPTION_PARAM(ev));
+	DICE_EXCEPTION_PARAM(ev) = 0;
     }
-  ev->major = CORBA_NO_EXCEPTION;
-  ev->repos_id = CORBA_DICE_EXCEPTION_NONE;
+    DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
+    DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
-
 
 static inline
 void CORBA_exception_set(
@@ -147,38 +176,31 @@ void CORBA_exception_set(
     CORBA_exception_type repos_id,
     void *param)
 {
-  CORBA_exception_free(ev);
-  ev->major = major;
-  if (major != CORBA_NO_EXCEPTION)
+    CORBA_exception_free(ev);
+    DICE_EXCEPTION_MAJOR(ev) = major;
+    if (major != CORBA_NO_EXCEPTION)
     {
-      ev->repos_id = repos_id;
-#ifdef L4API_linux
-      ev->param = param;
-#else
-      ev->_p.param = param;
-#endif
+	DICE_EXCEPTION_MINOR(ev) = repos_id;
+	DICE_EXCEPTION_PARAM(ev) = param;
     }
 }
 
 static inline
 CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
 {
-  // string can be found using repository id (repos_id)
-  if ((ev->major != CORBA_NO_EXCEPTION) && (ev->repos_id >= 0) &&
-      (ev->repos_id < CORBA_DICE_EXCEPTION_COUNT))
-    return __CORBA_Exception_Repository[ev->repos_id];
-  else
-    return 0;
+    // string can be found using repository id (repos_id)
+    if (DICE_HAS_EXCEPTION(ev) &&
+	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
+	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
+	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
+    else
+	return 0;
 }
 
 static inline
 void* CORBA_exception_value(CORBA_Environment *ev)
 {
-#ifdef L4API_linux
-  return ev->param;
-#else
-  return ev->_p.param;
-#endif
+    return DICE_EXCEPTION_PARAM(ev);
 }
 
 static inline
@@ -194,61 +216,48 @@ CORBA_any* CORBA_exception_as_any(CORBA_Environment *ev)
 static inline
 void CORBA_server_exception_free(CORBA_Server_Environment *ev)
 {
-  if (ev->major != CORBA_NO_EXCEPTION)
+    if (DICE_HAS_EXCEPTION(ev))
     {
-#ifdef L4API_linux
-      //ev->free(ev->param);
-      ev->param = 0;
-#else
-      //ev->free(ev->_p.param);    
-      ev->_p.param = 0;
-#endif
+	//ev->free(DICE_EXCEPTION_PARAM(ev));
+	DICE_EXCEPTION_PARAM(ev) = 0;
     }
-  ev->major = CORBA_NO_EXCEPTION;
-  ev->repos_id = CORBA_DICE_EXCEPTION_NONE;
+    DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
+    DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
-
 
 static inline
 void CORBA_server_exception_set(
     CORBA_Server_Environment *ev,
     CORBA_exception_type major,
-//    CORBA_char *except_repos_id,
+    // CORBA_char *except_repos_id,
     CORBA_exception_type repos_id,
     void *param)
 {
-  CORBA_server_exception_free(ev);
-  ev->major = major;
-  if (major != CORBA_NO_EXCEPTION)
+    CORBA_server_exception_free(ev);
+    DICE_EXCEPTION_MAJOR(ev) = major;
+    if (major != CORBA_NO_EXCEPTION)
     {
-      ev->repos_id = repos_id;
-#ifdef L4API_linux
-      ev->param = param;
-#else
-      ev->_p.param = param;
-#endif
+	DICE_EXCEPTION_MINOR(ev) = repos_id;
+	DICE_EXCEPTION_PARAM(ev) = param;
     }
 }
 
 static inline
 CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
 {
-  // string can be found using repository id (repos_id)
-  if ((ev->major != CORBA_NO_EXCEPTION) && (ev->repos_id >= 0) &&
-      (ev->repos_id < CORBA_DICE_EXCEPTION_COUNT))
-    return __CORBA_Exception_Repository[ev->repos_id];
-  else
-    return 0;
+    // string can be found using repository id (repos_id)
+    if (DICE_HAS_EXCEPTION(ev) &&
+	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
+	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
+	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
+    else
+	return 0;
 }
 
 static inline
 void* CORBA_server_exception_value(CORBA_Server_Environment *ev)
 {
-#ifdef L4API_linux
-  return ev->param;
-#else
-  return ev->_p.param;
-#endif
+    return DICE_EXCEPTION_PARAM(ev);
 }
 
 static inline
@@ -277,14 +286,55 @@ void* dice_get_last_ptr(CORBA_Server_Environment *ev)
 {
   void *ptr = 0;
   if (!ev)
-    return 0;
-  if (ev->ptrs_cur > 0 &&
-      ev->ptrs_cur <= DICE_PTRS_MAX)
-    {
-      ptr = ev->ptrs[--ev->ptrs_cur];
-      ev->ptrs[ev->ptrs_cur] = 0;
-    }
+    return ptr;
+  if (ev->ptrs_cur == 0 ||
+      ev->ptrs_cur > DICE_PTRS_MAX)
+    return ptr;
+  ptr = ev->ptrs[--ev->ptrs_cur];
+  ev->ptrs[ev->ptrs_cur] = 0;
   return ptr;
+}
+
+static inline
+void* dice_get_nth_ptr(CORBA_Server_Environment *ev, int i)
+{
+  void *ptr = 0;
+  if (!ev)
+    return 0;
+  if (i < 0 || i >= ev->ptrs_cur)
+    return 0;
+  ptr = ev->ptrs[i];
+  /* move ptrs after i to collate array */
+  while (i < ev->ptrs_cur)
+    {
+      ev->ptrs[i] = ev->ptrs[i+1];
+      i++;
+    }
+  ev->ptrs_cur--;
+  return ptr;
+}
+
+static inline
+const void* dice_get_ptr(CORBA_Server_Environment *ev, const void* p)
+{
+  int i;
+  if (!ev)
+    return 0;
+  for (i = 0; i < ev->ptrs_cur; i++)
+    {
+      if (p == ev->ptrs[i])
+        break;
+    }
+  if (i == ev->ptrs_cur)
+    return 0;
+  /* move ptrs after i to collate array */
+  while (i < ev->ptrs_cur)
+    {
+      ev->ptrs[i] = ev->ptrs[i+1];
+      i++;
+    }
+  ev->ptrs_cur--;
+  return p;
 }
 
 #ifdef __cplusplus

@@ -131,7 +131,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Building Infrastructure for DROPS (BID) Specification}
-\author{Jork Löser\\drops@os.inf.tu-dresden.de}
+\author{Jork Löser \qquad Ronald Aigner\\drops@os.inf.tu-dresden.de}
 \date{\today}
 \maketitle
 \thispagestyle{empty}
@@ -165,7 +165,7 @@ documentation in its various formats at
 
 \paragraph*{Copyright}
 
-This documentation is \copyright2003 by Technische Universität
+This documentation is \copyright2006 by Technische Universität
 Dresden. This documentation is part of DROPS, being distributed under
 the terms of the GNU General Public License 2. Please see the world
 wide web at \htmladdnormallink{http://os.inf.tu-dresden.de/l4env/COPYING}
@@ -230,7 +230,7 @@ l4/\{bin,\,lib\}/\{x86_586/,x86_586/v2/,ia64/,\dots\} and
 \index{L4Check}
 \index{MAINTAINER file}
 To maintain at least a low level of code consistency in our DROPS
-project, we designed the L4Check\cite{www:l4check} tool. It runs every
+project, we designed the L4Check \cite{www:l4check} tool. It runs every
 night and checkouts the various packages from CVS and builds them. If
 the build-process fails, an email is automatically generated and sent
 to the maintainer of the failing package. To define the maintainer of
@@ -487,6 +487,70 @@ When using the configuration tool, the special target
 configuration options will already be effecive during execution.
 
 \vfill\pagebreak
+\section{Build Directories}
+\label{sec:builddirs}
+\index{build directories}
+
+BID does use build-directories to contain all generated files. So your source
+directory will not be modified. If you try to configure or build your L4
+system without specifying a build-directory an error is issued. Simply name an
+build-directory (or output directory) when calling make with the variable
+«O»\index{O} set:
+
+\begin{verbatim}
+~> make O=/path/to/your/build/dir
+\end{verbatim}
+
+To create this directory and set up a basic Makefile infrastructure in this
+directory you have to call first:
+
+\begin{verbatim}
+~> make O=/path/to/your/build/dir config
+\end{verbatim}
+
+\subsection{Building External Sources}
+\label{sec:externalsource}
+
+If you do have a source directory outside your regular L4 setup and want to
+build this into your build directory you may do so using the
+«SRC_BASE»\index{SRC_BASE} environment variable. To determine the target
+location in the build directory BID requires a reference point. This reference
+point is denoted by the «SRC_BASE» variable. An example:
+
+\begin{verbatim}
+L4DIR=§(HOME)/src/l4
+O=§(HOME)/build-dirs/build-v2
+PWD=§(HOME)/test/pkg/my-pkg
+\end{verbatim}
+
+I you want «my-pkg» to appear in the «pkg» sub-directory in the
+build-directory, you would have to set «SRC_BASE» to «§(HOME)/test». Thus your
+make invocation would look like this:
+
+\begin{verbatim}
+~/test/pkg/my-pkg > make O=§(HOME)/build-dirs/build-v2 \
+L4DIR=§(HOME)/src/l4 SRC_BASE=../..
+\end{verbatim}
+
+\subsection{Parallel Build}
+\label{sec:parallelbuild}
+\index{parallel build}
+
+While talking about building your source we might as well mention parallel
+builds here. If you simply run «make -j» in your package directory, you will
+notice that make will drop several dependencies (see
+Section~\ref{sec:dependencies}) and then start a parallel build. This is
+actually not the intended behaviour, because of course we would like to keep
+the dependencies intact. Thus we must only enable parallel build where it is
+appropriate, for instance, in one sub-directory containing only source files.
+Therefore, we use the environment variable «PL»\index{PL} to specify the level
+of parallelism. You may invoke «make» like this:
+
+\begin{verbatim}
+~/src/l4/pkg > make O=§(HOME)/build-dirs/build-v2 PL=4
+\end{verbatim}
+
+\vfill\pagebreak
 \section{Dependencies}
 \label{sec:dependencies}
 \index{dependencies}
@@ -552,6 +616,34 @@ in a file named «.general.d», and this file is made dependent of the
 existing files. The role-files then ensure that all objects files and
 targets depend on this «.general.d».
 
+\subsection{Package Dependencies}
+
+To resolve inter-package dependencies basically two mechanisms are used. The
+first one is an explicit notation in the «l4/pkg/Makefile»: each package is
+separated into three parts: «headers», «lib», and «bin». The headers parts
+consists of the «idl» and «include» subdirectories of the package. The lib
+part contains the «lib» subdirectory and the bin part does contain the
+«server» and «examples» subdirectories. Usually the L4 packages are  build in
+the order of first building all «headers» sections, then all «lib» sections
+and finally all «bin» sections. The packages belonging to the L4 Environment
+are here preferred above the rest: so first all of the above steps for the L4
+Environment, later the same steps for the rest.
+
+You will find several of explicit dependencies between the parts of different
+packages specified in «l4/pkg/Makefile». These are respected by make during
+the build process and will ensure the correct order of building the packages.
+However, this mechanism fails if a package is not present in your source tree.
+Then make will silently ignore that dependency and you will probably see
+errors of missing include files during compile or unresolved symbols when
+linking binaries. This is where the second mechanism comes into play.
+
+In your Makefiles you may specify the Variable
+«DEPENDS_PKGS»\index{DEPENDS_PKGS} with a list of other packages that have to
+be present for this package to compile. Whenever the build systems finds this
+variable it will check in the «l4/pkg» directory for package directories with
+that names. If a package from the list is missing in the directory, an error
+is printed and the make run is aborted. Thus, you can specify inter-package
+dependencies.
 
 \vfill\pagebreak
 \section{Systems, Architectures and Modes}
@@ -588,17 +680,19 @@ When building for multiple environments, we distinguish between the
 \item [Mode] \index{Mode}%
   covers the target execution environment respectively the
   C-libraries binaries should be linked against. Examples are
-  \name{oskit10}, \name{loader} or \name{host}. See Section
+  \name{l4env}, \name{loader} or \name{host}. See Section
   \ref{sec:systems-modes} for a list of suggestions. Each target can
   be built/compiled for only one mode.
 \end{description}
 
-\begin{table}[h]
+\begin{table}[htp]
 \begin{center}
-\begin{tabular}{|l|c|c|c|}\hline
-        ARCH    & \underline{x86}              & arm & ia64 \\\hline
-        CPU     & \underline{586}, 686, K6, K7 & \underline{sa}, pxa & \\\hline
-        L4API   & \multicolumn{3}{c|}{\underline{l4v2}, l4x0, l4x2} \\\hline
+\begin{tabular}{|l|c|c|c|c|}\hline
+        ARCH    & \underline{x86}              & arm & amd64  & ppc32 \\\hline
+        CPU     & \underline{586}, 686, K6, K7 & \underline{sa}, pxa, int & 
+	   \underline{k8} & \underline{750} \\\hline
+        L4API   & \underline{l4v2}, l4x2, l4secv2emu & \underline{l4x0} &
+	   \underline{l4v2}, l4x2 & \underline{l4x2} \\\hline
 \end{tabular}
 \caption{Valid values for the components of a system description.
   Defaults are underlined.}
@@ -640,21 +734,21 @@ structure as depicted in Figure \ref{fig:systems-package-tree}
 \begin{center}\begin{minipage}{.4\columnwidth}\small\begin{verbatim}
   pkg/
    +- foo/
-   +- include/
-   +- lib/
-   |   +- src/
-   |       +- Makefile1
-   |       +- Make.rules
-   |       +- foo.c
-   |       +- OBJ-x86_586-l4v2/
-   |       |   +- Makefile2
-   |       |   +- foo.o
-   |       |   +- libfoo.a
-   |       +- OBJ-ia64-l4v2/
-   |           +- Makefile3
-   |           +- foo.o
-   |           +- libfoo.a
-   +- server/
+       +- include/
+       +- lib/
+       |   +- src/
+       |       +- Makefile1
+       |       +- Make.rules
+       |       +- foo.c
+       |       +- OBJ-x86_586-l4v2/
+       |       |   +- Makefile2
+       |       |   +- foo.o
+       |       |   +- libfoo.a
+       |       +- OBJ-ia64-l4v2/
+       |           +- Makefile3
+       |           +- foo.o
+       |           +- libfoo.a
+       +- server/
 \end{verbatim}
 \end{minipage}\end{center}
 \caption{Structure of an example package}
@@ -743,7 +837,7 @@ to generate the communication stubs. The systems these packets can be
 built for depend mainly on the IDL compiler. To avoid to change all
 the Makefile of those packages if the IDL compiler supports more
 systems, the variable «IDL_SYSTEMS»\index{§(IDL_SYSTEMS)} contains all
-the systems our default IDL compiler \name{dice}\cite{www:dice} can
+the systems our default IDL compiler \name{dice}\cite{dice-man} can
 generate code for. A Makefile can use «SYSTEMS=§(IDL_SYSTEMS)» to
 automatically build for all systems that are supported by dice.
 
@@ -761,53 +855,44 @@ Makefile that corresponds to the current «§(SYSTEM)». Note,
 
 The following modes are defined:
 
-\begin{descriptiontable}{oskit10_sigma0}
+\begin{descriptiontable}{l4env\_minimal}
 
-l4env        & aka \name{oskit10_l4env_tiny}. This mode allows to use some
-               basic libc functionality from the Flux OSKit 0.97,
-               together with the L4Env. Binaries are linked against
-               the small mini-libc \name{libmc}. \\
+tiny           & Minimal environment. Includes basic libc functionality from one
+                 of the C libraries selected and utility functions. \\
 
-l4env_oskit10 & This is an alias for \name{l4env}. \\
+sigma0         & Minimal L4 environment. Includes basic libc functionality like
+                 tiny mode but additionally links \emph{log} and \emph{names}
+	         libraries. \\
 
-l4env_freebsd & aka \name{oskit10_l4env_full}. This mode allows to use
-               drivers and the infrastructure from the Flux OSKit
-               0.97, together with the L4Env \cite{www:l4env}. Binaries
-               are linked against the huge freebsd-libc. \\
+l4env          & Default mode to build L4Env applications. Sets appropriate
+                 include and library paths. Also links against the L4Env
+	         libraries. I/O output is printed to log. \\
 
-loader       & Like l4env mode, but libraries are dynamically linked.
-               Binaries must be loaded with the L4Env
-               loader \cite{www:l4envloader}.\\
+l4env\_minimal & l4env mode with just write(1, ...) as I/O backend. \\
 
-sigma0       & This has no support for L4Env, the result is a plain L4
-               application. Binaries are linked against the small
-               mini-libc \name{libmc} from the Flux OSKit 0.6. \\
+l4env\_base    & l4env mode with the libc backends: basic_io, basic_mmap,
+                 mmap_util, syslog, simple_sleep, time, file_table. \\
 
-sigma0_oskit06 & This is an alias for \name{sigma0}. \\
+libc           & Rather internal mode to compile C libraries \\
 
-oskit10_sigma0 & aka \name{oskit10}. This mode allows to use
-               drivers and the infrastructure from the Flux OSKit
-               0.97. Binaries are linked against the huge freebsd-libc. \\
+host           & Build an application for the host operating system. \\
 
-l4linux      & Use this mode to build \llinux{} user-mode applications
-               with L4Env support. Binaries are linked dynamically
-               against standard-libc. \\
-
-l4linux_kern & Use this mode to build \llinux{} kernel-mode modules
-               with  L4Env support. Modules are linked against L4Env
-               libraries. \\
-
-host         & Build an application for the host operating system. \\
+l4linux        & Build hybrid applications for \llinux{}, which are normal Linux
+                 applications, but are also linked against L4Env libraries. \\
 
 \end{descriptiontable}
+
+Deprecated modes: l4linux\_kern, l4env\_oskit06, l4env\_oskit10,
+l4env\_freebsd, loader, sigma0\_oskit06, oskit10\_sigma0, 
 
 The mode specifies which standard C library and header files are being
 used, which objects for startup-code (CRT0), end-/marker-code (CRTN)
 are being linked and which linker scripts are used for all this. See
-Tables \ref{tab:mode-incdirs}, \ref{tab:mode-libdirs}, \ref{tab:mode-clibs},
-\ref{tab:mode-l4libs} and \ref{tab:mode-crt0ldscript} for what is determined
-by each mode. See Section \ref{sec:prog.mk} and Section
-\ref{sec:lib.mk} for the meaning of the variables.
+Tables \ref{tab:mode-incdirs-diet}, \ref{tab:mode-incdirs-uc}, \ref{tab:mode-libdirs},
+\ref{tab:mode-clibs-diet}, \ref{tab:mode-clibs-uc}, \ref{tab:mode-l4libs}, and
+\ref{tab:mode-crt0ldscript} for what is determined by each mode. See Section
+\ref{sec:prog.mk} and Section \ref{sec:lib.mk} for the meaning of the
+variables.
 
 %begin{latexonly}
 \newenvironment{ptabtwo}{\begin{tabular}{|p{.17\tabTwo}|%
@@ -827,214 +912,361 @@ by each mode. See Section \ref{sec:prog.mk} and Section
 }{\end{tabular}}
 \end{htmlonly}
 
-\begin{table}[h]
+\begin{table}[htp]
 \index{§(MODE)}\index{§(LIBCINCDIR)}%
 \begin{ptabtwo}
 \hline
 \bf Mode        & \bf «§LIBCINCDIR» &\\\hline\hline
 
-l4env           & -nostdinc -DOSKIT -I\{
-                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
-                  §(DROPS_STDDIR)/include/oskit10
-                  §(DROPS_STDDIR)/include/oskit10/oskit/c)\}
-                  &\\\hline
+l4env          & -nostdinc -DUSE_DIETLIBC=y -I\{ §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc §(GCCINCDIR) \} 
+               &\\\hline
 
-l4env_freebsd   & -nostdinc -DOSKIT -I\{
-                  §(L4DIR)/../oskit10/freebsd/ \{libc/include,
-                  3.x/src/include, 3.x/src/sys\} §(L4DIR)/../oskit10
-                  §(L4DIR)/include/c++/§(GCCVERSION)
-                  §(L4DIR)/include/c++/§(GCCVERSION)/drops
-                  §(DROPS_STDDIR)/include/oskit10
-                  §(DROPS_STDDIR)/include/oskit10/oskit/freebsd
-                  §(DROPS_STDDIR)/include/c++/§(GCCVERSION)
-                  §(DROPS_STDDIR)/include/c++/§(GCCVERSION)/drops
-                  \}  &\\\hline
+l4env\_minimal & -nostdinc -DUSE_DIETLIBC=y -I\{ §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc §(GCCINCDIR) \} 
+               &\\\hline
 
-loader          & nostdinc -DOSKIT -I\{
-                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
-                  §(DROPS_STDDIR)/include/oskit10
-                  §(DROPS_STDDIR)/include/oskit10/oskit/c \}
-                &\\\hline
+l4env\_base    & -nostdinc -I\{ §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc §(GCCINCDIR) \} 
+               &\\\hline
 
-sigma0          & -nostdinc -I\{§(L4DIR)/../oskit/ §(L4DIR)/../oskit/flux/c
-                  §(DROPS_STDDIR)/include/oskit06 
-                  §(DROPS_STDDIR)/include/oskit06/flux/c\}
-                &\\\hline
+tiny           & -nostdinc -DUSE_DIETLIBC=y -I\{ §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc §(GCCINCDIR) \} 
+               &\\\hline
 
-oskit10_sigma0  & -nostdinc -I\{
-                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
-                  §(DROPS_STDDIR)/include/oskit10
-                  §(DROPS_STDDIR)/include/oskit10/oskit/c \}
-                &\\\hline
+sigma0         & -nostdinc -DUSE_DIETLIBC=y -I\{ §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc §(GCCINCDIR) \} 
+               &\\\hline
 
-l4linux         & - &\\\hline
+libc           & -nostdinc -I\{ §(GCCINCDIR) §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc \}
+               &\\\hline
 
-l4linux_kern    & -nostdinc -I§(L4LINUX22_DIR)/include -D__KERNEL__
-                  -DLINUX_ON_L4
-                &\\\hline
+host           & - 
+               &\\\hline
 
-host            & - &\\\hline
+l4linux        & -I§(GCCINCDIR)
+               &\\\hline
 
 \end{ptabtwo}
-\caption{Directories for include file search depending on the mode.}
-\label{tab:mode-incdirs}
+\caption{Directories for include file search depending on the mode for
+\emph{dietlibc}.}
+\label{tab:mode-incdirs-diet}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[htp]
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§LIBCINCDIR» &\\\hline\hline
+
+l4env          & -nostdinc -I\{ §(L4DIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(L4DIR)/include/uclibc §(L4DIR)/include/uclibc++
+		 §(DROPS_STDDIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(DROPS_STDDIR)/include/uclibc
+		 §(DROPS_STDDIR)/include/uclibc++ §(GCCINCDIR) \}
+               &\\\hline
+
+l4env\_minimal & -nostdinc -I\{ §(L4DIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(L4DIR)/include/uclibc §(L4DIR)/include/uclibc++
+		 §(DROPS_STDDIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(DROPS_STDDIR)/include/uclibc
+		 §(DROPS_STDDIR)/include/uclibc++ §(GCCINCDIR) \}
+               &\\\hline
+
+l4env\_base    & -nostdinc -I\{ §(L4DIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(L4DIR)/include/uclibc §(L4DIR)/include/uclibc++
+		 §(DROPS_STDDIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(DROPS_STDDIR)/include/uclibc
+		 §(DROPS_STDDIR)/include/uclibc++ §(GCCINCDIR) \}
+               &\\\hline
+
+tiny           & -nostdinc -I\{ §(L4DIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(L4DIR)/include/uclibc §(L4DIR)/include/uclibc++
+		 §(DROPS_STDDIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(DROPS_STDDIR)/include/uclibc
+		 §(DROPS_STDDIR)/include/uclibc++ §(GCCINCDIR) \}
+               &\\\hline
+
+sigma0         & -nostdinc -I\{ §(L4DIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(L4DIR)/include/uclibc §(L4DIR)/include/uclibc++
+		 §(DROPS_STDDIR)/include/\{x86, arm, amd64\}/uclibc
+		 §(DROPS_STDDIR)/include/uclibc
+		 §(DROPS_STDDIR)/include/uclibc++ §(GCCINCDIR) \}
+               &\\\hline
+
+libc           & -nostdinc -I\{ §(GCCINCDIR) §(L4DIR)/include/dietlibc
+                 §(DROPS_STDDIR)/include/dietlibc \}
+               &\\\hline
+
+host           & - 
+               &\\\hline
+
+l4linux        & -I§(GCCINCDIR)
+               &\\\hline
+
+\end{ptabtwo}
+\caption{Directories for include file search depending on the mode for
+\emph{uclibc}.}
+\label{tab:mode-incdirs-uc}
+\end{table}
+
+\begin{table}[htp]
 \index{§(MODE)}\index{§(LIBCLIBDIR)}%
 \begin{ptabtwo}
 \hline
 \bf Mode        & \bf «§LIBCLIBDIR» &\\\hline\hline
 
-l4env           & -L§(L4DIR)/../oskit10/lib
-                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+l4env          & - 
+               &\\\hline
 
-l4env_freebsd   & -L\{§(L4DIR)/../oskit10/lib 
-                  -L§(L4DIR)/lib/c++/§(GCCVERSION)
-                  §(DROPS_STDDIR)/lib/oskit10
-                  §(DROPS_STDDIR)/lib/c++/§(GCCVERSION)
-                  \} &\\\hline
+l4env\_minimal & -
+               &\\\hline
 
-loader          & -L§(L4DIR)/../oskit10/lib
-                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+l4env\_base    & -
+               &\\\hline
 
-sigma0          & -L§(L4DIR)/../oskit/lib -L§(DROPS_STDDIR)/lib/oskit06
-                &\\\hline
+tiny           & -
+               &\\\hline
 
-oskit10_sigma0  & -L§(L4DIR)/../oskit10/lib
-                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+sigma0         & -
+               &\\\hline
 
-l4linux         & -L§(DROPS_STDDIR)/lib &\\\hline
+libc           & -
+               &\\\hline
 
-l4linux_kern    & - &\\\hline
+host           & -
+               &\\\hline
 
-host            & - &\\\hline
+l4linux        & -
+               &\\\hline
 
 \end{ptabtwo}
 \caption{Directories for library path search depending on the mode.}
 \label{tab:mode-libdirs}
 \end{table}
 
-\begin{table}[h!]
+\begin{table}[htp]
 \index{§(LIBCLIBS)}
 \begin{ptabtwo}
 \hline
 \bf Mode        & \bf «§LIBCLIBS» &\\\hline\hline
 
-l4env           & -nostdlib
-                  -loskit10_support_l4env -ll4env -ll4rm
-                  -ldm_generic -ldm_mem -lthread -loskit_c
-                  -loskit_kern -loskit_clientos -loskit_lmm
-                  -loskit10_support_l4env -loskit_kern 
-                  -loskit_c -loskit10_support_l4env
-                &\\\hline
+l4env          & -nostdlib §(GCCLDNOSTDLIB) §(DIETLIBC_IMPLEMENTATION) 
+		 -ldietlibc_support §(MALLOC_BACKEND) -lc_be_mmap
+		 -lc_be_mmap_util -lc_be_l4env_start_stop
+		 -lc_be_minimal_log_io -ldiet_be_simple_sleep -ll4env
+		 -llogserver_capsule -ll4rm -ldm_generic -ldm_mem  -lthread
+		 -lgeneric_ts §(DIETLIBC_IMPLEMENTATION) §(GCCLIB)
+		 §(DIETLIBC_IMPLEMENTATION) -ll4sys 
+	       &\\\hline
 
-l4env_freebsd   & -nostdlib -loskit10_support_l4env_full -loskit_startup
-                  -loskit_clientos -loskit_bootp -loskit_linux_fs 
-                  -loskit_diskpart -loskit_linux_dev
-                  -loskit_freebsd_net -loskit_kern -loskit_lmm
-                  -loskit_amm -loskit_freebsd_c -loskit_com
-                  -loskit_freebsd_c &\\\hline
+l4env\_minimal & -nostdlib §(GCCLDNOSTDLIB) §(MALLOC_BACKEND)
+		 §(DIETLIBC_IMPLEMENTATION) -lc_be_l4env_start_stop
+		 -lgeneric_ts -lc_be_minimal_log_io -lc_be_mmap_util
+		 §(MALLOC_BACKEND) -lc_be_mmap -lc_be_mmap_util -ll4rm
+		 -ldm_mem -ldm_generic -lthread -lsemaphore -ll4env
+		 -ll4env_err -lslab -llogserver_capsule -ll4rm -lthread
+		 -ldm_generic -lnames -ll4util_root -ll4util -lsigma0
+		 §(DIETLIBC_IMPLEMENTATION) §(GCCLIB)
+		 §(DIETLIBC_IMPLEMENTATION) -lc_be_l4env_start_stop -ll4sys
+               &\\\hline
 
-loader          & -nostdlib
-                  -loskit10_support_l4env -loskit_c
-                  -loskit_kern -loskit_clientos -loskit_lmm
-                  -loskit10_support_l4env -loskit_c
-                  -loskit_kern -loskit10_support_l4env &\\\hline
+l4env\_base    & -nostdlib §(GCCLDNOSTDLIB) -u printf -lc_be_io.o
+		 §(MALLOC_BACKEND) -lc_be_time -lrtc -ll4rm -ldm_mem
+		 -ldm_generic -lthread -lsemaphore -ll4env -ll4env_err -lslab
+		 -llogserver_capsule -ll4rm -lthread -ldm_generic -lnames
+		 -ll4util_root -ll4util -lsigma0 §(DIETLIBC_IMPLEMENTATION)
+		 §(GCCLIB) §(DIETLIBC_IMPLEMENTATION) §(MALLOC_BACKEND) -ll4rm
+		 -ldm_mem -ldm_generic -lc_be_time -lc_be_mmap
+		 -lc_be_mmap_util -lc_be_l4env_start_stop -lgeneric_ts
+		 -lc_be_syslog -lc_be_file-table -ldiet_be_simple_sleep
+		 -ll4vfs_common_io -ll4vfs_basic_io -ll4vfs_connection
+		 -ll4vfs_basic_name_server -ll4vfs_name_server
+		 -ll4vfs_name_space_provider -ll4vfs_extendable
+               &\\\hline
 
-sigma0          & -nostdlib -lmc -loskit_support -lkern -llmm -lmc
-                &\\\hline
+tiny           & -nostdlib §(GCCLDNOSTDLIB) -ldiet_c -ldietlibc_support
+                 -ldiet_be_minimal_io -ldiet_be_l4_start_stop
+		 -ldiet_be_sigma0_mem -ldiet_c -ll4util -lsigma0 -ldiet_c
+		 §(GCCLIB) -ldiet_c -ll4sys 
+               &\\\hline
 
-oskit10_sigma0  & -nostdlib -loskit10_support -loskit_startup
-                  -loskit_clientos -loskit_bootp
-                  -loskit_linux_fs -loskit_diskpart \
-                  -loskit_linux_dev -loskit_freebsd_net \
-                  -loskit10_support -loskit_kern -loskit_lmm \
-                  -loskit_amm -loskit_c -loskit_kern -lrmgr \
-                  -loskit_c
-                &\\\hline
+sigma0         & -nostdlib §(GCCLDNOSTDLIB) -ldiet_c -ldietlibc_support
+                 -ldiet_be_minimal_io -ldiet_be_l4_start_stop
+		 -ldiet_be_sigma0_mem -ldiet_c -llogserver -lnames -lsigma0
+		 -ll4util_root -ll4util §(ROOTLIB) -ldiet_c §(GCCLIB) -ldiet_c
+		 -ll4sys
+               &\\\hline
 
-l4linux         & -ldm_generic -ldm_mem -lnames -ll4util
-                  -lrmgr -lloaderif -ll4env -ll4env_err -lslab -ll4sys
-                &\\\hline
+libc           & -nostdlib §(GCCLDNOSTDLIB) -ldiet_c §(LIBCBACKEND_LIB)
+                 §(GCCLIB) -ldiet_c
+               &\\\hline
 
-l4linux_kern    & - &\\\hline
+host           & -
+               &\\\hline
 
-host            & - &\\\hline
+l4linux        & -ldm_generic -ldm_mem -lnames  -ll4util_root -ll4util
+		 §(ROOTLIB) -lloaderif -ll4env -ll4env_err -lslab -ll4sys
+	       &\\\hline
 
 \end{ptabtwo}
-\caption{Standard libc-libraries depending on the mode.}
-\label{tab:mode-clibs}
+\caption{Standard libc-libraries of \emph{dietlibc} depending on the mode.}
+\label{tab:mode-clibs-diet}
+\end{table}
+
+\begin{table}[htp]
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§LIBCLIBS» &\\\hline\hline
+
+l4env          & -nostdlib §(GCCLDNOSTDLIB) §(UCLIBC_IMPLEMENTATION)
+		 -luclibc_support §(MALLOC_BACKEND) -lc_be_mmap
+		 -lc_be_mmap_util -lc_be_l4env_start_stop
+		 -lc_be_minimal_log_io -luc_be_simple_sleep -ll4env
+		 -llogserver_capsule -ll4rm -ldm_generic -ldm_mem -lthread
+		 -lgeneric_ts §(UCLIBC_IMPLEMENTATION) §(GCCLIB)
+		 §(UCLIBC_IMPLEMENTATION) -ll4sys
+	       &\\\hline
+
+l4env\_minimal & -nostdlib §(GCCLDNOSTDLIB) §(MALLOC_BACKEND)
+		 §(UCLIBC_IMPLEMENTATION) -lc_be_l4env_start_stop -lgeneric_ts
+		 -lc_be_minimal_log_io -lc_be_mmap_util §(MALLOC_BACKEND)
+		 -lc_be_mmap -lc_be_mmap_util -ll4rm -ldm_mem -ldm_generic
+		 -lthread -lsemaphore -ll4env -ll4env_err -lslab
+		 -llogserver_capsule -ll4rm -lthread  -ldm_generic -lnames
+		 -ll4util_root -ll4util -lsigma0 §(UCLIBC_IMPLEMENTATION)
+		 §(GCCLIB) §(UCLIBC_IMPLEMENTATION) -lc_be_l4env_start_stop
+		 -luclibc_support -ll4sys
+               &\\\hline
+
+l4env\_base    & -nostdlib §(GCCLDNOSTDLIB) -u printf -lc_be_io.o
+		 §(MALLOC_BACKEND) -lc_be_time -lrtc -ll4rm -ldm_mem
+		 -ldm_generic -lthread -lsemaphore -ll4env -ll4env_err -lslab
+		 -llogserver_capsule -ll4rm -lthread -ldm_generic -lnames
+		 -ll4util_root -ll4util -lsigma0 §(UCLIBC_IMPLEMENTATION)
+		 §(GCCLIB) §(UCLIBC_IMPLEMENTATION) §(MALLOC_BACKEND) -ll4rm
+		 -ldm_mem -ldm_generic -lc_be_time -lc_be_mmap
+		 -lc_be_mmap_util -lc_be_l4env_start_stop -lgeneric_ts
+		 -lc_be_syslog -lc_be_file-table -luc_be_simple_sleep
+		 -ll4vfs_common_io -ll4vfs_basic_io -ll4vfs_connection
+		 -ll4vfs_basic_name_server -ll4vfs_name_server
+		 -ll4vfs_name_space_provider -ll4vfs_extendable -ll4sys
+               &\\\hline
+
+tiny           & -nostdlib §(GCCLDNOSTDLIB) -luc_c -luc_be_minimal_io
+		 -luc_be_l4_start_stop -luc_be_sigma0_mem -luc_c
+		 -luclibc_support -ll4util -lsigma0 -luc_c §(GCCLIB) -luc_c
+		 -ll4sys
+               &\\\hline
+
+sigma0         & -nostdlib §(GCCLDNOSTDLIB) -luc_c -luc_be_minimal_io
+		 -luc_be_l4_start_stop -luc_be_sigma0_mem -luc_c
+		 -luclibc_support -llogserver -lnames -lsigma0 -ll4util_root
+		 -ll4util §(ROOTLIB) -luc_c §(GCCLIB) -luc_c -ll4sys
+               &\\\hline
+
+libc           & -nostdlib §(GCCLDNOSTDLIB) -ldiet_c §(LIBCBACKEND_LIB)
+                 §(GCCLIB) -ldiet_c
+               &\\\hline
+
+host           & -
+               &\\\hline
+
+l4linux        & -ldm_generic -ldm_mem -lnames  -ll4util_root -ll4util
+		 §(ROOTLIB) -lloaderif -ll4env -ll4env_err -lslab -ll4sys
+	       &\\\hline
+
+\end{ptabtwo}
+\caption{Standard libc-libraries of \emph{uclibc} depending on the mode.}
+\label{tab:mode-clibs-uc}
 \end{table}
 
 
-\begin{table}[h!]
+\begin{table}[htp]
 \index{§(L4LIBS)}
 \begin{ptabtwo}
 \hline
 \bf Mode        & \bf «§L4LIBS»
 &\\\hline\hline
 
-l4env           & -static -ll4env -ll4rm -ldm_generic -ldm_mem -lthread
-                  -lsemaphore -llogserver -lnames -ll4util -lrmgr
-                  -loskit10_support_l4env -ll4env -ll4env_err -ll4rm 
-                  -ldm_generic -ldm_mem -lthread -lslab -ll4sys §(GCCLIB)
-                &\\\hline
+l4env          & -static -lgeneric_ts -ll4env -ll4rm -ldm_generic -ldm_mem
+                 -lthread -lsemaphore -llogserver_capsule -lnames
+		 -ll4util_root -ll4util -lsigma0 §(ROOTLIB) -ll4env
+		 -ll4env_err -ll4rm -ldm_generic -ldm_mem -lthread -lslab
+		 -ll4sys
+               &\\\hline
 
-l4env_freebsd   & -static -ll4env_oskit10 -ll4rm -ldm_generic
-                  -ldm_mem -lthread -lsemaphore -llogserver -lnames
-                  -ll4util -lrmgr -loskit10_support_l4env_full
-                  -ll4env_oskit10 -ll4env_err -ll4rm -ldm_generic
-                  -ldm_mem -lthread -lslab -ll4sys §(GCCLIB)
-                  §(GCCLIB_EH) &\\\hline
+l4env\_minimal & -static -ll4rm -ldm_mem -ldm_generic -lthread -lsemaphore
+                 -ll4env -ll4env_err -lslab -llogserver_capsule -ll4rm
+		 -lthread -ldm_generic -lnames -ll4util_root -ll4util -lsigma0 
+		 §(ROOTLIB) -ll4sys
+               &\\\hline
 
-loader          & -lloader.s -ll4sys §(GCCLIB) &\\\hline
+l4env\_base    & -static -ll4rm -ldm_mem -ldm_generic -lthread -lsemaphore
+                 -ll4env -ll4env_err -lslab -llogserver_capsule -ll4rm
+		 -lthread -ldm_generic -lnames -ll4util_root -ll4util -lsigma0
+		 §(ROOTLIB) -ll4sys
+               &\\\hline
 
-sigma0          & -static -llogserver -lnames -ll4util -lrmgr -ll4sys §(GCCLIB)
-                &\\\hline
+tiny           & -static -lmain -ll4util -ll4sys
+               &\\\hline
 
-oskit10_sigma0  & -static -llogserver -lnames -ll4util -lrmgr -ll4sys §(GCCLIB)
-                &\\\hline
+sigma0         & -static -lmain -lnames -llogserver -ll4util_root -ll4util
+                 -ll4sys
+               &\\\hline
 
-l4linux         & - &\\\hline
-l4linux_kern    & - &\\\hline
-host            & - &\\\hline
+libc           & -
+               &\\\hline
+
+host           & -
+               &\\\hline
+
+l4linux        & -
+               &\\\hline
 
 \end{ptabtwo}
 \caption{L4 libraries to be linked depending on the mode.}
 \label{tab:mode-l4libs}
 \end{table}
 
-\begin{table}[h!]
+\begin{table}[htp]
 \index{§(LIBCLIBS)}\index{§(CRT0)}\index{§(CRTN)}\index{§(LDSCRIPT)}
 \begin{ptabthree}{.41}{.42}
 \hline
 \bf Mode        & \bf «§CRT0» & \bf «§LDSCRIPT» 
 &\\\hline\hline
 
-l4env           & crt0_l4env.o
-                & main_stat.ld
-                &\\\hline
+l4env          & crt0.o
+               & main_stat.ld
+               &\\\hline
 
-l4env_freebsd   & crt0_l4env_freebsd.o
-                & main_stat.ld
-                & \\\hline
+l4env\_minimal & crt0.o
+               & main_stat.ld
+               &\\\hline
 
-loader          & crt0_l4env_dyn.o
-                & main_stat.ld
-                &\\\hline
+l4env\_base    & crt0.o
+               & main_stat.ld
+               &\\\hline
 
-sigma0          & crt0_getopt.o
-                & main_stat.ld
-                &\\\hline
+tiny           & crt0.o
+               & main_stat.ld
+               &\\\hline
 
-oskit10_sigma0  & crt0_oskit10_support.o
-                & main_stat.ld
-                &\\\hline
+sigma0         & crt0.o
+               & main_stat.ld
+               &\\\hline
 
-l4linux         & - & - &\\\hline
-l4linux_kern    & - & - &\\\hline
-host            & - & - &\\\hline
+libc           & crt0.o
+               & main_stat.ld
+               &\\\hline
+
+host           & -
+               & -
+               &\\\hline
+
+l4linux        & -
+               & -
+               &\\\hline
 
 \end{ptabthree}
 \caption{Startup code (CRT0) and linker scripts depending on the mode.}
@@ -1048,23 +1280,13 @@ packages:
 
 \begin{description}
 
-\item[sigma0] \name{names}: server and library
-\item[oskit10_sigma0] \name{names}: lister example; \name{log}: network
-  server
-\item[l4env] \name{con}: bench example
+\item[sigma0] \name{names}: library
+\item[host] \name{names}: lister example
+\item[l4env] \name{con}: library and server
 
 \end{description}
 
 
-
-\subsection{Backward Compatibility, \name{drops-gcc}}
-
-As long as packages have to be compiled that use the (older)
-make-system with those Makeconf's in «§(L4DIR)», they must be provided
-with correct libraries and include-files. Therefore a standard system
-is defined and used by the adapted Makeconf's. All packages that use
-BID and that should be used by old packages, compile at least for the
-standard system. The standard system is «x86_586-l4v2».
 
 \subsection{Defining new architectures and modes}
 \label{sec:modes-defining-own}
@@ -1075,7 +1297,7 @@ architecture is done by setting appropriate Make-variables. To define
 mode «mode» for architecture «arch», set «BID_SUPPORTED_arch_mode» to
 ``y'' and define the variables «LIBCINCDIR_arch_mode»,
 «LIBCLIBDIR_arch_mode», «LIBCLIBS_arch_mode», «L4LIBS_arch_mode»,
-«CRT0_arch_mode», «CRTN_arch_mode» and «LDSCRIPT_x86_sigma0».
+«CRT0_arch_mode», «CRTN_arch_mode» and «LDSCRIPT_arch_mode».
 
 Also, you can set
 «CARCHFLAGS_<arch>_<cpu>»\index{§(CARCHFLAGS_arch_cpu)} to specify
@@ -1083,16 +1305,10 @@ cpu-specific compiler options, e.g. «CARCHFLAGS_x86_p3=-march=p3» if
 -march=p3 is the compiler option to generate p3-optimized code.
 
 \vfill\pagebreak
-\section{Relocation of Binaries}
+\section{Relocated binaries and the STATIC file}
 \label{sec:reloc}
-\index{relocation}
-
-To generate executable binaries, there are two flavors of finally
-linking: Relocating a formerly relocatable binary or build relocated
-binaries in a normal link process.
-
-\subsection{Relocated binaries and the STATIC file}
 \label{sec:reloc-STATIC}
+\index{relocation}
 
 This is the classical approach of building an executable binary: Link
 it starting at a specific address. However, we offer some magic here
@@ -1105,30 +1321,6 @@ of a binary. «prog.mk» looks up the name of the binary in this file,
 and if it is found, the corresponding start-address is used. If the
 name of the binary is not found in STATIC, the start-address specified
 in «DEFAULT_RELOC++» is used.
-
-
-\subsection{Relocatable binaries}
-\label{sec:reloc-bins}
-
-The idea behind this is to have all binaries to be executed during one
-run-time session linked to different virtual addresses. This is done
-by building the binaries relocatable first. These relocatable binaries
-have all symbols resolved and all required libraries linked, but the
-final start-address is not defined yet. These binaries are not
-executable yet. After building the binaries in this relocatable form,
-the size of all binaries is known. Then, all binaries are relocated
-to successive address ranges. If you start these binaries later, they
-use disjoint virtual addresses, but do not waste much virtual memory
-between them. And its automatically.
-
-To build relocatable binaries, call «make reloc». This traverses the
-subtrees of your local directory and builds relocatable binaries in
-the directories having the prog role. The binaries are named
-«relocatable.xxx» with xxx being substituted by the target name(s).
-Finally, call «§(L4DIR)/bin/reloc/reloc.sh» with the binaries you want
-to relocate as parameters. This script relocates the binaries and
-copies them to «§(L4DIR)/bin/». For a more explanatory description of
-«reloc.sh»\index{relocation!reloc.sh}, ask its maintainer.
 
 
 \pagebreak\section{The Role-Files}
@@ -1186,12 +1378,6 @@ using «make <target>».
 \item [install::]       \index{install:: make target}
                         Installs the generated files into the
                         installation-tree «§(DROPS_STDDIR)».
-\item [reloc::]         \index{relocation!reloc:: make target}
-                        Build relocatable binaries. This is used for
-                        the relocation mechanism (see
-                        Section~\ref{sec:reloc-bins}). Used by
-                        «subdir.mk» and «prog.mk»,
-                        ignored by the others.
 \item [clean::]         \index{clean:: make target}
                         Deletes all intermediate files generated
                         during compilation. This does \emph{not}
@@ -1315,7 +1501,7 @@ The following variables are provided by the prog.mk role-file:
     GCCINCDIR           & The path where the gcc-specific
                           include-files, such as «stdarg.h». Never
                           (really, NEVER) try to include a «stdarg.h»
-                          from \name{OSKit} or another source!). \#
+                          from a C library!). \#
 
     GCCLIB              & The name of the compiler's companion library
                           (libgcc). \#
@@ -1364,8 +1550,9 @@ The following variables are provided by the prog.mk role-file:
                         \#
 
     CLIENTIDL++       & \index{§(CLIENTIDL)}%
-                        IDL client source files. The .c-files compiled
-                        from the given IDLs are added to SRC_C++.
+			IDL client source files. The .c and .cc-files compiled
+			from the given IDLs are added to SRC_C++ and SRC_CC++
+			respectively.
                         Default: unset. \#
 
     CFLAGS++          & \index{§(CFLAGS)}%
@@ -1424,6 +1611,11 @@ The following variables are provided by the prog.mk role-file:
                         The path to IDL-files. This path is used to
                         find the client and server idl-files. Default:
                         «§(PKG_DIR)/idl/OBJ-§(SYSTEM)». \#
+
+    IDL_PKGDIR        & \index{§(IDL_PKGDIR)}%
+                        A list of package directories where IDL files are used
+			from. This will eventually supercede «§(IDL_PATH)».
+			Default: «§(PKGDIR)». \#
 
     IDL_TYPE+         & \index{§(IDL_TYPE)}%
                         The type of the IDL-files. This type is used
@@ -1526,17 +1718,17 @@ The following variables are provided by the prog.mk role-file:
     LIBCINCDIR        & \index{§(LIBCINCDIR)}%
                         Include path and flags to the libc includes.
                         Default: Determined by the mode, points to
-                        OSKit0.6 or OSKit1.0 normally. \#
+                        dietlibc or uClibc normally. \#
 
     LIBCLIBDIR        & \index{§(LIBCLIBDIR)}%
                         Library path and flags to libc.
                         Default: Determined by the mode, points to
-                        OSKit0.6 or OSKit1.0 normally. \#
+                        dietlibc or uClibc normally. \#
 
     LIBCLIBS          & \index{§(LIBCLIBS)}%
                         Libraries and flags for libc.
                         Default: Determined by the mode, points to
-                        OSKit0.6 or OSKit1.0 with support libraries
+                        dietlibc or uClibc with support libraries
                         normally. \#
 
     \bf{}LIBS++       & \index{§(LIBS)}%
@@ -1570,8 +1762,9 @@ The following variables are provided by the prog.mk role-file:
                         Default: unset \#
 
     SERVERIDL++       & \index{§(SERVERIDL)}%
-                        IDL server source files. The .c-files compiled
-                        from the given IDLs are added to SRC_C++.
+                        IDL server source files. The .c and .cc-files compiled
+                        from the given IDLs are added to SRC_C++ and SRC_CC++
+			respectively.
                         Default: unset. \#
 
     \bf{}SRC_\{C,CC,S\}++ 
@@ -1608,10 +1801,10 @@ include §(L4DIR)/mk/prog.mk
 
 \subsubsection{C++ programs}
 
-For full-featured C++ support, you have to use the l4env_freebsd mode. 
 If you do not need exception support, you can use the l4env mode,
 which comes with a much smaller libc. You have to define some
-callbacks then. Please see the exec server as an example.
+callbacks then. Please see the exec server as an example. You should specify
+«CXXFLAGS» = -fno-exceptions -fno-rtti.
 
 \begin{implemented}
 \item [«BUILD_PROFILE»] To make it work, additional libraries
@@ -1620,8 +1813,6 @@ callbacks then. Please see the exec server as an example.
   or not.
 \item [«MODE»] is currently interpreted as MODE, not as MODE++.
 \end{implemented}
-
-\todo{Shall we link libprofile.a to the binary if profiling is enabled?}
 
 
 
@@ -1634,10 +1825,10 @@ callbacks then. Please see the exec server as an example.
 The purpose of the lib role is to build static and shared libraries
 for different systems. The libraries are the targets.
 
-To build shared libraries, set the «BUILD_SHARED» option to
-nonempty. The shared libs end on .s.so. The additional ``.s'' later
-allows to explicitly specify linking against a shared library by
-specifying the different library base name to the linker.
+To build shared libraries, simply end the «TARGET» library name on .s.so.
+The additional ``.s'' later allows to explicitly specify linking against a
+shared library by specifying the different library base name to the linker.
+The use of «BUILD_SHARED» is deprecated.
 
 To build libraries that can be used to build shared libraries later,
 set the «BUILD_PIC» option to nonempty. The resulting libraries
@@ -1695,7 +1886,7 @@ The following variables are provided by the prog.mk role-file:
     GCCINCDIR           & The path where the gcc-specific
                           include-files, such as «stdarg.h». Never
                           (really, NEVER) try to include a «stdarg.h»
-                          from \name{OSKit} or another source!). \#
+                          from a C library!). \#
 
     GCCLIB              & The name of the compiler's companion library
                           (libgcc). \#
@@ -1746,8 +1937,9 @@ The following variables are provided by the prog.mk role-file:
                         Default: adds §(OPTS) §(WARNINGS). \#
 
     CLIENTIDL++         & \index{§(CLIENTIDL)}%
-                        IDL client source files. The .c-files compiled
-                        from the given IDLs are added to SRC_C++.
+                        IDL client source files. The .c and .cc-files compiled
+                        from the given IDLs are added to SRC_C++ and SRC_CC++
+			respectively.
                         Default: unset. \#
 
     CPPFLAGS++        & \index{§(CPPFLAGS)}%
@@ -1780,6 +1972,11 @@ The following variables are provided by the prog.mk role-file:
                         The path to IDL-files. This path is used to
                         find the client and server idl-files. Default:
                         «§(PKG_DIR)/idl/OBJ-§(SYSTEM)». \#
+
+    IDL_PKGDIR        & \index{§(IDL_PKGDIR)}%
+                        A list of package directories where IDL files are used
+			from. This will eventually supercede «§(IDL_PATH)».
+			Default: «§(PKGDIR)». \#
 
     IDL_TYPE+           & \index{§(IDL_TYPE)}%
                         The type of the IDL-files. This type is used
@@ -1895,8 +2092,9 @@ The following variables are provided by the prog.mk role-file:
                         Default: unset \#
 
     SERVERIDL++         & \index{§(SERVERIDL)}%
-                        IDL server source files. The .c-files compiled
-                        from the given IDLs are added to SRC_C++.
+                        IDL server source files. The .c and .cc-files compiled
+                        from the given IDLs are added to SRC_C++ and SRC_CC++
+			respectively.
                         Default: unset. \#
 
     \bf{}SRC_\{C,CC,S\}++ 
@@ -1929,7 +2127,6 @@ include §(L4DIR)/mk/lib.mk
 
 \subsubsection{C++ programs}
 
-For full-featured C++ support, you have to use the l4env_freebsd mode. 
 If you do not need exception support, you can use the l4env mode,
 which comes with a much smaller libc. You have to define some
 callbacks then. Please see the exec server as an example.
@@ -1968,11 +2165,6 @@ There are no special targets.
                           and §(L4API) as defines.
                           See Section
                           \ref{sec:systems-compile} for details. \#
-
-    IDL_BE+             & \index{§(IDL_BE)}%
-                          The backend to compile the code for. Supported
-                          values are v2, x0 and x2. Default is v2.
-                          \#
 
     \bf{}IDL_EXPORT_SKELETON
                         & \index{§(IDL_EXPORT_SKELETON)}%
@@ -2040,7 +2232,7 @@ There are no special targets.
     LIBCINCDIR          & \index{§(LIBCINCDIR)}%
                           Include path and flags to the libc includes.
                           Default: Determined by the mode, points to
-                          OSKit0.6 or OSKit1.0 normally. \#
+                          dietlibc or uClibc normally. \#
 
     MODE++              & \index{§(MODE)}%
                           specify, which target system a target has to
@@ -2069,6 +2261,12 @@ IDL = ping.idl
 
 include §(L4DIR)/mk/idl.mk
 \end{verbatim}
+
+\subsubsection{C++ programs}
+
+If the «IDL_FLAGS» parameter specifies the C++ languag mapping using -BmCPP,
+then C++ files are generated. They end on .cc and .hh and are added to SRC_CC
+variables of lib and prog make roles.
 
 
 \vfill\pagebreak
@@ -2234,10 +2432,10 @@ are recursively forwarded to subdirectories.
                 in «§(TARGET)» using «make -C». Calls
                 «make install» in the subdirs then.
 
-\item [all::, clean::, cleanall::, install::, oldconfig::, reloc:,
+\item [all::, clean::, cleanall::, install::, oldconfig::, 
                 scrub::, txtconfig::] Phony targets. Call
                 «make \{all, clean, cleanall, install,
-                  oldconfig, reloc, txtconfig, scrub\}» in the
+                  oldconfig, txtconfig, scrub\}» in the
                 subdirectories.
 
 \item [config::] Phony target. Does nothing.
@@ -2333,10 +2531,10 @@ redraw within the appropriate viewer.
 
 \item [install::] Phony target. Generate documentation and install it globally.
 
-\item [dvi::, ps::] Phony targets. Compile the primary tex document
+\item [dvi::, ps::, pdf::] Phony targets. Compile the primary tex document
                     into dvi and ps, respectively.
 
-\item [showdvi::, showps::] Phony targets. Invoke a viewer on the
+\item [showdvi::, showps::, showpdf::] Phony targets. Invoke a viewer on the
                     compiled version of the primary tex document.
 
 \item [clean::]  Delete intermediate compilation files.
@@ -2410,14 +2608,21 @@ You may also trigger this test run in the «l4/pkg» directory by issuing
 \subsubsection{Make-Targets}
 
 \begin{description}
-\item [all::] Phony target. Generate documentation and install it locally.
+\item [all::] Phony target. Runs Fiasco UX with given arguments and compares
+              output to expected output.
 
-\item [genexp::] Generate the expected output.
+\item [ptest::]    Phony target. Same as all.
 
-\item [clean::]  Delete intermediate compilation files.
+\item [genexp::]   Phony target. Generate the expected output.
+
+\item [plainrun::] Phony target. Simply runs Fiasco UX with given arguments.
+                   No watchdog is installed, no output filtering applied, and
+		   no output comparison.
+
+\item [clean::]    Delete intermediate compilation files.
 
 \item [cleanall::] Delete all generated files (also the expected output file
-                    if generated by make).
+                   if generated by make).
 
 \end{description}
 
@@ -2429,14 +2634,12 @@ You may also trigger this test run in the «l4/pkg» directory by issuing
 			  to be tested.  If this binary name contains no
 			  directory elements ('/'), then the binary is 
 			  assumed to be in the architecture's and L4 API's
-			  binary directory.
+			  binary directory. §(L4DIR)/bin/§(ARCH)/§(L4API)
 
-			  If there are directory elements, is used as is.\#
-
-    TEST_CLIENT		& \index{§(TEST_CLIENT)}%
-    			  The name of the binary to be run as the application
-			  testing the server.  Same naming rules apply as
-			  with TEST_SERVER.\#
+			  If there are directory elements, is used as is.
+			  
+			  If empty, a warning is issued and make terminates
+			  successfully.\#
 
 \end{parameterlist}
 
@@ -2444,6 +2647,12 @@ You may also trigger this test run in the «l4/pkg» directory by issuing
 
 % argument of parameter-list is widest parameter
 \begin{parameterlist}{REQUIRED_SERVERS}
+
+    TEST_CLIENT		& \index{§(TEST_CLIENT)}%
+    			  The name of the binary to be run as the application
+			  testing the server.  Same naming rules apply as
+			  with TEST_SERVER.\#
+
     FIASCOUX_<api>	& \index{§(FIASCOUX_<api>)}%
     			  The Fiasco-UX binary to use for the specified
 			  §(L4API) 
@@ -2457,7 +2666,7 @@ You may also trigger this test run in the «l4/pkg» directory by issuing
 
 			  If this variable does not contain directory parts
 			  ('/'), then it is prefixed with the binary directory
-			  of user-land executables.  Otherwise it is take as
+			  of user-land executables.  Otherwise it is taken as
 			  is.
 
 			  The binaries are then prefixed with «-l» to run as
@@ -2501,6 +2710,39 @@ You may also trigger this test run in the «l4/pkg» directory by issuing
 			  find the user-land binaries in the «l4/bin»
 			  directory.\#
 
+    EXPECT_FAIL		& \index{§(EXPECT_FAIL)}%
+    			  If set will accept failure of output comparison. If
+			  output matches expected output, an error will be
+			  issued. This option has no effect in generate
+			  mode.\#
+
+    FILTER_KEEP_ALL	& \index{§(FILTER_KEEP_ALL)}%
+    			  If set, the output of Fiasco UX will not be
+			  filtered.\#
+
+    COMPARE_CMD		& \index{§(COMPARE_CMD)}%
+    			  If set, this command is run instead of the default
+			  command. This command should only generate output if
+			  there is an error. If no output is generated by the
+			  command, success is assumed. In case of an error the
+			  last 1000 lines of the output are printed to stderr.
+
+			  Default: diff -u §(EXPECTED_OUT) §(TMP_OUT)\#
+
+    NO_FBUF_DEV		& \index{§(NO_FBUF_DEV)}%
+    			  If set, Fiasco UX will not open a window to display
+			  graphical output. This is only relevant if your
+			  setup does graphical output and you would like to
+			  test it in batched mode (no DISPLAY).\#
+
+    USE_SYMBOLS		& \index{§(USE_SYMBOLS)}%
+			  If set to 'y', Fiasco UX will load its Symbols. This
+			  helps when debugging. Default: 'y'.\#
+
+    USE_LINES		& \index{§(USE_LINES)}%
+    			  If set to 'y', Fiasco UX will load its Lines. This
+			  helps when debugging. Default: 'y'.\#
+    
 \end{parameterlist}
 
 
@@ -2518,6 +2760,14 @@ TEST_CLIENT = dice_hello_client
 include $(L4DIR)/mk/runux.mk
 \end{verbatim}
 
+The §(COMPARE_CMD) can be used to apply own filter rules as well. An example
+that sorts the output depending on the LOG tag is the following:
+
+\begin{verbatim}
+COMPARE_CMD = "cat $(TMP_OUT)|sort -t '|' -k1,1 -s >$(TMP_OUT) ; diff -u
+$(EXPECTED_OUT) $(TMP_OUT)"
+\end{verbatim}
+
 
 \vfill\pagebreak
 
@@ -2533,29 +2783,6 @@ INSTALL_TARGET, INSTALL_TARGET_LOCAL, INSTALL_TARGET_GLOBAL, LIBDEPS,
 MAKEDEP, OSYSTEMS, ROLE, SYSTEM_TO_ARCH, SYSTEM_TO_CPU,
 SYSTEM_TO_L4API, TARGET_SYSTEMS»
 
-
-%begin{latexonly}
-\section{Todo}
-{\renewcommand{\section}[2]{}
-\listoftodos
-}
-%end{latexonly}
-
-
-
-\subsection*{Open Issues}
-
-
-The following open wishes are the result from the discussion on June 1st
-2002 in Rabenau after the presentation.
-
-\begin{description}
-
-\item [Install mk-files, open] Install the *.mk implementations to
-  /home/drops too. Then, we need a redirection mechanism that stays
-  unmodified for a longer period of time.
-
-\end{description}
 
 
 \appendix

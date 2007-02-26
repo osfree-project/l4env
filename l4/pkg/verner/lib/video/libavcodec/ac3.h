@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 /**
@@ -43,6 +43,7 @@ typedef struct AC3BitAllocParameters {
     int cplfleak, cplsleak;
 } AC3BitAllocParameters;
 
+#if 0
 extern const uint16_t ac3_freqs[3];
 extern const uint16_t ac3_bitratetab[19];
 extern const int16_t ac3_window[256];
@@ -52,10 +53,11 @@ extern const uint16_t sgaintab[4];
 extern const uint16_t dbkneetab[4];
 extern const uint16_t floortab[8];
 extern const uint16_t fgaintab[8];
+#endif
 
 void ac3_common_init(void);
 void ac3_parametric_bit_allocation(AC3BitAllocParameters *s, uint8_t *bap,
                                    int8_t *exp, int start, int end,
                                    int snroffset, int fgain, int is_lfe,
-                                   int deltbae,int deltnseg, 
+                                   int deltbae,int deltnseg,
                                    uint8_t *deltoffst, uint8_t *deltlen, uint8_t *deltba);

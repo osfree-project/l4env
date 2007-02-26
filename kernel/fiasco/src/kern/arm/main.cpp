@@ -38,20 +38,20 @@ static void exit_question()
 {
   exit_question_active = 1;
 
-  while(1) 
+  while (1)
     {
       puts("\nReturn reboots, \"k\" enters L4 kernel debugger...");
 
       char c = Kconsole::console()->getchar();
 
-      if (c == 'k' || c == 'K') 
+      if (c == 'k' || c == 'K')
 	{
 	  kdb_ke("_exit");
 	}
-      else 
+      else
 	{
-	  // it may be better to not call all the destruction stuff 
-	  // because of unresolved static destructor dependency 
+	  // it may be better to not call all the destruction stuff
+	  // because of unresolved static destructor dependency
 	  // problems.
 	  // SO just do the reset at this point.
 	  puts("\033[1mRebooting...\033[0m");
@@ -70,16 +70,15 @@ int main()
   // make some basic initializations, then create and run the kernel
   // thread
   set_exit_question(&exit_question);
-   
+
   printf("%s\n", Kip::k()->version_string());
 
-  // disallow all interrupts before we selectively enable them 
+  // disallow all interrupts before we selectively enable them
   //  pic_disable_all();
-  
+
   // create kernel thread
   static Kernel_thread *kernel = new (Config::kernel_id) Kernel_thread;
-  Space::kernel_space( current_space() );
-  //  unsigned dummy;
+  Mem_space::kernel_space( current_mem_space() );
 
   kdb_ke("init");
 

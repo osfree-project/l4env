@@ -26,6 +26,7 @@
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sigma0/kip.h>
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
 #include <l4/thread/thread.h>
@@ -304,7 +305,7 @@ static void
 l4semaphore_thread(void * data)
 {
   int error,i,datakey,found;
-  l4_uint32_t dw0,dw1;
+  l4_umword_t dw0,dw1;
   l4_threadid_t me,src,wakeup;
   l4semaphore_t * sem;
   l4sem_wq_t * wp;
@@ -390,13 +391,14 @@ l4semaphore_thread(void * data)
 #if !(L4SEMAPHORE_SEND_ONLY_IPC)
               /* reply */
 #if L4SEMAPHORE_RESTART_IPC
-              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK), 0, 0, L4_IPC_NEVER, &result);
+              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK),
+			  0, 0, L4_IPC_NEVER, &result);
 #else
-              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK), 0, 0,
-                          L4_IPC_SEND_TIMEOUT_0, &result);
+              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK),
+			  0, 0, L4_IPC_SEND_TIMEOUT_0, &result);
 #endif
 #endif
-              found = 0; 
+              found = 0;
               /* look for a waiting thread*/
               while (sem->queue != NULL)
 	        {
@@ -432,8 +434,8 @@ l4semaphore_thread(void * data)
                         }
 		    }
 		  else
-                    LOG_Error("L4semaphore: invalid thread "l4util_idfmt"! \
-			      Maybe not alive ?", l4util_idstr(wakeup));
+                    LOG_Error("L4semaphore: invalid thread "l4util_idfmt"!"
+			      "Maybe not alive ?", l4util_idstr(wakeup));
                 }
 
               if (!found)
@@ -492,6 +494,14 @@ int
 l4semaphore_init(void)
 {
   l4thread_t t;
+
+  if (!l4sigma0_kip_kernel_has_feature("deceit_bit_disables_switch"))
+    {
+      LOG_Error("Missing 'deceit_bit_disables_switch' kernel feature!");
+      return -1;
+    }
+
+
 
   /* start semaphore thread */
   t = l4thread_create_long(L4THREAD_INVALID_ID, l4semaphore_thread,

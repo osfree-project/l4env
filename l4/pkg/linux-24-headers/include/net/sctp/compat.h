@@ -1,5 +1,6 @@
 /* SCTP kernel reference Implementation
  *
+ * (C) Copyright IBM Corp. 2004
  * Copyright (c) 2003 Hewlett-Packard Company
  * 
  * This file is part of the SCTP kernel reference Implementation
@@ -36,7 +37,7 @@
 #include <linux/seq_file.h>
 
 /*
- * The following defines are for compatibility with 2.5
+ * The following defines are for compatibility with 2.6
  */
 /*
  * container_of - cast a member of a structure out to the containing structure
@@ -54,19 +55,15 @@
 	extern type name[]
 #define SNMP_DEC_STATS(mib, field) ((mib)[2*smp_processor_id()+!in_softirq()].field--)
 
-#define sctp_sk(__sk) (&(((struct sock *)__sk)->tp_pinfo.af_sctp))
 #define inet_sk(__sk) (&(((struct sock *)__sk)->protinfo.af_inet))
 #define inet6_sk(__sk) (&(((struct sock *)__sk)->net_pinfo.af_inet6))
 
 #define virt_addr_valid(x)	VALID_PAGE(virt_to_page((x)))
 #define sock_owned_by_user(sk)  ((sk)->lock.users)
 #define sk_set_owner(x, y)
-#define __unsafe(x) MOD_INC_USE_COUNT
+#define __unsafe(x)
 #define dst_pmtu(x) ((x)->pmtu)
 
-void sctp_hash_digest(const char *key, const int in_key_len,
-		      const char *text, const int text_len,
-		      __u8 *digest);
 /*
  * find last bit set.
  */

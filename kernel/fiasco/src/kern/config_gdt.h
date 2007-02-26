@@ -15,21 +15,27 @@
 
 #define GDT_CODE_KERNEL		(0x08)		// #1
 #define GDT_DATA_KERNEL		(0x10)		// #2
+
+#if defined(CONFIG_IA32)
+
 #define GDT_CODE_USER		(0x18)		// #3
 #define GDT_DATA_USER		(0x20)		// #4
 #define GDT_TSS			(0x28)		// #5: hardware task segment
 #define GDT_TSS_DBF		(0x30)		// #6: tss for dbf handler
+
+#endif
+
+#if defined(CONFIG_AMD64)
+
+#define GDT_DATA_USER		(0x18)		// #3
+#define GDT_CODE_USER		(0x20)		// #4
+#define GDT_TSS			(0x28)		// #5 hardware task segment
+
+#endif
+
 #define GDT_LDT			(0x38)		// #7
 
-#if defined(CONFIG_LOCAL_IPC)
-
-#define GDT_UTCB		(0x40)		// #8 segment for UTCB pointer
-#define GDT_TLS1		(0x00)		// dummy
-#define GDT_TLS2		(0x00)		// dummy
-#define GDT_TLS3		(0x00)		// dummy
-#define GDT_MAX			(0x48)
-
-#elif defined(CONFIG_EXCEPTION_IPC)
+#if defined(CONFIG_EXCEPTION_IPC)
 
 #define GDT_UTCB		(0x40)		// #8 segment for UTCB pointer
 #define GDT_TLS1		(0x48)		// #9

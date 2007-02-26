@@ -77,9 +77,9 @@ termstate_t * con_term_open(long max_sbuf_size, int hist)
 
     if (con_if_openqry_call(&(term->spec->con_l4id), max_sbuf_size, 0, 0, prio,
                             &(term->spec->vtc_l4id), CON_NOVFB, &env)
-        || (env.major != CORBA_NO_EXCEPTION))
+        || (DICE_HAS_EXCEPTION(&env)))
     {
-        LOGl("openqry failed (exc=%d)", env.major);
+        LOGl("openqry failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
         free(term->spec);
         free(term);
         return NULL;
@@ -105,9 +105,9 @@ termstate_t * con_term_open(long max_sbuf_size, int hist)
 
     if (con_vc_smode_call(&(term->spec->vtc_l4id), CON_INOUT,
                           &(term->spec->evh_l4id), &env)
-        || (env.major != CORBA_NO_EXCEPTION))
+        || (DICE_HAS_EXCEPTION(&env)))
     {
-        LOGl("smode failed (exc=%d)", env.major);
+        LOGl("smode failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
         l4semaphore_up(&term->termsem);
         free(term->spec);
         free(term);
@@ -121,9 +121,9 @@ termstate_t * con_term_open(long max_sbuf_size, int hist)
                                &(term->spec->accel_flags),
                                &(term->spec->font_w), &(term->spec->font_h),
                                &env)
-       || (env.major != CORBA_NO_EXCEPTION))
+       || (DICE_HAS_EXCEPTION(&env)))
     {
-        LOGl("gmode failed (exc=%d)", env.major);
+        LOGl("gmode failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
         l4semaphore_up(&term->termsem);
         free(term->spec);
         free(term);

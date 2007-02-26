@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= pcidevs
 DEFAULT_RELOC	= 0x00800000
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_C		= main.c
 LIBS		= -lpci24-single

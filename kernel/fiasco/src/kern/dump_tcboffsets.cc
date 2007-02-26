@@ -11,21 +11,19 @@
 
 
 #define DUMP_OFFSET(prefix,name,offset) \
-  printf("#define OFS__" #prefix "__" #name " 0x%lx\n", READ_VAL);
+  printf("#define OFS__" #prefix "__" #name " 0x%llx\n", READ_VAL);
 
 #define DUMP_BITSHIFT(prefix, value) \
-  printf("#define SHIFT__" #prefix " 0x%lx\n", log2(READ_VAL));
+  printf("#define SHIFT__" #prefix " 0x%llx\n", log2(READ_VAL));
 
-#define DUMP_MEMBER1(prefix,						\
-                     type1,member1,					\
-                     name) \
+#define DUMP_MEMBER1(prefix, type1, member1, name) \
   DUMP_OFFSET(prefix, name, READ_VAL)
 
 #define DUMP_CONSTANT(prefix, value) \
-  printf("#define VAL__" #prefix " 0x%lx\n", READ_VAL);
+  printf("#define VAL__" #prefix " 0x%llx\n", READ_VAL);
 
-#define DUMP_CAST_OFFSET(type, subtype) 		\
-  printf("#define CAST__" #type "_TO_" #subtype " 0x%lx\n", READ_VAL);
+#define DUMP_CAST_OFFSET(type, subtype) \
+  printf("#define CAST__" #type "_TO_" #subtype " 0x%llx\n", READ_VAL);
 
 /**
  * Calculates the logarithm base 2 from the given 2^n integer.
@@ -40,10 +38,12 @@ int log2(int value)
   return c;
 }
 
-int main(int argc, char **argv)
+int main(int /*argc*/, char **argv)
 {
-  unsigned long val;
-  int fd = open(argv[1],O_RDONLY); 
+  /* Only little endian supported if build architecture is 32 bit and 
+   * target architecture 64 bit! */
+  unsigned long long val = 0;
+  int fd = open(argv[1], O_RDONLY); 
   char len = 1;
   len = READ_VAL;
   lseek(fd, 32, SEEK_SET);

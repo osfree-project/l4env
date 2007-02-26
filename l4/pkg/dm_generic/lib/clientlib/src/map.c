@@ -19,6 +19,7 @@
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
 #include <l4/util/bitops.h>
+#include <l4/util/l4_macros.h>
 
 /* DMgeneric includes */
 #include <l4/dm_generic/dm_generic.h>
@@ -59,29 +60,29 @@ __do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
   l4_snd_fpage_t page;
   CORBA_Environment _env = dice_default_environment;
 
-  LOGdL(DEBUG_DO_MAP, "ds %u at "l4util_idfmt", offset 0x%08x\n" \
-        " receive window at 0x%08x, size2 %d, offset 0x%08x",
+  LOGdL(DEBUG_DO_MAP, "ds %u at "l4util_idfmt", offset 0x"l4_addr_fmt"\n" \
+        " receive window at 0x"l4_addr_fmt", size2 %d, offset 0x"l4_addr_fmt"",
         ds->id, l4util_idstr(ds->manager), offs, rcv_addr, rcv_size2, rcv_offs);
-  
+
   /* set receive fpage */
   _env.rcv_fpage = l4_fpage(rcv_addr, rcv_size2, 0, 0);
   /* do map call */
   ret = if_l4dm_generic_map_call(&(ds->manager), ds->id, offs, size, rcv_size2,
                                  rcv_offs, flags, &page,&_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
     {
       if (ret < 0)
 	return ret;
       else
-	return -L4_EIPC;      
+	return -L4_EIPC;
     }
 
   /* analyze received fpage */
-  LOGdL(DEBUG_DO_MAP, "got fpage at 0x%08x, size2 %d\n" \
-        " snd_base 0x%08x, mapped to 0x%08x",
-        page.fpage.fp.page << L4_LOG2_PAGESIZE, page.fpage.fp.size,
+  LOGdL(DEBUG_DO_MAP, "got fpage at 0x"l4_addr_fmt", size2 %d\n" \
+        " snd_base 0x"l4_addr_fmt", mapped to 0x"l4_addr_fmt,
+        (l4_addr_t)(page.fpage.fp.page << L4_LOG2_PAGESIZE), page.fpage.fp.size,
         page.snd_base, rcv_addr + page.snd_base);
-  
+
   *fpage_addr = rcv_addr + page.snd_base;
   *fpage_size = 1UL << page.fpage.fp.size;
 
@@ -130,17 +131,18 @@ l4dm_map_pages(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
 	       l4_size_t * fpage_size)
 {
   int ret;
-  
+
   /* do map */
   ret = __do_map(ds, offs, size, rcv_addr, rcv_size2, rcv_offs, flags,
 		 fpage_addr, fpage_size);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
-      LOG_printf("ds %u at "l4util_idfmt", offset 0x%08x\n", ds->id,
+      LOG_printf("ds %u at "l4util_idfmt", offset 0x"l4_addr_fmt"\n", ds->id,
              l4util_idstr(ds->manager), offs);
-      LOG_printf("receive window at 0x%08x, size2 %d, offset 0x%08x\n",
-             rcv_addr, rcv_size2,rcv_offs);
+      LOG_printf("receive window at 0x"l4_addr_fmt
+	     ", size2 %d, offset 0x"l4_addr_fmt"\n",
+             rcv_addr, rcv_size2, rcv_offs);
       LOGL("libdm_generic: map page failed: %d!", ret);
 #endif
     }

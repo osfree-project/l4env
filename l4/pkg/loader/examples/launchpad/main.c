@@ -73,7 +73,7 @@ static int init_me(void)
   return 0;
 }
 
-static void load_app(const char *app)
+static int load_app(const char *app)
 {
   int error;
   CORBA_Environment env = dice_default_environment;
@@ -89,13 +89,16 @@ static void load_app(const char *app)
       printf("Error %d (%s) loading application\n", error, l4env_errstr(error));
       if (*error_msg)
         printf("(Loader said: '%s')\n", error_msg);
+      return 0;
     }
 
+  return 1;
 }
 
 static void callback_press(dope_event *e, void *arg)
 {
   int nr = (int)arg;
+  int loaded = 0;
 
   if (nr >= app_list_idx)
     return;
@@ -104,9 +107,10 @@ static void callback_press(dope_event *e, void *arg)
       || (app_list[nr].single && !app_list[nr].running))
     {
       printf("loading app: %s\n", app_list[nr].app);
-      load_app(app_list[nr].app);
+      if (load_app(app_list[nr].app))
+	loaded = 1;
     }
-  if (app_list[nr].single && !app_list[nr].running)
+  if (loaded && app_list[nr].single && !app_list[nr].running)
     {
       dope_cmdf(app_id, "b%d.set(-state 1)", nr);
       app_list[nr].running = 1;

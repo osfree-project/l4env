@@ -106,7 +106,7 @@ struct resource *request_mem_region(unsigned long start, unsigned long n,
   l4_addr_t offset;
 
   LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld, name=\"%s\"", (void *)start, n, name);
-  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, &offset);
+  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, 0, &offset);
 
   if (!vaddr)
     {

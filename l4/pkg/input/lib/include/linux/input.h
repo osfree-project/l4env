@@ -951,20 +951,7 @@ void input_event(struct input_dev *dev, unsigned int type, unsigned int code, in
 #define input_report_ff_status(a,b,c)	input_event(a, EV_FF_STATUS, b, c)
 
 #define input_regs(a,b)		do { (a)->regs = (b); } while (0)
-#ifndef L4INPUT
 #define input_sync(a)		do { input_event(a, EV_SYN, SYN_REPORT, 0); (a)->regs = NULL; } while (0)
-#else
-/* XXX Original BitKeeper comment for this function was:
-
-   "By popular request, and explicit method of telling which events
-   from a device belong together was implemented - input_sync() and
-   EV_SYN. Touches every input driver. The first to make use of it
-   is mousedev.c to properly merge events into PS/2 packets."
-
-   I see no use here and remove it.
-*/
-#define input_sync(a)
-#endif
 
 
 static inline void input_set_abs_params(struct input_dev *dev, int axis, int min, int max, int fuzz, int flat)

@@ -218,7 +218,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, int push_next_char = -1)
   char const* f1;
 
   //char args[256];
-  char *argbuf = (char*)cmd.cmd->argbuf;
+  void *argbuf = (void*)cmd.cmd->argbuf;
 
   enum {
     NORMAL,
@@ -236,7 +236,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, int push_next_char = -1)
 
   do {
 
-    char *next_arg = argbuf;
+    char *next_arg = (char*)argbuf;
     char const *old_f = f;
     while(*f) 
       {
@@ -604,7 +604,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, int push_next_char = -1)
 
     f = old_f;
 
-    switch(cmd.mod->action( cmd.cmd->id, (void*&)argbuf, f, next_char ))
+    switch (cmd.mod->action(cmd.cmd->id, argbuf, f, next_char))
       {
       case Jdb_module::EXTRA_INPUT:
 	// more input expected
@@ -670,16 +670,15 @@ Jdb_core::new_line( unsigned &line )
  * This module handles the 'go' or 'g' command 
  * that continues normal program execution.
  */
-class Go_m 
-  : public Jdb_module
+class Go_m : public Jdb_module
 {
 public:
-
+  Go_m() FIASCO_INIT;
 };
 
 static Go_m go_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-PUBLIC
+IMPLEMENT
 Go_m::Go_m()
   : Jdb_module("GENERAL")
 {}
@@ -691,13 +690,13 @@ Jdb_module::Action_code Go_m::action( int, void *&, char const *&, int & )
 }
 
 PUBLIC
-int const Go_m::num_cmds() const
+int Go_m::num_cmds() const
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const Go_m::cmds() const
+Jdb_module::Cmd const * Go_m::cmds() const
 {
   static Cmd cs[] =
     { 
@@ -719,6 +718,7 @@ Jdb_module::Cmd const *const Go_m::cmds() const
 class Help_m : public Jdb_module
 {
 public:
+  Help_m() FIASCO_INIT;
 };
 
 
@@ -733,7 +733,7 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
   Jdb_category const *c = Jdb_category::first();
   if(!c)
     {
-      printf("There seems to be no debugger commands registerd\n");
+      printf("No debugger commands seem to have been registered\n");
       return NOTHING;
     }
 
@@ -818,13 +818,13 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
 }
 
 PUBLIC
-int const Help_m::num_cmds() const
+int Help_m::num_cmds() const
 { 
   return 2;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const Help_m::cmds() const
+Jdb_module::Cmd const * Help_m::cmds() const
 {
   static Cmd cs[] =
     {
@@ -835,7 +835,7 @@ Jdb_module::Cmd const *const Help_m::cmds() const
   return cs;
 }
 
-PUBLIC
+IMPLEMENT
 Help_m::Help_m()
   : Jdb_module("GENERAL")
 {}

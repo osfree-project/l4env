@@ -170,4 +170,14 @@ interface VideoCoreComponentIntern
 	 */
 	/*****************************************************************************/
 	long setPrediction ([in, string] char *learnFile, [in, string] char *predictFile);
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Set simulated machine speed for H.264 slice scheduling
+	 * 
+	 * \param speed  the machine speed factor (in percent) to simulate
+	 */
+	/*****************************************************************************/
+	long setH264Speed ([in] l4_int32_t speed);
 };

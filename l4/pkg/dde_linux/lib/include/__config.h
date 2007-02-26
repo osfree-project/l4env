@@ -69,10 +69,13 @@
                                     0 - l4_yield() / 1 - l4_usleep(to) */
 #define SCHED_YIELD_TO      10 /**< timeout for scheduling sleep (in us) */
 
+#define MAX_IRQ_HANDLERS    8  /**< maximal number of handlers for one
+                                    interrupt */
+
 #define SOFTIRQ_THREADS     1  /**< number of desired softirq threads 
                                     ONLY one supported for now! */
 
-#define PCI_DEVICES         16 /**< number of supported PCI devices */
+#define PCI_DEVICES         32 /**< number of supported PCI devices */
 
 /** @} */
 

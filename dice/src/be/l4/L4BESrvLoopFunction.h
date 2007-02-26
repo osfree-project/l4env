@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BESrvLoopFunction.h
- *    \brief   contains the declaration of the class CL4BESrvLoopFunction
+ *  \brief   contains the declaration of the class CL4BESrvLoopFunction
  *
  *    \date    02/10/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /**    \class CL4BESrvLoopFunction
  *    \ingroup backend
- *    \brief the function class for the back-end
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
@@ -42,24 +42,22 @@ class CL4BESrvLoopFunction : public CBESrvLoopFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CL4BESrvLoopFunction();
-    virtual ~CL4BESrvLoopFunction();
+    ~CL4BESrvLoopFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CL4BESrvLoopFunction(CL4BESrvLoopFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual bool DoUseParameterAsEnv(CBEContext * pContext);
-    virtual void WriteServerStartupInfo(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteDispatchInvocation(CBEFile *pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
 };
 
 #endif // !__DICE_L4BESRVLOOPFUNCTION_H__

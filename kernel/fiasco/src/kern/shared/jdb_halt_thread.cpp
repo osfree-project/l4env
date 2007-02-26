@@ -9,6 +9,9 @@ IMPLEMENTATION:
 
 class Jdb_halt_thread : public Jdb_module
 {
+public:
+  Jdb_halt_thread() FIASCO_INIT;
+private:
   static L4_uid  threadid;
 };
 
@@ -21,9 +24,9 @@ Jdb_halt_thread::action(int cmd, void *&, char const *&, int &)
   if (cmd != 0)
     return NOTHING;
 
-  Thread *t = Thread::lookup(threadid);
+  Thread *t = Thread::id_to_tcb(threadid);
 
-  if (!t || !t->is_valid())
+  if (!t->is_valid())
     {
       puts(" Invalid thread");
       return NOTHING;
@@ -31,7 +34,6 @@ Jdb_halt_thread::action(int cmd, void *&, char const *&, int &)
 
   t->regs()->cs(Gdt::gdt_code_kernel | Gdt::Selector_kernel);
   t->regs()->ip(reinterpret_cast<Address>(&Thread::halt_current));
-  t->regs()->sp(reinterpret_cast<Address>(t->regs()+1));
   t->regs()->flags(0);  // disable interrupts
   putchar('\n');
 
@@ -39,7 +41,7 @@ Jdb_halt_thread::action(int cmd, void *&, char const *&, int &)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_halt_thread::cmds() const
 {
   static Cmd cs[] =
@@ -52,13 +54,13 @@ Jdb_halt_thread::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_halt_thread::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_halt_thread::Jdb_halt_thread()
   : Jdb_module("MISC")
 {}

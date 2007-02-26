@@ -32,7 +32,7 @@ Jdb_dbinfo::init_symbols_lines ()
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[ia32]:
+IMPLEMENTATION[ia32,amd64]:
 
 #include "cpu_lock.h"
 #include "jdb_lines.h"
@@ -59,6 +59,9 @@ static unsigned char bitmap[bitmap_size];
 
 STATIC_INITIALIZE(Jdb_dbinfo);
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ia32]:
+
 PUBLIC static FIASCO_INIT
 void
 Jdb_dbinfo::init ()
@@ -74,11 +77,40 @@ Jdb_dbinfo::init ()
       *p = Kmem::virt_to_phys(pt) | Pd_entry::Valid | Pd_entry::Writable
 				  | Pd_entry::Referenced | Pd_entry::global();
 
-      current_space()->kmem_update((void*)addr);
+      current_mem_space()->kmem_update((void*)addr);
     }
 
   init_symbols_lines();
 }
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[amd64]:
+
+PUBLIC static FIASCO_INIT
+void
+Jdb_dbinfo::init ()
+{
+  Address addr;
+
+  for (addr = area_start; addr < area_end; addr += Config::SUPERPAGE_SIZE)
+    {
+      Pd_entry *p = Kmem::dir()->lookup(addr)
+				->pdp()->lookup(addr)
+					->pdir()->lookup(addr);
+      Ptab *pt    = (Ptab*)Kmem_alloc::allocator()->alloc(Config::PAGE_SHIFT);
+
+      pt->clear();
+      *p = Kmem::virt_to_phys(pt) | Pd_entry::Valid | Pd_entry::Writable
+				  | Pd_entry::Referenced | Pd_entry::global();
+
+      current_mem_space()->kmem_update((void*)addr);
+    }
+
+  init_symbols_lines();
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ia32,amd64]:
 
 PRIVATE static
 Address
@@ -154,6 +186,9 @@ Jdb_dbinfo::return_pages (Address addr, unsigned pages)
     }
 }
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ia32]:
+
 PUBLIC static
 bool
 Jdb_dbinfo::map (Address phys, size_t &size, Address &virt)
@@ -202,6 +237,65 @@ Jdb_dbinfo::unmap (Address virt, size_t size)
       return_pages (virt, size/Config::PAGE_SIZE);
     }
 }
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[amd64]:
+
+PUBLIC static
+bool
+Jdb_dbinfo::map (Address phys, size_t &size, Address &virt)
+{
+  Address offs  = phys & ~Config::PAGE_MASK;
+
+  size = (offs + size + Config::PAGE_SIZE - 1) & Config::PAGE_MASK;
+  virt = reserve_pages (size / Config::PAGE_SIZE);
+  if (!virt)
+    return false;
+
+  phys &= Config::PAGE_MASK;
+
+  for (Address v = virt; v < virt + size; 
+	       v += Config::PAGE_SIZE, phys += Config::PAGE_SIZE)
+    {
+      Pd_entry *p = Kmem::dir()->lookup(v)
+				->pdp()->lookup(v)
+					->pdir()->lookup(v);
+      assert (p->valid());
+      Pt_entry *e = p->ptab()->lookup(v);
+
+      *e = phys | Pt_entry::Valid | Pt_entry::Writable | Pt_entry::Referenced
+		| Pt_entry::Dirty | Pt_entry::global();
+      Mem_unit::tlb_flush (v);
+    }
+
+  virt += offs;
+  return true;
+}
+
+PUBLIC static
+void
+Jdb_dbinfo::unmap (Address virt, size_t size)
+{
+  if (virt && size)
+    {
+      virt &= Config::PAGE_MASK;
+
+      for (Address v = virt; v < virt + size; v += Config::PAGE_SIZE)
+	{
+	  Pd_entry *p = Kmem::dir()->lookup(v)
+				->pdp()->lookup(v)
+					->pdir()->lookup(v);
+	  assert (p->valid());
+	  *p->ptab()->lookup(v) = 0;
+	  Mem_unit::tlb_flush (v);
+	}
+
+      return_pages (virt, size/Config::PAGE_SIZE);
+    }
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ia32,amd64]:
 
 PUBLIC static
 void

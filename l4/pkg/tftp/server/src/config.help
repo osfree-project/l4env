@@ -1,59 +1,29 @@
-Allow burst-test
-CONFIG_OSHK_BURSTY_SEND
-  This build a server, which substitutes the real-time send function
-  with a special burst send function. Each packet given to the driver
-  to be sent, is analysed. The first few bytes of the data of the
-  packet are used to determine size and numbers of bursts. These
-  bursts are sent to the net then.
+Configure network switch
+CONFIG_ORE
+  This option choses between three methods of accessing the network
+  that may be used with TFTP.
+
+  ORe
+  ===
+  This option triggers the build of tftp.ore which will work with
+  the ORe software network switch exclusively.
   
-  This is a really weird hack. Say N here to get a working server.
+  Oshkosh
+  =======
+  This option triggers the build of tftp.oshkosh which will work with
+  the Oshkosh software network switch exclusively.
   
-Allow in-driver UDP sink
-CONFIG_OSHK_UDP_SINK
-  This hack creates already opened connections. The data is removed
-  in the driver already and not sent to any clients. This is for test
-  purposes only.
+  Hardware
+  ========
+  This option triggers to build tftp with compiled-in drivers for
+  access to real hardware. No software network switch is needed.
+  This may lead to problems, if tftp is not the only application
+  accessing the network interfaces in your system.
 
-  Say N here for a fully-functional driver.
-  
-Base-port for UDP sink
-CONFIG_OSHK_UDP_SINK_PORT
-  This is the base port where the range of special ports used for
-  CONFIG_OSHK_UDP_SINK starts.
-  
-Port count for UDP sink
-CONFIG_OSHK_UDP_SINK_COUNT
-  This is the port count of special ports used for
-  CONFIG_OSHK_UDP_SINK.
+Support for Intel Eepro 100 NICs
+CONFIG_EEPRO100
+  Support for Intel Eepro 100 NICs
 
-Special nasty UDP hack
-CONFIG_SPECIAL_UDP_HACK
-  This is a special nasty hack. If UDP-Packets on a special UDP-port
-  are received, some action is triggered. Highly experimental.
-
-  You should say N here.
-
-Special nasty UDP hack port number
-CONFIG_SPECIAL_UDP_PORT
-  This is the special nasty UDP port used for
-  CONFIG_SPECIAL_UDP_HACK.
-
-
-mainmenu_option next_comment
-comment 'Functional configuration for the Linux emulation lib'
-
-bool 'use the L4 environment (highly recommended)' CONFIG_OSHK_NICDRV_L4ENV
-bool 'tag real-time ethernet frames as 802.1Q frames' CONFIG_VLAN
-bool 'use Omega0 interface for interrupt access' CONFIG_USE_OMEGA0
-bool 'enable verbose irq tracing' CONFIG_IRQ_DEBUG
-int  'irq emulation thread stacksize' EMUL_IRQ_STACKSIZE 2048
-hex  'priority of irq emulation threads' CONFIG_OSHK_NICDRV_IRQ 0xE0
-hex  'priority of the DSI synchronization threads' CONFIG_OSHK_NICDRV_DSI 0xE0
-hex  'priority of the L4-semaphore thread' CONFIG_OSHK_NICDRV_SEMAPHORE 0xE0
-hex  'priority of the be send worker thread' CONFIG_OSHK_NICDRV_BE_WRITE_PRIO 0xD0
-hex  'priority of the rt send worker thread' CONFIG_OSHK_NICDRV_RT_WRITE_PRIO 0xD8
-
-endmenu
-
-
-
+Support for Intel E1000 NICs
+CONFIG_E1000
+  Support for Intel E1000 NICs

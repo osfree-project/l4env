@@ -30,7 +30,7 @@ struct parse_cmdline_struct{
     }val;
     const char		*comment;	// a description for the generated help
 };
-	
+
 #define TRASH(type, val) { type dummy __attribute__ ((unused)) = (val); }
 
 int parse_cmdline(int *argc, const char***argv, char arg0, ...){
@@ -45,7 +45,7 @@ int parse_cmdline(int *argc, const char***argv, char arg0, ...){
 }
 
 int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va0){
-    va_list va=va0;
+    va_list va;
     int c, count, shortform, cur_longopt;
     const char*longform, *comment;
     struct option *longopts, *longptr;
@@ -53,6 +53,7 @@ int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va0){
     struct parse_cmdline_struct *pa;
     int err;
 
+    va_copy(va, va0);
     /* calculate the number of argument-descriptors */
     shortform = arg0;
     for(count=0; shortform; count++){
@@ -114,7 +115,7 @@ int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va0){
     if(pa==0) return -2;
     
     /* fill in the short options field, longopts and parse args */
-    va=va0;
+    va_copy(va, va0);
     shortform = arg0;
     optptr    = optstring;
     longptr   = longopts;

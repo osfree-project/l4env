@@ -48,7 +48,7 @@
  * socket then.
  */
 int dsi_thread_start_worker(dsi_socket_t * socket,
-			    l4_uint32_t * ret_code){
+			    l4_umword_t * ret_code){
     int ret;
     l4_msgdope_t result;
     l4_umword_t d1, *dp;

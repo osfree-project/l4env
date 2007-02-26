@@ -26,7 +26,7 @@
  * \author	Norman Feske <nf2@inf.tu-dresden.de>
  */
 
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/thread_time.h>
 
@@ -46,7 +46,7 @@ inline unsigned long get_diff (unsigned long time1, unsigned long time2);
 /*** RETURN THREAD TIME IN MICROSEC ***/
 static inline l4_uint64_t get_thread_time_microsec (void)
 {
-  return l4_tsc_to_us(l4util_thread_time(l4util_kip()));
+  return l4_tsc_to_us(l4util_thread_time(l4sigma0_kip()));
 }
 
 int init_timer (void);

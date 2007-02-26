@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/File.h
- *    \brief   contains the declaration of the class CFile
+ *  \brief   contains the declaration of the class CFile
  *
  *    \date    07/05/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,224 +32,99 @@
 
 #include "Object.h"
 #include <string>
-using namespace std;
+#include <fstream>
+using std::ofstream;
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
 
-#define MAX_INDENT    80 /**< the maximum possible indent */
-#define STD_INDENT    04 /**< the standard indentation value */
+/** maimum possible indent */
+const unsigned int MAX_INDENT = 80;
+/** the standard indentation value */
+const unsigned int STD_INDENT = 4;
 
 /** \class CFile
  *  \ingroup base
  *  \brief base class for all file classes
+ *
+ * Because we only write files, this class owns an ostream only.
  */
 class CFile : public CObject
 {
-// Constructor
-  public:
-    /** \enum FileStatus
-     *  \brief describes the type of the file
-     */
-    enum FileStatus
-    {
-        Read = 1,    /**< file is open for read */
-        Write = 2    /**< file is open for write */
-    };
+// Constructors
+protected:
+    /** copy constructor */
+    CFile(CFile&src);
 
+public:
     /** the constructor for this class */
     CFile();
-    virtual ~ CFile();
-
-  protected:
-    /** the copy constructor
-     *    \param src the source to copy from
-     */
-    CFile(CFile & src);
 
 // Operations
-  public:
-     virtual bool IsOpen();
-    bool IsStoring();
-    bool IsLoading();
-    virtual string GetFileName();
+public:
     void DecIndent(int by = STD_INDENT);
     void IncIndent(int by = STD_INDENT);
-    int GetIndent()
+
+    bool Open(string sFileName);
+
+    /** \brief return the name of the file
+     *  \return the name of the currently open file, 0 if no file is open
+     */
+    string GetFileName() const
+    { return m_sFilename; }
+    /** \brief test whether or not file is open
+     *  \return true if file is open
+     */
+    bool IsOpen()
+    { return m_file.is_open(); }
+    /** flushes the content of the file stream to disk */
+    void Flush()
+    { m_file.flush(); }
+    /** \brief return the current indent
+     *  \return the current indent
+     */
+    unsigned int GetIndent() const
     { return m_nIndent; }
-    virtual void PrintIndent(const char *fmt, ...);
-    virtual void Print(const char *fmt, ...);
-    virtual void Prints(const char* str);
-    virtual bool Close();
-    virtual bool Open(string sFileName, int nStatus);
-    virtual void Flush();
+    /** \brief closes a file
+     *  \return true if close was successful, false otherwise
+     */
+    void Close()
+    { m_file.close(); }
+
+    template <typename T> CFile& operator<< (T a);
 
   protected:
-     virtual bool Open(int nStatus);
-     virtual void VPrint(const char* fmt, va_list args);
-     virtual void VPrintIndent(const char* fmt, va_list args);
+     virtual void PrintIndent(void);
 
   protected:
-    /**    \var string m_sFileName
-     *    \brief the file's name
+    /** \var string m_sFilename
+     *  \brief the file's name
      */
-    string m_sFileName;
-    /**    \var int m_nIndent
-     *    \brief the current valid indent, when printing to the file
+    string m_sFilename;
+    /** \var int m_nIndent
+     *  \brief the current valid indent, when printing to the file
      */
-    int m_nIndent;
-    /**    \var FILE* m_fCurrent
-     *    \brief the file handle
+    unsigned int m_nIndent;
+    /** \var ofstream m_file
+     *  \brief the file handle
      */
-    FILE *m_fCurrent;
-    /** \var m_nStatus
-     *    \brief write or read file
-     */
-    int m_nStatus;
-    /**    \var m_nLastIndent
-     *    \brief remembers last increment
+    ofstream m_file;
+    /** \var m_nLastIndent
+     *  \brief remembers last increment
      */
     int m_nLastIndent;
 };
 
-/**    \brief writes a string to the file
- *    \param f the file to write to
- *     \param str the string to write
- *    \return the File again
+/** \brief output data to the file
+ *  \param a the data to by printed into the file
+ *  \return a reference to the file
  */
-inline CFile& operator << (CFile& f, const char * const str)
+template <typename T>
+CFile& CFile::operator<< (T a)
 {
-    if (str && (str[0] == '\t'))
-        f.PrintIndent(&str[1]);
-    else
-        f.Prints(str);
-    return f;
-}
-
-/**    \brief writes a string to the file
- *    \param f the file to write to
- *     \param str the string to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, string str)
-{
-    f.Print("%s", str.c_str());
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const int i)
-{
-    f.Print("%d", i);
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const unsigned int i)
-{
-    f.Print("%u", i);
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const long i)
-{
-    f.Print("%ld", i);
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const unsigned long i)
-{
-    f.Print("%lu", i);
-    return f;
-}
-
-#if SIZEOF_LONG_LONG > 0
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const long long i)
-{
-    f.Print("%lld", i);
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const unsigned long long i)
-{
-    f.Print("%llu", i);
-    return f;
-}
-
-#endif
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const short i)
-{
-    f.Print("%hd", i);
-    return f;
-}
-
-/**    \brief writes an integer to the file
- *    \param f the file to write to
- *     \param i the integer to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const unsigned short i)
-{
-    f.Print("%hu", i);
-    return f;
-}
-
-/**    \brief writes an double to the file
- *    \param f the file to write to
- *     \param i the double to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const double i)
-{
-    f.Print("%f", i);
-    return f;
-}
-
-/**    \brief writes an double to the file
- *    \param f the file to write to
- *     \param i the double to write
- *    \return the File again
- */
-inline CFile& operator << (CFile& f, const long double i)
-{
-    f.Print("%Lf", i);
-    return f;
+    m_file << a;
+    return *this;
 }
 
 #endif                // __DICE_FILE_H__

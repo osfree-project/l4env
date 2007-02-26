@@ -68,9 +68,9 @@ l4blk_ctrl(l4blk_driver_t driver,
     out_size = 0;
   ret = l4blk_cmd_ctrl_call(&drv->cmd_id, drv->handle, cmd, in, in_size, 
                             &out, &out_size, &_env);
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
-      LOG_Error("IPC error calling driver: 0x%02x", _env.major);
+      LOG_Error("IPC error calling driver: 0x%02x", DICE_EXCEPTION_MAJOR(&_env));
       return -L4_EIPC;
     }
 

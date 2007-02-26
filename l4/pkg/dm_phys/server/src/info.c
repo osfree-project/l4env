@@ -51,10 +51,10 @@
  * purposes.
  */
 /*****************************************************************************/ 
-l4_int32_t
+long
 if_l4dm_mem_info_component (CORBA_Object _dice_corba_obj,
-                            l4_uint32_t ds_id,
-                            l4_uint32_t *size,
+                            unsigned long ds_id,
+                            l4_size_t *size,
                             l4_threadid_t *owner,
                             char **name,
                             l4_uint32_t *next_id,

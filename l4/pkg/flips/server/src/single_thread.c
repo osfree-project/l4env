@@ -77,8 +77,9 @@ void server_init(void)
 		ERR_EXIT("server listen(%d): %d", sock_listen, err);
 
 	/* emulate accepting server */
-	id = l4thread_create((l4thread_fn_t) emul_accept,
-	                      NULL, L4THREAD_CREATE_SYNC);
+	id = l4thread_create_named((l4thread_fn_t) emul_accept,
+	                           ".server",
+	                           NULL, L4THREAD_CREATE_SYNC);
 	if (id < 0)
 		ERR_EXIT("l4thread_create: %d", id);
 }

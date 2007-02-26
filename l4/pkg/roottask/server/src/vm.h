@@ -14,15 +14,8 @@
 #include <l4/sys/types.h>
 #include "types.h"
 
-typedef struct {
-    unsigned task;
-    l4_addr_t vm_start;
-    l4_addr_t vm_end;
-    l4_addr_t offset;
-} __vm_t;
-
-void      vm_add(unsigned task, l4_addr_t vm_start, l4_addr_t vm_end,
-		 l4_addr_t offest);
+void      vm_add(unsigned task,
+		 l4_addr_t vm_start, l4_addr_t vm_end, l4_addr_t offest);
 int       vm_find(unsigned task, l4_addr_t addr);
 l4_addr_t vm_get_offset(int i);
 

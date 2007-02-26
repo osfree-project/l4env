@@ -56,10 +56,10 @@ int yyparse(void);
 %token <string>  VERBOSE MEMDUMP SLEEP MEMORY IOPORT
 %token <string>  IN IS AT MB KB MS S MIN H POO POOL NOSUPERPAGES
 %token <string>  FIASCO_SYMBOLS FIASCO_LINES
-%token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE REBOOTABLE NO_VGA 
-%token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER
-%token <string>  NO_SIGMA0 SHOW_APP_AREAS
-%token <string>  UNSIGNED STRING
+%token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE REBOOTABLE NO_VGA
+%token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER CAP_HANDLER
+%token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE
+%token <string>  UNSIGNED STRING L4ENV_BINARY ALLOW_IPC DENY_IPC
 
 %type <number>   number memnumber memmodifier task_flag
 %type <number>   memflagspec memflags memflag
@@ -203,6 +203,30 @@ task_constraint	: task_modspec
 			      YYABORT;
 			    }
 			}
+                | CAP_HANDLER string
+                        {
+                          if (cfg_task_caphandler($2))
+                            {
+                              yyerror("Error setting capability fault handler.");
+                              YYABORT;
+                            }
+                        }
+                | ALLOW_IPC string
+                        {
+                          if (cfg_task_ipc($2, CAP_TYPE_ALLOW))
+                            {
+                              yyerror("Error allowing IPC.");
+                              YYABORT;
+                            }
+                        }
+                | DENY_IPC string
+                        {
+                          if (cfg_task_ipc($2, CAP_TYPE_DENY))
+                            {
+                              yyerror("Error denying IPC.");
+                              YYABORT;
+                            }
+                        }
 		| task_flag
 			{
 			  if (cfg_task_flag($1))
@@ -227,6 +251,10 @@ task_flag	: DIRECT_MAPPED
 			{ $$ = CFG_F_ALLOW_CLI; }
 		| SHOW_APP_AREAS
 			{ $$ = CFG_F_SHOW_APP_AREAS; }
+		| ALL_SECTS_WRITABLE
+			{ $$ = CFG_F_ALL_WRITABLE; }
+		| L4ENV_BINARY
+			{ $$ = CFG_F_L4ENV_BINARY; }
 		;
 
 task_modspec	: MODULE string string memrange

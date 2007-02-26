@@ -15,7 +15,7 @@ L4LIBS		= -lnethub \
 		  -lcxx_log_io -llogserver -ll4sys -lnames $(ROOTLIB) \
 		  -ll4util
 
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_CC		= main.cc
 
@@ -24,10 +24,12 @@ CXXFLAGS	+= -fno-exceptions -fno-rtti
 
 OBJS            += snd.packets.o rcv.packets.o
 
-vpath %.src ..
+vpath %.src $(SRC_DIR)
 
 %.packets.o: %.packets.src
-	$(OBJCOPY) -B i386 -O elf32-i386 -I binary $< $@
+	p=$$(pwd) && \
+	  cd $(dir $<) && \
+	  $(OBJCOPY) -B i386 -O elf32-i386 -I binary $(notdir $<) $$p/$@
 
 include $(L4DIR)/mk/prog.mk
 

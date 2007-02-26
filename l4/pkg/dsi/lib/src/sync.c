@@ -89,8 +89,8 @@ __wakeup_and_map(dsi_socket_t * socket,dsi_packet_t * packet)
   if (size != (1U << i))
     Panic("DSI: unaligned pages not supported yet!");
   
-  LOGdL(DEBUG_MAP_PACKET,"map packet %u, size %u (%d)",packet->no,size,i);
-  LOGdL(DEBUG_MAP_PACKET,"addr 0x%08x, offset 0x%08x",(unsigned)addr,offs);
+  LOGdL(DEBUG_MAP_PACKET,"map packet %u, size %lu (%d)",packet->no,size,i);
+  LOGdL(DEBUG_MAP_PACKET,"addr 0x%08lx, offset 0x%08lx",(unsigned long)addr,offs);
 
   /* send map message */
   ret = l4_ipc_send(socket->remote_socket.work_th,L4_IPC_SHORT_FPAGE,
@@ -132,7 +132,7 @@ __wakeup_and_copy(dsi_socket_t * socket,dsi_packet_t * packet)
   size = socket->sg_lists[packet->sg_list].size;
 
   LOGdL(DEBUG_COPY_PACKET,"copy packet");
-  LOGdL(DEBUG_COPY_PACKET,"addr 0x%08x, size %u",
+  LOGdL(DEBUG_COPY_PACKET,"addr 0x%08lx, size %u",
       (unsigned)socket->data_area + offs,size);
 
   /* send message */
@@ -194,7 +194,7 @@ dsi_sync_thread_send(void * data)
       if (!ret)
 	{
 	  LOGdL(DEBUG_SYNC_SEND,"msg from "l4util_idfmt, l4util_idstr(src));
-	  LOGdL(DEBUG_SYNC_SEND,"dw0 = %u, dw1 = %u",dw0,dw1);
+	  LOGdL(DEBUG_SYNC_SEND,"dw0 = %lu, dw1 = %lu",dw0,dw1);
           
 	  switch (dw0)
 	    {
@@ -206,7 +206,7 @@ dsi_sync_thread_send(void * data)
 	           ********************************************************/
 	          /* packet commited (dw1 -> packet index), wakeup receiver 
 	           * work thread */
-	          LOGdL(DEBUG_SYNC_SEND,"wakeup receiver, packet %d",dw1);
+	          LOGdL(DEBUG_SYNC_SEND,"wakeup receiver, packet %ld",dw1);
 
 		  packet = &socket->packets[dw1];
 
@@ -255,7 +255,7 @@ dsi_sync_thread_send(void * data)
 		   * message from remote work thread
 		   *********************************************************/
 		  /* wait for packet (dw1 -> packet index) */
-		  LOGdL(DEBUG_SYNC_SEND,"receiver waits for packet %d",dw1);
+		  LOGdL(DEBUG_SYNC_SEND,"receiver waits for packet %ld",dw1);
 
 		  packet = &socket->packets[dw1];
 
@@ -305,7 +305,7 @@ dsi_sync_thread_send(void * data)
 
 		  packet = &socket->packets[dw1];
 
-		  LOGdL(DEBUG_SYNC,"released packet %u (idx %u)",
+		  LOGdL(DEBUG_SYNC,"released packet %u (idx %lu)",
                         packet->no,dw1);
 
 		  /* call release callback function */
@@ -340,7 +340,7 @@ dsi_sync_thread_send(void * data)
 		} else goto e_inv_sender;
 	      break;
 	    default:
-              LOG_Error("DSI: invalid command (%d) from "l4util_idfmt, dw0,
+              LOG_Error("DSI: invalid command (%ld) from "l4util_idfmt, dw0,
                         l4util_idstr(src));
 	    }
 	  continue;
@@ -407,7 +407,7 @@ dsi_sync_thread_receive(void * data)
       if (!ret)
 	{
 	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from "l4util_idfmt, l4util_idstr(src));
-	  LOGdL(DEBUG_SYNC_RECEIVE,"dw0 = %u, dw1 = %u",dw0,dw1);
+	  LOGdL(DEBUG_SYNC_RECEIVE,"dw0 = %lu, dw1 = %lu",dw0,dw1);
 
 	  switch (dw0)
 	    {
@@ -419,7 +419,7 @@ dsi_sync_thread_receive(void * data)
 		   ***************************************************************/
 		  /* packet commited (dw1 -> packet index), wakeup sender
 		   * work thread */
-		  LOGdL(DEBUG_SYNC_RECEIVE,"wakeup sender, packet %d",dw1);
+		  LOGdL(DEBUG_SYNC_RECEIVE,"wakeup sender, packet %ld",dw1);
 
 		  packet = &socket->packets[dw1];
 
@@ -459,7 +459,7 @@ dsi_sync_thread_receive(void * data)
 		   * message from remote work thread
 		   *********************************************************/
 		  /* wait for packet (dw1 -> packet index) */
-		  LOGdL(DEBUG_SYNC_RECEIVE,"sender waits for packet %d",dw1);
+		  LOGdL(DEBUG_SYNC_RECEIVE,"sender waits for packet %ld",dw1);
 
 		  packet = &socket->packets[dw1];
 
@@ -496,7 +496,7 @@ dsi_sync_thread_receive(void * data)
 	      break;
               
 	    default:
-              LOG_Error("DSI: invalid command (%d) from "l4util_idfmt,
+              LOG_Error("DSI: invalid command (%ld) from "l4util_idfmt,
                         dw0, l4util_idstr(src));
 	    }
 	  continue;

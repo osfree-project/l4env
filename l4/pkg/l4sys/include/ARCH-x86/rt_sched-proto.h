@@ -13,9 +13,8 @@
 #ifndef __SYS_INCLUDE_ARCH_X86_RT_SCHED_PROTO_H_
 #define __SYS_INCLUDE_ARCH_X86_RT_SCHED_PROTO_H_
 
-#include <l4/sys/compiler.h>
-#include <l4/sys/syscalls.h>
 #include <l4/sys/types.h>
+#include <l4/sys/syscalls.h>
 
 #define L4_RT_ADD_TIMESLICE	1
 #define L4_RT_REM_TIMESLICES	2

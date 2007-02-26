@@ -8,9 +8,10 @@
 #include <l4/demangle/demangle.h>
 #include <l4/sys/types.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/elf.h>
+#include <l4/util/l4_macros.h>
 #include "cfg.h"
 #include "exec.h"
-#include "elf.h"
 #include "init.h"
 #include "memmap.h"
 #include "symbols.h"
@@ -19,34 +20,34 @@
 extern void reset_malloc(void);
 
 static void
-extract_symbols(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
+extract_symbols(l4_addr_t elf_image, unsigned sh_num, unsigned sh_entsize,
 		unsigned sh_offs, unsigned task_no,
 		l4_addr_t *from_sym, l4_addr_t *to_sym)
 {
-#ifdef ARCH_x86
+#if !defined L4BID_RELEASE_MODE
+#if defined ARCH_x86 | ARCH_amd64
   int i;
-  Elf32_Shdr *sh_sym, *sh_str;
+  MY_SHDR *sh_sym, *sh_str;
   unsigned sz_str, sz_sym;
-
   if (l4_version != VERSION_FIASCO)
     return;
 
   for (i=0; i<sh_num; i++)
     {
-      Elf32_Sym *sym_symtab;
+      MY_SYM *sym_symtab;
       const char *sym_strtab;
 
-      sh_sym = (Elf32_Shdr*)(elf_image + sh_offs + i*sh_entsize);
+      sh_sym = (MY_SHDR*)(elf_image + sh_offs + i*sh_entsize);
       if (sh_sym->sh_type == SHT_SYMTAB)
 	{
 	  unsigned num_symtab;
-	  Elf32_Sym *sym;
+	  MY_SYM *sym;
 	  unsigned size, len;
 	  unsigned pages;
 	  char *str;
 	  l4_addr_t addr, syms;
 
-	  sh_str     = (Elf32_Shdr*)(elf_image + sh_offs
+	  sh_str     = (MY_SHDR*)(elf_image + sh_offs
 					       + sh_sym->sh_link*sh_entsize);
 	  sz_str     = sh_str->sh_size;
 	  if (elf_image)
@@ -55,10 +56,10 @@ extract_symbols(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
 	    sym_strtab = (char*)sh_str->sh_addr;
 	  sz_sym     = sh_sym->sh_size;
 	  if (elf_image)
-	    sym_symtab = (Elf32_Sym*)(elf_image + sh_sym->sh_offset);
+	    sym_symtab = (MY_SYM*)(elf_image + sh_sym->sh_offset);
 	  else
-	    sym_symtab = (Elf32_Sym*)sh_sym->sh_addr;
-	  num_symtab = sz_sym/sizeof(Elf32_Sym);
+	    sym_symtab = (MY_SYM*)sh_sym->sh_addr;
+	  num_symtab = sz_sym/sizeof(MY_SYM);
 	  size       = 0;
 
 	  reset_malloc();
@@ -82,7 +83,7 @@ extract_symbols(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
 	      len = strlen(s_name);
 	      if (len>100)
 		len = 100;
-	      size += 11+len+1;
+	      size += OFFSET+len+1;
 
 	      if (d)
 		free((void*)d);
@@ -115,7 +116,8 @@ extract_symbols(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
 		  ||(!memcmp(s_name, "_stext", 6)))
 		continue;
 
-	      str += sprintf(str, "%08x   %.100s\n", sym->st_value, s_name);
+	      str += sprintf(str, l4_addr_fmt"   %.100s\n",
+		  	     (l4_addr_t)sym->st_value, s_name);
 
 	      if (d)
 		free((void*)d);
@@ -138,9 +140,9 @@ extract_symbols(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
 	  goto done;
 	}
     }
-
 done:
   ;
+#endif
 #endif
 }
 
@@ -148,7 +150,7 @@ void
 extract_symbols_from_image(l4_addr_t elf_image, unsigned task_no,
 			   l4_addr_t *from_sym, l4_addr_t *to_sym)
 {
-  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)elf_image;
+  MY_EHDR *ehdr = (MY_EHDR*)elf_image;
 
   extract_symbols(elf_image, ehdr->e_shnum, ehdr->e_shentsize,
 		  ehdr->e_shoff, task_no, from_sym, to_sym);
@@ -158,7 +160,7 @@ void
 extract_symbols_from_mbinfo(l4util_mb_info_t *mbi, unsigned task_no,
 			    l4_addr_t *from_sym, l4_addr_t *to_sym)
 {
-  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)mbi->syms.e.addr;
+  MY_EHDR *ehdr = (MY_EHDR*)(l4_addr_t)mbi->syms.e.addr;
 
   extract_symbols(mbi->syms.e.addr, ehdr->e_shnum, ehdr->e_shentsize,
 		  ehdr->e_shoff, task_no, from_sym, to_sym);

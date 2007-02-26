@@ -1,4 +1,4 @@
-PKGDIR ?= 	..
+PKGDIR = 	..
 L4DIR ?= 	$(PKGDIR)/../..
 
 SRC_DOX_REF = slab.cfg

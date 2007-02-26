@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEClient.h
- *    \brief   contains the declaration of the class CBEClient
+ *  \brief   contains the declaration of the class CBEClient
  *
  *    \date    01/11/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,47 +32,46 @@
 
 #include "be/BETarget.h"
 
-class CBEContext;
 class CFEFile;
 class CBEImplementationFile;
 
-/**    \class CBEClient
- *    \ingroup backend
- *    \brief the client - a collection of files
+/** \class CBEClient
+ *  \ingroup backend
+ *  \brief the client - a collection of files
  */
 class CBEClient : public CBETarget
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEClient();
     virtual ~CBEClient();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEClient(CBEClient &src);
 
 public:
-    virtual void Write(CBEContext *pContext);
+    virtual void Write();
 
 protected:
-    virtual void SetFileType(CBEContext *pContext, int nHeaderOrImplementation);
-    virtual bool CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext);
-    virtual bool CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * pContext);
-    virtual bool CreateBackEndFile(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEImplementationFile *pImpl);
-    virtual bool CreateBackEndModule(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEndModule(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEndInterface(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEndInterface(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEndInterface(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool CreateBackEndFunction(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEndFunction(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEndFunction(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pContext);
+    virtual void CreateBackEndHeader(CFEFile * pFEFile);
+    virtual void CreateBackEndImplementation(CFEFile * pFEFile);
+    virtual void CreateBackEndFile(CFEFile *pFEFile);
+    virtual void CreateBackEndFile(CFEFile * pFEFile, 
+	CBEImplementationFile *pImpl);
+    virtual void CreateBackEndModule(CFELibrary *pFELibrary);
+    virtual void CreateBackEndModule(CFEFile *pFEFile);
+    virtual void CreateBackEndInterface(CFEFile *pFEFile);
+    virtual void CreateBackEndInterface(CFELibrary *pFELibrary);
+    virtual void CreateBackEndInterface(CFEInterface *pFEInterface);
+    virtual void CreateBackEndFunction(CFEFile *pFEFile);
+    virtual void CreateBackEndFunction(CFELibrary *pFELibrary);
+    virtual void CreateBackEndFunction(CFEInterface *pFEInterface);
+    virtual void CreateBackEndFunction(CFEOperation *pFEOperation);
 };
 
 #endif // !__DICE_BECLIENT_H__

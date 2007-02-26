@@ -3,15 +3,20 @@ INTERFACE:
 #include "l4_types.h"
 #include "space.h"
 
+class slab_cache_anon;
+
 class Task : public Space
 {
 private:
-  void free_utcb_pagetable();
+  void free_utcb_pagetable ();
   void host_init (Task_num);
+  void map_tbuf();
 
 public:
   explicit Task (Task_num id);
   ~Task();
+  
+  Address map_kip();
 };
 
 INTERFACE [utcb]:
@@ -25,13 +30,72 @@ private:
 //---------------------------------------------------------------------------
 IMPLEMENTATION:
 
-inline
-Task *
-current_task()
-{  
-  return nonull_static_cast<Task*>(current_space());
+#include "auto_ptr.h"
+#include "config.h"
+#include "globals.h"
+#include "kmem.h"
+#include "kmem_slab_simple.h"
+#include "l4_types.h"
+#include "map_util.h"
+#include "mem_layout.h"
+
+IMPLEMENT inline
+explicit
+Task::Task (Task_num no)
+    : Space (no)
+{
+  host_init (no);
+
+  if (id() == Config::sigma0_taskno)
+    return;
+
+  map_tbuf();
 }
 
+/** Constructor for special derived classes such as Kernel_task. */
+PROTECTED inline
+Task::Task(Task_num no, Task_num chief, Mem_space::Dir_type* pdir)
+  : Space (no, chief, pdir)
+{
+}
+
+PRIVATE static
+slab_cache_anon* 
+Task::allocator ()
+{
+  static slab_cache_anon* slabs = new Kmem_slab_simple (sizeof (Task), 
+							sizeof (Mword),
+							"Task");
+  return slabs;
+
+  // If Fiasco would kill all tasks even when exiting through the
+  // kernel debugger, we could use a deallocating version of the above:
+  //
+  // static auto_ptr<slab_cache_anon> slabs
+  //   (new Kmem_slab_simple (sizeof (Task), sizeof (Mword)))
+  // return slabs.get();
+}
+
+
+PUBLIC inline NEEDS["kmem_slab_simple.h"]
+void *
+Task::operator new (size_t size)
+{
+  (void)size;
+  assert (size == sizeof (Task));
+
+  void *ret;
+  check((ret = allocator()->alloc()));
+  return ret;
+}
+
+PUBLIC inline NEEDS["kmem_slab_simple.h"]
+void 
+Task::operator delete (void * const ptr)
+{
+  if (ptr)
+    allocator()->free (ptr);
+}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [!ux]:
@@ -41,9 +105,14 @@ void
 Task::host_init (Task_num)
 {}
 
+IMPLEMENT inline
+void
+Task::map_tbuf ()
+{}
+
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!{ia32,ux}]:
+IMPLEMENTATION [!{ia32,ux,amd64}]:
 
 IMPLEMENT inline
 Task::~Task()
@@ -51,19 +120,7 @@ Task::~Task()
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!auto_map_kip]:
-
-IMPLEMENT inline NEEDS[Task::host_init]
-Task::Task (Task_num id)
-    : Space (id)
-{
-  host_init (id);
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [auto_map_kip]:
-
+IMPLEMENTATION [ia32,ux,amd64]:
 #include "config.h"
 #include "globals.h"
 #include "kmem.h"
@@ -72,21 +129,26 @@ IMPLEMENTATION [auto_map_kip]:
 #include "mem_layout.h"
 
 IMPLEMENT 
-Task::Task (Task_num no)
-    : Space (no)
+Address
+Task::map_kip ()
 {
-  host_init (no);
+  Address _kip;
+  if (mem_space()->v_lookup(Mem_layout::Kip_auto_map, &_kip, 0, 0))
+    {
+      if (_kip == Kmem::virt_to_phys (Kip::k()))
+	return Mem_layout::Kip_auto_map;
+    }
+  else if (!mem_map (sigma0_task,                      // from: space
+	Kmem::virt_to_phys (Kip::k()),     // from: address
+	Config::PAGE_SHIFT,                // from: size
+	0, 0,                              // read, map
+	nonull_static_cast<Space*>(this),  // to: space
+	Mem_layout::Kip_auto_map,          // to: adddress
+	Config::PAGE_SHIFT,                // to: size
+	0, L4_fpage::Cached).has_error())
+    return Mem_layout::Kip_auto_map;
 
-  if (id() == Config::sigma0_taskno)
-    return;
-
-  mem_map (sigma0_space, 
-	   Kmem::virt_to_phys (Kip::k()),
-	   Config::PAGE_SHIFT,
-	   0, 0,
-	   nonull_static_cast<Space*>(this), 
-	   Mem_layout::Kip_auto_map,
-	   Config::PAGE_SHIFT, 0);
+  return ~0UL;
 }
 
 
@@ -109,22 +171,17 @@ Task::initialize()
   // make sure sizeof(Utcb) is 2^n so that a UTCB does not cross a page
   // boundary
   // XXX: move that to some kernel startup phase
-  assert(!(sizeof(Utcb) & (sizeof(Utcb) - 1)));
+  //assert(!(sizeof(Utcb) & (sizeof(Utcb) - 1)));
 
   if (!Vmem_alloc::local_alloc
-           (static_cast<Space*> (this),
-	    Mem_layout::V2_utcb_addr, utcb_size_pages(),
-	    (Page_writable | Page_user_accessible)))
+           (mem_space(), Mem_layout::V2_utcb_addr, 
+	    mem_space()->utcb_size_pages(), 
+	    Mem_space::Page_writable | Mem_space::Page_user_accessible))
     {
       kdb_ke("KERNEL: Not enough kmem for utcb area");
       return false;
     }
 
-  // dummy LIPC KIP location
-  // so that the first KIP map to this address space will overwrite it
-  set_lipc_kip_pointer((Address) -1);
-
-  
   // For UX, map the UTCB pointer page. For ia32, do nothing
   if (id() != Config::sigma0_taskno)
     map_utcb_ptr_page();
@@ -142,11 +199,14 @@ PUBLIC
 void
 Task::cleanup()
 {
+#if 0
   Pd_entry *utcb_pde = _dir.lookup (Mem_layout::V2_utcb_addr);
   (void)utcb_pde;
 
   assert (utcb_pde && utcb_pde->valid() && !utcb_pde->superpage());
-  Vmem_alloc::local_free (this, Mem_layout::V2_utcb_addr, utcb_size_pages());
+#endif
+  Vmem_alloc::local_free (mem_space(), Mem_layout::V2_utcb_addr, 
+			  mem_space()->utcb_size_pages());
 
   // if the UTCBs are in the kernel mem (>3GB) also unmap the pagetable
   // free_utcb_pagetable();

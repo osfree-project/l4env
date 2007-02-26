@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BESizes.h
- *    \brief   contains the declaration of the class CL4BESizes
+ *  \file    dice/src/be/l4/L4BESizes.h
+ *  \brief   contains the declaration of the class CL4BESizes
  *
- *    \date    10/10/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/10/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -47,7 +47,7 @@ public:
 public: // Public methods
     /** abstract method, which shall determine the maximum number of bytes of
      * a message for a short IPC */
-    virtual int GetMaxShortIPCSize(int nDirection = 0) = 0;
+    virtual int GetMaxShortIPCSize(void) = 0;
 };
 
 #endif

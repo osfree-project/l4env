@@ -30,8 +30,8 @@ double cos(double x);
 
 extern long app_id;         		/* DOpE application id */
 
-extern u8 _binary____bumpmap_xga_start;
-extern u8 _binary____light_xga_start;
+extern u8 _binary_bumpmap_xga_start;
+extern u8 _binary_light_xga_start;
 
 static void *bumpvscr_id;
 static u16 *scr_adr = NULL;
@@ -100,7 +100,7 @@ static void gen_offset_map(s32 *src,s32 *dst) {
 
 static void prepare_bumpmap(void) {
 
-	gen_heightmap(&_binary____bumpmap_xga_start,&bumpbuf1[0][0]);
+	gen_heightmap(&_binary_bumpmap_xga_start,&bumpbuf1[0][0]);
 	filter(&bumpbuf1[0][0],&bumpbuf2[0][0]);
 	filter(&bumpbuf2[0][0],&bumpbuf1[0][0]);
 	filter(&bumpbuf1[0][0],&bumpbuf2[0][0]);    
@@ -111,7 +111,7 @@ static void prepare_bumpmap(void) {
 #define MASK 0x7bcf     // rrrr rggg gggb bbbb
 
 static void prepare_light(void) {
-	u8 *src = &_binary____light_xga_start;
+	u8 *src = &_binary_light_xga_start;
 	s16 *s,*d = &lightbuf[SCR_H/2][0];
 	int cnt = SCR_W*SCR_H;
 	for (;cnt--;) {

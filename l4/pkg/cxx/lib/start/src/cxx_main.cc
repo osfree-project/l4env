@@ -19,10 +19,9 @@ extern "C"
 void __main()
 {
   crt0_construction();
-  //  __cxa_atexit( crt0_destruction );
   if(main)
     main->run();
-  __cxa_do_atexit();
+  __cxa_finalize(0);
   crt0_sys_destruction();
   l4_sleep_forever();
 }

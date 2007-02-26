@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/CParser.h
- *    \brief   contains the declaration of the class CParser
+ *  \file    dice/src/CParser.h
+ *  \brief   contains the declaration of the class CParser
  *
- *    \date    Mon Jul 22 2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Mon Jul 22 2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,14 +31,11 @@
 #define PARSER_H
 
 #include <string>
-using namespace std;
-#include <stdio.h>
-#include <string.h> // needed for memset
+#include <cstdio>
+#include <cstring> // for std::memset
+#include "Compiler.h" // FrontEnd_Type
 
 class CFEFile;
-
-#define USE_FILE_C      (USE_FE_CORBA + 1)  /**< defines that a C header file is currently parsed */
-#define USE_FILE_CXX    (USE_FE_CORBA + 2)  /**< defines that a C++ header file is currently parsed */
 
 /** \class CParser
  *  \ingroup frontend
@@ -54,30 +51,49 @@ public:
     virtual ~CParser();
 
 public: // Public methods
-    static CParser* CreateParser(int nFileType);
+    static CParser* CreateParser(FrontEnd_Type nFileType);
 
-    static CParser* GetCurrentParser(); // used by CCompiler, parser, scanner
-    static CParser* SetCurrentParser(CParser *pParser); // used by CParser-derived, CCompiler
+    // used by CCompiler, parser, scanner
+    static CParser* GetCurrentParser();
+    // used by CParser-derived, CCompiler
+    static CParser* SetCurrentParser(CParser *pParser);
 
-    static void SetCurrentFile(CFEFile *pFEFile); // used by scanner, parser, CParser-derived
-    static void SetCurrentFileParent(); // used by scanner, parser, CParser-derived
-    static CFEFile* GetCurrentFile(); // used by scanner, parser, CParser-derived
+    // used by scanner, parser, CParser-derived
+    static void SetCurrentFile(CFEFile *pFEFile);
+    static void SetCurrentFileParent();
+    static CFEFile* GetCurrentFile();
 
-    virtual bool Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbose, bool bPreProcessOnly = false);
+    /** \brief parses an IDL file and inserts its elements into the pFEFile
+     *  \param scan_buffer the buffer to use for scanning
+     *  \param sFilename the name of the file to parse
+     *  \param nIDL indicates the type of the IDL (DCE/CORBA)
+     *  \param bPreProcessOnly true if parser should staop after preprocessing
+     *  \return true if successful
+     */
+    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL, 
+	    bool bPreProcessOnly = false) = 0;
     virtual bool DoEndImport();
-    virtual unsigned char Import(string sFilename); // used by parser
+    /** \brief imports a file
+     *  \param sFilename the name of the file
+     *  \return 0 if something went wrong and the parser should terminate
+     */
+    virtual unsigned char Import(string sFilename) = 0;
 
     virtual CFEFile *GetTopFileInScope(); // used by scanner, parser
     virtual bool PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& fOut); // used by preprocessing
     virtual void FinishEnvironment(); // used by parser
 
     virtual void UpdateState(string sFileName, int nLineNumber);
+
+    /** \brief sets parent of parser
+     *  \param pParser the parent parser
+     */
     void SetParent(CParser *pParser)
     { m_pParent = pParser; }
 
 protected: // Protected methods
-    virtual void Verbose(const char *sMsg, ...);
     bool CopyFile(FILE *fInput, FILE *fOutput);
+    FrontEnd_Type DetermineFileType(string sExt);
 
 protected: // Protected attributes
     /** \var CParser *m_pCurrentParser
@@ -92,14 +108,10 @@ protected: // Protected attributes
      *  \brief true if the parser is run the firt time
      */
     static bool m_bFirstRun;
-    /** \var bool m_bVerbose
-     *  \brief true if we should print verbose output
-     */
-    bool m_bVerbose;
     /** \var int m_nInputFileType
      *  \brief defines the IDL parser (DCE or CORBA)
      */
-    int m_nInputFileType;
+    FrontEnd_Type m_nInputFileType;
     /** \var void* m_pBuffer
      *  \brief is the pointer to the saved scan-buffer
      */
@@ -113,11 +125,13 @@ protected: // Protected attributes
      */
     string m_sPrevTopLevelFileName;
     /** \var CFEFile *m_pFEFile
-     *  \brief a reference to the top level file object in the scope of this parser
+     *  \brief a reference to the top level file object in the scope of this \
+     *         parser
      */
     CFEFile *m_pFEFile;
     /** \var int m_nLineNumber
-     *  \brief contains the line-number where the scan of the file was interrupted
+     *  \brief contains the line-number where the scan of the file was \
+     *         interrupted
      */
     int m_nLineNumber;
     /** \var int m_c_inc

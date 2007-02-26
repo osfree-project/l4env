@@ -7,20 +7,17 @@
 
 void printf_flush(void);
 
-static l4_uint8_t linebuf[CONTXT_LINEBUF_SIZE+1];
+static char linebuf[CONTXT_LINEBUF_SIZE+1];
 static int linebuf_idx;
 static int printed;
 
 static void
 flush_linebuf(void)
 {
-  if (__init)
+  contxt_write(linebuf, linebuf_idx);
+  if (!__init)
     {
-      contxt_write(linebuf, linebuf_idx);
-      linebuf_idx = 0;
-    }
-  else
-    {
+      /* ensure we see something on LOG console before we are initialized */
       linebuf[linebuf_idx] = 0;
       LOG_printf("%s", linebuf);
     }
@@ -91,4 +88,3 @@ fprintf(FILE *__stream, const char *format, ...)
   va_end(list);
   return err;
 }
-

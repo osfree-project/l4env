@@ -1,5 +1,5 @@
 PKGDIR = ..
-L4DIR  = $(PKGDIR)/../..
+L4DIR  ?= $(PKGDIR)/../..
 
 SRC_DOX_REF	= generic_io.cfg
 SRC_DOX		= generic_io-if.cfg

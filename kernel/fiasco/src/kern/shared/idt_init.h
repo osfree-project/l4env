@@ -1,3 +1,5 @@
+#include <globalconfig.h>
+
 #ifndef IDT_INIT
 #define IDT_INIT
 
@@ -9,6 +11,7 @@
 name:					;\
 	.text
 
+#ifdef CONFIG_BIT32
 #define	GATE_ENTRY(n,name,type)	\
 	.section ".initcall.data"	;\
 	.long	name			;\
@@ -20,6 +23,19 @@ name:					;\
 	.section ".initcall.data"	;\
 	.long	0			;\
 	.text
+#else
+#define	GATE_ENTRY(n,name,type)	\
+	.section ".initcall.data"	;\
+	.quad	name			;\
+	.word	n			;\
+	.word	type			;\
+	.text
+
+#define GATE_INITTAB_END		\
+	.section ".initcall.data"	;\
+	.quad	0			;\
+	.text
+#endif
 
 #define SEL_PL_U	0x03
 #define SEL_PL_K	0x00
@@ -34,16 +50,26 @@ name:					;\
 
 #include "l4_types.h"
 
-typedef struct
+#ifdef CONFIG_BIT32
+class Idt_init_entry
 {
+public:
   Unsigned32  entry;
-  Unsigned16  vector __attribute__((packed));
-  Unsigned16  type   __attribute__((packed));
-} Idt_init_entry;
+  Unsigned16  vector;
+  Unsigned16  type;
+} __attribute__((packed));
+#else
+class Idt_init_entry
+{
+public:
+  Unsigned64  entry;
+  Unsigned16  vector;
+  Unsigned16  type;
+} __attribute__((packed));
+#endif
 
 extern Idt_init_entry idt_init_table[];
 
 #endif
 
 #endif
-

@@ -12,7 +12,7 @@ MALLOC_BACKEND = -lc_be_buddy_slab_mem
 TARGET =        malloc_stress
 MODE =		l4env_minimal
 DEFAULT_RELOC = 0x00800000
-SYSTEMS =       x86-l4v2 x86-l4x0
+SYSTEMS =       x86-l4v2
 
 # include prog rule
 include $(L4DIR)/mk/prog.mk

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BETypedDeclarator.h
- *    \brief   contains the declaration of the class CBETypedDeclarator
+ *  \file    dice/src/be/BETypedDeclarator.h
+ *  \brief   contains the declaration of the class CBETypedDeclarator
  *
- *    \date    01/18/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/18/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,114 +31,150 @@
 #define __DICE_BETYPEDDECLARATOR_H__
 
 #include "be/BEObject.h"
+#include "be/BEAttribute.h"
+#include "be/BEDeclarator.h"
+#include "template.h"
+#include "Attribute-Type.h"
 #include <vector>
-using namespace std;
+#include <map>
+using std::multimap;
 
 class CFETypedDeclarator;
+class CFEDeclarator;
+class CFEAttribute;
 class CBEContext;
 class CBEType;
-class CBEAttribute;
 class CBEFile;
 class CBEHeaderFile;
 class CBEImplementationFile;
-class CBEDeclarator;
 class CDeclaratorStackLocation;
+class CBEConstant;
 
-/** defines an invalid array index, used to differ valid from invalid array indices when marshalling */
-#define INVALID_ARRAY_INDEX -1
-
-/**    \class CBETypedDeclarator
- *    \ingroup backend
- *    \brief the back-end parameter
+/** \class CBETypedDeclarator
+ *  \ingroup backend
+ *  \brief the back-end parameter
  */
 class CBETypedDeclarator : public CBEObject
 {
-
 // Constructor
-  public:
-    /**    \brief constructor
+public:
+    /** \brief constructor
      */
     CBETypedDeclarator();
     virtual ~CBETypedDeclarator();
 
-  protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+protected:
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBETypedDeclarator(CBETypedDeclarator & src);
 
-  public:
-    virtual void WriteGetSize(CBEFile * pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext * pContext);
-    virtual void WriteZeroInitDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteInitDeclaration(CBEFile* pFile, string sInitString, CBEContext* pContext);
-    virtual void WriteSetZero(CBEFile* pFile, CBEContext* pContext);
-    virtual void WriteCleanup(CBEFile* pFile, CBEContext* pContext);
-    virtual void WriteDeferredCleanup(CBEFile* pFile, CBEContext* pContext);
-    virtual void WriteIndirectInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIndirect(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteGlobalTestVariable(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteType(CBEFile * pFile, CBEContext * pContext, bool bUseConst = true);
+public:
+    virtual void CreateBackEnd(CBEType * pType, string sName);
+    virtual void CreateBackEnd(string sUserDefinedType, string sName, int nStars);
+    virtual void CreateBackEnd(CFETypedDeclarator * pFEParameter);
 
-    virtual bool CreateBackEnd(CBEType * pType, string sName, CBEContext * pContext);
-    virtual bool CreateBackEnd(string sUserDefinedType, string sName, int nStars, CBEContext * pContext);
-    virtual bool CreateBackEnd(CFETypedDeclarator * pFEParameter, CBEContext * pContext);
+    int GetSize();
+    int GetSize(string sName);
+    CBEType *GetType();
+    int GetBitfieldSize();
+    bool GetMaxSize(bool bGuessSize, int & nSize, string sName = string());
 
-    virtual int GetSize();
-    virtual int GetSize(string sName);
-    virtual CBEType *GetType();
-    virtual int GetBitfieldSize();
-    virtual int GetMaxSize(bool bGuessSize, CBEContext *pContext);
-
-    virtual CBEType *ReplaceType(CBEType * pNewType);
+    void ReplaceType(CBEType * pNewType);
 
     virtual bool IsVariableSized();
-    virtual bool IsString();
-    virtual bool IsDirection(int nDirection);
-    virtual bool IsFixedSized();
-    virtual bool HasSizeAttr(int nAttr);
-    virtual bool HasReference();
+    bool IsString();
+    bool IsDirection(int nDirection);
+    bool IsFixedSized();
+    bool HasReference();
 
-    virtual CBEDeclarator* FindDeclarator(string sName);
-    virtual CBEDeclarator *GetNextDeclarator(vector<CBEDeclarator*>::iterator &iter);
-    virtual CBEDeclarator *GetDeclarator();
-    virtual CBEDeclarator *GetCallDeclarator();
-    virtual vector<CBEDeclarator*>::iterator GetFirstDeclarator();
-    virtual bool IsLastDeclarator(vector<CBEDeclarator*>::iterator iter);
-    virtual void RemoveDeclarator(CBEDeclarator * pDeclarator);
-    virtual void AddDeclarator(CBEDeclarator * pDeclarator);
+    bool Match(string sName);
+    CBEDeclarator *GetCallDeclarator();
+    void RemoveCallDeclarator();
+    void AddDeclarator(CFEDeclarator * pFEDeclarator);
+    void AddDeclarator(string sName, int nStars);
 
-    virtual CBEAttribute* FindIsAttribute(string sDeclName);
-    virtual CBEAttribute *FindAttribute(int nAttrType);
-    virtual CBEAttribute *GetNextAttribute(vector<CBEAttribute*>::iterator &iter);
-    virtual vector<CBEAttribute*>::iterator GetFirstAttribute();
-    virtual void RemoveAttribute(CBEAttribute * pAttribute);
-    virtual void AddAttribute(CBEAttribute * pAttribute);
+    CBEAttribute* FindIsAttribute(string sDeclName);
+    void AddAttribute(CFEAttribute *pFEAttribute);
 
-    virtual CObject * Clone();
-
-  protected:
-     virtual void WriteDeclarators(CBEFile * pFile, CBEContext * pContext);
-     virtual void WriteAttributes(CBEFile * pFile, CBEContext * pContext);
-     virtual void WriteGlobalDeclarators(CBEFile * pFile, CBEContext * pContext);
-
-     virtual int GetSizeOfDeclarator(CBEDeclarator *pDeclarator);
-     virtual CBEType* GetTransmitType();
-
-  protected:
-    /**    \var CBEType *m_pType
-     *    \brief the type of the parameter
+    /** \brief creates a new instance of this class 
+     *  \return a reference to the copy
      */
-     CBEType * m_pType;
-    /**    \var vector<CBEAttribute*> m_vAttributes
-     *    \brief contains the type's attributes
+    virtual CObject *Clone()
+    { return new CBETypedDeclarator(*this); }
+
+    /** \brief sets the default initialization string
+     *  \param sInitString the new initializatio string (may be empty)
      */
-    vector<CBEAttribute*> m_vAttributes;
-    /**    \var vector<CBEDeclarator*> m_vDeclarators
-     *    \brief the names of the parameter
+    void SetDefaultInitString(string sInitString)
+    { m_sDefaultInitString = sInitString; }
+    /** \brief accesses the default initialization string
+     *  \return the value of the default initialization string
      */
-    vector<CBEDeclarator*> m_vDeclarators;
+    string GetDefaultInitString(void)
+    { return m_sDefaultInitString; }
+
+    bool AddLanguageProperty(string sProperty, string sPropertyString);
+    bool FindLanguageProperty(string sProperty, string& sPropertyString);
+
+    void WriteDeclarators(CBEFile * pFile);
+
+    // delegated to langauge dependent part
+    virtual void WriteDefinition(CBEFile *pFile);
+    virtual void WriteDeclaration(CBEFile * pFile);
+    void WriteSetZero(CBEFile* pFile);
+    void WriteGetSize(CBEFile * pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+    void WriteGetMaxSize(CBEFile * pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+    void WriteCleanup(CBEFile* pFile, bool bDeferred);
+    void WriteType(CBEFile * pFile, bool bUseConst = true);
+    void WriteIndirect(CBEFile * pFile);
+    void WriteIndirectInitialization(CBEFile * pFile, bool bMemory);
+    void WriteInitDeclaration(CBEFile* pFile, string sInitString);
+    // language specific
+    virtual void WriteForwardDeclaration(CBEFile *pFile);
+    virtual void WriteForwardTypeDeclaration(CBEFile * pFile,
+	bool bUseConst = true);
+
+    CBEType* GetTransmitType();
+
+protected:
+    int GetSizeOfDeclarator(CBEDeclarator *pDeclarator);
+    CBETypedDeclarator* GetSizeVariable(CBEAttribute *pIsAttribute,
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc,
+	bool& bFoundInStruct);
+    CBEConstant* GetSizeConstant(CBEAttribute *pIsAttribute);
+    void WarnNoMax(int nSize);
+    bool GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr, int& nSize, int& nDimension);
+
+    virtual void WriteAttributes(CBEFile * pFile);
+    virtual void WriteConstPrefix(CBEFile *pFile);
+    virtual void WriteProperties(CBEFile *pFile);
+
+protected:
+    /** \var CBEType *m_pType
+     *  \brief the type of the parameter
+     */
+    CBEType * m_pType;
+    /** \var string m_sDefaultInitString
+     *  \brief contains the initialization sequence if no other is given
+     */
+    string m_sDefaultInitString;
+    /** \var map<string, string> m_mProperties
+     *  \brief map with language specific properties
+     */
+    multimap<string, string> m_mProperties;
+
+public:
+    /** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
+     *  \brief contains the type's attributes
+     */
+    CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CSearchableCollection<CBEDeclarator, string> m_Declarators
+     *  \brief the names of the parameter
+     */
+    CSearchableCollection<CBEDeclarator, string> m_Declarators;
 };
 
 #endif                //*/ !__DICE_BETYPEDDECLARATOR_H__

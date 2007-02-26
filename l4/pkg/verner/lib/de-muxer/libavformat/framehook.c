@@ -14,12 +14,12 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include <errno.h>
 #include "config.h"
-#include "framehook.h"
 #include "avformat.h"
+#include "framehook.h"
 
 #ifdef CONFIG_HAVE_DLFCN
 #include <dlfcn.h>
@@ -49,7 +49,7 @@ int frame_hook_add(int argc, char *argv[])
 
     loaded = dlopen(argv[0], RTLD_NOW);
     if (!loaded) {
-        printf("%s\n", dlerror());
+        av_log(NULL, AV_LOG_ERROR, "%s\n", dlerror());
         return -1;
     }
 
@@ -63,18 +63,18 @@ int frame_hook_add(int argc, char *argv[])
     fhe->Release = dlsym(loaded, "Release");    /* Optional */
 
     if (!fhe->Process) {
-        printf("Failed to find Process entrypoint in %s\n", argv[0]);
+        av_log(NULL, AV_LOG_ERROR, "Failed to find Process entrypoint in %s\n", argv[0]);
         return -1;
     }
 
     if (!fhe->Configure && argc > 1) {
-        printf("Failed to find Configure entrypoint in %s\n", argv[0]);
+        av_log(NULL, AV_LOG_ERROR, "Failed to find Configure entrypoint in %s\n", argv[0]);
         return -1;
     }
 
     if (argc > 1 || fhe->Configure) {
         if (fhe->Configure(&fhe->ctx, argc, argv)) {
-            printf("Failed to Configure %s\n", argv[0]);
+            av_log(NULL, AV_LOG_ERROR, "Failed to Configure %s\n", argv[0]);
             return -1;
         }
     }
@@ -86,7 +86,7 @@ int frame_hook_add(int argc, char *argv[])
 
     return 0;
 #else
-    printf("Video hooking not compiled into this version\n");
+    av_log(NULL, AV_LOG_ERROR, "Video hooking not compiled into this version\n");
     return 1;
 #endif
 }

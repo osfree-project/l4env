@@ -1,10 +1,7 @@
 INTERFACE:
 
-#include <setjmp.h>             // typedef jmp_buf
-
+#include <csetjmp>             // typedef jmp_buf
 #include "l4_types.h"
-
-#include "activation.h"
 #include "config.h"
 #include "deadline_timeout.h"
 #include "mem_layout.h"
@@ -64,13 +61,13 @@ public:
    * Do not rely on this method in kernel code.
    * @see: d_threadno()
    */
-  Task_num Thread::d_taskno();
+  Task_num d_taskno();
 
   /**
    * Thread number for debugging purposes.
    * @see: d_taskno()
    */
-  LThread_num Thread::d_threadno();
+  LThread_num d_threadno();
 
 private:
   Thread(const Thread&);	///< Default copy constructor is undefined
@@ -102,28 +99,20 @@ private:
    */
   static void user_invoke();
 
-  /**
-   * Receive startup message.
-   *
-   * Wait for startup IPC from pager and set ip and sp.
-   */
-  void rcv_startup_msg();
-
-  bool Thread::associate_irq(Irq_alloc *irq);
-  void Thread::disassociate_irq(Irq_alloc *irq);
+  bool associate_irq(Irq_alloc *irq);
+  void disassociate_irq(Irq_alloc *irq);
 
 public:
-  /**
-   * Calculate TCB pointer from thread ID.
-   *
-   * @param id thread ID.
-   * @param s space, needed if ID is local.
-   * @return thread pointer if the ID was valid, 0 otherwise.
-   */
-  static Thread * Thread::lookup (L4_uid id, Space *s);
-
   static Mword pagein_tcb_request(Address pc);
   Mword is_tcb_mapped() const;
+
+  inline Mword user_ip() const;
+  inline void user_ip(Mword);
+
+  inline Mword user_sp() const;
+  inline void user_sp(Mword);
+
+  inline Mword user_flags() const;
 
 protected:
   // implementation details follow...
@@ -136,9 +125,6 @@ protected:
   // Deadline Timeout
   Deadline_timeout _deadline_timeout;
 
-  // Activation IPC sender role
-  Activation _activation;
-
   // Another critical TCB cache line:
   Task*        _task;
   Thread_lock  _thread_lock;
@@ -146,6 +132,7 @@ protected:
   // More ipc state
   Thread *_pager, *_ext_preempter;
   Thread *present_next, *present_prev;
+  Thread *_cap_handler;
 //  Irq_alloc *_irq;
 
   // long ipc state
@@ -164,6 +151,10 @@ protected:
   unsigned _magic;
   static const unsigned magic = 0xf001c001;
 
+  // for trigger_exception
+  Address _exc_ip;
+  unsigned _irq;
+
   // Constructor
   Thread (Task* task, L4_uid id);
 
@@ -171,30 +162,15 @@ protected:
   void kill_all();
 };
 
-// ----------------------------------------------------------------------------
-INTERFACE [!multi_irq_attach]:
-EXTENSION class Thread
-{
-protected:
-  Irq_alloc *_irq;
-};
-
-// ----------------------------------------------------------------------------
-INTERFACE [multi_irq_attach]:
-
-EXTENSION class Thread
-{
-protected:
-  unsigned _irq;
-};
-
 
 IMPLEMENTATION:
 
 #include <cassert>
 #include <cstdlib>		// panic()
+#include <cstring>
 #include "atomic.h"
 #include "entry_frame.h"
+#include "feature.h"
 #include "fpu_alloc.h"
 #include "globals.h"
 #include "irq_alloc.h"
@@ -206,6 +182,8 @@ IMPLEMENTATION:
 #include "std_macros.h"
 #include "thread_state.h"
 #include "timeout.h"
+
+KIP_KERNEL_FEATURE("multi_irq");
 
 /** Class-specific allocator.
     This allocator ensures that threads are allocated at a fixed virtual
@@ -220,7 +198,7 @@ Thread::operator new(size_t, L4_uid id)
   // Allocate TCB in TCB space.  Actually, do not allocate anything,
   // just return the address.  Allocation happens on the fly in
   // Thread::handle_page_fault().
-  return static_cast <void*>(lookup (id));
+  return static_cast <void*>(id_to_tcb (id));
 }
 
 /** Deallocator.  This function currently does nothing: We do not free up
@@ -239,7 +217,7 @@ Thread::operator delete(void *)
 /** Cut-down version of Thread constructor; only for kernel threads
     Do only what's necessary to get a kernel thread started --
     skip all fancy stuff, no locking is necessary.
-    @param space the address space
+    @param task the address space
     @param id user-visible thread ID of the sender
  */
 IMPLEMENT
@@ -248,7 +226,7 @@ Thread::Thread(Task* task, L4_uid id)
 	     Config::kernel_prio, Config::kernel_mcp,
 	     Config::default_time_slice),
     Sender(id), _preemption(id), _deadline_timeout(&_preemption),
-    _activation(id), _task(task), _magic(magic)
+    _task(task), _magic(magic), _exc_ip(~0UL)
 {
   *reinterpret_cast<void(**)()>(--_kernel_sp) = user_invoke;
 
@@ -299,6 +277,11 @@ current_thread()
 {
   return Thread::lookup(current());
 }
+
+PUBLIC inline
+bool
+Thread::exception_triggered() const
+{ return _exc_ip != ~0UL; }
 
 //
 // state requests/manipulation
@@ -357,10 +340,10 @@ Thread::handle_timer_interrupt()
  */
 PUBLIC static inline NEEDS ["config.h", "mem_layout.h"]
 Thread *
-Thread::lookup (Global_id id)
+Thread::id_to_tcb (Global_id id)
 {
   return reinterpret_cast <Thread *>
-    (id.is_invalid() || id.gthread() >= Config::max_threads() ?
+    (id.is_invalid() || id.gthread() >= Mem_layout::max_threads() ?
      0 : Mem_layout::Tcbs + (id.gthread() * Config::thread_block_size));
 }
 
@@ -399,14 +382,7 @@ Thread::user_invoke_generic()
   // * the context that switched to us holds the CPU lock
   // * we run on a newly-created stack without a CPU lock guard
   cpu_lock.clear();
-
-  current_thread()->rcv_startup_msg();		// set sp and ip
 }
-
-IMPLEMENT inline
-Thread *
-Thread::lookup (L4_uid id, Space*)
-{ return lookup ((Global_id) id); }
 
 /**
  * Return first thread in an address space.
@@ -414,7 +390,7 @@ Thread::lookup (L4_uid id, Space*)
 PUBLIC static inline
 Thread *
 Thread::lookup_first_thread (unsigned space)
-{ return lookup (Global_id (space, 0)); }
+{ return id_to_tcb (Global_id (space, 0)); }
 
 /** Thread's space index.
     @return thread's space index.
@@ -484,7 +460,8 @@ Thread::kill()
       // because subtasks could still be scheduled and do page faults.
       // XXX check /how/ ugly...
 
-      fpage_unmap(space(), L4_fpage(0,0,L4_fpage::Whole_space,0), true, false);
+      fpage_unmap(space(), L4_fpage(0,0,L4_fpage::Whole_space,0), 
+		  true, 0, Unmap_full);
 
       //for small spaces...
       kill_small_space();
@@ -702,6 +679,109 @@ Thread::kill_all()
 IMPLEMENT inline Task_num Thread::d_taskno() { return space_index(); }
 IMPLEMENT inline LThread_num Thread::d_threadno() { return id().lthread(); }
 
+IMPLEMENT
+bool
+Thread::associate_irq(Irq_alloc *irq)
+{
+  if (irq->alloc(this, Config::irq_ack_in_kernel))
+    {
+      ++_irq;
+      return true;
+    }
+  return false;
+}
+
+IMPLEMENT
+void
+Thread::disassociate_irq(Irq_alloc *irq)
+{
+  if (irq->free(this))
+    --_irq;
+}
+
+/** (Re-) Ininialize a thread and make it ready.
+    XXX Contrary to the L4-V2 spec we only cancel IPC if eip != 0xffffffff!
+    @param eip new user instruction pointer.  Set only if != 0xffffffff.
+    @param esp new user stack pointer.  Set only if != 0xffffffff.
+    @param o_eip return current instruction pointer if pointer != 0
+    @param o_esp return current stack pointer if pointer != 0
+    @param o_pager return current pager if pointer != 0
+    @param o_preempter return current internal preempter if pointer != 0
+    @param o_eflags return current eflags register if pointer != 0
+    @return false if !exists(); true otherwise
+ */
+PUBLIC
+bool
+Thread::initialize(Address ip, Address sp,
+		   Thread* pager, Receiver* preempter,
+		   Thread* cap_handler,
+		   Address *o_ip = 0, Address *o_sp = 0,
+		   Thread* *o_pager = 0, Receiver* *o_preempter = 0,
+		   Thread* *o_cap_handler = 0,
+		   Address *o_flags = 0,
+		   bool no_cancel = 0,
+		   bool alien = 0,
+		   bool trigger_exception = 0)
+{
+  assert (current() == thread_lock()->lock_owner());
+
+  if (state() == Thread_invalid)
+    return false;
+
+  Entry_frame *r = regs();
+
+  if (o_pager) *o_pager = _pager;
+  if (o_cap_handler) *o_cap_handler = _cap_handler;
+  if (o_preempter) *o_preempter = preemption()->receiver();
+  if (o_sp) *o_sp = user_sp();
+  if (o_ip) *o_ip = user_ip();
+  if (o_flags) *o_flags = user_flags();
+
+  if (pager)
+    _pager = pager;
+
+  if (preempter)
+    preemption()->set_receiver (preempter);
+
+  if (cap_handler)
+    _cap_handler = cap_handler;
+
+  // Changing the run state is only possible when the thread is not in
+  // an exception.
+  if (no_cancel && (state() & Thread_in_exception))
+    // XXX Maybe we should return false here.  Previously, we actually
+    // did so, but we also actually didn't do any state modification.
+    // If you change this value, make sure the logic in
+    // sys_thread_ex_regs still works (in particular,
+    // ex_regs_cap_handler and friends should still be called).
+    return true;
+
+  if (state() & Thread_dead)	// resurrect thread
+    state_change (~Thread_dead, Thread_ready);
+
+  else if (!no_cancel)		// cancel ongoing IPC or other activity
+    state_change (~(Thread_ipc_in_progress | Thread_delayed_deadline |
+                    Thread_delayed_ipc), Thread_cancel | Thread_ready);
+
+  if (trigger_exception)
+    do_trigger_exception(r);
+
+  if (ip != ~0UL)
+    {
+      user_ip(ip);
+
+      if (alien)
+	state_change (~Thread_dis_alien, Thread_alien);
+      else
+	state_del (Thread_alien);
+    }
+
+  if (sp != ~0UL)
+    user_sp (sp);
+
+  return true;
+}
+
 //---------------------------------------------------------------------------
 IMPLEMENTATION [exc_ipc]:
 
@@ -711,75 +791,32 @@ IMPLEMENTATION [exc_ipc]:
 KIP_KERNEL_FEATURE("exception_ipc");
 
 
-PRIVATE static
+PRIVATE static inline
 void
 Thread::copy_utcb_to_utcb(Thread *snd, Thread *rcv)
 {
-  unsigned m = snd->utcb()->snd_size;
-  unsigned s = rcv->utcb()->rcv_size;
+  Mword s = snd->utcb()->snd_size;
+  Mword r = rcv->utcb()->rcv_size;
 
-  // check for m == 0 not necessary
-  Cpu::memcpy_mwords (rcv->utcb()->values, snd->utcb()->values, s < m ? s : m);
+  Cpu::memcpy_mwords (rcv->utcb()->values, snd->utcb()->values, r < s ? r : s);
+  if ((rcv->utcb()->status & Utcb::Inherit_fpu) 
+      && (snd->utcb()->status & Utcb::Transfer_fpu))
+    snd->transfer_fpu(rcv);
 }
 
-PRIVATE static
-void
-Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
-{
-  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
-  unsigned m     = snd->utcb()->snd_size;
-  Unsigned32 cs  = ts->cs;
-
-  // check for m == 0 not necessary
-  Cpu::memcpy_mwords (&ts->gs, snd->utcb()->values, m > 16 ? 16 : m);
-
-  // sanitize eflags
-  if (!rcv->trap_is_privileged(0))
-    {
-      ts->eflags &= ~0x7000; // IOPL, NT
-      ts->eflags |=   0x200; // IF
-    }
-
-  // don't allow to overwrite the code selector!
-  ts->cs = cs;
-}
-
-PRIVATE static
-void
-Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
-{
-  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
-  unsigned m     = rcv->utcb()->rcv_size;
-
-    {
-      Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-      // check for m == 0 not necessary
-      Cpu::memcpy_mwords (rcv->utcb()->values, &ts->gs, m > 16 ? 16 : m);
-    }
-}
-
-PRIVATE static inline
-Thread::Utcb_copy_func *
-Thread::get_utcb_copy(Thread *s, Thread *r)
-{
-  // we cannot copy trap state to trap state!
-  assert(!s->_utcb_handler || !r->_utcb_handler);
-  if (EXPECT_FALSE(s->_utcb_handler != 0))
-    return &copy_ts_to_utcb;
-  else if (EXPECT_FALSE(r->_utcb_handler != 0))
-    return &copy_utcb_to_ts;
-  else
-    return &copy_utcb_to_utcb;
-}
 
 PRIVATE
 void
 Thread::copy_utcb_to(Thread* receiver)
 {
-  Utcb_copy_func *f = get_utcb_copy(this, receiver);
-
-  f(this, receiver);
+  // we cannot copy trap state to trap state!
+  assert(!this->_utcb_handler || !receiver->_utcb_handler);
+  if (EXPECT_FALSE(this->_utcb_handler != 0))
+    copy_ts_to_utcb(this, receiver);
+  else if (EXPECT_FALSE(receiver->_utcb_handler != 0))
+    copy_utcb_to_ts(this, receiver);
+  else
+    copy_utcb_to_utcb(this, receiver);
 }
 
 //---------------------------------------------------------------------------
@@ -793,8 +830,6 @@ Thread::copy_utcb_to(Thread*)
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [!log]:
-
-#include <cstring>
 
 PUBLIC inline
 unsigned Thread::sys_ipc_log(Syscall_frame *)
@@ -887,65 +922,8 @@ Thread::unset_utcb_ptr()
 }
 
 
-//----------------------------------------------------------------------------
-IMPLEMENTATION [!multi_irq_attach]:
-
-IMPLEMENT
-bool
-Thread::associate_irq(Irq_alloc *irq)
-{
-  if (irq->alloc(this, Config::irq_ack_in_kernel))
-    {
-      if (_irq)
-	_irq->free(this);
-
-      _irq = irq;
-      return true;
-    }
-  return false;
-}
-
-IMPLEMENT
-void
-Thread::disassociate_irq(Irq_alloc *)
-{
-  if (_irq)
-    _irq->free(this);
-
-  _irq = 0;
-}
 
 // ----------------------------------------------------------------------------
-IMPLEMENTATION [multi_irq_attach]:
-
-#include <feature.h>
-KIP_KERNEL_FEATURE("multi_irq");
-
-IMPLEMENT
-bool
-Thread::associate_irq(Irq_alloc *irq)
-{
-  if (irq->alloc(this, Config::irq_ack_in_kernel))
-    {
-      ++_irq;
-      return true;
-    }
-  return false;
-}
-
-IMPLEMENT
-void
-Thread::disassociate_irq(Irq_alloc *irq)
-{
-  if (irq->free(this))
-    --_irq;
-}
-
-// ----------------------------------------------------------------------------
-IMPLEMENTATION [act_ipc]:
-PROTECTED void Thread::send_activation (unsigned a) { _activation.send (a); }
-
-
 IMPLEMENTATION [!pl0_hack]:
 PUBLIC static void
 Thread::privilege_initialization()

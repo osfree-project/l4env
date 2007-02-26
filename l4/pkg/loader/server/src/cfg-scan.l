@@ -61,6 +61,7 @@ in			{ count(); return IN; }
 is			{ count(); return IS; }
 at			{ count(); return AT; }
 direct_mapped		{ count(); return DIRECT_MAPPED; }
+l4env			{ count(); return L4ENV_BINARY; }
 contiguous		{ count(); return CONTIGUOUS; }
 reboot_able		{ count(); return REBOOTABLE; }
 rebootable		{ count(); return REBOOTABLE; }
@@ -73,11 +74,15 @@ nosuperpages		{ count(); return NOSUPERPAGES; }
 priority		{ count(); return PRIORITY; }
 file_provider		{ count(); return FILE_PROVIDER; }
 ds_manager		{ count(); return DS_MANAGER; }
+cap_handler             { count(); return CAP_HANDLER; }
+allow_ipc               { count(); return ALLOW_IPC; }
+deny_ipc                { count(); return DENY_IPC; }
 mcp			{ count(); return MCP; }
 allow_cli		{ count(); return ALLOW_CLI; }
 show_app_areas		{ count(); return SHOW_APP_AREAS; }
+all_sects_writable	{ count(); return ALL_SECTS_WRITABLE; }
 ('[^']*'|\"[^\"]*\") 	{ count(); yylval.string = yytext; return STRING; }
-(0[xX]{HEXDIGIT}+|{DIGIT}+) { count(); 
+(0[xX]{HEXDIGIT}+|{DIGIT}+) { count();
 				   yylval.string = yytext; return UNSIGNED; }
 {SPACE}			{ count(); }
 {NEWLINE}		{ count(); }
@@ -149,8 +154,15 @@ cfg_setup_input(const char *cfg_buffer, int size)
   myinputlim = cfg_buffer + size;
   line = 1;
   col = 1;
-  yy_init = 1;
   yy_start = 0;
+  /* Starting with flex 2.5.33, the meaning of yy_init was reversed. To
+   * perform the cleanup we could call yylex_destroy but unfortunately
+   * this function is not backward-compatible. */
+#if YY_FLEX_MAJOR_VERSION*10000 + YY_FLEX_MINOR_VERSION*100 + YY_FLEX_SUBMINOR_VERSION < 20533
+  yy_init = 1;
+#else
+  yy_init = 0;
+#endif
 }
 
 void

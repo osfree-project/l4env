@@ -1,0 +1,3 @@
+do not test dm_phys because the current test prints addresses that change on
+almost every build of L4Env (especially binary sizes).
+A new test should be written that does not print addresse that change.

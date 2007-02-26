@@ -39,7 +39,7 @@ CORBA_Object_base nitevent_thread;
  *** SERVICE FUNCTIONS ***
  *************************/
 
-/*** GET NEXT EVENT OF EVENT QUEUE ***
+/*** UTILITY: GET NEXT EVENT OF EVENT QUEUE ***
  *
  * \return  0 if there is no pending event
  *          1 if there an event was returned in out parameter e
@@ -51,9 +51,23 @@ static int get_event(EVENT *e) {
 
 	/* take last element from event queue */
 	memcpy(e, &ev_queue[last], sizeof(EVENT));
-	last = (last+1) % MAX_INPUT_EVENTS;
+	last = (last + 1) % MAX_INPUT_EVENTS;
 
 	return 1;
+}
+
+
+/*** UTILITY: ENQUEUE EVENT INTO EVENT QUEUE ***/
+static inline void enqueue_event(int type, int code, int ax, int ay)
+{
+	EVENT *e = &ev_queue[first];
+
+	e->type  = type;
+	e->code  = code;
+	e->abs_x = ax;
+	e->abs_y = ay;
+
+	first = (first + 1) % MAX_INPUT_EVENTS;
 }
 
 
@@ -62,24 +76,32 @@ void nitevent_event_component(CORBA_Object _dice_corba_obj, unsigned long token,
                          int type, int keycode, int rx, int ry, int ax, int ay,
                          CORBA_Server_Environment *_dice_corba_env) {
 
-	EVENT *e = &ev_queue[first];
+	static int old_ax, old_ay;
+
+	/*
+	 * Generate motion event on a changed pointer position.
+	 * Press/release events can occur combined with motion.
+	 */
+	if (ax != old_ax || ay != old_ay) {
+
+		enqueue_event(EVENT_ABSMOTION, 0, ax, ay);
+
+		old_ax = ax;
+		old_ay = ay;
+	}
 
 	switch (type) {
+
 		case NITEVENT_TYPE_PRESS:
-			e->type = EVENT_PRESS;
-			e->code = keycode;
+
+			enqueue_event(EVENT_PRESS, keycode, ax, ay);
 			break;
+
 		case NITEVENT_TYPE_RELEASE:
-			e->type = EVENT_RELEASE;
-			e->code = keycode;
-			break;
-		case NITEVENT_TYPE_MOTION:
-			e->type  = EVENT_ABSMOTION;
-			e->abs_x = ax;
-			e->abs_y = ay;
+
+			enqueue_event(EVENT_RELEASE, keycode, ax, ay);
 			break;
 	}
-	first = (first+1) % MAX_INPUT_EVENTS;
 }
 
 

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEUnionCase.h
- *    \brief   contains the declaration of the class CBEUnionCase
+ *  \file    dice/src/be/BEUnionCase.h
+ *  \brief   contains the declaration of the class CBEUnionCase
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/15/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,53 +31,59 @@
 #define __DICE_BEUNIONCASE_H__
 
 #include "be/BETypedDeclarator.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFEUnionCase;
-class CBEContext;
 class CBEExpression;
 class CBETypedDeclarator;
 
-/**    \class CBEUnionCase
- *    \ingroup backend
- *    \brief the back-end union case (part of the union type)
+/** \class CBEUnionCase
+ *  \ingroup backend
+ *  \brief the back-end union case (part of the union type)
  */
 class CBEUnionCase : public CBETypedDeclarator
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEUnionCase();
     virtual ~ CBEUnionCase();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEUnionCase(CBEUnionCase & src);
 
 public:
-    virtual void RemoveLabel(CBEExpression * pLabel);
-    virtual CBEExpression *GetNextLabel(vector<CBEExpression*>::iterator &iter);
-    virtual vector<CBEExpression*>::iterator GetFirstLabel();
-    virtual void AddLabel(CBEExpression * pLabel);
+    virtual void CreateBackEnd(CFEUnionCase * pFEUnionCase);
+    virtual void CreateBackEnd(CBEType *pType, string sName, 
+	CBEExpression *pCaseLabel, bool bDefault);
 
-    virtual bool CreateBackEnd(CFEUnionCase * pFEUnionCase, CBEContext * pContext);
-    virtual bool CreateBackEnd(CBEType *pType, string sName, CBEExpression *pCaseLabel, bool bDefault, CBEContext *pContext);
-
-    virtual bool IsDefault();
+    /** \brief returns true if this is the default case
+     *  \return true if this is the default case
+     */
+    virtual bool IsDefault()
+    { return m_bDefault; }
+    /** \brief creates a clone of this object
+     *  \return reference to copy
+     */
+    virtual CObject* Clone()
+    { return new CBEUnionCase(*this); }
 
 protected:
-    /**    \var bool m_bDefault
-     *    \brief true is default branch
+    /** \var bool m_bDefault
+     *  \brief true is default branch
      */
      bool m_bDefault;
-    /**    \var vector<CBEExpression*> m_vCaseLabels
-     *    \brief contains a list of expressions, or is empoty if default
+
+public:
+    /** \var CCollection<CBEExpression> m_Labels
+     *  \brief contains a list of expressions, or is empoty if default
      */
-    vector<CBEExpression*> m_vCaseLabels;
+    CCollection<CBEExpression> m_Labels;
 };
 
 #endif    // !__DICE_BEUNIONCASE_H__

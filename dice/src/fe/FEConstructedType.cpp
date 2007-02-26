@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEConstructedType.cpp
- *    \brief   contains the implementation of the class CFEConstructedType
+ *  \brief   contains the implementation of the class CFEConstructedType
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -28,7 +28,7 @@
 
 #include "fe/FEConstructedType.h"
 
-CFEConstructedType::CFEConstructedType(TYPESPEC_TYPE nType)
+CFEConstructedType::CFEConstructedType(unsigned int nType)
 :CFETypeSpec(nType)
 {
     m_bForwardDeclaration = false;
@@ -38,18 +38,11 @@ CFEConstructedType::CFEConstructedType(CFEConstructedType & src)
 :CFETypeSpec(src)
 {
     m_bForwardDeclaration = false;
+    m_sTag = src.m_sTag;
 }
 
 /** CFEConstructedType destructor */
 CFEConstructedType::~CFEConstructedType()
 {
     // nothing to clean up
-}
-
-/** \brief returns the value of m_bForwardDeclaration
- *  \return the value of m_bForwardDeclaration
- */
-bool CFEConstructedType::IsForwardDeclaration()
-{
-    return m_bForwardDeclaration;
 }

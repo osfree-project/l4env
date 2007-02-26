@@ -21,13 +21,11 @@ private:
 
 IMPLEMENTATION:
 
-#include <assert.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
+#include <cassert>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
 #include <flux/page.h>
-
 #include "unix_aligned_alloc.h"
 
 // vm_offset_t kmem_alloc::zero_page;

@@ -1,7 +1,7 @@
 /* $Id$ */
 /*!
- * \file	con/include/l4/l4con/l4con.h
- * \brief	con protocol definitions.
+ * \file	l4con/include/l4con.h
+ * \brief	console protocol definitions.
  *
  * \date	2001
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
@@ -97,6 +97,7 @@
 #define L4CON_STREAM_CSCS_YV12	0x00000002
 #define L4CON_STREAM_CSCS_YUY2	0x00000004
 #define L4CON_POST_DIRTY	0x00000008
+#define L4CON_FAST_FILL		0x00000010
 
 //@}
 

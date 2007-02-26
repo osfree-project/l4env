@@ -11,18 +11,18 @@
 typedef struct timeout_item
 {
   l4_int32_t		index;    /**< backward reference into __tasks array */
-  l4_int32_t 		timeout;
+  l4_int32_t		timeout;
   l4events_nr_t		eventnr;
   l4_threadid_t		client;
   l4_uint8_t		options;
   struct timeout_item	*prev;
-  struct timeout_item 	*next;
+  struct timeout_item	*next;
 } timeout_item_t;
 
 timeout_item_t *timeout_first; /**< first event in timeout queue */
 
 
-static void 
+static void
 unlink_item_from_timeout_queue(timeout_item_t *i)
 {
   if (i->timeout == -1)
@@ -51,7 +51,7 @@ unlink_item_from_timeout_queue(timeout_item_t *i)
 /** Insert event in timeout_queue. Walk through the timout list, subtract
  *  the ticks and find the appropriate place.
  */
-static void 
+static void
 link_item_to_timeout_queue(timeout_item_t *i)
 {
   timeout_item_t *j;

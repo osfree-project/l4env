@@ -3,8 +3,8 @@ INTERFACE:
 EXTENSION class Jdb_bp
 {
 private:
-  static int		Jdb_bp::test_log_only();
-  static int		Jdb_bp::test_break(char *errbuf, size_t bufsize);
+  static int		test_log_only();
+  static int		test_break(char *errbuf, size_t bufsize);
 };
 
 
@@ -85,7 +85,7 @@ int
 Jdb_bp::set_debug_address_register(int num, Mword addr, Mword len,
 				   Breakpoint::Mode mode, Task_num task)
 {
-  if (task == 0)
+  if (task == Config::kernel_taskno)
     {
       putstr(" => task 0 (kernel) not allowed for breakpoints");
       return 0;

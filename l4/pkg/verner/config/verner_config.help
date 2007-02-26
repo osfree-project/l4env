@@ -132,6 +132,13 @@ PREDICT_DECODING_TIME_RTMON
   Additional histograms display the prediction overhead and the absolute and
   relative errors of the prediction.
 
+Schedule H.264 slices according to their visual importance
+H264_SLICE_SCHEDULE
+  This enables scheduling of H.264 slices when the CPU is overloaded. Slices
+  with high decoding times and low visual importance will be skipped first
+  to allow graceful degradation of playback quality. Unfortunately, the H.264
+  file needs to be preprocessed for this to work.
+
 Postprocess each or all video frames in one optional part
 RT_USE_OPTIONAL_FOR_ALL_FRAMES
   If running in RT mode, Verner can post-process video frames in an optional

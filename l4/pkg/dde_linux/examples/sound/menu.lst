@@ -1,4 +1,4 @@
-title sounddrv-foo
+title RMGR: sounddrv-foo
  kernel (nd)/tftpboot/USER/rmgr -sigma0 task modname "sounddrv-foo" module
  module (nd)/tftpboot/USER/fiasco -nowait -nokdb
  module (nd)/tftpboot/USER/sigma0
@@ -9,6 +9,20 @@ title sounddrv-foo
  module (nd)/tftpboot/USER/sounddrv-foo
  modaddr 0x01000000
  module (nd)/tftpboot/USER/sample.pcm sample1
+
+title BOOTSTRAP/ROOTTASK: sounddrv-foo
+ kernel (nd)/tftpboot/USER/bootstrap
+ module (nd)/tftpboot/USER/fiasco -nowait -nokdb
+ module (nd)/tftpboot/USER/sigma0
+ module (nd)/tftpboot/USER/roottask task modname "sounddrv-foo" module
+ module (nd)/tftpboot/USER/names
+ module (nd)/tftpboot/USER/log
+ module (nd)/tftpboot/USER/dm_phys
+ module (nd)/tftpboot/USER/l4io --noirq
+ module (nd)/tftpboot/USER/sounddrv-foo
+ modaddr 0x01000000
+ module (nd)/tftpboot/USER/sample.pcm sample1
+
 
 # sample.pcm should be:
 #

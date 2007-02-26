@@ -87,16 +87,16 @@ extern void LOG_flush(void);
 #define LOG_DEBUG 0
 #endif
 
-#if 1
-/* format_check: just for the compiler to check the format & args */
-extern void LOG_format_check(const char*format,...)
-  __attribute__((format(printf,1,2)));
-
 extern void LOG_log(const char*function, const char*format,...);
 extern void LOG_logl(const char*file, int line, const char*function,
 		     const char*format,...);
 extern void LOG_logL(const char*file, int line, const char*function,
 		     const char*format,...);
+
+#ifndef L4BID_RELEASE_MODE
+/* format_check: just for the compiler to check the format & args */
+extern void LOG_format_check(const char*format,...)
+  __attribute__((format(printf,1,2)));
 
 #define STRINGIFY_HELPER(nr)		#nr
 #define LINE_PRESCAN_SUBST(ln)		STRINGIFY_HELPER(ln)
@@ -127,12 +127,12 @@ extern void LOG_logL(const char*file, int line, const char*function,
   LOG_logk(a);					\
 } while(0)
 
-#define LOGd_Enter(doit, msg...) if(doit) LOG_Enter(msg)
-#define LOGd(doit, msg...) if(doit) LOG(msg)
-#define LOGdl(doit,msg...) if(doit) LOGl(msg)
-#define LOGdL(doit,msg...) if(doit) LOGL(msg)
-#define LOGdk(doit,msg...) if(doit) LOGk(msg)
-#define LOG_Error(msg...) LOGL("Error: " msg)
+#define LOGd_Enter(doit, msg...) do { if(doit) LOG_Enter(msg); } while (0)
+#define LOGd(doit, msg...)       do { if(doit) LOG(msg);       } while (0)
+#define LOGdl(doit,msg...)       do { if(doit) LOGl(msg);      } while (0)
+#define LOGdL(doit,msg...)       do { if(doit) LOGL(msg);      } while (0)
+#define LOGdk(doit,msg...)       do { if(doit) LOGk(msg);      } while (0)
+#define LOG_Error(msg...)        LOGL("Error: " msg)
 
 #else
 #define LOG(a...)

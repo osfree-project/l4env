@@ -22,6 +22,8 @@
 \sloppy
 \pagestyle{empty}
 
+\usepackage{hyperref}
+
 \begin{document}
 \thispagestyle{empty}
 
@@ -448,15 +450,6 @@ server/ only differ in the values for «§PKGDIR», we only list one.
 
 The server/include subdirectory contains no Makefile. We did not look
 at the Makefile in the man/ subdirectory.
-
-For comparison, the original Makefile from the server/src/ directory
-is printed here:
-
-\begin{minipage}{\columnwidth}
-\VerbatimInput[fontsize=\tiny,
-               frame=\vframe, label=Original server/src/Makefile]
-               {code/names-orig-server-src}
-\end{minipage}
 
 % align the last column
 \pagebreak

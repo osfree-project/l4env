@@ -59,20 +59,21 @@ protected:
     CBEImplementationFile(CBEImplementationFile &src);
 
 public:
-    virtual void Write(CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, 
-	CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, 
-	CBEContext *pContext);
-    virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
+    virtual void Write(void);
+    
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
+    
     virtual CBEHeaderFile* GetHeaderFile();
     virtual void SetHeaderFile(CBEHeaderFile *pHeaderFile);
 
 protected:  // Protected methods
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEContext *pContext);
-    virtual void WriteClass(CBEClass *pClass, CBEContext *pContext);
-    virtual void WriteFunction(CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace);
+    virtual void WriteClass(CBEClass *pClass);
+    virtual void WriteFunction(CBEFunction *pFunction);
+    virtual void WriteDefaultIncludes(void);
 
 protected: // Protected members
     /** \var CBEHeaderFile *m_pHeaderFile

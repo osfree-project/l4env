@@ -6,7 +6,7 @@
 \section desc Description
 
 A DROPS file server is responsible for task management. See the
-\ref ts "interface description" for further details. One implemenation
+\ref l4::ts "interface description" for further details. One implemenation
 of this interface is represented by the \c simple_ts package.
 
 */

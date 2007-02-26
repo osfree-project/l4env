@@ -32,14 +32,16 @@ enum {
   Kern_cnt_max               = 11,
 };
 
+
 struct Tracebuffer_status
 {
-  Unsigned32 tracebuffer0;
-  Unsigned32 size0;
-  Unsigned32 version0;
-  Unsigned32 tracebuffer1;
-  Unsigned32 size1;
-  Unsigned32 version1;
+  Address    tracebuffer0;
+  Address    size0;
+  Unsigned64 version0;
+  Address    tracebuffer1;
+  Address    size1;
+  Unsigned64 version1;
+  Address    current;
   Unsigned32 logevents[Log_event_max];
 
   Unsigned32 scaler_tsc_to_ns;

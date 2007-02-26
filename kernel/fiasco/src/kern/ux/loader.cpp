@@ -10,7 +10,7 @@ class Loader
 {
 private:
   static unsigned int phys_base;
-  static char * const errors[];
+  static char const *errors[];
 
 public:
   static FILE *open_module (const char * const path);
@@ -18,7 +18,9 @@ public:
   static char const * load_module (const char * const path,
 				   Multiboot_module *module,
 				   unsigned long int memsize,
-				   bool quiet);
+                                   bool quiet,
+                                   unsigned long *start,
+                                   unsigned long *end);
 
   static char const * copy_module (const char * const path,
 				   Multiboot_module *module,
@@ -41,7 +43,7 @@ IMPLEMENTATION:
 
 unsigned int Loader::phys_base = Mem_layout::Physmem;
 
-char * const Loader::errors[] FIASCO_INITDATA =
+char const *Loader::errors[] FIASCO_INITDATA =
 {
   "Failed to open file",
   "Failed to load ELF header",
@@ -99,7 +101,9 @@ char const *
 Loader::load_module (const char * const path,
                      Multiboot_module *module,
                      unsigned long int memsize,
-		     bool quiet)
+                     bool quiet,
+                     unsigned long *start,
+                     unsigned long *end)
 {
   FILE *fp;
   Elf32_Ehdr eh;
@@ -138,8 +142,8 @@ Loader::load_module (const char * const path,
 
   // Record entry point (initial EIP)
   module->reserved  = eh.e_entry;
-  module->mod_start = 0xffffffff;
-  module->mod_end   = 0;
+  *start            = 0xffffffff;
+  *end              = 0;
 
   // Load all program sections
   for (i = 0, offset = eh.e_phoff; i < eh.e_phnum; i++) {
@@ -159,7 +163,7 @@ Loader::load_module (const char * const path,
       continue;
 
     // Check if section fits into memory
-    if (ph.p_vaddr + ph.p_memsz > memsize)
+    if (ph.p_paddr + ph.p_memsz > memsize)
       {
         fclose (fp);
         return errors[5];
@@ -167,7 +171,7 @@ Loader::load_module (const char * const path,
 
     // Load Section with non-zero filesize
     if (ph.p_filesz && (fseek (fp, ph.p_offset, SEEK_SET) == -1 ||
-        fread ((void *)(phys_base + ph.p_vaddr), ph.p_filesz, 1, fp) != 1))
+        fread ((void *)(phys_base + ph.p_paddr), ph.p_filesz, 1, fp) != 1))
       {
         fclose (fp);
         return errors[6];
@@ -175,18 +179,18 @@ Loader::load_module (const char * const path,
 
     // Zero-pad uninitialized data if filesize < memsize
     if (ph.p_filesz < ph.p_memsz)
-      memset ((void *)(phys_base + ph.p_vaddr + ph.p_filesz), 0,
+      memset ((void *)(phys_base + ph.p_paddr + ph.p_filesz), 0,
                ph.p_memsz - ph.p_filesz);
 
-    if (ph.p_vaddr < module->mod_start)
-      module->mod_start = ph.p_vaddr;
-    if (ph.p_vaddr+ph.p_memsz > module->mod_end)
-      module->mod_end   = ph.p_vaddr + ph.p_memsz;
+    if (ph.p_paddr < *start)
+      *start = ph.p_paddr;
+    if (ph.p_paddr + ph.p_memsz > *end)
+      *end   = ph.p_paddr + ph.p_memsz;
   }
 
   if (! quiet)
     printf ("Loading Module 0x"L4_PTR_FMT"-0x"L4_PTR_FMT" [%s]\n",
-	    module->mod_start, module->mod_end, path);
+	    (Address)*start, (Address)*end, path);
 
   fclose (fp);
   return 0;
@@ -225,7 +229,7 @@ Loader::copy_module (const char * const path,
 
   if (! quiet)
     printf ("Copying Module 0x"L4_PTR_FMT"-0x"L4_PTR_FMT" [%s]\n",
-	    module->mod_start, module->mod_end, path);
+	    (Address)module->mod_start, (Address)module->mod_end, path);
 
   fclose (fp);
   return 0;

@@ -21,6 +21,7 @@ lib/src/logl.c : TUD
 lib/src/loglib.c : TUD
 lib/src/logliblinux.c : TUD
 lib/src/logserver.c : TUD
+lib/src/logchannel.c : TUD
 lib/src/printf.c : TUD
 lib/src/sprintf.c : TUD
 server: TUD

@@ -13,14 +13,14 @@ __BEGIN_DECLS
 
 struct shmid_ds {
   struct ipc_perm	shm_perm;	/* operation perms */
-  int			shm_segsz;	/* size of segment (bytes) */
+  int32_t		shm_segsz;	/* size of segment (bytes) */
   time_t		shm_atime;	/* last attach time */
   time_t		shm_dtime;	/* last detach time */
   time_t		shm_ctime;	/* last change time */
   pid_t			shm_cpid;	/* pid of creator */
   pid_t			shm_lpid;	/* pid of last operator */
-  unsigned short	shm_nattch;	/* no. of current attaches */
-  unsigned short 	shm_unused;	/* compatibility */
+  uint16_t		shm_nattch;	/* no. of current attaches */
+  uint16_t 		shm_unused;	/* compatibility */
   void 			*shm_unused2;	/* ditto - used by DIPC */
   void			*shm_unused3;	/* unused */
 };
@@ -44,15 +44,15 @@ struct shmid_ds {
 
 /* Obsolete, used only for backwards compatibility */
 struct	shminfo {
-  int shmmax;
-  int shmmin;
-  int shmmni;
-  int shmseg;
-  int shmall;
+  int32_t shmmax;
+  int32_t shmmin;
+  int32_t shmmni;
+  int32_t shmseg;
+  int32_t shmall;
 };
 
 struct shm_info {
-  int used_ids;
+  int32_t used_ids;
   unsigned long shm_tot;	/* total allocated shm */
   unsigned long shm_rss;	/* total resident shm */
   unsigned long shm_swp;	/* total swapped shm */
@@ -60,7 +60,7 @@ struct shm_info {
   unsigned long swap_successes;
 };
 
-#if defined(__i386__) || defined(__mips__) || defined(__arm__) || defined(powerpc) || defined (__powerpc64__) || defined(__s390__) || defined(__hppa__) || defined(__x86_64__) || defined(__ia64__)
+#if defined(__i386__) || defined(__mips__) || defined(__arm__) || defined(__powerpc__) || defined (__powerpc64__) || defined(__s390__) || defined(__hppa__) || defined(__x86_64__) || defined(__ia64__)
 #define PAGE_SIZE 4096UL
 #define PAGE_SHIFT 12
 #elif defined(__alpha__) || defined(__sparc__)

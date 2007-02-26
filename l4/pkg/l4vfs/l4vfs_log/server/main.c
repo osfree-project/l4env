@@ -60,7 +60,7 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
     if (node == NULL)
         return -ENOENT;
 
-    LOG("%x, %x", flags, flags & O_ACCMODE);
+//    LOG("%x, %x", flags, flags & O_ACCMODE);
     if (node->type == L4VFS_TH_TYPE_OBJECT)
     {
         if ((flags & O_ACCMODE) != O_WRONLY)
@@ -127,9 +127,9 @@ l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
                                object_handle_t fd,
-                               l4_int8_t **buf,
+                               char **buf,
                                l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
+                               short *_dice_reply,
                                CORBA_Server_Environment *_dice_corba_env)
 {
     return -EINVAL;
@@ -138,9 +138,9 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t handle,
-                                const l4_int8_t *buf,
+                                const char *buf,
                                 l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
+                                short *_dice_reply,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
     /* 1. check for valid object_handle, check owner
@@ -208,7 +208,7 @@ l4vfs_basic_io_lseek_component(CORBA_Object _dice_corba_obj,
 l4_int32_t
 l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                                   object_handle_t handle,
-                                  l4vfs_dirent_t *dirp,
+                                  l4vfs_dirent_t **dirp,
                                   l4_uint32_t *count,
                                   CORBA_Server_Environment *_dice_corba_env)
 {
@@ -224,7 +224,7 @@ l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
 
     node = clients[handle].node;
     seek = clients[handle].seek;
-    ret = l4vfs_th_dir_fill_dirents(node, seek, dirp, count);
+    ret = l4vfs_th_dir_fill_dirents(node, seek, *dirp, count);
     clients[handle].seek = ret;  // set new seekpointer
 
     return *count;
@@ -279,7 +279,7 @@ l4vfs_basic_name_server_resolve_component(
     char * p;
     object_id_t ret;
 
-    LOG("pathname = '%s'", pathname);
+    // LOG("pathname = '%s'", pathname);
     if (strcmp(".", pathname) == 0 ||
         strcmp("/", pathname) == 0 ||
         strlen(pathname) == 0)

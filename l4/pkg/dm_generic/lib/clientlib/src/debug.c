@@ -49,11 +49,11 @@ l4dm_ds_set_name(const l4dm_dataspace_t * ds, const char * name)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_set_name_call(&(ds->manager), ds->id, name, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: set name for ds %u at "l4util_idfmt \
             "failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -84,11 +84,11 @@ l4dm_ds_get_name(const l4dm_dataspace_t * ds, char * name)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_get_name_call(&(ds->manager), ds->id, &name, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: get name for da %u at "l4util_idfmt \
             "failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
-	    ret, _env.major);
+	    ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -114,10 +114,10 @@ l4dm_ds_show(const l4dm_dataspace_t * ds)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_show_ds_call(&(ds->manager), ds->id, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
     LOGdL(DEBUG_ERRORS, "libdm_generic: show ds %u at "l4util_idfmt \
           " failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager), 
-	  ret, _env.major);
+	  ret, DICE_EXCEPTION_MAJOR(&_env));
 }
 
 /*****************************************************************************/
@@ -152,11 +152,12 @@ l4dm_ds_list(l4_threadid_t dsm_id, l4_threadid_t owner, l4_uint32_t flags)
 
   /* call dataspace manager */
   if_l4dm_generic_list_call(&dsm_id, &owner, flags, &_env);
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: list dataspaces of "l4util_idfmt \
             "at "l4util_idfmt" failed (exc %d)",
-            l4util_idstr(owner), l4util_idstr(dsm_id), _env.major);
+            l4util_idstr(owner), l4util_idstr(dsm_id),
+	    DICE_EXCEPTION_MAJOR(&_env));
       return -L4_EIPC;
     }
 

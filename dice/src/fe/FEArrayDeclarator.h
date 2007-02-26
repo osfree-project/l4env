@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEArrayDeclarator.h
- *    \brief   contains the declaration of the class CFEArrayDeclarator
+ *  \brief   contains the declaration of the class CFEArrayDeclarator
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,13 +32,13 @@
 
 #include "fe/FEDeclarator.h"
 #include <vector>
-using namespace std;
+using std::vector;
 
 class CFEExpression;
 
 /** \class CFEArrayDeclarator
  *    \ingroup frontend
- *    \brief represents an array declarator (such as "int t1[]")
+ *  \brief represents an array declarator (such as "int t1[]")
  *
  * This class is created to represent an array declarator, which is a simple
  * declarator with array dimensions specified.
@@ -48,18 +48,18 @@ class CFEArrayDeclarator : public CFEDeclarator
 // standard constructor/destructor
   public:
     /** constructs an array declarator
-     *    \param pDecl the declarator the array bounds are added to */
+     *  \param pDecl the declarator the array bounds are added to */
     CFEArrayDeclarator(CFEDeclarator * pDecl);
     /** constructs an array declarator
-     *    \param sName the name of the declarator
-     *    \param pUpper its boundary
+     *  \param sName the name of the declarator
+     *  \param pUpper its boundary
      */
     CFEArrayDeclarator(string sName, CFEExpression * pUpper = 0);
     virtual ~ CFEArrayDeclarator();
 
   protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEArrayDeclarator(CFEArrayDeclarator & src);
 
@@ -67,8 +67,6 @@ class CFEArrayDeclarator : public CFEDeclarator
   public:
     virtual void ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper);
     virtual void ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower);
-    virtual bool IsReference();
-    virtual void Serialize(CFile * pFile);
     virtual void RemoveBounds(unsigned int nIndex);
     CObject *Clone();
     virtual unsigned int GetDimensionCount();
@@ -79,11 +77,11 @@ class CFEArrayDeclarator : public CFEDeclarator
 // attributes
   protected:
     /** \var vector<CFEExpression*> m_vLowerBounds
-     *    \brief contains the lower bounds of the array definitions
+     *  \brief contains the lower bounds of the array definitions
      */
      vector<CFEExpression*> m_vLowerBounds;
     /** \var vector<CFEExpression*> m_vUpperBounds
-     *    \brief contains the upper bound of the array definitions
+     *  \brief contains the upper bound of the array definitions
      */
     vector<CFEExpression*> m_vUpperBounds;
 };

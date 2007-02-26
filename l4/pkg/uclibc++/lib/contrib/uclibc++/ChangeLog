@@ -1,3 +1,27 @@
+0.2.1
+-	Now export std::calloc & std::realloc
+-	Implement std::ws
+-	Implement istream>> (*pf)(istream)
+-	Implement istream>> (*pf)(ios_base)
+-	Implement string::find_last_not_of
+-	Convert some string functions to use traits::eq in spec compliance
+-	String now accepts resize filler character
+-	String::assign(iterator first, iterator last) now implemented
+-	Clean up double-semicolons
+-	Add parent class scoping as appropriate
+-	Make ios::Init() exported again
+
+0.2.0
+-	Now can compare set iterators and const_iterators
+-	Now can compare map iterators and const_iterators
+-	Now can get a const value from operator* on set/map iterator
+-	Added fixed to std::map / std::multimap
+-	Clean up test suite
+-	Map test now tests for some additional error conditions
+-	Map iterators still invalidated improperly
+-	Fix to functional binder using wrong type
+-	Long double support now depends on float support
+
 0.1.12
 -	Add missing const declarators to some data types (thanks to asierllano)
 -	Fix list::swap to alter the nubmer of elements
@@ -40,6 +64,10 @@
 -	Added binary operators to valarray
 -	Added trig operators to valarray
 -	Fixed typos in valarray (thanks to psm)
+-	Broke spec slightly in slice_array to allow copying to make borken apps/compilers work
+-	More fixes to auto_ptr const correctness
+-	Fix deque constness in deque const_iterator typenames
+-	Fix stringstream buffer xsputn implementation
 
 
 0.1.11

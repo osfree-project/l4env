@@ -100,11 +100,11 @@ struct ip_mreq {
 struct ip_mreqn {
   struct in_addr	imr_multiaddr;		/* IP multicast address of group */
   struct in_addr	imr_address;		/* local IP address of interface */
-  int			imr_ifindex;		/* Interface index */
+  int32_t		imr_ifindex;		/* Interface index */
 };
 
 struct in_pktinfo {
-  int			ipi_ifindex;
+  int32_t		ipi_ifindex;
   struct in_addr	ipi_spec_dst;
   struct in_addr	ipi_addr;
 };
@@ -116,8 +116,8 @@ struct sockaddr_in {
   in_port_t		sin_port;	/* Port number			*/
   struct in_addr	sin_addr;	/* Internet address		*/
   /* Pad to size of `struct sockaddr'. */
-  unsigned char		sin_zero[__SOCK_SIZE__ - sizeof(short int) -
-			sizeof(unsigned short int) - sizeof(struct in_addr)];
+  unsigned char		sin_zero[__SOCK_SIZE__ - sizeof(int16_t) -
+			sizeof(uint16_t) - sizeof(struct in_addr)];
 };
 
 
@@ -184,7 +184,7 @@ struct in6_addr {
 };
 
 struct sockaddr_in6 {
-  unsigned short int	sin6_family;    /* AF_INET6 */
+  uint16_t		sin6_family;    /* AF_INET6 */
   uint16_t		sin6_port;      /* Transport layer port # */
   uint32_t		sin6_flowinfo;  /* IPv6 flow information */
   struct in6_addr	sin6_addr;      /* IPv6 address */
@@ -196,15 +196,15 @@ struct sockaddr_in_pad {
   in_port_t		sin_port;	/* Port number			*/
   struct in_addr	sin_addr;	/* Internet address		*/
   /* Pad to size of `struct sockaddr_in6'. */
-  unsigned char		sin_zero[sizeof(struct sockaddr_in6) - sizeof(short int) -
-			sizeof(unsigned short int) - sizeof(struct in_addr)];
+  unsigned char		sin_zero[sizeof(struct sockaddr_in6) - sizeof(int16_t) -
+			sizeof(uint16_t) - sizeof(struct in_addr)];
 };
 
 struct ipv6_mreq {
   /* IPv6 multicast address of group */
   struct in6_addr ipv6mr_multiaddr;
   /* local IPv6 address of interface */
-  int ipv6mr_interface;
+  int32_t ipv6mr_interface;
 };
 
 struct in6_flowlabel_req {
@@ -288,13 +288,13 @@ struct in6_flowlabel_req {
 
 struct in6_pktinfo {
   struct in6_addr	ipi6_addr;
-  int		ipi6_ifindex;
+  int32_t		ipi6_ifindex;
 };
 
 struct in6_ifreq {
   struct in6_addr	ifr6_addr;
   uint32_t		ifr6_prefixlen;
-  int		ifr6_ifindex; 
+  int32_t		ifr6_ifindex;
 };
 
 #define IPV6_SRCRT_STRICT	0x01	/* this hop must be a neighbor	*/
@@ -331,11 +331,11 @@ struct rt0_hdr {
 
 struct ipv6hdr {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-  unsigned int		flow_lbl:20,
+  uint32_t		flow_lbl:20,
 			priority:8,
 			version:4;
 #else
-  unsigned int		version:4,
+  uint32_t		version:4,
 			priority:8,
 			flow_lbl:20;
 #endif

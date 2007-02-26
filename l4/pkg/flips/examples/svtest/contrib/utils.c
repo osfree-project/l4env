@@ -1,10 +1,14 @@
 #include "utils.h"
 
 #include <stdio.h>
-#include <sys/timeb.h>
+//#include <sys/timeb.h>
 #include <sys/time.h>
 #include <string.h>
 #include <assert.h>
+
+/* XXX global vars */
+FILE *error_datei;
+int debug;
 
 
 double getSec();

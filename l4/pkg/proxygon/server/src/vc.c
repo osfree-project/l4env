@@ -222,9 +222,9 @@ void vc_init_rcvstring(int nb, l4_umword_t *addr, l4_umword_t *size,
 
 
 /*** CLOSE VIRTUAL CONSOLE ***/
-l4_int32_t
+long
 con_vc_close_component(CORBA_Object _dice_corba_obj,
-                       l4_int16_t *_dice_reply,
+                       short *_dice_reply,
                        CORBA_Server_Environment *_dice_corba_env) {
 	struct vc *vc = l4thread_data_get_current(tls_key);
 	return destroy_vc(vc);
@@ -232,7 +232,7 @@ con_vc_close_component(CORBA_Object _dice_corba_obj,
 
 
 /*** DRAW FILLED RECTANGLE ***/
-l4_int32_t
+long
 con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,
                             const l4con_pslim_rect_t *rect,
                             l4con_pslim_color_t color,
@@ -243,14 +243,14 @@ con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,
 
 
 /*** DRAW BITMAP ***/
-l4_int32_t
+long
 con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
                             const l4con_pslim_rect_t *rect,
                             l4con_pslim_color_t fg,
                             l4con_pslim_color_t bg,
                             const l4_uint8_t *bmap,
-                            l4_int32_t bmap_size,
-                            l4_uint8_t bmap_type,
+                            long bmap_size,
+                            unsigned char bmap_type,
                             CORBA_Server_Environment *_dice_corba_env) {
 	struct vc *vc = l4thread_data_get_current(tls_key);
 	return vc ? vc->canvas->bmap(vc->canvas, rect, fg, bg, bmap, bmap_type) : 0;
@@ -258,11 +258,11 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 
 
 /*** DRAW COLOR IMAGE ***/
-l4_int32_t
+long
 con_vc_pslim_set_component(CORBA_Object _dice_corba_obj,
                            const l4con_pslim_rect_t *rect,
-                           const l4_uint8_t *pmap,
-                           l4_int32_t pmap_size,
+                           const unsigned char *pmap,
+                           long pmap_size,
                            CORBA_Server_Environment *_dice_corba_env) {
 	struct vc *vc = l4thread_data_get_current(tls_key);
 	return vc ? vc->canvas->set(vc->canvas, rect, pmap) : 0;
@@ -270,12 +270,12 @@ con_vc_pslim_set_component(CORBA_Object _dice_corba_obj,
 
 
 /*** DRAW STRING ***/
-l4_int32_t
+long
 con_vc_puts_component(CORBA_Object _dice_corba_obj,
-                      const l4_int8_t *s,
-                      l4_int32_t len,
-                      l4_int16_t x,
-                      l4_int16_t y,
+                      const char *s,
+                      int len,
+                      short x,
+                      short y,
                       l4con_pslim_color_t fg,
                       l4con_pslim_color_t bg,
                       CORBA_Server_Environment *_dice_corba_env) {
@@ -285,12 +285,12 @@ con_vc_puts_component(CORBA_Object _dice_corba_obj,
 
 
 /*** DRAW ANSI STRING ***/
-l4_int32_t
+long
 con_vc_puts_attr_component(CORBA_Object _dice_corba_obj,
-                           const l4_int16_t *s,
-                           l4_int32_t len,
-                           l4_int16_t x,
-                           l4_int16_t y,
+                           const short *s,
+                           int len,
+                           short x,
+                           short y,
                            CORBA_Server_Environment *_dice_corba_env) {
 	struct vc *vc = l4thread_data_get_current(tls_key);
 	return vc ? vc->canvas->puts_attr(vc->canvas, (char *)s, len, x, y) : 0;
@@ -299,9 +299,9 @@ con_vc_puts_attr_component(CORBA_Object _dice_corba_obj,
 
 
 /*** SET EVENT LISTENER THREAD ***/
-l4_int32_t
+long
 con_vc_smode_component(CORBA_Object _dice_corba_obj,
-                       l4_uint8_t mode,
+                       unsigned char mode,
                        const l4_threadid_t *ev_handler,
                        CORBA_Server_Environment *_dice_corba_env) {
 	struct vc *vc = l4thread_data_get_current(tls_key);
@@ -312,9 +312,9 @@ con_vc_smode_component(CORBA_Object _dice_corba_obj,
 
 
 /*** REQUEST INFORMATION ABOUT CURRENT VIDEO MODE ***/
-l4_int32_t
+long
 con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
-                             l4_uint8_t *g_mode,
+                             unsigned char *g_mode,
                              l4_uint32_t *xres,
                              l4_uint32_t *yres,
                              l4_uint32_t *bits_per_pixel,
@@ -340,7 +340,7 @@ con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
 
 
 /*** IMPORT DATASPACE TO BE USED AS VIRTUAL FRAMEBUFFER ***/
-l4_int32_t
+long
 con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
                               const l4dm_dataspace_t *data_ds,
                               CORBA_Server_Environment *_dice_corba_env) {
@@ -378,7 +378,7 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
 
 
 /*** UPDATE SCREEN AREA OF AN IMPORTED DATASPACE ***/
-l4_int32_t
+long
 con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
                                const l4con_pslim_rect_t *rect,
                                CORBA_Server_Environment *_dice_corba_env) {
@@ -405,8 +405,8 @@ con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 	if (w <= 0 || h <= 0) return 0;
 
 	/* copy area from dataspace to vscreen buffer */
-	src = vc->ds_adr + y*VC_WIDTH + x;
-	dst = vc->pixels + y*VC_WIDTH + x;
+	src = (u16 *)vc->ds_adr + y*VC_WIDTH + x;
+	dst = (u16 *)vc->pixels + y*VC_WIDTH + x;
 
 	for (i = 0; i < h; i++) {
 		memcpy(dst, src, w*2);
@@ -421,7 +421,7 @@ con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 
 
 /*** REQUEST PIXEL LAYOUT ***/
-l4_int32_t
+long
 con_vc_graph_get_rgb_component(CORBA_Object _dice_corba_obj,
                                l4_uint32_t *red_offs,
                                l4_uint32_t *red_len,

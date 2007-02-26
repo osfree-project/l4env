@@ -1,4 +1,4 @@
-/* 
+/*
  * CRC decoder (for codec/format testing)
  * Copyright (c) 2002 Fabrice Bellard.
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
 
@@ -33,7 +33,7 @@
 #define DO8(buf)  DO4(buf); DO4(buf);
 #define DO16(buf) DO8(buf); DO8(buf);
 
-static uint32_t adler32(uint32_t adler, const uint8_t *buf, unsigned int len)
+unsigned long update_adler32(unsigned long adler, const uint8_t *buf, unsigned int len)
 {
     unsigned long s1 = adler & 0xffff;
     unsigned long s2 = (adler >> 16) & 0xffff;
@@ -56,6 +56,7 @@ static uint32_t adler32(uint32_t adler, const uint8_t *buf, unsigned int len)
     }
     return (s2 << 16) | s1;
 }
+#ifdef CONFIG_MUXERS
 
 typedef struct CRCState {
     uint32_t crcval;
@@ -66,17 +67,15 @@ static int crc_write_header(struct AVFormatContext *s)
     CRCState *crc = s->priv_data;
 
     /* init CRC */
-    crc->crcval = adler32(0, NULL, 0);
+    crc->crcval = update_adler32(0, NULL, 0);
 
     return 0;
 }
 
-static int crc_write_packet(struct AVFormatContext *s, 
-                            int stream_index,
-                            const uint8_t *buf, int size, int64_t pts)
+static int crc_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     CRCState *crc = s->priv_data;
-    crc->crcval = adler32(crc->crcval, buf, size);
+    crc->crcval = update_adler32(crc->crcval, pkt->data, pkt->size);
     return 0;
 }
 
@@ -85,7 +84,18 @@ static int crc_write_trailer(struct AVFormatContext *s)
     CRCState *crc = s->priv_data;
     char buf[64];
 
-    snprintf(buf, sizeof(buf), "CRC=%08x\n", crc->crcval);
+    snprintf(buf, sizeof(buf), "CRC=0x%08x\n", crc->crcval);
+    put_buffer(&s->pb, buf, strlen(buf));
+    put_flush_packet(&s->pb);
+    return 0;
+}
+
+static int framecrc_write_packet(struct AVFormatContext *s, AVPacket *pkt)
+{
+    uint32_t crc = update_adler32(0, pkt->data, pkt->size);
+    char buf[256];
+
+    snprintf(buf, sizeof(buf), "%d, %"PRId64", %d, 0x%08x\n", pkt->stream_index, pkt->dts, pkt->size, crc);
     put_buffer(&s->pb, buf, strlen(buf));
     put_flush_packet(&s->pb);
     return 0;
@@ -104,8 +114,23 @@ static AVOutputFormat crc_format = {
     crc_write_trailer,
 };
 
+static AVOutputFormat framecrc_format = {
+    "framecrc",
+    "framecrc testing format",
+    NULL,
+    "",
+    0,
+    CODEC_ID_PCM_S16LE,
+    CODEC_ID_RAWVIDEO,
+    NULL,
+    framecrc_write_packet,
+    NULL,
+};
+
 int crc_init(void)
 {
     av_register_output_format(&crc_format);
+    av_register_output_format(&framecrc_format);
     return 0;
 }
+#endif /* CONFIG_MUXERS */

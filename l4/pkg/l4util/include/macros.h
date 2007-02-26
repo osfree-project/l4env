@@ -47,6 +47,15 @@ EXTERN_C_BEGIN
 void _exit(int status) __attribute__ ((__noreturn__));
 EXTERN_C_END
 
+# ifdef L4BID_RELEASE_MODE
+#  define Panic(args...) do                                      \
+                           {                                     \
+			     LOGL(args);                         \
+			     LOG_flush();                        \
+			     _exit(-1);                          \
+			   }                                     \
+                         while (1)
+# else
 #  define Panic(args...) do                                      \
                            {                                     \
                              LOGL(args);                         \
@@ -55,6 +64,7 @@ EXTERN_C_END
                              _exit(-1);                          \
                            }                                     \
                          while (1)
+# endif
 #endif
 
 /* assertion */

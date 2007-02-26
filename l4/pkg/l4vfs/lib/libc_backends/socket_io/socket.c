@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/socket_io/socket.c
+ * \file   l4vfs/lib/backends/socket_io/socket.c
  * \brief  
  *
  * \date   08/10/2004
@@ -48,14 +48,13 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
     const char    *server_name;
     const char    *names_name;
 
-    /* 
+    /*
      * currently we support only these domains:
      * PF_INET, PF_NETLINK, PF_KEY, PF_LOCAL
      *
      * We have three socket servers, which are currently hardwired.
      * It will be generalized in next versions.
      */
-
     if (domain == PF_INET || domain == PF_NETLINK)
     {
 	server = &ip_server;
@@ -63,7 +62,6 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
 	server_name = "IP Stack";
 	names_name  = IPSTACK;
     }
-
     else if (domain == PF_KEY)
     {
 	server = &pf_key_server;
@@ -71,7 +69,6 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
 	server_name = "PF_KEY Server";
 	names_name  = PFKEY_SERV;
     }
-
     else if (domain == PF_LOCAL)
     {
 	server = &pf_local_server;
@@ -79,13 +76,11 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
 	server_name = "PF_LOCAL Server";
 	names_name  = PFLOCAL_SERV;
     }
-
     else
         return -EPFNOSUPPORT;
 
 
     /* get thread IDs */
-    
     if (l4_is_invalid_id(*server))
     {
 	if (names_waitfor_name(names_name, server, 10000) == 0)
@@ -93,11 +88,9 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
 	    LOG("%s is not registered at names!\n", server_name);
 	    return -ENETDOWN;
 	}
-        
 	if (l4_is_invalid_id(*thread))
 	{
 	    *thread = l4vfs_init_connection(*server);
-        
             if (l4_is_invalid_id(*thread))
             {
                 LOG_Error("Couldn't build up connection with %s!\n",
@@ -105,9 +98,8 @@ static int get_socket_server_thread(int domain, l4_threadid_t *server_thread)
 	        return -ENETDOWN;
 	    }
 	}
-      
     }
-    
+
     *server_thread = *thread;
     return 0;
 }
@@ -290,11 +282,19 @@ int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
     int local_fd;
     file_desc_t file_desc, fd_s;
     object_handle_t accept_obj_handle = -1;
+    socklen_t addrlen_tmp = 0;
 
-    if (! addrlen)
+    if (! addr)
     {
-        errno = EFAULT;
-        return -1;
+        addrlen = &addrlen_tmp;
+    }
+    else
+    {
+        if (! addrlen)
+        {
+            errno = EFAULT;
+            return -1;
+        }
     }
 
     local_fd = ft_get_next_free_entry();
@@ -372,7 +372,7 @@ int recv(int s, void *buf, size_t len, int flags)
 {
     int ret;
     file_desc_t file_desc;
-    l4_int8_t *b = (l4_int8_t*)buf;
+    char *b = buf;
 
     if (len < 0)
     {
@@ -412,7 +412,7 @@ int recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
 {
     int ret;
     file_desc_t file_desc;
-    l4_int8_t *b = (l4_int8_t*)buf;
+    char *b = buf;
 
     if (len < 0)
     {
@@ -571,6 +571,7 @@ int sendmsg(int s, const struct msghdr *msg, int flags)
 
     return ret;
 }
+
 int sendto(int s, const void *msg, size_t len, int flags,
            const struct sockaddr *to, socklen_t tolen)
 {
@@ -691,6 +692,72 @@ int setsockopt(int s, int level, int optname, const void *optval,
 
     ret = l4vfs_setsockopt(file_desc.server_id, file_desc.object_handle,
                            level, optname, optval, optlen);
+
+    if (ret != 0)
+    {
+        errno = -ret;
+        return -1;
+    }
+
+    return 0;
+}
+
+int getsockopt(int s, int level, int optname, void *optval,
+               socklen_t * optlen)
+{
+    int ret;
+    file_desc_t file_desc;
+
+    if (! optval)
+    {
+        errno = EFAULT;
+        return -1;
+    }
+
+    LOGd(_DEBUG, "local fd '%d'", s);
+    if (! ft_is_open(s))
+    {
+        errno = EBADF;
+        return -1;
+    }
+
+    file_desc = ft_get_entry(s);
+
+    ret = l4vfs_getsockopt(file_desc.server_id, file_desc.object_handle,
+                           level, optname, optval, optlen);
+
+    if (ret != 0)
+    {
+        errno = -ret;
+        return -1;
+    }
+
+    return 0;
+}
+
+int getpeername(int s, struct sockaddr *name, socklen_t *namelen)
+{
+    int ret;
+    file_desc_t file_desc;
+
+    if (! name || ! namelen)
+    {
+        errno = EFAULT;
+        return -1;
+    }
+
+    LOGd(_DEBUG, "local fd '%d'", s);
+    if (! ft_is_open(s))
+    {
+        errno = EBADF;
+        return -1;
+    }
+
+    file_desc = ft_get_entry(s);
+
+    ret = l4vfs_getpeername(file_desc.server_id,
+                            file_desc.object_handle,
+                            name, namelen);
 
     if (ret != 0)
     {

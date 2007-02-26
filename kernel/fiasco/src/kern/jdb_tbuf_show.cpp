@@ -16,11 +16,16 @@ IMPLEMENTATION:
 #include "kernel_console.h"
 #include "keycodes.h"
 #include "perf_cnt.h"
+#include "simpleio.h"
 #include "static_init.h"
 #include "thread.h"
 
 class Jdb_tbuf_show : public Jdb_module
 {
+public:
+  Jdb_tbuf_show() FIASCO_INIT;
+
+private:
   static char  _search_str[40];
   static char  _filter_str[40];
   static char  _buffer_str[80];
@@ -169,7 +174,7 @@ Jdb_tbuf_show::select_perf_event_unit_mask(Mword nr, Mword unit_mask)
   Mword addy     = 0;
   Mword max_absy = 0;
   Mword lines    = 10;
-  Mword cols	 = 8;
+  Mword cols	 = Jdb_screen::Columns - 1;
 
   Mword default_value, nvalues, value;
   Perf_cnt::Unit_mask_type type;
@@ -268,7 +273,7 @@ Jdb_tbuf_show::select_perf_event(Mword event)
   Mword lines    = (nevents < Jdb_screen::height()-6) 
 			    ? nevents 
 			    : Jdb_screen::height()-6;
-  Mword cols	 = 8;
+  Mword cols	 = Jdb_screen::Columns-1;
   Mword max_absy = nevents-lines;
 
   if (nevents == 0)
@@ -383,7 +388,8 @@ Jdb_tbuf_show::show_events(Mword n, Mword ref, Mword count, Unsigned8 mode,
 	  char s_tsc_dc[13], s_tsc_ds[15], s_tsc_sc[13], s_tsc_ss[15], s[3];
 
 	  Jdb_tbuf_output::print_entry(n, _buffer_str, 
-				       72 < sizeof(_buffer_str) ? 72 : sizeof(_buffer_str));
+				       72 < sizeof(_buffer_str) 
+				          ? 72 : sizeof(_buffer_str));
 
 	  if (!Jdb_tbuf::diff_tsc(n, &dtsc))
 	    dtsc = 0;
@@ -585,7 +591,7 @@ restart:
   Mword posy[10];                // idx of mark{0..9}
   Mword addy;			 // cursor position starting from top of screen
   Mword lines = Jdb_screen::height()-4;
-  Mword cols = 8;
+  Mword cols  = Jdb_screen::Columns-1;
   Mword n;
   Tb_entry *e;
 
@@ -628,8 +634,7 @@ restart:
       for (Mword i=0; i<2; i++)
 	if (Kern_cnt::mode (i, &perf_mode[i], &perf_name[i], &perf_event[i]) ||
 	    Perf_cnt::mode (i, &perf_mode[i], &perf_name[i], &perf_event[i],
-			       &perf_user[i], &perf_kern[i], &perf_edge[i]))
-	  ;
+			       &perf_user[i], &perf_kern[i], &perf_edge[i])) {}
 
       static const char * const mode_str[] =
 	{ "index", "tsc diff", "tsc rel", "tsc start", "kclock rel",
@@ -665,6 +670,8 @@ restart:
 	puts("\033[K");
 
       show_events(_absy, refy, lines, mode, time_mode, 0);
+      if (lines == 1)
+	puts("\033[K");
 
       for (Mword i=Tbuf_start_line+lines; i<Jdb_screen::height(); i++)
 	puts("\033[K");
@@ -830,13 +837,17 @@ restart:
 		  Global_id tid(Global_id::Nil);
 		  Mword eip;
 		  if (Jdb_tbuf_output::thread_ip(_absy+addy, &tid, &eip) &&
-		      Thread::lookup(tid))
+		      Thread::id_to_tcb(tid))
 	    	    {
     		      if (!jdb_disasm_addr_task(eip, tid.d_task(), 1))
 			goto exit;
 		      redraw = true;
 		    }
 		}
+	      break;
+	    case KEY_TAB:
+	      Jdb_tbuf_output::toggle_names();
+	      redraw = true;
 	      break;
 	    case KEY_CURSOR_LEFT: // mode switch
 	      if (mode == 0)
@@ -993,7 +1004,7 @@ Jdb_tbuf_show::action(int cmd, void *&, char const *&, int &)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_tbuf_show::cmds() const
 {
   static Cmd cs[] =
@@ -1008,13 +1019,13 @@ Jdb_tbuf_show::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_tbuf_show::num_cmds() const
 {
   return 2;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_tbuf_show::Jdb_tbuf_show()
     : Jdb_module("MONITORING")
 {}

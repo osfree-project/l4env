@@ -19,6 +19,7 @@ private:
     PDE_DOMAIN_SHIFT = 5,
 
     PDE_AP_MASK      = 0x0c00,
+    PDE_CACHE_MASK   = 0x000c,
 
     // already mask the lower 12 bits,
     // coz always have a 4kb second level 
@@ -238,7 +239,7 @@ Page_table::Status Page_table::change(void *va, Page::Attribs a,
 	  if (force_flush || _current==this)
 	    Mem_unit::flush_cache(va, (char*)va + 0x1000);
 	  
-	  set_pte(pt + pt_idx, (pt[pt_idx] & 0x0ff0) | a5,
+	  set_pte(pt + pt_idx, (pt[pt_idx] & ~0x0ff0) | a5,
 	          force_flush || _current==this, va);
 	  break;
 	}
@@ -357,7 +358,7 @@ Page_table::__insert(P_ptr<void> pa, void *va,
 	    Mem_unit::clean_dcache(pt, ((char*)pt) + 1024);
 
 	  // printf("X: write %08x to PD @%p\n", Mem_layout::pmem_to_phys((Address)pt) | PDE_TYPE_COARSE, raw + pd_idx);
-	  set_pte(raw + pd_idx, Mem_layout::pmem_to_phys((Address)pt) 
+	  set_pte(raw + pd_idx, current()->lookup(pt,0,0).get_unsigned()
 	                        | PDE_TYPE_COARSE,
 		  force_flush || _current==this, 0);
 	}
@@ -474,7 +475,7 @@ Mword Page_table::__lookup(void *va, Address *size, Page::Attribs *a,
       if(size)
 	*size = 1024*1024;
       if(a)
-	*a = (Page::Attribs)(raw[pd_idx] & PDE_AP_MASK);
+	*a = (Page::Attribs)(raw[pd_idx] & (PDE_AP_MASK | PDE_CACHE_MASK));
 
       valid = true;
       return (raw[pd_idx] & 0xfff00000) | ((Unsigned32)va & 0x0fffff );
@@ -498,7 +499,7 @@ Mword Page_table::__lookup(void *va, Address *size, Page::Attribs *a,
       valid = true;
       Unsigned32 ret = pt[pt_idx] & PAGE_BASE_MASK;
       if (a) 
-	*a = pt[pt_idx] & PDE_AP_MASK;
+	*a = pt[pt_idx] & (PDE_AP_MASK | PDE_CACHE_MASK);
 
       switch(pte_type(pt + pt_idx)) 
 	{
@@ -552,8 +553,7 @@ size_t const Page_table::num_page_sizes()
 PUBLIC /*inline*/
 void Page_table::activate()
 {
-  P_ptr<Page_table> p = P_ptr<Page_table>(Mem_layout::pmem_to_phys
-      ((Address)this));
+  P_ptr<Page_table> p = P_ptr<Page_table>::cast(current()->lookup(this,0,0));
   if(_current!=this) 
     {
       _current = this;

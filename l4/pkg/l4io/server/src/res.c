@@ -21,6 +21,7 @@
 #include <l4/rmgr/librmgr.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/generic_io/generic_io-server.h>  /* IDL IPC interface */
+#include <l4/sigma0/sigma0.h>
 
 /* OSKit includes */
 #include <stdio.h>
@@ -29,6 +30,7 @@
 /* local includes */
 #include "io.h"
 #include "res.h"
+#include "mtrr.h"
 #include "__config.h"
 #include "__macros.h"
 
@@ -69,6 +71,7 @@ typedef struct io_ares {
   l4_addr_t start;       /**< begin of announced region */
   l4_addr_t end;         /**< size of announced region */
   l4_addr_t vaddr;       /**< address in io's address space */
+  int       flags;       /**< flags */
 } io_ares_t;
 
 /** announced IO memory
@@ -107,11 +110,26 @@ static const l4_size_t bios_size  = 0x20000;
  *
  * @{ */
 
+/** Find client structure. */
+static io_client_t *find_client(l4_threadid_t tid)
+{
+  io_client_t *c;
+  io_client_t tmp;
+
+  tmp.c_l4id = tid;
+  for (c = io_self; c; c = c->next)
+    if (client_equal(c, &tmp))
+      return c;
+
+  return NULL;
+}
+
 /** Generic allocate region.
  * \ingroup grp_res
  */
 static int __request_region(unsigned long start, unsigned long len,
-                            unsigned long max, io_res_t ** root, io_client_t * c)
+                            unsigned long max, io_res_t ** root,
+                            io_client_t * c)
 {
   unsigned long end = start + len - 1;
   io_res_t *tmp = NULL, *s = *root,  /* successor */
@@ -128,7 +146,7 @@ static int __request_region(unsigned long start, unsigned long len,
     {
       if (!s || (end < s->start))
         {
-          LOGd(DEBUG_RES, "allocating (0x%08lx-0x%08lx) for "l4util_idfmt"",
+          LOGd(DEBUG_RES, "allocating (0x%08lx-0x%08lx) for "l4util_idfmt,
                start, end, l4util_idstr(c->c_l4id));
 
           tmp = malloc(sizeof(io_res_t));
@@ -224,6 +242,33 @@ static int __release_region(unsigned long start, unsigned long len,
   printf("Non-existent region (0x%08lx-0x%08lx) not freed\n", start, end);
   return -L4_EINVAL;
 }
+
+/** Generic release region for all regions of a specific client.
+ * \ingroup grp_res
+ */
+static int __release_region_client(io_res_t ** root, io_client_t * c)
+{
+  io_res_t *tmp, *n, *p;     /* predecessor */
+
+  for (tmp=*root, p=NULL; tmp;)
+    {
+      n = tmp->next;
+      if (l4_tasknum_equal(tmp->client->c_l4id, c->c_l4id))
+        {
+          if (!p)
+            *root = tmp->next;
+          else
+            p->next = tmp->next;
+          LOGd(DEBUG_RES, "freeing (0x%08lx-0x%08lx)", tmp->start, tmp->end);
+          free(tmp);
+        }
+      else
+	p = tmp;
+      tmp = n;
+    }
+  return 0;
+}
+
 /** @} */
 /** \name Request/Release Interface Functions (IPC interface)
  *
@@ -244,14 +289,17 @@ static int __release_region(unsigned long start, unsigned long len,
  * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
  * not implemented yet.
  */
-l4_int32_t l4_io_request_region_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint32_t addr,
-                                          l4_uint32_t len,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_request_region_component (CORBA_Object _dice_corba_obj,
+                                unsigned long addr,
+                                unsigned long len,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
-  io_client_t *c;
+  io_client_t *c = find_client(*_dice_corba_obj);
 
-  c = (io_client_t *) (_dice_corba_env->user_data);
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   return (__request_region(addr, len, MAX_IO_PORTS, &io_port_res, c));
 }
@@ -270,14 +318,17 @@ l4_int32_t l4_io_request_region_component(CORBA_Object _dice_corba_obj,
  * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
  * not implemented yet.
  */
-l4_int32_t l4_io_release_region_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint32_t addr,
-                                          l4_uint32_t len,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_release_region_component (CORBA_Object _dice_corba_obj,
+                                unsigned long addr,
+                                unsigned long len,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
-  io_client_t *c;
+  io_client_t *c = find_client(*_dice_corba_obj);
 
-  c = (io_client_t *) (_dice_corba_env->user_data);
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   return (__release_region(addr, len, &io_port_res, c));
 }
@@ -301,27 +352,37 @@ l4_int32_t l4_io_release_region_component(CORBA_Object _dice_corba_obj,
  *
  * Memory Regions are kept in a list.
  */
-l4_int32_t l4_io_request_mem_region_component(CORBA_Object _dice_corba_obj,
-                                              l4_uint32_t addr,
-                                              l4_uint32_t len,
-                                              l4_snd_fpage_t *region,
-                                              l4_uint32_t *offset,
-                                              CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long addr,
+                                    unsigned long len,
+				    unsigned long flags,
+                                    l4_snd_fpage_t *region,
+                                    unsigned long *offset,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   int error, size;
   unsigned int start = addr;
   unsigned int end = addr + len - 1;
   unsigned int sp_voffset;
-  unsigned int vaddr;
-  io_client_t *c = (io_client_t *) (_dice_corba_env->user_data);
+  l4_addr_t vaddr;
+  io_client_t *c = find_client(*_dice_corba_obj);
   io_ares_t *p = io_mem_ares;
+
+  /* init snd fpage with zero-sized fpage */
+  region->snd_base = 0;
+  region->fpage.raw = 0;
+
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   /* find/check announcement */
   for (;;)
     {
       if (!p)
         {
-          LOGdL(DEBUG_ERRORS, "requested (0x%08x-0x%08x) not announced",
+          LOGdL(DEBUG_ERRORS, "requested (0x%08lx-0x%08lx) not announced",
                 addr, addr + len - 1);
           return -L4_EINVAL;
         }
@@ -330,14 +391,57 @@ l4_int32_t l4_io_request_mem_region_component(CORBA_Object _dice_corba_obj,
       p = p->next;
     }
 
+  /* check availability */
+  if ((error = __request_region(addr, len, MAX_IO_MEMORY, &io_mem_res, c)))
+    return error;
+
+  /* cacheable mapping requested? */
+  if (flags & L4IO_MEM_CACHED)
+    {
+      size = len >> L4_LOG2_SUPERPAGESIZE;
+      if (len > (size << L4_LOG2_SUPERPAGESIZE))
+	size++;
+
+      /* Already mapped uncacheable? */
+      if (!p->flags)
+	{
+	  l4_uint32_t   vaddr_area;
+	  l4_threadid_t pager = rmgr_pager_id;
+
+	  /* No. Request cached mapping from Sigma0. */
+	  printf("Remapping I/O memory "l4_addr_fmt"-"l4_addr_fmt" cached\n",
+	         addr, addr+len);
+	  error = l4rm_area_reserve(size * L4_SUPERPAGESIZE,
+				    L4RM_LOG2_ALIGNED, &vaddr, &vaddr_area);
+	  if (error)
+	    Panic("no area for memory region announcement (%d)\n", error);
+
+	  if ((error = l4sigma0_map_iomem(pager, l4_trunc_superpage(addr),
+					  vaddr, size*L4_SUPERPAGESIZE, 1)))
+	    {
+	      switch (error)
+		{
+		case -2: Panic("sigma0 request IPC error");
+		case -3: Panic("sigma0 request for phys addr %08lx failed", addr);
+		}
+	    }
+
+	  /* Release old (uncached mapped) region */
+	  l4rm_area_release_addr((void*)p->vaddr);
+	  /* store new mapped address */
+	  p->vaddr = vaddr;
+	  /* this area is now mapped cachable */
+	  p->flags = 1;
+	}
+
+      if ((flags & L4IO_MEM_WRITE_COMBINED) == L4IO_MEM_WRITE_COMBINED)
+	mtrr_set(addr, size*L4_SUPERPAGESIZE, MTRR_WC);
+    }
+
   /* p->vaddr points to a 4MB aligned address even if addr doesn't start
    * there! */
   vaddr   = p->vaddr + (p->start - l4_trunc_superpage(p->start));
   *offset = addr - p->start;
-
-  /* check availability */
-  if ((error = __request_region(addr, len, MAX_IO_MEMORY, &io_mem_res, c)))
-    return error;
 
   /* build fpage - we can map the entire region */
   size = (len & L4_SUPERPAGEMASK) ? nLOG2(len) : L4_LOG2_SUPERPAGESIZE;
@@ -354,8 +458,9 @@ l4_int32_t l4_io_request_mem_region_component(CORBA_Object _dice_corba_obj,
   region->snd_base = 0;  /* hopefully no hot spot required */
   region->fpage = l4_fpage(vaddr, size, L4_FPAGE_RW, L4_FPAGE_MAP);
 
-  LOGd(DEBUG_RES, "sending fpage {0x%08x, 0x%08x}",
-       region->fpage.fp.page << 12, 1 << region->fpage.fp.size);
+  LOGd(DEBUG_RES, "sending fpage {0x%08lx, 0x%08lx}",
+       (unsigned long)region->fpage.fp.page << 12,
+       1UL << region->fpage.fp.size);
 
   /* done */
   return 0;
@@ -373,11 +478,12 @@ l4_int32_t l4_io_request_mem_region_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_search_mem_region_component(CORBA_Object _dice_corba_obj,
-                                             l4_uint32_t addr,
-                                             l4_uint32_t *start,
-                                             l4_uint32_t *len,
-                                             CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_search_mem_region_component (CORBA_Object _dice_corba_obj,
+                                   unsigned long addr,
+                                   unsigned long *start,
+                                   l4_size_t *len,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   return __search_region(addr, io_mem_ares,
                          (unsigned long *)start, (unsigned long *)len);
@@ -394,19 +500,22 @@ l4_int32_t l4_io_search_mem_region_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_release_mem_region_component(CORBA_Object _dice_corba_obj,
-                                              l4_uint32_t addr,
-                                              l4_uint32_t len,
-                                              CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_release_mem_region_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long addr,
+                                    unsigned long len,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   int error, size;
-  io_client_t *c = (io_client_t *) (_dice_corba_env->user_data);
-
+  io_client_t *c = find_client(*_dice_corba_obj);
   unsigned int start = addr;
   unsigned int end = addr + len - 1;
   io_ares_t *p = io_mem_ares;
-
   l4_fpage_t region;
+
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   if ((error = __release_region(addr, len, &io_mem_res, c)))
     return error;
@@ -421,9 +530,7 @@ l4_int32_t l4_io_release_mem_region_component(CORBA_Object _dice_corba_obj,
 
   /* build fpage for region */
   if (len & L4_SUPERPAGEMASK)
-    {
-      size = nLOG2(len);
-    }
+    size = nLOG2(len);
   else
     size = L4_LOG2_SUPERPAGESIZE;
   region = l4_fpage(p->vaddr, size, 0, 0);
@@ -447,13 +554,16 @@ l4_int32_t l4_io_release_mem_region_component(CORBA_Object _dice_corba_obj,
  *
  * \todo Implementation completion! For now it's deferred.
  */
-l4_int32_t l4_io_request_dma_component(CORBA_Object _dice_corba_obj,
-                                       l4_uint32_t channel,
-                                       CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_request_dma_component (CORBA_Object _dice_corba_obj,
+                             unsigned long channel,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
-  io_client_t *c;
+  io_client_t *c = find_client(*_dice_corba_obj);
 
-  c = (io_client_t *) (_dice_corba_env->user_data);
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   /* sanity checks */
   if (!(channel < MAX_ISA_DMA))
@@ -480,13 +590,16 @@ l4_int32_t l4_io_request_dma_component(CORBA_Object _dice_corba_obj,
  *
  * \todo Implementation completion! For now it's deferred.
  */
-l4_int32_t l4_io_release_dma_component(CORBA_Object _dice_corba_obj,
-                                       l4_uint32_t channel,
-                                       CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_release_dma_component (CORBA_Object _dice_corba_obj,
+                             unsigned long channel,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
-  io_client_t *c;
+  io_client_t *c = find_client(*_dice_corba_obj);
 
-  c = (io_client_t *) (_dice_corba_env->user_data);
+  if (!c)
+    /* client not registered */
+    return -L4_ENOTFOUND;
 
   /* sanity checks */
   if (!(channel < MAX_ISA_DMA))
@@ -509,6 +622,44 @@ l4_int32_t l4_io_release_dma_component(CORBA_Object _dice_corba_obj,
 
   return 0;
 }
+
+/** Release all regions of a client.
+ * \ingroup grp_res
+ *
+ * \param _dice_corba_obj   DICE corba object
+ * \param channel           ISA DMA channel
+ *
+ * \retval _dice_corba_env  corba environment
+ *
+ * \return 0 on success, negative error code otherwise
+ */
+long
+l4_io_release_client_component (CORBA_Object _dice_corba_obj,
+                                const l4_threadid_t *client,
+                                CORBA_Server_Environment *_dice_corba_env)
+{
+  io_client_t *c = find_client(*client);
+  l4_uint32_t channel;
+
+  if (!c)
+    return -L4_ENOTFOUND;
+
+  __release_region_client(&io_mem_res, c);
+  __release_region_client(&io_port_res, c);
+  for (channel=0; channel<MAX_ISA_DMA; channel++)
+    {
+      if (isa_dma[channel].used &&
+	  client_equal(isa_dma[channel].client, c))
+        {
+          /* release it */
+          isa_dma[channel].used = 0;
+          isa_dma[channel].client = NULL;
+        }
+    }
+
+  return 0;
+}
+
 /** @} */
 /** \name Region Specific Interface Functions (internal callbacks)
  *
@@ -551,9 +702,7 @@ int callback_request_mem_region(unsigned long addr, unsigned long len)
  */
 void callback_announce_mem_region(unsigned long addr, unsigned long len)
 {
-  int error, i;
-  l4_umword_t dw0 = 0, dw1 = 0;
-  l4_msgdope_t result;
+  int error;
   l4_addr_t vaddr;
   l4_uint32_t vaddr_area;
   l4_size_t size;
@@ -595,6 +744,7 @@ void callback_announce_mem_region(unsigned long addr, unsigned long len)
   s->start = addr;
   s->end = addr + len - 1;
   s->vaddr = vaddr;
+  s->flags = 0;
 
   if (!p)
     /* new res is the first */
@@ -603,24 +753,17 @@ void callback_announce_mem_region(unsigned long addr, unsigned long len)
     p->next = s;
 
   /* request sigma0/RMGR mappings to area */
-  for (i = size; i; i--)
+  if ((error = l4sigma0_map_iomem(pager, l4_trunc_superpage(addr),
+				  vaddr, size*L4_SUPERPAGESIZE, 0)))
     {
-      error = l4_ipc_call(pager,
-                          L4_IPC_SHORT_MSG, (addr - 0x40000000) & L4_SUPERPAGEMASK,
-                          0, L4_IPC_MAPMSG(vaddr, L4_LOG2_SUPERPAGESIZE), &dw0, &dw1,
-                          L4_IPC_NEVER, &result);
-      /* IPC error || no fpage received */
-      if (error || !dw1)
-        {
-          Panic("sigma0 request for phys addr %08lx failed (err=%d dw1=%d)\n",
-                addr, error, dw1);
-        }
-
-      vaddr += L4_SUPERPAGESIZE;
-      addr += L4_SUPERPAGESIZE;
+      switch (error)
+	{
+	case -2: Panic("sigma0 request IPC error");
+	case -3: Panic("sigma0 request for phys addr %08lx failed", addr);
+	}
     }
 
-  LOGd(DEBUG_RES, "(0x%08x-0x%08x) was announced; mapped to 0x%08x",
+  LOGd(DEBUG_RES, "(0x%08lx-0x%08lx) was announced; mapped to 0x%08lx",
        s->start, s->end, s->vaddr);
 }
 
@@ -766,7 +909,7 @@ int bios_map_area(unsigned long *ret_vaddr)
                           L4_IPC_NEVER, &result);
       /* IPC error || no fpage received */
       if (error || !dw1)
-          Panic("sigma0 request for phys addr %p failed (err=%d dw1=%d)\n",
+          Panic("sigma0 request for phys addr %p failed (err=%d dw1=%ld)\n",
                 (void*)paddr, error, dw1);
 
       paddr += L4_PAGESIZE;
@@ -841,6 +984,9 @@ int io_res_init(io_client_t *c)
   /* allocate ISA DMA CASCADE */
   isa_dma[4].used = 1;
   isa_dma[4].client = c;
+  
+  /* announce TPM 1.2 TIS area (see TPM 1.2 spec) */
+  callback_announce_mem_region(0xfed40000, 0x5000);
 
   return 0;
 
@@ -884,7 +1030,7 @@ static void list_amem_regions(void)
 
   while (p)
     {
-      printf("memory (0x%08x - 0x%08x)  ANNOUNCED (0x%08x)\n",
+      printf("memory (0x%08lx - 0x%08lx)  ANNOUNCED (0x%08lx)\n",
              p->start, p->end, p->vaddr);
       p = p->next;
     }

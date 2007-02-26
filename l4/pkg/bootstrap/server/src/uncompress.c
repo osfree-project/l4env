@@ -1,23 +1,38 @@
+/* $Id$ */
+/**
+ * \file	bootstrap/server/src/uncompress.c
+ * \brief	Support for on-the-fly uncompressing of boot modules
+ * 
+ * \date	2004
+ * \author	Adam Lackorzynski <adam@os.inf.tu-dresden.de> */
+
+/* (c) 2005 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <l4/sys/l4int.h>
+#include <l4/sys/consts.h>
 
+#include "startup.h"
 #include "gunzip.h"
 #include "uncompress.h"
 
 static void *filestart;
-static unsigned char *uncompressed_buffer;
+static l4_uint8_t *uncompressed_buffer;
 
 /*
  * Upper address for the allocator for gunzip
  */
-unsigned long gunzip_upper_mem_linalloc(void)
+l4_addr_t
+gunzip_upper_mem_linalloc(void)
 {
 #ifdef ARCH_arm
   return RAM_BASE + 0x03400000;
 #else
-  extern unsigned long _mod_addr;
+  extern l4_addr_t _mod_addr;
   return (_mod_addr - 1) & ~3;
 #endif
 }
@@ -25,7 +40,8 @@ unsigned long gunzip_upper_mem_linalloc(void)
 /*
  * Returns true if file is compressed, false if not
  */
-static void file_open(void *start,  int size)
+static void
+file_open(void *start,  int size)
 {
   filepos = 0;
   filestart = start;
@@ -36,14 +52,16 @@ static void file_open(void *start,  int size)
   gunzip_test_header();
 }
 
-static int module_read(void *buf, int size)
+static int
+module_read(void *buf, int size)
 {
-  memcpy(buf, (const void *)((unsigned long)filestart + filepos), size);
+  memcpy(buf, (const void *)((l4_addr_t)filestart + filepos), size);
   filepos += size;
   return size;
 }
 
-int grub_read(unsigned char *buf, int len)
+int
+grub_read(unsigned char *buf, int len)
 {
   /* Make sure "filepos" is a sane value */
   if ((filepos < 0) || (filepos > filemax))
@@ -68,16 +86,14 @@ int grub_read(unsigned char *buf, int len)
   return module_read(buf, len);
 }
 
-void *decompress(const char *name, void *start,
-                 int size, int size_uncompressed)
+void*
+decompress(const char *name, void *start, int size, int size_uncompressed)
 {
   unsigned char *retbuf;
-  extern unsigned long _mod_end;
   int read_size;
 
   if (!uncompressed_buffer)
-    uncompressed_buffer
-      = (unsigned char *)((_mod_end + 0xffff) & ~0xffff);
+    uncompressed_buffer = (l4_uint8_t *)((_mod_end + 0xffff) & ~0xffff);
 
   retbuf = uncompressed_buffer;
 
@@ -90,7 +106,9 @@ void *decompress(const char *name, void *start,
   if (!compressed_file)
     return start;
 
-  printf("Uncompressing %14s to %p (%d to %d bytes).\n", name, retbuf, size, size_uncompressed);
+  printf(".. Uncompressing %s to %p (%d to %d bytes, %+d%%).\n",
+        name, retbuf, size, size_uncompressed,
+	100*size_uncompressed/size - 100);
 
   // Add 10 to detect too short given size
   if ((read_size = grub_read(retbuf, size_uncompressed + 10))
@@ -101,9 +119,8 @@ void *decompress(const char *name, void *start,
       return NULL;
     }
 
-  //printf("Read %d bytes.\n", read_size);
-
   // Page aligned (important for data modules to work!)
-  uncompressed_buffer += (read_size + 0xfff) & ~0xfff;
+  uncompressed_buffer += l4_round_page(read_size);
+
   return retbuf;
 }

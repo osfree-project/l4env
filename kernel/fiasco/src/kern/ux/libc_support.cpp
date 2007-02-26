@@ -35,10 +35,12 @@ private:
 static void (*libc_atexit)(void);
 
 // see linker flags in  Makerules.KERNEL.ux
-extern "C" int __real_vsnprintf(char *str, size_t size, 
+extern "C" int __real_vsnprintf(char *str, size_t size,
 				const char *format, va_list ap);
 extern "C" int __real_puts(const char *s);
 extern "C" int __real_putchar(int c);
+extern "C" int __real_vfprintf(FILE *stream, const char *format,
+                               va_list ap);
 
 
 #define GET_ESP								\
@@ -97,7 +99,6 @@ __wrap_printf (const char *format, ...)
       return ret;
     }
 }
-
 
 // Unfortunately, we also need a wrapper for snprintf althought snprintf
 // calls vsnprintf. But glibc-snprintf calls __real_vsnprintf ...
@@ -177,6 +178,41 @@ __wrap_vsnprintf (char *str, size_t size, const char *format, va_list va)
   else
     {
       return __real_vsnprintf(str, size, format, va);
+    }
+}
+
+extern "C"
+int
+__wrap_vfprintf (FILE *stream, const char *format, va_list ap)
+{
+  if (!Stdout_console::active())
+    return 0;
+
+  unsigned esp = GET_ESP;
+
+  if (Kmem::is_tcb_page_fault(esp, 0))
+    {
+      static FILE       *_stream;
+      static const char *_format;
+      static va_list    _ap;
+      static unsigned   save_esp;
+      static int        ret;
+
+      Lock_guard <Cpu_lock> guard (&cpu_lock);
+
+      _stream = stream;
+      _format = format;
+      _ap     = ap;
+
+      SWITCH_TO_BOOT_STACK(save_esp);
+      ret = __real_vfprintf(_stream, _format, _ap);
+      RESTORE_STACK(save_esp);
+
+      return ret;
+    }
+  else
+    {
+      return __real_vfprintf(stream, format, ap);
     }
 }
 

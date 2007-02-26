@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BESrvLoopFunction.cpp
- *    \brief   contains the implementation of the class CL4BESrvLoopFunction
+ *  \file    dice/src/be/l4/L4BESrvLoopFunction.cpp
+ *  \brief   contains the implementation of the class CL4BESrvLoopFunction
  *
- *    \date    02/10/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/10/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -28,19 +28,21 @@
 
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/L4BESrvLoopFunction.h"
-#include "be/l4/L4BEMsgBufferType.h"
 #include "be/BEContext.h"
+#include "be/BEFile.h"
 #include "be/BEFunction.h"
 #include "be/BEOperationFunction.h"
 #include "be/BEClass.h"
-#include "be/BETypedDeclarator.h"
+#include "be/BEMsgBuffer.h"
 #include "be/BEType.h"
 #include "be/BEContext.h"
 #include "be/BEDeclarator.h"
 #include "be/BEWaitAnyFunction.h"
 
-#include "TypeSpec-Type.h"
+#include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4BESrvLoopFunction::CL4BESrvLoopFunction()
 {
@@ -51,129 +53,146 @@ CL4BESrvLoopFunction::CL4BESrvLoopFunction(CL4BESrvLoopFunction & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CL4BESrvLoopFunction::~CL4BESrvLoopFunction()
 {
-
 }
 
-/** \brief write the declaration of the CORBA_Object variable
+/** \brief writes the varaible initialization
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CL4BESrvLoopFunction::WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext)
+void
+CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    if (m_pCorbaObject)
+    // call base class - initializes opcode
+    CBESrvLoopFunction::WriteVariableInitialization(pFile);
+
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    // zero msg buffer
+    if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF)) 
+	pMsgBuffer->WriteSetZero(pFile);
+    // set the size dope here, so we do not need to set it anywhere else
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 0);
+    // init receive flexpage
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, 0);
+    // init indirect strings (using generic struct)
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, 0);
+
+    // set CORBA_Object depending on [dedicated_partner]. Here, the
+    // environment is initialized, so it is save to use the environment's
+    // partner member (independent of server parameter)
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
     {
-        vector<CBEDeclarator*>::iterator iterCO = m_pCorbaObject->GetFirstDeclarator();
-        CBEDeclarator *pName = *iterCO;
-        pFile->PrintIndent("CORBA_Object_base _%s;\n", pName->GetName().c_str());
-        pFile->PrintIndent("");
-        m_pCorbaObject->WriteDeclaration(pFile, pContext);
-        pFile->Print(" = &_%s; // is client id\n", pName->GetName().c_str());
+       string sObj = GetObject()->m_Declarators.First()->GetName();
+       CL4BENameFactory *pNF =
+           static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+       string sPartner = pNF->GetPartnerVariable();
+       *pFile << "\t_" << sObj << " = " << sPartner << ";\n";
     }
 }
 
-/**    \brief writes the varaible initialization
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the assignment of the default environment to the env var
+ *  \param pFile the file to write to
  */
-void CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void
+CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
 {
-    // call base class - initializes opcode
-    CBESrvLoopFunction::WriteVariableInitialization(pFile, pContext);
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    // zero msg buffer
-    if (pContext->IsOptionSet(PROGRAM_ZERO_MSGBUF))
-        pMsgBuffer->WriteSetZero(pFile, pContext);
-    // set the size dope here, so we do not need to set it anywhere else
-    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SIZE, 0, pContext);
-    // init receive flexpage
-    pMsgBuffer->WriteInitialization(pFile, TYPE_FLEXPAGE,
-        GetReceiveDirection(), pContext);
-    // init indirect strings
-    pMsgBuffer->WriteInitialization(pFile, TYPE_REFSTRING,
-        GetReceiveDirection(), pContext);
-    // when we finished initialization, signal that we are ready
-    WriteServerStartupInfo(pFile, pContext);
-}
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
 
-/**    \brief writes the server's startup notification
- *    \param pFile the file to write to
- *    \param pContext the context of this operation
- */
-void CL4BESrvLoopFunction::WriteServerStartupInfo(CBEFile *pFile, CBEContext *pContext)
-{
-    // if test-suite send creation thread signal that we started
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE_THREAD))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
-        pFile->PrintIndent("l4thread_started(0);\n");
+	// *corba-env = dice_default_env;
+	*pFile << "\t*" << pDecl->GetName() << " = ";
+	pEnv->GetType()->WriteCast(pFile, false);
+	*pFile << "dice_default_server_environment" << ";\n";
+    }
+    else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    {
+	*pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() << 
+	    ") = CORBA_NO_EXCEPTION;\n";
+	*pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() << 
+	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
+	*pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
+	*pFile << "\t" << pDecl->GetName() << 
+	    "->timeout = L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0);\n";
+	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
+	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
+	*pFile << "\t" << pDecl->GetName() << 
+	    "->rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;\n";
+	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
+	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
+	*pFile << "\t" << pDecl->GetName() << "->malloc = malloc_warning;\n";
+	*pFile << "\t" << pDecl->GetName() << "->free = free_warning;\n";
+	*pFile << "\t" << pDecl->GetName() << "->partner = L4_INVALID_ID;\n";
+	*pFile << "\t" << pDecl->GetName() << "->user_data = 0;\n";
+	*pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+	pFile->IncIndent();
+	*pFile << "\t" << pDecl->GetName() << "->ptrs[i] = 0;\n";
+	pFile->DecIndent();
+	*pFile << "\t" << pDecl->GetName() << "->ptrs_cur = 0;\n";
     }
 }
 
 /** \brief create this instance of a server loop function
  *  \param pFEInterface the interface to use as reference
- *  \param pContext the context of the create process
  *  \return true if create was successful
  *
- * We have to check whether the server loop might receive flexpages. If it does, we have
- * to use a server function parameter (the Corba Environment) to set the receive flexpage.
- * To find out if we have receive flexpages, we use the message buffer, but we then have to
- * set the context option.
+ * We have to check whether the server loop might receive flexpages. If it
+ * does, we have to use a server function parameter (the Corba Environment) to
+ * set the receive flexpage.  To find out if we have receive flexpages, we use
+ * the message buffer, but we then have to set the context option.
  */
-bool CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
+void
+CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
 {
-    if (!CBESrvLoopFunction::CreateBackEnd(pFEInterface, pContext))
-        return false;
+    CBESrvLoopFunction::CreateBackEnd(pFEInterface);
     // test for flexpages
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0) &&
-        m_pCorbaEnv)
+    int nDirection = GetReceiveDirection();
+    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) && 
+	pEnv)
     {
-        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-        CBEDeclarator *pDecl = *iterCE;
+        CBEDeclarator *pDecl = pEnv->m_Declarators.First();
         if (pDecl->GetStars() == 0)
             pDecl->IncStars(1);
         // set the call variables
         if (m_pWaitAnyFunction)
             m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-                pDecl->GetStars(), pDecl->GetName(), pContext);
+                pDecl->GetStars(), pDecl->GetName());
         if (m_pReplyAnyWaitAnyFunction)
             m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-                pDecl->GetStars(), pDecl->GetName(), pContext);
+                pDecl->GetStars(), pDecl->GetName());
     }
-    return true;
 }
 
-/** \brief writes the parameters of the server loop
+/** \brief writes the dispatcher invocation
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the parameters
- *
- * This server loop will only have one parameter: a void pointer.
  */
-void CL4BESrvLoopFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
+void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
 {
-    if (bComma)
-        pFile->Print(", ");
-    string sServerParam = pContext->GetNameFactory()->GetServerParameterName();
-    pFile->Print("void* %s", sServerParam.c_str());
+    CBESrvLoopFunction::WriteDispatchInvocation(pFile);
+
+    // set CORBA_Object depending on [dedicated_partner]. Here, the
+    // environment is initialized, so it is save to use the environment's
+    // partner member (independent of server parameter)
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+    {
+	string sObj = GetObject()->m_Declarators.First()->GetName();
+	CL4BENameFactory *pNF =
+	    static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+	string sPartner = pNF->GetPartnerVariable();
+	*pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
+	pFile->IncIndent();
+	*pFile << "\t_" << sObj << " = " << sPartner << ";\n";
+	pFile->DecIndent();
+    }
 }
 
-/** \brief test if server loop parameter should be used as environment
- *  \param pContext the current context
- *  \return true if parameter should be used as CORBA_Environment
- */
-bool CL4BESrvLoopFunction::DoUseParameterAsEnv(CBEContext * pContext)
-{
-    if (CBESrvLoopFunction::DoUseParameterAsEnv(pContext))
-        return true;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0) &&
-        m_pCorbaEnv)
-        return true;
-    return false;
-}

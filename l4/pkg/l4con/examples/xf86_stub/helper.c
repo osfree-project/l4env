@@ -1,14 +1,33 @@
 /*!
  * \file	con/examples/xf86_stub/helper.c
- * \brief	
+ * \brief
  *
  * \date	01/2002
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ */
 
-/* (c) 2003 'Technische Universitaet Dresden'
- * This file is part of the con package, which is distributed under
- * the terms of the GNU General Public License 2. Please see the
- * COPYING file for details. */
+/*
+ * Copyright (c) 2003 by Technische Universität Dresden, Germany
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * TECHNISCHE UNIVERSITÄT DRESDEN BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ */
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -40,14 +59,8 @@ LOG_log(const char *function, const char *format, ...)
 {
 }
 
-void
-LOG_logL(const char *file, int line, const char *function,
-	 const char *format, ...)
-{
-}
 
 int printf(const char *format, ...);
-
 int
 printf(const char *format, ...)
 {
@@ -65,12 +78,6 @@ printf(const char *format, ...)
   return 0;
 }
 #endif
-
-l4_threadid_t
-l4env_get_default_dsm(void)
-{
-  return L4_INVALID_ID;
-}
 
 char*
 strncpy(char *to, const char *from, size_t count)

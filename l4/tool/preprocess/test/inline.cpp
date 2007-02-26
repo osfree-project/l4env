@@ -12,6 +12,16 @@ IMPLEMENTATION:
 
 // Test dependency-chain resolver
 
+class Frob
+{
+};
+
+inline 
+bool
+Frob::private_func()
+{
+}
+
 inline 
 bool 
 Foo::private_func()
@@ -30,7 +40,7 @@ Bar::another_private_func()
 {
 }
 
-PUBLIC inline NEEDS [Bar::another_private_func]
+PUBLIC inline NEEDS [Bar::another_private_func, Frob::private_func]
 void
 Bar::public_func()
 {

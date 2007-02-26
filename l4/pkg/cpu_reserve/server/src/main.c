@@ -32,6 +32,7 @@
 
 static int verbose;
 int watch_verbose;
+int monitor_enable;
 l4_ssize_t l4libc_heapsize = 64*1024;
 l4_threadid_t main_id;
 

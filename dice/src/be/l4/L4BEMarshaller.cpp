@@ -2,11 +2,11 @@
  *    \file    dice/src/be/l4/L4BEMarshaller.cpp
  *    \brief   contains the implementation of the class CL4BEMarshaller
  *
- *    \date    05/17/2002
+ *    \date    01/26/2004
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2005
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,379 +26,593 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/L4BEMarshaller.h"
-#include "be/l4/L4BEMsgBufferType.h"
-#include "be/BEType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEFunction.h"
+#include "L4BEMarshaller.h"
+#include "L4BESizes.h"
+#include "L4BENameFactory.h"
+#include "L4BEIPC.h"
 #include "be/BEContext.h"
-#include "be/BEDeclarator.h"
+#include "be/BEFile.h"
+#include "be/BEStructType.h"
+#include "be/BETypedDeclarator.h"
+#include "be/BEMsgBuffer.h"
 #include "be/BEMsgBufferType.h"
-
-#include "TypeSpec-Type.h"
+#include "be/BEFunction.h"
+#include "be/BECallFunction.h"
+#include "be/BESndFunction.h"
+#include "be/BEReplyFunction.h"
+#include "be/BEWaitFunction.h"
+#include "be/BEDeclarator.h"
+#include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
+#include <sstream>
+using std::ostringstream;
 
 CL4BEMarshaller::CL4BEMarshaller()
+ : CBEMarshaller()
 {
-    m_nTotalFlexpages = 0;
-    m_nCurrentFlexpages = m_nTotalFlexpages-1;
-    m_nCurrentString = 0;
 }
 
-/** destructs the L4 marshaller object */
+/** destroys the object */
 CL4BEMarshaller::~CL4BEMarshaller()
 {
 }
 
-/** \brief marshals a single declarator
- *  \param pType the type of the declarator to marshal
- *  \param nStartOffset the start offset into  the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used to index the message buffer
- *  \param bIncOffsetVariable true if the offset variable should be incremented by this function
- *  \param bLastParameter true if this is the last parameter
- *  \param pContext the context of the marshalling
- *  \return the size of the marshalled data in bytes
+/** \brief write the marshaling code for a whole function
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write the marshaling code for
+ *  \param nDirection the direction to marshal
  *
- * This implementation is responsible for marshalling flexpages and indirect strings.
+ * This method initializes some internal counters, then calls the base class'
+ * implementation.
  */
-int CL4BEMarshaller::MarshalDeclarator(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bIncOffsetVariable, bool bLastParameter, CBEContext * pContext)
+void 
+CL4BEMarshaller::MarshalFunction(CBEFile *pFile,
+	CBEFunction *pFunction, 
+	int nDirection)
 {
-    if (pType->IsVoid())
-        return 0;
-
-    // check flexpages
-    // do not test for TYPE_RCV_FLEXPAGE, because this is onyl type of
-    // message buffer member
-    if (pType->IsOfType(TYPE_FLEXPAGE))
-    {
-        return MarshalFlexpage(pType, nStartOffset, bUseConstOffset, bLastParameter, pContext);
-    }
-    // indirect strings are have to be checked here, because we
-    // do not only want to transfer [ref, string], but all other [ref]
-    // parameter as well
-    if (m_pParameter->FindAttribute(ATTR_REF))
-    {
-        return MarshalIndirectString(pType, nStartOffset, bUseConstOffset, bLastParameter, pContext);
-    }
-
-    // call "normal marshalling"
-    return CBEMarshaller::MarshalDeclarator(pType, nStartOffset, bUseConstOffset, bIncOffsetVariable, bLastParameter, pContext);
+    m_nSkipSize = 0;
+    CBEMarshaller::MarshalFunction(pFile, pFunction, nDirection);
 }
 
-/** \brief marshals a flexpage
- *  \param pType the type of the flexpage
- *  \param nStartOffset the starting offset in the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used to index message buffer
- *  \param bLastParameter true if this is the last parameter to be marshalled
- *  \param pContext the context of the marshalling
- *  \return the number marshalled bytes
+/** \brief tests if this parameter should be marshalled
+ *  \param pFunction the function the parameter belongs to
+ *  \param pParameter the parameter (!) to be tested
+ *  \param nDirection the direction of the marshalling
+ *  \return true if this parameter should be skipped
  *
- * A flexpage is a constructed type, which consist of the members 'snd_base' and 'fpage'. The latter
- * is a union but has a member 'fpage' of typed dword. So it would be easiest to marshal two dwords,
- * by adding the declarators to the stack and using an own dword type.
+ * Additionally to the base class' tests this method skips the number of
+ * parameters used in the IPC binding. The exception member is called
+ * explicetly for marshalling/unmarshalling, thus test here for exception and
+ * return always true.
+ *
+ * To watch:
+ * - the special members, such as opcode and exception, since they are not
+ * parameters and therefore this method is not called for them (their size
+ * should have been added in MarshalFunction method).
+ * - The ASM bindings might require a somewhat different strategy, because
+ * they might assume parameters are all marshalled.
+ * - We have to be aware that members reaching beyond that boundary have to be
+ * marshalled, so the part beyond the boundary is in the message buffer.
  */
-int CL4BEMarshaller::MarshalFlexpage(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
+bool
+CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
+    CBETypedDeclarator *pParameter,
+    int nDirection)
 {
-    // create type
-    CBEType *pMemberType = pContext->GetClassFactory()->GetNewType(TYPE_INTEGER);
-    pMemberType->SetParent(m_pParameter);
-    if (!pMemberType->CreateBackEnd(false, 4, TYPE_INTEGER, pContext))
+    // first test base class
+    if (CBEMarshaller::DoSkipParameter(pFunction, pParameter, nDirection))
     {
-        delete pMemberType;
-        return 0;
+	// because this parameter is skipped, we have to add its size to the
+	// m_nSkipSize member. Otherwise we ignore some members of struct.
+	m_nSkipSize += pParameter->GetSize();
+	return true;
     }
-    // add the members of the flexpage type to the declarator stack and marshal them using their types
-    int nSize = 0;
-    // create and marshal first member
-    CBEDeclarator *pMember = pContext->GetClassFactory()->GetNewDeclarator();
-    pMember->SetParent(m_pParameter);
-    if (!pMember->CreateBackEnd(string("snd_base"), 0, pContext))
-    {
-        delete pMember;
-        delete pMemberType;
-        return 0;
-    }
-    CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(pMember);
-    m_vDeclaratorStack.push_back(pLoc);
-    nSize += MarshalDeclarator(pMemberType, nStartOffset, bUseConstOffset, false, bLastParameter, pContext);
-    m_vDeclaratorStack.pop_back();
-    delete pLoc;
-    delete pMember;
-    // create and marshal second
-    pMember = pContext->GetClassFactory()->GetNewDeclarator();
-    pMember->SetParent(m_pParameter);
-    if (!pMember->CreateBackEnd(string("fpage.fpage"), 0, pContext))
-    {
-        delete pMember;
-        delete pMemberType;
-        return 0;
-    }
-    pLoc = new CDeclaratorStackLocation(pMember);
-    m_vDeclaratorStack.push_back(pLoc);
-    nSize += MarshalDeclarator(pMemberType, nStartOffset+nSize, bUseConstOffset, false, bLastParameter, pContext);
-    m_vDeclaratorStack.pop_back();
-    delete pLoc;
-    delete pMember;
-    delete pMemberType;
-    // increase the fleypage count
-    m_nCurrentFlexpages++;
-    // the size of a marshalled flexpage is always 8 bytes (2 dwords)
-    return nSize;
+    
+    // skip members used in IPC binding only if we do marshaling, unmarshaling
+    // in same function (call, send, reply, wait) Otherwise we have to store
+    // the values in the message struct
+    if ((dynamic_cast<CBECallFunction*>(pFunction) == 0) &&
+	(dynamic_cast<CBESndFunction*>(pFunction) == 0) &&
+	(dynamic_cast<CBEReplyFunction*>(pFunction) == 0) &&
+	(dynamic_cast<CBEWaitFunction*>(pFunction) == 0))
+	return false;
+
+    // get supposed size of members to skip
+    CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+    int nSize = pSizes->GetMaxShortIPCSize();
+    int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
+    CBEType *pType = pParameter->GetType();
+    // first: try to get the size of the parameter
+    int nParamSize = pParameter->GetSize();
+    // second: if that didn't work try to get the maximum size of the param
+    if (pType->IsPointerType() ||
+	nParamSize == -1)
+	pParameter->GetMaxSize(true, nParamSize);
+    // and third: if that didn't work either, get the max size of the type
+    if (nParamSize == -1)
+	nParamSize = pSizes->GetMaxSizeOfType(pType->GetFEType());
+    m_nSkipSize += nParamSize;
+
+    // do NOT skip exception variable
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "param %p, exc %p\n", pParameter, 
+	pFunction->GetExceptionVariable());
+    if (pParameter == pFunction->GetExceptionVariable())
+	return false;
+
+    // Check if this parameter should be marshalled
+    // - it should be of word size
+    // - it should not be a constructed type
+    if ((nParamSize == nWordSize) &&
+	(m_nSkipSize <= nSize))
+	return true;
+
+    return false;
 }
 
-/** \brief marshals a complete parameter
+/** \brief marshals platform specific members of the message buffer
+ *  \param pMember the member to test for marshalling
+ *  \return true if the member has been marshaled
+ */
+bool 
+CL4BEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
+{
+    assert(pMember);
+    if (CBEMarshaller::MarshalSpecialMember(pMember))
+	return true;
+
+    if (MarshalRcvFpage(pMember))
+	return true;
+    if (MarshalSendDope(pMember))
+	return true;
+    if (MarshalSizeDope(pMember))
+	return true;
+    if (MarshalZeroFlexpage(pMember))
+	return true;
+
+    return false;
+}
+
+/** \brief marshals the receive flexpage (if necessary)
+ *  \param pMember the member to test for marshalling
+ *  \return true if the member has been marshaled
+ *
+ * The receive flexpage is never marshalled. Therefore we simply test if the
+ * current member is the flexpage and if so, return true to indicate to skip
+ * this member
+ */
+bool
+CL4BEMarshaller::MarshalRcvFpage(CBETypedDeclarator *pMember)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sFlexName = 
+	pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+
+    // is this the flexpage member
+    if (!pMember->m_Declarators.Find(sFlexName))
+	return false;
+
+    return true;
+}
+
+/** \brief marshals the send dope 
+ *  \param pMember the member to test for marshalling
+ *  \return true if the member has been marshaled
+ *
+ * The send dope is (like the receive flexpage) never marshalled. Therefore,
+ * we look for it and if found indicate to skip it.
+ */
+bool
+CL4BEMarshaller::MarshalSendDope(CBETypedDeclarator *pMember)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sSendName = 
+	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+
+    // is this the send dope
+    if (!pMember->m_Declarators.Find(sSendName))
+	return false;
+
+    return true;
+}
+
+/** \brief marshals the size dope 
+ *  \param pMember the member to test for marshalling
+ *  \return true if the member has been marshaled
+ *
+ * The size dope is (like send dope and receive flexpage) never marshalled.
+ * Therefore, we test for the size dope and return true to indicate that this
+ * member should be skipped.
+ */
+bool
+CL4BEMarshaller::MarshalSizeDope(CBETypedDeclarator *pMember)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sSizeName = 
+	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
+
+    // is this the size dope
+    if (!pMember->m_Declarators.Find(sSizeName))
+	return false;
+
+    return true;
+}
+
+/** \brief writes a single member fitting to a word sized location
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write for
+ *  \param nDirection the direction of the requested parameter
+ *  \param nPosition the position of the requested parameter
+ *  \param bReference true if a reference to the parameter is required
+ *  \param bLValue true if parameter is l-Value
+ *  \return true if member has been marshalled
+ *
+ * The function has to be specified explicetly, because this method might also
+ * be called for server message buffers.
+ *
+ * If bReference is true a reference is required, such as when to use a
+ * pointer to the member when calling a function.
+ *
+ * This implementation does only write the proper access to the member at the
+ * desired position in the message buffer.  It does not influence where this
+ * member is marshalled.
+ */
+bool
+CL4BEMarshaller::MarshalWordMember(CBEFile *pFile, 
+	CBEFunction *pFunction,
+	int nDirection,
+	int nPosition, 
+	bool bReference,
+	bool bLValue)
+{
+    m_pFile = pFile;
+    m_pFunction = pFunction;
+    PositionMarshaller *pPosMarshaller = new PositionMarshaller(this);
+    bool bRet = pPosMarshaller->Marshal(pFile, pFunction, nDirection, 
+	    nPosition, bReference, bLValue);
+    delete pPosMarshaller;
+    
+    return bRet;
+}
+
+/** \brief marshals a single parameter
  *  \param pFile the file to marshal to
+ *  \param pFunction the function the parameter belongs to
  *  \param pParameter the parameter to marshal
- *  \param nStartOffset the starting offset into the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used to index the message buffer
- *  \param bLastParameter true if this is the last parameter
- *  \param pContext the context of this marshalling
- *
- * We first call the base class implementation and then check whether total number of flexpages has been reached.
- * If it has, then all flexpages are marshalled and we write the flexpage seperator.
+ *  \param bMarshal true if marshaling, false if unamrshaling
+ *  \param nPosition the position to marshal the parameter in the generic \
+ *         struct
  */
-int CL4BEMarshaller::Marshal(CBEFile * pFile, CBETypedDeclarator * pParameter, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
+void
+CL4BEMarshaller::MarshalParameter(CBEFile *pFile,
+    CBEFunction *pFunction,
+    CBETypedDeclarator *pParameter,
+    bool bMarshal,
+    int nPosition)
 {
-    int nSize = CBEMarshaller::Marshal(pFile, pParameter, nStartOffset, bUseConstOffset, bLastParameter, pContext);
-    // check if flexpage limit is reached
-    if (m_nCurrentFlexpages == m_nTotalFlexpages)
+    m_pFile = pFile;
+    m_pFunction = pFunction;
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"%s called for func %s and param %s (%s at pos %d)\n",
+	__func__, pFunction ? pFunction->GetName().c_str() : "(none)",
+	pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "(none)",
+	bMarshal ? "marshalling" : "unmarshalling", nPosition);
+
+    int nDirection = 0;
+    if (bMarshal)
+	nDirection = pFunction->GetSendDirection();
+    else
+	nDirection = pFunction->GetReceiveDirection();
+
+    vector<CDeclaratorStackLocation*> stack;
+    CDeclaratorStackLocation *pLoc = 
+	new CDeclaratorStackLocation(pParameter->m_Declarators.First());
+    stack.push_back(pLoc);
+
+    if (bMarshal)
     {
-        // write two zero dwords
-        MarshalValue(4, 0, nStartOffset+nSize, bUseConstOffset, false, pContext);
-        MarshalValue(4, 0, nStartOffset+nSize+4, bUseConstOffset, false, pContext);
-        // set current flexpage count to less or more than total flexpage count
-        m_nCurrentFlexpages++;
-        // adapt size
-        nSize += pContext->GetSizes()->GetSizeOfType(TYPE_FLEXPAGE);
-     }
-     // return size
-     return nSize;
-}
-
-/** \brief marshals a whole function
- *  \param pFile the file to marshal to
- *  \param pFunction the function to marshal
- *  \param nFEType the type of the parameters to marshal (negative if not this type, zero if all)
- *  \param nNumber the number of parameters to marshal (0 if all, negative if all after abs(nNumber) parameters)
- *  \param nStartOffset the starting offset in the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used to index message buffer
- *  \param pContext the context of the marshalling
- *  \return the size in bytes of the marshalled data
- *
- * This implementation has to count the total number of flexpages first and init the
- * current counter.
- */
-int CL4BEMarshaller::Marshal(CBEFile * pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
-{
-    m_nTotalFlexpages = 0;
-    vector<CBETypedDeclarator*>::iterator iter = pFunction->GetFirstSortedParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = pFunction->GetNextSortedParameter(iter)) != 0)
-    {
-        // do not test for TYPE_RCV_FLEXPAGE, because this is type
-        // of message buffer member
-        if (pParameter->GetType()->IsOfType(TYPE_FLEXPAGE))
-            m_nTotalFlexpages++;
-    }
-    if (m_nTotalFlexpages > 0)
-        m_nCurrentFlexpages = 0;
-    // call base class
-    return CBEMarshaller::Marshal(pFile, pFunction, nFEType, nNumber, nStartOffset, bUseConstOffset, pContext);
-}
-
-/** \brief marshals an indirect string parameter
- *  \param pType the type of the indirect string
- *  \param nStartOffset the starting offset into the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used to index the message buffer
- *  \param bLastParameter true if this is the last parameter to be marshalled
- *  \param pContext the context of the marshalling
- *  \return the size of the marshalled data in bytes
- *
- * Because the return value is used to increase the offset into the message buffer, and that's not
- * where we marshal to, we return zero.
- *
- * To marshal indirect strings, we use an internal variable to count which string is currently marshalled.
- *
- * To marshal an indirect string is fairly easy. We have to set the FE type of pType to TYPE_REFSTRING, which
- * makes the name factory generate the correct message buffer member.
- *
- * SENDING:
- *
- * (msgbuffer._string[&lt;current-string&gt;]).snd_str = &lt;var&gt;;
- * (msgbuffer._string[&lt;current-string&gt;]).snd_size = strlen(&lt;var&gt;);
- *
- * OR
- *
- * (msgbuffer._string[&lt;current-string&gt;]).snd_str = &lt;var&gt;;
- * (msgbuffer._string[&lt;current-string&gt;]).snd_size = &lt;size-var&gt;; // if size_is/length_is attribute
- *
- * \todo the functions receiving indirect strings have to init the rcv_str and rcv_size value
- *
- * RECEIVING:    (set before invocation)
- *
- * (msgbuffer._string[&lt;current-string&gt;]).rcv_str = &lt;var&gt;; // no allocation!
- * OR
- * (msgbuffer._string[&lt;current-string&gt;]).rcv_str = CORBA_alloc(&lt;size&gt;); // allocation
- * (msgbuffer._string[&lt;current-string&gt;]).rcv_size = &lt;size&gt;;
- *
- * If the message buffer is variable sized, it is declared as:
- * struct { ... char _byes[0]; l4_strdope_t _strings[x]; }
- * after allocation the struct on the stack, the access to _bytes[0] addresses the same
- * location as _strings[0] does. Therefore we have to marshal strings in a variable sized
- * message buffer using _bytes.
- */
-int CL4BEMarshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
-{
-    bool bUsePointer = !pType->IsPointerType();
-    string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-    CBEMsgBufferType *pMsgBuffer = m_pFunction->GetMessageBuffer();
-    assert(pMsgBuffer);
-
-    // if the message buffer is variable sized, we cannot
-    // marshal into l4_strdope_t members, but have to marshal directly into the byte buffer
-    bool bVarSized = pMsgBuffer->IsVariableSized();
-
-    // a message buffer is also "variable sized" if the function is one of
-    // CBEUnmarshalFunction or CBEMarshalFunction:
-    // if interface A derives from B, then the message buffer of B can
-    // contain more dwords than the one of A. If B's server loop passes its
-    // message buffer into one of A's unmarshal or marshal functions, then
-    // the _strings member is not where expected: therefore we have to
-    // dynamically calculate an offset
-    if (m_pFunction && m_pFunction->IsComponentSide())
-        bVarSized = true;
-
-    // if first ref-string in var-sized buffer: l4_strdope_t-align the offset
-    if (bVarSized)
-    {
-        string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        string sTmpOffset = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        if (m_nCurrentString == 0)
-        {
-            // save offset variable in temp offset variable (because it contains the actual marshalled size of dwords)
-            *m_pFile << "\t" << sTmpOffset << " = " << sOffset << "; // save offset\n";
-            // align offset to l4_strdope_t size
-            *m_pFile << "\t" << sOffset << " = ";
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_MSGDOPE_SIZE, DIRECTION_IN, pContext);
-            *m_pFile << ".md.dwords*4;" <<
-                " // set offset to l4_strdope_t-aligned size of dword buffer\n";
-        }
-        else
-        {
-            // set offset to next string
-            *m_pFile << "\t" << sOffset << " += " <<
-                pContext->GetSizes()->GetSizeOfEnvType(string("l4_strdope_t")) <<
-                ";\n";
-        }
-    }
-    // do "normal" refstring marshalling
-    if (m_bMarshal)
-    {
-        bool bUseConst = false;
-        // write snd_str
-        m_pFile->PrintIndent("");
-        if (bVarSized)
-        {
-            m_pFile->Print("(");
-            WriteBuffer(string("l4_strdope_t"), nStartOffset, bUseConst, true, true, pContext);
-            m_pFile->Print(")");
-        }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, DIRECTION_IN, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
-        m_pFile->Print(".snd_str = (%s)(", sMWord.c_str());
-        CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-            bUsePointer, false, pContext);
-        m_pFile->Print(");\n");
-        // now marshal size
-        m_pFile->PrintIndent("");
-        if (bVarSized)
-        {
-            m_pFile->Print("(");
-            WriteBuffer(string("l4_strdope_t"), nStartOffset, bUseConst, true, true, pContext);
-            m_pFile->Print(")");
-        }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, DIRECTION_IN, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
-        m_pFile->Print(".snd_size = ");
-        // first test size attributes
-        if ((m_pParameter->FindAttribute(ATTR_SIZE_IS)) ||
-            (m_pParameter->FindAttribute(ATTR_LENGTH_IS)))
-        {
-            if (pType->GetSize() > 1)
-                m_pFile->Print("(");
-            m_pParameter->WriteGetSize(m_pFile, &m_vDeclaratorStack, pContext);
-            if (pType->GetSize() > 1)
-            {
-                m_pFile->Print(")");
-                m_pFile->Print("*sizeof");
-                pType->WriteCast(m_pFile, false, pContext);
-            }
-        }
-        // then test string attribute
-        else if (m_pParameter->FindAttribute(ATTR_STRING))
-        {
-            m_pFile->Print("strlen(");
-            CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-                bUsePointer, false, pContext);
-            m_pFile->Print(")+1");  // zero terminating character
-        }
-        // if we land here, this might still contain max attribute
-        else
-            m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
-        m_pFile->Print(";\n");
-        // go to next string
-        m_nCurrentString++;
+	*pFile << "\t";
+	MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, true);
+	*pFile << " = ";
+	WriteParameter(pParameter, &stack, false);
+	*pFile << ";\n";
     }
     else
     {
-        // write receive var
-        m_pFile->PrintIndent("");
-        CDeclaratorStackLocation::Write(m_pFile, &m_vDeclaratorStack,
-            bUsePointer, false, pContext);
-        m_pFile->Print(" = ");
-        // we have to use the type of the original parameter,
-        // because this is the variable we fill with the values from
-        // the message buffer and it is decalred with the original typed
-        m_pParameter->GetType()->WriteCast(m_pFile, true, pContext);
-        if (bVarSized)
-        {
-            bool bUseConst = false;
-            m_pFile->Print("(");
-            WriteBuffer(string("l4_strdope_t"), nStartOffset, bUseConst,
-                true, true, pContext);
-            m_pFile->Print(")");
-        }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, DIRECTION_OUT, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
-        m_pFile->Print(".rcv_str;\n");
-
-        // we do not unmarshal the receive size, because:
-        // it contains the number of bytes of the array, but we
-        // want the size parameter to contain the number of
-        // elements, and the rcv_size member of the indirect part
-        // contains the size of the receive buffer, not the actual
-        // received number of bytes
-
-        // go to next string
-        m_nCurrentString++;
+	*pFile << "\t";
+	WriteParameter(pParameter, &stack, false);
+	*pFile << " = ";
+	MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, false);
+	*pFile << ";\n";
     }
-    // if last string restore offset, because we need it for send dope calculation
-    if (bVarSized && (m_nCurrentString == pMsgBuffer->GetCount(TYPE_STRING)) && !bUseConstOffset)
-    {
-        string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        string sTmpOffset = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        m_pFile->PrintIndent("%s = %s;\n", sOffset.c_str(), sTmpOffset.c_str());
-    }
-    if (bVarSized && !bUseConstOffset)
-        return pContext->GetSizes()->GetSizeOfEnvType(string("l4_strdope_t"));
-    return 0;
+
+    delete pLoc;
 }
+
+/** \brief internal method to marshal a parameter
+ *  \param pParameter the parameter to marshal
+ *  \param pStack the declarator stack
+ *
+ * This method decides which strategy should be used to marshal the given
+ * parameter. It also checks if there is a special treatment necessary.
+ */
+void
+CL4BEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    if (MarshalRefstring(pParameter, pStack))
+	return;
+
+    CBEMarshaller::MarshalParameterIntern(pParameter, pStack);
+}
+
+/** \brief marshal an indirect string parameter
+ *  \param pParameter the member to test for refstring marshalling
+ *  \param pStack the declarator stack so far
+ *  \return true if we marshalled a refstring
+ *
+ * A refstring parameter can be identified by its ATTR_REF attribute. A
+ * pointer to this parameter has then to be assigned to the snd_str element of
+ * the indirect part member. The size has to be assigned to the snd_size
+ * element (for sending). For receiving the address of the receive buffer can
+ * be used to set the address of the receive buffer. 
+ *
+ * We have to use the rcv_str member to set incoming strings, because snd_str
+ * is not se properly.
+ */
+bool
+CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CL4BEMarshaller::%s called for %s with%s [ref]\n", __func__, 
+	pParameter->m_Declarators.First()->GetName().c_str(),
+	pParameter->m_Attributes.Find(ATTR_REF) ? "" : "out");
+    if (!pParameter->m_Attributes.Find(ATTR_REF))
+	return false;
+
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+    CBETypedDeclarator *pMember = FindMarshalMember(pStack);
+    if (!pMember)
+    {
+	CCompiler::Warning("CL4BEMarshaller::%s: couldn't find member for param %s\n",
+	    __func__, pParameter->m_Declarators.First()->GetName().c_str());
+    }
+    assert(pMember);
+    CBEType *pType = pParameter->GetType();
+    // try to find respective member and assign
+    if (m_bMarshal)
+    {
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pStack);
+	// write access to snd_str part of indirect string
+	*m_pFile << ".snd_str = (l4_umword_t)";
+	// if type of member and parameter are different, cast to member type
+	WriteParameter(pParameter, pStack, true);
+	*m_pFile << ";\n";
+	//
+	// set size
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pStack);
+	// write access to snd_str part of indirect string
+	*m_pFile << ".snd_size = ";
+	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
+	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
+	    pParameter->m_Attributes.Find(ATTR_STRING))
+	    *m_pFile << "+1"; // tranmist terminating zero
+	*m_pFile << ";\n";
+
+	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
+	{
+	    // if parameter has max-is attribute, make sure snd_size adheres to
+	    // that
+	    *m_pFile << "\tif (";
+	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+		pStack);
+	    // write access to snd_str part of indirect string
+	    *m_pFile << ".snd_size > ";
+	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << ")\n";
+	    m_pFile->IncIndent();
+	    *m_pFile << "\t";
+	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+		pStack);
+	    // write access to snd_str part of indirect string
+	    *m_pFile << ".snd_size = ";
+	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << ";\n";
+	    m_pFile->DecIndent();
+	}
+    }
+    else if (m_pFunction->IsComponentSide() || // on server side OR
+	!pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT)) // no prealloc
+    {
+	// do not unmarshal refstring if preallocated at the client side,
+	// because preallocated refstrings are already assigned to rcv_str.
+	//
+	// if parameter is [out] and has *one* reference then we have to
+	// dereference the parameter, because the reference is simply for
+	// [out].
+	bool bDeref = pParameter->m_Attributes.Find(ATTR_OUT) &&
+	    pParameter->m_Declarators.First()->GetStars() == 1 &&
+	    !pParameter->GetType()->IsPointerType();
+	*m_pFile << "\t";
+	WriteParameter(pParameter, pStack, !bDeref);
+	*m_pFile << " = ";
+	if (bDeref)
+	    *m_pFile << "*";
+	// cast to type of parameter
+	pType->WriteCast(m_pFile, true);
+	// access message buffer
+	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
+	    pStack);
+	// append receive member
+	*m_pFile << ".rcv_str;\n";
+
+	// We do unmarshal the size parameter, because the actually
+	// transmitted size might be smaller than the size of the receive
+	// buffer we provided.
+	// But we only do this, if the size parameter is a parameter of the
+	// function.
+	
+	// now: if we dereference the parameter and we malloced the receive
+	// string, then we should free it now.
+	if (bDeref)
+	{
+	    *m_pFile << "\t";
+	    CBEContext::WriteFree(m_pFile, m_pFunction);
+	    *m_pFile << " ( (void*) ";
+	    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
+		pStack);
+	    *m_pFile << ".rcv_str);\n";
+	}
+    }
+
+    return true;
+}
+
+/** \brief test if zero flexpage and marshal if so
+ *  \param pMember the parameter to marshal
+ *  \return true if zero flexpage marshalled
+ */
+bool
+CL4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
+    if (!pMember->m_Declarators.Find(sName))
+	return false;
+
+    // get message buffer
+    CBEMsgBuffer *pMsgBuffer = pMember->GetSpecificParent<CBEMsgBuffer>();
+    assert(pMsgBuffer);
+    
+    if (m_bMarshal)
+    {
+	// zero send base
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	*m_pFile << ".snd_base = 0;\n";
+	// zero fpage member
+	*m_pFile << "\t";
+	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	*m_pFile << ".fpage.raw = 0;\n";
+    }
+
+    return true;
+}
+
+/** \brief writes the access to a specific member in the message buffer
+ *  \param nDir the direction of the parameter
+ *  \param pMsgBuffer the message buffer containing the members
+ *  \param pMember the member to access
+ *  \param pStack set if a stack is to be used
+ *
+ * For derived interfaces the offset into the message buffer where indirect
+ * strings may start can vary greatly. For marshalling we cannot directly use
+ * the indirect part member, but have to use an offset into the word buffer
+ * (size dope's word value) and cast that location to a stringdope. (This only
+ * applies when marshalling at server side.)
+ *
+ * To allow multiple indirect strings, we first have to know at which position
+ * in the indirect string list the current member is.
+ */
+void
+CL4BEMarshaller::WriteMember(int nDir,
+    CBEMsgBuffer *pMsgBuffer,
+    CBETypedDeclarator *pMember,
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    if (pMember->m_Attributes.Find(ATTR_REF) &&
+	m_pFunction->IsComponentSide() &&
+	!dynamic_cast<CBESndFunction*>(m_pFunction) &&
+	!dynamic_cast<CBEReplyFunction*>(m_pFunction))
+    {
+	WriteRefstringCastMember(nDir, pMsgBuffer, pMember);
+	return;
+    }
+
+    CBEMarshaller::WriteMember(nDir, pMsgBuffer, pMember, pStack);
+}
+
+/** \brief writes the access to a refstring member in the message buffer
+ *  \param nDirection the direction of the parameter
+ *  \param pMsgBuffer the message buffer containing the members
+ *  \param pMember the member to access
+ *
+ * For derived interfaces the offset into the message buffer where indirect
+ * strings may start can vary greatly. For marshalling we cannot directly use
+ * the indirect part member, but have to use an offset into the word buffer
+ * (size dope's word value) and cast that location to a stringdope. (This only
+ * applies when marshalling at server side.)
+ *
+ * To allow multiple indirect strings, we first have to know at which position
+ * in the indirect string list the current member is.
+ */
+void
+CL4BEMarshaller::WriteRefstringCastMember(int nDirection,
+    CBEMsgBuffer *pMsgBuffer,
+    CBETypedDeclarator *pMember)
+{
+    assert(pMember);
+    assert(pMsgBuffer);
+
+    // get index in refstring field
+    CBEStructType *pStruct = GetStruct(m_pFunction, nDirection);
+    assert(pStruct);
+    // iterate members of struct, when member of struct matches pMember, then
+    // stop counting, otherwise: if member of struct is of type refstring
+    // increment counter
+    int nIndex = -1;
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = pStruct->m_Members.begin();
+	 iter != pStruct->m_Members.end();
+	 iter++)
+    {
+	/* increment first, so nIndex is at zero if we have only one member */
+	if ((*iter)->m_Attributes.Find(ATTR_REF))
+	    nIndex++;
+	if ((*iter) == pMember)
+	    break;
+    }
+    assert (nIndex >= 0);
+    ostringstream os;
+    // of course we have to add the size of a stringdope in words
+    CBESizes *pSizes = CCompiler::GetSizes();
+    nIndex *= pSizes->GetSizeOfType(TYPE_REFSTRING);
+    nIndex = pSizes->WordsFromBytes(nIndex);
+    os << nIndex;
+
+    // access to the strings is done using the generic struct, the word member
+    // using the size-dope's word count plus the index from above as index
+    // into the word member and casting the result to a string dope.
+    //
+    // *(l4_strdope_t*)(&(<msgbuf>->_word[<msgbuf>->_word._size_dope.md.dwords
+    //     + nIndex]))
+
+    // get name of word sized member
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMember = pNF->GetWordMemberVariable();
+    *m_pFile << "(*";
+    // write type cast for restring
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
+    pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
+    pType->WriteCast(m_pFile, true);
+    delete pType;
+
+    *m_pFile << "(&(";
+    pMsgBuffer->WriteAccessToStruct(m_pFile, m_pFunction, 0);
+    *m_pFile << "." << sMember << "[";
+    pMsgBuffer->WriteMemberAccess(m_pFile, m_pFunction, nDirection, 
+	TYPE_MSGDOPE_SIZE, 0);
+    *m_pFile << ".md.dwords";
+    if (nIndex > 0)
+	*m_pFile << " + " << os.str();
+    *m_pFile << "])))";
+}
+

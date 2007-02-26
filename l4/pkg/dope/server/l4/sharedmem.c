@@ -58,7 +58,7 @@ static SHAREDMEM *shm_alloc(s32 size) {
 	                                       "DOpE shm",
 	                                       &new->ds);
 	new->size = size;
-	printf("SharedMem(alloc): hl.low=%x, lh.high=%x, id=%x, size=%x\n",
+	printf("SharedMem(alloc): hl.low=%lx, lh.high=%lx, id=%x, size=%x\n",
 		new->ds.manager.lh.low,
 		new->ds.manager.lh.high,
 		new->ds.id,
@@ -86,7 +86,7 @@ static void *shm_get_adr(SHAREDMEM *sm) {
 /*** GENERATE A GLOBAL IDENTIFIER FOR THE SPECIFIED SHARED MEMORY BLOCK ***/
 static void shm_get_ident(SHAREDMEM *sm, u8 *dst) {
 	if (!sm) return;
-	sprintf(dst, "t_id=0x%08X,%08X ds_id=0x%08x size=0x%08x",
+	sprintf(dst, "t_id=0x%08lX,%08lX ds_id=0x%08x size=0x%08x",
 	        sm->ds.manager.lh.low,
 	        sm->ds.manager.lh.high,
 	        sm->ds.id,

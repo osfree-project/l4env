@@ -46,6 +46,7 @@ SECTIONS
   {
     KEEP (*(.init))
   } =0x90909090
+  . = ALIGN(16);
   .plt            : { *(.plt) }
   .text           :
   {
@@ -71,11 +72,18 @@ SECTIONS
      the linker would then create the section even if it turns out to
      be empty, which isn't pretty.  */
   . = ALIGN(32 / 8);
-  .preinit_array     : { *(.preinit_array) }
+  .preinit_array  : { *(.preinit_array) }
   .init_array     : { *(.init_array) }
   .fini_array     : { *(.fini_array) }
   .data           :
   {
+    FILL(0x90909090)
+    . = ALIGN(8);
+    *(.mark_beg_l4syscalls)
+    *(.data.l4sys)
+    *(.mark_end_l4syscalls)
+    FILL(0x00000000)
+    . = ALIGN(16);
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
   }

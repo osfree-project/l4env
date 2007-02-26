@@ -134,7 +134,14 @@ void cfg_setup_input(const char *cfg_buffer, const char *cfg_buffer_end)
 void cfg_done(void)
 {
   yy_delete_buffer(YY_CURRENT_BUFFER);
+  /* Starting with flex 2.5.33, the meaning of yy_init was reversed. To
+   * perform the cleanup we could call yylex_destroy but unfortunately
+   * this function is not backward-compatible. */
+#if YY_FLEX_MAJOR_VERSION*10000 + YY_FLEX_MINOR_VERSION*100 + YY_FLEX_SUBMINOR_VERSION < 20533
   yy_init = 1;
+#else
+  yy_init = 0;
+#endif
 }
 
 static int yywrap(void)		/* called when lexing is finished */

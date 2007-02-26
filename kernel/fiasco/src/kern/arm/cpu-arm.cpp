@@ -1,5 +1,7 @@
 INTERFACE [arm]:
 
+#include "types.h"
+
 class Cpu
 {
 public:
@@ -15,7 +17,6 @@ IMPLEMENTATION [arm]:
 #include <cstring>
 #include <panic.h>
 
-#include "types.h"
 #include "pagetable.h"
 #include "kmem_space.h"
 #include "mem_unit.h"
@@ -33,7 +34,10 @@ void Cpu::early_init()
 		 " mcr  p15, 0, %0, c1, c0   \n"
 		 
 		 :
-		 : "r"(0x0000317f), "I"(0x0d3)
+		 : 
+		 "r"(0x0000317f),
+		 //"r"(0x00002173/*disabled cache*/),
+		 "I"(0x0d3)
 		 : "r2","r3"
 		 );
 }
@@ -55,6 +59,39 @@ void Cpu::init()
 PUBLIC static inline
 bool
 Cpu::have_superpages()
-{
-  return true;
-}
+{ return true; }
+
+PUBLIC static inline
+void
+Cpu::debugctl_enable()
+{}
+
+PUBLIC static inline
+void
+Cpu::debugctl_disable()
+{}
+
+PUBLIC static inline NEEDS["types.h"]
+Unsigned32
+Cpu::get_scaler_tsc_to_ns()
+{ return 0; }
+
+PUBLIC static inline NEEDS["types.h"]
+Unsigned32
+Cpu::get_scaler_tsc_to_us()
+{ return 0; }
+
+PUBLIC static inline NEEDS["types.h"]
+Unsigned32
+Cpu::get_scaler_ns_to_tsc()
+{ return 0; }
+
+PUBLIC static inline
+bool
+Cpu::have_tsc()
+{ return 0; }
+
+PUBLIC static inline
+Unsigned64
+Cpu::rdtsc (void)
+{ return 0; }

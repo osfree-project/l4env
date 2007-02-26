@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BETarget.h
- *    \brief   contains the declaration of the class CBETarget
+ *  \file    dice/src/be/BETarget.h
+ *  \brief   contains the declaration of the class CBETarget
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,9 +30,12 @@
 #ifndef __DICE_BETARGET_H__
 #define __DICE_BETARGET_H__
 
-#include "be/BEObject.h"
+#include "BEObject.h"
+#include "BEContext.h" // for FILE_TYPE
+#include "template.h"
 #include <vector>
-using namespace std;
+#include <ostream>
+using std::ostream;
 
 class CFEFile;
 class CFEOperation;
@@ -49,85 +52,92 @@ class CBEContext;
 class CBETypedef;
 class CBEFunction;
 
-#define FILETYPE_HEADER                1    /**< helper define for header files */
-#define FILETYPE_IMPLEMENTATION        2    /**< helper define for implementation files */
-
-/**    \class CBETarget
- *    \ingroup backend
- *    \brief the base class for the target components (client, component, testsuite, root)
+/** \class CBETarget
+ *  \ingroup backend
+ *  \brief the base class for the target components (client, component,
+ *          testsuite, root)
  *
- * This class is introduced as base class to client, component, testsuite and root, because these target classes
- * all have the posession of files in common. The client and component obviously posess several header and implementation
- * files. The root may also contain some header files, such as opcode files or similar. The testsuite posseses the implementation
- * files containing the tesuite application.
+ * This class is introduced as base class to client, component, testsuite and
+ * root, because these target classes all have the posession of files in
+ * common. The client and component obviously posess several header and
+ * implementation files. The root may also contain some header files, such as
+ * opcode files or similar. The testsuite posseses the implementation files
+ * containing the tesuite application.
  */
 class CBETarget : public CBEObject
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBETarget();
     virtual ~CBETarget();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBETarget(CBETarget &src);
 
 public:
-    virtual CBEFunction* FindFunction(string sFunctionName);
-    virtual void RemoveFile(CBEImplementationFile *pImplementation);
-    virtual void RemoveFile(CBEHeaderFile *pHeader);
+    virtual void CreateBackEnd(CFEFile *pFEFile);
+    
+    virtual CBEFunction* FindFunction(string sFunctionName,
+	FUNCTION_TYPE nFunctionType);
     virtual CBETypedef* FindTypedef(string sTypeName);
-    virtual CBEImplementationFile* GetNextImplementationFile(vector<CBEImplementationFile*>::iterator &iter);
-    virtual vector<CBEImplementationFile*>::iterator GetFirstImplementationFile();
-    virtual CBEHeaderFile* GetNextHeaderFile(vector<CBEHeaderFile*>::iterator &iter);
-    virtual vector<CBEHeaderFile*>::iterator GetFirstHeaderFile();
-    virtual void AddFile(CBEImplementationFile *pImplementationFile);
-    virtual void AddFile(CBEHeaderFile *pHeaderFile);
-    virtual void Write(CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
-    virtual void PrintTargetFiles(FILE *output, int &nCurCol, int nMaxCol);
-    virtual bool HasFunctionWithUserType(string sTypeName, CBEContext *pContext);
+    
+    /** \brief generates the output files and code */
+    virtual void Write() = 0;
+    virtual void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
+    virtual bool HasFunctionWithUserType(string sTypeName);
 
 protected:
-    virtual void WriteImplementationFiles(CBEContext *pContext);
-    virtual void WriteHeaderFiles(CBEContext *pContext);
-    virtual void SetFileType(CBEContext *pContext, int nHeaderOrImplementation);
-    virtual bool DoAddIncludedFiles(CBEContext *pContext);
+    virtual void WriteImplementationFiles();
+    virtual void WriteHeaderFiles();
+    virtual bool DoAddIncludedFiles();
     // constants
-    virtual bool AddConstantToFile(CBEFile *pFile, CFEConstDeclarator *pFEConstant, CBEContext *pContext);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFEFile *pFEFile, CBEContext *pContext);
+    virtual bool AddConstantToFile(CBEFile *pFile, 
+	CFEConstDeclarator *pFEConstant);
+    virtual bool AddConstantToFile(CBEFile *pFile, CFEInterface *pFEInterface);
+    virtual bool AddConstantToFile(CBEFile *pFile, CFELibrary *pFELibrary);
+    virtual bool AddConstantToFile(CBEFile *pFile, CFEFile *pFEFile);
     // type definitions
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFETypedDeclarator *pFETypedDeclarator, CBEContext *pContext);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFEFile *pFEFile, CBEContext *pContext);
+    virtual bool AddTypedefToFile(CBEFile *pFile, 
+	CFETypedDeclarator *pFETypedDeclarator);
+    virtual bool AddTypedefToFile(CBEFile *pFile, CFEInterface *pFEInterface);
+    virtual bool AddTypedefToFile(CBEFile *pFile, CFELibrary *pFELibrary);
+    virtual bool AddTypedefToFile(CBEFile *pFile, CFEFile *pFEFile);
     // header file search
-    virtual CBEHeaderFile* FindHeaderFile(string sFileName, CBEContext *pContext);
-    virtual CBEHeaderFile* FindHeaderFile(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual CBEHeaderFile* FindHeaderFile(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual CBEHeaderFile* FindHeaderFile(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual CBEHeaderFile* FindHeaderFile(CFEFile *pFEFile, CBEContext *pContext);
+    virtual CBEHeaderFile* FindHeaderFile(CFEOperation *pFEOperation,
+	FILE_TYPE nFileType);
+    virtual CBEHeaderFile* FindHeaderFile(CFEInterface *pFEInterface,
+	FILE_TYPE nFileType);
+    virtual CBEHeaderFile* FindHeaderFile(CFELibrary *pFELibrary,
+	FILE_TYPE nFileType);
+    virtual CBEHeaderFile* FindHeaderFile(CFEFile *pFEFile, FILE_TYPE nFileType); 
 
-    virtual bool CreateBackEndHeader(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEndImplementation(CFEFile *pFEFile, CBEContext *pContext);
-    virtual void PrintTargetFileName(FILE *output, string sFilename, int &nCurCol, int nMaxCol);
+    /** \brief create target for header file 
+     *  \param pFEFile the front-end file to use as reference
+     */
+    virtual void CreateBackEndHeader(CFEFile *pFEFile) = 0;
+    /** \brief create target for implementation file 
+     *  \param pFEFile the front-end file to use as reference
+     */
+    virtual void CreateBackEndImplementation(CFEFile *pFEFile) = 0;
+    
+    virtual void PrintTargetFileName(ostream& output, string sFilename, 
+	int &nCurCol, int nMaxCol);
 
-protected:
-    /**    \var vector<CBEHeaderFile*> m_vHeaderFiles
-     *    \brief contains the header files of the respective target part
+public:
+    /** \var CSearchableCollection<CBEHeaderFile, string> m_HeaderFiles
+     *  \brief contains the header files of the respective target part
      *
-     * Because the handling for header and implementation files is different at some points, we keep
-     * them in different vectors.
+     * Because the handling for header and implementation files is different
+     * at some points, we keep them in different vectors.
      */
-    vector<CBEHeaderFile*> m_vHeaderFiles;
-    /**    \var vector<CBEImplementationFile*> m_vImplementationFiles
-     *    \brief contains the implementation files for the respective target part
+    CSearchableCollection<CBEHeaderFile, string> m_HeaderFiles;
+    /** \var CCollection<CBEImplementationFile> m_ImplementationFiles
+     *  \brief contains the implementation files for the respective target part
      */
-    vector<CBEImplementationFile*> m_vImplementationFiles;
+    CCollection<CBEImplementationFile> m_ImplementationFiles;
 };
 
 #endif // !__DICE_BETARGET_H__

@@ -6,7 +6,7 @@ L4DIR ?=	$(PKGDIR)/../../..
 SRC_C =		clientlib.c
 CLIENTIDL =	vdemuxer.idl
 
-PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR)/../config $(PKGDIR)/include
+PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR_OBJ)/../config $(PKGDIR)/include
 
 # target
 TARGET = 	libvtdemuxer_client.a

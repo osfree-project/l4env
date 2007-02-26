@@ -1,7 +1,7 @@
 PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
-SYSTEMS = x86-l4v2 x86-l4x0
+SYSTEMS = x86-l4v2
 TARGET	= pit
 SRC_C	= main.c pit.c pic.c
 DEFAULT_RELOC = 0x00A00000

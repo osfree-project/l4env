@@ -39,7 +39,7 @@ __check_overlap(l4la_free_t **first, void *b, l4_size_t s)
 	  || (b_e >  x_s && b_e <= x_e))
 	{
 	  printf("trying to free memory that is already free: \n"
-	         "  [%x-%x) overlaps [%x-%x)\n",
+	         "  [%lx-%lx) overlaps [%lx-%lx)\n",
 		 x_s, x_e, b_s, b_e );
 	  enter_kdebug("l4la");
 	}
@@ -63,7 +63,7 @@ __sanity_check_list(l4la_free_t **first, char const *func, char const *info)
 
 	  if (((l4_addr_t)c) + c->size > (l4_addr_t)c->next)
 	    {
-	      printf("%s: %s(%s): list order violation\n",
+	      printf("%s: %s(%s): overlapping blocks\n",
 		     __FILE__, func, info);
 	      enter_kdebug("l4la");
 	    }
@@ -238,8 +238,9 @@ l4la_dump(l4la_free_t **first)
   printf("List_alloc [first=%p]\n", *first);
   l4la_free_t *c = *first;
   for (;c && c!=c->next ; c = c->next)
-    printf("  mem_block_t [this=%p size=0x%x (%dkB) next=%p]\n", c, c->size, 
-	   (c->size+1023)/1024, c->next);
+    printf("  mem_block_t [this=%p size=0x%lx (%ldkB) next=%p]\n", c,
+	   (l4_addr_t)c->size, 
+	   (l4_addr_t)(c->size+1023)/1024, c->next);
 
   if (c && c == c->next)
     printf("  BUG: loop detected\n");

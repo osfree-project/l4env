@@ -1,18 +1,23 @@
 #       Status      Description
 -------------------------------------------------------------------------------
 1                   Resolve performance lacks...
+1a                  Adam: ORe does not fully utilize CPU?
 
 2                   Client-side ORe drivers
-2a                  FLIPS driver
+2a      DONE        FLIPS driver (done by Christian)
 2b      DONE        L4Linux driver  (thx Adam)
-2c      DONE        TFTP driver
+2c      DONE        TFTP driver		
+2d      DONE        uIP stack driver
 
 3                   we need a solution using dataspaces instead of string ipc, 
                     which will hopefully improve performance
+                    - no local delivery yet
+                    - implement lazy rxtx_entry copying
 
 4                   incorporate more NIC drivers from Linux
 
-5                   build a version using dde_linux26
+5                   build a version using dde_linux26 - This is absolutely
+                    necessary, as GCC4 is not supported by 2.4 kernels
 
 6       DONE        special case: packets for local ORe clients need to be 
                     delivered directly, because they will otherwise never be 
@@ -24,10 +29,39 @@
 
 8       DONE        Make sure only one can request the original device MAC
 
-9                   Adam: We need to configure which legacy drivers are built 
+9       DONE        Adam: We need to configure which legacy drivers are built 
                     into ORe, especially we need to be able to have none 
                     compiled in, so that local instances of ORe clients are
                     able to communicate in FiascoUX.
 
-10                  Frank: the Tulip driver fails under high load leaving
+9b      DONE        Adam wants to integrate ORe and FiascoUX so that UX apps
+                    can do networking.
+
+10      DONE        Frank: the Tulip driver fails under high load leaving
                     ORe in an non-working state
+
+11      DONE        Events support: killing an ORe client should result in
+                    the client's connection being closed
+
+12      DONE        MAC addresses need to be made unique
+
+13      DONE        ORe hangs on send (??) after being idle for some time
+
+14      DONE        Make ORe multi-threaded (one worker for each connection)
+
+15                  Refactoring, Documentation:
+                        - comment all functions
+                        - get rid of way too long functions --> split
+                            functionality
+                        
+16                  Split configuration struct:
+                        - users only need to access the dataspaces, but
+                          not the DSI stuff --> this should be kept by
+                          the client library, so that the shmem implementation
+                          is transparent to the user and can be replaced by something
+                          more suitable than DSI
+
+17      IMPORTANT   ORe-driver for ORe to support cascading
+18      DONE	    command-line parameter to tell ORe which drivers should
+                    be loaded (needed for cascading)
+19      DONE	    tell L4Linux which ORe instance to use

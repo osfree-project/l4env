@@ -120,7 +120,7 @@ static void draw_area(WIDGET *cw, long cx1, long cy1, long cx2, long cy2) {
 
 		cw = cw->wd->parent;
 
-		/* shink current area to parent view area */
+		/* shrink current area to parent view area */
 		if (cx1 < 0) cx1 = 0;
 		if (cy1 < 0) cy1 = 0;
 		if (cx2 > cw->wd->w - 1) cx2 = cw->wd->w - 1;

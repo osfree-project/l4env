@@ -66,7 +66,7 @@ static __alloc_t* __small_mem[8];
 
 #define FIRST_SMALL(p)		(((unsigned long)(p))&(~(MEM_BLOCK_SIZE-1)))
 
-static inline int __ind_shift() { return (MEM_BLOCK_SIZE==4096)?4:5; }
+static inline int __ind_shift(void) { return (MEM_BLOCK_SIZE==4096)?4:5; }
 
 static size_t REGPARM(1) get_index(size_t _size) {
   register size_t idx=0;
@@ -143,7 +143,7 @@ extern void free(void *ptr);
 #else
 void free(void *ptr) __attribute__((weak,alias("_alloc_libc_free")));
 #endif
-void if_freenameindex(void* ptr) __attribute__((alias("free")));
+//void if_freenameindex(void* ptr) __attribute__((alias("free")));
 
 #ifdef WANT_MALLOC_ZERO
 static __alloc_t zeromem[2];

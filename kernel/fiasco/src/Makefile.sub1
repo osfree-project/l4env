@@ -1,3 +1,5 @@
+# -*- makefile -*-
+
 # Targets in this Makefile:
 # - all: Create C++ sources from Preprocess input
 #
@@ -6,6 +8,8 @@
 # .Modules.deps are up-to-date.
 
 all: do-all
+
+BUILD_SOURCES=true
 
 include $(srcdir)/Makeconf	# also reads srcdir/Makeconf.local
                                 # and        objdir/Makeconf.local
@@ -50,7 +54,9 @@ do-all: $(ALL_STAMPS)
 	@echo "CPPFLAGS = $(CPPFLAGS)" >> $@.new
 	@echo "CFLAGS = $(CFLAGS)" >> $@.new
 	@echo "CXXFLAGS = $(CXXFLAGS)" >> $@.new
-	@echo "ASFLAGS = $(CXXFLAGS)" >> $@.new
+	@echo "OPT_CFLAGS = $(OPT_CFLAGS)" >> $@.new
+	@echo "OPT_CXXFLAGS = $(OPT_CXXFLAGS)" >> $@.new
+	@echo "ASFLAGS = $(ASFLAGS)" >> $@.new
 	@echo "CONFIG_XARCH = $(CONFIG_XARCH)" >> $@.new
 # If the compiler configuration has changed, remove all dependency
 # files -- they have just become useless.

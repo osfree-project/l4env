@@ -1,12 +1,21 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 TARGET		= run
+SYSTEMS		= x86-l4v2 arm-l4x0
 DEFAULT_RELOC	= 0x01300000
-SYSTEMS		= x86-l4v2 x86-l4x0
 SRC_C		= main.c
 MODE		= $(if $(filter y,$(BUILD_LOADER)),loader,l4env)
 DEFINES		= -DUSERNAME=\"$(shell whoami)\"
+
+DEPENDS_PKGS	= l4con
+
+include $(L4DIR)/mk/Makeconf
+
+ifneq ($(USE_LDSO),y)
 LIBS		= -lcontxt -lcon -lconstream-server -lloaderif \
-		  -ldm_phys -lparsecmdline
+		  -ldm_phys -lparsecmdline -levents
+else
+LIBS		= -lcontxt -lconstream-server -ldm_phys -lparsecmdline -levents
+endif
 
 include $(L4DIR)/mk/prog.mk

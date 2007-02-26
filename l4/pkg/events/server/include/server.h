@@ -11,6 +11,10 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
+
+#ifndef SERVER_H
+#define SERVER_H
+
 #include "l4/events/events.h"
 
 /*! \brief Use a static array in bss as memory heap. The advantage is that
@@ -35,7 +39,7 @@
  */
 /*****************************************************************************/
 l4_uint8_t
-server_register(l4_threadid_t *client, 
+server_register(l4_threadid_t client, 
 		l4events_ch_t event_ch, 
 		l4events_pr_t priority);
 
@@ -50,7 +54,7 @@ server_register(l4_threadid_t *client,
  */
 /*****************************************************************************/
 l4_uint8_t
-server_unregister(l4_threadid_t *client, l4events_ch_t event_ch);
+server_unregister(l4_threadid_t client, l4events_ch_t event_ch);
 
 /*****************************************************************************/
 /*!\ingroup serverapi
@@ -64,7 +68,7 @@ server_unregister(l4_threadid_t *client, l4events_ch_t event_ch);
  */
 /*****************************************************************************/
 l4_uint8_t
-server_unregister_all(l4_threadid_t *client);
+server_unregister_all(l4_threadid_t client);
 
 /*****************************************************************************/
 /*!\ingroup serverapi
@@ -83,7 +87,7 @@ server_unregister_all(l4_threadid_t *client);
  */
 /*****************************************************************************/
 l4_uint8_t
-server_send_event(l4_threadid_t *client, l4events_ch_t event_ch,
+server_send_event(l4_threadid_t client, l4events_ch_t event_ch,
 		  const l4events_event_t *event, int async, int ack);
 
 /*****************************************************************************/
@@ -102,7 +106,7 @@ server_send_event(l4_threadid_t *client, l4events_ch_t event_ch,
  */
 /*****************************************************************************/
 l4_uint8_t
-server_receive_event(l4_threadid_t *client, l4events_ch_t *event_ch,
+server_receive_event(l4_threadid_t client, l4events_ch_t *event_ch,
 			l4events_event_t *event, int ack);
 
 /*****************************************************************************/
@@ -116,7 +120,7 @@ server_receive_event(l4_threadid_t *client, l4events_ch_t *event_ch,
  */
 /*****************************************************************************/
 l4_uint8_t
-server_give_ack(l4_threadid_t *client, l4events_nr_t event_nr);
+server_give_ack(l4_threadid_t client, l4events_nr_t event_nr);
 
 /*****************************************************************************/
 /*!\ingroup serverapi
@@ -129,7 +133,7 @@ server_give_ack(l4_threadid_t *client, l4events_nr_t event_nr);
  */
 /*****************************************************************************/
 l4_uint8_t
-server_get_ack(l4_threadid_t *client, l4events_nr_t event_nr);
+server_get_ack(l4_threadid_t client, l4events_nr_t event_nr);
 
 /*****************************************************************************/
 /*!\ingroup serverapi
@@ -148,3 +152,5 @@ server_handle_timeout(void);
 /*****************************************************************************/
 void
 server_dump(void);
+
+#endif

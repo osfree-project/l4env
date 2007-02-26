@@ -13,7 +13,6 @@
 #error This header file can only be used with a L4API version!
 #endif
 
-#include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 
 /**
@@ -38,7 +37,7 @@ fiasco_ldt_set(void *ldt, unsigned int size,
  * \param desc			Pointer to GDT descriptors.
  * \param size			Size of the descriptors in bytes
  *				 (multiple of 8).
- * \param enter_number		Entry number to start (valid values: 0-2).
+ * \param entry_number_start	Entry number to start (valid values: 0-2).
  * \param tid			Thread ID to set the GDT entry for.
  */
 L4_INLINE void

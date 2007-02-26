@@ -43,8 +43,9 @@
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
 
-/* OSKit includes */
+/* LibC includes */
 #include <stdlib.h>		/* malloc, free */
+#include <inttypes.h>
 
 /* local */
 #include "arch_globals.h"

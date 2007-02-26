@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/Object.h
- *    \brief   contains the declaration of the class CObject
+ *  \file    dice/src/Object.h
+ *  \brief   contains the declaration of the class CObject
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,7 +32,9 @@
 
 #include "defines.h"
 #include <string>
-using namespace std;
+using std::string;
+
+class CVisitor;
 
 /** \class CObject
  *  \ingroup backend
@@ -51,23 +53,28 @@ class CObject
     virtual ~ CObject();
 
   protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
-    CObject(CObject & src);
+    CObject(const CObject & src);
 
 // Operations
   public:
-    string GetSourceFileName();
-    void SetSourceFileName(string sFileName);
-    int GetSourceLine();
-    void SetSourceLine(int nLineNb);
-    virtual int GetSourceLineEnd();
-    void SetSourceLineEnd(int nLineNb);
+    string const GetSourceFileName() const;
+    void SetSourceFileName(const string sFileName);
+    int GetSourceLine() const;
+    void SetSourceLine(const int nLineNb);
+    int GetSourceLineEnd() const;
+    void SetSourceLineEnd(const int nLineNb);
     virtual CObject * Clone();
     void SetParent(CObject * pParent = 0);
-    CObject *GetParent();
+    CObject* GetParent() const;
     template< typename O > O* GetSpecificParent(unsigned nStart = 1);
+    bool IsParent(CObject * pParent);
+    /** \brief accept function for visitors
+     */
+    virtual void Accept(CVisitor&)
+    { }
 
 // Attributes
   protected:
@@ -88,24 +95,6 @@ class CObject
      */
     string m_sSourceFileName;
 };
-
-/** \brief retrieves a reference to the parent object
- *  \return a reference to the parent object
- */
-inline CObject*
-CObject::GetParent()
-{
-    return m_pParent;
-}
-
-/** \brief sets the new parent object
- *  \param pParent a reference to the new parent object
- */
-inline void
-CObject::SetParent(CObject * pParent)
-{
-    m_pParent = pParent;
-}
 
 /** \brief obtain a reference to a specifc parent
  *  \param nStart the parent where to start (1 for parent, 0 for this)
@@ -128,11 +117,29 @@ O* CObject::GetSpecificParent(unsigned nStart)
     return 0;
 }
 
+/** \brief retrieves a reference to the parent object
+ *  \return a reference to the parent object
+ */
+inline CObject*
+CObject::GetParent(void) const
+{
+    return m_pParent;
+}
+
+/** \brief sets the new parent object
+ *  \param pParent a reference to the new parent object
+ */
+inline void
+CObject::SetParent(CObject * pParent)
+{
+    m_pParent = pParent;
+}
+
 /** \brief sets the source line number of this element
  *  \param nLineNb the line this elements has been declared
  */
 inline void
-CObject::SetSourceLine(int nLineNb)
+CObject::SetSourceLine(const int nLineNb)
 {
     m_nSourceLineNb = nLineNb;
 }
@@ -141,7 +148,7 @@ CObject::SetSourceLine(int nLineNb)
  *  \return the line number of declaration
  */
 inline int
-CObject::GetSourceLine()
+CObject::GetSourceLine(void) const
 {
     return m_nSourceLineNb;
 }
@@ -150,7 +157,7 @@ CObject::GetSourceLine()
  *  \param nLineNb the line this elements has been declared
  */
 inline void
-CObject::SetSourceLineEnd(int nLineNb)
+CObject::SetSourceLineEnd(const int nLineNb)
 {
     m_nSourceLineNbEnd = nLineNb;
 }
@@ -159,16 +166,16 @@ CObject::SetSourceLineEnd(int nLineNb)
  *  \return the line number of declaration
  */
 inline int
-CObject::GetSourceLineEnd()
+CObject::GetSourceLineEnd(void) const
 {
     return m_nSourceLineNbEnd;
 }
 
 /** \brief sets the file name of the source file
- *  \param the name of the source file
+ *  \param sFileName the name of the source file
  */
 inline void
-CObject::SetSourceFileName(string sFileName)
+CObject::SetSourceFileName(const string sFileName)
 {
     m_sSourceFileName = sFileName;
 }
@@ -176,8 +183,8 @@ CObject::SetSourceFileName(string sFileName)
 /** \brief retrieves the name of the source file
  *  \return the name of the source file
  */
-inline string
-CObject::GetSourceFileName()
+inline string const
+CObject::GetSourceFileName(void) const
 {
     return m_sSourceFileName;
 }

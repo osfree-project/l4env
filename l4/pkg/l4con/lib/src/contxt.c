@@ -33,7 +33,7 @@ int keylist_head = 0;		/* next char to write to keylist */
 int keylist_tail = 0;		/* next char to read from keylist */
 int keylist[CONTXT_KEYLIST_SIZE];  /* keyboard buffer */
 l4_uint32_t fn_x, fn_y;		/* font size x, y */
-l4_uint8_t *vtc_scrbuf;		/* screen buffer */
+char       *vtc_scrbuf;		/* screen buffer */
 l4_threadid_t vtc_l4id;		/* thread id of appropriate console thread */
 
 
@@ -69,9 +69,9 @@ contxt_init(long max_sbuf_size, int scrbuf_lines)
 
   if (con_if_openqry_call(&con_l4id, max_sbuf_size, 0, 0, prio, &vtc_l4id,
 			  CON_NOVFB, &env)
-      || (env.major != CORBA_NO_EXCEPTION))
+      || DICE_HAS_EXCEPTION(&env))
     {
-      LOGl("openqry failed (exc=%d)", env.major);
+      LOGl("openqry failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
       return -L4_EINVAL;
     }
 
@@ -79,9 +79,9 @@ contxt_init(long max_sbuf_size, int scrbuf_lines)
     return -L4_EINVAL;
   
   if (con_vc_smode_call(&vtc_l4id, CON_INOUT, &evh_l4id, &env)
-      || (env.major != CORBA_NO_EXCEPTION))
+      || DICE_HAS_EXCEPTION(&env))
     {
-      LOGl("smode failed (exc=%d)", env.major);
+      LOGl("smode failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
       return -L4_EINVAL;
     }
  
@@ -89,9 +89,9 @@ contxt_init(long max_sbuf_size, int scrbuf_lines)
 			     &bits_per_pixel, &bytes_per_pixel,
 			     &bytes_per_line, &accel_flags, 
 			     &fn_x, &fn_y, &env)
-      || (env.major != CORBA_NO_EXCEPTION))
+      || DICE_HAS_EXCEPTION(&env))
     {
-      LOGl("gmode failed (exc=%d)", env.major);
+      LOGl("gmode failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
       return -L4_EINVAL;
     }
 
@@ -102,8 +102,8 @@ contxt_init(long max_sbuf_size, int scrbuf_lines)
   LOG("%dx%d, cols:%d, lines:%d, sb_lines:%d",
       xres, yres, vtc_cols, vtc_lines, sb_lines);
 
-  if (!(vtc_scrbuf = (l4_uint8_t*)(l4dm_mem_allocate_named(sb_lines * vtc_cols,
-							 0, "contxt buffer"))))
+  if (!(vtc_scrbuf = (char*)(l4dm_mem_allocate_named(sb_lines * vtc_cols,
+						      0, "contxt buffer"))))
     {
       LOGl("no mem for vtc_scrbuf (%dkB)", (sb_lines*vtc_cols) / 1024);
       return -L4_ENOMEM;

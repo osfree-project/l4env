@@ -4,39 +4,36 @@ L4DIR  ?= $(PKGDIR)/../..
 
 include $(L4DIR)/mk/Makeconf
 
-FILES  = $(PKGDIR)/common/fileops.h \
-	 $(PKGDIR)/lib/audio/lame/lame.h \
-	 $(PKGDIR)/lib/audio/wave.h \
-	 $(PKGDIR)/lib/audio/mpg123lib/mpglib.h \
-	 $(PKGDIR)/lib/audio/mpg123lib/mpg123.h \
-	 $(PKGDIR)/lib/support/libc/cr7libc.h \
-	 $(PKGDIR)/lib/support/aclib/aclib.h \
-	 $(PKGDIR)/lib/support/x86cpucaps/x86cpucaps.h \
-	 $(PKGDIR)/lib/video/libavcodec/avcodec.h \
-	 $(PKGDIR)/lib/video/libavcodec/common.h \
-	 $(PKGDIR)/lib/video/postproc/postprocess.h \
-	 $(PKGDIR)/lib/video/xvidcore-0.9.1/src/xvid.h \
-	 $(PKGDIR)/lib/video/libmpeg2/mpeg2.h \
-	 $(PKGDIR)/lib/de-muxer/avilib/avilib.h \
-	 $(PKGDIR)/lib/de-muxer/ogmlib/ogmlib.h \
-	 $(PKGDIR)/lib/de-muxer/ogmlib/ogmstreams.h \
-	 $(PKGDIR)/lib/de-muxer/probe/probe_mp3.h \
-	 $(PKGDIR)/lib/de-muxer/probe/probe_ogm.h \
-	 $(PKGDIR)/lib/de-muxer/probe/probe_wav.h \
-	 $(PKGDIR)/lib/de-muxer/probe/probe_mpeg.h \
-	 $(PKGDIR)/lib/de-muxer/probe/probe_avi.h \
-	 $(PKGDIR)/lib/fx/goom/goom.h \
-	 $(PKGDIR)/lib/predict/predict.h
+FILES  = $(PKGDIR_ABS)/common/fileops.h \
+	 $(PKGDIR_ABS)/lib/audio/lame/lame.h \
+	 $(PKGDIR_ABS)/lib/audio/wave.h \
+	 $(PKGDIR_ABS)/lib/audio/mpg123lib/mpglib.h \
+	 $(PKGDIR_ABS)/lib/audio/mpg123lib/mpg123.h \
+	 $(PKGDIR_ABS)/lib/support/aclib/aclib.h \
+	 $(PKGDIR_ABS)/lib/support/x86cpucaps/x86cpucaps.h \
+	 $(PKGDIR_ABS)/lib/video/libavcodec/avcodec.h \
+	 $(PKGDIR_ABS)/lib/video/postproc/postprocess.h \
+	 $(PKGDIR_ABS)/lib/video/xvidcore-1.0/src/xvid.h \
+	 $(PKGDIR_ABS)/lib/video/libmpeg2/mpeg2.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/avilib/avilib.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/ogmlib/ogmlib.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/ogmlib/ogmstreams.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/probe/probe_mp3.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/probe/probe_ogm.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/probe/probe_wav.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/probe/probe_mpeg.h \
+	 $(PKGDIR_ABS)/lib/de-muxer/probe/probe_avi.h \
+	 $(PKGDIR_ABS)/lib/fx/goom/goom.h \
+	 $(PKGDIR_ABS)/lib/predict/predict.h
 
-all:: $(notdir $(FILES)) xvid_10.h
+TARGETS = $(addprefix $(OBJ_DIR)/,$(notdir $(FILES)))
 
-$(notdir $(FILES)):
-	$(VERBOSE)for i in $(FILES); do ln -sf $${i} `basename $${i}`; done
+all:: $(TARGETS)
 
-xvid_10.h: $(PKGDIR)/lib/video/xvidcore-1.0/src/xvid.h
-	$(VERBOSE)$(LN) -sf $< $@
+$(TARGETS):
+	$(VERBOSE)cd $(OBJ_DIR) && for i in $(subst $(L4DIR_ABS),$(L4DIR)/source,$(FILES)); do ln -sf $${i} `basename $${i}`; done
 
 clean cleanall:
-	$(VERBOSE)$(RM) $(notdir $(FILES)) xvid_10.h
+	$(VERBOSE)cd $(OBJ_DIR) && $(RM) $(notdir $(FILES))
 
 install:

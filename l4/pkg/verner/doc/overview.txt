@@ -80,7 +80,6 @@ lib/video:				für Video
 lib/video/libavcodec:		Teil von FFMPEG (viele Enkoder und Dekoder)
 lib/video/libmpeg2:			mpeg2-Video-Dekoder
 lib/video/postproc:			Postproccessing (Deblocking, Deringing, ...)
-lib/video/xvidcore-0.9.1	XviD Version 0.9.1
 lib/video/xvidcore-1.0:		XviD Version 1.0.x
 
 ----------

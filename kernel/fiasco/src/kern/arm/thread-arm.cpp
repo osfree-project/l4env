@@ -49,13 +49,11 @@ Thread::print_page_fault_error(Mword e)
 // Public services
 //
 
-IMPLEMENT inline void Thread::rcv_startup_msg() {} // dummy
-
 IMPLEMENT
 void
 Thread::user_invoke()
 {
-  //  printf("Thread: %p [state=%08x, space=%p]\n", current(), current()->state(), current_space() );
+  //  printf("Thread: %p [state=%08x, space=%p]\n", current(), current()->state(), current_mem_space() );
 
   assert (current()->state() & Thread_ready);
 #if 0
@@ -66,7 +64,7 @@ Thread::user_invoke()
 #endif
 
   register unsigned long r0 asm ("r0")
-    = Kmem::virt_to_phys(Kip::k()).get_unsigned();
+    = Kmem_space::kdir()->lookup(Kip::k(),0,0).get_unsigned();
 
 #if 1
   asm volatile
@@ -97,33 +95,11 @@ Thread::user_invoke()
 IMPLEMENT inline NEEDS["space.h", <cstdio>, "types.h" ,"config.h"]
 bool Thread::handle_sigma0_page_fault( Address pfa )
 {
-  if(pfa<Kmem::Sdram_phys_base && pfa>=Kmem::Sdram_phys_base + 256*1024*1024)
-    {
-      printf("BAD Sigma0 access @%08lx\n", pfa);
-      return false;
-    }
-#if 0
-  if(pfa>=0x80000000)
-    { // adapter area
-      printf("MAP adapter area: %08x\n",pfa & Config::SUPERPAGE_MASK);
-      return (space()->v_insert((pfa & Config::SUPERPAGE_MASK),
-				(pfa & Config::SUPERPAGE_MASK),
-				Config::SUPERPAGE_SIZE,
-				Space::Page_writable
-				| Space::Page_user_accessible
-				| Space::Page_noncacheable)
-	      != Space::Insert_err_nomem);
-    }
-  else
-#endif
-    {
-      return (space()->v_insert((pfa & Config::SUPERPAGE_MASK),
-				(pfa & Config::SUPERPAGE_MASK),
-				Config::SUPERPAGE_SIZE,
-				Space::Page_writable
-				| Space::Page_user_accessible)
-	      != Space::Insert_err_nomem);
-    }
+  return (mem_space()->v_insert((pfa & Config::SUPERPAGE_MASK),
+	(pfa & Config::SUPERPAGE_MASK),
+	Config::SUPERPAGE_SIZE,
+	Mem_space::Page_writable | Mem_space::Page_user_accessible)
+      != Mem_space::Insert_err_nomem);
 }
 
 
@@ -141,8 +117,14 @@ extern "C" {
   Mword pagefault_entry(const Mword pfa, const Mword error_code,
                         const Mword pc, Mword *const sp)
   {
-    // Pagefault in user mode or interrupts were enabled
-    if (PF::is_usermode_error(error_code) || !(sp[5] /*spsr*/ & 128))
+    // Pagefault in user mode
+    if (PF::is_usermode_error(error_code))
+      {
+	current_thread()->state_del(Thread_cancel);
+        Proc::sti();
+      }
+    // or interrupts were enabled
+    else if (!(sp[5] /*spsr*/ & Proc::Status_IRQ_disabled))
       Proc::sti();
 
       // Pagefault in kernel mode and interrupts were disabled
@@ -187,7 +169,10 @@ extern "C" {
       }
 
     if (PF::is_alignment_error(error_code))
-      return false;
+      {
+	printf("KERNEL: alignment error at %08lx (PC: %08lx)\n", pfa, pc);
+        return false;
+      }
 
     return current_thread()->handle_page_fault(pfa, error_code, pc);
   }
@@ -196,9 +181,8 @@ extern "C" {
   {
     Thread *t = current_thread();
     // send exception IPC if requested
-    if (t->snd_exception(ts))
+    if (t->send_exception(ts))
       return;
-
 
     // exception handling failed
     if (Config::conservative)
@@ -250,6 +234,7 @@ next_irq:
 	    Timer::acknowledge();
 	    Timer::update_system_clock();
 	    current_thread()->handle_timer_interrupt();
+	    goto next_irq;
 	  }
 
 	for (unsigned irq=0; irq < sizeof(Mword)*8; irq++)
@@ -301,8 +286,8 @@ IMPLEMENTATION [arm-x0]:
  */
 IMPLEMENT
 Thread::Thread(Task* task,
-	       L4_uid id,
-	       unsigned short init_prio, unsigned short mcp)
+               L4_uid id,
+               unsigned short init_prio, unsigned short mcp)
   : Receiver (&_thread_lock,
               task,
               init_prio,
@@ -310,8 +295,7 @@ Thread::Thread(Task* task,
               Config::default_time_slice),
     Sender            (id),	// select optimized version of constructor
     _preemption       (id),
-    _deadline_timeout (&_preemption),
-    _activation	      (id)
+    _deadline_timeout (&_preemption)
 {
   assert (current() == thread_lock()->lock_owner());
   assert (state() == Thread_invalid);
@@ -327,6 +311,9 @@ Thread::Thread(Task* task,
   _irq = 0;
   _recover_jmpbuf = 0;
   _timeout = 0;
+  _exc_ip = ~0UL;
+  _in_exception = false;
+
   Lock_guard <Thread_lock> guard (thread_lock());
 
   *reinterpret_cast<void(**)()> (--_kernel_sp) = user_invoke;
@@ -337,120 +324,79 @@ Thread::Thread(Task* task,
   r->sp(0);
   r->ip(0);
 
-  _task->kmem_update(this);
+  mem_space()->kmem_update(this);
   // make sure the thread's kernel stack is mapped in its address space
   //  _task->kmem_update(reinterpret_cast<Address>(this));
 
+  caps_init (current_thread());
   _pager = _ext_preempter = nil_thread;
   preemption()->set_receiver (nil_thread);
 
-  if (space_index() == Thread::lookup(thread_lock()->lock_owner())
-                       ->space_index())
-    {
-      // same task -> enqueue after creator
-      present_enqueue(Thread::lookup(thread_lock()->lock_owner()));
-    }
-  else
-    {
-      // other task -> enqueue in front of this task
-      present_enqueue(lookup_first_thread(Thread::lookup
-					  (thread_lock()->lock_owner())
-					  ->space_index())
-                      ->present_prev);
-      // that's safe because thread 0 of a task is always present
-    }
+  present_enqueue();
 
   state_add(Thread_dead);
-
+  
   // ok, we're ready to go!
 }
 
-/** (Re-) Ininialize a thread and make it ready.
-    This call also cancels IPC.
-    @param eip new user instruction pointer.  Set only if != 0xffffffff.
-    @param esp new user stack pointer.  Set only if != 0xffffffff.
-    @param o_eip return current instruction pointer if pointer != 0
-    @param o_esp return current stack pointer if pointer != 0
-    @param o_pager return current pager if pointer != 0
-    @param o_preempter return current internal preempter if pointer != 0
-    @param o_eflags return current eflags register if pointer != 0
-    @return false if !exists(); true otherwise
- */
-PUBLIC
-bool
-Thread::initialize(Address ip, Address sp,
-		   Thread* pager, Receiver* preempter,
-		   Address *o_ip = 0,
-		   Address *o_sp = 0,
-		   Thread **o_pager = 0,
-		   Receiver **o_preempter = 0,
-		   Address *o_eflags = 0,
-		   bool no_cancel = 0,
-		   bool alien = 0)
-{
-  (void)o_eflags;
+IMPLEMENT inline
+Mword
+Thread::user_sp() const
+{ return regs()->sp(); }
 
-  assert (current() == thread_lock()->lock_owner());
+IMPLEMENT inline
+void
+Thread::user_sp(Mword sp)
+{ return regs()->sp(sp); }
 
-  if (state() == Thread_invalid)
-    return false;
+IMPLEMENT inline NEEDS[Thread::exception_triggered]
+Mword
+Thread::user_ip() const
+{ return exception_triggered()?(_exc_ip & ~0x03):regs()->ip(); }
 
-  Entry_frame *r = regs();
+IMPLEMENT inline
+Mword
+Thread::user_flags() const
+{ return 0; }
 
-  if (o_pager) *o_pager = _pager;
-  if (o_preempter) *o_preempter = preemption()->receiver();
-  if (o_sp) *o_sp = r->sp();
-  if (o_ip) *o_ip = r->ip();
-  //if (o_eflags) *o_eflags = r->eflags;
-
-  if (ip != 0xffffffff)
+IMPLEMENT inline NEEDS[Thread::exception_triggered]
+void
+Thread::user_ip(Mword ip)
+{ 
+  if (exception_triggered())
+    _exc_ip = (_exc_ip & 0x03) | ip;
+  else
     {
+      Entry_frame *r = regs();
       r->ip(ip);
-      r->psr = (r->psr & ~0x01f) | 0x10;
-      
-      if (alien)
-	state_change (~0, Thread_alien);
-      else
-	state_change (~Thread_alien, 0);
-
-      if (! (state() & Thread_dead))
-	{
-#if 0
-	  kdb_ke("reseting non-dead thread");
-#endif
-	  if (!no_cancel)
-	  // cancel ongoing IPC or other activity
-	    state_change(~Thread_ipc_in_progress,
-                         Thread_cancel | Thread_ready);
-	}
-      else
-        state_change(~Thread_dead, Thread_ready);
+      r->psr = (r->psr & ~Proc::Status_mode_mask) | Proc::Status_mode_user;
     }
-
-  if (pager != 0) _pager = pager;
-  if (preempter != 0) preemption()->set_receiver (preempter);
-  if (sp != 0xffffffff) r->sp( sp );
-
-  return true;
 }
+
 
 PUBLIC inline NEEDS ["trap_state.h"]
 Mword
-Thread::snd_exception(Trap_state *ts)
+Thread::send_exception(Trap_state *ts)
 {
   state_del(Thread_cancel);
-  Proc::sti();		// enable interrupts, we're sending IPC
-  exception(ts);
-  return 1;      // We did it
+  Proc::sti();        // enable interrupts, we're sending IPC
+
+  Ipc_err err = exception(ts);
+
+  if (err.has_error() && err.error() == Ipc_err::Enot_existent)
+    return 0;
+
+  return 1;           // We did it
 }
+
 
 PRIVATE
 Ipc_err
 Thread::exception(Trap_state *ts)
 {
-  if (space()->is_sigma0())
+  if (mem_space()->is_sigma0())
     {
-      puts("Exception in Sigma0: KILL SIGMA0");
+      puts("KERNEL: Exception in Sigma0: killing SIGMA0");
       ts->dump();
       halt();
     }
@@ -471,87 +417,114 @@ Thread::exception(Trap_state *ts)
   L4_timeout timeout( L4_timeout::Never );
   Thread *handler = _pager; // _exception_handler;
 
+  if (! revalidate(handler))
+    {
+      WARN ("Denying %x.%x to send exception message (pc=%x"
+	    ", error=%x) to %x.%x",
+	    id().task(), id().lthread(), ts->pc, ts->error_code, 
+	    handler ? handler->id().task() : L4_uid (L4_uid::Invalid).task(),
+	    handler ? handler->id().lthread() 
+	            : L4_uid (L4_uid::Invalid).lthread());
+
+      return Ipc_err(Ipc_err::Enot_existent);
+    }
+
   // fill registers for IPC
   r.set_msg_word(0, L4_exception_ipc::Exception_ipc_cookie_1);
   r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
   r.set_msg_word(2, 0); // nop in V2
   r.snd_desc((Mword)&snd_msg);
   r.rcv_desc((Mword)&snd_msg);
-  snd_msg.fp = L4_fpage();
-  snd_msg.size_dope = L4_msgdope(3,1);
-  snd_msg.snd_dope  = L4_msgdope(3,1);
+  snd_msg.fp = L4_fpage(0,0,L4_fpage::Whole_space,0);
+  snd_msg.size_dope = L4_msgdope(L4_snd_desc(0), 3,1);
+  snd_msg.snd_dope  = L4_msgdope(L4_snd_desc(0), 3,1);
   snd_msg.excp_regs.snd_size = sizeof(Trap_state);
   snd_msg.excp_regs.rcv_size = sizeof(Trap_state);
   snd_msg.excp_regs.snd_str = (Unsigned8*)ts;
   snd_msg.excp_regs.rcv_str = (Unsigned8*)ts;
 
-  prepare_receive(handler, &r);
-
   _in_exception = true;
+  asm volatile ( "" : : : "memory" );
 
-  Ipc_err err = do_send(handler, timeout, &r);
+  if (_exc_ip != ~0UL)
+    ts->pc = user_ip();
+
   Ipc_err ret (0);
+  Proc::cli();
+  Ipc_err err = do_ipc(true, handler,
+                       true, handler,
+                       timeout, &r);
+  Proc::sti();
 
-  if (EXPECT_FALSE(err.has_error()))
+  if (EXPECT_FALSE(err.has_error()
+                   && err.error() != Ipc_err::Recanceled
+                   && err.error() != Ipc_err::Secanceled
+                   && err.error() != Ipc_err::Seaborted
+                   && err.error() != Ipc_err::Reaborted))
     {
-      if (err.error() == Ipc_err::Semsgcut
-	  || err.error() == Ipc_err::Sercvpfto)
-	{
-	  printf("Pager is not willing to handle exceptions\n"
-	         "KILL Thread: ");
-	  id().print();
-	  puts("");
-	  ts->dump();
-
-	  halt();
-	}
-
       if (Config::conservative)
-	{
-	  printf("exception send error = 0x%lx\n"
-	         "KILL thread\n", err.raw());
-	  ts->dump();
-	  halt();
-	  kdb_ke ("snd to pager failed");
-	}
+        {
+          printf("KERNEL: Error %s exception (err=0x%lx) %s ",
+                 err.snd_error() ? "sending" : "rcveiving", err.raw(),
+                 err.snd_error() ? "to" : "from");
+          handler->id().print();
+          printf("\nKERNEL: killing thread ");
+          id().print();
+          puts("");
+          ts->dump();
+          halt();
 
-      // skipped receive operation
-      state_del(Thread_ipc_receiving_mask);
+          if (err.snd_error())
+            kdb_ke("snd to pager failed");
+          else
+            kdb_ke("rcv from pager failed");
+        }
 
-      if (err.error() == Ipc_err::Enot_existent)
-	ret = (state() & Thread_cancel)
-	  ? Ipc_err (0) // retry user insn after thread_ex_regs
-	  : err;
+      if (err.snd_error())
+        {
+          if (err.error() == Ipc_err::Enot_existent)
+            ret = (state() & Thread_cancel)
+              ? Ipc_err (0)
+              : err;
+          else if (err.error() == Ipc_err::Semsgcut
+                   || err.error() == Ipc_err::Sercvpfto)
+            {
+              printf("KERNEL: Pager is not willing to handle exceptions\n"
+                     "KERNEL: killing thread: ");
+              id().print();
+              puts("");
+              ts->dump();
 
-      // else ret = 0 -- that's the default, and it means: retry
-    }
-  else
-    {
-      err = do_receive(handler, timeout, &r);
-
-      if (EXPECT_FALSE(err.has_error()))
-	{
-	  if (Config::conservative)
-	    {
-	      printf("exception rcv error = 0x%lx\n"
-		     "KILL Thread\n", err.raw());
-	      ts->dump();
-	      halt();
-	      kdb_ke("rcv from pager failed");
-	    }
-
-	}
-
-      if (r.msg_word(0) == 1)
-	state_add(Thread_dis_alien);
-
-      // enforce user mode;
-      ts->cpsr &= ~0x1f;
-      ts->cpsr |= 0x10;
-      // else ret = 0 -- that's the default, and it means: retry
+              halt();
+            }
+        }
     }
 
-  _in_exception = false;
+
+  if (r.msg_word(0) == 1)
+    state_add(Thread_dis_alien);
+
+  {
+    Lock_guard<Cpu_lock> lock(&cpu_lock);
+
+    if (EXPECT_FALSE(_exc_ip != ~0UL))
+      {
+        extern char leave_by_trigger_exception[];
+	user_ip(ts->pc);
+        ts->pc = (Mword)leave_by_trigger_exception;
+        ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
+        ts->cpsr |= Proc::Status_mode_supervisor
+                     | Proc::Status_interrupts_disabled;
+      }
+    else
+      {
+        ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
+        ts->cpsr |= Proc::Status_mode_user;
+      }
+
+    _in_exception = false;
+  }
+
   return ret;
 }
 
@@ -560,9 +533,32 @@ bool
 Thread::invalid_ipc_buffer(void const *a)
 {
   if (!_in_exception)
-    return
-      Mem_layout::in_kernel(((Address)a & Config::SUPERPAGE_MASK)
-	      + Config::SUPERPAGE_SIZE - 1);
+    return Mem_layout::in_kernel(((Address)a & Config::SUPERPAGE_MASK)
+                                 + Config::SUPERPAGE_SIZE - 1);
 
   return false;
+}
+
+PRIVATE inline
+int
+Thread::do_trigger_exception(Entry_frame *r)
+{
+  if (_exc_ip == ~0UL)
+    {
+      Lock_guard<Cpu_lock> lock(&cpu_lock);
+      _exc_ip = r->ip();
+      // store FIQ and IRQ Mask bits in lowest two bits of exception IP
+      // (PC ist always word aligned --> no Thumb support yet)
+      _exc_ip |= (r->psr >> 6) & 0x03; 
+      if (!_in_exception)
+        {
+          extern char leave_by_trigger_exception[];
+          r->pc = (Mword)leave_by_trigger_exception;
+          r->psr &= ~Proc::Status_mode_mask; // clear mode
+          r->psr |= Proc::Status_mode_supervisor
+                     | Proc::Status_interrupts_disabled;
+        }
+      return 1;
+    }
+  return 0;
 }

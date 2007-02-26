@@ -16,6 +16,7 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/l4int.h>
+#include <l4/sigma0/sigma0.h>
 
 #include <stdio.h>
 
@@ -43,8 +44,7 @@ static int get_pager(void)
 static unsigned request_page(void *addr)
 {
     int err;
-    l4_msgdope_t result;
-    l4_umword_t dw0, dw1;
+    l4_umword_t dummy;
 
     if(l4_thread_equal(pager_id, L4_INVALID_ID) && get_pager() != 0)
     {
@@ -53,23 +53,15 @@ static unsigned request_page(void *addr)
         return 0;
     }
 
-    err = l4_ipc_call(pager_id,
-                      L4_IPC_SHORT_MSG, 0xfffffffc, 0,
-                      L4_IPC_MAPMSG((l4_umword_t)addr, L4_LOG2_PAGESIZE), 
-                      &dw0, &dw1, L4_IPC_NEVER, &result);
-
-    if (err)
+    if ((err = l4sigma0_map_anypage(pager_id, (l4_addr_t)addr,
+                                    L4_LOG2_PAGESIZE, &dummy)))
     {
-        printf("morecore: IPC error 0x%02x!\n", err);
-        return 0;
+	switch (err)
+	{
+	case -2: printf("morecore: IPC error!\n"); return 0;
+	case -3: printf("morecore: page request failed!\n"); return 0;
+	}
     }
-
-    if (! l4_ipc_fpage_received(result))
-    {
-        printf("morecore: page request failed!\n");
-        return 0;
-    }
-
     return 1;
 }
 
@@ -122,7 +114,7 @@ int munmap(void *start, size_t length)
 }
 
 void * mremap(void * old_address, size_t old_size, size_t new_size,
-	      unsigned long flags)
+	      int may_move)
 {
     printf("mremap() called: unimplemented!\n");
     errno = EINVAL;

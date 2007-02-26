@@ -11,7 +11,7 @@ CLIENTIDL      = overlay.idl
 
 PRIVATE_INCDIR = $(PKGDIR)/include \
                  $(PKGDIR)/lib/screen/include \
-                 $(L4DIR)/tool/dice/include
+		 $(DICE_INCDIR)
 
 vpath screen.c $(PKGDIR)/lib/screen/common
 

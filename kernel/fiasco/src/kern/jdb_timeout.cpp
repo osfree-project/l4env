@@ -5,7 +5,7 @@ IMPLEMENTATION [jdb_thread_names]:
 static inline
 const char*
 get_thread_name(Global_id id)
-{ return Jdb_thread_names::lookup(id)->name(); }
+{ return Jdb_thread_names::lookup(id, true)->name(); }
 
 IMPLEMENTATION [!jdb_thread_names]:
 
@@ -39,11 +39,15 @@ IMPLEMENTATION:
 
 class Jdb_list_timeouts : public Jdb_module
 {
+public:
+  Jdb_list_timeouts() FIASCO_INIT;
+private:
   enum
     {
       Timeout_ipc		= 1,
       Timeout_deadline		= 2,
       Timeout_timeslice		= 3,
+      Timeout_root		= 4,
     };
 };
 
@@ -91,13 +95,13 @@ Jdb_timeout_list::iter(int count, Timeout **t_start,
     {
       if (forw)
 	{
-	  if (!t_new->_next)
+	  if (t_new->_next == Timeout::get_first_timeout())
 	    break;
 	  t_new = t_new->_next;
 	}
       else
 	{
-	  if (!t_new->_prev)
+	  if (t_new->_prev == Timeout::get_first_timeout())
 	    break;
 	  t_new = t_new->_prev;
 	}
@@ -232,7 +236,10 @@ Jdb_list_timeouts::get_type(Timeout *t)
   if (t == timeslice_timeout)
     // there is only one global timeslice timeout
     return Timeout_timeslice;
-
+  
+  if(Timeout::is_root_node(addr))
+    return Timeout_root;
+  
   if (!Kmem::is_tcb_page_fault(addr, 0))
     // IPC timeout and Deadline timeout are thread specific
     return 0;
@@ -311,6 +318,11 @@ Jdb_list_timeouts::list_timeouts_show_timeout(Timeout *t)
       else
         strcpy (ownerstr, "destruct");
       break;
+    case Timeout_root:
+      type  = "root";
+      owner = 0;
+      strcpy (ownerstr, "kern");
+      break;
     default:
       snprintf(ownerstr, sizeof(ownerstr), L4_PTR_FMT, (Address)t);
       type  = "???";
@@ -332,7 +344,7 @@ Jdb_list_timeouts::list_timeouts_show_timeout(Timeout *t)
       ownerstr, owner ? get_thread_name(owner->id()) : "");
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_list_timeouts::Jdb_list_timeouts()
   : Jdb_module("INFO")
 {}
@@ -342,7 +354,7 @@ void
 Jdb_list_timeouts::list()
 {
   unsigned y, y_max;
-  Timeout *t_current = Timeout::first_timeout;
+  Timeout *t_current = Timeout::get_first_timeout(); 
 
   Jdb::clear_screen();
   show_header();
@@ -434,7 +446,7 @@ Jdb_list_timeouts::action(int cmd, void *&, char const *&, int &)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_list_timeouts::cmds() const
 {
   static Cmd cs[] =
@@ -446,7 +458,7 @@ Jdb_list_timeouts::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_list_timeouts::num_cmds() const
 {
   return 1;

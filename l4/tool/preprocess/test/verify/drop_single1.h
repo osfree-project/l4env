@@ -22,6 +22,10 @@ public:
 #line 21 "dropsection.cpp"
   void
   bar( unsigned x );
+  
+#line 54 "dropsection.cpp"
+  int
+  tust( int y );
 };
 #line 12 "dropsection.cpp"
 

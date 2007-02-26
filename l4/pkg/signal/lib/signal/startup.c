@@ -28,7 +28,6 @@ void l4signal_signal_thread(void *argp)
     _dice_corba_env.malloc      = (dice_malloc_func)malloc;
     _dice_corba_env.free        = (dice_free_func)free;
 
-
 //    LOGd(_DEBUG, "\033[33msignal thread started: "l4util_idfmt"\033[37m",
 //            l4util_idstr(l4_myself()));
 

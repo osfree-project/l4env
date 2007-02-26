@@ -1,3 +1,4 @@
+
 #include "tcboffset.h"
 
 	.section ".initcall.data","aw"
@@ -37,6 +38,11 @@ sys_call_task_new:
 	ret
 sys_call_task_new_end:
 
+sys_call_privctrl:
+	int	$0x37
+	ret
+sys_call_privctrl_end:
+
 sys_call_se_ipc:
 	0:
 	push	%ecx
@@ -64,8 +70,9 @@ sys_call_se_ipc_end:
 	.global	sys_call_lthread_ex_regs_end
 	.global	sys_call_task_new
 	.global	sys_call_task_new_end
+	.global sys_call_privctrl
+	.global sys_call_privctrl_end
 	.global	sys_call_se_ipc
 	.global	sys_call_se_ipc_end
 
 	.previous
-

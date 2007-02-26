@@ -1,6 +1,6 @@
 /**
- *    \file    dice/src/be/l4/v2/L4V2BEReplyFunction.cpp
- *    \brief   contains the implementation of the class CL4V2BEReplyFunction
+ *    \file    dice/src/be/l4/v2/L4V2BEReplyFunction.h
+ *  \brief   contains the declaration of the class CL4V2BEReplyFunction
  *
  *    \date    11/23/2004
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -42,12 +42,7 @@ public:
     virtual ~CL4V2BEReplyFunction();
 
 protected:
-    virtual void WriteUnmarshalling(CBEFile * pFile,  int nStartOffset,  bool & bUseConstOffset,  CBEContext * pContext);
-    virtual void WriteMarshalling(CBEFile * pFile,  int nStartOffset,  bool & bUseConstOffset,  CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile * pFile,  CBEContext * pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile,  CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile);
 };
 
 #endif

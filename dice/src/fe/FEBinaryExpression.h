@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEBinaryExpression.h
- *    \brief   contains the declaration of the class CFEBinaryExpression
+ *  \brief   contains the declaration of the class CFEBinaryExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /** \class CFEBinaryExpression
  *    \ingroup frontend
- *    \brief represents a binary expression
+ *  \brief represents a binary expression
  *
  * This class is used to represent a binary expression, which is an expression
  * consiting of two expressions seperated by an operator.
@@ -45,33 +45,32 @@ class CFEBinaryExpression : public CFEUnaryExpression
 // standard constructor/destructor
 public:
     /** constructs a binary expression
-     *    \param nType the type of the expression
-     *    \param pOperand the first operand of the expression
-     *    \param Operator the operator of the expression
-     *    \param pOperand2 the second operand
+     *  \param nType the type of the expression
+     *  \param pOperand the first operand of the expression
+     *  \param Operator the operator of the expression
+     *  \param pOperand2 the second operand
      */
     CFEBinaryExpression(EXPR_TYPE nType, CFEExpression *pOperand, EXPT_OPERATOR Operator, CFEExpression *pOperand2);
     virtual ~CFEBinaryExpression();
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEBinaryExpression(CFEBinaryExpression &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual string ToString();
     virtual CObject* Clone();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual CFEExpression* GetOperand2();
 
 // attributes
 protected:
     /** \var CFEExpression *m_pOperand2
-     *    \brief the second operand
+     *  \brief the second operand
      */
     CFEExpression *m_pOperand2;
 };

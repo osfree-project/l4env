@@ -33,22 +33,18 @@ static char stacks[MAXTHREADS][STACKSIZE];
 /* Create a new thread. */
 int thread_create(void(*func)(void), l4_threadid_t *id, const char*name){
     static int next_thread = 1;
-    l4_umword_t *esp;
-    l4_threadid_t thread = l4_myself();
+    l4_threadid_t thread;
 
     if(next_thread>MAXTHREADS){
 	LOG_Error("No more space to create a thread");
 	return -1;
     }
 
-    thread.id.lthread = next_thread;
-    if(id) *id = thread;
-
-    esp = (l4_umword_t*)&stacks[next_thread][0];
-    l4util_create_thread(next_thread, func, esp);
+    thread = l4util_create_thread(next_thread, func,
+                                  (l4_umword_t*)&stacks[next_thread][0]);
     names_register_thread_weak(name, thread);
     next_thread++;
+    if(id) *id = thread;
 
     return 0;
 }
-

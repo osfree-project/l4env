@@ -2,7 +2,7 @@
 #include "local.h"
 
 /* loglib tag */
-char LOG_tag[9] = "flips-0";
+char LOG_tag[9] = "flips";
 
 l4_ssize_t l4libc_heapsize = 1024 * 1024;
 
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 {
 	LOG_printf("Let's go...\n");
 
-	if (liblinux_init(256*1024, 1024*1024))
+	if (liblinux_init(256*1024, 1024*1024, 0))
 		exit(1);
 #if USE_LXDRV
 	if (liblxdrv_init())

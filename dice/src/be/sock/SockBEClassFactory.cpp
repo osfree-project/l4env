@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBEClassFactory.cpp
- *    \brief   contains the implementation of the class CBEClassFactory
+ *  \brief   contains the implementation of the class CBEClassFactory
  *
  *    \date    01/10/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -33,22 +33,18 @@
 #include "SockBEMarshalFunction.h"
 #include "SockBESrvLoopFunction.h"
 #include "SockBEUnmarshalFunction.h"
+#include "SockBESndFunction.h"
 #include "SockBESizes.h"
 #include "BESocket.h"
-#include "SockBEDispatchFunction.h"
+#include "Compiler.h"
+#include <iostream>
 
-
-CSockBEClassFactory::CSockBEClassFactory(bool bVerbose)
-: CBEClassFactory(bVerbose)
+CSockBEClassFactory::CSockBEClassFactory()
+: CBEClassFactory()
 {
 }
 
-CSockBEClassFactory::CSockBEClassFactory(CSockBEClassFactory & src)
-: CBEClassFactory(src)
-{
-}
-
-/**    \brief the destructor of this class */
+/** \brief the destructor of this class */
 CSockBEClassFactory::~CSockBEClassFactory()
 {
 
@@ -59,8 +55,8 @@ CSockBEClassFactory::~CSockBEClassFactory()
  */
 CBECallFunction * CSockBEClassFactory::GetNewCallFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBECallFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBECallFunction\n");
     return new CSockBECallFunction();
 }
 
@@ -69,8 +65,7 @@ CBECallFunction * CSockBEClassFactory::GetNewCallFunction()
  */
 CBESizes * CSockBEClassFactory::GetNewSizes()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBESizes\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CSockBEClassFactory: created class CSockBESizes\n");
     return new CSockBESizes();
 }
 
@@ -79,8 +74,8 @@ CBESizes * CSockBEClassFactory::GetNewSizes()
  */
 CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, false);
 }
 
@@ -89,8 +84,8 @@ CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
  */
 CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBESrvLoopFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBESrvLoopFunction\n");
     return new CSockBESrvLoopFunction();
 }
 
@@ -99,8 +94,8 @@ CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
  */
 CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
     return new CSockBEUnmarshalFunction();
 }
 
@@ -109,8 +104,8 @@ CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
  */
 CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEMarshalFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBEMarshalFunction\n");
     return new CSockBEMarshalFunction();
 }
 
@@ -119,8 +114,7 @@ CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
  */
 CBECommunication * CSockBEClassFactory::GetNewCommunication()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CBESocket\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CSockBEClassFactory: created class CBESocket\n");
     return new CBESocket();
 }
 
@@ -129,18 +123,17 @@ CBECommunication * CSockBEClassFactory::GetNewCommunication()
  */
 CBEWaitAnyFunction* CSockBEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, true);
 }
 
-
-/** \brief creates a new instance of the class CBEDispatchFunction
+/** \brief creates a new instance of the class CSockBESndFunction
  *  \return a reference to the new object
  */
-CBEDispatchFunction* CSockBEClassFactory::GetNewDispatchFunction()
+CBESndFunction * CSockBEClassFactory::GetNewSndFunction()
 {
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEDispatchFunction\n");
-    return new CSockBEDispatchFunction();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CSockBEClassFactory: created class CSockBESndFunction\n");
+    return new CSockBESndFunction();
 }

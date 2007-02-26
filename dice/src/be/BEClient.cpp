@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEClient.cpp
- *    \brief   contains the implementation of the class CBEClient
+ *  \file    dice/src/be/BEClient.cpp
+ *  \brief   contains the implementation of the class CBEClient
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -35,398 +35,344 @@
 #include "be/BEUnmarshalFunction.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEImplementationFile.h"
-#include "be/BEOpcodeType.h"
 #include "be/BEExpression.h"
 #include "be/BEConstant.h"
 #include "be/BERoot.h"
 #include "be/BEClass.h"
 #include "be/BENameSpace.h"
-
+#include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "fe/FEUnaryExpression.h"
 #include "fe/FEIntAttribute.h"
-
+#include <algorithm>
+#include <cassert>
 
 CBEClient::CBEClient()
 {
 }
 
-CBEClient::CBEClient(CBEClient & src):CBETarget(src)
+CBEClient::CBEClient(CBEClient & src)
+: CBETarget(src)
 {
 }
 
-/**    \brief destructor
+/** \brief destructor
  */
 CBEClient::~CBEClient()
 {
-
 }
 
-/**    \brief writes the clients output
- *    \param pContext the context of the write operation
+/** \brief writes the clients output
  */
-void CBEClient::Write(CBEContext * pContext)
+void CBEClient::Write()
 {
-    WriteHeaderFiles(pContext);
-    WriteImplementationFiles(pContext);
-}
-
-/**    \brief sets the current file-type in the context
- *    \param pContext the context to manipulate
- *    \param nHeaderOrImplementation a flag to indicate whether we need a header or implementation file
- */
-void CBEClient::SetFileType(CBEContext * pContext, int nHeaderOrImplementation)
-{
-    switch (nHeaderOrImplementation)
-    {
-    case FILETYPE_HEADER:
-        pContext->SetFileType(FILETYPE_CLIENTHEADER);
-        break;
-    case FILETYPE_IMPLEMENTATION:
-        pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
-        break;
-    default:
-        CBETarget::SetFileType(pContext, nHeaderOrImplementation);
-        break;
-    }
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    WriteHeaderFiles();
+    WriteImplementationFiles();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done.\n", __func__);
 }
 
 /** \brief creates the back-end files for a function
  *  \param pFEOperation the front-end function to use as reference
- *  \param pContext the context of the create process
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pContext)
+void
+CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 {
-    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFEOperation->GetName().c_str());
     // get root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
+
+    string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
-    // create the file
-    CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-    AddFile(pImpl);
-    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
-    pImpl->SetHeaderFile(pHeader);
-    if (!pImpl->CreateBackEnd(pFEOperation, pContext))
     {
-        RemoveFile(pImpl);
+	exc += "failed, because header file could not be found";
+	throw new CBECreateException(exc);
+    }
+    // create the file
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    m_ImplementationFiles.Add(pImpl);
+    pImpl->SetHeaderFile(pHeader);
+    try
+    {
+	pImpl->CreateBackEnd(pFEOperation, FILETYPE_CLIENTIMPLEMENTATION);
+    }
+    catch (CBECreateException *e)
+    {
+	m_ImplementationFiles.Remove(pImpl);
         delete pImpl;
-        VERBOSE("%s failed because file could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
+	throw;
     }
     // add the functions to the file
     // search the functions
     // if attribute == IN, we need send
     // if attribute == OUT, we need wait, recv, unmarshal
     // if attribute == empty, we need call if test, we need test
-    int nOldType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sFuncName;
     CBEFunction *pFunction;
-    if (pFEOperation->FindAttribute(ATTR_IN))
+    if (pFEOperation->m_Attributes.Find(ATTR_IN))
     {
-        nOldType = pContext->SetFunctionType(FUNCTION_SEND);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_SEND);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_SEND);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
-        // test suite's test function
-        if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        {
-            nOldType = pContext->SetFunctionType(FUNCTION_SEND | FUNCTION_TESTFUNCTION);
-            sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-            pContext->SetFunctionType(nOldType);
-            pFunction = pRoot->FindFunction(sFuncName);
-            if (!pFunction)
-            {
-                VERBOSE("%s failed because function %s could not be found\n",
-                        __PRETTY_FUNCTION__, sFuncName.c_str());
-                return false;
-            }
-            pFunction->AddToFile(pImpl, pContext);
-        }
+        pFunction->AddToFile(pImpl);
     }
-    else if (pFEOperation->FindAttribute(ATTR_OUT))
+    else if (pFEOperation->m_Attributes.Find(ATTR_OUT))
     {
         // wait function
-        nOldType = pContext->SetFunctionType(FUNCTION_WAIT);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_WAIT);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_WAIT);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
         // receive function
-        pContext->SetFunctionType(FUNCTION_RECV);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_RECV);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_RECV);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
         // unmarshal function
-        if (pContext->IsOptionSet(PROGRAM_GENERATE_MESSAGE))
+        if (CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE))
         {
-            nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-            sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-            pContext->SetFunctionType(nOldType);
-            pFunction = pRoot->FindFunction(sFuncName);
+            sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
+            pFunction = pRoot->FindFunction(sFuncName, FUNCTION_UNMARSHAL);
             if (!pFunction)
             {
-                VERBOSE("%s failed because function %s could not be found\n",
-                        __PRETTY_FUNCTION__, sFuncName.c_str());
-                return false;
+		exc += " failed because function " + sFuncName + 
+		    " could not be found";
+		throw new CBECreateException(exc);
             }
-            pFunction->AddToFile(pImpl, pContext);
+            pFunction->AddToFile(pImpl);
         }
-        pContext->SetFunctionType(nOldType);
     }
     else
     {
-        nOldType = pContext->SetFunctionType(FUNCTION_CALL);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_CALL);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_CALL);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
-        // test suite's test function
-        if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        {
-            nOldType = pContext->SetFunctionType(FUNCTION_CALL | FUNCTION_TESTFUNCTION);
-            sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-            pContext->SetFunctionType(nOldType);
-            pFunction = pRoot->FindFunction(sFuncName);
-            if (!pFunction)
-            {
-                VERBOSE("%s failed because function %s could not be found\n",
-                        __PRETTY_FUNCTION__, sFuncName.c_str());
-                return false;
-            }
-            pFunction->AddToFile(pImpl, pContext);
-        }
+        pFunction->AddToFile(pImpl);
     }
-    return true;
 }
 
 /** \brief creates the header files of the client
  *  \param pFEFile the front end file to use as reference
- *  \param pContext the context of this operation
  *  \return true if successful
  *
  * We could call the base class to create the header file as usual. But we
  * need a reference to it, which we would have to search for. Thus we simply
  * create it here, as the base class would do and use its reference.
  */
-bool CBEClient::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
+void
+CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
 {
-    VERBOSE("CBEClient::CreateBackEndHeader(file: %s) called\n",
+    string exc = string(__func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndHeader(file: %s) called\n",
         pFEFile->GetFileName().c_str());
-    
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
-    CBEClassFactory *pCF = pContext->GetClassFactory();
     // the header files are created on a per IDL file basis, no matter
     // which option is set
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
-    AddFile(pHeader);
-    pContext->SetFileType(FILETYPE_CLIENTHEADER);
-    if (!pHeader->CreateBackEnd(pFEFile, pContext))
+    m_HeaderFiles.Add(pHeader);
+    try
     {
-        RemoveFile(pHeader);
-        delete pHeader;
-        VERBOSE("%s failed because header file could not be created\n",
-	    __PRETTY_FUNCTION__);
-        return false;
+	pHeader->CreateBackEnd(pFEFile, FILETYPE_CLIENTHEADER);
     }
-    pRoot->AddToFile(pHeader, pContext);
+    catch (CBECreateException *e)
+    {
+	m_HeaderFiles.Remove(pHeader);
+        delete pHeader;
+	throw;
+    }
+    pRoot->AddToFile(pHeader);
     // create opcode files per IDL file
-    if (!pContext->IsOptionSet(PROGRAM_NO_OPCODES))
+    if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
         CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
-        AddFile(pOpcodes);
-        pContext->SetFileType(FILETYPE_OPCODE);
-        if (!pOpcodes->CreateBackEnd(pFEFile, pContext))
+        m_HeaderFiles.Add(pOpcodes);
+	try
+	{
+	    pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFile(pOpcodes);
+	    m_HeaderFiles.Remove(pOpcodes);
             delete pOpcodes;
-            VERBOSE("%s failed because opcode file could not be created\n",
-		__PRETTY_FUNCTION__);
-            return false;
+	    throw;
         }
-        pRoot->AddOpcodesToFile(pOpcodes, pFEFile, pContext);
+        pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
         // include opcode file to included files
         // do not use include file name, since the opcode file is
         // assumed to be in the same directory
         pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false, 
 	    pFEFile);
     }
-    VERBOSE("CBEClient::CreateBackEndHeader(file: %s) return true\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndHeader(file: %s) return true\n",
         pFEFile->GetFileName().c_str());
-    return true;
 }
 
 /** \brief create the back-end implementation files
  *  \param pFEFile the respective front-end file
- *  \param pContext the context of this operation
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * pContext)
+void
+CBEClient::CreateBackEndImplementation(CFEFile * pFEFile)
 {
-    VERBOSE("CBEClient::CreateBackEndImplementation(file: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndImplementation(file: %s) called\n",
         pFEFile->GetFileName().c_str());
     // depending on options call respective functions
-    if (pContext->IsOptionSet(PROGRAM_FILE_ALL) || pContext->IsOptionSet(PROGRAM_FILE_IDLFILE))
-    {
-        if (!CreateBackEndFile(pFEFile, pContext))
-            return false;
-    }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_MODULE))
-    {
-        if (!CreateBackEndModule(pFEFile, pContext))
-            return false;
-    }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
-    {
-        if (!CreateBackEndInterface(pFEFile, pContext))
-            return false;
-    }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION))
-    {
-        if (!CreateBackEndFunction(pFEFile, pContext))
-            return false;
-    }
-    return true;
+    if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) || 
+	CCompiler::IsFileOptionSet(PROGRAM_FILE_IDLFILE))
+	CreateBackEndFile(pFEFile);
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_MODULE))
+	CreateBackEndModule(pFEFile);
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_INTERFACE))
+	CreateBackEndInterface(pFEFile);
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION))
+	CreateBackEndFunction(pFEFile);
 }
 
 /** \brief internal function to create a file-pair per front-end file
  *  \param pFEFile the respective front-end file
- *  \param pContext the context of the creation
  *  \return true if successful
  *
- * the client generates one implementation file per IDL file
- * or for all IDL files (depending on the options).
+ * the client generates one implementation file per IDL file or for all IDL
+ * files (depending on the options).
  */
-bool CBEClient::CreateBackEndFile(CFEFile *pFEFile, CBEContext *pContext)
+void
+CBEClient::CreateBackEndFile(CFEFile *pFEFile)
 {
     if (!pFEFile->IsIDLFile())
-        return true;
+        return;
 
-    VERBOSE("CBEClient::CreateBackEndFile(file: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s) called\n",
         pFEFile->GetFileName().c_str());
 
+    string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
+    {
+	exc += " failed, because could not find header file for ";
+	exc += pFEFile->GetFileName();
+	throw new CBECreateException(exc);
+    }
 
     // create file
-    CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-    AddFile(pImpl);
-    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    if (!pImpl->CreateBackEnd(pFEFile, pContext))
+    try
     {
-        RemoveFile(pImpl);
+	pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
+    }
+    catch (CBECreateException *e)
+    {
+	m_ImplementationFiles.Remove(pImpl);
         delete pImpl;
-        VERBOSE("CBEClient::CreateBackEndFile failed because file could not be created\n");
-        return false;
+	throw;
     }
     // add interfaces and functions
-    if (!CreateBackEndFile(pFEFile, pContext, pImpl))
-        return false;
-    return true;
+    // throws exception if failing
+    CreateBackEndFile(pFEFile, pImpl);
 }
 
 /** \brief internal functions, which adds all members of a file to a file
  *  \param pFEFile the front-end file to search
- *  \param pContext the context of the creation
  *  \param pImpl the implementation file to add the members to
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEImplementationFile *pImpl)
+void 
+CBEClient::CreateBackEndFile(CFEFile * pFEFile, 
+    CBEImplementationFile *pImpl)
 {
-    VERBOSE("CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
         pFEFile->GetFileName().c_str(), pImpl->GetFileName().c_str());
 
     // get root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
+
+    string exc = string(__func__);
     // iterate over interfaces and add them
-    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
-    CFEInterface *pFEInterface;
-    while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = pFEFile->m_Interfaces.begin();
+	 iterI != pFEFile->m_Interfaces.end();
+	 iterI++)
     {
-        CBEClass *pClass = pRoot->FindClass(pFEInterface->GetName());
+        CBEClass *pClass = pRoot->FindClass((*iterI)->GetName());
         if (!pClass)
         {
-            VERBOSE("CBEClient::CreateBackEndFile failed because interface %s could not be found\n",
-                    pFEInterface->GetName().c_str());
-            return false;
+	    exc += " failed because interface " + (*iterI)->GetName() +
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
         // if class has been added already, then skip it
         if (pImpl->FindClass(pClass->GetName()) != pClass)
-            pClass->AddToFile(pImpl, pContext);
+            pClass->AddToFile(pImpl);
     }
     // iterate over libraries and add them
-    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
-    CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFEFile->m_Libraries.begin();
+	 iterL != pFEFile->m_Libraries.end();
+	 iterL++)
     {
-        CBENameSpace *pNameSpace = pRoot->FindNameSpace(pFELibrary->GetName());
+        CBENameSpace *pNameSpace = pRoot->FindNameSpace((*iterL)->GetName());
         if (!pNameSpace)
         {
-            VERBOSE("CBEClient::CreateBackEndFile failed because library %s could not be found\n",
-                    pFELibrary->GetName().c_str());
-            return false;
+	    exc += " failed because library " + (*iterL)->GetName() +
+		" could not be found";
+	    throw new CBECreateException(exc);
         }
         // if this namespace is already added, skip it
         if (pImpl->FindNameSpace(pNameSpace->GetName()) != pNameSpace)
-            pNameSpace->AddToFile(pImpl, pContext);
+            pNameSpace->AddToFile(pImpl);
     }
-    // if FILE_ALL: iterate over included files and call this function using them
-    if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
+    // if FILE_ALL: iterate over included files and call this function using
+    // them
+    if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL))
     {
-        vector<CFEFile*>::iterator iterF = pFEFile->GetFirstChildFile();
-        CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextChildFile(iterF)) != 0)
+        vector<CFEFile*>::iterator iterF;
+	for (iterF = pFEFile->m_ChildFiles.begin();
+	     iterF != pFEFile->m_ChildFiles.end();
+	     iterF++)
         {
-            if (!CreateBackEndFile(pIncFile, pContext, pImpl))
-                return false;
+            CreateBackEndFile(*iterF, pImpl);
         }
     }
-    return true;
 }
 
 /** \brief creates the back-end files for the FILE_MODULE option
  *  \param pFEFile the respective front-end file
- *  \param pContext the context of the file creation
  *  \return true if successful
  *
  * Because a file may also contain interfaces, we have to create a file for
@@ -435,292 +381,332 @@ bool CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEI
  * interfaces is derived from the IDL file directly. We do not add typedefs and
  * constants, because we do not add them to implementation files.
  */
-bool CBEClient::CreateBackEndModule(CFEFile *pFEFile, CBEContext *pContext)
+void
+CBEClient::CreateBackEndModule(CFEFile *pFEFile)
 {
     if (!pFEFile->IsIDLFile())
-        return true; // do not abort creation
+        return; // do not abort creation
 
-    VERBOSE("CBEClient::CreateBackEndModule(file: %s) called\n",
-        pFEFile->GetFileName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s(file: %s) called\n",
+	__func__, pFEFile->GetFileName().c_str());
+    
+    string exc = string (__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
+    {
+	exc += " failed, because header file could not be found for ";
+	exc += pFEFile->GetFileName();
+	throw new CBECreateException(exc);
+    }
 
     // get root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     // check if we have interfaces
-    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
-    CFEInterface *pFEInterface = pFEFile->GetNextInterface(iterI);
+    CFEInterface *pFEInterface = pFEFile->m_Interfaces.First();
     if (pFEInterface)
     {
         // we do have interfaces
         // create file
-        CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-        AddFile(pImpl);
-        pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+        CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+        m_ImplementationFiles.Add(pImpl);
         pImpl->SetHeaderFile(pHeader);
-        if (!pImpl->CreateBackEnd(pFEFile, pContext))
+	try
+	{
+	    pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFile(pImpl);
+	    m_ImplementationFiles.Remove(pImpl);
             delete pImpl;
-            VERBOSE("CBEClient::CreateBackEndModule failed because impl. file could not be created\n");
-            return false;
+	    throw;
         }
         // add interfaces to this file
-        iterI = pFEFile->GetFirstInterface();
-        while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
+        vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFEFile->m_Interfaces.begin();
+	     iterI != pFEFile->m_Interfaces.end();
+	     iterI++)
         {
             // find interface
-            CBEClass *pBEClass = pRoot->FindClass(pFEInterface->GetName());
-            if (!pBEClass)
+            CBEClass *pClass = pRoot->FindClass((*iterI)->GetName());
+            if (!pClass)
             {
-                RemoveFile(pImpl);
+		m_ImplementationFiles.Remove(pImpl);
                 delete pImpl;
-                VERBOSE("CBEClient::CreateBackEndModule failed because function %s is not created\n",
-                        pFEInterface->GetName().c_str());
-                return false;
+		exc += " failed because clas " + (*iterI)->GetName() + 
+		    " is not created";
+		throw new CBECreateException(exc);
             }
             // add interface to file
-            pBEClass->AddToFile(pImpl, pContext);
+            pClass->AddToFile(pImpl);
         }
     }
     // iterate over libraries and create files for them
-    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
-    CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFEFile->m_Libraries.begin();
+	 iterL != pFEFile->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndModule(pFELibrary, pContext))
-            return false;
+        CreateBackEndModule(*iterL);
     }
     // success
-    return true;
 }
 
 /** \brief creates the file for the module
  *  \param pFELibrary the respective front-end library
- *  \param pContext the context of the creation
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndModule(CFELibrary *pFELibrary, CBEContext *pContext)
+void
+CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
 {
-    VERBOSE("CBEClient::CreateBackEndModule(lib: %s) called\n",
-        pFELibrary->GetName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s(lib: %s) called\n",
+	__func__, pFELibrary->GetName().c_str());
     // get the root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
 
+    string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFELibrary, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFELibrary, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
+    {
+	exc += " failed, beacuse header file could not be found";
+	throw new CBECreateException(exc);
+    }
 
     // search for the library
     CBENameSpace *pBENameSpace = pRoot->FindNameSpace(pFELibrary->GetName());
     if (!pBENameSpace)
     {
-        VERBOSE("CBEClient::CreateBackEndModule failed because namespace %s could not be found\n",
-                pFELibrary->GetName().c_str());
-        return true;
+	exc += " failed because namespace " + pFELibrary->GetName() +
+	    " could not be found\n";
+	throw new CBECreateException(exc);
     }
     // create the file
-    CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-    AddFile(pImpl);
-    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    if (!pImpl->CreateBackEnd(pFELibrary, pContext))
+    try
     {
-        RemoveFile(pImpl);
+	pImpl->CreateBackEnd(pFELibrary, FILETYPE_CLIENTIMPLEMENTATION);
+    }
+    catch (CBECreateException *e)
+    {
+	m_ImplementationFiles.Remove(pImpl);
         delete pImpl;
-        VERBOSE("CBEClient::CreateBackEndModule failed because implem. file  could not be created\n");
-        return false;
+        throw;
     }
     // add it to the file
-    pBENameSpace->AddToFile(pImpl, pContext);
+    pBENameSpace->AddToFile(pImpl);
     // iterate over nested libs and call this function for them as well
-    vector<CFELibrary*>::iterator iterL = pFELibrary->GetFirstLibrary();
-    CFELibrary *pFENested;
-    while ((pFENested = pFELibrary->GetNextLibrary(iterL)) != 0)
+//     for_each(pFELibrary->m_Libraries.begin(),
+// 	pFELibrary->m_Libraries.end(),
+// 	mem_fun(&CBEClient::CreateBackEndModule));
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFELibrary->m_Libraries.begin();
+	 iterL != pFELibrary->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndModule(pFENested, pContext))
-            return false;
+        CreateBackEndModule(*iterL);
     }
-    return true;
 }
 
 /** \brief creates the files for the FILE_INTERFACE option
  *  \param pFEFile the file to search for interfaces
- *  \param pContext the context of the creation process
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndInterface(CFEFile *pFEFile, CBEContext *pContext)
+void
+CBEClient::CreateBackEndInterface(CFEFile *pFEFile)
 {
-    VERBOSE("CBEClient::CreateBackEndInterface(file: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndInterface(file: %s) called\n",
         pFEFile->GetFileName().c_str());
     // search for top-level interfaces
-    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
-    CFEInterface *pFEInterface;
-    while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
+//     for_each(pFEFile->m_Interfaces.Begin(),
+// 	pFEFile->m_Interfaces.End(),
+// 	CreateBackEndInterface);
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = pFEFile->m_Interfaces.begin();
+	 iterI != pFEFile->m_Interfaces.end();
+	 iterI++)
     {
-        if (!CreateBackEndInterface(pFEInterface, pContext))
-            return false;
+        CreateBackEndInterface(*iterI);
     }
     // search for libraries
-    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
-    CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
+//     for_each(pFEFile->m_Libraries.Begin(),
+// 	pFEFile->m_Libraries.End(),
+// 	CreateBackEndInterface);
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFEFile->m_Libraries.begin();
+	 iterL != pFEFile->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndInterface(pFELibrary, pContext))
-            return false;
+        CreateBackEndInterface(*iterL);
     }
-    return true;
 }
 
 /** \brief creates the file for the FILE_INTERFACE option
  *  \param pFELibrary the module to search for interfaces
- *  \param pContext the context of the creation
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary, CBEContext *pContext)
+void
+CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary)
 {
-    VERBOSE("CBEClient::CreateBackEndInterface(lib: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEClient::CreateBackEndInterface(lib: %s) called\n",
         pFELibrary->GetName().c_str());
     // search for interfaces
-    vector<CFEInterface*>::iterator iterI = pFELibrary->GetFirstInterface();
-    CFEInterface *pFEInterface;
-    while ((pFEInterface = pFELibrary->GetNextInterface(iterI)) != 0)
+//     for_each(pFELibrary->m_Interfaces.Begin(),
+// 	pFELibrary->m_Interfaces.End(),
+// 	CreateBackEndInterface);
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = pFELibrary->m_Interfaces.begin();
+	 iterI != pFELibrary->m_Interfaces.end();
+	 iterI++)
     {
-        if (!CreateBackEndInterface(pFEInterface, pContext))
-            return false;
+        CreateBackEndInterface(*iterI);
     }
     // search for nested libs
-    vector<CFELibrary*>::iterator iterL = pFELibrary->GetFirstLibrary();
-    CFELibrary *pFENested;
-    while ((pFENested = pFELibrary->GetNextLibrary(iterL)) != 0)
+//     for_each(pFELibrary->m_Libraries.Begin(),
+// 	pFELibrary->m_Libraries.End(),
+// 	CreateBackEndInterface);
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFELibrary->m_Libraries.begin();
+	 iterL != pFELibrary->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndInterface(pFENested, pContext))
-            return false;
+        CreateBackEndInterface(*iterL);
     }
-    return true;
 }
 
 /** \brief create the back-end file for an interface
  *  \param pFEInterface the front-end interface
- *  \param pContext the context of the creation
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface, CBEContext *pContext)
+void
+CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
 {
-    VERBOSE("CBEClient::CreateBackEndInterface(interface: %s) called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndInterface(interface: %s) called\n",
         pFEInterface->GetName().c_str());
     // get root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
 
+    string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEInterface, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFEInterface, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
+    {
+	exc += " failed, because no header file could be found";
+	throw new CBECreateException(exc);
+    }
 
     // find the interface
     CBEClass *pBEClass = pRoot->FindClass(pFEInterface->GetName());
     if (!pBEClass)
     {
-        VERBOSE("CBEClient::CreateBackEndInterface failed because interface %s could not be found\n",
-                pFEInterface->GetName().c_str());
-        return false;
+	exc += " failed because interface " + pFEInterface->GetName() +
+	    " could not be found";
+	throw new CBECreateException(exc);
     }
     // create the file
-    CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-    AddFile(pImpl);
-    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    if (!pImpl->CreateBackEnd(pFEInterface, pContext))
+    try
     {
-        RemoveFile(pImpl);
+	pImpl->CreateBackEnd(pFEInterface, FILETYPE_CLIENTIMPLEMENTATION);
+    }
+    catch (CBECreateException *e)
+    {
+	m_ImplementationFiles.Remove(pImpl);
         delete pImpl;
-        VERBOSE("CBEClient::CreateBackEndInterface failed because implementation file couldnot be created\n");
-        return false;
+	throw;
     }
     // add the interface
-    pBEClass->AddToFile(pImpl, pContext);
-    return true;
+    pBEClass->AddToFile(pImpl);
 }
 
 /** \brief creates the files for the FILE_FUNCTION option
  *  \param pFEFile the file to search for functions
- *  \param pContext the context of the create process
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndFunction(CFEFile *pFEFile, CBEContext *pContext)
+void 
+CBEClient::CreateBackEndFunction(CFEFile *pFEFile)
 {
-    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFEFile->GetFileName().c_str());
     // if there are any top level type definitions and  constants
     // iterate over interfaces
-    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
-    CFEInterface *pFEInterface;
-    while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
+//     for_each(pFEFile->m_Interfaces.Begin(),
+// 	pFEFile->m_Interfaces.End(),
+// 	CreateBackEndFunction);
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = pFEFile->m_Interfaces.begin();
+	 iterI != pFEFile->m_Interfaces.end();
+	 iterI++)
     {
-        if (!CreateBackEndFunction(pFEInterface, pContext))
-            return false;
+        CreateBackEndFunction(*iterI);
     }
     // iterate over libraries
-    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
-    CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
+//     for_each(pFEFile->m_Libraries.Begin(),
+// 	pFEFile->m_Libraries.End(),
+// 	CreateBackEndFunction);
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFEFile->m_Libraries.begin();
+	 iterL != pFEFile->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndFunction(pFELibrary, pContext))
-            return true;
+        CreateBackEndFunction(*iterL);
     }
-    return true;
 }
 
 /** \brief creates the back-end files for the FILE_FUNCTION option
  *  \param pFELibrary the library to search for functions
- *  \param pContext the context of the create process
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndFunction(CFELibrary *pFELibrary, CBEContext *pContext)
+void
+CBEClient::CreateBackEndFunction(CFELibrary *pFELibrary)
 {
-    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFELibrary->GetName().c_str());
     // search for interface
-    vector<CFEInterface*>::iterator iterI = pFELibrary->GetFirstInterface();
-    CFEInterface *pFEInterface;
-    while ((pFEInterface = pFELibrary->GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = pFELibrary->m_Interfaces.begin();
+	 iterI != pFELibrary->m_Interfaces.end();
+	 iterI++)
     {
-        if (!CreateBackEndFunction(pFEInterface, pContext))
-            return false;
+        CreateBackEndFunction(*iterI);
     }
     // search for nested libs
-    vector<CFELibrary*>::iterator iterL = pFELibrary->GetFirstLibrary();
-    CFELibrary *pFENested;
-    while ((pFENested = pFELibrary->GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = pFELibrary->m_Libraries.begin();
+	 iterL != pFELibrary->m_Libraries.end();
+	 iterL++)
     {
-        if (!CreateBackEndFunction(pFENested, pContext))
-            return false;
+        CreateBackEndFunction(*iterL);
     }
-    return true;
 }
 
 /** \brief creates the back-end file for the FILE_FUNCTION option
  *  \param pFEInterface the interface to search for the functions
- *  \param pContext the context of the creation
  *  \return true if successful
  */
-bool CBEClient::CreateBackEndFunction(CFEInterface *pFEInterface, CBEContext *pContext)
+void
+CBEClient::CreateBackEndFunction(CFEInterface *pFEInterface)
 {
-    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFEInterface->GetName().c_str());
     // search the interface
-    vector<CFEOperation*>::iterator iter = pFEInterface->GetFirstOperation();
-    CFEOperation *pFEOperation;
-    while ((pFEOperation = pFEInterface->GetNextOperation(iter)) != 0)
+    vector<CFEOperation*>::iterator iter;
+    for (iter = pFEInterface->m_Operations.begin();
+	 iter != pFEInterface->m_Operations.end();
+	 iter++)
     {
-        if (!CreateBackEndFunction(pFEOperation, pContext))
-            return false;
+        CreateBackEndFunction(*iter);
     }
-    return true;
 }
+

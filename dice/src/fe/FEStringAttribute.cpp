@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEStringAttribute.cpp
- *    \brief   contains the implementation of the class CFEStringAttribute
+ *  \brief   contains the implementation of the class CFEStringAttribute
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -48,7 +48,7 @@ CFEStringAttribute::~CFEStringAttribute()
 }
 
 /** retrieves the contained string
- *    \return a reference to the string, which is parameter of this attribute
+ *  \return a reference to the string, which is parameter of this attribute
  * Because the returned string is only a reference to the member data, please copy
  * the string before you manipulate it.
  */
@@ -58,46 +58,9 @@ string CFEStringAttribute::GetString()
 }
 
 /** creates a copy of this object
- *    \return a copy of this object
+ *  \return a copy of this object
  */
 CObject *CFEStringAttribute::Clone()
 {
     return new CFEStringAttribute(*this);
-}
-
-/** serializes this object
- *    \param pFile the file to serialize from/to
- */
-void CFEStringAttribute::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        switch (m_nType)
-        {
-        case ATTR_UUID:
-            pFile->PrintIndent("<attribute>uuid(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_HELPFILE:
-            pFile->PrintIndent("<attribute>helpfile(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_HELPSTRING:
-            pFile->PrintIndent("<attribute>helpstring(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_DEFAULT_FUNCTION:
-            pFile->PrintIndent("<attribute>default_function(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_ERROR_FUNCTION:
-            pFile->PrintIndent("<attribute>error_string(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_ERROR_FUNCTION_CLIENT:
-            pFile->PrintIndent("<attribute>error_string_client(%s)</attribute>\n", GetString().c_str());
-            break;
-        case ATTR_ERROR_FUNCTION_SERVER:
-            pFile->PrintIndent("<attribute>error_string_server(%s)</attribute>\n", GetString().c_str());
-            break;
-        default:
-            CFEAttribute::Serialize(pFile);
-            break;
-        }
-    }
 }

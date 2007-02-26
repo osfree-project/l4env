@@ -1,3 +1,5 @@
+# -*- makefile -*-
+
 # Targets in this Makefile:
 # - all: Run all subsystems' "all" targets
 # - doc: Create doxygen documentation in directory "docs"
@@ -10,6 +12,8 @@
 # all `preprocess'd C++ source files have been created.
 
 all: do-all
+
+BUILD_OBJECTS=true
 
 include $(srcdir)/Makeconf	# also reads srcdir/Makeconf.local
                                 # and        objdir/Makeconf.local
@@ -65,7 +69,7 @@ ifeq ($(findstring $(CCVER_MINOR),2 3 4),)
 endif
 endif
 
-Checkinitcalls: kernel.image $(OBJ_KERNEL)
+Checkinitcalls: $(KERNEL) $(OBJ_KERNEL)
 ifneq ($(shell $(CXX) -dumpversion | cut -d . -f1-2),3.4)
 	@echo "Checking initcalls"
 	$(VERBOSE)$(srcdir)/../tool/checkinitcalls -k kernel.image \
@@ -124,7 +128,7 @@ DEPS.dot: $(KERNEL_MODULES_CPP)
 	   echo $$f >> source_files.mkdeps ; \
 	 done
 	$(srcdir)/../tool/gendotdeps \
-	  $(addprefix -I,$(PRIVATE_INCDIR)) $(GENDOT_FLAGS) \
+	  -E "$(PREPROCESS_PARTS)" $(addprefix -I,$(PRIVATE_INCDIR)) $(addprefix --vpath=,$(VPATH)) $(GENDOT_FLAGS) \
 	  -v -b $(srcdir)/DEPS.blacklist source_files.mkdeps -o $@ || $(RM) $@
 	@$(RM) source_files.mkdeps
 
@@ -160,16 +164,30 @@ Circular: $(KERNEL) $(BOOT) $(RUN_TESTS) $(CHECKSUM)
 	) > $@.new
 	@mv $@.new $@
 
-# Check that this build did not introduce circular dependencies.
+# Create a Circular.max file for the first time.  Usually this target
+# is not needed -- there should be a Circular.max file in the CVS.
+$(srcdir)/Circular.max.$(CONFIG_XARCH): 
+# Circular is not in the dependencies because we do not want a new
+# copy of Circular.max every time Circular changes.  We nevertheless
+# need it to so the copy -- so create it explicitly
+	$(MAKE) -f $(srcdir)/Makefile.sub2 Circular
+	cp Circular $@
+
+# Check that the number of circular dependency has not increased in
+# this build.
 .PHONY: Circular-ok
-Circular-ok: Circular
-	@ if [ $$(tail -1 Circular) -gt 0 ]; \
+Circular-ok: $(srcdir)/Circular.max.$(CONFIG_XARCH) Circular
+# Circular.max.* must be the first dependency:  We are going to
+# reference it as $<.
+	@ max=$$(tail -1 $<); \
+	  current=$$(tail -1 Circular); \
+	  if [ $$current -gt $$max ]; \
 	  then \
-	    echo "Circular dependencies detected!"; \
-	    cat Circular; \
+	    echo "Number of circular dependencies increased!"; \
+	    diff -up $< Circular; \
 	    exit 1; \
 	  fi; \
-	  echo "Circular-dependency check OK."
+	  echo "Circular-dependency check OK ($$current <= $$max)"
 
 ###
 
@@ -177,10 +195,6 @@ Circular-ok: Circular
 
 # Find directories for source and header files.  There may be
 # duplicates, so weed out the list using a tiny Perl script.
-# Additionally we strip off the srcdir from every path because
-# we're probably not starting our editor in a build dir. Instead
-# put the tags file into $(srcdir) (this is suboptimal too but
-# better than the builddir I guess)
 define source-files
 	( find $(shell perl -e '				   \
 		%seen = ();					   \
@@ -191,16 +205,13 @@ define source-files
 		    print "$$i ";				   \
 		}' $(filter-out auto, $(VPATH) $(PRIVATE_INCDIR))) \
 	  -maxdepth 1 -type f -name '*.cpp' -o -name '*.h' 	   \
-	  -o -name '*.cc' -o -name '*.c' ) |			   \
-	  perl -p -e 's@^$(srcdir)/@@'
+	  -o -name '*.cc' -o -name '*.c' )
 endef
 
 TAGS:
-	$(source-files) | (cd $(srcdir) && \
-	                   etags --members --language=c++ -)
+	$(source-files) | etags --members --language=c++ -
 
 tags:
-	$(source-files) | (cd $(srcdir) && \
-	                   ctags --members --language=c++ -d -w -T -)
+	$(source-files) | ctags --members --language=c++ -d -w -T -
 
 

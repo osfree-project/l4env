@@ -30,6 +30,10 @@ public:
 #line 21 "dropsection.cpp"
   void
   bar( unsigned x );
+  
+#line 54 "dropsection.cpp"
+  int
+  tust( int y );
 
 private:  
 #line 17 "dropsection-ext.cpp"

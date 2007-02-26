@@ -44,7 +44,7 @@ Perf_cnt::get_perf_event(Mword, unsigned *, const char **, const char **) {}
 PUBLIC static Mword
 Perf_cnt::get_max_perf_event() { return 0; }
 PUBLIC static void
-Perf_cnt::split_event(Mword, Mword *, Mword *) {}
+Perf_cnt::split_event(Mword, unsigned *, Mword *) {}
 PUBLIC static Mword
 Perf_cnt::lookup_event(Mword) { return 0; }
 PUBLIC static void
@@ -62,6 +62,9 @@ Perf_cnt::mode(Mword /*slot*/, const char **mode, const char **name,
   return 0;
 }
 
-PUBLIC static void
+PUBLIC static
+int
 Perf_cnt::setup_pmc(Mword, Mword, Mword, Mword, Mword)
-{}
+{
+  return 0;
+}

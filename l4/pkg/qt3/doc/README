@@ -1,0 +1,60 @@
+This directory contains some documentation on how to start Qt3 applications in
+L4/DROPS. If you are looking for the Qt API & tools documentation, please use
+the online version on Trolltech's web site or the packaged version from your
+Linux distribution. Also see $L4DIR/pkg/qt3/lib/contrib/README regarding this
+subject.
+
+0) Some background
+------------------
+
+Qt/Embedded ships with its own windowing system, which also includes a variety
+of prerendered fonts (.qpf files in $QTDIR/lib/fonts). You have to make these
+font files available via L4VFS before you can start any Qt3 application. In
+this directory you will find a 'loader' config file (cfg_qt3_file_servers),
+which I used for the TUD:OS Demo CD. It will start three instances of
+'simple_file_server' and one instance of 'tmpfs'. It also uses 'fstab' to
+create the following directory hierarchy in L4VFS:
+
+/
++-qt3
+| +-lib
+|   +-fonts
++-data
++-sheep
++-tmp
+
+/qt3/lib/fonts contains a set of .qpf font files, in /data you will find some
+pictures and text files, and /sheep contains all files necessary for the game
+'Little Sheep'. The 'tmpfs' file server allows you store files in /tmp (e.g.,
+modified text files saved with QTinyEditor). The data files (data + sheep) are
+in $L4DIR/pkg/qt3/examples/data. You can copy/symlink this directory to your
+tftpboot boot directory.
+
+You will need to adapt the path variables at the beginning of the loader
+script. Another config file (cfg_qrun) can be used to start the Qt application
+launcher QRun. Also, you must pass the '-qws' switch to exactly _one_ of the
+Qt applications in a session. This application will then become the QWS server
+(cfg_qrun does this for you).
+
+
+1) Starting a Qt session in Fiasco/UX:
+--------------------------------------
+
+You can start a Qt3 session with Fiasco/UX and fuxfprov. Just have a look at
+the following two files:
+
+  $L4DIR/tool/runux/qt3_loader
+and
+  $L4DIR/pkg/qt3/examples/qrun/run.sh
+
+You may need to adapt the $CFGPATH variable in
+
+$L4DIR/tool/runux/config.local
+
+
+2) GRUB menu.lst for native Fiasco:
+-----------------------------------
+
+Finally, the file menu.lst in this directory contains a sample GRUB menu.lst
+for launching Qt3 applications. Again, you will need to adapt the path
+variables.

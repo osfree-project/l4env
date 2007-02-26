@@ -11,7 +11,8 @@ typedef enum{
 	OMEGA0_PASS,
 	OMEGA0_REQUEST,
 	OMEGA0_FIRST,
-	OMEGA0_NEXT
+	OMEGA0_NEXT,
+	OMEGA0_DETACH_ALL,
 } omege0_request_descriptor;
 
 #define OMEAG0_SERVER_NAME	"omega0" // name to register with at nameserver

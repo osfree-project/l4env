@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBEUnmarshalFunction.h
- *    \brief   contains the declaration of the class CSockBEUnmarshalFunction
+ *  \brief   contains the declaration of the class CSockBEUnmarshalFunction
  *
  *    \date    11/30/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -41,17 +41,16 @@ class CSockBEUnmarshalFunction : public CBEUnmarshalFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CSockBEUnmarshalFunction();
     virtual ~CSockBEUnmarshalFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CSockBEUnmarshalFunction(CSockBEUnmarshalFunction &src);
 
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
-    virtual void WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 };
 
 #endif

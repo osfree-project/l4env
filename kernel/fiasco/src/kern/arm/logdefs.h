@@ -3,10 +3,10 @@
 
 /* This is some logging for the poor and crippled. */
 
-#define X_LOG_CONTEXT_SWITCH						\
+#define LOG_CONTEXT_SWITCH						\
   do {									\
     static int volatile tb_ctw_sw_enabled = 0;				\
-    if (tb_ctw_sw_enabled)						\
+    if (0 || tb_ctw_sw_enabled)						\
       printf("tb_ctx_sw: ctx=%p, ip=%p\n", this, (void *)regs()->ip()); \
   } while (0)
 
@@ -44,8 +44,44 @@
 #define LOG_SCHED_LOAD			do { } while (0)
 #define LOG_SCHED_SAVE			do { } while (0)
 #define LOG_SCHED_INVALIDATE		do { } while (0)
+
+#include "globalconfig.h"
+
+#if defined(CONFIG_JDB)
+
+#include "globals.h"
+#include "jdb_tbuf.h"
+#include "cpu_lock.h"
+#include "lock_guard.h"
+#include "processor.h"
+
+#define LOG_MSG(context, text)						\
+  do {									\
+    /* The cpu_lock is needed since virq::hit() depends on it */	\
+    Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+    Tb_entry_ke *tb = static_cast<Tb_entry_ke*>(Jdb_tbuf::new_entry());	\
+    tb->set_const(context, Proc::program_counter(), text);		\
+    Jdb_tbuf::commit_entry();						\
+  } while (0)
+
+/*
+ * Kernel instrumentation macro used by fm3. Do not remove!
+ */
+#define LOG_MSG_3VAL(context, text, v1, v2, v3)				\
+  do {									\
+    /* The cpu_lock is needed since virq::hit() depends on it */	\
+    Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+    Tb_entry_ke_reg *tb =						\
+       static_cast<Tb_entry_ke_reg*>(Jdb_tbuf::new_entry());		\
+    tb->set_const(context, Proc::program_counter(), text, v1, v2, v3);	\
+    Jdb_tbuf::commit_entry();						\
+  } while (0)
+
+#else
 #define LOG_MSG(a,b)			do { } while (0)
 #define LOG_MSG_3VAL(a,b,c,d,e)		do { } while (0)
+#endif /* ! CONFIG_JDB */
+
 #define LOG_SEND_PREEMPTION		do { } while (0)
 #define LOG_TASK_NEW			do { } while (0)
 

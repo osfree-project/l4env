@@ -31,7 +31,7 @@ char LOG_tag[9] = "ts_exit";
 
 static int debug_pager = 0;
 
-typedef struct 
+typedef struct
 {
   l4_addr_t		start;
   l4_addr_t		end;
@@ -65,12 +65,12 @@ app(int id, int num_create, l4_threadid_t caller)
   sprintf(name, "simple_ts_exit_%i", id);
   names_register(name);
   l4dm_mem_open(dsm_id, DS_SIZE, 0, 0, name, &ds);
-  
+
   for (i=0; i<num_create; i++)
     {
       l4_addr_t esp = app_stack[appindex].start+L4_PAGESIZE;
       CORBA_Environment _env = dice_default_environment;
-      l4_threadid_t tid;
+      l4_threadid_t tid, invalid = L4_INVALID_ID;
       int error;
 
       /* put app number and myself on top of stack as parameter */
@@ -85,7 +85,7 @@ app(int id, int num_create, l4_threadid_t caller)
        * new task (because the task already runs before the task create to
        * the task server returns */
       if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
-	  || _env.major != CORBA_NO_EXCEPTION)
+	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  /* most probably we have reached the maximum number of tasks */
 	  printf("Error allocating task: %d\n", error);
@@ -106,8 +106,8 @@ app(int id, int num_create, l4_threadid_t caller)
       /* Create task. We choose a priority of 19 and an mcp of 0xe0. */
       if ((error = l4_ts_create_call(&ts_id, &tid,
 				     (l4_addr_t)app, esp, 0xe0,
-				     &pager, 21, "",  0, &_env))
-	  || _env.major != CORBA_NO_EXCEPTION)
+				     &pager, &invalid, 21, "",  0, &_env))
+	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  printf("Error %d creating task\n", error);
 	  break;
@@ -117,7 +117,7 @@ app(int id, int num_create, l4_threadid_t caller)
       l4_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
 
       if (debug_pager)
-        printf("Task "l4util_idfmt" (%08x:%08x) stack at %08x..%08x is up\n",
+        printf("Task "l4util_idfmt" (%08lx:%08lx) stack at %08lx..%08lx is up\n",
 	     l4util_idstr(tid),tid.lh.high,tid.lh.low,
 	     esp & L4_PAGEMASK, (esp & L4_PAGEMASK)+L4_PAGESIZE-1);
     }
@@ -156,7 +156,7 @@ app_pager(void *unused)
 
 	  if (src_thread.id.task > MAX_TASK_ID)
 	    {
-	      printf("pagefault at %08x (eip %08x) from unknown task "
+	      printf("pagefault at %08lx (eip %08lx) from unknown task "
 		     l4util_idfmt"\n", dw1, dw2, l4util_idstr(src_thread));
 	      enter_kdebug("stop");
 	      continue;
@@ -178,7 +178,7 @@ app_pager(void *unused)
 	  else if ((dw1 & 0xfffffffc) == 0)
 	    {
 	      printf("null pointer exception thread "l4util_idfmt
-		     ", (%08x at %08x)\n",
+		     ", (%08lx at %08lx)\n",
 		     l4util_idstr(src_thread), dw1, dw2);
 	      enter_kdebug("stop");
 	    }
@@ -208,11 +208,11 @@ app_pager(void *unused)
 	    }
 	  else
 	    {
-	      printf("unknown pagefault at %08x (eip %08x) from "
+	      printf("unknown pagefault at %08lx (eip %08lx) from "
 		     l4util_idfmt"\n"
-		     "eip = %08x..%08x  stack = %08x..%08x\n",
+		     "eip = %08lx..%08lx  stack = %08lx..%08lx\n",
 		      dw1, dw2, l4util_idstr(src_thread),
-		      (unsigned)&app, (unsigned)&task2app,
+		      (unsigned long)&app, (unsigned long)&task2app,
 		      app_stack[appidx].start, app_stack[appidx].end);
 	      enter_kdebug("stop");
 	    }

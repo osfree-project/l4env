@@ -4,23 +4,26 @@ TARGET		= libnetboot.a
 NOTARGETSTOINSTALL = y
 
 all::
-include ../../Makeconf
-Makefile.inc: ../../Makeconf
+include $(OBJ_DIR)/../Makeconf
+Makefile.inc: $(OBJ_DIR)/../Makeconf
 
 SRC_C		= fsys_tftp.c nic.c netboot.c config.c misc.c gunzip.c \
-		  timer.c
+		  timer.c 
 
 DEFINES		= -DWITHOUT_LIBC_STUBS -DFSYS_TFTP=1
 CFLAGS		= -fno-strict-aliasing
+PRIVATE_INCDIR	= $(OBJ_DIR)
 
-ifeq ($(CONFIG_PCI),y)
-SRC_C		+= pci.c io_support.c
-endif
 ifeq ($(CONFIG_OSHKOSH),y)
-SRC_C		+= oshkosh.c
+SRC_C		+= oshkosh.c 
 endif
 ifeq ($(CONFIG_ORE),y)
-SRC_C		+= ore.c
+SRC_C		+= ore.c 
+endif
+
+ifeq ($(CONFIG_REAL_HW),y)
+ifeq ($(CONFIG_PCI),y)
+SRC_C		+= pci.c io_support.c
 endif
 ifeq ($(CONFIG_EEPRO100),y)
 SRC_C		+= eepro100.c
@@ -52,4 +55,4 @@ endif
 ifeq ($(CONFIG_NS8390),y)
 SRC_C		+= ns8390.c
 endif
-
+endif

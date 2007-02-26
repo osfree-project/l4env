@@ -10,6 +10,14 @@
 #ifndef SYMBOLS_H
 #define SYMBOLS_H
 
+#ifdef ARCH_x86
+#define OFFSET 11
+#endif
+
+#ifdef ARCH_amd64
+#define OFFSET 19
+#endif
+
 void
 extract_symbols_from_image(l4_addr_t elf_image, unsigned task_no,
 			   l4_addr_t *from_sym, l4_addr_t *to_sym);

@@ -1,0 +1,231 @@
+--- Makefile	2006-06-06 16:07:14.450564676 +0200
++++ Makefile	2006-07-14 17:03:29.840508136 +0200
+@@ -2,10 +2,10 @@
+ # libavcodec Makefile
+ # (c) 2000-2005 Fabrice Bellard
+ #
+-include ../config.mak
++include config.mak
+ 
+ # NOTE: -I.. is needed to include config.h
+-CFLAGS=$(OPTFLAGS) -DHAVE_AV_CONFIG_H -I.. -I$(SRC_PATH)/libavutil -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE $(AMR_CFLAGS)
++CFLAGS=$(OPTFLAGS) -DHAVE_AV_CONFIG_H -I. -I$(PKGDIR_OBJ)/config -I../../support/libavutil $(LIBCINCDIR_x86_tiny) -D_GNU_SOURCE $(AMR_CFLAGS) -Wall -Wno-switch
+ 
+ OBJS= bitstream.o utils.o mem.o allcodecs.o \
+       mpegvideo.o jrevdct.o jfdctfst.o jfdctint.o\
+@@ -81,7 +81,11 @@
+     OBJS+= h261.o
+ endif
+ ifneq ($(CONFIG_H264_DECODER)$(CONFIG_SVQ3_DECODER),)
++ifneq ($(H264_SLICE_SCHEDULE),y)
+     OBJS+= h264.o
++else
++    OBJS+= h264_sched.o
++endif
+ endif
+ ifneq ($(CONFIG_HUFFYUV_DECODER)$(CONFIG_HUFFYUV_ENCODER)$(CONFIG_FFVHUFF_DECODER)$(CONFIG_FFVHUFF_ENCODER),)
+     OBJS+= huffyuv.o
+@@ -420,7 +424,7 @@
+ 
+ EXTRAOBJS = $(AMREXTRALIBS)
+ 
+-include $(SRC_PATH)/common.mak
++include common.mak
+ 
+ $(LIB): $(AMRLIBS)
+ 
+@@ -432,6 +436,7 @@
+ dsputil.o: dsputil.c dsputil.h
+ 
+ clean:: $(CLEANAMR)
++	cd $(OBJ_DIR) ; \
+ 	rm -f \
+ 	   i386/*.o i386/*~ \
+ 	   armv4l/*.o armv4l/*~ \
+--- common.mak	2006-07-21 10:16:39.294174869 +0200
++++ common.mak	2006-07-21 10:28:18.620123874 +0200
+@@ -2,7 +2,7 @@
+ # common bits used by all libraries
+ #
+ 
+-SRC_DIR = $(SRC_PATH)/$(SUBDIR)
++SRC_DIR := $(SRC_DIR)/../$(SUBDIR)
+ VPATH = $(SRC_DIR)
+ 
+ #FIXME: This should be in configure/config.mak
+@@ -21,14 +21,21 @@
+ 
+ SRCS := $(OBJS:.o=.c) $(ASM_OBJS:.o=.S) $(CPPOBJS:.o=.cpp)
+ OBJS := $(OBJS) $(ASM_OBJS) $(CPPOBJS)
++OBJS := $(addprefix $(OBJ_DIR)/,$(OBJS))
++LIB := $(addprefix $(OBJ_DIR)/,$(LIB))
+ STATIC_OBJS := $(OBJS) $(STATIC_OBJS)
+ SHARED_OBJS := $(OBJS) $(SHARED_OBJS)
+ 
+-all: $(LIB) $(SLIBNAME)
++ifeq ($(TARGET_ARCH_UNSUPPORTED),)
++all:: $(LIB) $(SLIBNAME)
++else
++all::
++endif
+ 
+ $(LIB): $(STATIC_OBJS)
+-	rm -f $@
+-	$(AR) rc $@ $^ $(EXTRAOBJS)
++	cd $(OBJ_DIR) ; \
++	rm -f $@ ; \
++	$(AR) rc $@ $^ $(EXTRAOBJS) ; \
+ 	$(RANLIB) $@
+ 
+ $(SLIBNAME): $(SHARED_OBJS)
+@@ -37,14 +44,17 @@
+ 	-lib /machine:i386 /def:$(@:.dll=.def)
+ endif
+ 
+-%.o: %.c
++$(filter-out $(ASM_OBJS) $(CPPOBJS),$(OBJS)): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
++	@mkdir -p $(dir $@)
+ 	$(CC) $(CFLAGS) $(LIBOBJFLAGS) -c -o $@ $<
+ 
+-%.o: %.S
++$(ASM_OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.S
++	@mkdir -p $(dir $@)
+ 	$(CC) $(CFLAGS) $(LIBOBJFLAGS) -c -o $@ $<
+ 
+ # BeOS: remove -Wall to get rid of all the "multibyte constant" warnings
+-%.o: %.cpp
++$(CPPOBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
++	@mkdir -p $(dir $@)
+ 	g++ $(subst -Wall,,$(CFLAGS)) -c -o $@ $<
+ 
+ depend: $(SRCS)
+@@ -52,7 +62,8 @@
+ 
+ dep:	depend
+ 
+-clean::
++cleanall clean::
++	cd $(OBJ_DIR) ; \
+ 	rm -f *.o *.d *~ *.a *.lib *.so *.dylib *.dll \
+ 	      *.lib *.def *.dll.a *.exp
+ 
+@@ -66,7 +77,7 @@
+ INSTLIBTARGETS += install-lib-static
+ endif
+ 
+-install: install-libs install-headers
++install:
+ 
+ install-libs: $(INSTLIBTARGETS)
+ 
+--- utils.c	30 Mar 2006 04:33:05 -0000	1.179
++++ utils.c	13 Apr 2006 09:09:44 -0000
+@@ -1353,6 +1353,8 @@
+     return n;
+ }
+ 
++/* This function is unused and mkstemp() does not link here. Kill it! */
++#if 0
+ /* Wrapper to work around the lack of mkstemp() on mingw/cygin.
+  * Also, tries to create file in /tmp first, if possible.
+  * *prefix can be a character constant; *filename will be allocated internally.
+@@ -1388,3 +1390,4 @@
+     }
+     return fd; /* success */
+ }
++#endif
+--- avcodec.h	2006-05-24 17:02:30.815299516 +0200
++++ avcodec.h	2006-05-24 17:08:54.215824451 +0200
+@@ -1968,6 +1968,92 @@
+      */
+     int scenechange_factor;
+ 
++#if H264_SLICE_SCHEDULE
++
++    /* callback for external data processing */
++    void (*process_slice)(void *);
++    /* callback for sideband data processing */
++    void (*process_sideband)(uint8_t *);
++/* NALU type number for our custom sideband data NALUs */
++#define NAL_SIDEBAND_DATA   0x1F
++/* pseudo slices */
++#define PSEUDO_SLICE_FRAME_START  -1
++#define PSEUDO_SLICE_FRAME_END    -2
++
++    /* the metrics for the decoding time estimation */
++/* toggle metrics extraction */
++#define FFMPEG_METRICS 0
++#if FFMPEG_METRICS
++#define FFMPEG_METRICS_EXTRACT(x) x
++#else
++#define FFMPEG_METRICS_EXTRACT(x)
++#endif
++    struct {
++        int type;
++        int bytes;
++        int intra_pcm;
++        int intra_4x4;
++        int intra_8x8;
++        int intra_16x16;
++        int inter_4x4;
++        int inter_8x8;
++        int inter_16x16;
++	int idct_4x4;
++	int idct_8x8;
++        int deblock_edges;
++    } metrics;
++
++    /* time measurements */
++/* toggle time measurement */
++#define FFMPEG_TIME 0
++#if FFMPEG_TIME
++#define FFMPEG_TIME_START(context,slot) context->timing.slot -= read_time()
++#define FFMPEG_TIME_STOP(context,slot) context->timing.slot += read_time()
++#else
++#define FFMPEG_TIME_START(context,slot)
++#define FFMPEG_TIME_STOP(context,slot)
++#endif
++    struct {
++        uint64_t decoder_prep;      /* cabac init */
++        uint64_t decompress_cabac;  /* decode_mb_cabac, includes iscan and iquant */
++        uint64_t decompress_cavlc;  /* decode_mb_cavlc, includes iscan and iquant */
++        uint64_t spatial_pred;      /* pred4x4, pred8x8, pred8x8l, pred16x16 */
++        uint64_t temporal_pred;     /* hl_motion */
++        uint64_t idct;              /* idct and merge */
++        uint64_t post;              /* xchg_mb_border, filter_mb */
++        uint64_t frame_end;         /* execute_ref_pic_marking, ff_er_frame_end, MPV_frame_end */
++        uint64_t total;
++    } timing;
++
++    /* frame structure */
++    struct {
++        int flag_idr;
++        AVFrame *current;
++        AVFrame *display;
++        int mb_width;
++        int mb_height;
++    } frame;
++
++    /* slice structure; does not support FMO */
++    struct {
++        int flag_last;
++        int start_index;  /* macroblock numbers, start inclusive, end exclusive */
++        int end_index;
++	int skip;         /* this can be set from outside and will skip the next slice */
++	int conceal;      /* this can be set from outside to activate FFmpeg's error concealment */
++    } slice;
++
++    /* reference structure */
++    struct {
++        int long_count;
++        int short_count;
++        AVFrame *long_list[32];
++        AVFrame *short_list[32];
++        int count[2];
++        AVFrame *list[2][32];
++    } reference;
++
++#endif
+ } AVCodecContext;
+ 
+ /**

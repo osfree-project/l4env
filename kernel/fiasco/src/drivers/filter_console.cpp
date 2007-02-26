@@ -7,7 +7,7 @@ class Filter_console : public Console
 {
 public:
 
-  Filter_console( Console *o, int to=8000 );
+  Filter_console( Console *o, int to = 10 );
   ~Filter_console();
 
   int write( char const *str, size_t len );
@@ -35,6 +35,7 @@ IMPLEMENTATION:
 #include <cstring>
 #include <cctype>
 #include "keycodes.h"
+#include "delayloop.h"
 
 
 IMPLEMENT 
@@ -58,7 +59,10 @@ int Filter_console::char_avail() const
 IMPLEMENT 
 Filter_console::Filter_console( Console *o, int to )
   : _o(o), csi_timeout(to), state(NORMAL), pos(0), arg(0)
-{}
+{
+  if (o->failed())
+    fail();
+}
 
 IMPLEMENT
 Filter_console::~Filter_console()
@@ -112,7 +116,7 @@ int Filter_console::getchar_timeout( unsigned timeout )
 {
   int c;
   while((c= _o->getchar(false)) == -1 && timeout--)
-    ;
+    Delay::delay(1);
   return c;
 }
 

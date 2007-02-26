@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/CCParser.cpp
- *    \brief   contains the implementation of the class CCParser
+ *  \file    dice/src/CCParser.cpp
+ *  \brief   contains the implementation of the class CCParser
  *
- *    \date    Sun Jul 27 2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Sun Jul 27 2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -35,9 +35,8 @@
 #include "Compiler.h"
 #include "fe/FEFile.h"
 
-#include <ctype.h>
+#include <cctype>
 #include <algorithm>
-using namespace std;
 
 //@{
 /** global variables and function of the GCC C parser */
@@ -111,21 +110,12 @@ unsigned char CCParser::Import(string sFilename)
     // 2. determine file type
     // set c_inc to indicate if this is a C header file or not
     int iDot = sFilename.rfind('.');
-    int nFileType = m_nInputFileType;
+    FrontEnd_Type nFileType = m_nInputFileType;
     if (iDot > 0)
     {
         string sExt = sFilename.substr (iDot + 1);
-        transform(sExt.begin(), sExt.end(), sExt.begin(), tolower);
-        if ((sExt == "h") ||
-	    (sExt == "c"))
-            nFileType = USE_FILE_C;
-        if ((sExt == "hh") ||
-            (sExt == "H") ||
-            (sExt == "hpp") ||
-            (sExt == "hxx") ||
-	    (sExt == "cpp") ||
-	    (sExt == "cc"))
-            nFileType = USE_FILE_CXX;
+        transform(sExt.begin(), sExt.end(), sExt.begin(), _tolower);
+	nFileType = DetermineFileType(sExt);
         if ((nFileType == USE_FILE_C) ||
             (nFileType == USE_FILE_CXX))
             c_inc = 1;
@@ -138,7 +128,8 @@ unsigned char CCParser::Import(string sFilename)
     unsigned char nRet = 2;
     if (m_nInputFileType != nFileType)
     {
-        Verbose("C::Import(%s) requires a new parser (%d)\n", sFilename.c_str(), nFileType);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "C::Import(%s) requires a new parser (%d)\n",
+	    sFilename.c_str(), nFileType);
         // 3. create new Parser
         CParser *pParser = CParser::CreateParser(nFileType);
         CParser *pOldParser = CParser::SetCurrentParser(pParser);
@@ -146,7 +137,7 @@ unsigned char CCParser::Import(string sFilename)
         // scanner set a new FEFile as my current file
 
         // 4. call it's Parse method
-        erroccured = !pParser->Parse(m_pBuffer, sFilename, nFileType, m_bVerbose);
+        erroccured = !pParser->Parse(m_pBuffer, sFilename, nFileType);
         delete pParser;
 
         // restore old parser
@@ -166,7 +157,8 @@ unsigned char CCParser::Import(string sFilename)
     else
     {
         m_nFiles++;
-        Verbose("C::Import(%s) does not require a new parser, increment file count to %d\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "C::Import(%s) doesn't require a new parser, inc file cnt to %d\n",
             sFilename.c_str(), m_nFiles);
         nRet = 1;
     }
@@ -177,10 +169,9 @@ unsigned char CCParser::Import(string sFilename)
 
 /** \brief parses an IDL file and inserts its elements into the pFEFile
  *  \param scan_buffer the buffer of the scanner to use
- *    \param sFilename the name of the file to parse
+ *  \param sFilename the name of the file to parse
  *  \param nIDL indicates the type of the IDL (DCE/CORBA)
- *  \param bVerbose true if verbose output should be written
- *    \param bPreProcessOnly true if we stop after pre-processing
+ *  \param bPreProcessOnly true if we stop after pre-processing
  *  \return true if successful
  *
  * Performs the following steps:
@@ -192,21 +183,20 @@ unsigned char CCParser::Import(string sFilename)
  * -# call parse method
  * -# close input file
  */
-bool CCParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbose, bool bPreProcessOnly)
+bool CCParser::Parse(void *scan_buffer,
+    string sFilename,
+    FrontEnd_Type nIDL,
+    bool bPreProcessOnly)
 {
-//     TRACE("C::Parse(%p, %s, %d, %s, %s) called\n", scan_buffer,
-//         sFilename.c_str(), nIDL, bVerbose?"true":"false",
-//         bPreProcessOnly?"true":"false");
-
-    m_bVerbose = bVerbose;
     m_nInputFileType = nIDL;
+    bool bFirst = (scan_buffer == 0);
 
     // 1. call preprocess -> opens input file
     CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
     FILE *fInput = 0;
-    if (!scan_buffer)
+    if (bFirst)
     {
-        fInput = pPreProcess->PreProcess(sFilename, false, bVerbose);
+        fInput = pPreProcess->PreProcess(sFilename, false);
         if (!fInput)
         {
             erroccured = true;
@@ -229,22 +219,27 @@ bool CCParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbos
     // the current include path. This is only done if PreProcess and therefore
     // OpenFile is called.
     string sPath;
-    if (!scan_buffer)
-        sPath = pPreProcess->GetCurrentIncludePath();
+    if (bFirst)
+        sPath = pPreProcess->GetIncludePath(sFilename);
     else
+    {
         sPath = pPreProcess->FindPathToFile(sFilename, gLineNumber);
+	if (sPath.empty())
+	    sPath = pPreProcess->GetIncludePath(sFilename);
+    }
     bool bIsStandard = pPreProcess->IsStandardInclude(sFilename, gLineNumber);
-    string sOrigName = pPreProcess->GetOriginalIncludeForFile(sFilename, gLineNumber);
-    // if path is set and origname is empty, then sNewFileNameGccC is with full path
-    // and FindPathToFile returned an include path that matches the beginning of the
-    // string. Now we get the original name by cutting off the beginning of the string,
-    // which is the path
+    string sOrigName = pPreProcess->GetOriginalIncludeForFile(sFilename, 
+	gLineNumber);
+    // if path is set and origname is empty, then sNewFileNameGccC is with
+    // full path and FindPathToFile returned an include path that matches the
+    // beginning of the string. Now we get the original name by cutting off
+    // the beginning of the string, which is the path
     if (!sPath.empty() && sOrigName.empty())
         sOrigName = sFilename.substr(sPath.length());
     if (sOrigName.empty())
         sOrigName = sFilename;
-       // new file
-       m_pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bIsStandard);
+    // new file
+    m_pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bIsStandard);
 
     // 3. set new current file
     CParser::SetCurrentFile(m_pFEFile);
@@ -255,18 +250,16 @@ bool CCParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbos
     sInFileName = sFilename;
 
     // 5. init the scanner
-    if (m_bVerbose)
-    {
+    if (CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_PARSER))
         gcc_cdebug = 1;
-        gcc_c_flex_debug = 1;
-    }
     else
-    {
         gcc_cdebug = 0;
+    if (CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_PARSER))
+        gcc_c_flex_debug = 1;
+    else
         gcc_c_flex_debug = 0;
-    }
 
-    if (!scan_buffer)
+    if (bFirst)
     {
         gcc_cin = fInput;
         StartBufferGccC(fInput);
@@ -275,13 +268,13 @@ bool CCParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbos
         RestoreBufferGccC(scan_buffer, true);
 
     // 6. call gcc_cparse
-    Verbose("Import C header file (%d).\n", nIDL);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Import C header file (%d).\n", nIDL);
     if (gcc_cparse())
     {
         erroccured = true;
         return false;
     }
-    Verbose("... finished parsing file.\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "... finished parsing file.\n");
 
     // flush buffer state
     GetCurrentBufferGccC();
@@ -292,6 +285,10 @@ bool CCParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbos
 
     // switch current file
     CParser::SetCurrentFileParent();
+
+    // finish the environment
+    if (bFirst)
+	FinishEnvironment();
 
     return true;
 }

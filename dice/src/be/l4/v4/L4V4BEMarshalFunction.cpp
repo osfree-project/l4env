@@ -25,11 +25,19 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 #include "L4V4BEMarshalFunction.h"
-#include "be/l4/v4/L4V4BENameFactory.h"
+#include "L4V4BENameFactory.h"
 #include "be/BEContext.h"
+#include "be/BEFile.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
+#include "be/BESizes.h"
+#include "be/BETrace.h"
+#include "be/BEMsgBuffer.h"
+#include "be/BEClass.h"
 #include "Attribute-Type.h"
+#include "TypeSpec-L4V4Types.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4V4BEMarshalFunction::CL4V4BEMarshalFunction()
  : CL4BEMarshalFunction()
@@ -43,20 +51,23 @@ CL4V4BEMarshalFunction::~CL4V4BEMarshalFunction()
 
 /** \brief write the L4 specific marshalling code
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start marshalling in the message buffer
- *  \param bUseConstOffset true if nStartOffset should be used
- *  \param pContext the context of the write operation
  */
 void
-CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext* pContext)
+CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
 {
+    assert (m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
+    {
+	m_pTrace->BeforeMarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+    
+    // FIXME: get message buffer var and use its declarator
     string sMsgBuffer =
-        pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+        CCompiler::GetNameFactory()->GetMessageBufferVariable();
     // clear message
-    *pFile << "\tL4_MsgClear ( " << sMsgBuffer << " );\n";
+    *pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
     // call base class
     // we skip L4 specific implementation, because it marshals flexpages
     // or exceptions (we don't need this) and it sets the send dope, which
@@ -64,71 +75,19 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile,
     // we also skip basic backend marshalling, because it marshals exception
     // first, we want this to be done later (into the tag label) and it
     // starts marshalling after the opcode, which is in the tag as well
-    CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    CBEOperationFunction::WriteMarshalling(pFile);
     // set exception in msgbuffer
-    WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+    WriteMarshalException(pFile, true);
+    // set dopes
+    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+	GetSendDirection());
+
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterMarshalling(pFile, this);
+	m_bTraceOn = false;
+    }
 }
 
-/** \brief marshals the exception
- *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start marshalling
- *  \param bUseConstOffset true if nStart can be used
- *  \param pContext the context of the marshalling
- *  \return the number of bytes used to marshal the exception
- *
- * For V4 the exception is stored as label in the tag.
- */
-int
-CL4V4BEMarshalFunction::WriteMarshalException(CBEFile* pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext* pContext)
-{
-    if (FindAttribute(ATTR_NOEXCEPTIONS))
-        return 0;
-    if (!m_pExceptionWord)
-        return 0;
-    // store in message directly
-    string sMsgBuffer =
-        pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    vector<CBEDeclarator*>::iterator iterExc = m_pExceptionWord->GetFirstDeclarator();
-    CBEDeclarator *pD = *iterExc;
-    *pFile << "\tL4_Set_MsgLabel ( " << sMsgBuffer << ", " << pD->GetName()
-        << " );\n";
-    // since exception is in tag it does not use any space
-    return 0;
-}
-
-/** \brief calculates the size of the function's parameters
- *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
- *  \return the size of the parameters
- *
- * For V4 exception is transmitted in tag, so no size for that.
- */
-int
-CL4V4BEMarshalFunction::GetFixedSize(int nDirection,
-    CBEContext* pContext)
-{
-    int nSize = CBEMarshalFunction::GetFixedSize(nDirection, pContext);
-    if (nDirection & DIRECTION_OUT)
-        nSize -= pContext->GetSizes()->GetExceptionSize();
-    return nSize;
-}
-
-/** \brief calculates the size of the function's parameters
- *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
- *  \return the size of the parameters
- *
- * For V4 exception is transmitted in tag, so no size for that.
- */
-int
-CL4V4BEMarshalFunction::GetSize(int nDirection,
-    CBEContext *pContext)
-{
-    int nSize = CBEMarshalFunction::GetSize(nDirection, pContext);
-    if (nDirection & DIRECTION_OUT)
-        nSize -= pContext->GetSizes()->GetExceptionSize();
-    return nSize;
-}

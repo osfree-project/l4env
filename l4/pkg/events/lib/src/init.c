@@ -30,15 +30,11 @@
 int
 l4events_init(void)
 {
+  if (!l4_is_invalid_id(l4events_server))
+    return 1;
+
   if (!names_waitfor_name("event_server", &l4events_server, 5000))
-    {
-      printf("Event server not found!\n");
-      /* Why should we enter_kdebug("stop");  ??? */
-    }
+    printf("Event server not found!\n");
 
-  if (l4_is_invalid_id(l4events_server))
-    return 0;
-
-  return 1;
-};
-
+  return l4_is_invalid_id(l4events_server) ? 0 : 1;
+}

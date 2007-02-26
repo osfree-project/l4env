@@ -21,8 +21,8 @@ private:
 class Tb_entry_trap : public Tb_entry
 {
 private:
-  char		_trapno;
-  Unsigned16	_errno;
+  Unsigned8	_trapno;
+  Unsigned16	_error;
   Mword		_ebp, _edx, _cr2, _eax, _eflags, _esp;
   Unsigned16	_cs,  _ds;
 };
@@ -64,7 +64,7 @@ Tb_entry_ke_reg::set(Context *ctx, Mword eip, Mword v1, Mword v2, Mword v3)
 PUBLIC inline NEEDS [<cstring>]
 void
 Tb_entry_ke_reg::set(Context *ctx, Mword eip, Trap_state *ts)
-{ set(ctx, eip, ts->eax, ts->ecx, ts->edx); }
+{ set(ctx, eip, ts->value(), ts->value2(), ts->value3()); }
 
 PUBLIC inline
 void
@@ -118,15 +118,15 @@ void
 Tb_entry_trap::set(Context *ctx, Mword eip, Trap_state *ts)
 {
   set_global(Tbuf_trap, ctx, eip);
-  _trapno = ts->trapno;
-  _errno  = ts->err;
-  _edx    = ts->edx;
-  _cr2    = ts->cr2;
-  _eax    = ts->eax; 
-  _cs     = (Unsigned16)ts->cs;
-  _ds     = (Unsigned16)ts->ds;  
-  _esp    = ts->esp;
-  _eflags = ts->eflags;
+  _trapno = ts->_trapno;
+  _error  = ts->_err;
+  _edx    = ts->_edx;
+  _cr2    = ts->_cr2;
+  _eax    = ts->_eax; 
+  _cs     = (Unsigned16)ts->cs();
+  _ds     = (Unsigned16)ts->_ds;  
+  _esp    = ts->sp();
+  _eflags = ts->flags();
 }
 
 PUBLIC inline
@@ -134,18 +134,19 @@ void
 Tb_entry_trap::set(Context *ctx, Mword eip, Mword trapno)
 {
   set_global(Tbuf_trap, ctx, eip);
-  _trapno = trapno | 0x80;
+  _trapno = trapno;
+  _cs     = 0;
 }
 
 PUBLIC inline
-char
+Unsigned8
 Tb_entry_trap::trapno() const
 { return _trapno; }
 
 PUBLIC inline
 Unsigned16
-Tb_entry_trap::errno() const
-{ return _errno; }
+Tb_entry_trap::error() const
+{ return _error; }
 
 PUBLIC inline
 Mword

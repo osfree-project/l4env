@@ -244,6 +244,9 @@ static void wid_set_parent(WIDGET *w, void *new_parent)   {
 
 	/* sanity check - avoid parent relationship with itself */
 	if (w == new_parent) return;
+
+	userstate->release_widget(w);
+
 	w->wd->parent = new_parent;
 }
 
@@ -424,8 +427,10 @@ static void wid_dec_ref(WIDGET *w) {
 	if (w->wd->ref_cnt > 0) return;
 
 	/* the widget is not referenced anymore - destroy is */
-	INFO(printf("widman(dec_ref): %s %lu ref_cnt reached zero -> commit suicide\n",
-	     w->gen->get_type(w), (long)w));
+	INFO(printf("widman(dec_ref): %s %p ref_cnt reached zero -> commit suicide\n",
+	     w->gen->get_type(w), w));
+
+	userstate->release_widget(w);
 
 	/* free widget type specific data */
 	w->gen->free_data(w);

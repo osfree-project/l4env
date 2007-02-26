@@ -21,6 +21,7 @@
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/rmgr/librmgr.h>
+#include <l4/sigma0/sigma0.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/types.h>
@@ -303,7 +304,7 @@ unshare_data(l4_addr_t addr, l4_threadid_t tid)
     }
 
   if (debug_pager)
-   printf("unshared data page %08x => %08x client "l4util_idfmt"\n",
+   printf("unshared data page %08lx => %08lx client "l4util_idfmt"\n",
       addr, new_page, l4util_idstr(tid));
 
   if (debug_pager)
@@ -322,7 +323,6 @@ pager_thread(void)
   l4_addr_t fault_address, fault_eip;
   l4_snd_fpage_t fp;
   l4_msgdope_t dope;
-  l4_umword_t ignore;
 
   l4_touch_ro((void*)&_stext, l4_round_page(&_etext - &_stext));
   l4_touch_rw((void*)shared_data, L4_PAGESIZE);
@@ -347,7 +347,7 @@ pager_thread(void)
 
       // do not lock in pager, because this gives dead locks
       if(debug_pager)
-	printf("[%s page fault in "l4util_idfmt" at %08x (EIP %08x) ",
+	printf("[%s page fault in "l4util_idfmt" at %08lx (EIP %08lx) ",
 	       rw_page_fault ? "write" : "read",
 	       l4util_idstr(src), fault_address, fault_eip);
 				/* in Code */
@@ -404,17 +404,18 @@ pager_thread(void)
 	  {
 
 	    if(!debug_pager)
-	     printf("[%s page fault in "l4util_idfmt" at %08x (EIP %08x) ",
+	     printf("[%s page fault in "l4util_idfmt" at %08lx (EIP %08lx) ",
 		     rw_page_fault ? "write" : "read",
 		     l4util_idstr(src), fault_address, fault_eip);
 	    printf("stop pager]\n");
 	    enter_kdebug("stop");
-	    l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER, &dope);
+	    fp.snd_base = 0;
+	    l4_ipc_sleep(L4_IPC_NEVER);
 	  }
 	}
 
       if(debug_pager)
-	printf(" %s (%s), base : %08x, size : %d, offset : %08x]\n",
+	printf(" %s (%s), base : %08x, size : %d, offset : %08lx]\n",
 	       fp.fpage.fp.grant ? "grant" : "map",
 	       fp.fpage.fp.write ? "WR" : "RO",
 	       fp.fpage.fp.page << L4_PAGESHIFT,
@@ -528,7 +529,7 @@ recv_task(void)
   printf("end.\n");
 
   /* wait forever */
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER, &dope);
+  l4_ipc_sleep(L4_IPC_NEVER);
 
   return;
 }
@@ -538,7 +539,6 @@ static void
 send_task(void)
 {
   l4_taskid_t my_id;
-  l4_umword_t ignore;
   l4_msgdope_t dope;
   l4events_event_t event;
   l4events_nr_t event_nr;
@@ -590,7 +590,7 @@ send_task(void)
 
 
   /* wait forever */
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER, &dope);
+  l4_ipc_sleep(L4_IPC_NEVER);
 
   return;
 }
@@ -599,14 +599,16 @@ send_task(void)
 
 /*! \brief grabs some shared memory */
 static void
-get_shared_memory(void)
+get_shared_memory(l4_threadid_t pager)
 {
   assert(sizeof(shared_data_t) <= L4_PAGESIZE);
 
   shared_data = (shared_data_t*)rmgr_reserve_mem(L4_PAGESIZE,
 						 L4_LOG2_PAGESIZE, 0, 0, 0);
+  l4sigma0_map_mem(pager,
+      		  (l4_addr_t)shared_data, (l4_addr_t)shared_data, L4_PAGESIZE);
 
-  if (!shared_data)
+  if (shared_data == (shared_data_t*)~0U)
   {
     printf("Cannot allocate page for sharing data section\n");
     enter_kdebug("out of memory");
@@ -615,37 +617,40 @@ get_shared_memory(void)
 
 /*! \brief save data segment so we are able to copy-on-write it for childs */
 static void
-save_data(void)
+save_data(l4_threadid_t pager)
 {
   l4_addr_t beg  = l4_trunc_page(&_etext);
   l4_addr_t end  = l4_round_page(&_end);
 
   my_program_data_copy = rmgr_reserve_mem(end-beg, L4_LOG2_PAGESIZE, 0, 0, 0);
 
-  if (!my_program_data_copy)
+  if (my_program_data_copy == ~0U)
   {
-    printf("Cannot allocate %dkB memory for unsharing data section\n",
+    printf("Cannot allocate %ldkB memory for unsharing data section\n",
 	  (end-beg)/1024);
     enter_kdebug("out of memory");
   }
 
+  l4sigma0_map_mem(pager,
+      		   my_program_data_copy, my_program_data_copy, end-beg);
   memcpy((void*)my_program_data_copy, (void*)&_etext, &_end-&_etext);
 }
 
 /*! \brief reserve pool for copy-on-write */
 static void
-reserve_cow(void)
+reserve_cow(l4_threadid_t pager)
 {
   cow_pool = rmgr_reserve_mem(COW_POOL_PAGES*L4_PAGESIZE,
                               L4_LOG2_PAGESIZE, 0, 0, 0);
-  if (!cow_pool)
+  if (cow_pool == ~0U)
     {
       printf("Cannot allocate %dkB memory for cow pool!\n",
 	  COW_POOL_PAGES*L4_PAGESIZE/1024);
       enter_kdebug("out of memory");
     }
 
-  l4_touch_rw((void*)cow_pool, COW_POOL_PAGES*L4_PAGESIZE);
+  l4sigma0_map_mem(pager,
+      		   cow_pool, cow_pool, COW_POOL_PAGES*L4_PAGESIZE);
   cow_pages = COW_POOL_PAGES;
 }
 
@@ -670,10 +675,12 @@ int main(void)
      -- must be done before save_data()! */
   names_register("eventdemo");
 
+  get_thread_ids(&my_id, &my_preempter, &my_pager, NULL);
+  
   /* initialize the memory management system */
-  get_shared_memory();
-  save_data();
-  reserve_cow();
+  get_shared_memory(my_pager);
+  save_data(my_pager);
+  reserve_cow(my_pager);
 
   printf("starting event server demo...\n");
 
@@ -692,7 +699,6 @@ int main(void)
   }
 
   /* start pager thread */
-  get_thread_ids(&my_id,&my_preempter,&my_pager,NULL);
   shared_data->main_thread_id = my_id;
   pager_thread_id = my_id;
   pager_thread_id.id.lthread = PAGER_THREAD;
@@ -783,7 +789,7 @@ int main(void)
   printf("end of the game.\n");
 
   /* wait forever */
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER, &dope);
+  l4_ipc_sleep(L4_IPC_NEVER);
 
   return 0;
 }

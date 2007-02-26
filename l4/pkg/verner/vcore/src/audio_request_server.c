@@ -119,7 +119,7 @@ VideoCoreComponent_Audio_dice_thread (void)
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_connect_UncompressedAudioOut_component
   (CORBA_Object _dice_corba_obj, const l4dm_dataspace_t * ctrl_ds,
    const l4dm_dataspace_t * data_ds, dsi_socket_ref_t * socketref,
@@ -190,7 +190,7 @@ l4_int32_t
 *
 * unlocks a mutex and let the work_thread run. */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_start_UncompressedAudioOut_component (CORBA_Object
 							       _dice_corba_obj,
 							       const
@@ -222,7 +222,7 @@ VideoCoreComponentIntern_start_UncompressedAudioOut_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_disconnect_UncompressedAudioOut_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -276,7 +276,7 @@ l4_int32_t
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_connect_CompressedAudioIn_component (CORBA_Object
 							      _dice_corba_obj,
 							      const
@@ -355,7 +355,7 @@ VideoCoreComponentIntern_connect_CompressedAudioIn_component (CORBA_Object
 *
 * unlocks a mutex and let the work_thread run. */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_start_CompressedAudioIn_component (CORBA_Object
 							    _dice_corba_obj,
 							    const
@@ -386,7 +386,7 @@ VideoCoreComponentIntern_start_CompressedAudioIn_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_disconnect_CompressedAudioIn_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -437,18 +437,13 @@ l4_int32_t
  *
  */
 /*****************************************************************************/
-l4_int32_t
-VideoCoreComponentIntern_setAudioRTparams_component (CORBA_Object
-						     _dice_corba_obj,
-						     l4_uint32_t period,
-						     l4_uint32_t
-						     reservation_audio,
-						     l4_uint32_t
-						     reservation_video,
-						     l4_int32_t
-						     verbose_preemption_ipc,
-						     CORBA_Server_Environment
-						     * _dice_corba_env)
+long
+VideoCoreComponentIntern_setAudioRTparams_component (CORBA_Object _dice_corba_obj,
+						     unsigned long period,
+						     unsigned long reservation_audio,
+						     unsigned long reservation_video,
+						     int verbose_preemption_ipc,
+						     CORBA_Server_Environment * _dice_corba_env)
 {
 #if BUILD_RT_SUPPORT
   /* lock */

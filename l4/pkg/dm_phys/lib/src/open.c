@@ -75,11 +75,12 @@ l4dm_memphys_open(int pool, l4_addr_t addr, l4_size_t size, l4_addr_t align,
   else
     ret = if_l4dm_memphys_dmphys_open_call(&dsm_id, pool, addr, size, align,
                                            flags, "", ds, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_phys: open dataspace at DMphys ("l4util_idfmt") failed "
-            "(ret %d, exc %d)", l4util_idstr(dsm_id), ret, _env.major);
+            "(ret %d, exc %d)", l4util_idstr(dsm_id), ret,
+	    DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

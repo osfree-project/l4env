@@ -6,9 +6,14 @@ L4DIR	?= $(PKGDIR)/../..
 # line and adapt it.
 TARGET = idl lib src
 
+
 DROPSCONF	= y
 DROPSCONF_TITLE = ORe configuration
 DROPSCONF_UNDEF = 1
-DROPSCONF_CONFIG_H = src/auto_config.h
+DROPSCONF_CONFIG_H = $(OBJ_DIR)/include/auto_config.h
 
 include $(L4DIR)/mk/subdir.mk
+
+# these dependencies are defined in subdir.mk only if PKGDIR=.
+lib: idl
+src: lib

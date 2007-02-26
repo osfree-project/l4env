@@ -46,7 +46,7 @@
 #include <l4/sys/rt_sched.h> // RT scheduling
 #include <l4/util/atomic.h>
 #include <l4/rmgr/librmgr.h> // for rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
+#include <l4/sigma0/kip.h> // l4sigma0_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -257,10 +257,10 @@ work_loop_video (void *data)
 #endif
 #if RTMON_DSI_BENCHMARK
   list_in = rt_mon_list_create(sizeof(rt_mon_basic_event_t),
-      RT_MON_EVTYPE_BASIC, 100,
+      RT_MON_EVTYPE_BASIC, 10,
       "verner/demuxer/video-dsi", "packet", RT_MON_TIMER_SOURCE, 1);
   list_out = rt_mon_list_create(sizeof(rt_mon_basic_event_t),
-      RT_MON_EVTYPE_BASIC, 100,
+      RT_MON_EVTYPE_BASIC, 10,
       "verner/sync/video-dsi", "packet", RT_MON_TIMER_SOURCE, 1);
 #endif
 #if PREDICT_DECODING_TIME_RTMON
@@ -285,7 +285,7 @@ work_loop_video (void *data)
 
 #if !RT_USE_CPU_RESERVE
   /* Get KIP */
-  kinfo = l4util_kip_map ();
+  kinfo = l4sigma0_kip_map (L4_INVALID_ID);
   if (!kinfo)
     Panic ("get KIP failed!\n");
 #endif
@@ -779,18 +779,23 @@ shutdown_send_thread:
   /* monitor dump histogram */
   //rt_mon_hist_dump (hist);
   /* deregister histogram */
-  rt_mon_hist_free (hist);
+  if (hist)
+    rt_mon_hist_free (hist);
   /* monitor dump histogram */
   //rt_mon_hist_dump (hist_filter);
-  rt_mon_hist_free (hist_decode);
-  rt_mon_hist_free (hist_filter);
+  if (hist_decode)
+    rt_mon_hist_free (hist_decode);
+  if (hist_filter)
+    rt_mon_hist_free (hist_filter);
 #if BUILD_RT_SUPPORT
   rt_mon_hist_free (hist_pipcs);
 #endif
 #endif
 #if RTMON_DSI_BENCHMARK
-  rt_mon_list_free (list_in);
-  rt_mon_list_free (list_out);
+  if (list_in)
+    rt_mon_list_free (list_in);
+  if (list_out)
+    rt_mon_list_free (list_out);
 #endif
 #if PREDICT_DECODING_TIME_RTMON
   if (control->predict->predictor) {

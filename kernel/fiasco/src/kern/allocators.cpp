@@ -13,5 +13,6 @@ void allocator_init() FIASCO_INIT;
 void 
 allocator_init()
 {
-  Sched_context::_slabs = new Kmem_slab_simple (sizeof (Sched_context), 4);
+  Sched_context::_slabs = new Kmem_slab_simple (sizeof (Sched_context), 4,
+						"Sched_context");
 }

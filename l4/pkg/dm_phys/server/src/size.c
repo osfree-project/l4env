@@ -42,10 +42,11 @@
  *         - -#L4_EPERM   Caller is not a client of the dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_mem_size_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t ds_id, l4_uint32_t *size,
-                           CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_size_component (CORBA_Object _dice_corba_obj,
+                            unsigned long ds_id,
+                            l4_size_t *size,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
@@ -56,10 +57,10 @@ if_l4dm_mem_size_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %ld!",
 	     l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;

@@ -12,6 +12,7 @@
  */
 
 #include <l4/sys/ipc.h>
+#include <l4/sys/vhw.h>
 #include <l4/input/libinput.h>
 #include <l4/thread/thread.h>
 #include <l4/util/macros.h>
@@ -21,10 +22,10 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/env/errno.h>
 #include <l4/env/mb_info.h>
+#include <l4/sigma0/sigma0.h>
+#include <l4/sigma0/kip.h>
 
 #include <stdio.h>
-
-#define IRQ_NUM_FUX_COM 1
 
 /* needs to be the same as in ux_con! */
 enum {
@@ -108,45 +109,31 @@ static void *map_inputmemory(l4_addr_t paddr)
 {
   int error;
   const int size = 1 << 22; // INPUTMEM_SIZE; must be a superpage
-  l4_umword_t dummy;
-  l4_msgdope_t result;
-  l4_threadid_t my_pager = L4_INVALID_ID, dtid = L4_INVALID_ID;
+  l4_threadid_t my_pager = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
   l4_addr_t vaddr;
   l4_uint32_t rg;
-
-  /* get my pager */
-  l4_thread_ex_regs(l4rm_region_mapper_id(), (l4_umword_t)-1, (l4_umword_t)-1,
-                    &dtid, &my_pager, &dummy, &dummy, &dummy);
 
   /* get memory */
   paddr &= L4_PAGEMASK;
 
-  printf("%s: paddr = 0x%08x\n", __func__, paddr);
-
-  if (paddr < 0x80000000)
-    Panic("Cannot map input memory at %08x with Sigma0 protocol", paddr);
+  printf("%s: paddr = 0x%08lx\n", __func__, paddr);
 
   if ((error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, &vaddr, &rg)))
     Panic("Error %d reserving region size=%d Bytes for input mem", error, size);
 
-  for (;;)
+  if ((error = l4sigma0_map_iomem(my_pager, paddr, vaddr, size, 0)))
     {
-      error = l4_ipc_call(my_pager,
-                          L4_IPC_SHORT_MSG, (paddr - 0x40000000) | 2, 0,
-                          L4_IPC_MAPMSG(vaddr, L4_LOG2_SUPERPAGESIZE),
-                          &dummy, &dummy, L4_IPC_NEVER, &result);
-
-      if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
-        break;
+      switch (error)
+	{
+	case -1: Panic("Bad alignment of physical address");
+	case -2: Panic("IPC error mapping input mem");
+	case -3: Panic("No fpage received mapping input mem");
+	case -4: Panic("Cannot map input mem at %08lx with old Sigma0 protocol",
+		       paddr);
+	}
     }
 
-  if (error)
-    Panic("Error 0x%02x mapping input mem", error);
-
-  if (!l4_ipc_fpage_received(result))
-    Panic("No fpage received, result=0x%04x", result.msgdope);
-
-  printf("Input memory page mapped to 0x%08x\n", vaddr);
+  printf("Input memory page mapped to 0x%08lx\n", vaddr);
 
   return (void *)vaddr;
 }
@@ -154,22 +141,21 @@ static void *map_inputmemory(l4_addr_t paddr)
 static int init_stuff(void)
 {
   l4thread_t irq_tid;
-  int irq = IRQ_NUM_FUX_COM;
-  l4util_mb_info_t *mbi = l4env_multiboot_info;
-  l4util_mb_vbe_ctrl_t *vbe_cont;
-  l4util_mb_vbe_mode_t *vbe_mode;
+  int irq;
+  l4_kernel_info_t *kip = l4sigma0_kip_map(L4_INVALID_ID);
+  struct l4_vhw_descriptor *vhw;
+  struct l4_vhw_entry *vhwe;
 
-  /* get input memory address */
-  vbe_cont = (l4util_mb_vbe_ctrl_t *)mbi->vbe_ctrl_info;
-  vbe_mode = (l4util_mb_vbe_mode_t *)mbi->vbe_mode_info;
+  if (!kip)
+    Panic("Cannot map KIP!");
 
-  if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO)
-      || !vbe_cont || !vbe_mode)
-    Panic("Multiboot structure has no VESA info!\n"
-          "You probably need to start Fiasco-UX with -G!");
+  if (!(vhw = l4_vhw_get(kip))
+      || !(vhwe = l4_vhw_get_entry_type(vhw, L4_TYPE_VHW_INPUT))
+      || !vhwe->irq_no)
+    Panic("Cannot read VHW structure!");
 
-  input_mem = map_inputmemory(vbe_mode->phys_base
-                              + 64 * 1024 * vbe_cont->total_memory);
+  input_mem = map_inputmemory(vhwe->mem_start);
+  irq       = vhwe->irq_no;
 
   /* only use the interrupt thread if we have a callback function
    * registered; if we're only used in polling mode we already have the

@@ -63,6 +63,12 @@ static int start_thread(THREAD *dst_tid, void (*entry)(void *), void *arg) {
 	return 0;
 }
 
+
+static void kill_thread(THREAD *tid) {
+	SDL_KillThread(tid->t);
+}
+
+
 static MUTEX *create_mutex(int init_locked) {
 	MUTEX *new = (MUTEX *)malloc(sizeof(MUTEX));
 	new->m = SDL_CreateMutex();
@@ -108,6 +114,7 @@ static struct thread_services services = {
 	free_thread,
 	copy_thread,
 	start_thread,
+	kill_thread,
 	create_mutex,
 	destroy_mutex,
 	lock_mutex,

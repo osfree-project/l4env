@@ -6,21 +6,12 @@
 
 L4DIR		?= .
 
-OSKITDIR	?= ../oskit
-OSKIT10DIR	?= ../oskit10
+BUILD_DIRS	= tool ../kernel/fiasco ../dice pkg
+install-dirs	= tool ../kernel/fiasco ../dice pkg
+clean-dirs	= tool ../kernel/fiasco ../dice pkg doc
+cleanall-dirs	= tool ../kernel/fiasco ../dice pkg doc
 
-BUILD_DIRS	= tool $(OSKITDIR) $(OSKIT10DIR) $(L4LINUX22_DIR) kernel pkg
-HELLODIRS	= pkg/l4sys \
-		  pkg/crtx \
-		  pkg/rmgr \
-		  pkg/l4util \
-		  pkg/oskit_support \
-		  pkg/demangle \
-		  pkg/sigma0 \
-		  pkg/hello
-install-dirs	= tool $(OSKITDIR) $(OSKIT10DIR) kernel pkg doc
-clean-dirs	= tool $(OSKITDIR) $(OSKIT10DIR) $(L4LINUX22_DIR) kernel pkg doc
-cleanall-dirs	= tool kernel pkg doc
+BUILD_TOOLS	= gawk
 
 # our default target is all::
 all::
@@ -31,9 +22,9 @@ all::
 DROPSCONF 		= y
 DROPSCONF_DEFCONFIG	?= $(L4DIR)/mk/defconfig/config.x86
 DROPSCONF_CONFIG_IN	= $(L4DIR)/mk/config.in
-DROPSCONF_CONFIG	= $(L4DIR)/.Makeconf.bid
-DROPSCONF_CONFIG_H	= $(L4DIR)/include/l4/bid_config.h
-DROPSCONF_CONFIG_MK	= $(L4DIR)/.Makeconf.bid.converted
+DROPSCONF_CONFIG	= $(OBJ_BASE)/.Makeconf.bid
+DROPSCONF_CONFIG_H	= $(OBJ_BASE)/include/l4/bid_config.h
+DROPSCONF_CONFIG_MK	= $(OBJ_BASE)/.Makeconf.bid.converted
 DROPSCONF_DONTINC_MK	= y
 DROPSCONF_HELPFILE	= $(L4DIR)/mk/config.help
 
@@ -45,13 +36,13 @@ CONFIG_MK_INDEPOPTS	= BID_GENERATE_MAPFILE\
 			  INT_CPP_NAME_SWITCH BID_LIBGENDEP INT_CPP_.*_NAME \
 			  INT_CXX_.*_NAME VERBOSE BID_STRIP_PROGS \
 			  INT_LD_NAME_SWITCH INT_LD_.*_NAME
-CONFIG_MK_REAL		= Makeconf.bid.local
-CONFIG_MK_INDEP		= Makeconf.bid.local.indep
+CONFIG_MK_REAL		= $(OBJ_BASE)/Makeconf.bid.local
+CONFIG_MK_INDEP		= $(OBJ_BASE)/Makeconf.bid.local.indep
 
 ifneq ($(filter help config txtconfig oldconfig,$(MAKECMDGOALS)),)
 # tweek $(L4DIR)/mk/Makeconf to use the intermediate file
 export BID_IGN_ROOT_CONF=y
-BID_ROOT_CONF=$(L4DIR)/.Makeconf.bid.converted
+BID_ROOT_CONF=$(OBJ_BASE)/.Makeconf.bid.converted
 endif
 
 # $(L4DIR)/mk/Makeconf shouln't include Makeconf.local twice
@@ -61,25 +52,30 @@ export DROPS_STDDIR
 
 # after having absfilename, we can export BID_ROOT_CONF
 ifneq ($(filter config txtconfig oldconfig, $(MAKECMDGOALS)),)
-export BID_ROOT_CONF=$(call absfilename,$(L4DIR))/.Makeconf.bid.converted
+export BID_ROOT_CONF=$(call absfilename,$(OBJ_BASE))/.Makeconf.bid.converted
 endif
 
 #####################
 # rules follow
 
 # some dependencies
-all::	$(BUILD_DIRS) doc
+all::	$(BUILD_DIRS)
 tool:	$(DROPSCONF_CONFIG_MK)
-pkg:	$(DROPSCONF_CONFIG_MK) tool $(OSKITDIR) $(OSKIT10DIR) $(L4LINUX22_DIR)
+pkg:	$(DROPSCONF_CONFIG_MK) tool
 doc:	pkgdoc
-kernel: $(DROPSCONF_CONFIG_MK) tool
 
-tool pkg kernel:
+ifeq ($(BID_BUILD_DOC),y)
+install-dirs += doc
+all:: doc
+endif
+
+tool ../kernel/fiasco pkg: ../dice
 	$(VERBOSE)if [ -r $@/Makefile ]; then PWD=$(PWD)/$@ $(MAKE) -C $@; fi
 
-$(OSKITDIR) $(OSKIT10DIR) $(L4LINUX22_DIR): $(DROPSCONF_CONFIG_MK)
-	$(VERBOSE)if [ -r $@/Makefile.drops ]; then \
-		$(MAKE) -C $@ -f Makefile.drops; fi
+../dice:
+	$(VERBOSE)if [ -r $@/Makefile.drops ]; then                \
+	   $(MAKE) -C $@ -f Makefile.drops;                        \
+	 fi
 
 doc:
 	$(VERBOSE)for d in tool doc ; do \
@@ -89,21 +85,8 @@ pkgdoc:
 	$(VERBOSE)test ! -r pkg/Makefile || PWD=$(PWD)/pkg $(MAKE) -C pkg doc
 
 
-# 'Hello World' Server is special: It requires oskit to be present
-hello:	oskit.present $(OSKITDIR)
-	$(VERBOSE)set -e; for i in $(HELLODIRS) ; do \
-	  PWD=$(PWD)/$$i $(MAKE) -C $$i lib ; \
-	done
-	$(VERBOSE)set -e; for i in $(HELLODIRS) ; do \
-	  test $$i = pkg/l4util || PWD=$(PWD)/$$i $(MAKE) -C $$i ; \
-	done
-
-oskit.present:
-	@test -r $(OSKITDIR)/Makefile.drops || \
-	  (echo "ERROR: please install OSKIT to $(OSKITDIR)"; exit 1)
-
-.PHONY: all clean cleanall install hello oskit.present pkgdoc
-.PHONY: $(BUILD_DIRS) $(HELLODIRS) doc/html
+.PHONY: all clean cleanall install hello pkgdoc
+.PHONY: $(BUILD_DIRS) doc/html check_build_tools
 
 cleanall::
 	$(VERBOSE)rm -f *~
@@ -113,6 +96,15 @@ clean cleanall install::
 	  if [ -r $$i/Makefile -o -r $$i/GNUmakefile ] ; then \
 		PWD=$(PWD)/$$i $(MAKE) -C $$i $@ ; fi ; done
 
+install::
+	$(VERBOSE)tmpdir=$$(mktemp -d -t l4bid.defs.XXXXXX) &&       \
+	echo "L4DIR = $(L4DIR_ABS)"       > $$tmpdir/Makefile &&     \
+	echo "L4_BUILDDIR = $(OBJ_BASE)" >> $$tmpdir/Makefile &&     \
+	cat $(L4DIR)/mk/export_defs.inc  >> $$tmpdir/Makefile &&     \
+	$(MAKE) -C $$tmpdir;                                         \
+	$(RM) -r $$tmpdir
+
+
 #####################
 # config-rules follow
 
@@ -121,57 +113,48 @@ clean cleanall install::
 # we evaluate some variables that depend on the postprocessed config file.
 # The variables are defined in mk/Makeconf, which sources Makeconf.bid.local.
 # Hence, we have to 1) postprocess, 2) call make again to get the variables.
-DROPSCONF_CONFIG_MK_POST_HOOK::
-        # try-libgendep must be done before calling make with the local helper
-	$(VERBOSE)$(MAKE) try-libgendep
+DROPSCONF_CONFIG_MK_POST_HOOK:: check_build_tools $(OBJ_DIR)/Makefile
+        # libgendep must be done before calling make with the local helper
+	$(VERBOSE)$(MAKE) libgendep
 	$(VERBOSE)$(MAKE) Makeconf.bid.local-helper || \
 		(rm -f $(DROPSCONF_CONFIG_MK) $(CONFIG_MK_REAL) $(CONFIG_MK_INDEP); false)
+	$(VEROBSE)$(LN) -snf $(L4DIR_ABS) $(OBJ_BASE)/source
 
 # cashing of some variables. Others are determined directly.
 # The contents of the variables to cache is already defined in mk/Makeconf.
-.PHONY: Makeconf.bid.local-helper try-libgendep
-ARCHS = $(BUILD_SYSTEMS_x86) $(BUILD_SYSTEMS_arm)
+.PHONY: Makeconf.bid.local-helper libgendep
+ARCH = $(BUILD_ARCH)
 Makeconf.bid.local-helper:
-	$(foreach arch,$(ARCHS),$(if $(CPU_$(arch)),, \
-	    $(error Specify at least one CPU-type for architecture "$(arch)")))
-	$(VERBOSE)echo BUILD_SYSTEMS="$(strip				\
-	    $(foreach arch, $(ARCHS), $(foreach cpu,$(CPU_$(arch)),	\
-		$(foreach l4api, l4v2 l4x0 l4x2 l4v4,			\
-		    $(if $(filter y,$(BUILD_SYSTEMS_$(arch)_$(l4api))),	\
-			$(arch)_$(cpu)-$(l4api)))			\
-		    $(arch)_$(cpu) )))" >>$(DROPSCONF_CONFIG_MK)
-	$(VERBOSE)$(foreach arch, $(ARCHS),				\
-		$(foreach v, GCCDIR GCCLIB GCCLIB_EH GCCVERSION		\
+	$(VERBOSE)echo BUILD_SYSTEMS="$(strip $(ARCH)_$(CPU)            \
+	               $(ARCH)_$(CPU)-$(BUILD_ABI))" >> $(DROPSCONF_CONFIG_MK)
+	$(VERBOSE)$(foreach v, GCCDIR GCCLIB GCCLIB_EH GCCVERSION	\
 			GCCMAJORVERSION GCCMINORVERSION GCCSUBVERSION	\
 			LDNOSTDLIB GCCLDNOSTDLIB,			\
-			echo $(v)_$(arch)=$(call $(v)_f,$(arch))	\
-			>>$(DROPSCONF_CONFIG_MK);))
+			echo $(v)=$(call $(v)_f,$(ARCH))	\
+			>>$(DROPSCONF_CONFIG_MK);)
 	$(foreach v, BID_LIBGENDEP, echo $v=$($(v)) >>$(DROPSCONF_CONFIG_MK);)
 	$(VERBOSE)echo 'BUILD_PIC += $$(BUILD_LOADER_PICS)' >>$(DROPSCONF_CONFIG_MK)
 ifeq ($(INT_CPP_NAME_SWITCH), y)
-	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
-		GENDEP_OUTPUT=$$X.out $(CC_$(arch)) -c $$X -o $$X.o; \
-		test -e $$X.out; echo INT_CPP_$(arch)_NAME=`cat $$X.out` \
+		GENDEP_OUTPUT=$$X.out $(CC) -c $$X -o $$X.o; \
+		test -e $$X.out; echo INT_CPP_NAME=`cat $$X.out` \
 			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{o,out}; )
-	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
+		rm -f $$X $$X.{o,out};
+	$(VERBOSE)set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
 		rm -f $$X.out; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
-		GENDEP_OUTPUT=$$X.out $(CXX_$(arch)) -c $$X -o $$X.o; \
-		test -e $$X.out; echo INT_CXX_$(arch)_NAME=`cat $$X.out` \
+		GENDEP_OUTPUT=$$X.out $(CXX) -c $$X -o $$X.o; \
+		test -e $$X.out; echo INT_CXX_NAME=`cat $$X.out` \
 			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{o,out}; )
+		rm -f $$X $$X.{o,out};
 endif
 ifeq ($(INT_LD_NAME_SWITCH), y)
-	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X. \
-		GENDEP_OUTPUT=$$X.out $(CC_$(arch)) $$X -o $$X.; \
-		test -e $$X.out; echo INT_LD_$(arch)_NAME=`cat $$X.out` \
+		GENDEP_OUTPUT=$$X.out $(CC) $$X -o $$X.; \
+		test -e $$X.out; echo INT_LD_NAME=`cat $$X.out` \
 			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{,out}; )
+		rm -f $$X $$X.{,out};
 endif
 	$(VERBOSE)sort <$(DROPSCONF_CONFIG_MK) >$(CONFIG_MK_REAL).tmp
 	$(VERBOSE)echo -e "# Automatically generated. Don't edit\n" >$(CONFIG_MK_INDEP)
@@ -181,12 +164,30 @@ endif
 	$(VERBOSE)grep -v $(addprefix -e ^,$$ # $(CONFIG_MK_INDEPOPTS) ) \
 		<$(CONFIG_MK_REAL).tmp >>$(CONFIG_MK_REAL).tmp2
 	$(VERBOSE)echo -e 'include $(call absfilename,$(CONFIG_MK_INDEP))' >>$(CONFIG_MK_REAL).tmp2
-	$(VERBOSE)diff --brief $(CONFIG_MK_REAL) $(CONFIG_MK_REAL).tmp2 || \
-		mv $(CONFIG_MK_REAL).tmp2 $(CONFIG_MK_REAL)
+	$(VERBOSE)if [ -e "$(CONFIG_MK_REAL)" ]; then                        \
+	            diff --brief $(CONFIG_MK_REAL) $(CONFIG_MK_REAL).tmp2 || \
+		      mv $(CONFIG_MK_REAL).tmp2 $(CONFIG_MK_REAL);           \
+		  else                                                       \
+		    mv $(CONFIG_MK_REAL).tmp2 $(CONFIG_MK_REAL);             \
+		  fi
 	$(VERBOSE)$(RM) $(CONFIG_MK_REAL).tmp $(CONFIG_MK_REAL).tmp2
 
-# If a local libgendep is here, use it. Otherwise, the build process will
-# utilize the global one; or fail if this is not available too.
-try-libgendep:
-	$(VERBOSE)test ! -r tool/gendep/Makefile || \
-		PWD=$(PWD)/tool/gendep $(MAKE) -C tool/gendep
+libgendep:
+	$(VERBOSE)if [ ! -r tool/gendep/Makefile ]; then	\
+	            echo "=== l4/tool/gendep missing! ===";	\
+		    exit 1;					\
+	          fi
+	$(VERBOSE)PWD=$(PWD)/tool/gendep $(MAKE) -C tool/gendep
+
+check_build_tools:
+	@unset mis;                                                \
+	for i in $(BUILD_TOOLS); do                                \
+	  if ! command -v $$i >/dev/null 2>&1; then                \
+	    [ -n "$$mis" ] && mis="$$mis ";                        \
+	    mis="$$mis$$i";                                        \
+	  fi                                                       \
+	done;                                                      \
+	if [ -n "$$mis" ]; then                                    \
+	  echo -e "\033[1;31mProgram(s) \"$$mis\" not found, please install!\033[0m"; \
+	  exit 1;                                                  \
+	fi

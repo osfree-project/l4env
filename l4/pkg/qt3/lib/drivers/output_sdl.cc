@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/drivers/output_sdl.cc
+ * \brief  VESA framebuffer driver for Qt/Embedded.
+ *
+ * \date   10/24/2004
+ * \author Josef Spillner <js177634@inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2005 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 /*
  * Based on DOpE's l4/scrdrv.c
  */
@@ -9,6 +26,7 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/macros.h>
 #include <l4/log/l4log.h>
+#include <l4/sigma0/sigma0.h>
 
 #include <l4/env/mb_info.h>
 
@@ -22,18 +40,16 @@ static int    scr_linelength;        /* bytes per scanline */
 static void  *scr_adr;               /* physical screen adress */
 
 static int
-vc_map_video_mem(l4_addr_t addr, l4_size_t size,
+vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
                  l4_addr_t *vaddr, l4_offs_t *offset) {
 	int error;
-	l4_addr_t m_addr;
 	l4_uint32_t rg;
-	l4_uint32_t dummy;
 	l4_msgdope_t result;
-	l4_threadid_t my_task_preempter_id, my_task_pager_id;
+	l4_threadid_t my_task_pager_id;
 
-	*offset = addr & ~L4_SUPERPAGEMASK;
-	addr   &= L4_SUPERPAGEMASK;
-	size    = (size + *offset + L4_SUPERPAGESIZE-1) & L4_SUPERPAGEMASK;
+	*offset = paddr & ~L4_SUPERPAGEMASK;
+	paddr   = l4_trunc_superpage(paddr);
+	size    = l4_round_superpage(size + *offset);
 
 	if ((error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, vaddr, &rg))) {
 		LOG("Error %d reserving region size=%dMB for video memory\n",
@@ -43,46 +59,28 @@ vc_map_video_mem(l4_addr_t addr, l4_size_t size,
 	}
 
 	/* get region manager's pager */
-	my_task_preempter_id = my_task_pager_id = L4_INVALID_ID;
-	l4_thread_ex_regs(l4rm_region_mapper_id(), (l4_uint32_t)-1, (l4_uint32_t)-1,
-	                  &my_task_preempter_id, &my_task_pager_id,
-	                  &dummy, &dummy, &dummy);
+	my_task_pager_id = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
 
-	LOG("Mapping video memory at 0x%08x to 0x%08x (size=%dMB)\n",
-	       addr, *vaddr, size>>20);
+	LOG("Mapping video memory at 0x%08lx to 0x%08lx (size=%dMB)\n",
+	       paddr, *vaddr, size>>20);
 
 	/* check here for curious video buffer, one candidate is VMware */
-	if (addr < 0x80000000) {
-		LOG("Video memory address is below 2GB (0x80000000), don't know\n"
-		 "how to map it as device super i/o page.\n");
-		return -L4_EINVAL;
-	}
-
-	for (m_addr=*vaddr; size>0; size-=L4_SUPERPAGESIZE,
-	     addr+=L4_SUPERPAGESIZE, m_addr+=L4_SUPERPAGESIZE) {
-		for (;;) {
-			/* we could get l4_thread_ex_regs'd ... */
-			error = l4_ipc_call(my_task_pager_id,
-                         L4_IPC_SHORT_MSG, (addr-0x40000000) | 2, 0,
-			 L4_IPC_MAPMSG(m_addr, L4_LOG2_SUPERPAGESIZE),
-			 &dummy, &dummy,
-			 L4_IPC_NEVER, &result);
-			if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
-				break;
-		}
-		if (error) {
+	switch (l4sigma0_map_iomem(my_task_pager_id, paddr, *vaddr, size, 1)) {
+		case -2:
 			LOG("Error 0x%02d mapping video memory\n", error);
 			enter_kdebug("map_video_mem");
 			return -L4_EINVAL;
-		}
-		if (!l4_ipc_fpage_received(result)) {
-			LOG("No fpage received, result=0x%08x\n", result.msgdope);
+		case -3:
+			LOG("No fpage received, result=0x%08lx\n", result.msgdope);
 			enter_kdebug("map_video_mem");
 			return -L4_EINVAL;
-		}
+		case -4:
+			LOG("Video memory address is below 2GB (0x80000000), don't know\n"
+			    "how to map it as device super i/o page.\n");
+			return -L4_EINVAL;
 	}
 
-	LOG("mapping: vaddr=0x%x size=%d(0x%x) offset=%d(0x%x)\n",
+	LOG("mapping: vaddr=0x%lx size=%d(0x%x) offset=%ld(0x%lx)\n",
 	       *vaddr, size, size, *offset, *offset);
 
 	return 0;

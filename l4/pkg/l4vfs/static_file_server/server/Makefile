@@ -5,7 +5,7 @@ L4DIR        ?= $(PKGDIR)/../../..
 FILES        := $(shell cat $(PKGDIR)/server/files.lst)
 FILES_ofs    := $(addsuffix .ofs,$(FILES))
 
-SYSTEMS       = x86-l4v2 x86-l4x0
+SYSTEMS       = x86-l4v2
 
 SRC_C         = main.c basic_io.c resolve.c state.c
 

@@ -46,7 +46,6 @@
 #include <l4/sys/rt_sched.h> // RT scheduling
 #include <l4/util/atomic.h>
 #include <l4/rmgr/librmgr.h> // for rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -238,8 +237,9 @@ work_loop_create (control_struct_t * control)
 
     /* set preemter */
     pager = L4_INVALID_ID;
-    l4_thread_ex_regs (control->work_thread_id, -1, -1,
-		       &preempter, &pager, &word1, &word1, &word1);
+    l4_thread_ex_regs_flags(control->work_thread_id, -1, -1,
+		            &preempter, &pager, &word1, &word1, &word1,
+			    L4_THREAD_EX_REGS_NO_CANCEL);
 #endif
   }
 

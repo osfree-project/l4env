@@ -9,7 +9,6 @@
 #ifndef __L4_L4v2_KDEBUG_H__
 #define __L4_L4v2_KDEBUG_H__
 
-#include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 
 /*****************************************************************************
@@ -80,15 +79,19 @@ fiasco_get_cputime(l4_threadid_t tid, l4_threadid_t *next_tid,
 L4_INLINE void
 fiasco_register_symbols(l4_taskid_t tid, l4_addr_t addr, l4_size_t size)
 {
-  asm("int $3; cmpb $30, %%al" : : "a" (addr), "d" (size),
-				   "b" (tid.id.task), "c" (1));
+  asm("push %%ebx; movl %%esi,%%ebx \n\t"
+      "int  $3; cmpb $30, %%al      \n\t"
+      "pop  %%ebx                   \n\t"
+      : : "a" (addr), "d" (size), "S" (tid.id.task), "c" (1));
 }
 
 L4_INLINE void
 fiasco_register_lines(l4_taskid_t tid, l4_addr_t addr, l4_size_t size)
 {
-  asm("int $3; cmpb $30, %%al" : : "a" (addr), "d" (size),
-				   "b" (tid.id.task), "c" (2));
+  asm("push %%ebx; movl %%esi,%%ebx \n\t"
+      "int  $3; cmpb $30, %%al      \n\t"
+      "pop  %%ebx                   \n\t"
+      : : "a" (addr), "d" (size), "S" (tid.id.task), "c" (2));
 }
 
 L4_INLINE void

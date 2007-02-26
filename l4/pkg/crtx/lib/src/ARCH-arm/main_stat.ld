@@ -4,6 +4,12 @@ OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm",
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 
+PHDRS
+{
+  ro PT_LOAD;
+  rw PT_LOAD;
+}
+
 SECTIONS
 {
   /* No program code/data before _stext/_prog_img_start! */
@@ -23,7 +29,7 @@ SECTIONS
     LONG(0xc3)  /* terminate .fini */
     . = ALIGN(0x40);
     *(.rodata .rodata.* .gnu.linkonce.r.* .rodata1)
-  }
+  } : ro
 
   _etext = .;
   PROVIDE (etext = .); /* don't fail if user defines this symbol */
@@ -34,14 +40,14 @@ SECTIONS
   {
     *(.data .data.* .gnu.linkonce.d.*)
     *(.anno)
-  }
+  } : rw
   /* exception frames for C++ */
   .eh_frame : 
   {
     __eh_frame_start__ = .;
     KEEP (*(.eh_frame)) 
     LONG(0) /* terminate .eh_frame */
-  }
+  } : rw
   .gcc_except_table : { KEEP(*(.gcc_except_table)) }
   .dynamic :  { *(.dynamic) }
 
@@ -65,7 +71,7 @@ SECTIONS
     KEEP (*(SORT(.c_ctors.?????)))
     KEEP (*(.c_ctors))
     KEEP (*(.mark_end_c_ctors))
-  }
+  } : rw
   . = ALIGN(4);
   .dtors :
   {
@@ -85,9 +91,9 @@ SECTIONS
     KEEP (*(SORT(.c_dtors.?????)))
     KEEP (*(.c_dtors))
     KEEP (*(.mark_end_c_dtors))
-  }
+  } : rw
 
-  .got : { *(.got.plt) *(.got) }
+  .got : { *(.got.plt) *(.got) } : rw
 
   _edata = .;
   PROVIDE (edata = .); /* don't fail if user defines this symbol */
@@ -101,7 +107,7 @@ SECTIONS
    _end = .;
    PROVIDE (end = .); /* don't fail if user defines this symbol */
    *(.rospace)
-  }
+  } : rw
 
   /* No code/data beyond this symbol in program image */
   _prog_img_end = .;

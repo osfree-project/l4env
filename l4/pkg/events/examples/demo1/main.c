@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
   printf("sending an event.\n");
   eval_request(l4events_send(10, &send_evt, &event_nr, 
 		L4EVENTS_ASYNC | L4EVENTS_SEND_ACK));
-  printf("event_nr: %d\n", event_nr);
+  printf("event_nr: %ld\n", event_nr);
  
   l4events_dump();
 
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
   printf("sending an event.\n");
   eval_request(l4events_send(12, &send_evt, &event_nr, 
 		L4EVENTS_ASYNC | L4EVENTS_SEND_ACK));
-  printf("event_nr: %d\n", event_nr);
+  printf("event_nr: %ld\n", event_nr);
 
   strcpy(send_evt.str,"world");
   send_evt.len = strlen(send_evt.str)+1;
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
 
   printf("sending an event.\n");
   eval_request(l4events_send(12, &send_evt, &event_nr, L4EVENTS_ASYNC));
-  printf("event_nr: %d\n", event_nr);
+  printf("event_nr: %ld\n", event_nr);
 
   l4events_dump();
   

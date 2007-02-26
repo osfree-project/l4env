@@ -1,15 +1,13 @@
 # -*- makefile -*-
 
-HOST_CXX := g++
-
 $(TCBOFFSET): dump_tcboffsets tcboffset.bin
 	./$< tcboffset.bin > $@.new
 	mv $@.new $@
 
-dump_tcboffsets: dump_tcboffsets.cc tcboffset_in.h globalconfig.h
+dump_tcboffsets: dump_tcboffsets.cc tcboffset_in.h globalconfig.h .Compiler-config
 	$(COMP_MESSAGE)
-	$(VERBOSE)$(HOST_CXX) -MD -I . -o $@ $<
-	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $@.d, $(dir $@).$@.cc.d)
+	$(VERBOSE)$(HOST_CXX) -MD -MP -MF .$@.cc.d.new -Wall -W -I . -o $@ $<
+	@mv .$@.cc.d.new .$@.cc.d
 
 tcboffset.o: tcboffset_in.h
 

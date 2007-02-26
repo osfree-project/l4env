@@ -2,7 +2,7 @@
 /* $Id$ */
 
 /**
- * \file	con/idl/stream/stream.idl
+ * \file	l4con/idl/stream.idl
  * \brief	streaming IPC interface for pushing console events to clients
  *
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>

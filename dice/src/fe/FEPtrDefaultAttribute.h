@@ -55,7 +55,6 @@ protected:
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CFEAttribute* GetPtrAttribute();
     virtual CObject* Clone();
 

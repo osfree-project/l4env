@@ -132,10 +132,10 @@ l4blk_open_driver(const char * name, l4blk_driver_t * driver,
   /* open driver */
   ret = l4blk_driver_open_call(&drv->driver_id, &drv->handle,
                                &drv->cmd_id, &drv->notify_id, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOG_Error("open driver failed \"%s\" (ret %d, exc %d)",
-                name, ret, _env.major);
+                name, ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -210,9 +210,10 @@ l4blk_close_driver(l4blk_driver_t driver)
 
   /* close driver */
   ret = l4blk_driver_close_call(&drv->driver_id, drv->handle, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
-      LOG_Error("close driver failed (ret %d, exc %d)", ret, _env.major);
+      LOG_Error("close driver failed (ret %d, exc %d)", ret,
+	  DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else

@@ -50,6 +50,11 @@
 #define HCI_RS232 	4
 #define HCI_PCI		5
 
+/* HCI device quirks */
+enum {
+	HCI_QUIRK_RESET_ON_INIT
+};
+
 /* HCI device flags */
 enum {
 	HCI_UP,
@@ -469,7 +474,7 @@ typedef struct {
 	__u8	pscan_period_mode;
 	__u8	dev_class[3];
 	__u16	clock_offset;
-	__u8	rssi;
+	__s8	rssi;
 } __attribute__ ((packed)) inquiry_info_with_rssi;
 #define INQUIRY_INFO_WITH_RSSI_SIZE 14
 

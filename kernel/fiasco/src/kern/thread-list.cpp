@@ -55,3 +55,39 @@ Thread::present_dequeue()
       present_next /* = present_prev */ = 0;
     }
 }
+
+PRIVATE inline
+void
+Thread::present_enqueue()
+{
+  if (space_index() == Thread::lookup(thread_lock()->lock_owner())
+                       ->space_index())
+    {
+      // same task -> enqueue after creator
+      present_enqueue (Thread::lookup(thread_lock()->lock_owner()));
+    }
+  else
+    present_enqueue_other_task();
+}
+
+PRIVATE inline
+void
+Thread::present_enqueue_other_task()
+{
+  if (id().lthread())
+    {
+      // other task and non-first thread
+      // --> enqueue in the destination address space after the first
+      //     thread
+      present_enqueue (lookup_first_thread(space()->id()));
+    }
+  else
+    {
+      // other task -> enqueue in front of this task
+      present_enqueue
+	(lookup_first_thread
+	 (Thread::lookup (thread_lock()->lock_owner())
+	  ->space_index())->present_prev);
+    }
+}
+

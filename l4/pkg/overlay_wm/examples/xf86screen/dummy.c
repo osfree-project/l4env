@@ -60,5 +60,5 @@ char *strncpy(char *to, const char *from, int count) {
 	return ret;
 }
 
-void LOG_logL(void);
-void LOG_logL(void) {}
+void puts(void);
+void puts(void) {}

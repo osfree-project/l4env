@@ -19,6 +19,5 @@ fiasco \
 	-l dm_phys \
 	-l simple_ts \
 	-l fuxfprov \
-	-l l4exec \
 	-n 9 \
 	"${args[@]}"

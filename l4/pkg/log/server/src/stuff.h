@@ -48,17 +48,6 @@ typedef struct{
 #define MAX_BIN_CONNS 64
 extern bin_conn_t bin_conns[MAX_BIN_CONNS];
 
-//! A structure containing the last received client-request
-typedef struct{
-    l4_fpage_t fpage;
-    l4_msgdope_t size;
-    l4_msgdope_t snd;
-    l4_umword_t d0,d1, d2, d3, d4, d5, d6;
-    l4_strdope_t string;
-    l4_msgdope_t result;
-} rcv_message_t;
-extern rcv_message_t message;
-
 extern unsigned buffer_head, buffer_tail, buffer_size;
 extern char buffer_array[];
 extern int flush_local, flush_serial, flush_to_net, flush_muxed;

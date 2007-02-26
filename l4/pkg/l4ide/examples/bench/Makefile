@@ -5,7 +5,7 @@ L4DIR ?=	$(PKGDIR)/../..
 PRIVATE_INCDIR = $(PKGDIR)/include
 
 # source files
-SRC_C =		main.c rand.c
+SRC_C =		main.c
 
 # target
 TARGET =	l4ide_bench

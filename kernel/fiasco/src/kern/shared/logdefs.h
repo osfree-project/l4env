@@ -59,7 +59,7 @@
   BEGIN_LOG_EVENT(log_context_switch)                                   \
   Tb_entry_ctx_sw *tb =                                                 \
      static_cast<Tb_entry_ctx_sw*>(Jdb_tbuf::new_entry());              \
-  tb->set(this, Space::current(), regs()->ip(), t, t_orig,      \
+  tb->set(this, space(), regs()->ip(), t, t_orig,	\
           t_orig->lock_cnt(), current_sched(),                          \
           current_sched() ? current_sched()->prio() : 0,                \
           (Mword)__builtin_return_address(0));                          \
@@ -139,11 +139,11 @@
 
 #define LOG_TRAP                                                        \
   BEGIN_LOG_EVENT(log_trap)                                             \
-  if (ts->trapno != 1 && ts->trapno != 3)                               \
+  if (ts->_trapno != 1 && ts->_trapno != 3)                             \
     {                                                                   \
       Tb_entry_trap *tb =                                               \
          static_cast<Tb_entry_trap*>(Jdb_tbuf::new_entry());            \
-      tb->set(this, ts->ip(), ts);                                  \
+      tb->set(this, ts->ip(), ts);                                      \
       Jdb_tbuf::commit_entry();                                         \
     }                                                                   \
   END_LOG_EVENT

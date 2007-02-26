@@ -15,7 +15,7 @@ PREFIX(l4_ipc_call_asm:)
 	movl	40(%esp),%ecx
 	andl	$0xfffffffe,%ebp
 #ifdef KIP_SYSCALLS
-	call	*__L4_ipc
+	call	__l4sys_ipc_direct
 #else
 #ifndef L4V2_IPC_SYSENTER
 	int	$0x30
@@ -58,6 +58,9 @@ PREFIX(l4_ipc_reply_and_wait_asm:)
 	movl	32(%esp),%ebp
 	movl	44(%esp),%ecx
 	orl	$0x00000001,%ebp
+#ifdef KIP_SYSCALLS
+	call	__l4sys_ipc_direct
+#else
 #ifndef L4V2_IPC_SYSENTER
 	int	$0x30
 #else
@@ -69,6 +72,7 @@ PREFIX(l4_ipc_reply_and_wait_asm:)
 	sysenter
 	movl	%ebp,%edx
 1:
+#endif
 #endif
 	movl	28(%esp),%ecx
 	movl	%esi,(%ecx)

@@ -431,7 +431,7 @@ l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
 l4_int32_t
 l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                                   object_handle_t handle,
-                                  l4vfs_dirent_t *dirp,
+                                  l4vfs_dirent_t **dirp,
                                   l4_uint32_t *count,
                                   CORBA_Server_Environment *_dice_corba_env)
 {
@@ -447,7 +447,7 @@ l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
 
     node = clients[handle].node;
     seek = clients[handle].seek;
-    ret = l4vfs_th_dir_fill_dirents(node, seek, dirp, count);
+    ret = l4vfs_th_dir_fill_dirents(node, seek, *dirp, count);
     clients[handle].seek = ret;  // set new seekpointer
 
     if (*count < 0)
@@ -518,9 +518,9 @@ l4vfs_basic_io_lseek_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
                                object_handle_t fd,
-                               l4_int8_t **buf,
+                               char **buf,
                                l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
+                               short *_dice_reply,
                                CORBA_Server_Environment *_dice_corba_env)
 {
     return -EINVAL;
@@ -529,9 +529,9 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                const l4_int8_t *buf,
+                                const char *buf,
                                 l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
+                                short *_dice_reply,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
     return -EINVAL;

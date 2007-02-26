@@ -97,6 +97,12 @@ static int start_thread(THREAD *dst_tid, void (*entry)(void *), void *arg) {
 }
 
 
+/*** KILL THREAD ***/
+static void kill_thread(THREAD *tid) {
+	l4thread_shutdown(l4thread_id(tid->tid));
+}
+
+
 /*** CREATE NEW MUTEX AND SET IT UNLOCKED ***/
 static MUTEX *create_mutex(int init) {
 	MUTEX *result;
@@ -189,6 +195,7 @@ static struct thread_services services = {
 	free_thread,
 	copy_thread,
 	start_thread,
+	kill_thread,
 	create_mutex,
 	destroy_mutex,
 	mutex_down,

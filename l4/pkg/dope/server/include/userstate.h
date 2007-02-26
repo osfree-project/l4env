@@ -47,7 +47,8 @@ struct userstate_services {
 	char    (*get_ascii)         (long keycode);
 	void    (*set_max_mx)        (long max_mx);
 	void    (*set_max_my)        (long max_my);
-
+	void    (*release_app)       (int app_id);
+	void    (*release_widget)    (WIDGET *);
 };
 
 

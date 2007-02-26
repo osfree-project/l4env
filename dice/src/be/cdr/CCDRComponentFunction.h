@@ -44,7 +44,7 @@ public:
     virtual ~CCDRComponentFunction();
 
 public:
-    virtual bool CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEOperation* pFEOperation);
 };
 
 #endif

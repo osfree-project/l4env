@@ -34,7 +34,7 @@ IPC_timeout::~IPC_timeout()
 }
 
 PRIVATE inline NEEDS ["globals.h"]
-Receiver * const
+Receiver *
 IPC_timeout::owner()
 {
   // We could have saved our context in our constructor, but computing

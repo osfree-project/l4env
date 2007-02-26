@@ -2,14 +2,15 @@ SYSTEMS			:= 	x86-l4v2
 PKGDIR			?=	../../..
 L4DIR			?=	$(PKGDIR)/../..
 
-PRIVATE_INCDIR		 = 	$(PKGDIR)/lib/include $(PKGDIR)/include
+PRIVATE_INCDIR		 = 	$(PKGDIR)/include $(PKGDIR)/lib/include $(PKGDIR_OBJ)/lib/include
 
 TARGET			 =	libogmlib.a
 
 SRC_C			 =	ogmlib.c framing.c bitwise.c common.c
 
 # include configuration
--include $(PKGDIR)/Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/Makeconf.bid.local
 
 # use petze ?
 ifeq ($(OGMLIB_PETZE),y)

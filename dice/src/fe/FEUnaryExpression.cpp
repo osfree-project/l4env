@@ -80,7 +80,7 @@ long CFEUnaryExpression::GetIntValue()
  *  \param nType the type to compare with
  *  \return true if it is of the given type, false f not
  */
-bool CFEUnaryExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEUnaryExpression::IsOfType(unsigned int nType)
 {
     switch (GetOperator())
       {
@@ -113,38 +113,4 @@ EXPT_OPERATOR CFEUnaryExpression::GetOperator()
 CObject *CFEUnaryExpression::Clone()
 {
     return new CFEUnaryExpression(*this);
-}
-
-/** serialize this object
- *  \param pFile the file to serialize to/from
- */
-void CFEUnaryExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<unary_expression>\n");
-      pFile->IncIndent();
-      pFile->PrintIndent("<operator>");
-      switch (m_nOperator)
-        {
-        case EXPR_SMINUS:
-        pFile->Print("-");
-        break;
-        case EXPR_SPLUS:
-        pFile->Print("+");
-        break;
-        case EXPR_TILDE:
-        pFile->Print("~");
-        break;
-        case EXPR_EXCLAM:
-        pFile->Print("!");
-        break;
-        default:
-        break;
-        }
-      pFile->Print("</operator>\n");
-      GetOperand()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</unary_expression>\n");
-      }
 }

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEType.h
- *    \brief   contains the declaration of the class CBEType
+ *  \brief   contains the declaration of the class CBEType
  *
  *    \date    01/15/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,9 +32,8 @@
 
 #include "be/BEObject.h"
 #include <vector>
-using namespace std;
+using std::vector;
 
-class CBEContext;
 class CBEFile;
 class CBETypedef;
 class CFETypeSpec;
@@ -43,74 +42,85 @@ class CBEType;
 class CBEExpression;
 class CDeclaratorStackLocation;
 
-/**    \class CBEType
- *    \ingroup backend
- *    \brief the back-end type
+/** \class CBEType
+ *  \ingroup backend
+ *  \brief the back-end type
  */
 class CBEType : public CBEObject
 {
 
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEType();
     virtual ~CBEType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEType(CBEType &src);
 
 public:
     virtual bool IsUnsigned();
     virtual int GetFEType();
-    virtual void WriteZeroInit(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteZeroInit(CBEFile *pFile);
     virtual int GetStringLength();
     virtual CObject* Clone();
     virtual bool IsOfType(int nFEType);
     virtual int GetSize();
+    virtual int GetMaxSize();
     virtual bool IsVoid();
-    virtual bool CreateBackEnd(bool bUnsigned, int nSize, int nFEType, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
+    virtual void CreateBackEnd(bool bUnsigned, int nSize, int nFEType);
+    virtual void CreateBackEnd(CFETypeSpec *pFEType);
     virtual CBETypedef* GetTypedef();
-    virtual void Write(CBEFile *pFile, CBEContext *pContext);
+    virtual void Write(CBEFile *pFile);
+    virtual void WriteToStr(string &str);
     virtual bool IsConstructedType();
     virtual bool HasTag(string sTag);
-    virtual void WriteCast(CBEFile *pFile, bool bPointer, CBEContext *pContext);
+    virtual void WriteCast(CBEFile *pFile, bool bPointer);
     virtual bool IsPointerType();
     virtual bool IsArrayType();
-    virtual void WriteDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteDeclaration(CBEFile *pFile);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void WriteGetSize(CBEFile *pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+    virtual void WriteGetMaxSize(CBEFile *pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual int GetArrayDimensionCount();
     virtual int GetIndirectionCount();
-    virtual void WriteIndirect(CBEFile* pFile, CBEContext* pContext);
+    virtual void WriteIndirect(CBEFile* pFile);
 
-    virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
-
-protected:
-    virtual void WriteZeroInitArray(CBEFile *pFile, CBEType *pType, CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter, CBEContext *pContext);
+    virtual bool AddToFile(CBEHeaderFile *pHeader);
 
 protected:
-    /**    \var bool m_bUnsigned
-     *    \brief indicates if this type is unsigned
+    virtual void WriteZeroInitArray(CBEFile *pFile, CBEType *pType, 
+	CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter);
+
+protected:
+    /** \var bool m_bUnsigned
+     *  \brief indicates if this type is unsigned
      */
     bool m_bUnsigned;
-    /**    \var unsigned int m_nSize
-     *    \brief specifies the size of the type in bytes
+    /** \var int m_nSize
+     *  \brief cached value of size
      */
     int m_nSize;
-    /**    \var string m_sName
-     *    \brief the fully extended name of the type
+    /** \var int m_nMaxSize
+     *  \brief cached value of maximum size
+     */
+    int m_nMaxSize;
+    /** \var string m_sName
+     *  \brief the fully extended name of the type
      *
-     * A type's name might be extended by the library or interface name. These extension are already in this variable.
+     * A type's name might be extended by the library or interface name. These
+     * extension are already in this variable.
      */
     string m_sName;
-    /**    \var in m_nFEType
-     *    \brief only used for comparison
+    /** \var in m_nFEType
+     *  \brief only used for comparison
      */
     int m_nFEType;
 };

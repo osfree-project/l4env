@@ -20,7 +20,7 @@ L4_INLINE void
 cfg_init(void)
 {
   /* first task the config file configures */
-  __cfg_task = myself.id.task;
+  __cfg_task = TASKNO_ROOT;
   quota_set_default(&q);
   bootquota_set_default(&b);
 }

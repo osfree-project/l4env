@@ -10,8 +10,8 @@
 #define __L4_SYSCALLS_H__
 
 #include <l4/sys/types.h>
-#include <l4/sys/compiler.h>
 #include <l4/sys/kdebug.h>
+#include <l4/sys/utcb.h>
 
 /*****************************************************************************
  *** Syscall arguments
@@ -192,8 +192,18 @@ l4_thread_ex_regs_flags(l4_threadid_t destination,
 		        unsigned long flags);
 
 enum {
-  L4_THREAD_EX_REGS_ALIEN     = 1 << 29,
-  L4_THREAD_EX_REGS_NO_CANCEL = 1 << 30,
+  /* Additional arguments are delivered in the UTCB */
+  L4_THREAD_EX_REGS_UTCB_ARGS       = 1 << 27,
+  /* The target thread will raise an exception immediately just before
+   * returning to userland. */
+  L4_THREAD_EX_REGS_RAISE_EXCEPTION = 1 << 28,
+  /* The target thread is handled as alien, that is every L4 syscall
+   * will generate an exception IPC. */
+  L4_THREAD_EX_REGS_ALIEN           = 1 << 29,
+  /* Don't cancel ongoing IPC. */
+  L4_THREAD_EX_REGS_NO_CANCEL       = 1 << 30,
+  /* Reserved for backward compatibility with older L4 versions. */
+  L4_THREAD_EX_REGS_VM86            = 1 << 31,
 };
 
 /**
@@ -219,6 +229,25 @@ l4_inter_task_ex_regs(l4_threadid_t destination,
 		      l4_umword_t *old_eip,
 		      l4_umword_t *old_esp,
 		      unsigned long flags);
+
+L4_INLINE void
+l4_inter_task_ex_regs_cap(l4_threadid_t destination,
+		          l4_umword_t eip,
+		          l4_umword_t esp,
+		          l4_threadid_t *preempter,
+		          l4_threadid_t *pager,
+			  l4_threadid_t *cap_handler,
+		          l4_umword_t *old_eflags,
+		          l4_umword_t *old_eip,
+		          l4_umword_t *old_esp,
+		          unsigned long flags);
+
+/**
+ * Special version of l4_thread_ex_regs to get the pager of a thread
+ * with the callers address space.
+ */
+L4_INLINE l4_threadid_t
+l4_thread_ex_regs_pager(l4_threadid_t destination);
 
 /**
  * Release the processor non-preemptively
@@ -377,8 +406,29 @@ l4_task_new(l4_taskid_t destination,
 	    l4_umword_t esp,
 	    l4_umword_t eip,
 	    l4_threadid_t pager);
+
+L4_INLINE l4_taskid_t
+l4_task_new_cap(l4_taskid_t destination,
+	        l4_umword_t mcp_or_new_chief,
+	        l4_umword_t esp,
+	        l4_umword_t eip,
+	        l4_threadid_t pager,
+	        l4_threadid_t cap_handler);
+
 enum {
-  L4_TASK_NEW_ALIEN = 1 << 31,
+  /* Start task in IPC monitor mode */
+  L4_TASK_NEW_IPC_MONITOR     = 1 << 29,
+  /* Raise exception upon start of thread 0 */
+  L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,
+  /* Start thread 0 in alien mode */
+  L4_TASK_NEW_ALIEN           = 1 << 31,
+
+  /* Number of flags */
+  L4_TASK_NEW_NR_OF_FLAGS     = 3,
+
+  /* Mask of all flags */
+  L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
+                                  << (sizeof(l4_umword_t) * 8 - L4_TASK_NEW_NR_OF_FLAGS),
 };
 
 
@@ -393,44 +443,39 @@ L4_INLINE int
 l4_privctrl(l4_umword_t cmd,
 	    l4_umword_t param);
 
+/**
+ * Internal prototypes
+ */
+L4_INLINE void
+__do_l4_thread_ex_regs(l4_umword_t val0,
+                       l4_umword_t eip,
+                       l4_umword_t esp,
+                       l4_threadid_t *preempter,
+                       l4_threadid_t *pager,
+                       l4_umword_t *old_eflags,
+                       l4_umword_t *old_eip,
+                       l4_umword_t *old_esp);
+L4_INLINE l4_taskid_t
+__do_l4_task_new(l4_taskid_t destination,
+                 l4_umword_t mcp_or_new_chief_and_flags,
+                 l4_umword_t esp,
+                 l4_umword_t eip,
+                 l4_threadid_t pager);
+
+
 /*****************************************************************************
  *** Implementation
  *****************************************************************************/
 
-#ifndef CONFIG_L4_CALL_SYSCALLS
-
-# define L4_SYSCALL_id_nearest            "int $0x31 \n\t"
-# define L4_SYSCALL_fpage_unmap           "int $0x32 \n\t"
-# define L4_SYSCALL_thread_switch         "int $0x33 \n\t"
-# define L4_SYSCALL_thread_schedule       "int $0x34 \n\t"
-# define L4_SYSCALL_lthread_ex_regs       "int $0x35 \n\t"
-# define L4_SYSCALL_task_new              "int $0x36 \n\t"
-# define L4_SYSCALL_privctrl              "int $0x37 \n\t"
-# define L4_SYSCALL(name)                 L4_SYSCALL_ ## name
-
-#else
-
-# ifdef CONFIG_L4_ABS_SYSCALLS
-#  define L4_SYSCALL(s) "call __L4_"#s"_direct   \n\t"
-# else
-#  define L4_SYSCALL(s) "call *__L4_"#s"  \n\t"
-# endif
-
-#endif
+#include <l4/sys/syscall-invoke.h>
 
 #define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
 
 #ifdef PROFILE
 #include "syscalls-l42-profile.h"
 #else
-#  if GCC_VERSION < 295
-#    error gcc >= 2.95 required
-#  elif GCC_VERSION < 302
-#    ifdef __PIC__
-#      include "syscalls-l42-gcc295-pic.h"
-#    else
-#      include "syscalls-l42-gcc295-nopic.h"
-#    endif
+#  if GCC_VERSION < 302
+#    error gcc >= 3.0.2 required
 #  else
 #    ifdef __PIC__
 #      include "syscalls-l42-gcc3-pic.h"
@@ -465,7 +510,7 @@ l4_thread_ex_regs(l4_threadid_t destination,
 }
 
 /*
- * L4 lthread_ex_regs without IPC canceling
+ * L4 lthread_ex_regs with additional flags
  */
 L4_INLINE void
 l4_thread_ex_regs_flags(l4_threadid_t destination,
@@ -502,6 +547,47 @@ l4_inter_task_ex_regs(l4_threadid_t destination,
                          eip, esp, preempter, pager,
                          old_eflags, old_eip, old_esp);
 }
+
+L4_INLINE void
+l4_inter_task_ex_regs_cap(l4_threadid_t destination,
+		          l4_umword_t eip,
+		          l4_umword_t esp,
+		          l4_threadid_t *preempter,
+		          l4_threadid_t *pager,
+			  l4_threadid_t *cap_handler,
+		          l4_umword_t *old_eflags,
+		          l4_umword_t *old_eip,
+		          l4_umword_t *old_esp,
+		          unsigned long flags)
+{
+  l4_utcb_t *utcb = l4_utcb_get();
+  utcb->ex_regs.caphandler = *cap_handler;
+  __do_l4_thread_ex_regs(destination.id.lthread
+                          | (destination.id.task << 7)
+			  | flags
+			  | L4_THREAD_EX_REGS_UTCB_ARGS,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+  *cap_handler = utcb->ex_regs.caphandler;
+}
+
+/*
+ * Special version of l4_thread_ex_regs to get the pager of a thread
+ */
+L4_INLINE l4_threadid_t
+l4_thread_ex_regs_pager(l4_threadid_t destination)
+{
+  l4_umword_t dummy;
+  l4_threadid_t preempter = L4_INVALID_ID;
+  l4_threadid_t pager     = L4_INVALID_ID;
+
+  l4_thread_ex_regs_flags(destination, (l4_umword_t)-1, (l4_umword_t)-1,
+                          &preempter, &pager, &dummy, &dummy, &dummy,
+                          L4_THREAD_EX_REGS_NO_CANCEL);
+  return pager;
+}
+
+
 /* ============================================================= */
 
 #endif /* ! PROFILE */

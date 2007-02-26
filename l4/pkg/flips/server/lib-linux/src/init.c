@@ -10,6 +10,9 @@
 #include "liblinux.h"
 #include "local.h"
 
+/* defined in linux sources (2.4.32) net/ipv4/ipconfig.c */
+extern int ic_enable;
+
 l4io_info_t *io_info_addr;
 
 /** INITIALISATION OF DDE_LINUX */
@@ -56,11 +59,16 @@ void * liblinux_get_l4io_info()
  *
  * Linux does it in net/socket.c.
  */
-static int net_init(void)
+static int net_init(int dhcp)
 {
 	netlink_proto_init();
 	rtnetlink_init();
 	net_dev_init();             /* implicitly calls liblinux_lo_init.c */
+
+	if (dhcp) {
+		LOG("DHCP enabled");
+		ic_enable = 1;
+	}
 
 	return 0;
 }
@@ -70,7 +78,7 @@ static int net_init(void)
  * This function  must be called at first.
  * We initialize DDE before starting our submodules.
  */
-int liblinux_init(unsigned int vmem, unsigned int kmem)
+int liblinux_init(unsigned int vmem, unsigned int kmem, int dhcp)
 {
 	int err;
 
@@ -88,7 +96,7 @@ int liblinux_init(unsigned int vmem, unsigned int kmem)
 	libsocket_linux_init();
 
 	/* Linux */
-	if ((err = net_init())) {
+	if ((err = net_init(dhcp))) {
 		LOGd(DEBUG_LIBLX, "NET initialization failed (%d)", err);
 		return err;
 	}

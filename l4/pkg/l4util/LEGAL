@@ -63,9 +63,7 @@ lib/src/Makefile : TUD
 lib/src/__main.c : TUD
 lib/src/alloc.c : TUD
 lib/src/base64.c : Trantor Standard Systems Inc. : MIT
-lib/src/getopt.c : GPL
-lib/src/getopt1.c : GPL
-lib/src/getopt2.c : GPL
+lib/src/getopt2.c : TUD
 lib/src/kip.c : TUD
 lib/src/memdesc.c : TUD
 lib/src/micros2l4to.c : TUD

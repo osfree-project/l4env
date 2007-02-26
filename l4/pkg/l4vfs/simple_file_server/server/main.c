@@ -113,12 +113,12 @@ l4vfs_basic_io_access_component(CORBA_Object _dice_corba_obj,
 
 
 l4vfs_ssize_t
-l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
-                               object_handle_t fd,
-                               l4_int8_t **buf,
-                               l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
-                               CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_read_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t fd,
+                                char **buf,
+                                l4vfs_size_t *count,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
     int ret;
 
@@ -131,9 +131,9 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                const l4_int8_t *buf,
+                                const char *buf,
                                 l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
+                                short *_dice_reply,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
     int ret;
@@ -170,12 +170,12 @@ l4vfs_basic_io_fsync_component(CORBA_Object _dice_corba_obj,
 
 int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                                       object_handle_t fd,
-                                      l4vfs_dirent_t *dirp,
+                                      l4vfs_dirent_t **dirp,
                                       unsigned int *count,
                                       CORBA_Server_Environment *_dice_corba_env)
 {   int ret;
 
-    ret = clientstate_getdents(fd,dirp,*count,*_dice_corba_obj);
+    ret = clientstate_getdents(fd,*dirp,*count,*_dice_corba_obj);
 
     return ret;
 
@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
             break;
         }
     } while (option != -1);
-    
+
     names_register(SIMPLE_FILE_SERVER_NAME);
     state_init();
 

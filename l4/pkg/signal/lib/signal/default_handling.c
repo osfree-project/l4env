@@ -193,7 +193,8 @@ void l4signal_default_handling( siginfo_t *signal )
 // put all application threads asleep
 void l4signal_stop_app()
 {
-    int i, dummy;
+    int i;
+    l4_umword_t dummy;
     // me, myself and I
     l4thread_t me = l4thread_id(l4_myself());
     static l4_threadid_t inval = L4_INVALID_ID;
@@ -213,10 +214,10 @@ void l4signal_stop_app()
        if (THREAD_EXISTS(i) && i != me)
        {
            l4semaphore_down(&l4signal_masktable_sem);
-           l4_thread_ex_regs( l4thread_l4_id(i), (l4_umword_t)l4signal_sleep,
-                   0xFFFFFFFF, &inval, &inval,
-                   &dummy, &(l4signal_sigmask_table[i].eip),
-                   &(l4signal_sigmask_table[i].esp) );
+           l4_thread_ex_regs(l4thread_l4_id(i), (l4_umword_t)l4signal_sleep,
+                             (l4_umword_t)-1, &inval, &inval,
+			     &dummy, &(l4signal_sigmask_table[i].eip),
+			     &(l4signal_sigmask_table[i].esp));
 
 //           l4signal_thread_prio[i] = l4thread_get_prio(i);
 //           l4thread_set_prio(i, 0);
@@ -235,7 +236,8 @@ void l4signal_sleep(void)
 // wake all application threads
 void l4signal_continue_app()
 {
-   int i, dummy;
+   int i;
+   l4_umword_t dummy;
    l4thread_t me = l4thread_id(l4_myself());
    static l4_threadid_t inval = L4_INVALID_ID;
 
@@ -245,9 +247,9 @@ void l4signal_continue_app()
        if (THREAD_EXISTS(i) && i != me)
        {
            l4semaphore_down(&l4signal_masktable_sem);
-           l4_thread_ex_regs( l4thread_l4_id(i), l4signal_sigmask_table[i].eip,
-                   l4signal_sigmask_table[i].esp, &inval, &inval, &dummy,
-                   &dummy, &dummy);
+           l4_thread_ex_regs(l4thread_l4_id(i), l4signal_sigmask_table[i].eip,
+                             l4signal_sigmask_table[i].esp, &inval, &inval, 
+			     &dummy, &dummy, &dummy);
 //           l4thread_set_prio(i, l4signal_thread_prio[i]);
            l4semaphore_up(&l4signal_masktable_sem);
        }

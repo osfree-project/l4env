@@ -27,6 +27,8 @@ typedef struct {
 
 #define REG_NOMATCH -1
 
+// overwrite any setting by any libc (e.g. for UX)
+#undef RE_DUP_MAX
 #define RE_DUP_MAX 255
 
 struct __regex_t;

@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libpresenter_fprov.a
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 CLIENTIDL	= presenter_fprov.idl
 

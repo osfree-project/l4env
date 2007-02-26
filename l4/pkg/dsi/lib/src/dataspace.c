@@ -207,10 +207,10 @@ __map_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
 				       sizeof(dsi_ctrl_header_t) +
 				       cfg.num_packets * sizeof(dsi_packet_t));
   
-  LOGdL(DEBUG_CTRL_DS, "attached crtl ds to 0x%08x \n" \
-        " header at   0x%08x\n" \
-        " packets at  0x%08x\n" \
-        " sg_lists at 0x%08x",
+  LOGdL(DEBUG_CTRL_DS, "attached crtl ds to 0x%08lx \n" \
+        " header at   0x%08lx\n" \
+        " packets at  0x%08lx\n" \
+        " sg_lists at 0x%08lx",
         (l4_addr_t)map_addr,(l4_addr_t)socket->header, 
 	(l4_addr_t)socket->packets, (l4_addr_t)socket->sg_lists);
   
@@ -558,7 +558,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
   socket->data_map_size = i;
   socket->next_buf = map;
 
-  LOGdL(DEBUG_DATA_DS, "attached data ds to addr 0x%08x", (l4_addr_t)map);
+  LOGdL(DEBUG_DATA_DS, "attached data ds to addr 0x%08lx", (l4_addr_t)map);
 
   /* done */
   return 0;

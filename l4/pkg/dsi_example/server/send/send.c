@@ -27,6 +27,8 @@
 #include "send-server.h"
 #include "__config.h"
 
+#include <stdio.h>
+
 char LOG_tag[9]="send";
 
 /*****************************************************************************
@@ -230,11 +232,11 @@ send_thread(void * data)
  * \retval ctrl_ds       Id of control dataspace
  * \retval data_ds       Id of data dataspace
  * \retval _ev           Flick exception structure (unused)
- * 
+ *
  * \return 0 on success, -1 if creation failed.
  */
-/*****************************************************************************/ 
-l4_int32_t 
+/*****************************************************************************/
+long
 dsi_example_send_open_component(CORBA_Object _dice_corba_obj,
                                 dsi_example_send_socket_t *s,
                                 dsi_example_send_dataspace_t *ctrl_ds,
@@ -336,8 +338,8 @@ dsi_example_send_open_component(CORBA_Object _dice_corba_obj,
  * \retval _ev     Flick exception structure (unused)
  * \return 0 on success, -1 if connect failed.
  */
-/*****************************************************************************/ 
-l4_int32_t 
+/*****************************************************************************/
+long
 dsi_example_send_connect_component(CORBA_Object _dice_corba_obj,
                                    const dsi_example_send_socket_t *local,
                                    const dsi_example_send_socket_t *remote,
@@ -369,14 +371,14 @@ dsi_example_send_connect_component(CORBA_Object _dice_corba_obj,
 /*****************************************************************************/
 /**
  * \brief Start transfer.
- * 
+ *
  * \param  request Flick request structure
  * \param  local   Socket
  * \retval _ev     Flick exception structure (unused)
  * \return 0 on success, -1 if failed.
  */
-/*****************************************************************************/ 
-l4_int32_t 
+/*****************************************************************************/
+long
 dsi_example_send_start_component(CORBA_Object _dice_corba_obj,
                                  const dsi_example_send_socket_t *local,
                                  CORBA_Server_Environment *_dice_corba_env)
@@ -395,17 +397,17 @@ dsi_example_send_start_component(CORBA_Object _dice_corba_obj,
  * \param  request       Flick request structure
  * \param  local         Socket reference
  * \retval _ev           Flick exception structure (unused)
- *	
+ *
  * \return 0
  */
-/*****************************************************************************/ 
-l4_int32_t 
+/*****************************************************************************/
+long
 dsi_example_send_stop_component(CORBA_Object _dice_corba_obj,
                                 const dsi_example_send_socket_t *local,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
   LOGL("stopped");
-  
+
   /* done */
   return 0;
 }
@@ -413,15 +415,15 @@ dsi_example_send_stop_component(CORBA_Object _dice_corba_obj,
 /*****************************************************************************/
 /**
  * \brief Close send socket.
- * 
+ *
  * \param  request       Flick request structure
  * \param  local         Socket reference
  * \retval _ev           Flick exception structure (unused)
- *	
+ *
  * \return 0 on success, error code otherwise.
  */
-/*****************************************************************************/ 
-l4_int32_t 
+/*****************************************************************************/
+long
 dsi_example_send_close_component(CORBA_Object _dice_corba_obj,
                                  const dsi_example_send_socket_t *local,
                                  CORBA_Server_Environment *_dice_corba_env)

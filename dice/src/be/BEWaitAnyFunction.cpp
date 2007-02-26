@@ -1,9 +1,9 @@
 /**
- *    \file   dice/src/be/BEWaitAnyFunction.cpp
- *    \brief  contains the implementation of the class CBEWaitAnyFunction
+ *  \file   dice/src/be/BEWaitAnyFunction.cpp
+ *  \brief  contains the implementation of the class CBEWaitAnyFunction
  *
- *    \date   01/21/2002
- *    \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date   01/21/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,28 +26,34 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEWaitAnyFunction.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEOpcodeType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEDeclarator.h"
-#include "be/BEComponent.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEMsgBufferType.h"
-#include "be/BEUserDefinedType.h"
-
+#include "BEWaitAnyFunction.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEOpcodeType.h"
+#include "BEMsgBuffer.h"
+#include "BEDeclarator.h"
+#include "BEComponent.h"
+#include "BEImplementationFile.h"
+#include "BEHeaderFile.h"
+#include "BEUserDefinedType.h"
+#include "BENameFactory.h"
+#include "BETrace.h"
+#include "BEAttribute.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
+#include <cassert>
 
 CBEWaitAnyFunction::CBEWaitAnyFunction(bool bOpenWait, bool bReply)
+    : CBEInterfaceFunction(bOpenWait ? 
+	(bReply ? FUNCTION_REPLY_WAIT : FUNCTION_WAIT_ANY) :
+	(bReply ? FUNCTION_REPLY_RECV : FUNCTION_RECV_ANY))
 {
     m_bOpenWait = bOpenWait;
     m_bReply = bReply;
     /* reply is only allowed with open wait */
     if (bReply)
-        assert(bOpenWait);
+	assert(bOpenWait);
 }
 
 CBEWaitAnyFunction::CBEWaitAnyFunction(CBEWaitAnyFunction & src)
@@ -57,7 +63,7 @@ CBEWaitAnyFunction::CBEWaitAnyFunction(CBEWaitAnyFunction & src)
     m_bReply = src.m_bReply;
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CBEWaitAnyFunction::~CBEWaitAnyFunction()
 {
 
@@ -65,134 +71,94 @@ CBEWaitAnyFunction::~CBEWaitAnyFunction()
 
 /** \brief creates the wait-any function for the given interface
  *  \param pFEInterface the respective front-end interface
- *  \param pContext the context of the code generation
  *  \return true if successful
  *
  * A function which waits for any message from any sender, does return the
  * opcode of the received message and has as a parameter a reference to the
  * message buffer.
  */
-bool
-CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface,
-    CBEContext * pContext)
+void
+CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface)
 {
+    FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
     if (m_bOpenWait)
     {
-        if (m_bReply)
-            pContext->SetFunctionType(FUNCTION_REPLY_ANY_WAIT_ANY);
-        else
-            pContext->SetFunctionType(FUNCTION_WAIT_ANY);
+	if (m_bReply)
+	    nFunctionType = FUNCTION_REPLY_WAIT;
+	else
+	    nFunctionType = FUNCTION_WAIT_ANY;
     }
     else
-        pContext->SetFunctionType(FUNCTION_RECV_ANY);
+	nFunctionType = FUNCTION_RECV_ANY;
     // set target file name
-    SetTargetFileName(pFEInterface, pContext);
+    SetTargetFileName(pFEInterface);
     // name of the function
-    m_sName =
-        pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+    SetFunctionName(pFEInterface, nFunctionType);
 
-    if (!CBEInterfaceFunction::CreateBackEnd(pFEInterface, pContext))
-        return false;
+    CBEInterfaceFunction::CreateBackEnd(pFEInterface);
     // set source line number to last number of interface
     SetSourceLine(pFEInterface->GetSourceLineEnd());
 
+    string exc = string(__func__);
     // return type -> set to opcode
     // if return var is parameter do not delete it
-    string sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-    if (!SetReturnVar(pContext->GetClassFactory()->GetNewOpcodeType(),
-        sOpcodeVar, pContext))
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sOpcodeVar = pNF->GetOpcodeVariable();
+    if (!SetReturnVar(CCompiler::GetClassFactory()->GetNewOpcodeType(),
+	    sOpcodeVar))
     {
-        VERBOSE("%s failed because return var could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
+	exc += " failed because return var could not be created.";
+	throw new CBECreateException(exc);
     }
+    // set to zero init it
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    pReturn->SetDefaultInitString("0");
+
+    AddMessageBuffer();
+    // add marshaller and communication class
+    CreateMarshaller();
+    CreateCommunication();
+    CreateTrace();
+
     // add parameters
-    if (!AddMessageBuffer(pFEInterface, pContext))
+    AddParameters();
+
+    // if any of the interface's functions has the sched_donate attribute set,
+    // we should be able to reply with shceduling donation as well. Search for
+    // this attribute
+    if (m_pClass && m_pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
     {
-        VERBOSE("%s failed because message buffer could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	m_Attributes.Add(pAttr);
+	pAttr->CreateBackEnd(ATTR_SCHED_DONATE);
     }
-
-    return true;
-}
-
-/** \brief adds the message buffer parameter to this function
- *  \param pFEInterface the front-end interface to use as reference
- *  \param pContext the context of the write process
- *  \return true if successful
- */
-bool
-CBEWaitAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface,
-    CBEContext * pContext)
-{
-    // get class's message buffer
-    CBEClass *pClass = GetClass();
-    assert(pClass);
-    // get message buffer type
-    CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
-    assert(pMsgBuffer);
-    // msg buffer not initialized yet
-    pMsgBuffer->InitCounts(pClass, pContext);
-    // create own message buffer
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
-    m_pMsgBuffer->SetParent(this);
-    if (!m_pMsgBuffer->CreateBackEnd(pMsgBuffer, pContext))
-    {
-        delete m_pMsgBuffer;
-        m_pMsgBuffer = 0;
-        VERBOSE("%s failed because message buffer could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
-    }
-    return true;
-}
-
-/** \brief writes the variable declarations of this function
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * No message buffer variable - its a parameter.
- */
-void
-CBEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile,
-    CBEContext * pContext)
-{
-    m_pReturnVar->WriteZeroInitDeclaration(pFile, pContext);
 }
 
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * This implementation should initialize the message buffer and the pointers of
  * the out variables. We init the message buffer, because we have nothing to
  * send and want the message buffer to be in a defined state.
  */
 void
-CBEWaitAnyFunction::WriteVariableInitialization(CBEFile * pFile,
-    CBEContext * pContext)
-{
-}
+CBEWaitAnyFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+{}
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void
-CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 {
-    pFile->PrintIndent("/* invoke */\n");
+    *pFile << "\t/* invoke */\n";
 }
 
 /** \brief writes the unmarshalling of the message
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to \
- *         false if not possible
- *  \param pContext the context of the write operation
  *
  * This implementation should unpack the out parameters from the returned
  * message structure.
@@ -200,41 +166,46 @@ CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  * This implementation unmarshals the "return variable", which is the opcode.
  */
 void
-CBEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext * pContext)
+CBEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
-}
+    assert(m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
+    {
+	m_pTrace->BeforeUnmarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+    
+    WriteMarshalReturn(pFile, false);
 
-/**    \brief clean up the mess
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * This implementation has nothing to clean up
- */
-void CBEWaitAnyFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
-{
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterUnmarshalling(pFile, this);
+	m_bTraceOn = false;
+    }
 }
 
 /** \brief check if this parameter is marshalled
  *  \param pParameter the parameter to marshal
- *  \param pContext the context of this marshalling thing
+ *  \param bMarshal true if marshaling, false if unmarshaling
  *  \return true if if is marshalled
  *
- * Always return false, because this function does not marshal any parameters
+ * Always return false, except the parameter is the return variable, which
+ * should be unmarshaled if wait_any or reply_and_wait.
  */
 bool
 CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
-    CBEContext *pContext)
+    bool bMarshal)
 {
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    if (!bMarshal &&
+	(pParameter == pReturn))
+	return true;
     return false;
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A wait-any function is written at the component's side.
@@ -244,20 +215,19 @@ CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * component's side.
  */
 bool
-CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
+CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile * pFile)
 {
     if (!IsTargetFile(pFile))
-        return false;
+	return false;
     if (m_bOpenWait)
-        // this test is true for m_bReply (true or false)
-        return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	// this test is true for m_bReply (true or false)
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
     else
-        return pContext->IsOptionSet(PROGRAM_GENERATE_MESSAGE);
+	return CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE);
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A wait-any function is written at the component's side.
@@ -267,79 +237,33 @@ CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext
  * component's side.
  */
 bool
-CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile * pFile)
 {
     if (!IsTargetFile(pFile))
-        return false;
+	return false;
     if (m_bOpenWait)
-        // this test is true for m_bReply (true or false)
-        return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	// this test is true for m_bReply (true or false)
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
     else
-        return pContext->IsOptionSet(PROGRAM_GENERATE_MESSAGE);
+	return CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE);
 }
 
-/** \brief write the message buffer parameter
+/** \brief write a single parameter to the target file
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the parameter
- */
-void
-CBEWaitAnyFunction::WriteAfterParameters(CBEFile * pFile,
-    CBEContext * pContext,
-    bool bComma)
-{
-    if (bComma)
-    {
-        pFile->Print(",\n");
-        pFile->PrintIndent("");
-    }
-    // write message buffer
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    WriteParameter(pFile, pMsgBuffer, pContext, false /* no const msgbuf */);
-    // base class
-    CBEInterfaceFunction::WriteAfterParameters(pFile, pContext, true);
-}
-
-/** \brief write the message buffer call parameter
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the declarators
- */
-void
-CBEWaitAnyFunction::WriteCallAfterParameters(CBEFile * pFile,
-    CBEContext * pContext,
-    bool bComma)
-{
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (bComma)
-    {
-        pFile->Print(",\n");
-        pFile->PrintIndent("");
-    }
-    if (pMsgBuffer->HasReference())
-        pFile->Print("&");
-    WriteCallParameter(pFile, pMsgBuffer, pContext);
-    CBEInterfaceFunction::WriteCallAfterParameters(pFile, pContext, true);
-}
-
-/** \brief writes additional parameters before the parameter list
- *  \param pFile the file to print to
- *  \param pContext the context of the write operation
- *  \return true if this function wrote something
+ *  \param pParameter the parameter to write
+ *  \param bUseConst true if param should be const
  *
- * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
+ * Do not write const Object.
  */
-bool
-CBEWaitAnyFunction::WriteBeforeParameters(CBEFile *pFile, CBEContext *pContext)
+void
+CBEWaitAnyFunction::WriteParameter(CBEFile * pFile,
+    CBETypedDeclarator * pParameter,
+    bool bUseConst)
 {
-    if (m_pCorbaObject)
-    {
-        WriteParameter(pFile, m_pCorbaObject, pContext, false /* no const */);
-        return true;
-    }
-    return false;
+    if (pParameter == GetObject())
+	CBEInterfaceFunction::WriteParameter(pFile, pParameter, false);
+    else
+	CBEInterfaceFunction::WriteParameter(pFile, pParameter, bUseConst);
 }
 
 /** \brief tries to find a parameter by its type
@@ -348,17 +272,17 @@ CBEWaitAnyFunction::WriteBeforeParameters(CBEFile *pFile, CBEContext *pContext)
  */
 CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     if (pMsgBuffer)
     {
-        CBEType *pType = pMsgBuffer->GetType();
-        if (dynamic_cast<CBEUserDefinedType*>(pType))
-        {
-            if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-                return pMsgBuffer;
-        }
-        if (pType->HasTag(sTypeName))
-            return pMsgBuffer;
+	CBEType *pType = pMsgBuffer->GetType();
+	if (dynamic_cast<CBEUserDefinedType*>(pType))
+	{
+	    if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
+		return pMsgBuffer;
+	}
+	if (pType->HasTag(sTypeName))
+	    return pMsgBuffer;
     }
     return CBEInterfaceFunction::FindParameterType(sTypeName);
 }
@@ -381,3 +305,4 @@ int CBEWaitAnyFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
+

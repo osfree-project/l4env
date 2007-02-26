@@ -14,8 +14,6 @@
 
 int main( int argc, char **argv )
 {
-    sleep(2);
-
     QApplication a( argc, argv );
 
     FtpMainWindow m;

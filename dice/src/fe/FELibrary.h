@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FELibrary.h
- *    \brief   contains the declaration of the class CFELibrary
+ *  \brief   contains the declaration of the class CFELibrary
  *
  *    \date    02/22/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -30,10 +30,11 @@
 #ifndef __DICE_FE_FELIBRARY_H__
 #define __DICE_FE_FELIBRARY_H__
 
-#include "fe/FEFileComponent.h"
+#include "FEFileComponent.h"
+#include "Attribute-Type.h"
+#include "template.h"
 #include <string>
 #include <vector>
-using namespace std;
 
 class CFEIdentifier;
 class CFETypedDeclarator;
@@ -44,7 +45,7 @@ class CFEAttribute;
 
 /**    \class CFELibrary
  *    \ingroup frontend
- *    \brief describes the front-end library
+ *  \brief describes the front-end library
  */
 class CFELibrary : public CFEFileComponent
 {
@@ -52,89 +53,82 @@ class CFELibrary : public CFEFileComponent
 // standard constructor/destructor
 public:
     /** constructs a library object
-     *    \param sName the name of the library
-     *    \param pAttributes the attributes of the library
-     *    \param pElements the elements (components) of the library*/
-    CFELibrary(string sName, vector<CFEAttribute*> *pAttributes, vector<CFEFileComponent*> *pElements);
+     *  \param sName the name of the library
+     *  \param pAttributes the attributes of the library
+     *  \param pParent the parent of this lib
+     */
+    CFELibrary(string sName, vector<CFEAttribute*> *pAttributes, 
+	CFEBase *pParent);
     virtual ~CFELibrary();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFELibrary(CFELibrary &src);
 
 // Operations
 public:
-    virtual CFEInterface* FindInterface(string sName, CFELibrary *pStart = NULL);
-    virtual CFELibrary* FindLibrary(string sName);
-    virtual void AddSameLibrary(CFELibrary *pLibrary);
-    virtual void Serialize(CFile *pFile);
-    virtual void Dump();
-    virtual CFEConstDeclarator* FindConstant(string sName);
-    virtual CFELibrary* GetNextLibrary(vector<CFELibrary*>::iterator &iter);
-    virtual vector<CFELibrary*>::iterator GetFirstLibrary();
-    virtual bool CheckConsistency();
-    virtual CFETypedDeclarator* GetNextTypedef(vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstTypedef();
-    virtual CFEConstDeclarator* GetNextConstant(vector<CFEConstDeclarator*>::iterator &iter);
-    virtual vector<CFEConstDeclarator*>::iterator GetFirstConstant();
-    virtual CObject* Clone();
-    virtual CFETypedDeclarator* FindUserDefinedType(string sName);
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFELibrary(*this); }
+
+    CFEInterface* FindInterface(string sName, CFELibrary *pStart = NULL);
+    CFETypedDeclarator* FindUserDefinedType(string sName);
+    CFEConstDeclarator* FindConstant(string sName);
+    CFELibrary* FindLibrary(string sName);
+    CFEConstructedType* FindTaggedDecl(string sName);
+
+    void AddSameLibrary(CFELibrary *pLibrary);
+    void AddComponents(vector<CFEFileComponent*> *pComponents);
+    
+    virtual void Accept(CVisitor&);
     virtual string GetName();
-    virtual CFEAttribute* GetNextAttribute(vector<CFEAttribute*>::iterator &iter);
-    virtual vector<CFEAttribute*>::iterator GetFirstAttribute();
-    virtual CFEInterface* GetNextInterface(vector<CFEInterface*>::iterator &iter);
-    virtual vector<CFEInterface*>::iterator GetFirstInterface();
+    bool Match(string sName);
 
-    virtual void AddTypedef(CFETypedDeclarator *pFETypedef);
-    virtual void AddInterface(CFEInterface *pFEInterface);
-    virtual void AddConstant(CFEConstDeclarator *pFEConstant);
-    virtual void AddLibrary(CFELibrary *pFELibrary);
-
-    virtual void AddTaggedDecl(CFEConstructedType *pFETaggedDecl);
-    virtual CFEConstructedType* GetNextTaggedDecl(vector<CFEConstructedType*>::iterator &iter);
-    virtual vector<CFEConstructedType*>::iterator GetFirstTaggedDecl();
-    virtual CFEConstructedType* FindTaggedDecl(string sName);
 
 // Attributes
 protected:
-    /**    \var vector<CFEAttribute*> m_vAttributes
-     *    \brief contains the library's attributes
-     */
-    vector<CFEAttribute*> m_vAttributes;
-    /**    \var string m_sLibName
-     *    \brief contains the library's name
+    /** \var string m_sLibName
+     *  \brief contains the library's name
      */
     string m_sLibName;
-    /**    \var CFELibrary* m_pSameLibraryNext
-     *    \brief the same library in other files (this is like a next pointer)
+    /** \var CFELibrary* m_pSameLibraryNext
+     *  \brief the same library in other files (this is like a next pointer)
      */
     CFELibrary* m_pSameLibraryNext;
-    /**    \var CFELibrary* m_pSameLibraryPrev
-     *    \brief the same library in other files (this is like a prev pointer)
+    /** \var CFELibrary* m_pSameLibraryPrev
+     *  \brief the same library in other files (this is like a prev pointer)
      */
     CFELibrary* m_pSameLibraryPrev;
-    /** \var vector<CFEConstDeclarator*> m_vConstants
+
+public:
+    /** \var CSearchableCollection<CFEAttribute> m_Attributes
+     *  \brief contains the library's attributes
+     */
+    CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CSearchableCollection<CFEConstDeclarator> m_Constants
      *  \brief constains the constants defined in the library
      */
-    vector<CFEConstDeclarator*> m_vConstants;
-    /** \var vector<CFETypedDeclarator*> m_vTypedefs
+    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
+    /** \var CSearchableCollection<CFETypedDeclarator> m_Typedefs
      *  \brief contains the typedefs of this library
      */
-    vector<CFETypedDeclarator*> m_vTypedefs;
-    /** \var vector<CFEInterface*> m_vInterfaces
+    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
+    /** \var CSearchableCollection<CFEInterface> m_Interfaces
      *  \brief contains the interfaces of this library
      */
-    vector<CFEInterface*> m_vInterfaces;
-    /** \var vector<CFELibrary*> m_vLibraries
+    CSearchableCollection<CFEInterface, string> m_Interfaces;
+    /** \var CSearchableCollection<CFELibrary> m_Libraries
      *  \brief contains the nested libraries
      */
-    vector<CFELibrary*> m_vLibraries;
-    /** \var vector<CFEConstructedType*> m_vTaggedDeclarators
+    CSearchableCollection<CFELibrary, string> m_Libraries;
+    /** \var CSearchableCollection<CFEConstructedType> m_TaggedDeclarators
      *  \brief contains the tagged constructed types of this library
      */
-    vector<CFEConstructedType*> m_vTaggedDeclarators;
+    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
 };
 
 #endif // __DICE_FE_FELIBRARY_H__

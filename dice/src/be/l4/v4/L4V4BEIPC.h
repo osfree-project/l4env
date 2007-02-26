@@ -1,10 +1,11 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BEIPC.h
- *    \brief    contains the declaration of the class CL4V4BEIPC
+ *  \brief   contains the declaration of the class CL4V4BEIPC
  *
  *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -45,12 +46,16 @@ public:
     virtual ~CL4V4BEIPC();
 
 public:
-    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
-    virtual void WriteReceive(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
-    virtual void WriteReplyAndWait(CBEFile* pFile,  CBEFunction* pFunction,  bool bSendFlexpage,  bool bSendShortIPC,  CBEContext* pContext);
-    virtual void WriteReplyAndWait(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
-    virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
-    virtual void WriteWait(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
+    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteReceive(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteReplyAndWait(CBEFile* pFile,  CBEFunction* pFunction,  
+	bool bSendFlexpage,  bool bSendShortIPC);
+    virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteWait(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction);
+    virtual void WriteInitialization(CBEFile* pFile, CBEFunction* pFunction);
+    virtual void WriteBind(CBEFile *pFile, CBEFunction* pFunction);
+    virtual void WriteCleanup(CBEFile* pFile, CBEFunction* pFunction);
 };
 
 #endif

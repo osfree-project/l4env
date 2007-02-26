@@ -29,6 +29,7 @@
 #include "fe/FEInterfaceComponent.h"
 
 CFEInterfaceComponent::CFEInterfaceComponent()
+: CFEFileComponent(NULL)
 {
 }
 

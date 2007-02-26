@@ -416,7 +416,7 @@ int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, int flags, o
        return res;
     }
 
-    LOGd(_DEBUG,"attached ds at address %d",content_addr);
+    LOGd(_DEBUG,"attached ds at address %ld",content_addr);
 
     buf = (char *) content_addr;
 
@@ -513,7 +513,7 @@ int clientstate_msync(const l4dm_dataspace_t *ds, l4_addr_t offset,
     /* set iterator to first list element */
     arraylist->set_iterator(files);
 
-    LOGd(_DEBUG,"msync with offset: %d, length: %d",offset,length);
+    LOGd(_DEBUG,"msync with offset: %ld, length: %d",offset,length);
 
     for (i=0;i<arraylist->size(files);i++)
     {

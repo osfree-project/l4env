@@ -8,6 +8,7 @@ __BEGIN_DECLS
 #define __WANT_POSIX1B_SIGNALS__
 
 #include <sys/types.h>
+#include <endian.h>
 
 #define NSIG		32
 
@@ -31,7 +32,7 @@ __BEGIN_DECLS
 #define SIGALRM		14
 #define SIGTERM		15
 #define SIGUNUSED	31
-#if defined(__i386__) || defined(__x86_64__) || defined(powerpc) || defined(__arm__) \
+#if defined(__i386__) || defined(__x86_64__) || defined(__powerpc__) || defined(__arm__) \
 	|| defined(__s390__) || defined(__ia64__) || defined(__powerpc64__)
 #define SIGBUS		 7
 #define SIGUSR1		10
@@ -231,9 +232,9 @@ typedef sighandler_t sig_t;
 typedef sighandler_t __sighandler_t;	/* shoot the glibc people! */
 #endif
 
-#define SIG_DFL ((sighandler_t)0)	/* default signal handling */
-#define SIG_IGN ((sighandler_t)1)	/* ignore signal */
-#define SIG_ERR ((sighandler_t)-1)	/* error return from signal */
+#define SIG_DFL ((sighandler_t)0L)	/* default signal handling */
+#define SIG_IGN ((sighandler_t)1L)	/* ignore signal */
+#define SIG_ERR ((sighandler_t)-1L)	/* error return from signal */
 
 typedef union sigval {
   int sival_int;
@@ -241,14 +242,24 @@ typedef union sigval {
 } sigval_t;
 
 #define SI_MAX_SIZE	128
-#define SI_PAD_SIZE	((SI_MAX_SIZE/sizeof(int)) - 3)
+#if __WORDSIZE == 64
+#define SI_PAD_SIZE	((SI_MAX_SIZE/sizeof(int32_t)) - 4)
+#else
+#define SI_PAD_SIZE	((SI_MAX_SIZE/sizeof(int32_t)) - 3)
+#endif
+
+#ifdef __sparc_v9__
+typedef int32_t __band_t;
+#else
+typedef long __band_t;
+#endif
 
 typedef struct siginfo {
-  int si_signo;
-  int si_errno;
-  int si_code;
+  int32_t si_signo;
+  int32_t si_errno;
+  int32_t si_code;
   union {
-    int _pad[SI_PAD_SIZE];
+    int32_t _pad[SI_PAD_SIZE];
     /* kill() */
     struct {
       pid_t _pid;		/* sender's pid */
@@ -256,8 +267,8 @@ typedef struct siginfo {
     } _kill;
     /* POSIX.1b timers */
     struct {
-      unsigned int _timer1;
-      unsigned int _timer2;
+      uint32_t _timer1;
+      uint32_t _timer2;
     } _timer;
     /* POSIX.1b signals */
     struct {
@@ -269,7 +280,7 @@ typedef struct siginfo {
     struct {
       pid_t _pid;		/* which child */
       uid_t _uid;		/* sender's uid */
-      int _status;		/* exit code */
+      int32_t _status;		/* exit code */
       clock_t _utime;
       clock_t _stime;
     } _sigchld;
@@ -279,8 +290,8 @@ typedef struct siginfo {
     } _sigfault;
     /* SIGPOLL */
     struct {
-      int _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
-      int _fd;
+      __band_t _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
+      int32_t _fd;
     } _sigpoll;
   } _sifields;
 } siginfo_t;
@@ -427,14 +438,7 @@ typedef struct {
 } sigset_t;
 
 struct sigaction {
-#if defined(__alpha__)
-  union {
-    sighandler_t _sa_handler;
-    void (*_sa_sigaction)(int, siginfo_t*, void*);
-  } _u;
-  sigset_t sa_mask;
-  unsigned long sa_flags;
-#elif defined(__ia64__) || defined(__hppa__)
+#if defined(__alpha__) || defined(__ia64__) || defined(__hppa__)
   union {
     sighandler_t _sa_handler;
     void (*_sa_sigaction)(int, siginfo_t*, void*);
@@ -449,7 +453,7 @@ struct sigaction {
   } _u;
   sigset_t sa_mask;
   void (*sa_restorer)(void);
-  int sa_resv[1];
+  int32_t sa_resv[1];
 #else	/* arm, i386, ppc, s390, sparc, saprc64, x86_64 */
   union {
     sighandler_t _sa_handler;
@@ -472,16 +476,16 @@ struct sigaction {
 
 #define SIGEV_MAX_SIZE  64
 #ifndef SIGEV_PAD_SIZE
-#define SIGEV_PAD_SIZE  ((SIGEV_MAX_SIZE/sizeof(int)) - 3)
+#define SIGEV_PAD_SIZE  ((SIGEV_MAX_SIZE/sizeof(int32_t)) - 3)
 #endif
 
 typedef struct sigevent {
   sigval_t sigev_value;
-  int sigev_signo;
-  int sigev_notify;
+  int32_t sigev_signo;
+  int32_t sigev_notify;
   union {
-    int _pad[SIGEV_PAD_SIZE];
-    int _tid;
+    int32_t _pad[SIGEV_PAD_SIZE];
+    int32_t _tid;
 
     struct {
       void(*_function)(sigval_t);
@@ -498,10 +502,10 @@ typedef struct sigaltstack {
 #if defined(__mips__)
   void *ss_sp;
   size_t ss_size;
-  int ss_flags;
+  int32_t ss_flags;
 #else
   void *ss_sp;
-  int ss_flags;
+  int32_t ss_flags;
   size_t ss_size;
 #endif
 } stack_t;
@@ -517,6 +521,11 @@ int sigsuspend(const sigset_t *mask) __THROW;
 int sigpending(sigset_t *set) __THROW;
 int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) __THROW;
 
+#ifdef _GNU_SOURCE
+int sigisemptyset(const sigset_t *set) __THROW __pure;
+int sigorset(sigset_t *set, const sigset_t *left, const sigset_t *right) __THROW;
+int sigandset(sigset_t *set, const sigset_t *left, const sigset_t *right) __THROW;
+#endif
 
 sighandler_t signal(int signum, sighandler_t action);
 
@@ -528,10 +537,10 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 #include <sys/time.h>
 
 int sigtimedwait(const sigset_t *mask, siginfo_t *info, const struct timespec *ts) __THROW;
-int sigqueueinfo(int pid, int sig, siginfo_t *info) __THROW;
+int sigqueueinfo(pid_t pid, int sig, siginfo_t *info) __THROW;
 int siginterrupt(int sig, int flag) __THROW;
 
-int killpg(int pgrp, int sig) __THROW;
+int killpg(pid_t pgrp, int sig) __THROW;
 
 /* 0 is OK ! kernel puts in MAX_THREAD_TIMEOUT :) */
 #define sigwaitinfo(m, i) sigtimedwait((m),(i),0)

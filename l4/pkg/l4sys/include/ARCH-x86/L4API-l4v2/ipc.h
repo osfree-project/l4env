@@ -10,7 +10,6 @@
 #define __L4_IPC_H__
 
 #include <l4/sys/types.h>
-#include <l4/sys/compiler.h>
 
 /*****************************************************************************
  *** IPC parameters
@@ -613,6 +612,23 @@ l4_ipc_receive(l4_threadid_t src,
                l4_msgdope_t *result);
 
 /**
+ * Sleep for an amount of time.
+ * \ingroup api_calls_ipc
+ *
+ * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ *
+ * \return  error code: 
+ *          - #L4_IPC_RETIMEOUT Timeout during receive operation (expected!)
+ *          - #L4_IPC_RECANCELED Receive operation canceled by another thread.
+ *          - #L4_IPC_REABORTED Receive operation aborted by another thread.
+ *
+ * This operation includes no send phase. The invoker waits until the timeout
+ * is expired or the IPC was aborted by another thread.
+ */
+L4_INLINE int
+l4_ipc_sleep(l4_timeout_t timeout);
+
+/**
  * Check if received message contains flexpage
  * \ingroup api_calls_ipc
  *
@@ -655,6 +671,15 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp);
  *****************************************************************************/
 
 L4_INLINE int
+l4_ipc_sleep(l4_timeout_t timeout)
+{
+  l4_umword_t dummy;
+  l4_msgdope_t result;
+  return l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
+                        timeout, &result);
+}
+
+L4_INLINE int
 l4_ipc_fpage_received(l4_msgdope_t msgdope)
 {
   return msgdope.md.fpage_received != 0;
@@ -680,14 +705,8 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp)
 #ifdef PROFILE
 #  include "ipc-l42-profile.h"
 #else
-#  if GCC_VERSION < 295
-#    error gcc >= 2.95 required
-#  elif GCC_VERSION < 302
-#    ifdef __PIC__
-#      include "ipc-l42-gcc295-pic.h"
-#    else
-#      include "ipc-l42-gcc295-nopic.h"
-#    endif
+#  if GCC_VERSION < 302
+#    error gcc >= 3.0.2 required
 #  else
 #    ifdef __PIC__
 #      include "ipc-l42-gcc3-pic.h"

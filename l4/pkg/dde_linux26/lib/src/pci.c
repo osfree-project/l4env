@@ -116,7 +116,7 @@ static inline void __pci_io_to_linux(l4io_pci_dev_t *l4io,
   linus->device = l4io->device;
   linus->subsystem_vendor = l4io->sub_vendor;
   linus->subsystem_device = l4io->sub_device;
-  linus->class = l4io->class;
+  linus->class = l4io->dev_class;
 
   linus->irq = l4io->irq;
 

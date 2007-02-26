@@ -35,7 +35,7 @@ l4vfs_th_node_t * l4vfs_th_new_node(const char * name, int type,
                                     void * data);
 /* Destroys a node in the tree.
  *
- * The node is free'ed and it is removed from the tree (all links are
+ * The node is free()'ed and it is removed from the tree (all links are
  * bridged)
  *
  * parent and child must not be NULL.
@@ -62,9 +62,9 @@ void   l4vfs_th_dir_to_dirent(const l4vfs_th_node_t * node,
                               l4vfs_dirent_t * entry);
 int    l4vfs_th_dir_dirent_size(const l4vfs_th_node_t * node);
 
-/** 
+/**
  * @brief Convert parts of a directory node to a dirent buffer
- * 
+ *
  * @param  node   tree node to operate on (should be a directory)
  * @param  index  file number to begin with conversion (0 = '.', 1 =
  *                '..', 2 = '[first file]', ...)

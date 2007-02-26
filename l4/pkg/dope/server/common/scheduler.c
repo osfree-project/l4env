@@ -96,6 +96,17 @@ static void rt_remove_widget(WIDGET *w) {
 }
 
 
+/*** UNREGISTER ALL REAL-TIME WIDGETS OF SPECIFIED APPLICATION ***/
+static void rt_release_app(int app_id) {
+	s32 i;
+	for (i=0;i<NUM_SLOTS;i++) {
+		WIDGET *w = ts[i].w;
+		if (w && (w->gen->get_app_id(w) == app_id))
+			rt_remove_widget(w);
+	}
+}
+
+
 /*** SET MUTEX THAT SHOULD BE UNLOCKED AFTER DRAWING OPERATIONS ***/
 static void rt_set_sync_mutex(WIDGET *w,MUTEX *m) {
 	s32 i;
@@ -173,9 +184,12 @@ static void process_mainloop(void) {
 		/* cycle trough time slots */
 		curr_slot = (curr_slot + 1) % NUM_SLOTS;
 
-		if ((cw = ts[curr_slot].w))
+		if ((cw = ts[curr_slot].w)) {
+			cw->gen->lock(cw);
 			cw->gen->drawarea(cw, cw, 0, 0, cw->wd->w, cw->wd->h);
-	
+			cw->gen->unlock(cw);
+		}
+
 		if (ts[curr_slot].sync_mutex) thread->mutex_up(ts[curr_slot].sync_mutex);
 
 		rt_end_time = timer->get_time();
@@ -226,6 +240,7 @@ static void process_mainloop(void) {
 static struct scheduler_services services = {
 	rt_add_widget,
 	rt_remove_widget,
+	rt_release_app,
 	rt_set_sync_mutex,
 	process_mainloop,
 };

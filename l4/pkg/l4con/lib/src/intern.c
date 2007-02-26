@@ -112,7 +112,7 @@ _copy_fb(int t, int b, int dir, int lines)
     }
   
   if (con_vc_pslim_copy_call(&vtc_l4id, &_rect, 0, y, &env))
-    LOG("intern.c: pslim_copy failed (exc=%d)", env.major);
+    LOG("intern.c: pslim_copy failed (exc=%d)", DICE_EXCEPTION_MAJOR(&env));
 }
 
 
@@ -225,7 +225,7 @@ _cursor(int mode)
       cursor[0] = vtc_scrbuf[sb_y * vtc_cols + sb_x];
       cursor[1] = 0;
       
-      con_vc_puts_call(&vtc_l4id, (l4_int8_t*)cursor, 1, 
+      con_vc_puts_call(&vtc_l4id, (char*)cursor, 1, 
 		       BITX(sb_x), BITY(cursor_y), fgc, bgc, &env);
     }
 }
@@ -245,16 +245,21 @@ _cursor(int mode)
 void
 _flush(l4_uint8_t *s, int len, int __nline)
 {
-  l4_uint8_t *d;
-  int l, cursor_y = OFS_LINES(sb_y-fline);
+  char *d;
+  int l;
+
+  if (!__init)
+    return;
 
   if(len > 0)
     {
+      int cursor_y = OFS_LINES(sb_y-fline);
+
       for (l=len, d=&vtc_scrbuf[sb_y * vtc_cols + sb_x]; l; l--)
 	*d++ = *s++;
 
-      if ((cursor_y >= 0) && (cursor_y < vtc_lines))
-	putstocon(sb_x, cursor_y, &vtc_scrbuf[sb_y * vtc_cols + sb_x], len);
+      if (cursor_y >= 0 && cursor_y < vtc_lines)
+	putstocon(sb_x, cursor_y, &vtc_scrbuf[sb_y*vtc_cols + sb_x], len);
       /* else not visible */
     }
   

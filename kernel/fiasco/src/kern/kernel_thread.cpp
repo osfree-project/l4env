@@ -6,7 +6,7 @@ class Kernel_thread : public Thread
 {
 private:
   /**
-   * Frees the memory of the initcall sections.  
+   * Frees the memory of the initcall sections.
    *
    * Virtually initcall sections are freed by not marking them
    * reserved in the KIP. This method just invalidates the contents of
@@ -14,7 +14,7 @@ private:
    * unmapping it.
    */
   void	free_initcall_section();
-  void	bootstrap() 		asm ("call_bootstrap") FIASCO_FASTCALL;
+  void	bootstrap()		asm ("call_bootstrap") FIASCO_FASTCALL;
   void	bootstrap_arch();
   void	run();
 
@@ -22,31 +22,27 @@ protected:
   void	init_workload();
 };
 
-INTERFACE[lipc]:
-
-#include "l4_types.h"
-
-EXTENSION class Kernel_thread
-{
-private:
-  // a dummy Utcb, to avoid expensive checks if this is a kernel thread
-  Utcb _kernel_thread_utcb;
-};
-
-
 IMPLEMENTATION:
 
 #include <cstdlib>
 #include <cstdio>
 
 #include "config.h"
+#include "delayloop.h"
 #include "globals.h"
 #include "helping_lock.h"
+#include "kernel_task.h"
 #include "processor.h"
+#include "task.h"
 #include "thread.h"
 #include "thread_state.h"
 #include "timer.h"
 #include "vmem_alloc.h"
+
+PUBLIC
+Kernel_thread::Kernel_thread()
+  : Thread (Kernel_task::kernel_task(), Config::kernel_id)
+{}
 
 // overload allocator -- we cannot allocate by page fault during
 // bootstrapping
@@ -59,8 +55,8 @@ Kernel_thread::operator new (size_t s, L4_uid id)
 
   // explicitly allocate and enter in page table -- we cannot allocate
   // by page fault during bootstrapping
-  
-  if (! Vmem_alloc::page_alloc ((void*)((Address)addr & Config::PAGE_MASK), 
+
+  if (! Vmem_alloc::page_alloc ((void*)((Address)addr & Config::PAGE_MASK),
 			        Vmem_alloc::ZERO_FILL))
     panic("can't allocate kernel tcb");
 
@@ -71,7 +67,7 @@ PUBLIC inline
 Mword *
 Kernel_thread::init_stack()
 {
-  return _kernel_sp; 
+  return _kernel_sp;
 }
 
 // the kernel bootstrap routine
@@ -93,6 +89,12 @@ Kernel_thread::bootstrap()
   Timer::enable();
 
   bootstrap_arch();
+
+  printf("Calibrating timer loop... ");
+  // Init delay loop, needs working timer interrupt
+  if (running)
+    Delay::init();
+  printf("done.\n");
 
   run();
 }
@@ -116,7 +118,7 @@ Kernel_thread::run()
   // applications which then have access to initcall frames as per kinfo page.
   init_workload();
 
-  while (running) 
+  while (running)
     idle();
 
   puts ("\nExiting, wait...");
@@ -145,23 +147,3 @@ Kernel_thread::idle()
     Proc::pause();
 }
 
-
-IMPLEMENTATION [!lipc]:
-
-PUBLIC inline NEEDS["task.h"]
-Kernel_thread::Kernel_thread()
-             : Thread (current_task(), Config::kernel_id)
-{}
-
-
-IMPLEMENTATION [lipc]:
-
-PUBLIC inline NEEDS["task.h"]
-Kernel_thread::Kernel_thread()
-             : Thread (current_task(), Config::kernel_id)
-{  
-  // local id = 0, we dont have any userland here
-  local_id(0);
-  // set the kernel utcb ptr
-  utcb(&_kernel_thread_utcb );
-}

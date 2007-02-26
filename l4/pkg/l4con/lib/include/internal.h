@@ -38,7 +38,7 @@ extern int fline;		/* first visible line */
 extern int scrpos_y;		/* screen y position */
 extern l4_uint32_t fn_x, fn_y;	/* font size x, y */
 
-extern l4_uint8_t *vtc_scrbuf;
+extern char       *vtc_scrbuf;
 extern l4_uint8_t *editbuf;
 
 extern l4_threadid_t evh_l4id;
@@ -55,8 +55,8 @@ extern void _redraw(void);
 extern void _cursor(int);
 extern void _flush(l4_uint8_t*, int, int);
 
-extern void contxt_write(const l4_uint8_t*, int);
-extern void (*putstocon)(int, int, l4_int8_t *, int);
+extern int  contxt_write(const char*, int);
+extern void (*putstocon)(int, int, const char*, int);
 
 #endif
 

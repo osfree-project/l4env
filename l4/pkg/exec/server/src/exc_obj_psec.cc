@@ -140,7 +140,7 @@ exc_obj_psec_t::init_ds(l4_addr_t addr, l4_size_t size_aligned,
       if (error)
 	{
 	  l4dm_memphys_show_pool_free(1);
-	  printf("Can't allocate memory from pool 1 at %08x-%08x\n",
+	  printf("Can't allocate memory from pool 1 at %08lx-%08lx\n",
 	      addr, addr+size_aligned);
 	  return error;
 	}
@@ -225,7 +225,7 @@ exc_obj_psec_t::share_to_env(l4env_infopage_t *env,
   
   if (*psec_vaddr)
     {
-      Error("psec_vaddr %p not empty (%08x)\n", psec_vaddr, *psec_vaddr);
+      Error("psec_vaddr %p not empty (%08lx)\n", psec_vaddr, *psec_vaddr);
       return -L4_ENOMEM;
     }
 
@@ -258,7 +258,7 @@ exc_obj_psec_t::share_to_env(l4env_infopage_t *env,
 	}
 
 #ifdef DEBUG_SHARING
-      printf("Sharing program section (%08x, %d) to %08x-%08x\n", 
+      printf("Sharing program section (%08x, %d) to %08lx-%08lx\n",
 	      env->id, envsec_idx, new_addr, new_addr+size);
 #endif
 
@@ -267,14 +267,14 @@ exc_obj_psec_t::share_to_env(l4env_infopage_t *env,
     }
   else
     {
-    
+
 #ifdef DEBUG_SHARING
-      printf("Referencing program section (%08x, %d) to %08x-%08x\n",
+      printf("Referencing program section (%08x, %d) to %08lx-%08lx\n",
 	      env->id, envsec_idx, new_addr, new_addr+size);
 #endif
 
       *new_l4exc = l4exc;
-      
+
       if ((error = check(l4dm_share(&l4exc.ds, client, L4DM_RO),
 			"sharing psec rights to client")))
 	return error;

@@ -1,8 +1,7 @@
 /* -*- c -*- */
 /* $Id$ */
-
 /*!
- * \file	con/idl/con/con.idl
+ * \file	l4con/idl/l4con.idl
  * \brief	con IDL interface
  *
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>,
@@ -60,9 +59,9 @@ library con
        * \return 0 on success, negative error code otherwise */
       long screenshot([in]  short vc_nr,
                       [out] l4dm_dataspace_t *ds,
-	              [out] unsigned long *xres,
-		      [out] unsigned long *yres,
-		      [out] unsigned long *bpp);
+	              [out] l4_uint32_t *xres,
+		      [out] l4_uint32_t *yres,
+		      [out] l4_uint32_t *bpp);
 
       /** Close all vc's of an application.
        * \ingroup idl_con_if
@@ -76,7 +75,7 @@ library con
   /** virtual console (thread) interface.
    * \defgroup idl_con_vc Virtual Console Interface (with pSLIM)
    */
-  [error_function_server(vc_error), server_parameter,
+  [error_function_server(vc_error), 
    init_rcvstring_server(vc_init_rcvstring)]
   interface vc
     {
@@ -179,9 +178,9 @@ library con
        *
        * \return 0 for success */
       long pslim_cscs([in] l4con_pslim_rect_t rect,
-	              [in, ref, size_is(y_l)] char* y, [in] int y_l,
-		      [in, ref, size_is(u_l)] char* u, [in] int u_l,
-		      [in, ref, size_is(v_l)] char* v, [in] int v_l,
+	              [in, ref, size_is(y_l)] unsigned char* y, [in] int y_l,
+		      [in, ref, size_is(u_l)] unsigned char* u, [in] int u_l,
+		      [in, ref, size_is(v_l)] unsigned char* v, [in] int v_l,
 		      [in] long yuv_type,
 		      [in] char scale);
 
@@ -246,14 +245,14 @@ library con
        *
        * \return 0 for success, negative error codes otherwise */
       long graph_gmode([out] byte *g_mode,
-		       [out] unsigned long *xres,
-		       [out] unsigned long *yres,
-		       [out] unsigned long *bits_per_pixel,
-		       [out] unsigned long *bytes_per_pixel,
-		       [out] unsigned long *bytes_per_line,
-		       [out] unsigned long *flags,
-		       [out] unsigned long *xtxt,
-		       [out] unsigned long *ytxt);
+		       [out] l4_uint32_t *xres,
+		       [out] l4_uint32_t *yres,
+		       [out] l4_uint32_t *bits_per_pixel,
+		       [out] l4_uint32_t *bytes_per_pixel,
+		       [out] l4_uint32_t *bytes_per_line,
+		       [out] l4_uint32_t *flags,
+		       [out] l4_uint32_t *xtxt,
+		       [out] l4_uint32_t *ytxt);
 
       /** Get RGB values of current virtual console.
        * \ingroup idl_con_vc
@@ -266,12 +265,12 @@ library con
        * \retval blue_len	length of blue value in pixel
        *
        * \return 0 for success, negative error codes otherwise */
-      long graph_get_rgb([out] unsigned long *red_offs,
-                         [out] unsigned long *red_len,
-                         [out] unsigned long *green_offs,
-                         [out] unsigned long *green_len,
-                         [out] unsigned long *blue_offs,
-                         [out] unsigned long *blue_len);
+      long graph_get_rgb([out] l4_uint32_t *red_offs,
+                         [out] l4_uint32_t *red_len,
+                         [out] l4_uint32_t *green_offs,
+                         [out] l4_uint32_t *green_len,
+                         [out] l4_uint32_t *blue_offs,
+                         [out] l4_uint32_t *blue_len);
 
       /** Map the graphics memory into the client.
        * \ingroup idl_con_vc

@@ -3,7 +3,7 @@
  * \file	loader/server/src/cfg.c
  * \brief	helper functions for scanning the config script
  *
- * \date 	01/01/2001
+ * \date	01/01/2001
  * \author	Frank Mehnert */
 
 /* (c) 2003 Technische Universitaet Dresden
@@ -16,18 +16,16 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#ifdef USE_OSKIT
-#include <malloc.h>
-#endif
 
 #include <l4/env/errno.h>
 #include <l4/sys/consts.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/sys/kdebug.h>
 #include <l4/thread/thread.h>
-#include <l4/names/libnames.h>
 #include <l4/loader/loader.h>
-#include <l4/exec/errno.h>
+#include <l4/names/libnames.h>
+#include <l4/util/util.h>
+#include <l4/util/macros.h>
 
 #include "app.h"
 #include "dm-if.h"
@@ -63,11 +61,12 @@ cfg_make_template(void)
   ct->next_mem    = ct->mem;
   ct->fprov_id    = L4_INVALID_ID;
   ct->dsm_id      = app_dsm_id;
+  ct->caplist     = NULL;
 }
 
 static void
-cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t fprov_id, 
-	      const char *fname)
+cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id, 
+	      l4_threadid_t fprov_id, const char *fname)
 {
   memset(ct, 0, sizeof(*ct));
 
@@ -79,7 +78,9 @@ cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t fprov_id,
   ct->next_mem    = ct->mem;
   ct->task.fname  = strdup(fname);
   ct->fprov_id    = fprov_id;
-  ct->dsm_id      = cfg_task_template.dsm_id;
+  ct->dsm_id      = dsm_id;
+  ct->caphandler  = L4_INVALID_ID;
+  ct->caplist     = NULL;
 
   if (cfg_task_template.iobitmap)
     {
@@ -103,7 +104,7 @@ cfg_new_task_template(void)
 
 /** Create a pseudo task. */
 int
-cfg_job(l4_umword_t flag, unsigned int number)
+cfg_job(l4_uint32_t flag, unsigned int number)
 {
   cfg_task_t *ct;
 
@@ -169,7 +170,7 @@ cfg_new_task(const char *fname, const char *args)
       return -L4_ENOMEM;
     }
 
-  cfg_init_task(ct, cfg_task_template.ds_image, 
+  cfg_init_task(ct, cfg_task_template.ds_image, cfg_task_template.dsm_id,
 		cfg_task_template.fprov_id, fname);
   ct->task.args = args;
 
@@ -241,7 +242,7 @@ cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high, l4_umword_t flags)
 
   if (flags >> 16 > 7)
     {
-      printf("Can't use memory pool %d -- only have 7 pools\n", flags >> 16);
+      printf("Can't use memory pool %ld -- only have 7 pools\n", flags >> 16);
       return -L4_EINVAL;
     }
 
@@ -259,7 +260,7 @@ cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high, l4_umword_t flags)
   *((*cfg_task_current)->next_mem++) = cm;
   
   if (cfg_verbose>0)
-    printf("  <%s>: mem: %6d kB at %08x-%08x flags %02x pool %d\n",
+    printf("  <%s>: mem: %6d kB at %08lx-%08lx flags %02x pool %d\n",
 	(*cfg_task_current)->task.fname, size / 1024,
 	low, high, cm.flags, cm.pool);
 
@@ -352,7 +353,7 @@ cfg_task_mcp(unsigned int mcp)
 
 /** Set flag of task we currently working on. */
 int
-cfg_task_flag(l4_umword_t flag)
+cfg_task_flag(l4_uint32_t flag)
 {
   if (!*cfg_task_current)
     /* cfg_task_flag before cfg_new_task */
@@ -381,7 +382,7 @@ cfg_task_fprov(const char *fprov_name)
       return -L4_EINVAL;
     }
 
-  if (!names_waitfor_name(fprov_name, &(*cfg_task_current)->fprov_id, 5000))
+  if (!cfg_lookup_name(fprov_name, &(*cfg_task_current)->fprov_id))
     {
       printf("File provider \"%s\" not found\n", fprov_name);
       return -L4_ENOTFOUND;
@@ -401,11 +402,77 @@ cfg_task_dsm(const char *dsm_name)
       return -L4_EINVAL;
     }
 
-  if (!names_waitfor_name(dsm_name, &(*cfg_task_current)->dsm_id, 5000))
+  if (!cfg_lookup_name(dsm_name, &(*cfg_task_current)->dsm_id))
     {
       printf("Dataspace manager \"%s\" not found\n", dsm_name);
       return -L4_ENOTFOUND;
     }
+
+  return 0;
+}
+
+/** Set caphandler of a task. */
+int
+cfg_task_caphandler(const char *name)
+{
+  if (!*cfg_task_current)
+    /* cfg_task_caphandler before cfg_new_task */
+    {
+      printf("Set cap handler of which task?\n");
+      return -L4_EINVAL;
+    }
+
+  if (!cfg_lookup_name(name, &(*cfg_task_current)->caphandler))
+    {
+      printf("%s: Capfault handler \"%s\" not found\n",
+             (*cfg_task_current)->task.fname, name);
+      return -L4_ENOTFOUND;
+    }
+
+  printf("Capability fault handler: "l4util_idfmt"\n",
+         l4util_idstr((*cfg_task_current)->caphandler));
+
+  return 0;
+}
+
+/** Add a capability to the cap_list. */
+static void
+caplist_add(cfg_task_t *ct, cfg_cap_t *cap)
+{
+  if (!ct->caplist)
+    ct->caplist = cap;
+  else
+    {
+      cfg_cap_t *h = ct->caplist;
+      while (h->next)
+        h = h->next;
+      h->next = cap;
+    }
+}
+
+/** Set the task caps. */
+int
+cfg_task_ipc(const char *name, int type)
+{
+  cfg_cap_t *cap = NULL;
+
+  if (!*cfg_task_current)
+    {
+      printf("I don't know which task this capability belongs to.\n");
+      return -L4_EINVAL;
+    }
+
+  printf("%s: %s to communicate with %s\n", (*cfg_task_current)->task.fname,
+         (type == CAP_TYPE_ALLOW ? "allowed" : "denied"), name);
+
+  if (!(cap = malloc(sizeof(cfg_cap_t))))
+    return -L4_ENOMEM;
+
+  *cap = (cfg_cap_t){NULL, strdup(name), type};
+  if (!cap->dest)
+    return -L4_ENOMEM;
+
+  caplist_add(*cfg_task_current, cap);
 
   return 0;
 }
@@ -416,7 +483,7 @@ cfg_next_task(void)
 {
   if (!*cfg_task_nextout || cfg_task_nextout >= cfg_task+CFG_MAX_TASK)
     return NULL;
-  
+
   return cfg_task_nextout++;
 }
 
@@ -434,7 +501,7 @@ cfg_clear_task(cfg_task_t *ct)
 	  ct->next_module->fname = 0;
 	  ct->next_module->args  = 0;
 	}
-      
+
       free((char*)ct->task.fname);
       free((char*)ct->task.args);
       free(ct->iobitmap);
@@ -453,6 +520,30 @@ parse_cfg(l4_addr_t cfg_addr, l4_size_t cfg_size)
   cfg_done();
 
   return error;
+}
+
+/** Lookup a name by names but check for numerical versions first,
+ *  task.thread must use hex numbers */
+int
+cfg_lookup_name(const char *name, l4_threadid_t *id)
+{
+  char *p;
+  unsigned long task, thread;
+
+  /* Check if name os of the form "task.thread" */
+  task = strtoul(name, &p, 16);
+  if (task && p && *p == '.')
+    {
+      thread = strtoul(p + 1, &p, 16);
+      if (p && *p == '\0')
+        {
+	  id->raw = 0;
+	  id->id.task = task;
+	  id->id.lthread = thread;
+	  return 1;
+	}
+    }
+  return names_waitfor_name(name, id, 5000);
 }
 
 int
@@ -510,7 +601,7 @@ load_without_script(const char *fname_and_arg, l4_size_t fname_len,
 
   snprintf(fname, fname_len+1, "%s", fname_and_arg);
 
-  cfg_init_task(&ct, *bin_ds, fprov_id, fname);
+  cfg_init_task(&ct, *bin_ds, app_dsm_id, fprov_id, fname);
   ct.image    = bin_addr;
   ct.sz_image = bin_size;
 
@@ -538,11 +629,13 @@ load_without_script(const char *fname_and_arg, l4_size_t fname_len,
       printf("Setting libpath to %s\n", cfg_libpath);
     }
 
+#ifndef USE_LDSO
   if (!(ct.flags & CFG_F_INTERPRETER))
     {
       if ((error = l4rm_detach((void*) bin_addr)))
 	printf("Error %d detaching dataspace\n", error);
     }
+#endif
 
   error = app_boot(&ct, owner);
 
@@ -579,7 +672,7 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
 		   l4_taskid_t task_ids[])
 {
   int error, parse_error;
-  cfg_task_t **ct;
+  cfg_task_t *ct, **ctp;
   int nr = 0;
   l4_uint32_t cfg_flags = 0;
   l4_size_t fname_len = strlen(fname_and_arg);
@@ -588,15 +681,21 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
   if ((o = strchr(fname_and_arg, ' ')))
     fname_len = o-fname_and_arg;
 
-  /* check if user gave us a filename of an executable */
-  error = exec_if_ftype(cfg_ds, cfg_env);
-  if (error == -L4_EINVAL)
+#ifdef USE_LDSO
+  error = elf_check_ftype(cfg_addr, cfg_size, cfg_env);
+  if (!(!(error = elf_check_ftype(cfg_addr, cfg_size, cfg_env))
+        || error == -ELF_INTERPRETER || error == -ELF_BADFORMAT))
+#else
+  /* Check if user gave us the filename of an executable. cfg_env is needed
+   * here to pass ELF class and architecture to l4exec. */
+  if ((error = exec_if_ftype(cfg_ds, cfg_env)) == -L4_EINVAL)
+#endif
     return return_error_msg(error, "checking file type of \"%s\"",
-	fname_and_arg);
+			    fname_and_arg);
 
-  *is_binary = (error ==  0 || error == -L4_EXEC_INTERPRETER);
+  *is_binary = (error ==  0 || error == -ELF_INTERPRETER);
 
-  if (error == -L4_EXEC_INTERPRETER)
+  if (error == -ELF_INTERPRETER)
     cfg_flags |= CFG_F_INTERPRETER;
 
   if (*is_binary)
@@ -613,55 +712,87 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
 			      fname_and_arg);
     }
 
-  while ((ct = cfg_next_task()))
+  while ((ctp = cfg_next_task()))
     {
-      if ((*ct)->flags & CFG_F_MEMDUMP)
+      ct = *ctp;
+
+      if (ct->flags & CFG_F_MEMDUMP)
 	{
 	  /* specal job: Show rmgr memory dump */
 	  rmgr_dump_mem();
 	}
-      else if ((*ct)->flags & CFG_F_SLEEP)
+      else if (ct->flags & CFG_F_SLEEP)
 	{
 	  /* special job: Sleep for a while */
-	  printf("sleeping for %d ms\n", (*ct)->prio);
-	  l4thread_sleep((*ct)->prio);
+	  printf("sleeping for %d ms\n", ct->prio);
+	  l4thread_sleep(ct->prio);
 	}
-      else if (!((*ct)->flags & CFG_F_TEMPLATE))
+      else if (!(ct->flags & CFG_F_TEMPLATE))
 	{
 	  /* start regular task */
-	  (*ct)->flags |= ext_flags & L4LOADER_STOP ? CFG_F_STOP : 0;
-	  if (l4_is_invalid_id((*ct)->fprov_id))
-	    (*ct)->fprov_id = fprov_id;
-	  if (l4_is_invalid_id((*ct)->dsm_id))
-	    (*ct)->dsm_id = app_dsm_id;
+	  ct->flags |= ext_flags & L4LOADER_STOP ? CFG_F_STOP : 0;
+	  if (l4_is_invalid_id(ct->fprov_id))
+	    ct->fprov_id = fprov_id;
+	  if (l4_is_invalid_id(ct->dsm_id))
+	    ct->dsm_id = app_dsm_id;
 
-	  if ((error = app_boot(*ct, owner)))
+	  /* load file image in every case */
+	  if ((error = load_file(ct->task.fname, ct->fprov_id, ct->dsm_id, 
+				 cfg_binpath, /*contiguous=*/0,
+				 &ct->image, &ct->sz_image, &ct->ds_image)))
+	    {
+	      printf("Error %d loading \"%s\"\n", error, ct->task.fname);
+	      return error;
+	    }
+
+#ifdef USE_LDSO
+	  if ((error = elf_check_ftype(ct->image, ct->sz_image, cfg_env)) == -ELF_CORRUPT
+              || error == -ELF_BADFORMAT)
+#else
+	  if ((error = exec_if_ftype(&ct->ds_image, cfg_env)) == -L4_EINVAL
+	      || error == -ELF_BADFORMAT)
+#endif
+	    {
+	      junk_ds(&ct->ds_image, ct->image);
+	      return return_error_msg(error, "checking file type of \"%s\"",
+				      ct->task.fname);
+	    }
+
+	  if (error == -ELF_INTERPRETER)
+	    ct->flags |= CFG_F_INTERPRETER;
+
+	  /* junk_ds for ds_image is called in start interp */
+	  if ((error = app_boot(ct, owner)))
       	    break;
 
 	  if (task_ids)
-	    task_ids[nr++] = (*ct)->task_id;
+	    task_ids[nr++] = ct->task_id;
 	}
 
-      if (!((*ct)->flags & CFG_F_TEMPLATE))
+      if (!(ct->flags & CFG_F_TEMPLATE))
 	{
-	  cfg_clear_task(*ct);
-	  free(*ct);
+	  cfg_clear_task(ct);
+	  free(ct);
 	}
-      *ct = (cfg_task_t*)0;
+
+      /* done */
+      *ctp = (cfg_task_t*)0;
     }
 
   if (task_ids && nr < l4loader_MAX_TASK_ID)
     task_ids[nr++] = L4_INVALID_ID;
 
   /* recycle cfg_task_t's */
-  while ((ct = cfg_next_task()))
+  while ((ctp = cfg_next_task()))
     {
-      if (!((*ct)->flags & CFG_F_TEMPLATE))
+      ct = *ctp;
+
+      if (!(ct->flags & CFG_F_TEMPLATE))
 	{
-	  cfg_clear_task(*ct);
-	  free(*ct);
+	  cfg_clear_task(ct);
+	  free(ct);
 	}
-      *ct = (cfg_task_t*)0;
+      *ctp = (cfg_task_t*)0;
     }
 
   return error;

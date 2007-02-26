@@ -26,17 +26,18 @@
 #ifndef __INPUT_INCLUDE_LIBINPUT_H_
 #define __INPUT_INCLUDE_LIBINPUT_H_
 
+#include <l4/input/macros.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <l4/input/macros.h>
 
 struct l4input {
-	long long time;      /**< unused */
+        long long time; ///< unused on bare hardware, used in Fiasco-UX
 	unsigned short type;
 	unsigned short code;
-	unsigned int value;
+	int value;
 };
 
 /** Initialize input driver library.

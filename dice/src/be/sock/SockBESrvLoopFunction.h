@@ -54,11 +54,12 @@ protected:
     /** \brief copy constructor */
     CSockBESrvLoopFunction(CSockBESrvLoopFunction &src);
 
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteCleanup(CBEFile * pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
 
 public:
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
 };
 
 #endif

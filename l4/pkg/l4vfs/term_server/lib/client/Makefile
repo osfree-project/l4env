@@ -1,7 +1,7 @@
 PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../../..
 
-SYSTEMS = x86-l4v2 x86-l4x0
+SYSTEMS = x86-l4v2
 
 # the name of your library
 TARGET  = libl4vfs_term_server_internal.a \

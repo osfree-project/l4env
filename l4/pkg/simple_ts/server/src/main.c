@@ -4,9 +4,10 @@
  *
  * \date	08/29/2000
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- * 		Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
+ *		Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
  *
- * \brief	Server functions */
+ * \brief	Server functions
+ */
 
 /* L4 includes */
 #include <l4/env/errno.h>
@@ -32,14 +33,14 @@
 #include "timeout_queue.h"
 
 #ifdef L4API_l4x0
-#define TASK_CNT_MAX	256
+#define TASK_CNT_MAX	451
 #else
-#define TASK_CNT_MAX	512
+#define TASK_CNT_MAX	901
 #endif
 #define TASK_CNT_DFL	64
 #define TASK_FIRST	10
 
-#define TASK_VECTYPE unsigned
+#define TASK_VECTYPE l4_umword_t
 #define TASK_VECSIZE (TASK_CNT_MAX+sizeof(TASK_VECTYPE)-1)/sizeof(TASK_VECTYPE)
 
 #define ANY_TASKNO	0xffffffff
@@ -52,7 +53,7 @@ static const unsigned taskno_min = TASK_FIRST;
 static unsigned       task_cnt = TASK_CNT_DFL;
 static char           task_name[TASK_CNT_MAX][16];
 
-typedef struct __task 
+typedef struct __task
 {
   l4_threadid_t		owner;
   l4_threadid_t		id;
@@ -72,7 +73,7 @@ static l4_threadid_t master_id = L4_INVALID_ID;
 
 static char stack[L4_PAGESIZE] __attribute__((aligned(4)));
 
-inline static unsigned 
+inline static unsigned
 taskid_to_index(l4_threadid_t t)
 {
   return (t.id.task - taskno_min);
@@ -117,7 +118,7 @@ parse_args(int argc, const char **argv)
 
   if (task_cnt + taskno_min > TASK_CNT_MAX)
     {
-      LOG("Too many tasks (%d) -- limiting to %d!", 
+      LOG("Too many tasks (%d) -- limiting to %d!",
 	  task_cnt, TASK_CNT_MAX - taskno_min);
       task_cnt = TASK_CNT_MAX - taskno_min;
     }
@@ -163,18 +164,18 @@ task_init(void)
 
       __tasks[i].owner = L4_NIL_ID;
       /* Set initial state of task id. */
-      __tasks[i].id.id = (l4_threadid_struct_t){ 
-					      lthread:0, 
-					      task:i+taskno_min, 
+      __tasks[i].id.id = (l4_threadid_struct_t){
+					      lthread:0,
+					      task:i+taskno_min,
 #ifdef ARCH_arm /* dummy check for x0-native */
 					      version:0,
 #else
-					      version_low:0, 
-					      version_high:0, 
-					      site:0, 
+					      version_low:0,
+					      version_high:0,
+					      site:0,
 					      nest:0,
 #endif
-					      chief:rmgr_id.id.task, 
+					      chief:rmgr_id.id.task,
 					    };
       __tasks[i].timeout.timeout = -1;
 
@@ -192,7 +193,7 @@ task_init(void)
 	  /* this is a valid task number; however, as we create tasks
 	   * through RMGR, just return the L4 task right back to RMGR */
 	  tid = server_id;
-	  tid.id.chief = tid.id.task;
+	  tid.id.chief = l4_myself().id.task; //tid.id.task;
 	  tid.id.task = taskno;
 #ifndef ARCH_arm
 	  tid.id.nest++;
@@ -207,7 +208,7 @@ static l4_uint32_t
 task_alloc(l4_threadid_t *caller, l4_uint32_t taskno)
 {
   unsigned n = taskno - taskno_min;
-  
+
   if (taskno != ANY_TASKNO)
     {
       if (!l4util_test_and_set_bit(n, task_used))
@@ -223,7 +224,7 @@ task_alloc(l4_threadid_t *caller, l4_uint32_t taskno)
 	}
       return -L4_ENOTASK;
     }
-  
+
   /* return any free task number */
   do
     {
@@ -319,10 +320,10 @@ task_kill(l4_threadid_t caller, l4_taskid_t taskid, l4_uint8_t options)
   if (n<0 || n>=task_cnt)
     /* invalid task no */
     return -L4_ENOTFOUND;
-  
+
   if (!l4util_test_bit(n, task_used))
     return -L4_EUNKNOWN;
-  
+
   /* test if task already terminating */
   if (l4util_test_bit(n, task_term))
     return -L4_EUNKNOWN;
@@ -334,11 +335,11 @@ task_kill(l4_threadid_t caller, l4_taskid_t taskid, l4_uint8_t options)
       !l4_is_nil_id(__tasks[n].owner))
     {
       LOG("Kill "l4util_idfmt" from "l4util_idfmt" but owner is "l4util_idfmt,
-	  l4util_idstr(taskid), l4util_idstr(caller), 
+	  l4util_idstr(taskid), l4util_idstr(caller),
 	  l4util_idstr(__tasks[n].owner));
       return -L4_ENOTOWNER;
     }
-  
+
   /* set task to termination state */
   if (using_events && !(options & L4TS_KILL_NOEV))
     l4util_set_bit(n, task_term);
@@ -383,27 +384,27 @@ task_kill_recursive(l4_threadid_t caller, l4_taskid_t taskid)
   // per default free task resource
   if ((ret = task_kill(caller, taskid, L4TS_KILL_FREE)))
     return ret;
-  
+
   /* kill owned tasks recursive */
   for (i=0; i<task_cnt; i++)
-    if (l4util_test_bit(i, task_used) && 
+    if (l4util_test_bit(i, task_used) &&
 	l4_task_equal(__tasks[i].owner, __tasks[n].id))
       task_kill_recursive(__tasks[n].id, __tasks[i].id);
 
   return 0;
 }
 
-
-/** 
+/**
  *  Alloc task number.
  *
  * \retval taskid	Task ID of new task
  * \return		0 on success
- * 			-L4_ENOTASK if no task is available 
+ *			-L4_ENOTASK if no task is available
  */
-l4_int32_t
-l4_ts_allocate_component(CORBA_Object client, l4_taskid_t *taskid,
-			 CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_allocate_component (CORBA_Object client,
+                          l4_taskid_t *taskid,
+                          CORBA_Server_Environment *_dice_corba_env)
 {
   l4_int32_t taskno; /* UGLY, taskno can also be an error code */
 
@@ -416,54 +417,97 @@ l4_ts_allocate_component(CORBA_Object client, l4_taskid_t *taskid,
 }
 
 /** 
+ * \brief Allocate a task ID and become the task's chief.
+ * \retval taskid   allocated task ID
+ * \return          0 on success
+ *                  -L4_ENOTASK if no task is available
+ */
+long
+l4_ts_allocate2_component(CORBA_Object client,
+                          l4_taskid_t *taskid,
+                          CORBA_Server_Environment *_dice_corba_env)
+{
+  l4_int32_t taskno;
+  l4_taskid_t ret;
+
+  if ((taskno = task_alloc(client, ANY_TASKNO)) < 0)
+    return -L4_ENOTASK;
+
+  /* Hmmm. During init() we returned all tasks to RMGR. This client
+   * however wants to be the task's chief. Therefore we re-create
+   * the task here. */
+  if (rmgr_get_task(taskno))
+    return -L4_ENOTASK;
+
+  *taskid          = __tasks[taskno - taskno_min].id;
+  taskid->id.chief = client->id.task;
+  // transfer chief rights
+  ret = l4_task_new(*taskid, (l4_umword_t)client->raw, 0, 0, L4_NIL_ID);
+  if (l4_is_nil_id(*taskid))
+    {
+      LOG_Error("Error allocating task with chief rights.");
+      return -L4_ENOTASK;
+    }
+
+  __tasks[taskno - taskno_min].id = *taskid;
+  return 0;
+}
+
+/**
  *  Free task number.
  *
  * \param taskid	Task ID to free
  * \return		0 on succes
- * 			-L4_ENOTFOUND if task doesn't exist
- * 			-L4_ENOTOWNER if caller isn't the owner
+ *			-L4_ENOTFOUND if task doesn't exist
+ *			-L4_ENOTOWNER if caller isn't the owner
  */
-l4_int32_t
+long
 l4_ts_free_component(CORBA_Object client, const l4_taskid_t *taskid,
 		     CORBA_Server_Environment *_dice_corba_env)
 {
   return task_free(client, taskid->id.task);
 }
 
-/** 
+/**
  *  Get taskid for taskno.
  *
  * \param taskno	Task number
- * \retval taskid	Corresponding task ID 
+ * \retval taskid	Corresponding task ID
  */
-l4_int32_t
-l4_ts_taskno_to_taskid_component(CORBA_Object client, l4_uint32_t taskno,
-				 l4_taskid_t *taskid,
-				 CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_taskno_to_taskid_component (CORBA_Object _dice_corba_obj,
+                                  unsigned long tasknr,
+                                  l4_taskid_t *taskid,
+                                  CORBA_Server_Environment *_dice_corba_env)
 {
-  *taskid = task_get_taskid(taskno);
+  *taskid = task_get_taskid(tasknr);
   return l4_is_invalid_id(*taskid) ? -L4_ENOTFOUND : 0;
 }
 
-/** 
+/**
  *  Create an L4 task.
- *  
+ *
  * \param request	Flick request structure
  * \param entry		initial program eip
  * \param stack		initial stack pointer
  * \param mcp_or_chief	maximum controlled priority
  * \param pager		initial pager
  * \retval taskid	Task ID of new task
- * \return		0 on success 
- * 			-L4_ENOTASK if no task is available 
+ * \return		0 on success
+ *			-L4_ENOTASK if no task is available
  */
-l4_int32_t 
-l4_ts_create_component(CORBA_Object client, l4_taskid_t *taskid,
-		       l4_uint32_t entry, l4_uint32_t stack,
-		       l4_uint32_t mcp,  const l4_taskid_t *pager,
-		       l4_int32_t prio, const char* resname,
-		       l4_uint32_t flags,
-		       CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_create_component (CORBA_Object client,
+                        l4_taskid_t *taskid,
+                        l4_addr_t entry,
+                        l4_addr_t stack,
+                        unsigned long mcp,
+                        const l4_taskid_t *pager,
+                        const l4_taskid_t *caphandler,
+                        long prio,
+                        const char* resname,
+                        unsigned long flags,
+                        CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t tid = *taskid;
 
@@ -481,13 +525,13 @@ l4_ts_create_component(CORBA_Object client, l4_taskid_t *taskid,
 
   if (l4util_test_bit(taskid_to_index(tid), task_term))
     {
-      printf("ERROR: task "l4util_idtskfmt" still terminating\n", 
+      printf("ERROR: task "l4util_idtskfmt" still terminating\n",
 	     l4util_idtskstr(tid));
       return -L4_EUSED;
     }
 
   /* create an active L4 task */
-  tid = rmgr_task_new(tid, mcp, stack, entry, *(l4_threadid_t*)pager);
+  tid = rmgr_task_new_with_cap(tid, mcp, stack, entry, *pager, *caphandler);
   if (l4_is_nil_id(tid) || l4_is_invalid_id(tid))
     return -L4_EINVAL;
 
@@ -514,22 +558,24 @@ l4_ts_create_component(CORBA_Object client, l4_taskid_t *taskid,
   return 0;
 }
 
-/** 
+/**
  *  Terminate task.
  *
  * \param request	Flick request structure
  * \param taskid	Task ID to free
  * \return		0 on success
  *			-L4_ENOTOWNER if not owner of that task number
- *			-L4_ENOTFOUND if task number was not found 
+ *			-L4_ENOTFOUND if task number was not found
  */
-l4_int32_t
-l4_ts_kill_component(CORBA_Object client, const l4_taskid_t *taskid,
-		     const l4_uint8_t options, l4_int16_t *_dice_reply,
-		     CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_kill_component (CORBA_Object client,
+                      const l4_taskid_t *taskid,
+                      l4_uint8_t options,
+                      short *_dice_reply,
+                      CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
-  
+
   ret = task_kill(*client, *taskid, options);
   if (using_events && !(options & L4TS_KILL_NOEV) &&
       ret == 0 && (options & L4TS_KILL_SYNC))
@@ -539,32 +585,33 @@ l4_ts_kill_component(CORBA_Object client, const l4_taskid_t *taskid,
   return ret;
 }
 
-/** 
+/**
  *  Terminate task for itself.
- * 
+ *
  * \return		0 on success
  *			-L4_ENOTOWNER if not owner of that task number
  *			-L4_ENOTFOUND if task number was not found
  */
-l4_int32_t
-l4_ts_exit_component(CORBA_Object client, l4_int16_t *_dice_reply,
-		     CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_exit_component (CORBA_Object client,
+                      short *_dice_reply,
+                      CORBA_Server_Environment *_dice_corba_env)
 {
   if (l4util_test_bit(taskid_to_index(*client), task_term))
     {
       LOG("Cannot exit "l4util_idfmt" (reserved or terminating)",
-  	  l4util_idstr(*client));
+	  l4util_idstr(*client));
       *_dice_reply = DICE_NO_REPLY;
       return -L4_ENOTFOUND;
     }
 
-  LOG("Exit "l4util_idfmt, l4util_idstr(*client));
+  LOG_printf("Exit "l4util_idfmt"\n", l4util_idstr(*client));
 
   *_dice_reply = DICE_NO_REPLY;
   return task_kill_recursive(*client, *client);
 }
 
-/** 
+/**
  *  Terminate task and terminate all owned tasks. There is no option to
  *  wait completely until all tasks are killed. The reason is that we
  *  would have to wait until _all_ child tasks and the task itself are
@@ -576,12 +623,14 @@ l4_ts_exit_component(CORBA_Object client, l4_int16_t *_dice_reply,
  *			-L4_ENOTOWNER if not owner of that task number
  *			-L4_ENOTFOUND if task number was not found
  */
-l4_int32_t
-l4_ts_kill_recursive_component(CORBA_Object client, const l4_taskid_t *taskid,
-		    	       CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_kill_recursive_component (CORBA_Object client,
+                                const l4_taskid_t *taskid,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
-  LOG("Kill "l4util_idfmt" sent by "l4util_idfmt" owner "l4util_idfmt,
-      l4util_idstr(*taskid), l4util_idstr(*client), 
+  LOG_printf("Kill "l4util_idfmt" sent by "l4util_idfmt" owner "
+      l4util_idfmt"\n",
+      l4util_idstr(*taskid), l4util_idstr(*client),
       l4util_idstr(task_get_owner(*taskid)));
   return task_kill_recursive(*client, *taskid);
 }
@@ -594,10 +643,11 @@ l4_ts_kill_recursive_component(CORBA_Object client, const l4_taskid_t *taskid,
  * \return		0 on success
  *			-L4_ENOTOWNER if not owner of that task number
  */
-l4_int32_t
-l4_ts_owner_component(CORBA_Object client, const l4_taskid_t *taskid,
-	     	      const l4_taskid_t *owner,
-     		      CORBA_Server_Environment *_dice_corba_env)
+long
+l4_ts_owner_component (CORBA_Object client,
+                       const l4_taskid_t *taskid,
+                       const l4_taskid_t *owner,
+                       CORBA_Server_Environment *_dice_corba_env)
 {
   if (!l4_task_equal(task_get_owner(*taskid), *client))
     return -L4_ENOTOWNER;
@@ -606,7 +656,7 @@ l4_ts_owner_component(CORBA_Object client, const l4_taskid_t *taskid,
 }
 
 
-/** 
+/**
  * Dump list of allocated tasks.
  */
 void
@@ -622,7 +672,7 @@ l4_ts_dump_component(CORBA_Object client,
 	{
 	  int len = printf("  task-nr:%02x task:"l4util_idfmt
 			   " owner:"l4util_idfmt,
-			   i, l4util_idstr(__tasks[i].id), 
+			   i, l4util_idstr(__tasks[i].id),
 			   l4util_idstr(__tasks[i].owner));
 	  printf("%*s%s\n", 38-len, "",
 	      *task_name[i] ? task_name[i] : "<unknown");
@@ -634,20 +684,20 @@ l4_ts_dump_component(CORBA_Object client,
  * Send one-way IPC back to the client which killed a task. This is only
  * possible in the context of the server (therefore the extra component
  * function).
- * 
+ *
  * \param client	Task ID of client to answer
  * \return		0 on success
  */
 void
 l4_ts_do_kill_reply_component(CORBA_Object client, const l4_threadid_t *task,
-     		              CORBA_Server_Environment *_dice_corba_env)
+                              CORBA_Server_Environment *_dice_corba_env)
 {
   l4_ts_kill_reply ((l4_threadid_t*)task, 0, _dice_corba_env);
 }
 
 
 /**
- * This function searchs for the terminating task of an eventnr and 
+ * This function searchs for the terminating task of an eventnr and
  * completes purging of the task resources. It clears the termination
  * bit, so the task server has the resource back for granting.
  */
@@ -690,9 +740,9 @@ handle_ack(l4events_nr_t eventnr)
   return 0;
 }
 
-/** 
- * This function checks if timeout for an exit event is running down. 
- * Actually this function is not doing any useful thing. It only sets up 
+/**
+ * This function checks if timeout for an exit event is running down.
+ * Actually this function is not doing any useful thing. It only sets up
  * a new fresh timeout for the exit event.
  */
 static void
@@ -711,11 +761,11 @@ handle_timeout(void)
 
   while (timeout_first->timeout == 0)
     {
-      i = timeout_first;  
+      i = timeout_first;
 
       printf("\033[41mExit NOT SUCCESSFUL done for "l4util_idtskfmt"!\033[m\n",
 	  l4util_idtskstr(__tasks[i->index].id));
-  
+
       /* we are doing nothing more than a relink of the timeout
        * at the moment */
       unlink_item_from_timeout_queue(i);
@@ -754,7 +804,7 @@ send_exit_event(int n)
   return 0;
 }
 
-/** 
+/**
  * The acknowledge thread. Used to communicate with the event server.
  * In normal case, we wait for a message (exit event) from the event
  * server --- like the event thread in the resource managers. But
@@ -830,8 +880,8 @@ dice_server_error(l4_msgdope_t result, CORBA_Server_Environment* env)
   /* our client was killed, perhaps due exit handling */
   if (result.msgdope == L4_IPC_ENOT_EXISTENT)
     return;
-    
-  LOG("server error: %x", result.msgdope);
+
+  LOG("server error: %lx", result.msgdope);
 }
 
 /** Main function, server loop. */

@@ -4,12 +4,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
-
-#define POLL_MODE
-
-#ifndef POLL_MODE
 #include <signal.h>
-#endif
 
 #include "SDL.h"
 
@@ -61,6 +56,7 @@ int refresh_rate;
 int mouse_visible;
 struct l4input *input_mem;
 int input_queue_pos;
+int signal_mode, sig_redraw_pending;
 
 struct key_mapping {
   unsigned long sdlkey;
@@ -86,6 +82,7 @@ static struct key_mapping key_map[] = {
   { SDLK_0,            11 },
   { SDLK_MINUS,        53 },
   { SDLK_EQUALS,       13 },
+  { SDLK_WORLD_20,     13 },
   { SDLK_BACKSPACE,    14 },
   { SDLK_TAB,          15 },
   { SDLK_q,            16 },
@@ -144,6 +141,19 @@ static struct key_mapping key_map[] = {
   { SDLK_F10,          68 },
   { SDLK_NUMLOCK,      69 },
   { SDLK_SCROLLOCK,    70 },
+  { SDLK_KP7,          71 }, /* Keypad 7 */
+  { SDLK_KP8,          72 }, /* Keypad 8 */
+  { SDLK_KP9,          73 }, /* Keypad 9 */
+  { SDLK_KP_MINUS,     74 }, /* Keypad minus */
+  { SDLK_KP4,          75 }, /* Keypad 4 */
+  { SDLK_KP5,          76 }, /* Keypad 5 */
+  { SDLK_KP6,          77 }, /* Keypad 6 */
+  { SDLK_KP_PLUS,      78 }, /* Keypad plus */
+  { SDLK_KP1,          79 }, /* Keypad 1 */
+  { SDLK_KP2,          80 }, /* Keypad 2 */
+  { SDLK_KP3,          81 }, /* Keypad 3 */
+  { SDLK_KP0,          82 }, /* Keypad 0 */
+  { SDLK_KP_PERIOD,    83 }, /* Keypad dot */
 
   { SDLK_F11,          87 },
   { SDLK_F12,          88 },
@@ -151,7 +161,10 @@ static struct key_mapping key_map[] = {
   { SDLK_F14,          89 },
   { SDLK_F15,          90 },
 
+  { SDLK_KP_ENTER,     96 }, /* Keypad enter */
   { SDLK_RCTRL,        97 },
+  { SDLK_KP_DIVIDE,    98 }, /* Keypad slash */
+  { SDLK_PRINT,        99 },
   { SDLK_RALT,         100 },
   { SDLK_RMETA,        100 },
   { SDLK_MODE,         100 }, /* Alt Gr */
@@ -167,16 +180,21 @@ static struct key_mapping key_map[] = {
   { SDLK_INSERT,       110 },
   { SDLK_DELETE,       111 },
 
+  { SDLK_KP_EQUALS,    117 }, /* Keypad equals */
+
   { SDLK_PAUSE,        119 },
-  { SDLK_PRINT,        210 },
+
+  { SDLK_LSUPER,       125 }, /* Left "Penguin" key */
+  { SDLK_RSUPER,       126 }, /* Right "Penguin" key */
+  { SDLK_MENU,         127 },
 
   { 223,               12 }, /* sz */
   { 252,               26 }, /* ue */
-  { 43,                27 },
+  { 43,                27 }, /* + -> ] */
   { 246,               39 }, /* oe  -> ; */
   { 228,               40 }, /* ae  -> " */
   { 94,                41 }, /* ^ ° -> ` */
-  { 35,                43 }, /* # ' -> backslash */ 
+  { 35,                43 }, /* # ' -> backslash */
   { 60,                86 }, /* < > | */
 
   { 0, 0},
@@ -211,7 +229,7 @@ static unsigned long map_keycode(SDLKey sk)
 void usage(char *prog)
 {
   printf("%s options\n\n"
-         "  -f fd        File descriptor to mmap\n\n"
+         "  -f fd        File descriptor to mmap\n"
          "  -s 0x...     Start of FB in physmem\n"
          "  -x val       Width of screen in pixels\n"
          "  -y val       Height of screen in pixels\n"
@@ -222,6 +240,16 @@ void usage(char *prog)
          ,prog);
 }
 
+static void set_window_title(int count)
+{
+  char title[100];
+
+  snprintf(title, sizeof(title), "%s - %s | %d",
+           WM_WINDOW_TITLE,
+	   signal_mode ? "Signalled mode" : "Polling mode", count);
+
+  SDL_WM_SetCaption(title, WM_ICON_TITLE);
+}
 
 Uint32 timer_call_back(Uint32 interval, void *param)
 {
@@ -241,7 +269,7 @@ static inline void generate_irq(void)
 	   PROGNAME);
     exit(0);
   }
-} 
+}
 
 static inline int enqueue_event(struct l4input e)
 {
@@ -260,28 +288,44 @@ static inline int enqueue_event(struct l4input e)
     input_queue_pos = 0;
   return 0;
 }
- 
+
 static void propagate_event(struct l4input e)
 {
   if (!enqueue_event(e))
     generate_irq();
 }
 
+void signal_handler(int sig)
+{
+  (void)sig;
+  signal_mode = sig_redraw_pending = 1;
+}
+
 static void loop(SDL_Surface *screen, void *fbmem)
 {
   SDL_Event e;
-
-#ifdef POLL_MODE
   SDL_TimerID timer_id;
+  int count = 0;
+  int poll_mode_shown = 1;
+
+  /* Install signal handler for SIGUSR1 */
+  signal(SIGUSR1, signal_handler);
 
   if ((timer_id = SDL_AddTimer(refresh_rate, timer_call_back, NULL)) == NULL) {
     fprintf(stderr, "%s: Adding of timer failed!", PROGNAME);
     exit(1);
   }
-#endif
 
   while (SDL_WaitEvent(&e)) {
     struct l4input l4e = { .time = 0, .code = 0, .type = 0, .value = 0 };
+
+    if (signal_mode && poll_mode_shown) {
+      set_window_title(count);
+      poll_mode_shown = 0;
+    }
+
+    if (count % 100 == 0)
+      set_window_title(count);
 
     switch (e.type) {
       case SDL_KEYUP:
@@ -347,12 +391,16 @@ static void loop(SDL_Surface *screen, void *fbmem)
 	exit(0);
 
       case SDL_USEREVENT:
-	/* Redraw screen */
-	if (SDL_LockSurface(screen) < 0)
-	  break;
-	memcpy(screen->pixels, fbmem, fb_size);
-	SDL_UnlockSurface(screen);
-	SDL_Flip(screen);
+	if (!signal_mode || sig_redraw_pending) {
+	  /* Redraw screen */
+	  if (SDL_LockSurface(screen) < 0)
+	    break;
+	  memcpy(screen->pixels, fbmem, fb_size);
+	  SDL_UnlockSurface(screen);
+	  SDL_Flip(screen);
+          count++;
+	  sig_redraw_pending = 0;
+	}
 	break;
 
       default:
@@ -363,16 +411,6 @@ static void loop(SDL_Surface *screen, void *fbmem)
   }
 
 }
-
-#ifndef POLL_MODE
-void trigger_handler(int sig)
-{
-  (void)sig;
-
-  /* enqueue new event */
-  timer_call_back(0, NULL);
-}
-#endif
 
 int main(int argc, char **argv)
 {
@@ -423,11 +461,6 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-#ifndef POLL_MODE
-  /* Install signal handler for SIGUSR1 */
-  signal(SIGUSR1, trigger_handler);
-#endif
-
   printf("Frame buffer resolution of UX-con: %dx%d@%d, refresh: %dms\n",
          width, height, depth, refresh_rate);
 
@@ -436,11 +469,10 @@ int main(int argc, char **argv)
 
   physmem_size = ((fb_size & ~(SUPERPAGESIZE - 1))) + SUPERPAGESIZE;
 
-  if ((fbmem = mmap(NULL, physmem_size + INPUTMEM_SIZE, 
+  if ((fbmem = mmap(NULL, physmem_size + INPUTMEM_SIZE,
 	            PROT_READ | PROT_WRITE, MAP_SHARED,
 	            physmem_fd, physmem_fb_start)) == MAP_FAILED) {
-    fprintf(stderr, "%s: mmap failed: %s\n",
-	    PROGNAME, strerror(errno));
+    fprintf(stderr, "%s: mmap failed: %s\n", PROGNAME, strerror(errno));
     exit(1);
   }
 
@@ -460,7 +492,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  SDL_WM_SetCaption(WM_WINDOW_TITLE, WM_ICON_TITLE);
+  set_window_title(0);
 
   SDL_ShowCursor(mouse_visible);
 

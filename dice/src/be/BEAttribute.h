@@ -1,9 +1,9 @@
 /**
- *    \file    BEAttribute.h
- *    \brief   contains the declaration of the class CBEAttribute
+ *  \file    BEAttribute.h
+ *  \brief   contains the declaration of the class CBEAttribute
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/15/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,9 +31,10 @@
 #define __DICE_BEATTRIBUTE_H__
 
 #include "be/BEObject.h"
+#include "Attribute-Type.h"
+#include "template.h"
 #include <string>
 #include <vector>
-using namespace std;
 
 class CFEAttribute;
 class CFEIntAttribute;
@@ -42,10 +43,12 @@ class CFEStringAttribute;
 class CFETypeAttribute;
 class CFEVersionAttribute;
 
-class CBEContext;
 class CBEType;
 class CBEDeclarator;
 
+/** \enum ATTR_CLASS
+ *  \brief defines the valid attribute classes (kinds of attributes)
+ */
 enum ATTR_CLASS
 {
     ATTR_CLASS_NONE    = 0,   /**< the attribute belongs to no attribute class */
@@ -57,92 +60,146 @@ enum ATTR_CLASS
     ATTR_CLASS_VERSION = 6    /**< the attribute is a version attribute */
 };
 
-/**    \class CBEAttribute
- *    \ingroup backend
- *    \brief the back-end attribute
+/** \class CBEAttribute
+ *  \ingroup backend
+ *  \brief the back-end attribute
  */
-class CBEAttribute:public CBEObject
+class CBEAttribute : public CBEObject
 {
 // Constructor
 public:
-  /**    \brief constructor
+  /** \brief constructor
    */
   CBEAttribute();
   virtual ~ CBEAttribute();
 
 protected:
-  /**    \brief copy constructor
-   *    \param src the source to copy from
+  /** \brief copy constructor
+   *  \param src the source to copy from
    */
   CBEAttribute(CBEAttribute & src);
 
 public:
-    virtual CBEDeclarator * GetNextIsAttribute(vector<CBEDeclarator*>::iterator &iter);
-    virtual vector<CBEDeclarator*>::iterator GetFirstIsAttribute();
-    virtual int GetType();
     virtual void AddIsParameter(CBEDeclarator * pDecl);
-    virtual bool CreateBackEnd(int nType, CBEContext * pContext);
-    virtual bool CreateBackEnd(CFEAttribute * pFEAttribute, CBEContext * pContext);
-    virtual bool IsOfType(ATTR_CLASS nType);
-    virtual int GetIntValue();
+    virtual int GetRemainingNumberOfIsAttributes(
+	vector<CBEDeclarator*>::iterator iter);
+
+    virtual void CreateBackEnd(ATTR_TYPE nType);
+    virtual void CreateBackEnd(CFEAttribute * pFEAttribute);
+    virtual void CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator);
+    virtual void CreateBackEndInt(ATTR_TYPE nType, int nValue);
+    virtual void CreateBackEndType(ATTR_TYPE nType, CBEType *pType);
     virtual CObject * Clone();
-    virtual CBEDeclarator* FindIsParameter(string sName);
-    virtual string GetString();
-    virtual int GetRemainingNumberOfIsAttributes(vector<CBEDeclarator*>::iterator iter);
-    virtual CBEType* GetAttrType();
+
+    virtual void Write(CBEFile *pFile);
+    virtual void WriteToStr(string &str);
+
+    /** \brief tries to match the attribute type
+     *  \param nType the type to match
+     *  \return true if type matches
+     */
+    bool Match(ATTR_TYPE nType)
+    { return m_nType == nType; }
+
+    /** \brief returns the attribute's type
+     *  \return the member m_nType
+     */
+    ATTR_TYPE GetType()
+    { return m_nType; }
+    
+    /** \brief returns class
+     *  \return the attribute's class
+     */
+    ATTR_CLASS GetClass()
+    { return m_nAttrClass; }
+    
+    /** \brief checks the type of an attribute
+     *  \param nType the type to compare the own type to
+     *  \return true if the types are the same
+     */
+    bool IsOfType(ATTR_CLASS nType)
+    { return (m_nAttrClass == nType); }
+
+    /** \brief retrieves the integer value of this attribute
+     *  \return the value of m_nIntValue or -1 if m_nAttrClass != ATTR_CLASS_INT
+     */
+    int GetIntValue()
+    { 
+	return (m_nAttrClass == ATTR_CLASS_INT) ? 
+	    m_nIntValue : -1;
+    }
+
+    /** \brief access string value
+     *  \return string member if ATTR_CLASS_STRING
+     */
+    string GetString()
+    {
+	return (m_nAttrClass == ATTR_CLASS_STRING) ?
+	    m_sString : string();
+    }
+
+    /** \brief retrieve reference to the type of a type 
+     *         attribute (such as transmit_as)
+     *  \return a reference to the type of a type attribute
+     */
+    CBEType* GetAttrType()
+    { return m_pType; }
 
 protected:
-    virtual bool CreateBackEndInt(CFEIntAttribute * pFEIntAttribute, CBEContext * pContext);
-    virtual bool CreateBackEndIs(CFEIsAttribute * pFEIsAttribute, CBEContext * pContext);
-    virtual bool CreateBackEndString(CFEStringAttribute * pFEStringAttribute, CBEContext * pContext);
-    virtual bool CreateBackEndType(CFETypeAttribute * pFETypeAttribute, CBEContext * pContext);
-    virtual bool CreateBackEndVersion(CFEVersionAttribute * pFEVersionAttribute, CBEContext * pContext);
+    virtual void CreateBackEndInt(CFEIntAttribute * pFEIntAttribute);
+    virtual void CreateBackEndIs(CFEIsAttribute * pFEIsAttribute);
+    virtual void CreateBackEndString(CFEStringAttribute * pFEStringAttribute);
+    virtual void CreateBackEndType(CFETypeAttribute * pFETypeAttribute);
+    virtual void CreateBackEndVersion(CFEVersionAttribute * pFEVersionAttribute);
 
 protected:
-  /**    \var int m_nType
-   *    \brief m_nType contains the attribute's type (and helps select which of the other members to use)
+  /** \var ATTR_TYPE m_nType
+   *  \brief m_nType contains the attribute's type (and helps select which
+   *    of the other members to use)
    */
-  int m_nType;
+  ATTR_TYPE m_nType;
   /** \var ATTR_CLASS m_nAttrClass
    *  \brief contains the attribute class
    */
   ATTR_CLASS m_nAttrClass;
-  /**    \var vector<string> m_vPortSpecs
-   *    \brief contains the EndPoint Attributes specs if any
+  /** \var vector<string> m_vPortSpecs
+   *  \brief contains the EndPoint Attributes specs if any
    */
   vector<string> m_vPortSpecs;
-  /**    \var vector<string> m_vExceptions
-   *    \brief contains the exception attributes if any
+  /** \var vector<string> m_vExceptions
+   *  \brief contains the exception attributes if any
    */
   vector<string> m_vExceptions;
-  /**    \var int m_nIntValue
-   *    \brief contains the int attribute's value if any
+  /** \var int m_nIntValue
+   *  \brief contains the int attribute's value if any
    */
   int m_nIntValue;
-  /**    \var vector<CBEDeclarator*> m_vParameters
-   *    \brief contains the values of the Is attributes (if any)
-   */
-  vector<CBEDeclarator*> m_vParameters;
-  /**    \var CBEAttribute m_pPtrDefault
-   *    \brief the Pointer default attribute value
+  /** \var CBEAttribute m_pPtrDefault
+   *  \brief the Pointer default attribute value
    */
   CBEAttribute *m_pPtrDefault;
-  /**    \var string m_sString
-   *    \brief the value of the string attribute
+  /** \var string m_sString
+   *  \brief the value of the string attribute
    */
   string m_sString;
-  /**    \var CBEType m_pType
-   *    \brief contains the type of the type attribute
+  /** \var CBEType m_pType
+   *  \brief contains the type of the type attribute
    */
   CBEType *m_pType;
-  /**    \var int m_nMinorVersion
-   *    \brief contains the minor version information if this is a version attribute
+  /** \var int m_nMinorVersion
+   *  \brief contains the minor version information if this is a version attribute
    */
   int m_nMinorVersion;
   /** \var int m_nMajorVersion
    *  \brief the major part of the version information
    */
   int m_nMajorVersion;
+
+public:
+  /** \var CSearchableCollection<CBEDeclarator, string> m_Parameters
+   *  \brief contains the values of the Is attributes (if any)
+   */
+  CSearchableCollection<CBEDeclarator, string> m_Parameters;
 };
 
 #endif                //*/ !__DICE_BEATTRIBUTE_H__

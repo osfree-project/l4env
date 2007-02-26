@@ -43,9 +43,10 @@
 include sources.inc
 include platform.inc
 
+VERBOSE?=@
 RM = rm -rf
-CP = cp
 MKDIR = mkdir -p
+
 ##############################################################################
 #
 # Build rules
@@ -59,8 +60,8 @@ OBJECTS += $(DCT_IA64_OBJECTS)
 
 # The VPATH mechanism could use a "per target" build directory
 # To keep it simple at the moment, the directory is fixed to "build"
-BUILD_DIR = =build
-VPATH     = $(SRC_DIR):$(BUILD_DIR)
+BUILD_DIR = $(OBJ_DIR)/..
+VPATH     = $(XVID_SRC_DIR):$(BUILD_DIR)
 
 #-----------------------------------------------------------------------------
 # The default rule
@@ -68,60 +69,55 @@ VPATH     = $(SRC_DIR):$(BUILD_DIR)
 
 .SUFFIXES: .$(OBJECT_EXTENSION) .$(ASSEMBLY_EXTENSION) .c
 
-all: $(STATIC_LIB) 
-	@echo
-	@echo "---------------------------------------------------------------"
-	@echo " XviD has been successfully built."
-	@echo
-	@echo " * Binaries are currently located in the '$(BUILD_DIR)' directory"
-	@echo " * To install them on your system, you can run '# make install'"
-	@echo "   as root."
-	@echo "---------------------------------------------------------------"
-	@echo
+all:: $(STATIC_LIB) 
+	$(VERBOSE)echo
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo " XviD has been successfully built."
+	$(VERBOSE)echo
+	$(VERBOSE)echo " * Binaries are currently located in the '$(BUILD_DIR)' directory"
+	$(VERBOSE)echo " * To install them on your system, you can run '# make install'"
+	$(VERBOSE)echo "   as root."
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo
 
 $(OBJECTS): platform.inc
 
 $(BUILD_DIR):
-	@echo "  D: $(BUILD_DIR)"
-	@$(MKDIR) $(BUILD_DIR)
+	$(VERBOSE)echo "  D: $(BUILD_DIR)"
+	$(VERBOSE)$(MKDIR) $(BUILD_DIR)
 
 #-----------------------------------------------------------------------------
 # Generic assembly rule
 #-----------------------------------------------------------------------------
 
 .$(ASSEMBLY_EXTENSION).$(OBJECT_EXTENSION):
-	@echo "  A: $(@D)/$(<F)"
-	@$(MKDIR) $(BUILD_DIR)/$(@D)
-	@$(CP) $< $(BUILD_DIR)/$(@D)
-	@$(AS) $(AFLAGS) $< -o $(BUILD_DIR)/$@
+	$(VERBOSE)echo "  A: $(@D)/$(<F)"
+	$(VERBOSE)$(MKDIR) $(BUILD_DIR)/$(@D)
+	$(VERBOSE)$(AS) $(AFLAGS) $< -o $(BUILD_DIR)/$@
 
 #-----------------------------------------------------------------------------
 # Generic C rule
 #-----------------------------------------------------------------------------
 
 .c.$(OBJECT_EXTENSION):
-	@echo "  C: $(@D)/$(<F)"
-	@$(MKDIR) $(BUILD_DIR)/$(@D)
-	@$(CP) $< $(BUILD_DIR)/$(@D)
-	@$(CC) -c $(ARCHITECTURE) $(BUS) $(ENDIANNESS) $(FEATURES) $(SPECIFIC_CFLAGS) $(CFLAGS) $< -o $(BUILD_DIR)/$@
+	$(VERBOSE)echo "  C: $(@D)/$(<F)"
+	$(VERBOSE)$(MKDIR) $(BUILD_DIR)/$(@D)
+	$(VERBOSE)$(CC) -c $(ARCHITECTURE) $(BUS) $(ENDIANNESS) $(FEATURES) $(SPECIFIC_CFLAGS) $(CFLAGS) $< -o $(BUILD_DIR)/$@
 
 #-----------------------------------------------------------------------------
 # Static Library
 #-----------------------------------------------------------------------------
 
-$(STATIC_LIB): $(BUILD_DIR) $(OBJECTS)
-	@echo "  L: $(@F)"
-	@cd $(BUILD_DIR) && ar rc $(@F) $(OBJECTS) && $(RANLIB) $(@F)
-	rm -f ../../../../libxvidcore-1.0.a
-	ln -s ./video/xvidcore-1.0/build/generic/$(BUILD_DIR)/libxvidcore.a ../../../../libxvidcore-1.0.a
-	
+$(STATIC_LIB): $(OBJECTS)
+	$(VERBOSE)echo "  L: $(@F)"
+	$(VERBOSE)cd $(BUILD_DIR) && ar rc $(@F) $(OBJECTS) && $(RANLIB) $(@F)
 
 #-----------------------------------------------------------------------------
 # Installation
 #-----------------------------------------------------------------------------
 
 install: $(BUILD_DIR)/$(STATIC_LIB) 
-	@echo " "
+	$(VERBOSE)echo " "
 
 #-----------------------------------------------------------------------------
 # Platorm specific file -- dumb rules for people executing make before
@@ -142,64 +138,63 @@ configure:
 	list-objects list-targets list-install-path list-cflags
 
 clean:
-	@echo "  Cl: Build directory"
-	@$(RM) $(BUILD_DIR)
-	@$(RM) ../../../../libxvidcore-1.0.a
+	$(VERBOSE)echo "  Cl: Build directory"
+	$(VERBOSE)$(RM) $(call absfilename,$(BUILD_DIR)/)
 
 cleanall: clean
 
 distclean: clean
-	@echo "  Cl: Generated build files"
-	@$(RM) platform.inc
-	@$(RM) config.log
-	@$(RM) config.status
-	@$(RM) autom4te.cache
+	$(VERBOSE)echo "  Cl: Generated build files"
+	$(VERBOSE)$(RM) platform.inc
+	$(VERBOSE)$(RM) config.log
+	$(VERBOSE)$(RM) config.status
+	$(VERBOSE)$(RM) autom4te.cache
 
 mrproper: distclean
-	@echo "  Cl: Boostrapped build files"
-	@$(RM) configure
-	@$(RM) install-sh
-	@$(RM) missing
-	@$(RM) config.guess
-	@$(RM) mkinstalldirs
-	@$(RM) config.sub
+	$(VERBOSE)echo "  Cl: Boostrapped build files"
+	$(VERBOSE)$(RM) configure
+	$(VERBOSE)$(RM) install-sh
+	$(VERBOSE)$(RM) missing
+	$(VERBOSE)$(RM) config.guess
+	$(VERBOSE)$(RM) mkinstalldirs
+	$(VERBOSE)$(RM) config.sub
 
 list-objects:
-	@echo
-	@echo "---------------------------------------------------------------"
-	@echo "Object files used for this build"
-	@echo "---------------------------------------------------------------"
-	@echo
-	@echo $(OBJECTS)
-	@echo
+	$(VERBOSE)echo
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo "Object files used for this build"
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo
+	$(VERBOSE)echo $(OBJECTS)
+	$(VERBOSE)echo
 
 list-targets:
-	@echo
-	@echo "---------------------------------------------------------------"
-	@echo "Target Libraries"
-	@echo "---------------------------------------------------------------"
-	@echo
-	@echo Shared library: $(SHARED_LIB)
-	@echo Static library: $(STATIC_LIB)
-	@echo
+	$(VERBOSE)echo
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo "Target Libraries"
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo
+	$(VERBOSE)echo Shared library: $(SHARED_LIB)
+	$(VERBOSE)echo Static library: $(STATIC_LIB)
+	$(VERBOSE)echo
 
 list-install-path:
-	@echo
-	@echo "---------------------------------------------------------------"
-	@echo "Install Paths"
-	@echo "---------------------------------------------------------------"
-	@echo
-	@echo Include Directory: $(includedir)
-	@echo Library Directory: $(libdir)
-	@echo
+	$(VERBOSE)echo
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo "Install Paths"
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo
+	$(VERBOSE)echo Include Directory: $(includedir)
+	$(VERBOSE)echo Library Directory: $(libdir)
+	$(VERBOSE)echo
 
 list-cflags:
-	@echo
-	@echo "---------------------------------------------------------------"
-	@echo "Using CFLAGS"
-	@echo "---------------------------------------------------------------"
-	@echo
-	@echo CFLAGS=$(CFLAGS)
-	@echo
+	$(VERBOSE)echo
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo "Using CFLAGS"
+	$(VERBOSE)echo "---------------------------------------------------------------"
+	$(VERBOSE)echo
+	$(VERBOSE)echo CFLAGS=$(CFLAGS)
+	$(VERBOSE)echo
 
 info: list-objects list-cflags list-targets list-install-path

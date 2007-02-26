@@ -1,6 +1,7 @@
 #
 # FIASCO Kernel configuration
 #
+source "rules.isg"
 
 prefix CONFIG_
 
@@ -19,14 +20,17 @@ your kernel.
 Use with caution!
 .
 
-PF_PC			'(PC)     IA-32 PC Platform'
-PF_UX		        '(UX)     Linux Usermode Platform'
-PF_SA1100		'(SA1100) Intel StrongARM Platform'
-PF_XSCALE               '(XSCALE) Intel XScale Platform'
-PF_ISG			'(ISG)    ARM926 Platform'
+PF_PC			'(PC)         IA-32 PC Platform'
+PF_UX		        '(UX)         Linux Usermode Platform'
+PF_SA1100		'(SA1100)     Intel StrongARM Platform'
+PF_XSCALE               '(XSCALE)     Intel XScale Platform'
+PF_ISG			'(ISG)        ISG Platform'
+PF_INTEGRATOR		'(INTEGRATOR) ARM Integrator Platform'
+PF_REALVIEW		'(REALVIEW)   ARM RealView Emulation Baseboard'
 
 IA32			'(IA-32) Intel IA-32 processor family'
 ARM			'(ARM)   ARM processor family'
+AMD64			'(AMD64) AMD64 processor family'
 
 ABI_V2			'(L4V2)  L4 Stable Version V.2 ABI'		text
 This is the original L4 API as implemented in Jochen Liedtke's assembly
@@ -97,6 +101,10 @@ IA32_K8			'(K8)    AMD Opteron / Athlon64'		text
 Choose this if you have an AMD Opteron or Athlon64 CPU.
 .
 
+AMD64_K8		'(K8)    AMD Opteron / Athlon64'		text
+Choose this if you have an AMD Opteron or Athlon64 CPU.
+.
+
 SCHED_PIT		'(PIT)   Use PIT for scheduling'		text
 Normally, Fiasco uses the RTC at IRQ8 for scheduling. This can be
 disadvantageous in certain circumstances, e.g. VMWare doesn't seem to
@@ -131,17 +139,6 @@ SCHED_APIC		'(APIC)  Use APIC timer for scheduling'		text
 Use the Local APIC for scheduling
 .
 
-KIP_SYSCALLS_REL	'(REL)   Relative entry points'			text
-Using this option user application can map the KIP anywhere in their virtual
-address space and use the entry points via relative addressing.
-.
-
-KIP_SYSCALLS_ABS	'(ABS)   Absolute entry points'			text
-Using this option the kernel maps a KIP at a fixed virtual address in
-the kernel area (0xeacff000) so that user application can use absolute
-addressing. This might be slightly faster.
-.
-
 arch			'Target CPU Family'				text
 Choose your target platform to compile for.
 .
@@ -151,6 +148,7 @@ kernel_options		'Kernel Options'
 
 ia32_processor		'Target processor'
 arm_processor           'Target processor'
+amd64_processor		'Target processor'
 
 timer			'Scheduling Timer'
 
@@ -189,6 +187,11 @@ I/O port space, its IOPL is raised to 3 allowing the task to use cli and
 sti.
 .
 
+TASK_CAPS			'Enable task capabilities'		text
+Enabling this option adds task-send capabilities to the kernel.  IPC
+is allowed only if the sender task owns a capability for the receiver task.
+.
+
 DECEIT_BIT_DISABLES_SWITCH	'Deceit bit disables switch'		text
 The L4 reference manual defines a mechanism called 'Clans and Chiefs'.
 Using bit 0 a chief can claim the IPC as 'deceiving' which means
@@ -208,21 +211,6 @@ some P4 processors from being overheated. This option requires a working
 timer IRQ to wakeup getchar periodically.
 .
 
-KIP_SYSCALLS		'Provide system-call entry code in the KIP'	text
-Say 'Yes' if you want to use system-calls via kernel-provided entry code
-in the kernel info page (KIP). This is an alternative to the normal
-system-call interface.
-
-Using the system-call entry points in the KIP has the advantage of
-transparent support for fast kernel entries using SYSENTER/SYSEXIT,
-if supported by the CPU and kernel (without recompiling applications).
-
-To enable this feature in user applications, you have to add something
-like "CPP_FLAGS += -DKIP_SYSCALLS" to your Makeconf.local.
-.
-
-kipsyscalls		'KIP entry point addressing'
-
 SYNC_TSC		'Synchronize KIP time with time-stamp counter'	text
 Synchronize the internal kernel clock with the CPU time stamp counter.
 .
@@ -239,9 +227,14 @@ address space.
 .
 
 UX_CON			'Graphical console (requires SDL library!)'	text
-Fiasco/UX can supply a graphical console for the L4 program it is running.
+Fiasco-UX can supply a graphical console for the L4 program it is running.
 Enabling this option will build the additional program but needs the SDL
 library including development header files installed.
+.
+
+UX_NET			'Network support'				text
+Enabling this option makes Fiasco-UX provide network support for L4
+programs.
 .
 
 warnlevels		'Runtime warning level'
@@ -351,14 +344,8 @@ Should be disabled for kernels which are used for measurements.
 
 JDB_MISC		'Miscellaneous JDB modules'
 
-JDB_THREAD_NAMES	'Support names for threads in JDB'
-
 VMEM_ALLOC_TEST		'Run test for Vmem_alloc allocator'
 
-
-SYSCALL_ITER		'Inter-task ex-regs syscall'  	                text
-Experimental inter-regs-ex-regs system call.
-.
 
 EXCEPTION_IPC		'Exception IPC'					text
 Enable generation of exception IPC by the kernel whenever a thread
@@ -368,22 +355,6 @@ causes an exception or a pagefault.
 HANDLE_SEGMENTS		'Handle and preserve segments'			text
 This function preserves the values of segment registers across thread
 and task switches and allows to configure segments for user programs.
-.
-
-LOCAL_IPC               'Local IPC'                                     text
-Enable Kernel support for Local IPC, works only with V2.
-.
-
-
-ENDPOINTS		'Endpoint IPC'					text
-This option enables experimental endpoint support.
-EXPERIMENTAL!
-.
-
-ACTIVATION_IPC		'Activation IPC'				text
-Enable generation of activation IPC by the kernel whenever a thread
-leaves or enters the ready list.
-EXPERIMENTAL!
 .
 
 PL0_HACK		'PL0 Hack'					text
@@ -397,6 +368,10 @@ Use this option to override the default C compiler (gcc).
 
 CXX			'C++ compiler'					text
 Use this option to override the default C++ compiler (g++).
+.
+
+HOST_CXX		'C++ host compiler'				text
+Use this option to override the default C++ host compiler (g++).
 .
 
 VERBOSE			'Verbose build process'				text
@@ -415,10 +390,9 @@ kernel mode). The page faults are logged to the normal console in the format
 *KP[pfa, error_code, ip].
 .
 
-MULTI_IRQ_ATTACH        'Allow association of multiple IRQs'              text
-If you enable this option a thread can be attached to multiple IRQs. 
-Additionally an IRQ is no longer acknowledged automatically, a send to the
-IRQ is necessary to acknowledge the IRQ.
+WORKAROUND_AMD_FPU_LEAK 'Enables workaroud for AMD FPU security leak'   text
+If you use Fiasco for high assurance, high security and use AMD CPUs
+you should enable this option. In any other case it is no harm to disable it.
 .
 
 
@@ -439,25 +413,24 @@ main			'Main menu'
 ########################################
 req_profile_nopit	'PIT scheduling is incompatible with profiling'
 req_profile_fp		'Profiling needs frame pointers'
-req_small_spaces	'Does not (yet) work with small address spaces'
 
 req_rtc_slow_rtc	'Slow RTC option needs RTC as scheduling timer'
 req_one_shot_apic	'One-shot mode needs APIC as scheduling timer'
 req_one_shot_sync_tsc	'One-shot mode requires synchronous kernel clock'
-
 
 warndepend EXPERIMENTAL
 
 ###########################################################################
 # Specify which items/menus to hide (in order of appearance in main menu) #
 ###########################################################################
-unless  EXPERIMENTAL suppress dependent PF_ISG ACTIVATION_IPC ENDPOINTS
-  EXCEPTION_IPC SYSCALL_ITER MULTI_IRQ_ATTACH HANDLE_SEGMENTS LOCAL_IPC
-  PL0_HACK
+unless  EXPERIMENTAL suppress dependent PF_ISG
+  PL0_HACK ASSEMBLER_IPC_SHORTCUT
 
 unless  PF_PC or PF_UX suppress dependent IA32
+unless  PF_PC or PF_UX suppress dependent AMD64
 unless  PF_PC suppress timer WATCHDOG
-require PF_PC implies IA32
+unless  PF_PC suppress WORKAROUND_AMD_FPU_LEAK
+require PF_PC implies (IA32 or AMD64)
 
 when    PF_UX suppress IO_PROT POWERSAVE_GETCHAR SYNC_TSC SMALL_SPACES PROFILE
                        SERIAL VMEM_ALLOC_TEST
@@ -468,101 +441,118 @@ require PF_UX implies IA32 and SCHED_PIT and IO_PROT == n
 		      and VMEM_ALLOC_TEST == n
 unless  PF_UX suppress UX_CON
 require PF_UX == n implies UX_CON == n
+unless  PF_UX suppress UX_NET
+require PF_UX == n implies UX_NET == n
 unless  PF_PC suppress PL0_HACK
 require PF_PC == n implies PL0_HACK == n
+#require PF_PC and IA32 implies (CONTEXT_4K == n)
 		      
-unless  PF_SA1100 or PF_XSCALE or PF_ISG suppress dependent ARM
+unless  PF_SA1100 or PF_XSCALE or PF_ISG or PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM
 unless  PF_SA1100 suppress dependent ARM_SA
 require PF_SA1100 implies (ARM and ARM_SA)
 unless  PF_XSCALE suppress dependent ARM_PXA
 require PF_XSCALE implies (ARM and ARM_PXA)
-unless  PF_ISG    suppress dependent ARM_926
-require PF_ISG    implies (ARM and ARM_926)
+unless  PF_ISG or PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM_926
+require PF_ISG        implies (ARM and ARM_926)
+require PF_INTEGRATOR implies ARM
+require PF_REALVIEW   implies ARM
+unless  PF_ISG suppress arm_isg_options
 
-unless PF_UX suppress dependent CONTEXT_4K
+unless PF_UX or PF_PC suppress CONTEXT_4K
 unless IA32 and PF_PC suppress dependent REGPARM3
 unless IA32 suppress dependent PROFILE SYNC_TSC SMALL_SPACES IO_PROT 
-                       FINE_GRAINED_CPUTIME GSTABS ASSEMBLER_IPC_SHORTCUT
+                       FINE_GRAINED_CPUTIME  
+unless PF_PC or PF_UX suppress ASSEMBLER_IPC_SHORTCUT
 unless IA32 suppress dependent JDB_ACCOUNTING ia32_processor
+unless AMD64 suppress dependent amd64_processor
+require AMD64 implies WATCHDOG==n and GSTABS==n and ABI_X0==n and
+                      KDB==n and HANDLE_SEGMENTS==n and PL0_HACK==n and
+		      CONTEXT_4K
+when AMD64 suppress WATCHDOG GSTABS ABI_X0 KDB HANDLE_SEGMENTS
+		PL0_HACK
+
+when EXCEPTION_IPC suppress ASSEMBLER_IPC_SHORTCUT
+require EXCEPTION_IPC implies ASSEMBLER_IPC_SHORTCUT==n
 
 unless ARM  suppress dependent DEBUG_KERNEL_PAGE_FAULTS VMEM_ALLOC_TEST 
-                               JDB_THREAD_NAMES arm_processor
+                               arm_processor
 			       
 when   ARM  suppress BEFORE_IRET_SANITY HANDLE_SEGMENTS ABI_V2 
-                     ASSEMBLER_IPC_SHORTCUT KIP_SYSCALLS
+                     ASSEMBLER_IPC_SHORTCUT 
 		     FINE_GRAINED_CPUTIME JDB_ACCOUNTING JDB_MISC
+		     IA32_TARGET GSTABS
 		     
 require ARM implies  BEFORE_IRET_SANITY==n and  HANDLE_SEGMENTS==n 
-                     and ABI_X0 and KIP_SYSCALLS==n 
+                     and ABI_X0 
 		     and ASSEMBLER_IPC_SHORTCUT==n and FINE_GRAINED_CPUTIME==n 
-                     and JDB_ACCOUNTING==n and JDB_MISC==n and LOCAL_IPC==n
-		     and SERIAL
-
-unless ABI_V2 suppress dependent LOCAL_IPC
+                     and JDB_ACCOUNTING==n and JDB_MISC==n 
+		     and SERIAL and CONTEXT_4K==n and GSTABS==n
 
 unless SERIAL 	 suppress dependent KDB
 unless JDB	 suppress dependent JDB_LOGGING JDB_ACCOUNTING JDB_MISC
 unless SCHED_RTC suppress dependent SLOW_RTC
-when IA32 and SCHED_APIC == n	suppress ONE_SHOT
+when (IA32 or AMD64) and SCHED_APIC == n suppress ONE_SHOT
 
-when PROFILE suppress ASSEMBLER_IPC_SHORTCUT
-require PROFILE implies (ASSEMBLER_IPC_SHORTCUT == n)
+when ASSEMBLER_IPC_SHORTCUT suppress PROFILE
+require ASSEMBLER_IPC_SHORTCUT implies (PROFILE == n)
 
-when HANDLE_SEGMENTS suppress SMALL_SPACES ASSEMBLER_IPC_SHORTCUT
+when HANDLE_SEGMENTS suppress SMALL_SPACES
 require HANDLE_SEGMENTS	implies (SMALL_SPACES == n) 
-                                and (ASSEMBLER_IPC_SHORTCUT == n) 
 				
-when EXCEPTION_IPC	suppress ASSEMBLER_IPC_SHORTCUT
-require EXCEPTION_IPC	implies (ASSEMBLER_IPC_SHORTCUT == n)
 
 #########################################################################
 # Specify default settings for things that can be suppressed (in order) #
 #########################################################################
+default IA32				from y
 default CC				from 'gcc'
 default CXX				from 'g++'
+default HOST_CXX			from 'g++'
 default VERBOSE				from n
 default ABI_V2				from y
 default SCHED_PIT			from y
 default WARN_ANY			from y
 default INLINE				from y
 default NDEBUG				from n
-default ASSEMBLER_IPC_SHORTCUT		from y
+default ASSEMBLER_IPC_SHORTCUT		from n
 default CONTEXT_4K			from n
 default REGPARM3			from y
 default SLOW_RTC			from n
 default DECEIT_BIT_DISABLES_SWITCH	from y
 default POWERSAVE_GETCHAR		from y
 default UX_CON				from n
+default UX_NET				from n
 default GSTABS				from y
 default WATCHDOG			from y
 default SERIAL				from y
-default KDB				from IA32
-default JDB				from IA32 or ARM
+default KDB				from n
+default JDB				from y
 default LIST_ALLOC_SANITY		from n
 default BEFORE_IRET_SANITY		from n
 default DEBUG_KERNEL_PAGE_FAULTS	from n
-default MULTI_IRQ_ATTACH                from n
-default LOCAL_IPC                       from n
-default ACTIVATION_IPC			from n
 default PL0_HACK			from n
+default WORKAROUND_AMD_FPU_LEAK		from n
+default MAINTAINER_MODE			from y
 
 ###############################################
 # Specify consistency rules with explanations #
 ###############################################
 require SLOW_RTC      implies (SCHED_RTC) explanation req_rtc_slow_rtc
-require IA32 and ONE_SHOT  implies (SCHED_APIC) explanation req_one_shot_apic
-require IA32 and ONE_SHOT  implies (SYNC_TSC) explanation req_one_shot_sync_tsc
-require SMALL_SPACES  implies (KIP_SYSCALLS == n) explanation req_small_spaces
+require (IA32 or AMD64) and ONE_SHOT 
+                      implies (SCHED_APIC) explanation req_one_shot_apic
+require (IA32 or AMD64) and ONE_SHOT  
+                      implies (SYNC_TSC) explanation req_one_shot_sync_tsc
 require PROFILE	      implies (SCHED_RTC == y) explanation req_profile_nopit
 require PROFILE	      implies (NO_FRAME_PTR == n) explanation req_profile_fp
 
 ###########################
 # Specify derived symbols #
 ###########################
-derive XARCH		from PF_PC ? 'ia32' : ( ARM ? 'arm' : ( PF_UX ? 'ux' : '' ))
+derive XARCH		from ( ARM ? 'arm' : ( PF_UX ? 'ux' : ( AMD64 ? 'amd64' : ( PF_PC ? 'ia32' : '' ))))
 derive ABI		from ABI_V2 ? 'v2' : ( ABI_X0 ? 'x0' : ( IA32 ? '': 'generic'))
-derive IA32_TARGET	from ARM ? 'StrongARM' : (IA32_486 ? 'Intel 80486' : (IA32_586 ? 'Intel Pentium' : (IA32_686 ? 'Intel Pentium Pro' : (IA32_P2 ? 'Intel Pentium II' : (IA32_P3 ? 'Intel Pentium III' : (IA32_P4 ? 'Intel Pentium 4' : (IA32_PM ? 'Pentium M' : (IA32_K6 ? 'AMD K6' : (IA32_K7 ? 'AMD Athlon' : (IA32_K8 ? 'AMD Opteron' : 'unknown'))))))))))
-derive PERF_CNT		from (JDB and IA32)
+derive IA32_TARGET	from IA32_486 ? 'Intel 80486' : (IA32_586 ? 'Intel Pentium' : (IA32_686 ? 'Intel Pentium Pro' : (IA32_P2 ? 'Intel Pentium II' : (IA32_P3 ? 'Intel Pentium III' : (IA32_P4 ? 'Intel Pentium 4' : (IA32_PM ? 'Pentium M' : (IA32_K6 ? 'AMD K6' : (IA32_K7 ? 'AMD Athlon' : (IA32_K8 ? 'AMD Opteron' : 'unknown')))))))))
+derive PERF_CNT		from (JDB and (IA32 or AMD64))
+derive BIT32		from (IA32 or ARM)
+derive BIT64		from AMD64
 
 derive WARN_LEVEL	from WARN_NONE ? 0 : 2
 
@@ -572,14 +562,17 @@ choices platform		# Platform selection
 	PF_SA1100
 	PF_XSCALE
 	PF_ISG
+	PF_INTEGRATOR
+	PF_REALVIEW
 	default PF_PC
 
 choices arch	
 	IA32
 	ARM
+	AMD64
 	default IA32
 
-choices abi_version			# ABI selection
+choices abi_version		# ABI selection
 	ABI_V2
 	ABI_X0
 	default ABI_V2
@@ -603,16 +596,15 @@ choices ia32_processor		# Target processor selection
 	IA32_K8
 	default IA32_586	
 
+choices amd64_processor
+	AMD64_K8
+	default AMD64_K8
+
 choices timer			# Timer source selection
 	SCHED_PIT
 	SCHED_RTC
 	SCHED_APIC
 	default SCHED_PIT
-
-choices kipsyscalls		# KIP code selection
-	KIP_SYSCALLS_REL
-	KIP_SYSCALLS_ABS
-	default KIP_SYSCALLS_REL
 
 choices warnlevels		# Debug Warning levels
 	WARN_NONE
@@ -624,21 +616,17 @@ menu target_system
 	arch
 	ia32_processor
 	arm_processor
+	amd64_processor
+	arm_isg_options
 	REGPARM3
+	WORKAROUND_AMD_FPU_LEAK
 
 menu abi_extensions
 	DECEIT_BIT_DISABLES_SWITCH
-        KIP_SYSCALLS {
-	  kipsyscalls
-        }
-	MULTI_IRQ_ATTACH
 	EXCEPTION_IPC
-	SYSCALL_ITER
 	HANDLE_SEGMENTS
-	ENDPOINTS
-        LOCAL_IPC
-	ACTIVATION_IPC
 	PL0_HACK
+	TASK_CAPS
 
 menu kernel_options
 	abi_version
@@ -655,6 +643,7 @@ menu kernel_options
 	FINE_GRAINED_CPUTIME
 	IO_PROT
 	UX_CON
+	UX_NET
 
 menu debugging			# Debug options
 	INLINE
@@ -672,7 +661,6 @@ menu debugging			# Debug options
 	  JDB_LOGGING
 	  JDB_ACCOUNTING
           JDB_MISC
-	  JDB_THREAD_NAMES
 	  WATCHDOG
 	}
 	VMEM_ALLOC_TEST
@@ -682,6 +670,7 @@ menu debugging			# Debug options
 menu compiling			# Compiling and Building
 	CC$
 	CXX$
+	HOST_CXX$
 	VERBOSE
 	MAINTAINER_MODE
 

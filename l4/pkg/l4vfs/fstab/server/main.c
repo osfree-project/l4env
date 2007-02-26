@@ -3,7 +3,7 @@
  * \brief  
  *
  * \date   10/11/2004
- * \author Alexander Boettcher <ab764283@inf.tu-dresden.de>
+ * \author Alexander Boettcher <boettcher@os.tu-dresden.de>
  */
 /* (c) 2004 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
                     ret = mkdir(optarg, O_RDONLY);
                     if (ret)
                     {
-                        LOG("error %d - fileprovider %d, mkdir('%s')",
+                        LOG("Error: %d, Volume_id: %d, mkdir('%s')",
                             ret, id, optarg);
                         continue;
                     }
@@ -131,15 +131,15 @@ int main(int argc, char *argv[])
 
                 ret = 1;
                 try = 0;
-                while (ret && try < 3)
+                while (ret && try < 10)
                 {
                     if ((ret = l4vfs_attach_namespace(ns, id, src, optarg)))
                     {
-                        try ++;
-                        LOG("error %d - fileprovider %d, "
-                            "attach_namespace('%s', '%s'), %d try",
-                            ret, id, src, optarg,try);
-                        l4_sleep(1000);
+                        try++;
+                        LOG("Error: %d, Volume_id: %d, "
+                            "attach_namespace('%s', '%s'), %d. attempt",
+                            ret, id, src, optarg, try);
+                        l4_sleep(2000);
                     }
                 }
             }
@@ -155,14 +155,14 @@ int main(int argc, char *argv[])
             //        exist?
             ret   = mkdir(optarg, O_RDONLY);
             if (ret)
-                LOG("error %d - fileprovider %d, mkdir('%s')", ret, id, optarg);
+                LOG("Error %d, Volume_id %d, mkdir('%s')", ret, id, optarg);
 
             break;
         case -1:
             // prevents showing fstab_info if no more option exists
             break;
         default:
-            LOG("error  - unknown option %c", option);
+            LOG("Error: Unknown option %c", option);
             fstab_info();
             return 1;
 

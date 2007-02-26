@@ -3,10 +3,10 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= list-ds
 MODE		= host
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 LIBCINCDIR	= $(addprefix -I,$(L4INCDIR))
-LIBS		= -lnames -llogserver -ll4util $(ROOTLIB) -ldm_generic
+LIBS		= -lnames -llogserver -ll4util $(ROOTLIB) -ll4sys -ldm_generic
 
 SRC_C		= main.c
 

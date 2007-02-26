@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/x0/L4X0BEClassFactory.h
- *    \brief   contains the declaration of the class CL4X0BEClassFactory
+ *  \brief   contains the declaration of the class CL4X0BEClassFactory
  *
  *    \date    12/01/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -44,28 +44,17 @@ class CL4X0BEClassFactory : public CL4BEClassFactory
 {
 // Constructor
 public:
-    /**    \brief constructor
-     *    \param bVerbose true if class should print status output
+    /** \brief constructor
      */
-    CL4X0BEClassFactory(bool bVerbose = false);
+    CL4X0BEClassFactory();
     virtual ~CL4X0BEClassFactory();
 
-protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
-     */
-    CL4X0BEClassFactory(CL4X0BEClassFactory &src);
-
 public: // Public methods
-    virtual CBECallFunction* GetNewCallFunction();
     virtual CBESizes * GetNewSizes();
-    virtual CBEWaitFunction * GetNewWaitFunction();
-    virtual CBEWaitFunction * GetNewRcvFunction();
-    virtual CBEWaitAnyFunction * GetNewWaitAnyFunction();
-    virtual CBESndFunction * GetNewSndFunction();
-    virtual CBEWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
-    virtual CBEWaitAnyFunction * GetNewRcvAnyFunction();
-    virtual CBEReplyFunction* GetNewReplyFunction();
+    virtual CBETrace* GetNewTrace();
+    virtual CBECommunication* GetNewCommunication();
+    virtual CBEMsgBuffer* GetNewMessageBuffer();
+    virtual CBEDispatchFunction* GetNewDispatchFunction();
 };
 
 #endif

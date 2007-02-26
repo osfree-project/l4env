@@ -281,7 +281,7 @@ int close(int fd)
     return 0;
 }
 
-int read(int fd, void *buf, size_t count)
+ssize_t read(int fd, void *buf, size_t count)
 {
     /* 1. lookup fd in the filetable, do some sanity checks, ...
      * 2. forward request to server
@@ -290,7 +290,7 @@ int read(int fd, void *buf, size_t count)
 
     file_desc_t file_desc;
     ssize_t ret;
-    l4_int8_t *b = (l4_int8_t*)buf;
+    char *b = buf;
 
     // 1.
     LOGd(_DEBUG, "fd = '%d', buf = '%p', count = '%d''", fd, buf, count);
@@ -331,7 +331,7 @@ int read(int fd, void *buf, size_t count)
     return ret;
 }
 
-int write(int fd, const void *buf, size_t count)
+ssize_t write(int fd, const void *buf, size_t count)
 {
     /* 1. lookup fd in the filetable, do some sanity checks, ...
      * 2. forward request to server
@@ -472,11 +472,29 @@ int getdents(int fd, struct dirent *dirp, unsigned int count)
     LOGd(_DEBUG, "is ok");
 
     // 2.
-    ret = l4vfs_getdents(file_desc.server_id,
-                         file_desc.object_handle,
-                         (l4vfs_dirent_t*)dirp,
-                         count);
-    LOGd(_DEBUG, "ret = '%d'", (int)ret);
+
+    // fixme: This is kind of evil as it relies on l4vfs_dirent_t and
+    //        dirent being binary compatible (which is only true for dietlibc)
+    {
+        ret = l4vfs_getdents(file_desc.server_id,
+                             file_desc.object_handle,
+                             (l4vfs_dirent_t*)dirp,
+                             count);
+        LOGd(_DEBUG, "ret = '%d'", (int)ret);
+        // fixme: we should fixup dirp here, in order to maintain
+        //        binary compatibility for uclibc.  Problem is, that
+        //        this fixup will grow the data, potentially beyond
+        //        valid memory.  We also can not drop the last entry,
+        //        because the seekpointer at the server can not easily
+        //        be moved back.
+
+        // Two solutions possible:
+        // 1. fixup uclibc to use the same data layout as dietlibc, or
+        // 2. use a transfer datatype including some padding for transfer,
+        //    such that, conversion here will only *shorten* the used
+        //    memory, i.e.
+        //      for each libc: sizeof(l4vfs_dirent_t) >= sizeof(dirent)
+    }
 
     // 3.
     if (ret < 0)
@@ -869,7 +887,7 @@ void init_io(void)
             if (fd < 0)
             {
                 LOG("Failed to open stdin, errno = %d, retrying ...", errno);
-                l4_sleep(200);
+                l4_sleep(500);
             }
             else
                 break;
@@ -891,7 +909,7 @@ void init_io(void)
             if (fd < 0)
             {
                 LOG("Failed to open stdout, errno = %d, retrying ...", errno);
-                l4_sleep(200);
+                l4_sleep(500);
             }
             else
                 break;
@@ -913,7 +931,7 @@ void init_io(void)
             if (fd < 0)
             {
                 LOG("Failed to open stderr, errno = %d, retrying ...", errno);
-                l4_sleep(200);
+                l4_sleep(500);
             }
             else
                 break;

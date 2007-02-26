@@ -1,0 +1,585 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file    l4sys/include/ARCH-x86/L4API-l4v2/types.h
+ * \brief   L4 kernel API type definitions, L4 v2 version
+ * \ingroup api_types
+ */
+/*****************************************************************************/
+#ifndef __L4_TYPES_H__
+#define __L4_TYPES_H__
+
+#include <l4/sys/compiler.h>
+#include <l4/sys/consts.h>
+#include <l4/sys/l4int.h>
+
+/**
+ * 64 Bit -> 32 Bit low/high conversion
+ * \ingroup api_types_common
+ */
+typedef struct {
+  l4_umword_t low;  ///< Low 32 Bits
+  l4_umword_t high; ///< High 32 Bits
+} l4_low_high_t;
+
+/*****************************************************************************
+ *** L4 unique identifiers
+ *****************************************************************************/
+
+/**
+ * L4 thread id structure
+ * \ingroup api_types_id
+ */
+typedef struct {
+  unsigned version_low:10;   ///< Version0
+  unsigned lthread:7;        ///< Thread number
+  unsigned task:11;          ///< Task number
+  unsigned version_high:4;   ///< Version1
+  unsigned site:17;          ///< Site id
+  unsigned chief:11;         ///< Chief task number
+  unsigned nest:4;           ///< Nested
+} l4_threadid_struct_t;
+
+/**
+ * L4 thread id
+ * \ingroup api_types_id
+ */
+typedef union {
+  l4_low_high_t lh;          ///< Plain 64 bit id
+  l4_threadid_struct_t id;   ///< Thread id struct
+  l4_uint64_t raw;
+} l4_threadid_t;
+
+/**
+ * L4 task id
+ * \ingroup api_types_id
+ */
+typedef l4_threadid_t l4_taskid_t;
+
+/**
+ * L4 interrupt id structure
+ * \ingroup api_types_id
+ */
+typedef struct {
+  unsigned intr:8;           ///< Interrupt number
+  unsigned char zero[7];     ///< Unused (must be 0)
+} l4_intrid_struct_t;
+
+/**
+ * L4 interrupt id
+ * \ingroup api_types_id
+ */
+typedef union {
+  l4_low_high_t lh;          ///< Plain 64 bit id
+  l4_intrid_struct_t id;     ///< Interrupt id struct
+} l4_intrid_t;
+
+/**
+ * L4 nil thread id
+ * \ingroup api_types_id
+ * \hideinitializer
+ */
+#define L4_NIL_ID_INIT	     {{0,0}}
+#define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
+
+/**
+ * L4 invalid thread id
+ * \ingroup api_types_id
+ * \hideinitializer
+ */
+#define L4_INVALID_ID_INIT   {{0xffffffff,0xffffffff}}
+#define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
+
+/**
+ * \brief   Test if \a id is nil thread id
+ * \ingroup api_types_id
+ *
+ * \param   id           Thread id
+ * \return  != 0 if \a id is nil thread id, 0 if not
+ */
+L4_INLINE int
+l4_is_nil_id(l4_threadid_t id);
+
+/**
+ * \brief   Test if \a id is invalid thread id
+ * \ingroup api_types_id
+ *
+ * \param   id           Thread id
+ * \return  != 0 if \a id is invalid thread id, 0 if not
+ */
+L4_INLINE int
+l4_is_invalid_id(l4_threadid_t id);
+
+/**
+ * \brief   Test if \a id is a IRQ thread id
+ * \ingroup api_types_id
+ *
+ * \param   id           Thread id
+ * \return  != 0 if \a id is IRQ thread id, 0 if not
+ */
+L4_INLINE int
+l4_is_irq_id(l4_threadid_t id);
+
+/**
+ * \brief   Return the IRQ number
+ * \ingroup api_types_id
+ *
+ * \param   id            Thread id
+ * \return  IRQ number
+ */
+L4_INLINE int
+l4_get_irqnr(l4_threadid_t id);
+
+/**
+ * \brief   Create task id from thread id
+ * \ingroup api_types_id
+ *
+ * \param   t            Thread id
+ * \return  Task id
+ */
+L4_INLINE l4_threadid_t
+l4_get_taskid(l4_threadid_t t);
+
+/**
+ * \brief   Test if two thread ids are equal
+ * \ingroup api_types_id
+ *
+ * \param   t1           First thread id
+ * \param   t2           Second thread id
+ * \return  !=0 if thread ids are equal, 0 if not
+ */
+L4_INLINE int
+l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2);
+
+/**
+ * \brief   Test if two task ids are equal
+ * \ingroup api_types_id
+ *
+ * \param   t1           First task id
+ * \param   t2           Second task id
+ * \return  != 0 if task ids are equal, 0 if not
+ */
+L4_INLINE int
+l4_task_equal(l4_threadid_t t1, l4_threadid_t t2);
+
+/**
+ * \brief   Test if the task numbers of two task ids are equal
+ * \ingroup api_types_id
+ *
+ * \param   t1           First task id
+ * \param   t2           Second task id
+ * \return  != 0 if task numbers are equal, 0 if not
+ */
+L4_INLINE int
+l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2);
+
+/**
+ * \brief   Create interrupt id
+ * \ingroup api_types_id
+ *
+ * \param   irq          Interrupt number
+ * \retval  t            Interrupt id
+ */
+L4_INLINE void
+l4_make_taskid_from_irq(int irq, l4_threadid_t *t);
+
+/*****************************************************************************
+ *** L4 flexpages
+ *****************************************************************************/
+
+/**
+ * L4 flexpage structure
+ * \ingroup api_types_fpage
+ */
+typedef struct {
+  unsigned grant:1;          ///< Grant page (send flexpage)
+  unsigned write:1;          ///< Map writable (send flexpage)
+  unsigned size:6;           ///< Flexpage size (log2)
+  unsigned zero:4;           ///< Unused (must be 0)
+  unsigned page:20;          ///< Page address
+} l4_fpage_struct_t;
+
+/**
+ * L4 I/O flexpage structure
+ * \ingroup api_types_fpage
+ */
+typedef struct {
+  unsigned grant:1;          ///< Grant I/O page (send I/O flexpage)
+  unsigned zero1:1;          ///< Unused (no write permissions, must be 0)
+  unsigned iosize:6;         ///< I/O flexpage size
+  unsigned zero2:4;          ///< Unused (must be 0)
+  unsigned iopage:16;        ///< I/O flexpage base address
+  unsigned f: 4;             ///< Unused, must be 0xF
+} l4_iofpage_struct_t;
+
+/**
+ * L4 flexpage type
+ * \ingroup api_types_fpage
+ */
+typedef union {
+  l4_umword_t fpage;         ///< Plain 32 bit value
+  l4_umword_t raw;
+  l4_fpage_struct_t fp;      ///< Flexpage structure
+  l4_iofpage_struct_t iofp;  ///< I/O Flexpage structure
+} l4_fpage_t;
+
+/**
+ * Whole address space size
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_WHOLE_ADDRESS_SPACE	(32)
+
+/**
+ * Read-only flexpage
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_FPAGE_RO		0
+
+/**
+ * Read-write flexpage
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_FPAGE_RW		1
+
+/**
+ * Map flexpage
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_FPAGE_MAP		0
+
+/**
+ * Grant flexpage
+ * \ingroup api_types_grant
+ * \hideinitializer
+ */
+#define L4_FPAGE_GRANT		1
+
+/**
+ * Whole I/O address space size
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_WHOLE_IOADDRESS_SPACE 16
+
+/**
+ * Maximum I/O port address
+ * \ingroup api_types_fpage
+ * \hideinitializer
+ */
+#define L4_IOPORT_MAX  (1L << L4_WHOLE_IOADDRESS_SPACE)
+
+/**
+ * Send flexpage types
+ * \ingroup api_types_fpage
+ */
+typedef struct {
+  l4_umword_t snd_base;      ///< Offset in receive window (send base)
+  l4_fpage_t fpage;          ///< Source flexpage descriptor
+} l4_snd_fpage_t;
+
+/**
+ * \brief   Build flexpage descriptor
+ * \ingroup api_types_fpage
+ *
+ * \param   address      Flexpage source address
+ * \param   size         Flexpage size (log2), #L4_WHOLE_ADDRESS_SPACE to
+ *                       specify the whole address space (with \a address 0)
+ * \param   write        Read-write flexpage (#L4_FPAGE_RW) or read-only
+ *                       flexpage (#L4_FPAGE_RO)
+ * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
+ *                       (#L4_FPAGE_MAP)
+ * \return  Flexpage descriptor.
+ */
+L4_INLINE l4_fpage_t
+l4_fpage(unsigned long address, unsigned int size,
+         unsigned char write, unsigned char grant);
+
+/**
+ * \brief   Build I/O flexpage descriptor
+ * \ingroup api_types_fpage
+ *
+ * \param   port         I/O flexpage port base
+ * \param   size         I/O flexpage size, #L4_WHOLE_IOADDRESS_SPACE to 
+ *                       specify the whole I/O address space (with \a port 0)
+ * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
+ *                       (#L4_FPAGE_MAP)
+ * \return  I/O flexpage descriptor
+ */
+L4_INLINE l4_fpage_t
+l4_iofpage(unsigned port, unsigned int size, unsigned char grant);
+
+/**
+ * \brief   Test if fault address describes I/O pagefault
+ * \ingroup api_types_fpage
+ *
+ * \param   address      Fault address
+ * \return  != 0 if \a address describes I/O pagefault, 0 if not
+ */
+L4_INLINE int
+l4_is_io_page_fault(unsigned address);
+
+/*****************************************************************************
+ *** L4 message dopes
+ *****************************************************************************/
+
+ /**
+ * L4 message dope structure
+ * \ingroup api_types_msg
+ */
+typedef struct {
+  unsigned msg_deceited:1;   ///< Received message deceited (unused)
+  unsigned fpage_received:1; ///< Received flexpage
+  unsigned msg_redirected:1; ///< Received message redirected (unused)
+  unsigned src_inside:1;     ///< Received message from an inner clan (unused)
+  unsigned snd_error:1;      ///< Error during send operation
+  unsigned error_code:3;     ///< Error code
+  unsigned strings:5;        ///< Number of indirect strings in message
+  unsigned dwords:19;        ///< Number of dwords in message
+} l4_msgdope_struct_t;
+
+
+/**
+ * L4 message dope type
+ * \ingroup api_types_msg
+ */
+typedef union {
+  l4_umword_t msgdope;       ///< Plain 32 Bit value
+  l4_msgdope_struct_t md;    ///< Message dope structure
+  l4_umword_t raw;
+} l4_msgdope_t;
+
+/**
+ * L4 string dope
+ * \ingroup api_types_msg
+ */
+typedef struct {
+  l4_umword_t snd_size;      ///< Send string size
+  l4_umword_t snd_str;       ///< Send string address
+  l4_umword_t rcv_size;      ///< Receive string size
+  l4_umword_t rcv_str;       ///< Receive string address
+} l4_strdope_t;
+
+/*****************************************************************************
+ *** L4 timeouts
+ *****************************************************************************/
+
+/**
+ * L4 timeout structure
+ * \ingroup api_types_timeout
+ */
+typedef struct {
+  unsigned rcv_exp:4;        ///< Receive timeout exponent
+  unsigned snd_exp:4;        ///< Send timeout exponent
+  unsigned rcv_pfault:4;     ///< Receive pagefault timeout
+  unsigned snd_pfault:4;     ///< Send pagefault timeout
+  unsigned snd_man:8;        ///< Send timeout mantissa
+  unsigned rcv_man:8;        ///< Receive timeout mantissa
+} l4_timeout_struct_t;
+
+/**
+ * L4 timeout type
+ * \ingroup api_types_timeout
+ */
+typedef union {
+  l4_umword_t timeout;       ///< Plain 32 bit value
+  l4_timeout_struct_t to;    ///< Timeout structure
+} l4_timeout_t;
+
+
+/*****************************************************************************
+ *** l4_schedule param word
+ *****************************************************************************/
+
+/**
+ * Scheduling parameter structure
+ * \ingroup api_types_sched
+ */
+typedef struct {
+  unsigned prio:8;           /**< System-wide priority of the destination
+                              **  thread. 255 is the highest and 0 the lowest
+                              **  priority.
+                              **/
+  unsigned small:8;          /**< Small address space number for destination
+                              **  task (see #L4_SMALL_SPACE)
+                              **/
+  unsigned state:4;          /**< Thread state (l4_thread_schedule() return
+                              **  value)
+                              **
+                              **  Values:
+                              **  - 0+\a k \a Running. The thread is ready to
+                              **    execute at user-level.
+                              **  - 4+\a k \a Sending. A user-invoked IPC send
+                              **    operation currently transfers an outgoing
+                              **    message.
+                              **  - 8+\a k \a Receiving. A user-invoked IPC
+                              **    receive operation currently receives an
+                              **    incoming message.
+                              **  - 0xC \a Waiting for receive. A user-invoked
+                              **    receive operation currently waits for an
+                              **    incoming message.
+                              **  - 0xD \a Pending send. A user-invoked send
+                              **    operation currently waits for the
+                              **    destination (recipient) to become ready to
+                              **    receive.
+                              **  - 0xE \a Reserved.
+                              **  - 0xF \a Dead. The thread is unable to
+                              **    execute.
+                              **
+                              **  - k=0 \a Kernel \a inactive. The kernel does
+                              **    not execute an automatic RPC for the thread.
+                              **  - k=1 \a Pager. The kernel executes a
+                              **    pagefault RPC to the thread's pager.
+                              **  - k=2 \a Internal \a preempter. The kernel
+                              **    executes a preemption RPC to the thread's
+                              **    internal preempter.
+                              **  - k=3 \a external \a preempter. The kernel
+                              **    executes a preemption RPC to the thread's
+                              **    external preempter.
+                              **
+                              **  If l4_sched_param_struct_t is used as an input
+                              **  argument for l4_thread_schedule(), \a state
+                              *   must be 0.
+                              **/
+  unsigned time_exp:4;       ///< Timeslice exponent
+  unsigned time_man:8;       ///< Timeslice mantissa
+} l4_sched_param_struct_t;
+
+/**
+ * Scheduling parameter type
+ * \ingroup api_types_sched
+ */
+typedef union {
+  l4_umword_t sched_param;   ///< Plain 32 bit value
+  l4_sched_param_struct_t sp;///< Scheduling parameter structure
+} l4_sched_param_t;
+
+/**
+ * Invalid scheduling parameter
+ * \ingroup api_types_sched
+ * \hideinitializer
+ */
+#define L4_INVALID_SCHED_PARAM ((l4_sched_param_t){sched_param:(unsigned)-1})
+
+/**
+ * Compute l4_sched_param_struct_t->small argument
+ * \ingroup api_types_sched
+ * \hideinitializer
+ *
+ * \param   size_mb      Small space size (MB), possible sizes are
+ *                       2, 4, 8, ... 256 megabytes
+ * \param   nr           Small space number, valid numbers are
+ *                       1 .. (512/\a size_mb)-1.
+ *
+ * Compute l4_sched_param_struct_t->small argument for
+ * l4_thread_schedule(): size_mb is the size of all small address
+ * spaces, and nr is the number of the small address space.  See
+ * Liedtke: ``L4 Pentium implementation''
+ */
+#define L4_SMALL_SPACE(size_mb, nr) ((size_mb >> 2) + nr * (size_mb >> 1))
+
+/**
+ * \brief   Test if \a sp is invalid scheduling parameter
+ * \ingroup api_types_sched
+ *
+ * \param   sp           Scheduling parameter
+ * \return  != 0 if \a sp is invalid scheduling parameter, 0 if not
+ */
+L4_INLINE int
+l4_is_invalid_sched_param(l4_sched_param_t sp);
+
+/*****************************************************************************
+ *** implementations
+ *****************************************************************************/
+
+L4_INLINE int
+l4_is_invalid_sched_param(l4_sched_param_t sp)
+{
+  return sp.sched_param == 0xffffffff;
+}
+
+L4_INLINE int
+l4_is_nil_id(l4_threadid_t id)
+{
+  return id.lh.low == 0;
+}
+
+L4_INLINE int
+l4_is_invalid_id(l4_threadid_t id)
+{
+  return id.lh.low == 0xffffffff;
+}
+
+L4_INLINE int
+l4_is_irq_id(l4_threadid_t id)
+{
+  return id.lh.high == 0 && id.lh.low > 0 && id.lh.low <= 255;
+}
+
+L4_INLINE int
+l4_get_irqnr(l4_threadid_t id)
+{
+  return id.lh.low - 1;
+}
+
+L4_INLINE l4_fpage_t
+l4_fpage(unsigned long address, unsigned int size,
+         unsigned char write, unsigned char grant)
+{
+  return ((l4_fpage_t){fp:{grant, write, size, 0,
+                           (address & L4_PAGEMASK) >> 12 }});
+}
+
+L4_INLINE l4_fpage_t
+l4_iofpage(unsigned port, unsigned int size,
+           unsigned char grant)
+{
+  return ((l4_fpage_t){iofp:{grant, 0, size, 0, port, 0xf}});
+}
+
+L4_INLINE int
+l4_is_io_page_fault(unsigned address)
+{
+  l4_fpage_t t;
+  t.fpage = address;
+  return(t.iofp.f == 0xf);
+}
+
+L4_INLINE l4_threadid_t
+l4_get_taskid(l4_threadid_t t)
+{
+  t.id.lthread = 0;
+  return t;
+}
+
+L4_INLINE int
+l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2)
+{
+  return ((t1.lh.low == t2.lh.low) && (t1.lh.high == t2.lh.high));
+}
+
+#define TASK_MASK 0xfffe03ff
+L4_INLINE int
+l4_task_equal(l4_threadid_t t1, l4_threadid_t t2)
+{
+  return (((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) &&
+          (t1.lh.high == t2.lh.high));
+}
+
+L4_INLINE int
+l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2)
+{
+  return (t1.id.task == t2.id.task);
+}
+
+L4_INLINE void
+l4_make_taskid_from_irq(int irq, l4_threadid_t *t)
+{
+  t->lh.low = irq+1;
+  t->lh.high = 0;
+}
+
+#endif /* !__L4_TYPES_H__ */

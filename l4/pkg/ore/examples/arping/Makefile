@@ -2,17 +2,15 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../..
 
-SYSTEMS        = x86-l4v2 x86-l4x0
+SYSTEMS        = x86-l4v2
 
-SRC_C          = main.c
+TARGET		= ore_test_arping
 
-CLIENTIDL      = ore.idl
+SRC_C		= main.c 
 
-LIBS           += -lore
+CLIENTIDL 	= ore_rxtx.idl ore_manager.idl
+LIBS	 	+= -lore -lparsecmdline -ldm_phys
 
 DEFAULT_RELOC  = 0x00980000
-TARGET         = ore_test_arping
-
-#PRIVATE_INCDIR = $(LINUX24_INCDIR)
 
 include $(L4DIR)/mk/prog.mk

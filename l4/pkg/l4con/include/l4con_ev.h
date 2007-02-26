@@ -1,8 +1,8 @@
 /* $Id$ */
 
 /*!
- * \file	con/include/l4/l4con/l4con_ev.h
- * \brief	con protocol definitions - input event part
+ * \file	l4con/include/l4con_ev.h
+ * \brief	console protocol definitions - input event part
  *
  * \date	2001
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>

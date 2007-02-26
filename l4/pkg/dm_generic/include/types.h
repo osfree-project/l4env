@@ -58,13 +58,13 @@ __BEGIN_DECLS;
 /**
  * \brief   Test dataspace ids
  * \ingroup api_types
- *	
+ *
  * \param   ds1          First dataspace id
  * \param   ds2          Second dataspaces id
  *
  * \return  1 if dataspaces ids are equal, 0 otherwise.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 L4_INLINE int
 l4dm_dataspace_equal(l4dm_dataspace_t ds1, l4dm_dataspace_t ds2);
 
@@ -72,12 +72,12 @@ l4dm_dataspace_equal(l4dm_dataspace_t ds1, l4dm_dataspace_t ds2);
 /**
  * \brief   Test dataspace id
  * \ingroup api_types
- * 
+ *
  * \param   ds           Dataspace id
- *	 
+ *
  * \return  != 0 if ds is invalid dataspace descriptor, 0 if not
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 L4_INLINE int
 l4dm_is_invalid_ds(l4dm_dataspace_t ds);
 

@@ -1,4 +1,4 @@
-SYSTEMS         := x86-l4v2 x86-l4x0
+SYSTEMS         := x86-l4v2
 PKGDIR		?= ../../..
 L4DIR		?= $(PKGDIR)/../..
 
@@ -25,11 +25,11 @@ else
 LIBS		+= -lpresenter_util_fprov -lgeneric_fprov
 endif
 
-PRIVATE_INCDIR  = $(PKGDIR)/server/include  
+PRIVATE_INCDIR  = $(PKGDIR_ABS)/server/include  
 
-PRIVATE_LIBDIR   = $(PKGDIR)/server/src/util/OBJ-$(SYSTEM) \
-		   $(PKGDIR)/server/src/controller/OBJ-$(SYSTEM) \
-		   $(PKGDIR)/server/src/view/OBJ-$(SYSTEM)
+PRIVATE_LIBDIR   = $(PKGDIR_OBJ)/server/src/util/OBJ-$(SYSTEM) \
+		   $(PKGDIR_OBJ)/server/src/controller/OBJ-$(SYSTEM) \
+		   $(PKGDIR_OBJ)/server/src/view/OBJ-$(SYSTEM)
 
 include $(L4DIR)/mk/prog.mk
 

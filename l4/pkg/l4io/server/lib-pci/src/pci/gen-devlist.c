@@ -74,7 +74,7 @@ main(void)
 						if (vendor_len + strlen(c) + 1 > MAX_NAME_SIZE) {
 							fprintf(stderr, "Line %d: Device name too long\n", lino);
 							fprintf(stderr, "%s\n", c);
-							return 1;
+							c[MAX_NAME_SIZE-1-vendor_len] = 0;
 						}
 					}
 					fprintf(devf, "\tDEVICE(%s,%s,\"", vend, line+1);

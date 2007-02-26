@@ -105,8 +105,8 @@ namespace L4
     char pad;
   };
  
-  IOModifier const hex(16);
-  IOModifier const dec(10);
+  extern IOModifier const hex;
+  extern IOModifier const dec;
 
   extern BasicOStream cout;
   extern BasicOStream cerr;
@@ -207,7 +207,10 @@ L4::BasicOStream &
 operator << (L4::BasicOStream &s, void const *u)
 {
   long unsigned x = (long unsigned)u;
+  L4::IOBackend::Mode mode = s.be_mode();
+  s.write(L4::hex);
   s.write((long long unsigned)x,-1);
+  s.be_mode(mode);
   return s;
 }
 

@@ -103,7 +103,7 @@ VideoSyncComponent_dice_thread (void)
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoSyncComponentIntern_connect_UncompressedVideoIn_component (CORBA_Object
 								_dice_corba_obj,
 								const
@@ -149,7 +149,7 @@ VideoSyncComponentIntern_connect_UncompressedVideoIn_component (CORBA_Object
 * unlocks a mutex and let the work_thread run.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoSyncComponentIntern_start_UncompressedVideoIn_component (CORBA_Object
 							      _dice_corba_obj,
 							      const
@@ -181,7 +181,7 @@ VideoSyncComponentIntern_start_UncompressedVideoIn_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_disconnect_UncompressedVideoIn_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -216,7 +216,7 @@ l4_int32_t
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoSyncComponentIntern_connect_UncompressedAudioIn_component (CORBA_Object
 								_dice_corba_obj,
 								const
@@ -265,7 +265,7 @@ VideoSyncComponentIntern_connect_UncompressedAudioIn_component (CORBA_Object
 * unlocks a mutex and let the work_thread run.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoSyncComponentIntern_start_UncompressedAudioIn_component (CORBA_Object
 							      _dice_corba_obj,
 							      const
@@ -297,7 +297,7 @@ VideoSyncComponentIntern_start_UncompressedAudioIn_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_disconnect_UncompressedAudioIn_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -335,14 +335,13 @@ l4_int32_t
  *
  */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoSyncComponentIntern_setRTparams_component (CORBA_Object
 						_dice_corba_obj,
-						l4_uint32_t period,
-						l4_uint32_t reservation_audio,
-						l4_uint32_t reservation_video,
-						l4_int32_t
-						verbose_preemption_ipc,
+						unsigned long period,
+						unsigned long reservation_audio,
+						unsigned long reservation_video,
+						int verbose_preemption_ipc,
 						CORBA_Server_Environment *
 						_dice_corba_env)
 {
@@ -364,7 +363,7 @@ VideoSyncComponentIntern_setRTparams_component (CORBA_Object
  *
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_getPosition_component
   (CORBA_Object _dice_corba_obj, double *position,
    CORBA_Server_Environment * _dice_corba_env)
@@ -382,7 +381,7 @@ l4_int32_t
  *
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_setVolume_component
   (CORBA_Object _dice_corba_obj, int left, int right,
    CORBA_Server_Environment * _dice_corba_env)
@@ -418,7 +417,7 @@ l4_int32_t
 * To stop playback use  disconnect_Uncompressed[Video/Audio]In.
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_setPlaybackMode_component
   (CORBA_Object _dice_corba_obj, int mode,
    CORBA_Server_Environment * _dice_corba_env)
@@ -510,7 +509,7 @@ VideoSyncComponent_event (int event, char *osd_text)
 * \param fx_plugin_id       id of effects plugin to use, <0 disables
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoSyncComponentIntern_setFxPlugin_component
   (CORBA_Object _dice_corba_obj, int fx_plugin_id,
    CORBA_Server_Environment * _dice_corba_env)

@@ -54,6 +54,7 @@ struct window {
 };
 
 struct window *first_win;
+struct window *bg_win;
 
 
 /*************************
@@ -65,7 +66,8 @@ static struct window *find_window(int ovl_id) {
 	struct window *curr = first_win;
 
 	/* search for window with matching ovl id */
-	while (curr && curr->ovl_id != ovl_id) curr = curr->next;
+	while (curr && (curr->ovl_id != ovl_id))
+		curr = curr->next;
 
 	/* if such a window exists, return its struct */
 	return curr;
@@ -80,6 +82,7 @@ static struct window *find_window(int ovl_id) {
 int overlay_get_screen_info_component(CORBA_Object _dice_corba_obj,
                                       int *w, int *h, int *mode,
                                       CORBA_Server_Environment *_dice_corba_env) {
+	printf("overlay_get_screen_info_component called wh=%d,%d\n", scr_width, scr_height);
 	*w = scr_width;
 	*h = scr_height;
 	*mode = scr_mode;
@@ -103,6 +106,9 @@ overlay_open_screen_component(CORBA_Object _dice_corba_obj,
 	int ret;
 	printf("nitovlwm: open_screen called w=%d, h=%d, depth=%d\n", width, height, depth);
 
+	/* open screen only once */
+	if (scr_adr) return 0;
+
 	scr_adr = l4dm_mem_ds_allocate(width*height*depth/8,
 	                               L4DM_CONTIGUOUS | L4RM_LOG2_ALIGNED | L4RM_MAP,
 	                               &scr_ds);
@@ -113,7 +119,6 @@ overlay_open_screen_component(CORBA_Object _dice_corba_obj,
 
 	/* enable nitpicker to access the buffer */
 	ret = l4dm_share(&scr_ds, nit, L4DM_RW);
-	printf("open_screen: l4dm_share to Nitpicker returned %d\n", ret);
 
 	scr_buf_id = nitpicker_import_buffer_call(&nit, &scr_ds, width, height, &env);
 	printf("open_screen: nitpicker_import_buffer_call returned buf_id=%d\n", scr_buf_id);
@@ -150,7 +155,6 @@ overlay_map_screen_component(CORBA_Object _dice_corba_obj,
                              CORBA_Server_Environment *_dice_corba_env) {
 	static char retbuf[128];
 	int ret;
-	printf("nitovlwm: map_screen called\n");
 
 	/* grant access to the screen buffer to the client */
 	ret = l4dm_share(&scr_ds, *_dice_corba_obj, L4DM_RW);
@@ -158,7 +162,7 @@ overlay_map_screen_component(CORBA_Object _dice_corba_obj,
 
 	/* convert dataspace id to ds_ident outstring */
 	*ds_ident = retbuf;
-	sprintf(retbuf, "t_id=0x%08X,%08X ds_id=0x%08x size=0x%08x",
+	sprintf(retbuf, "t_id=0x%08lX,%08lX ds_id=0x%08x size=0x%08x",
 	        scr_ds.manager.lh.low,
 	        scr_ds.manager.lh.high,
 	        scr_ds.id,
@@ -209,6 +213,7 @@ overlay_create_window_component(CORBA_Object _dice_corba_obj,
 	static int ovl_id_cnt;
 
 	struct window *new = malloc(sizeof(struct window));
+
 	if (!new) {
 		printf("Error: out of memory in function create_window_component\n");
 		return -1;
@@ -217,7 +222,9 @@ overlay_create_window_component(CORBA_Object _dice_corba_obj,
 	new->next = first_win;
 	first_win = new;
 
-	new->ovl_id = ++ovl_id_cnt;
+	new->ovl_id  = ++ovl_id_cnt;   /* assign unique ovl window id             */
+	new->nit_id  = -1;             /* a newly created window has no view, yet */
+
 	return new->ovl_id;
 }
 
@@ -244,6 +251,10 @@ overlay_destroy_window_component(CORBA_Object _dice_corba_obj,
 		/* skip window in list */
 		if (curr) curr->next = win->next;
 	}
+
+	if (bg_win == win)
+		bg_win = 0;
+
 	free(win);
 }
 
@@ -256,7 +267,14 @@ overlay_open_window_component(CORBA_Object _dice_corba_obj,
 	struct window *win = find_window(win_id);
 
 	if (!win) return;
+
 	win->nit_id = nitpicker_new_view_call(&nit, scr_buf_id, &nit_ev, &env);
+
+	if (win == bg_win) {
+		printf("ok, we have a background view\n");
+		nitpicker_set_background_call(&nit, win->nit_id, &env);
+	}
+
 	nitpicker_set_view_title_call(&nit, win->nit_id, "NitOvlWM", &env);
 	nitpicker_set_view_port_call(&nit, win->nit_id, win->x, win->y,
 	                             win->x, win->y, win->w, win->h, 1, &env);
@@ -272,6 +290,7 @@ overlay_close_window_component(CORBA_Object _dice_corba_obj,
 
 	if (!win) return;
 	nitpicker_destroy_view_call(&nit, win->nit_id, &env);
+	win->nit_id = -1;
 }
 
 
@@ -303,7 +322,9 @@ overlay_place_window_component(CORBA_Object _dice_corba_obj,
 	oy1 = win->y; oy2 = win->y + win->h - 1;
 
 	win->x = x; win->y = y; win->w = w; win->h = h;
-	nitpicker_set_view_port_call(&nit, win->nit_id, x, y, x, y, w, h, 0, &env);
+	if (win->nit_id >= 0)
+		nitpicker_set_view_port_call(&nit, win->nit_id, x, y,
+		                             x, y, w, h, 0, &env);
 
 	nx1 = win->x; nx2 = win->x + win->w - 1;
 	ny1 = win->y; ny2 = win->y + win->h - 1;
@@ -349,13 +370,46 @@ overlay_place_window_component(CORBA_Object _dice_corba_obj,
 
 /*** IDL INTERFACE: BRING OVERLAY WINDOW ON TOP ***/
 void
-overlay_top_window_component(CORBA_Object _dice_corba_obj,
-                             int win_id,
-                             CORBA_Server_Environment *_dice_corba_env) {
-	struct window *win = find_window(win_id);
+overlay_stack_window_component(CORBA_Object _dice_corba_obj,
+                               int win_id,
+                               int neighbor_id,
+                               int behind,
+                               int do_redraw,
+                               CORBA_Server_Environment *_dice_corba_env) {
 
+	struct window *win      = find_window(win_id);
+	struct window *neighbor = find_window(neighbor_id);
+
+	int view_id          = win      ? win->nit_id      : -1;
+	int neighbor_view_id = neighbor ? neighbor->nit_id : -1;
+
+	if (view_id < 0) return;
+	nitpicker_stack_view_call(&nit, view_id, neighbor_view_id,
+	                          behind, do_redraw, &env);
+}
+
+
+/*** IDL INTERFACE: DEFINE TITLE OF AN OVERLAY WINDOW ***/
+void overlay_title_window_component(CORBA_Object _dice_corba_obj,
+                                    int win_id, const char* title,
+                                    CORBA_Server_Environment *_dice_corba_env) {
+
+	struct window *win = find_window(win_id);
 	if (!win) return;
-	nitpicker_stack_view_call(&nit, win->nit_id, -1, 1, &env);
+	nitpicker_set_view_title_call(&nit, win->nit_id, title, &env);
+}
+
+
+/*** IDL INTERFACE: DEFINE BACKGROUND WINDOW ***/
+void overlay_set_background_component(CORBA_Object _dice_corba_obj, int win_id,
+                                      CORBA_Server_Environment *_dice_corba_env) {
+
+	struct window *win = find_window(win_id);
+	if (!win) return;
+
+	bg_win = win;
+
+	nitpicker_set_background_call(&nit, win->nit_id, &env);
 }
 
 
@@ -374,18 +428,32 @@ nitevent_event_component(CORBA_Object _dice_corba_obj,
                          int ay,
                          CORBA_Server_Environment *_dice_corba_env) {
 	static CORBA_Environment env = dice_default_environment;
+	static int old_ax, old_ay;
 
+	/* deliver motion event if absolute pointer position changed */
+	CORBA_exception_free(&env);
+	if ((old_ax != ax) || (old_ay != ay)) {
+		input_listener_motion_call(&client_listener, ax, ay, rx, ry, &env);
+		if (DICE_HAS_EXCEPTION(&env))
+			printf("nitevent_event_component: IPC error %d for event forwarding motion call\n", DICE_IPC_ERROR(&env));
+		else {
+			old_ax = ax;
+			old_ay = ay;
+		}
+	}
+
+	CORBA_exception_free(&env);
 	switch (type) {
 		case NITEVENT_TYPE_PRESS:
 			input_listener_button_call(&client_listener, 1, keycode, &env);
+			if (DICE_HAS_EXCEPTION(&env))
+				printf("nitevent_event_component: IPC error %d for event forwarding press call\n", DICE_IPC_ERROR(&env));
 			break;
 
 		case NITEVENT_TYPE_RELEASE:
 			input_listener_button_call(&client_listener, 2, keycode, &env);
-			break;
-
-		case NITEVENT_TYPE_MOTION:
-			input_listener_motion_call(&client_listener, ax, ay, rx, ry, &env);
+			if (DICE_HAS_EXCEPTION(&env))
+				printf("nitevent_event_component: IPC error %d for event forwarding release call\n", DICE_IPC_ERROR(&env));
 			break;
 	}
 }
@@ -403,7 +471,6 @@ int main(int argc, char **argv) {
 		if (!strcmp(argv[i], "--name") && (i + 1 < argc))
 			overlay_name = argv[i + 1];
 
-	printf("nitovlwm: wait for nitpicker at names\n");
 	if (names_waitfor_name("Nitpicker", &nit, 10000) == 0) {
 		printf("Nitpicker is not registered at names!\n");
 		return 1;

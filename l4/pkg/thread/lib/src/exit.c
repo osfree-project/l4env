@@ -63,15 +63,11 @@ static l4_uint32_t exit_stack_used = 0;
 static inline void
 __lock_exit_stack(void)
 {
-  l4_msgdope_t result;
-  l4_umword_t dummy;
-
   /* try to get the lock */
   while (!l4util_cmpxchg32(&exit_stack_used, 0, 1))
     {
       /* wait 1 ms */
-      l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
-		     L4_IPC_TIMEOUT(0, 0, 250, 14, 0, 0), &result);
+      l4_ipc_sleep(L4_IPC_TIMEOUT(0, 0, 250, 14, 0, 0));
     }
 }
 
@@ -84,8 +80,24 @@ __lock_exit_stack(void)
  * Cleanup thread \a tcb and block L4 thread forever.
  */
 /*****************************************************************************/ 
+#ifdef ARCH_arm
+/* ARM needs to load parameters from stack to registers */
+void
+__do_cleanup_and_block(l4th_tcb_t * tcb);
+
+asm(
+"__do_cleanup_and_block:		\n\t"
+"	ldr r0, [sp, #4]!		\n\t"
+"	b __do_cleanup_and_block_real	\n\t"
+);
+
+static void __attribute((used))
+__do_cleanup_and_block_real(l4th_tcb_t * tcb)
+#else
+/* Other archs have parameters on the stack itself */
 static void
 __do_cleanup_and_block(l4th_tcb_t * tcb)
+#endif
 {
   /* release thread stack */
   if (tcb->flags & TCB_ALLOCATED_STACK)
@@ -126,16 +138,16 @@ __do_cleanup_and_block(l4th_tcb_t * tcb)
     "i" (TCB_UNUSED)                /* 2, 'unused' thread state */
     );
 #else
-#ifdef ARCH_arm
-#warning IMPROPER THREAD EXIT FOR ARM!
-    /* unlock exit stack; mark tcp unused */
-#if 0
-  __asm__ __volatile__(
-      :
-      : 
-  );
-#endif
+#if defined(ARCH_arm) || defined(ARCH_amd64)
+  /* unlock exit stack; mark tcb unused */
+  {
+    l4_uint16_t *statep = &tcb->state;
+    asm volatile("" : : : "memory");
+    exit_stack_used = 0;
+    asm volatile("" : : : "memory");
+    *statep = TCB_UNUSED;
     l4_sleep_forever();
+  }
 #else
 #error Unsupported arch
 #endif

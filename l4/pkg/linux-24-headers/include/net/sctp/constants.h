@@ -1,8 +1,8 @@
 /* SCTP kernel reference Implementation
+ * (C) Copyright IBM Corp. 2001, 2004
  * Copyright (c) 1999-2000 Cisco, Inc.
  * Copyright (c) 1999-2001 Motorola, Inc.
  * Copyright (c) 2001 Intel Corp.
- * Copyright (c) 2001-2002 International Business Machines Corp.
  *
  * This file is part of the SCTP kernel reference Implementation
  *
@@ -57,15 +57,6 @@ enum { SCTP_MAX_STREAM = 0xffff };
 enum { SCTP_DEFAULT_OUTSTREAMS = 10 };
 enum { SCTP_DEFAULT_INSTREAMS = SCTP_MAX_STREAM };
 
-/* Define the amount of space to reserve for SCTP, IP, LL.
- * There is a little bit of waste that we are always allocating
- * for ipv6 headers, but this seems worth the simplicity.
- */
-
-#define SCTP_IP_OVERHEAD ((sizeof(struct sctphdr)\
-                          + sizeof(struct ipv6hdr)\
-                          + MAX_HEADER))
-
 /* Since CIDs are sparse, we need all four of the following
  * symbols.  CIDs are dense through SCTP_CID_BASE_MAX.
  */
@@ -75,6 +66,9 @@ enum { SCTP_DEFAULT_INSTREAMS = SCTP_MAX_STREAM };
 #define SCTP_NUM_BASE_CHUNK_TYPES	(SCTP_CID_BASE_MAX + 1)
 #define SCTP_NUM_CHUNK_TYPES		(SCTP_NUM_BASE_CHUNKTYPES + 2)
 
+#define SCTP_NUM_ADDIP_CHUNK_TYPES	2
+
+#define SCTP_NUM_PRSCTP_CHUNK_TYPES	1
 
 /* These are the different flavours of event.  */
 typedef enum {
@@ -99,6 +93,7 @@ typedef enum {
 	SCTP_EVENT_TIMEOUT_T1_INIT,
 	SCTP_EVENT_TIMEOUT_T2_SHUTDOWN,
 	SCTP_EVENT_TIMEOUT_T3_RTX,
+	SCTP_EVENT_TIMEOUT_T4_RTO,
 	SCTP_EVENT_TIMEOUT_T5_SHUTDOWN_GUARD,
 	SCTP_EVENT_TIMEOUT_HEARTBEAT,
 	SCTP_EVENT_TIMEOUT_SACK,
@@ -110,9 +105,10 @@ typedef enum {
 
 typedef enum {
 	SCTP_EVENT_NO_PENDING_TSN = 0,
+	SCTP_EVENT_ICMP_PROTO_UNREACH,
 } sctp_event_other_t;
 
-#define SCTP_EVENT_OTHER_MAX		SCTP_EVENT_NO_PENDING_TSN
+#define SCTP_EVENT_OTHER_MAX		SCTP_EVENT_ICMP_PROTO_UNREACH
 #define SCTP_NUM_OTHER_TYPES		(SCTP_EVENT_OTHER_MAX + 1)
 
 /* These are primitive requests from the ULP.  */
@@ -122,9 +118,10 @@ typedef enum {
 	SCTP_PRIMITIVE_ABORT,
 	SCTP_PRIMITIVE_SEND,
 	SCTP_PRIMITIVE_REQUESTHEARTBEAT,
+	SCTP_PRIMITIVE_ASCONF,
 } sctp_event_primitive_t;
 
-#define SCTP_EVENT_PRIMITIVE_MAX	SCTP_PRIMITIVE_REQUESTHEARTBEAT
+#define SCTP_EVENT_PRIMITIVE_MAX	SCTP_PRIMITIVE_ASCONF
 #define SCTP_NUM_PRIMITIVE_TYPES	(SCTP_EVENT_PRIMITIVE_MAX + 1)
 
 /* We define here a utility type for manipulating subtypes.
@@ -159,10 +156,6 @@ SCTP_SUBTYPE_CONSTRUCTOR(PRIMITIVE,	sctp_event_primitive_t,	primitive)
 		       		- (unsigned long)(c->chunk_hdr)\
 				- sizeof(sctp_data_chunk_t)))
 
-/* This is a table of printable names of sctp_param_t's.  */
-extern const char *sctp_param_tbl[];
-
-
 #define SCTP_MAX_ERROR_CAUSE  SCTP_ERROR_NONEXIST_IP
 #define SCTP_NUM_ERROR_CAUSE  10
 
@@ -179,6 +172,11 @@ typedef enum {
 	SCTP_IERROR_BAD_TAG,
 	SCTP_IERROR_BIG_GAP,
 	SCTP_IERROR_DUP_TSN,
+	SCTP_IERROR_HIGH_TSN,
+	SCTP_IERROR_IGNORE_TSN,
+	SCTP_IERROR_NO_DATA,
+	SCTP_IERROR_BAD_STREAM,
+	SCTP_IERROR_BAD_PORTS,
 
 } sctp_ierror_t;
 
@@ -235,11 +233,6 @@ const char *sctp_pname(const sctp_subtype_t);	/* primitives */
 /* This is a table of printable names of sctp_state_t's.  */
 extern const char *sctp_state_tbl[], *sctp_evttype_tbl[], *sctp_status_tbl[];
 
-/* SCTP reachability state for each address */
-#define SCTP_ADDR_NOHB			4
-#define SCTP_ADDR_REACHABLE		2
-#define SCTP_ADDR_NOT_REACHABLE		1
-
 /* Maximum chunk length considering padding requirements. */
 enum { SCTP_MAX_CHUNK_LEN = ((1<<16) - sizeof(__u32)) };
 
@@ -267,7 +260,8 @@ enum { SCTP_ARBITRARY_COOKIE_ECHO_LEN = 200 };
  * nearest power of 2.
  */
 enum { SCTP_MIN_PMTU = 576 };
-enum { SCTP_MAX_DUP_TSNS = 128 };
+enum { SCTP_MAX_DUP_TSNS = 16 };
+enum { SCTP_MAX_GABS = 16 };
 
 typedef enum {
 	SCTP_COUNTER_INIT_ERROR,
@@ -319,7 +313,7 @@ typedef enum {
 #define SCTP_DEFAULT_COOKIE_LIFE_USEC	0  /* microseconds */
 
 #define SCTP_DEFAULT_MINWINDOW	1500	/* default minimum rwnd size */
-#define SCTP_DEFAULT_MAXWINDOW	32768	/* default rwnd size */
+#define SCTP_DEFAULT_MAXWINDOW	65535	/* default rwnd size */
 #define SCTP_DEFAULT_MAXSEGMENT 1500	/* MTU size, this is the limit
                                          * to which we will raise the P-MTU.
 					 */
@@ -351,7 +345,6 @@ typedef enum {
 	SCTP_XMIT_OK,
 	SCTP_XMIT_PMTU_FULL,
 	SCTP_XMIT_RWND_FULL,
-	SCTP_XMIT_MUST_FRAG,
 	SCTP_XMIT_NAGLE_DELAY,
 } sctp_xmit_t;
 

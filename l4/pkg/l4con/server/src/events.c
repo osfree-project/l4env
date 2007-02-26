@@ -68,9 +68,9 @@ events_init_and_wait(void *dummy)
       /* call service thread to free resources, this must be done to
        * synchronize the manipulation of loader data structures */
       ret = con_if_close_all_call(&con_service_id, &tid, &_env);
-      if (ret || (_env.major != CORBA_NO_EXCEPTION))
+      if (ret || DICE_HAS_EXCEPTION(&_env))
         LOG_Error("handle exit event: call to service thread failed " \
-                  "(ret %d, exc %d)!", ret,_env.major);
+                  "(ret %d, exc %d)!", ret, DICE_EXCEPTION_MAJOR(&_env));
     }
 }
 

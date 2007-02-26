@@ -3,7 +3,7 @@
  * Shared between UX and native IA32.
  */
 
-INTERFACE[ia32,ux]:
+INTERFACE[ia32,amd64,ux]:
 
 EXTENSION class Fpu
 {
@@ -39,7 +39,7 @@ private:
   };
 };
 
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,amd64,ux]:
 
 #include <cstring>
 #include "cpu.h"
@@ -82,7 +82,7 @@ Fpu::init_state (Fpu_state *s)
  * @return size of FPU context structure
  */
 IMPLEMENT inline NEEDS ["cpu.h", "regdefs.h"]
-unsigned const
+unsigned
 Fpu::state_size()
 {
   return (Cpu::features() & FEAT_FXSR) ? sizeof (sse_regs) :
@@ -94,7 +94,7 @@ Fpu::state_size()
  * @return recommended FPU context alignment
  */
 IMPLEMENT inline NEEDS ["cpu.h", "regdefs.h"]
-unsigned const
+unsigned
 Fpu::state_align()
 {
   return (Cpu::features() & FEAT_FXSR) ? 16 : 4;

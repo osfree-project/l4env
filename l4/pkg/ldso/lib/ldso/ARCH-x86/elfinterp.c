@@ -30,6 +30,7 @@
  */
 
 #include "ldso.h"
+#include "syscall.h"
 
 /* Program to load an ELF binary on a linux system, and run it.
    References to symbols in sharable libraries can be resolved by either
@@ -181,6 +182,10 @@ _dl_do_reloc(struct elf_resolve *tpnt, struct dyn_elf *scope,
 	symtab_index = ELF32_R_SYM(rpnt->r_info);
 	symbol_addr = 0;
 	symname = strtab + symtab[symtab_index].st_name;
+
+	// fm3: Fixup for non-PIC syscalls in shared libraries
+	if (_dl_syscall_fixup(symname, reloc_addr))
+		return 0;
 
 	if (symtab_index) {
 		symbol_addr = (unsigned long)_dl_find_hash(symname, scope, tpnt,

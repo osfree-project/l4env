@@ -15,14 +15,15 @@ options.
 \subsection{Pre-Processing Options (Front-End Options)}
 These options affect the preprocessing of the input files.
 
-\subsubsection{{\tt --corba, -C}}
-Specify that all input IDL files are written using CORBA IDL
-syntax.
+\subsubsection{{\tt -x <language>}}
+Specify the language of the input IDL files. Possible values are {\tt dce} and
+{\tt corba}. This option defaults to {\tt dce}. Include header files are
+recognized by their extension.
 
 \subsubsection{{\tt --preprocess, -P}}
 Passes the arguments given to this option to the preprocessor.
 
-Example: \verb|-P-C|
+Example: \verb|-P--nostdinc|
 
 \subsubsection{{\tt -Wp,}}
 Same as {\tt -P}. {\tt -P} and {\tt -Wp,} are scanned for
@@ -68,6 +69,16 @@ Print include file tree into \verb|.d| files and compile.
 
 \subsubsection{{\tt -MMD}}
 Print include file tree for file included with '' and compile.
+
+\subsubsection{{\tt -MF <filename>}}
+Generates the dependency tree into the file specified by the filename. This
+option only works if one of {\tt -M}, {\tt -MM}, {\tt -MD}, or {\tt -MMD} is
+given.
+
+\subsubsection{{\tt -MP}}
+Generates for all files, which the generated files depend on, a phony
+dependency target in the dependency list. This option also requires one of the
+dependency generation options.
 
 \subsubsection{{\tt --with-cpp=<argument>}}
 Specify your own preprocessor. This will override environment
@@ -199,23 +210,8 @@ Displays version information, including the build date and the
 user who built this version.
 
 \subsubsection{{\tt --verbose, -v<level>}}
-Displays verbose output. There are several levels of verbosity,
-which are described in table~\ref{tab:verbose}.
-
-\begin{table}[htb]
-\begin{center}
-\begin{tabular}{|c|l|} \hline
-\it Level & \it Verbose output by: \\ \hline \hline
-1, 2 & only the back-end \\ \hline
-3 & back-end and front-end \\ \hline
-4 & name- and class-factory \\ \hline
-5 & same as 3 and 4 \\ \hline
-6 & same as 5 and 7 \\ \hline
-7 & IDL parser \\ \hline
-\end{tabular}
-\caption{\label{tab:verbose} Verbose levels}
-\end{center}
-\end{table}
+Displays verbose output.  The optional value specifies the amount of
+verboseness. The higher values the more output.
 
 \subsubsection{{\tt -f}}
 Specifies additional compiler flags, which are hints for the compiler

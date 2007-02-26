@@ -45,4 +45,11 @@ l4util_atomic_add(volatile long *dest, long val)
   l4_atomic_add(dest, val);
 }
 
+#define __L4UTIL_ATOMIC_HAVE_ARCH_INC
+L4_INLINE void
+l4util_atomic_inc(volatile long *dest)
+{
+  l4_atomic_add(dest, 1);
+}
+
 #endif /* ! __L4UTIL__INCLUDE__ARCH_ARM__ATOMIC_ARCH_H__ */

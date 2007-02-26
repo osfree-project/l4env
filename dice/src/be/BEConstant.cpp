@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEConstant.cpp
- *    \brief   contains the implementation of the class CBEConstant
+ *  \brief   contains the implementation of the class CBEConstant
  *
  *    \date    01/18/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,7 +32,7 @@
 #include "be/BEType.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEImplementationFile.h"
-
+#include "Compiler.h"
 #include "fe/FEConstDeclarator.h"
 #include "fe/FETypeSpec.h"
 
@@ -54,7 +54,7 @@ CBEConstant::CBEConstant(CBEConstant & src)
     m_pValue->SetParent(this);
 }
 
-/**    \brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEConstant::~CBEConstant()
 {
     if (m_pType)
@@ -63,101 +63,118 @@ CBEConstant::~CBEConstant()
         delete m_pValue;
 }
 
-/**    \brief creates the back-end constant declarator
- *    \param *pFEConstDeclarator therespective front-end declarator
- *    \param *pContext the context of the code generation
- *    \return true if the code generation was successful
+/** \brief creates the back-end constant declarator
+ *  \param pFEConstDeclarator the respective front-end declarator
+ *  \return true if the code generation was successful
  *
  * This implementation sets the name, the type and the value of the constant.
  */
-bool CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator, CBEContext * pContext)
+void
+CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
 {
     // call CBEObject's CreateBackEnd method
-    if (!CBEObject::CreateBackEnd(pFEConstDeclarator))
-        return false;
+    CBEObject::CreateBackEnd(pFEConstDeclarator);
 
     // set target file name
-    SetTargetFileName(pFEConstDeclarator, pContext);
+    SetTargetFileName(pFEConstDeclarator);
     // get name
-    m_sName = pContext->GetNameFactory()->GetConstantName(pFEConstDeclarator, pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    m_sName = pNF->GetConstantName(pFEConstDeclarator);
     // get type
     CFETypeSpec *pFEType = pFEConstDeclarator->GetType();
-    m_pType = pContext->GetClassFactory()->GetNewType(pFEType->GetType());
+    m_pType = pCF->GetNewType(pFEType->GetType());
     m_pType->SetParent(this);
-    if (!m_pType->CreateBackEnd(pFEType, pContext))
+    try
+    {
+	m_pType->CreateBackEnd(pFEType);
+    }
+    catch (CBECreateException *e)
     {
         delete m_pType;
         m_pType = 0;
-        return false;
+        throw;
     }
     // check for constant's value
     if (!pFEConstDeclarator->GetValue())
     {
-        VERBOSE("CBEConstant::CreateBackEnd for \"%s\" failed because no value\n", m_sName.c_str());
-        return false;
+	string exc = string(__func__);
+	exc += " for \"" + m_sName + "\" failed because no value.";
+        throw new CBECreateException(exc);
     }
     // get value
-    m_pValue = pContext->GetClassFactory()->GetNewExpression();
+    m_pValue = pCF->GetNewExpression();
     m_pValue->SetParent(this);
-    if (!m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue(), pContext))
+    try
+    {
+	m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue());
+    }
+    catch (CBECreateException *e)
     {
         delete m_pValue;
         m_pValue = 0;
-        return false;
+        throw;
     }
-
-    return true;
 }
 
-/**    \brief creates the back-end constants declarator
- *    \param pType the type of the constant
- *    \param sName the name of the constant
- *    \param pValue the expression representing the value of the constant
- *    \param bAlwaysDefine true if the const chould always appear as a define
- *    \param pContext the context of the generation
- *    \return true if successful.
+/** \brief creates the back-end constants declarator
+ *  \param pType the type of the constant
+ *  \param sName the name of the constant
+ *  \param pValue the expression representing the value of the constant
+ *  \param bAlwaysDefine true if the const chould always appear as a define
+ *  \return true if successful.
  */
-bool CBEConstant::CreateBackEnd(CBEType * pType, string sName, CBEExpression * pValue, bool bAlwaysDefine, CBEContext * pContext)
+void
+CBEConstant::CreateBackEnd(CBEType * pType,
+    string sName, 
+    CBEExpression * pValue,
+    bool bAlwaysDefine)
 {
-     m_sName = sName;
-     m_bAlwaysDefine = bAlwaysDefine;
-     m_pType = pType;
-     if (m_pType)
-         m_pType->SetParent(this);
-     else
-         return false;
-     m_pValue = pValue;
-     if (m_pValue)
-         m_pValue->SetParent(this);
-     else
-         return false;
-     return true;
+    string exc = string(__func__);
+    
+    m_sName = sName;
+    m_bAlwaysDefine = bAlwaysDefine;
+    m_pType = pType;
+    if (m_pType)
+	m_pType->SetParent(this);
+    else
+    {
+	exc += " failed, beause no type given.";
+	throw new CBECreateException(exc);
+    }
+    m_pValue = pValue;
+    if (m_pValue)
+  	m_pValue->SetParent(this);
+    else
+    {
+	exc += " failed, because no value given.";
+	throw new CBECreateException(exc);
+    }
 }
 
-/**    \brief writes the constant definition to the header file
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the constant definition to the header file
+ *  \param pFile the file to write to
  *
  * A constant definitionlooks like this:
  *
- * <code>#define &lt;name&gt; &lt;expression&gt;</code>
+ * <code>\#define \<name\> \<expression\></code>
  *
- * So we first write the define, then the name, which is the same as used in the IDL file,
- * and then the expression.
+ * So we first write the define, then the name, which is the same as used in
+ * the IDL file, and then the expression.
  */
-void CBEConstant::Write(CBEHeaderFile * pFile, CBEContext * pContext)
+void CBEConstant::Write(CBEHeaderFile * pFile)
 {
     if (!pFile->IsOpen())
         return;
 
     *pFile << "#ifndef _constdef_" << m_sName << "\n";
     *pFile << "#define _constdef_" << m_sName << "\n";
-    if (pContext->IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
+    if (CCompiler::IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
     {
         // #define <name>
         *pFile << "#define " << m_sName << " ";
         // <expression>
-        m_pValue->Write(pFile, pContext);
+        m_pValue->Write(pFile);
         // newline
         *pFile << "\n";
     }
@@ -165,9 +182,9 @@ void CBEConstant::Write(CBEHeaderFile * pFile, CBEContext * pContext)
     {
         // should be static
         *pFile << "const ";
-        m_pType->Write(pFile, pContext);
+        m_pType->Write(pFile);
         *pFile << " " << GetName() << " = ";
-        m_pValue->Write(pFile, pContext);
+        m_pValue->Write(pFile);
         *pFile << ";\n";
     }
     *pFile << "#endif /* _constdef_" << m_sName << " */\n";
@@ -191,17 +208,16 @@ CBEExpression *CBEConstant::GetValue()
 
 /** \brief checks if this constant is added to the header file
  *  \param pHeader the header file to be added to
- *  \param pContext the context of this create process
  *  \return if const could be added successfully
  *
  * A const usually is always added to a header file , if the target file is the
  * respective file for the IDL file
  */
-bool CBEConstant::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
+bool CBEConstant::AddToFile(CBEHeaderFile *pHeader)
 {
-    VERBOSE("CBEConstant::AddToFile(header: %s) for const %s called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEConstant::AddToFile(header: %s) for const %s called\n",
         pHeader->GetFileName().c_str(), m_sName.c_str());
     if (IsTargetFile(pHeader))
-        pHeader->AddConstant(this);
+        pHeader->m_Constants.Add(this);
     return true;
 }

@@ -1,0 +1,21 @@
+\section{Memory and Buffer Management}
+\label{sec:mem-mgmt}
+
+There are different requirements on the buffer management for IDL derived
+code.  The CORBA Specification, for instance, defines that any memory
+necessary for non-simple types is allocated by stubs automatically.  When
+conforming to this requirement, a working implementation of \verb|malloc|
+and \verb|free| has to be provided by the user.
+
+Another part, which defines requirements, is the communication platform.
+L4 allows the usage of indirect parts in messages, which are only the
+start address and size of a memory region to be transferred.  This memory
+region is not part of the message buffer.  Therefore the receiver has 
+to provide a corresponding memory region into which the content of the
+sender's memory region can be copied.  This feature is widely used in
+L4 applications to avoid copying large blocks of data from a message buffer
+into other memory structures.  The start of an area in the memory 
+structure is given and the message transfer copies data directly into 
+that structure.
+
+

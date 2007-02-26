@@ -8,7 +8,7 @@
 [ -n "$L4DIR"    ] || L4DIR=${0%/*}/../..
 
 # some properties for nonGUI and GUI version of kaffe
-KAFFE_DIR="$L4DIR/pkg/kaffe"
+KAFFE_DIR="$L4DIR/../build/pkg/kaffe"
 FONTDIR="$L4DIR/pkg/qt3/lib/libqt3/lib/fonts"
 
 if [ ! -e "$L4PATH/sfs_qt" ] && [ -n "$KAFFEGUI" ]; then
@@ -31,13 +31,14 @@ if [ -n "$KAFFEGUI" ]; then
              -l sfs_qt
              -d$FONTDIR/fontdir
              -d$FONTDIR/helvetica_100_50.qpf"
-  KAFFE_JAR="-d$KAFFE_DIR/lib/l4kaffe/libraries/javalib/rt.jar
+  KAFFE_JAR="-d$KAFFE_DIR/server/src/build/libraries/javalib/rt.jar
              -d$KAFFE_DIR/native/installation/jre/lib/kaffeawt.jar"
 else
   KAFFE_CFG="kaffe/loader.cfg"
   KAFFE_FSTAB="fstab -v 132 -b/ -m/linux -v15 -b/ -m/kaffe"
   KAFFE_OPT=""
-  KAFFE_JAR="-d$KAFFE_DIR/lib/l4kaffe/libraries/javalib/rt.jar"
+  KAFFE_JAR="-d$KAFFE_DIR/server/src/build/libraries/javalib/rt.jar
+             -d$KAFFE_DIR/server/src/build/libraries/javalib/vmspecific/kaffe-vminterface.jar"
 fi
 
 # simple_file_server has to provide:
@@ -58,15 +59,15 @@ fi
 fiasco \
 	-G $UXRES \
         -n8 \
+        -n10 \
         -l log \
         -l names \
         -l dm_phys \
         -l rtc-ux \
-        -l simple_ts \
+        -l name_server \
         -l con-ux \
         -l term_con \
-        -l name_server \
-        -l l4exec \
+        -l simple_ts \
         -l "loader -fprov=fprov_proxy_fs $KAFFE_CFG" \
         -l fprov_proxy \
         -l "$KAFFE_FSTAB" \
@@ -75,4 +76,13 @@ fiasco \
             $KAFFE_JAR \
            "-d$L4PATH/kaffevm" \
            "-d$L4PATH/libloader.s.so"  \
+           "-d$L4PATH/libld-l4.s.so"  \
+           "-d$L4PATH/libdl.s.so"  \
+           "-d$KAFFE_DIR/server/src/build/kaffe/kaffevm/libkaffevm.la" \
+	   "-d$KAFFE_DIR/server/src/build/libraries/javalib/external/classpath/native/jni/java-nio/libjavanio.so" \
+	   "-d$KAFFE_DIR/server/src/build/libraries/javalib/external/classpath/native/jni/java-io/libjavaio.so" \
+	   "-d$KAFFE_DIR/server/src/build/libraries/javalib/external/classpath/native/jni/java-lang/libjavalang.so" \
            "$@"
+#           "-d$KAFFE_DIR/server/src/build/libraries/clib/native/libjavalang.la" \
+#           "-d$KAFFE_DIR/server/src/build/libraries/clib/nio/libjavanio.la" \
+#           "-d$KAFFE_DIR/server/src/build/libraries/clib/io/libjavaio.la" \

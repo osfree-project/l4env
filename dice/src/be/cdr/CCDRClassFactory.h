@@ -40,9 +40,8 @@ class CCDRClassFactory : public CBEClassFactory
 {
 public:
     /** \brief create the CDR class factory object
-     *  \param bVerbose true if the class factory should produce verbose output
      */
-    CCDRClassFactory(bool bVerbose);
+    CCDRClassFactory();
     virtual ~CCDRClassFactory();
 
 public:
@@ -51,6 +50,7 @@ public:
     virtual CBEComponentFunction* GetNewComponentFunction();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
+    virtual CBECommunication* GetNewCommunication();
 };
 
 #endif

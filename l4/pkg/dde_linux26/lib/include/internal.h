@@ -62,7 +62,7 @@ static inline void dde_add_region(struct dde_region **head,
 
   *head = p;
 
-  LOGd(DEBUG_MSG, "new dde_region [0x%08x, 0x%08x, %d]\n", va, pa, size);
+  LOGd(DEBUG_MSG, "new dde_region [0x%08lx, 0x%08lx, %d]\n", va, pa, size);
 }
 
 /*****************************************************************************/
@@ -90,7 +90,7 @@ static inline void dde_remove_region(struct dde_region **head,
 #else
   struct dde_region *p = *head;
 
-  LOG("remove conv_region [0x%08x, %d]\n", va, size);
+  LOG("remove conv_region [0x%08lx, %d]\n", va, size);
 #endif
 }
 

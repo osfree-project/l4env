@@ -1,4 +1,4 @@
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,amd64,ux]:
 
 #include <cstdio>
 #include "config.h"
@@ -12,6 +12,9 @@ IMPLEMENTATION[ia32,ux]:
 
 class Jdb_misc_monitor : public Jdb_module
 {
+public:
+  Jdb_misc_monitor() FIASCO_INIT;
+private:
   static int  number;
   static char dummy;
   static char enable;
@@ -97,7 +100,7 @@ Jdb_misc_monitor::action(int cmd, void *&args, char const *&fmt, int &)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_misc_monitor::cmds() const
 {
   static Cmd cs[] =
@@ -110,13 +113,13 @@ Jdb_misc_monitor::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_misc_monitor::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_misc_monitor::Jdb_misc_monitor()
   : Jdb_module("MONITORING")
 {

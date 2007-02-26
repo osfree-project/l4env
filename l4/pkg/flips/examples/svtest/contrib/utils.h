@@ -35,8 +35,9 @@
 #define HOST_LEN 1024 //max length of ip or hostname
 
 
-FILE *error_datei; //if not set, output to stderr
-int debug;
+/* XXX global vars */
+extern FILE *error_datei; //if not set, output to stderr
+extern int debug;
 
 //functions
 void my_output(int *status);

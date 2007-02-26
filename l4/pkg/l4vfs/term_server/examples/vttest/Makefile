@@ -2,7 +2,7 @@
 PKGDIR           ?= ../../
 L4DIR            ?= $(PKGDIR)/../../..
 
-SYSTEMS           = x86-l4v2 x86-l4x0
+SYSTEMS           = x86-l4v2
 
 PRIVATE_INCDIR    = $(PKGDIR)/examples/vttest/         \
                     $(PKGDIR)/examples/vttest/contrib

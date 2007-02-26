@@ -19,50 +19,62 @@
 #include "server.h"
 #include "pic.h"
 #include "config.h"
+#include "events.h"
 
 #ifdef USE_OSKIT
 /* krishna: 16 kb of data for dynamic allocation + dynamic stack allocation */
-#define MEM_SIZE (1024*16 + IRQ_NUMS*STACKSIZE)
+#define MEM_SIZE (1024*16 + IRQ_NUMS*STACKSIZE + STACKSIZE)
 static char mem_array[MEM_SIZE] __attribute__ ((aligned(4096)));
 #endif
 
 /* initalized list-based memory manager from oskit. We use <memsize> bytes
    within mem_array. */
-static int mem_init(void){
+static int mem_init(void)
+{
 #ifdef USE_OSKIT
-    void *addr;
+  void *addr;
   
-    addr = &mem_array;
-    init_OSKit_malloc_from_memory((l4_umword_t)addr, MEM_SIZE);
+  addr = &mem_array;
+  init_OSKit_malloc_from_memory((l4_umword_t)addr, MEM_SIZE);
 #endif
-    return 0;
+  return 0;
 }
 
-int main(int argc, const char**argv){
-    int error;
+int main(int argc, const char**argv)
+{
+  int error;
 
-    if ((error = parse_cmdline(&argc, &argv,
-		 'o', "nosfn", "don't use special fully nested mode",
-		 PARSE_CMD_SWITCH, 0, &use_special_fully_nested_mode,
-		 0)))
-      return 1;
+  if ((error = parse_cmdline(&argc, &argv,
+	       'o', "nosfn", "don't use special fully nested mode",
+	       PARSE_CMD_SWITCH, 0, &use_special_fully_nested_mode,
+      	       'e', "events", "enable exit handling via events",
+	       PARSE_CMD_SWITCH, 1, &use_events,
+	       0)))
+    return 1;
 
-    rmgr_init();
-    LOG("Using %s fully nested PIC mode",
-	 use_special_fully_nested_mode ? "special" : "(normal)");
+  rmgr_init();
+  LOG_printf("Using %s fully nested PIC mode\n",
+	     use_special_fully_nested_mode ? "special" : "(normal)");
   
-    mem_init();
-    LOGdl(OMEGA0_DEBUG_STARTUP,"memory initialized");
+  mem_init();
+  LOGdl(OMEGA0_DEBUG_STARTUP,"memory initialized");
   
-    attach_irqs();
-    LOGdl(OMEGA0_DEBUG_STARTUP,"attached to irqs");
-  
-    if(names_register(OMEAG0_SERVER_NAME)==0){
-	LOGl("error registering at nameserver");
-	return 1;
+  attach_irqs();
+  LOGdl(OMEGA0_DEBUG_STARTUP,"attached to irqs");
+
+  if (use_events)
+    {
+      init_events();
+      LOGdl(OMEGA0_DEBUG_STARTUP,"started events thread");
     }
-    LOGdl(OMEGA0_DEBUG_STARTUP,"registered at nameserver");
   
-    server();
-    return 0;
+  if(names_register(OMEAG0_SERVER_NAME)==0)
+    {
+      LOGl("error registering at nameserver");
+      return 1;
+    }
+  LOGdl(OMEGA0_DEBUG_STARTUP,"registered at nameserver");
+  
+  server();
+  return 0;
 }

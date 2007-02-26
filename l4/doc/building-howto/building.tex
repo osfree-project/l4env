@@ -13,18 +13,21 @@
 \setlength{\marginparwidth}{1cm}
 
 \title{Building DROPS HOWTO}
-\author{Frank Mehnert \qquad Jork Löser\\drops@os.inf.tu-dresden.de }
-\date{May 2003}
+\author{Frank Mehnert \qquad Jork Löser \qquad Ronald Aigner\\l4-hackers@os.inf.tu-dresden.de }
+\date{March 2006}
 
 \newcommand{\llinux}{L$\!^4$Linux}
 \newcommand{\code}[1]{\texttt{#1}}
+
+\usepackage{hyperref}
 
 \begin{document}
 \maketitle
 
 This document is also available in
 \latexhtml{\htmladdnormallink{HTML}{index.html}}
-{\htmladdnormallink{postscript}{building.ps}} format.
+{\htmladdnormallink{postscript}{building.ps} and 
+\htmladdnormallink{pdf}{building.pdf}} format.
 
 \section{Quickstart}
 
@@ -33,10 +36,9 @@ abstract:
 
 \begin{enumerate}
 
-\item Get the following components from \code{http://os.{\hskip
-      0pt}inf.{\hskip 0pt}tu-{\hskip 0pt}dresden.de/{\hskip
-      0pt}drops/{\hskip 0pt}download.html}:
-  L4Env, OSKit, OSKit~1.0, \llinux, Fiasco.
+\item Get the following components from \code{http://tudos.{\hskip
+      0pt}org/{\hskip 0pt}drops/{\hskip 0pt}download.html}:
+  L4Env, \llinux, Fiasco.
 
 \item Unpack the tar-balls in one directory. Memorize the directory.
 
@@ -62,9 +64,10 @@ A DROPS package typically consists of a server, one or more client
 libraries and associated interface headers. Often there also exist one
 or more examples illustrating the usage of the package.
 
-For C library support, DROPS utilizes the external FLUX Operating
-System Toolkit, in both versions 0.6 and 1.0. Some
-packages require the older version, some packages use the new one.
+For C library support, DROPS utilizes one of two external C libraries dietlibc
+or uClibc. The two C libraries are included in the L4Env as packages.
+Some packages require the older OSKit libc. These packages are not actively
+maintained.
 
 Some DROPS packages require \llinux, the L4 port of Linux. \llinux{} is
 available as another external module.
@@ -78,12 +81,14 @@ packet depends on must be available, as well as the C library and the
 tools mentioned. For examples, the name server has the following
 dependencies:
 \begin{itemize}
-\item the resource manager \code{rmgr} (part of DROPS)
+\item the resource manager \code{roottask} (part of DROPS)
 \item the logging server \code{log} (part of DROPS)
-\item the packet l4util (part of DROPS)
-\item the C library from OSKit~0.6 (not part of DROPS but available from the
-  DROPS download site)
-\item the BID make macros
+\item to build it requires the packages \code{l4util}, \code{l4sys},
+\code{roottask}, \code{sigma0}, \code{log}, \code{events}, and \code{crtx}
+(all part of DROPS)
+\item a C library (either dietlibc or uClibc)
+\item the BID make macros, and the tools \code{config}, \code{gendep},
+\code{dice}, and the \code{bin} directory from \code{l4/tool}.
 \end{itemize}
 
 The building tools of DROPS allow for two locations of the required
@@ -98,8 +103,9 @@ installed DROPS:
    By executing \code{make} in \code{L4DIR/pkg}, all libraries are
    symlinked into subdirectories of \code{L4DIR/lib} and all
    interface headers and IDL files are symlinked into subdirectories
-   at \code{L4DIR/lib}. We also refer to \code{L4DIR} as \textit{L4
-     directory}.
+   at \code{L4DIR/include}. We also refer to \code{L4DIR} as \textit{L4
+     directory}. All binary files are symlinked into subdirectories
+   at \code{L4DIR/bin}.
 
 \item The packets and tools are already compiled and installed at a central
    place at \code{DROPS\_STDDIR}. Obviously, only the headers and IDL
@@ -115,9 +121,8 @@ component               & default location     \\
 \hline
 DROPS packets           & \code{L4DIR/pkg}         \\
 DROPS Tools             & \code{L4DIR/tool}        \\
-OSKit~0.6               & \code{L4DIR/../oskit}    \\
-OSKit~1.0               & \code{L4DIR/../oskit10}  \\
 \llinux{} v2.2          & \code{L4DIR/../linux22}  \\
+\llinux{} v2.6		& \code{L4DIR/../l4linux-2.6} \\
 \hline
 \end{tabular}
 \caption{Locations of source code relative to \code{L4DIR}}
@@ -150,18 +155,22 @@ In the following section we show how to build a DROPS tree.
 \subsection{Downloading and Unpacking}
 
 The source code of the DROPS packages and the tools can be obtained from
-\code{http://os.inf.tu-{\hskip 0pt}dresden.de/{\hskip 0pt}drops/{\hskip
-    0pt}download.html}
-as tar-balls or via remote-CVS -- see download instructions at this web page.
-Put all the tar-balls into one directory and unpack them.
+\code{http://tudos.{\hskip 0pt}org/{\hskip 0pt}drops/{\hskip
+0pt}download.html} as tar-balls or via remote-CVS -- see download instructions
+at this web page.  Put all the tar-balls into one directory and unpack them.
 
 If you are at the Dresden OS group, you can use the CVS repository at
 \code{/home/cvs}. You can also use the installed components at
-\code{/home/drops}. Check out the components you want to compile on
-your own. Additionally, you need the BID macros at \code{L4DIR/mk},
-the Makefile at \code{L4DIR}. If you want to compile DROPS packages,
-you should also check out the Makefile at \code{L4DIR/pkg}. We set up
-some CVS modules, please see the aforementioned download page for details.
+\code{/home/drops}. Check out the components you want to compile on your own.
+Additionally, you need the BID macros at \code{L4DIR/mk}, the Makefile at
+\code{L4DIR}. If you want to compile DROPS packages, you should also check out
+the Makefile at \code{L4DIR/pkg}. Before building a package you need to config
+your environment and target platform (see Section~\ref{sec:config}).  For
+this, you need the \code{config} and \code{gendep} tools from the
+\code{L4DIR/tool} directory.  Most packages use IDL to specify their
+interfaces.  To compile the IDLs you need our IDL compiler \code{dice} also in
+the \code{L4DIR/tool} directory. We set up some CVS modules, please see the
+aforementioned download page for details.
 
 \subsection{OS requirements}
 
@@ -174,7 +183,7 @@ DROPS distribution are required:
 \hline
 tool                    & supported versions    \\
 \hline
-GNU C                   & 2.95.2, 2.95.4 or 3.2 \\
+GNU C                   & 3.x \\
 GNU make                & $\geq$ 3.77           \\
 Binutils                & $\geq$ 2.13.90        \\
 GNU bash                & $\geq$ 2.05           \\
@@ -183,8 +192,12 @@ awk                     & posix compatible      \\
 GNU sed                 &                       \\
 GNU perl                & $\geq$ 5.6.1          \\
 flex                    &                       \\
-byacc                   &                       \\
-Doxygen (recommended) & $\geq$ 1.2.15           \\
+byacc / bison           &                       \\
+Doxygen (recommended)   & $\geq$ 1.2.15		\\
+autoconf                & $\geq$ 2.59		\\
+automake		& $\geq$ 1.4		\\
+ncurses-dev(el)		&			\\
+python-curses		&			\\
 \hline
 \end{tabular}
 \caption{Required build tools}
@@ -199,6 +212,7 @@ mentioned in table \ref{tab:tools}, contact us and we will try to
 solve the issue.
 
 \subsection{Configuring}
+\label{sec:config}
 
 Prior to compilation, you must configure the DROPS environment. Go
 into your \code{L4DIR} directory. If you uncompressed the tar-balls,
@@ -209,8 +223,7 @@ this should be \code{l4/}. A
 starts an interactive configuration tool. You should at least adapt
 the \code{DROPS\_STDDIR} setting at ``Paths and Directories'', as this
 is the directory where the components will be installed on a
-\code{make install}. Note that unlike the other components, OSKit~1.0
-cannot be used without being installed into \code{DROPS\_STDDIR}.
+\code{make install}.
 
 The default values meet most peoples requirements. Thus, instead of
 doing the interactive configuration, you can also configure
@@ -233,13 +246,6 @@ After configuring, go to the \code{L4DIR} directory and do a
 This builds everything available as sources: the tools, C libraries,
 Fiasco micro-kernel and the DROPS packages. It also builds the documentation.
 
-OSKit~1.0 will also be installed if its sources are available. If you
-forgot to set DROPS\_STDDIR during configuration, you probably notice
-this now, as OSKIT 1.0 tries to install to \code{/home/drops}. Delete
-the files \code{L4DIR/../oskit/GNUMakefile} and
-\code{L4DIR/../oskit10/GNUMakefile}. Then, redo \code{make} in
-\code{L4DIR} after a successful configuration.
-
 To install the things into \code{DROPS\_STDDIR} (and obtain the same
 setup as we have at Dresden), do a
 
@@ -249,19 +255,14 @@ setup as we have at Dresden), do a
 
 If you want to restart the build process, e.g. after editing some
 source files, you do not have to build everything again. Here is what
-the makefile in \code{L4DIR} does.
+the Makefile in \code{L4DIR} does.
 
 \begin{enumerate}
 \item DROPS tools in \code{L4DIR/tool}
 \begin{verbatim}
 cd l4/tool ; make
 \end{verbatim}
-\item OSKit~0.6 and OSKit~1.0
-\begin{verbatim}
-cd oskit ; make -f Makefile.drops
-cd oskit10 ; make -f Makefile.drops
-\end{verbatim}
-\item \llinux{} v2.2
+\item \llinux{} v2.2 (if available)
 \begin{verbatim}
 cd linux22 ; make -f Makefile.drops
 \end{verbatim}
@@ -288,7 +289,7 @@ for details.
 
 Note, although the makefile in \code{L4DIR} builds the documentation
 per default, the called sub-makefiles only build the documentation
-when \code{doc} is explicitely mentioned as a target on the cmdline.
+when \code{doc} is explicitly mentioned as a target on the cmdline.
 
 \subsubsection{Sub-makefiles and Sub-tree consistency}
 \label{sec:submakes}
@@ -297,19 +298,19 @@ when \code{doc} is explicitely mentioned as a target on the cmdline.
   built state by issuing \code{make} at the top of that subtree. \code{Make}
   generally not builds things upwards in the directory hierarchy.}
 
-This is true for everything \emph{below} \code{L4DIR}. Exceptions are
-the external C libraries and \llinux, which have their own build
-system. \code{L4DIR}, serving as the project root directory, is the
-other exception, as it integrates the external components.
+This is true for everything \emph{below} \code{L4DIR}. An exception is
+\llinux, which has its own build system. \code{L4DIR}, serving as the project
+root directory, is the other exception, as it integrates the external
+components.
 
 As a consequence, a \code{make} issued within a package X cannot help you
 building other packages X may depend on. Or, if you are within the
-\code{server/} directory of a DROPS package, \code{make} does not rebuild the
+\code{server/} directory of a package, \code{make} does not rebuild the
 \code{lib/} directory of that package. In these cases, you have to
 issue the \code{make} upwards the directory hierarchy.
 
-As another consequence, you can be shure that \code{make} does not change
-your filesystem outside the current subtree. Exceptions are the
+As another consequence, you can be sure that \code{make} does not change
+your file-system outside the current subtree. Exceptions are the
 installation directories \code{L4DIR/bin}, \code{L4DIR/lib},
 \code{L4DIR/include} and \code{L4DIR/doc}.
 
@@ -322,7 +323,7 @@ out the be both a robust and general solution.
 It is generally not necessary to enforce rebuilding of DROPS source
 code, e.g. by doing a \code{make clean} followed by a \code{make}. A
 \code{make} rebuilds the depending files reliably, be it within one DROPS
-package, accross DROPS packages or code of external componente such as
+package, across DROPS packages or code of external components such as
 the C library.
 
 

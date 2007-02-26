@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/cdr/CCDRMarshalFunction.cpp
- *    \brief   contains the implementation of the class CCDRMarshalFunction
+ *  \brief   contains the implementation of the class CCDRMarshalFunction
  *
  *    \date    10/29/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -30,8 +30,9 @@
 #include "be/BEHeaderFile.h"
 #include "be/BEImplementationFile.h"
 #include "be/BEContext.h"
-
+#include "be/BETrace.h"
 #include "Attribute-Type.h"
+#include <cassert>
 
 CCDRMarshalFunction::CCDRMarshalFunction()
  : CBEMarshalFunction()
@@ -45,19 +46,18 @@ CCDRMarshalFunction::~CCDRMarshalFunction()
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if this function should be written to the given file
  */
-bool CCDRMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext)
+bool CCDRMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (!FindAttribute(ATTR_OUT)) &&
+        (!m_Attributes.Find(ATTR_OUT)) &&
         !IsComponentSide())
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-        (!FindAttribute(ATTR_IN)) &&
+        (!m_Attributes.Find(ATTR_IN)) &&
         IsComponentSide())
         return true;
     return false;
@@ -65,19 +65,18 @@ bool CCDRMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pCo
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if this function should be written to the given file
  */
-bool CCDRMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext)
+bool CCDRMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (!FindAttribute(ATTR_OUT)) &&
+        (!m_Attributes.Find(ATTR_OUT)) &&
         !IsComponentSide())
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-        (!FindAttribute(ATTR_IN)) &&
+        (!m_Attributes.Find(ATTR_IN)) &&
         IsComponentSide())
         return true;
     return false;
@@ -85,16 +84,28 @@ bool CCDRMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile,  CBECont
 
 /** \brief writes the marshalling code
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start marshalling
- *  \param bUseConstOffset true if nStartOffset should be used
- *  \param pContext the context of the write operation
  *
  * No opcode marshalled.
  */
-void CCDRMarshalFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
+void 
+CCDRMarshalFunction::WriteMarshalling(CBEFile* pFile)
 {
+    assert(m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
+    {
+	m_pTrace->BeforeMarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+    
     if (IsComponentSide())
-        nStartOffset += WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+        WriteMarshalException(pFile, true);
     // now unmarshal rest
-    CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    CBEOperationFunction::WriteMarshalling(pFile);
+
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterMarshalling(pFile, this);
+	m_bTraceOn = false;
+    }
 }

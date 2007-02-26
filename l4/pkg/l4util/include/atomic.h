@@ -313,6 +313,15 @@ l4util_dec32_res(volatile l4_uint32_t *dest);
 L4_INLINE void
 l4util_atomic_add(volatile long *dest, long val);
 
+/**
+ * \brief Atomic increment
+ * \ingroup atomic
+ *
+ * \param  dest      destination operand
+ */
+L4_INLINE void
+l4util_atomic_inc(volatile long *dest);
+
 EXTERN_C_END
 
 /*****************************************************************************
@@ -486,6 +495,18 @@ l4util_atomic_add(volatile long *dest, long val)
 {
   l4util_cli();
   *dest += val;
+  l4util_sti();
+}
+#endif
+
+#ifndef __L4UTIL_ATOMIC_HAVE_ARCH_INC
+#include <l4/util/irq.h>
+
+L4_INLINE void
+l4util_atomic_inc(volatile long *dest)
+{
+  l4util_cli();
+  (*dest)++;
   l4util_sti();
 }
 #endif

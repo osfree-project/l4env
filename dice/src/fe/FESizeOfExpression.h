@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FESizeOfExpression.h
- *    \brief    contains the declaration of the class CFESizeOfExpression
+ *  \brief    contains the declaration of the class CFESizeOfExpression
  *
  *    \date    07/10/2003
  *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -43,7 +43,6 @@ protected:
     CFESizeOfExpression(CFESizeOfExpression &src);
 
 public:
-    virtual void Serialize(CFile *pFile);
     virtual string ToString();
     virtual CObject* Clone();
     virtual CFETypeSpec* GetSizeOfType();

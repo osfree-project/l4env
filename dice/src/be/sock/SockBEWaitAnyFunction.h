@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBEWaitAnyFunction.h
- *    \brief   contains the declaration of the class CSockBEWaitAnyFunction
+ *  \brief   contains the declaration of the class CSockBEWaitAnyFunction
  *
  *    \date    11/28/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -44,19 +44,19 @@ class CSockBEWaitAnyFunction : public CBEWaitAnyFunction
 // Constructor
 public:
     /** \brief constructor
-     *    \param bOpenWait true if wait for any sender
-     *    \param bReply true if reply is sent before wait
+     *  \param bOpenWait true if wait for any sender
+     *  \param bReply true if reply is sent before wait
      */
     CSockBEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CSockBEWaitAnyFunction();
 
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CSockBEWaitAnyFunction(CSockBEWaitAnyFunction &src);
 
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
+    virtual void WriteInvocation(CBEFile * pFile);
 };
 
 #endif

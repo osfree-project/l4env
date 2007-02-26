@@ -125,14 +125,14 @@ List_alloc::dump()
   printf("List_alloc [_first=%p]\n", _first);
   Mem_block *c = _first;
   for (;c && c!=c->next ; c = c->next)
-    printf("  Mem_block [this=%p size=0x%lx (%ldkB) next=%p]\n", c, c->size, 
+    printf("  Mem_block [this=%p size=0x%lx (%ldKB) next=%p]\n", c, c->size, 
 	   (c->size+1023)/1024, c->next);
 
   if (c && c == c->next)
     printf("  BUG: loop detected\n");
 }
 
-PUBLIC 
+PUBLIC inline
 List_alloc::List_alloc()
 //  : _first(0) 
 {}

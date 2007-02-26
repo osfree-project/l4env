@@ -57,11 +57,11 @@ protected:
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
     virtual CFEExpression* GetBound();
     virtual CFETypeSpec* GetBaseType();
     virtual CObject* Clone();
+
+    virtual void Accept(CVisitor&);
 
 protected:
     /** \var CFEExpression* m_pBound

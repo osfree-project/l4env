@@ -4,8 +4,8 @@
  *
  * \date	17/08/2000
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- * 
- * Simple DROPS TFTP server. 
+ *
+ * Simple DROPS TFTP server.
  * Network code adapted from GRUB */
 
 /* (c) 2003 Technische Universitaet Dresden
@@ -18,6 +18,7 @@
 
 #include "netboot/etherboot.h"
 #include "netboot/netboot.h"
+#include "../tftp_config.h"
 
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
@@ -32,6 +33,7 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/getopt.h>
 #include <l4/util/macros.h>
+#include <l4/util/util.h>
 #include <l4/generic_io/libio.h>
 
 // #define DEBUG_LOAD
@@ -47,9 +49,13 @@ int use_l4io = 0;	/* whether to use L4IO server or not, default no */
 extern int disp_filesizebarrier;
 extern int disp_filesize;
 
+#if CONFIG_ORE
+extern char tftp_orename[16];
+#endif
+
 /**
  * Parse command line
- * 
+ *
  * \param  argc          Number of command line arguments
  * \param  argv          Command line arguments
  */
@@ -61,6 +67,7 @@ __parse_command_line(int argc, char * argv[])
   {
     {"server", 1, 0, 's'},
     {"l4io", 0, 0, 'i'},
+    {"orename", 1, 0, 'o'},
     {0, 0, 0, 0}
   };
 
@@ -109,8 +116,15 @@ __parse_command_line(int argc, char * argv[])
 	  }
 #endif
 	  break;
+        case 'o':
+#if CONFIG_ORE
+          LOG("orename: %s", optarg);
+          strncpy(tftp_orename, optarg, sizeof(tftp_orename));
+          tftp_orename[sizeof(tftp_orename)-1] = 0;
+#endif
+          break;
 
-	default: 
+	default:
 	  printf("Invalid argument: %c\n",c);
 	}
     }
@@ -118,23 +132,23 @@ __parse_command_line(int argc, char * argv[])
 
 /**
  * Return a new dataspace including the image of a L4 module
- * 
+ *
  * \param request	pointer to Flick request structure
  * \param fname		requested module filename
  * \param dm		dataspace manager for allocating the image dataspace
  * \param flags		flags used for creating a dataspace
  * \retval ds		dataspace including the file image
  * \retval _ev		Flick exception structure (unused)
- * \return 		0 on success
- * 			-L4_ENOMEM if allocation failed */
-l4_int32_t 
-l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
-    const char* fname,
-    const l4_threadid_t *dm,
-    l4_uint32_t flags,
-    l4dm_dataspace_t *ds,
-    l4_uint32_t *size,
-    CORBA_Server_Environment *_dice_corba_env)
+ * \return		0 on success
+ *			-L4_ENOMEM if allocation failed */
+long
+l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
+                             const char* fname,
+                             const l4_threadid_t *dm,
+                             unsigned long flags,
+                             l4dm_dataspace_t *ds,
+                             l4_size_t *size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   int read_size;
   int error;
@@ -169,10 +183,10 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
     }
 
   printf("Loading %s [%dkB]\n", fname, (*size + 1023) / 1024);
-  
+
   /* Reset display file position */
   disp_filesizebarrier = disp_filesize = 0;
-  
+
   read_size = netboot_read((char*) addr, *size);
 
   netboot_close();
@@ -184,7 +198,7 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
       l4dm_close((l4dm_dataspace_t*)ds);
       return -L4_ENOMEM;
     }
-  
+
   if (!read_size)
     {
       printf("Error reading file %s\n"
@@ -249,7 +263,7 @@ real_main (void *dummy)
       printf("failed to register at name server\n");
       exit(-1);
     }
-  
+
   if (have_tftp_server_addr)
     netboot_set_server(tftp_server_addr);
 
@@ -266,12 +280,12 @@ main (int argc, char **argv)
 
   netboot_show_drivers();
 
-  if ((ret = l4thread_create_long (L4THREAD_INVALID_ID, real_main, 
+  if ((ret = l4thread_create_long(L4THREAD_INVALID_ID, real_main,
 				  ".real_main",
-				  (unsigned)real_main_stack 
-				    + sizeof(real_main_stack), 
+				  (unsigned)real_main_stack
+				    + sizeof(real_main_stack),
 				  sizeof(real_main_stack),
-				  L4THREAD_DEFAULT_PRIO, 0, 
+				  L4THREAD_DEFAULT_PRIO, 0,
 				  L4THREAD_CREATE_ASYNC)) < 0)
     {
       Panic ("Error %d creating real_main thread", ret);

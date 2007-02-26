@@ -14,13 +14,14 @@
  */
 
 /* L4 includes */
+#include <l4/sys/types.h>
 #include <l4/sys/kernel.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/util.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/env/errno.h>
-#include <l4/sys/types.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/thread/thread.h>
 
@@ -36,32 +37,6 @@
  */
 static unsigned long long volatile *kclock; /**< kernel clock reference
                                              * \ingroup grp_misc */
-/** address of L4 kernel info
- * \ingroup grp_misc */
-static l4_addr_t kernel_info_addr = 0x1000;
-
-/** Get RMGR pager id.
- *
- * \retval pager         RMGR pager thread id
- *
- * Return the thread id of the RMGR pager.
- * We asume that we have a flat clan structure and our chief is the RMGR!
- */
-static void __get_rmgr_pager(l4_threadid_t * pager)
-{
-  l4_threadid_t my_pager, my_preempter, chief;
-  l4_umword_t dummy;
-
-  /* get pager/preempter */
-  my_preempter = my_pager = L4_INVALID_ID;
-  l4_thread_ex_regs(l4_myself(), (l4_umword_t) - 1, (l4_umword_t) - 1,
-                    &my_preempter, &my_pager, &dummy, &dummy, &dummy);
-
-  /* get chief */
-  l4_nchief(L4_INVALID_ID, &chief);
-
-  pager->raw = chief.raw;
-}
 
 /** Map kernel info page.
  *
@@ -71,45 +46,15 @@ static void __get_rmgr_pager(l4_threadid_t * pager)
  */
 static int __map_kernel_info_page(void)
 {
-  l4_threadid_t chief;
-  int error;
-  l4_umword_t dummy, magic;
-  l4_msgdope_t result;
-  l4_uint32_t kernel_info_areaid;
+  l4_kernel_info_t *kip;
 
-  __get_rmgr_pager(&chief);
-
-  /* reserve kernel info page area */
-  error = l4rm_area_reserve(L4_PAGESIZE, 0,
-                            &kernel_info_addr, &kernel_info_areaid);
-  if (error)
+  if (!(kip = l4sigma0_kip_map(L4_INVALID_ID)))
     {
-      LOGdL(DEBUG_ERRORS, "kernel info page area already used!");
-      return -L4_ENOMAP;
-    }
-
-  /* map kernel info page */
-  error = l4_ipc_call(chief,
-                           L4_IPC_SHORT_MSG, 1, 1,
-                           L4_IPC_MAPMSG(kernel_info_addr, L4_LOG2_PAGESIZE),
-                           &dummy, &dummy, L4_IPC_NEVER, &result);
-  if (error)
-    {
-      LOGdL(DEBUG_ERRORS, "calling pager (0x%02x)", error);
-      return -L4_EIPC;
-    }
-
-  magic = ((l4_kernel_info_t *) kernel_info_addr)->magic;
-
-  if (!l4_ipc_fpage_received(result) || (magic != L4_KERNEL_INFO_MAGIC))
-    {
-      LOGdL(DEBUG_ERRORS, "mapping kernel info page");
+      LOGdL(DEBUG_ERRORS, "error getting kernel info page!");
       return -L4_ENOTFOUND;
     }
 
-  LOGd(DEBUG_MSG, "mapped kernel info page @ %p\n", (void*)kernel_info_addr);
-
-  kclock = &((l4_kernel_info_t *) kernel_info_addr)->clock;
+  kclock = &kip->clock;
 
   return 0;
 }
@@ -147,10 +92,7 @@ static void jiffies_thread(void *data)
   /* jiffie loop */
   for (;;)
     {
-      error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
-                                  &dummy, &dummy,
-                                  L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0),
-                                  &result);
+      error = l4_ipc_sleep(L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0));
 
       if (error != L4_IPC_RETIMEOUT)
         Panic("while receiving from NIL (IPC 0x%02x)", error);
@@ -226,7 +168,7 @@ int io_jiffies_init()
     return error;
 
   /* create jiffies thread */
-  jiffies_tid = l4thread_create_named((l4thread_fn_t) jiffies_thread,
+  jiffies_tid = l4thread_create_named(jiffies_thread,
 				      ".jiffies",
 				      0, L4THREAD_CREATE_SYNC);
 

@@ -1,0 +1,3 @@
+This directory contains the libc backends which are suited for L4Env.
+Each backend shall provide just some functionality (like io or memory
+management) so that different backends can be combined.

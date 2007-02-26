@@ -23,6 +23,7 @@
 
 static struct sockaddr_in ovl_screen_sockaddr;
 CORBA_Object ovl_screen_srv = &ovl_screen_sockaddr;
+int ovl_phys_width, ovl_phys_height, ovl_phys_mode;
 
 /*** DICE MEMORY ALLOCATION FUNCTION ***/
 void *CORBA_alloc(unsigned long size) {

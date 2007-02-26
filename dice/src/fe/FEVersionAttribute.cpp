@@ -82,17 +82,3 @@ CObject *CFEVersionAttribute::Clone()
 {
     return new CFEVersionAttribute(*this);
 }
-
-/** serialize this object
- *  \param pFile the file to serialize to/from
- */
-void CFEVersionAttribute::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      //if ((m_nMajor == 0) && (m_nMinor == 0))
-      //      return;
-      pFile->PrintIndent("<attribute>version(%d.%d)</attribute>\n",
-                 m_nMajor, m_nMinor);
-      }
-}

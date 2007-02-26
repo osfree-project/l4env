@@ -1,4 +1,4 @@
-INTERFACE[ia32,ux]:
+INTERFACE[ia32,amd64,ux]:
 
 #include "initcalls.h"
 #include "l4_types.h"
@@ -67,7 +67,7 @@ private:
 };
 
 
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,amd64,ux]:
 
 #include <cstdio>
 
@@ -75,6 +75,7 @@ IMPLEMENTATION[ia32,ux]:
 #include "jdb_input.h"
 #include "jdb_module.h"
 #include "jdb_handler_queue.h"
+#include "jdb_screen.h"
 #include "jdb_tbuf.h"
 #include "l4_types.h"
 #include "static_init.h"
@@ -82,6 +83,8 @@ IMPLEMENTATION[ia32,ux]:
 
 class Jdb_set_bp : public Jdb_module, public Jdb_input_task_addr
 {
+public:
+  Jdb_set_bp() FIASCO_INIT;
 private:
   static char     breakpoint_cmd;
   static char     breakpoint_restrict_cmd;
@@ -262,7 +265,7 @@ Breakpoint::show()
 		printf("%32s", "and ");
 	      printf("register %s in ["L4_PTR_FMT", "L4_PTR_FMT"]\n",
 		  (restrict.reg.reg > 0) && (restrict.reg.reg < 10) 
-		      ? Jdb::reg_names[restrict.reg.reg-1] 
+		      ? Jdb_screen::Reg_names[restrict.reg.reg-1] 
 		      : "???",
 		   restrict.reg.y, restrict.reg.z);
 	    }
@@ -306,23 +309,9 @@ Breakpoint::restricted(Thread *t)
   // investigate for register restriction
   if (restrict.reg.reg)
     { 
-      Mword val = 0;
+      Mword val = e->get_reg(restrict.reg.reg);
       Mword y   = restrict.reg.y;
       Mword z   = restrict.reg.z;
-
-      switch (restrict.reg.reg)
-	{
-	case 1:  val = e->eax; break;
-	case 2:  val = e->ebx; break;
-	case 3:  val = e->ecx; break;
-	case 4:  val = e->edx; break;
-	case 5:  val = e->ebp; break;
-	case 6:  val = e->esi; break;
-	case 7:  val = e->edi; break;
-	case 8:  val = e->eip; break;
-	case 9:  val = e->esp; break;
-	case 10: val = e->eflags; break;
-	}
 
       // return true if rules do NOT match
       if (  (y <= z && (val <  y || val >  z))
@@ -414,7 +403,7 @@ Breakpoint::test_log(Thread *t)
 
       // is called with disabled interrupts
       Tb_entry_bp *tb = static_cast<Tb_entry_bp*>(Jdb_tbuf::new_entry());
-      tb->set(t, e->eip, mode, len, value, addr);
+      tb->set(t, e->ip(), mode, len, value, addr);
       Jdb_tbuf::commit_entry();
     }
 }
@@ -498,12 +487,13 @@ int
 Jdb_bp::test_break(Mword dr6, char *errbuf, size_t bufsize)
 {
   Thread *t = Jdb::get_thread();
+  Jdb_entry_frame *e = Jdb::get_entry_frame();
 
   for (int i=0; i<4; i++)
     if (dr6 & (1<<i))
       {
 	if (bps[i].break_at_instruction())
-      	  Jdb::get_entry_frame()->eflags |= EFLAGS_RF;
+      	  e->flags(e->flags() | EFLAGS_RF);
 	if (bps[i].test_break(t, errbuf, bufsize))
 	  return 1;
       }
@@ -518,6 +508,7 @@ void
 Jdb_bp::test_log(Mword &dr6)
 {
   Thread *t = Jdb::get_thread();
+  Jdb_entry_frame *e = Jdb::get_entry_frame();
 
   for (int i=0; i<4; i++)
     if (dr6 & (1<<i))
@@ -528,7 +519,7 @@ Jdb_bp::test_log(Mword &dr6)
 	    bps[i].test_log(t);
 	    // consider instruction breakpoints
 	    if (bps[i].break_at_instruction())
-	      Jdb::get_entry_frame()->eflags |= EFLAGS_RF;
+	      e->flags(e->flags() | EFLAGS_RF);
 	    // clear condition
 	    dr6 &= ~(1<<i);
 	  }
@@ -599,7 +590,7 @@ Jdb_bp::list()
 
 //---------------------------------------------------------------------------//
 
-PUBLIC
+IMPLEMENT
 Jdb_set_bp::Jdb_set_bp()
   : Jdb_module("DEBUGGING")
 {}
@@ -750,7 +741,7 @@ got_address:
 	    case 'e':
 	      if (!Jdb::get_register(&breakpoint_restrict_reg.reg))
 		return NOTHING;
-	      fmt  = " in [%08x-%08x]\n";
+	      fmt  = " in ["L4_ADDR_INPUT_FMT"-"L4_ADDR_INPUT_FMT"]\n";
     	      args = &breakpoint_restrict_reg.low;
 	      state = 8;
 	      return EXTRA_INPUT;
@@ -758,7 +749,8 @@ got_address:
 	    case '2':
 	    case '4':
 	      putchar(breakpoint_restrict_cmd);
-	      fmt   = "-byte addr=%8x between[%8x-%8x]\n";
+	      fmt   = "-byte addr="L4_ADDR_INPUT_FMT
+		      " between["L4_ADDR_INPUT_FMT"-"L4_ADDR_INPUT_FMT"]\n";
 	      args  = &breakpoint_restrict_addr;
 	      state = 9;
 	      return EXTRA_INPUT;
@@ -803,7 +795,7 @@ got_address:
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_set_bp::cmds() const
 {
   static Cmd cs[] = 
@@ -812,6 +804,7 @@ Jdb_set_bp::cmds() const
 	  "b{i|a|w|p}<addr>\tset breakpoint on instruction/access/write/io "
 	  "access\n"
 	  "b{-|+|*}<num>\tdisable/enable/log breakpoint\n"
+	  "bl\tlist breakpoints\n"
 	  "br<num>{t|T|a|A|e|1|2|4}\trestrict breakpoint to "
 	  "(!)thread/(!)task/reg/mem",
 	  &breakpoint_cmd },
@@ -821,7 +814,7 @@ Jdb_set_bp::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_set_bp::num_cmds() const
 {
   return 1;

@@ -17,6 +17,7 @@
 ; * What is 'EMPTY'?
 ; * Will "LaTeX" be factored out of GOSH like HTML?
 
+\tableofcontents
 
 Intro
 #####
@@ -29,6 +30,9 @@ Howto build this file:
 !# gosh out.txt > gosh.tex
 !# rm out.txt
 
+
+*Some hidden chapter
+####################
 
 1st Order Heading -- Chapter
 ############################
@@ -66,7 +70,7 @@ BUG this should be a new paragraph, but it is'nt.
 _Just_emphasize_this_point_ but only this point.
 
 Trigger bug in emph: (_BUG_) - *GOTCHA* This bug is no more.
-
+What about this one: (_BUG0_,_BUG1_)?
 
 * itemize is nice.
 * what do you think?
@@ -146,6 +150,23 @@ Some Text could be here. Maybe more ...
  col1 | col2 | col3
 [table LABEL] TEXT
 
+ col1 | col2 | col3
+ ------------------
+ col1 | col2 | col3
+[table TABLE2] second table
+
+ accentuation  | test
+----------------------------
+ italic        | _italic_
+ bold          | *bold*
+ monospaced    | 'monospaced'
+
+[table accentuations full-span]
+
+Please not that you need a _space_ in the line between table [LABEL] and 
+[TABLE2] in the source representation. Table [accentuations] shows
+italic, bold, and monospaced styles.
+;Is it correct that this text is indented?
 
 More Text for Tab. [LABEL] follows here.
 
@@ -206,7 +227,8 @@ here comes "*some quoted bold text*" followed by some normal text.
 Text after image without empty line
 ###################################
 
-[image bla.png]
+'bla.png' is missing.
+;[image bla.png]
 This is some plain text that was wrongly assigned to the
 caption of the image.
 
@@ -215,3 +237,25 @@ Accentuations
 
 Monospaced and 'non'-monospaced connected by a hyphen.
 
+Accentuation of 'IPCmon''s name.
+
+This works
+##########
+
+* _To be written by #Krishna#_
+* _To be written by *Krishna* _
+* _To be written by 'Krishna' _
+
+This don't
+##########
+
+* _To be written by *Krishna*_
+* _To be written by 'Krishna'_
+
+Annotations
+###########
+
+:description:
+  Here is some normal text
+  | followed by an annotation
+  and some more text

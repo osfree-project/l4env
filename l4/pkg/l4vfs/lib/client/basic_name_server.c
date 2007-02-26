@@ -44,12 +44,12 @@ char *  l4vfs_rev_resolve(l4_threadid_t server, object_id_t dest,
     ret = l4vfs_basic_name_server_rev_resolve_call(&server, &dest, parent,
                                                    &_dice_corba_env);
 
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Resolving failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_IS_EXCEPTION(&_dice_corba_env, CORBA_SYSTEM_EXCEPTION))
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
             case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                 LOG("Server did not recognize the opcode");
@@ -58,7 +58,8 @@ char *  l4vfs_rev_resolve(l4_threadid_t server, object_id_t dest,
                 LOG("IPC error occured.");
                 return NULL;
             default:
-                LOG("some other error found: %d", _dice_corba_env.repos_id );
+                LOG("some other error found: %d",
+		    DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                 return NULL;
             }
         }
@@ -77,12 +78,12 @@ l4_threadid_t l4vfs_thread_for_volume(l4_threadid_t server,
     ret = l4vfs_basic_name_server_thread_for_volume_call(&server, volume_id,
                                                          &_dice_corba_env);
 
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Resolving failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_IS_EXCEPTION(&_dice_corba_env, CORBA_SYSTEM_EXCEPTION))
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
             case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                 LOG("Server did not recognize the opcode");
@@ -91,7 +92,8 @@ l4_threadid_t l4vfs_thread_for_volume(l4_threadid_t server,
                 LOG("IPC error occured.");
                 return L4_INVALID_ID;
             default:
-                LOG("some other error found: %d", _dice_corba_env.repos_id );
+                LOG("some other error found: %d",
+		    DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                 return L4_INVALID_ID;
             }
         }

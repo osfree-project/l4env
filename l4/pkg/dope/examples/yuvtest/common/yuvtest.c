@@ -36,7 +36,7 @@ int main(int argc,char **argv) {
 	native_startup(argc,argv);
 	
 	/* init DOpE library */
-	dope_init();
+	if (dope_init()) return -1;
 	
 	/* register DOpE-application */
 	app_id = dope_init_app("YUV-Test");

@@ -1,0 +1,24 @@
+
+LIBUART_DIR := $(objbase)/uart
+
+rel2abs	= $(foreach f, $(1),$(shell cd $(f); pwd))
+
+LIBUART_srcdir    := $(strip $(call rel2abs, $(srcdir)))
+LIBUART_VPATH_abs := $(call rel2abs, $(VPATH_LIBUART))
+
+$(LIBUART_DIR):
+	if [ -e $@ ]; then true; else mkdir -p $@; fi
+	$(MAKE_MESSAGE)      
+	$(VERBOSE)$(MAKE) -C $(LIBUART_DIR) 		\
+	  -f $(LIBUART_srcdir)/lib/uart/Makefile 	\
+	  srcdir=$(LIBUART_srcdir) 			\
+	  objbase=$(objbase) 				\
+	  VERBOSE="$(VERBOSE)" 				\
+	  OBJECTS="$(OBJECTS_LIBUART)" 			\
+	  TARGET="$(LIBUART)" 				\
+	  VPATH_LIBUART="$(LIBUART_VPATH_abs)" 		\
+	  PRIVATE_INCDIR=$(LIBUART_srcdir)/lib/uart
+
+.PHONY: $(LIBUART_DIR)
+
+$(LIBUART): $(LIBUART_DIR)

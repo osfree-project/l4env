@@ -125,6 +125,8 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, unsigned long load_addr,
 	ElfW(Addr) relro_addr = 0;
 	size_t relro_size = 0;
 
+	_dl_memset(&app_tpnt_tmp, 0, sizeof(app_tpnt_tmp));
+
 	/* Wahoo!!! We managed to make a function call!  Get malloc
 	 * setup so we can use _dl_dprintf() to print debug noise
 	 * instead of the SEND_STDERR macros used in dl-startup.c */
@@ -754,6 +756,36 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, unsigned long load_addr,
 			}
 		}
 
+	}
+#endif
+#if 0
+    {
+		for (tpnt = _dl_loaded_modules; tpnt; tpnt = tpnt->next) {
+			Elf32_Ehdr *e = (Elf32_Ehdr*)tpnt->loadaddr;
+			_dl_dprintf(1, "%s %x\n", tpnt->libname, e);
+			int i, j;
+			_dl_dprintf(1, "%d section\n", e->e_shnum);
+			for (i=0; i<e->e_shnum; i++) {
+				Elf32_Shdr *sh_sym = (Elf32_Shdr*)(tpnt->loadaddr +
+												   e->e_shoff +
+												   i*e->e_shentsize);
+				Elf32_Shdr *sh_str = (Elf32_Shdr*)(tpnt->loadaddr +
+												   e->e_shoff +
+												   sh_sym->sh_link*e->e_shentsize);
+				_dl_dprintf(1, "testing section %d\n", i);
+				if (sh_sym->sh_type == SHT_SYMTAB) {
+					const char *sym_strtab = (const char*)(tpnt->loadaddr +
+														 sh_str->sh_offset);
+					Elf32_Sym *sym_symtab = (Elf32_Sym*)(tpnt->loadaddr +
+													     sh_sym->sh_offset);
+					_dl_dprintf(1, "found section %d\n", i);
+					for (j=0; j<sh_sym->sh_size/sizeof(Elf32_Sym); j++) {
+						Elf32_Sym *sym = sym_symtab + i;
+						_dl_dprintf(1, "%s\n", sym_strtab + sym->st_name);
+					}
+				}
+			}
+		}
 	}
 #endif
 	/* Notify the debugger we have added some objects. */

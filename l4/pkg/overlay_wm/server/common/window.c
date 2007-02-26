@@ -156,8 +156,8 @@ void overlay_place_window_component(CORBA_Object _dice_corba_obj,
                                   int win_id,
                                   int x, int y, int w, int h,
                                   CORBA_Server_Environment *_dice_corba_env) {
-	long xratio = (phys_scr_w<<16)/ovl_scr_w;
-	long yratio = (phys_scr_h<<16)/ovl_scr_h;
+	long xratio = ovl_scr_w ? (phys_scr_w<<16)/ovl_scr_w : 0;
+	long yratio = ovl_scr_h ? (phys_scr_h<<16)/ovl_scr_h : 0;
 	
 	printf("OvlWM(place_window): win_id=%d, xywh=(%d,%d,%d,%d)\n",win_id,x,y,w,h);
 
@@ -173,12 +173,31 @@ void overlay_place_window_component(CORBA_Object _dice_corba_obj,
 }
 
 
-/*** IDL INTERFACE: TOP THE SPECIFIED OVERLAY WINDOW ***/
-void overlay_top_window_component(CORBA_Object _dice_corba_obj,
-                                int win_id,
-                                CORBA_Server_Environment *_dice_corba_env) {
-	dope_cmdf(app_id, "win%d.top()", win_id);
+/*** IDL INTERFACE: DEFINE STACKING POSITION OF AN OVERLAY WINDOW ***/
+void overlay_stack_window_component(CORBA_Object _dice_corba_obj,
+                                    int win_id,
+                                    int neighbor_id,
+                                    int behind,
+                                    int do_redraw,
+                                    CORBA_Server_Environment *_dice_corba_env) {
+
+	/* only handle the top case */
+	if ((neighbor_id == -1) && (behind == 1))
+		dope_cmdf(app_id, "win%d.top()", win_id);
+	else
+		printf("overlay_stack_window_component: window stacking not fully supported\n");
 }
+
+
+/*** IDL INTERFACE: DEFINE TITLE OF AN OVERLAY WINDOW ***/
+void overlay_title_window_component(CORBA_Object _dice_corba_obj,
+                                    int win_id, const char* title,
+                                    CORBA_Server_Environment *_dice_corba_env) { }
+
+
+/*** IDL INTERFACE: DEFINE BACKGROUND WINDOW ***/
+void overlay_set_background_component(CORBA_Object _dice_corba_obj, int win_id,
+                                      CORBA_Server_Environment *_dice_corba_env) { }
 
 
 /*** IDL INTERFACE: REGISTER WINDOW EVENT LISTENER THREAD ***/

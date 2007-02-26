@@ -1,0 +1,21 @@
+--- Makefile	6 Mar 2006 14:13:00 -0000	1.18
++++ Makefile	13 Apr 2006 09:11:50 -0000
+@@ -1,10 +1,10 @@
+ #
+ # libavutil Makefile
+ #
+-include ../config.mak
++include ../../video/libavcodec/config.mak
+ 
+ # NOTE: -I.. is needed to include config.h
+-CFLAGS=$(OPTFLAGS) -DHAVE_AV_CONFIG_H -DBUILD_AVUTIL -I.. -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
++CFLAGS=$(OPTFLAGS) -DHAVE_AV_CONFIG_H -DBUILD_AVUTIL -I$(PKGDIR_OBJ)/config -I../../video/libavcodec $(LIBCINCDIR_x86_tiny) -D_GNU_SOURCE -Wall
+ 
+ #FIXME: This should be in configure/config.mak
+ ifeq ($(CONFIG_WIN32),yes)
+@@ -31,4 +31,4 @@
+ LIBMAJOR=$(LAVUMAJOR)
+ endif
+ 
+-include $(SRC_PATH)/common.mak
++include ../../video/libavcodec/common.mak

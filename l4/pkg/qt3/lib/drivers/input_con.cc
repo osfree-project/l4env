@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/drivers/input_con.cc
+ * \brief  L4con driver for Qt/Embedded.
+ *
+ * \date   10/24/2004
+ * \author Josef Spillner <js177634@inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2005 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 /*
  * Based on inputlib example
  */
@@ -61,7 +78,7 @@ static void drops_get_input(void)
 	LOGd(_DEBUG, "[mouse/keyboard:con] got event(s)\n");
 	for (i = 0; i < num_con_events; i++)
 	{
-		LOGd(_DEBUG, "[mouse/keyboard:con] * event: %i/%i/%i\n", con_event[i].type, con_event[i].code, con_event[i].value);
+		LOGd(_DEBUG, "[mouse/keyboard:con] * event: %i/%i/%li\n", con_event[i].type, con_event[i].code, con_event[i].value);
 		switch(con_event[i].type)
 		{
 			case EV_KEY:

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEFunctionDeclarator.h
- *    \brief   contains the declaration of the class CFEFunctionDeclarator
+ *  \file    dice/src/fe/FEFunctionDeclarator.h
+ *  \brief   contains the declaration of the class CFEFunctionDeclarator
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,14 +31,14 @@
 #define __DICE_FE_FEFUNCTIONDECLARATOR_H__
 
 #include "fe/FEDeclarator.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFETypedDeclarator;
 
-/**    \class CFEFunctionDeclarator
- *    \ingroup frontend
- *    \brief a class representing a function declarator
+/** \class CFEFunctionDeclarator
+ *  \ingroup frontend
+ *  \brief a class representing a function declarator
  *
  * This class is used to represent a function declarator
  */
@@ -48,36 +48,32 @@ class CFEFunctionDeclarator : public CFEDeclarator
 // standard constructor/destructor
 public:
     /** constructs a function declarator
-     *    \param pDecl the name of the function
-     *    \param pParams the parameters of the function
+     *  \param pDecl the name of the function
+     *  \param pParams the parameters of the function
      */
     CFEFunctionDeclarator(CFEDeclarator *pDecl, vector<CFETypedDeclarator*> *pParams);
     virtual ~CFEFunctionDeclarator();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEFunctionDeclarator(CFEFunctionDeclarator &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual CFETypedDeclarator* GetNextParameter(vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstParameter();
-    virtual CFEDeclarator* GetDeclarator();
-    virtual CObject* Clone();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEFunctionDeclarator(*this); }
 
 // attributes
-protected:
-    /**    \var vector<CFETypedDeclarator*> m_vParameters
-     *    \brief contains all parameters of this function
+public:
+    /** \var CCollection<CFETypedDeclarator> m_Parameters
+     *  \brief contains all parameters of this function
      */
-    vector<CFETypedDeclarator*> m_vParameters;
-    /**    \var CFEDeclarator *m_pDeclarator
-     *    \brief the declarator (??)
-     */
-    CFEDeclarator *m_pDeclarator;
+    CCollection<CFETypedDeclarator> m_Parameters;
 };
 
 #endif /* __DICE_FE_FEFUNCTIONDECLARATOR_H__ */

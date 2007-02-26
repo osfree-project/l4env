@@ -1,8 +1,9 @@
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,ux,amd64]:
 
 #include <cstdio>
 #include <cstring>
 #include "simpleio.h"
+#include "jdb_screen.h"
 
 PUBLIC
 void
@@ -74,12 +75,14 @@ Jdb_kern_info_cpu::show_features()
     NULL, NULL,
     "monitor (monitor/mwait instructions)",
     "dscpl (CPL qualified debug store)",
-    NULL, NULL,
+    "vmx (virtual machine technology)",
+    NULL,
     "est (enhanced speedstep technology)",
     "tm2 (thermal monitor 2)",
     NULL,
     "cid (L1 context id)",
-    NULL, NULL, NULL,
+    NULL, NULL,
+    "cmpxchg16b",
     "xtpr (send task priority messages)",
     (char *)(-1)
   };
@@ -111,13 +114,17 @@ Jdb_kern_info_cpu::show_features()
   show_f_bits (Cpu::ext_amd_features(), extended_amd, 5, position, colon);
 }
 
-PRIVATE inline
+PRIVATE inline NEEDS["jdb_screen.h"]
 void
 Jdb_kern_info_misc::show_pdir()
 {
-  Space *s = current_space();
-  printf ("pdir: "L4_PTR_FMT" (taskno=%x, chief=%x)\n",
-	  (Address) s,
-	  unsigned (s->id()),
-	  unsigned (s->chief()));
+  Mem_space *s = current_mem_space();
+  // printf ("%s"L4_PTR_FMT" (taskno=%x, chief=%x)\n",
+  //   	  Jdb_screen::Root_page_table,
+  //	  (Address) s->dir(),
+  //	  unsigned (s->id()),
+  //	  unsigned (s->chief()));
+  printf ("%s"L4_PTR_FMT"\n",
+      	  Jdb_screen::Root_page_table,
+	  (Address) s->dir());
 }

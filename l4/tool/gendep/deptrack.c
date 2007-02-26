@@ -282,13 +282,20 @@ setup_regexps (void)
  */
 static void get_executable_name (void)
 {
-  FILE *cmdline = fopen ("/proc/self/cmdline", "r");
+  const char * const proc_cmdline = "/proc/self/cmdline";
+  FILE *cmdline = fopen (proc_cmdline, "r");
   char cmd[STRLEN];
   int i=0;
   char *basename_p;
   int c;
   cmd[STRLEN-1] = 0;
-  
+ 
+  if (!cmdline)
+    {
+      fprintf(stderr, "libgendep.o: cannot open %s\n", proc_cmdline);
+      exit(-1);
+    }
+      
   while ((c = fgetc(cmdline))!=EOF && c && i < STRLEN-1)
     cmd[i++] = c;
 

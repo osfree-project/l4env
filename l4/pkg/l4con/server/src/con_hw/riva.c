@@ -981,9 +981,10 @@ static int
 riva_probe(unsigned int bus, unsigned int devfn, 
 	   const struct pci_device_id *device,  con_accel_t *accel)
 {
-  unsigned addr0, size0, addr1, size1;
+  l4_addr_t addr0, addr1;
+  l4_size_t size0, size1;
   struct riva_chip_info *rci;
-  unsigned ctrl_base;
+  l4_addr_t ctrl_base;
   unsigned char rev;
 
   PCIBIOS_READ_CONFIG_BYTE (bus, devfn, PCI_REVISION_ID, &rev);
@@ -1001,7 +1002,7 @@ riva_probe(unsigned int bus, unsigned int devfn,
     }
 
   /* map memory mapped i/o registers */
-  if (map_io_mem(addr0, size0, "ctrl", &ctrl_base)<0)
+  if (map_io_mem(addr0, size0, 0, "ctrl", &ctrl_base)<0)
     return -L4_ENOTFOUND;
 
   if (addr1 != hw_vid_mem_addr)
@@ -1013,7 +1014,8 @@ riva_probe(unsigned int bus, unsigned int devfn,
   if (size1 < hw_vid_mem_size)
     size1 = hw_vid_mem_size;
 
-  if (map_io_mem(hw_vid_mem_addr, size1, "video", &hw_map_vid_mem_addr)<0)
+  if (map_io_mem(hw_vid_mem_addr, size1, 1, "video",
+	         (l4_addr_t *)&hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 
   riva_hw.EnableIRQ = 0;

@@ -40,7 +40,7 @@ typedef struct
   int QAP_on;			/* QAP enabled */
   int quality;			/* quality level for vcore */
   int connected;		/* indication that audio chain is build and connected */
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   const char *learn_file;
   const char *predict_file;
 #endif

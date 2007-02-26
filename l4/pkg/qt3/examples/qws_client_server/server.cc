@@ -9,9 +9,6 @@ extern "C" {
 int
 main(int argc, char **argv)
 {
-  // wait for file systems to be mounted by 'fstab'
-  l4_sleep(3000);
-
   LOG("QWS-Server: starting up ...");
 
   QApplication app(argc, argv);

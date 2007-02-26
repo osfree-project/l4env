@@ -13,14 +13,14 @@ extern "C" {
 static inline
 void* malloc_warning(unsigned long size)
 {
-  enter_kdebug("malloc");
-  return 0;
+    L4_KDB_Enter("malloc not set in environment");
+    return 0;
 };
 
 static inline
 void free_warning(void* addr)
 {
-  enter_kdebug("free");
+    L4_KDB_Enter("free not set in environment");
 };
 
 #ifdef __cplusplus
@@ -28,44 +28,54 @@ void free_warning(void* addr)
 #endif
 
 #define dice_default_environment \
-  { CORBA_NO_EXCEPTION, 0, { param: 0 }, L4_Never, \
-    L4_CompleteAddressSpace, \
-    malloc_warning, free_warning }
+  { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+      { param: 0 }, L4_Never, L4_CompleteAddressSpace, \
+      malloc_warning, free_warning }
 #define dice_default_server_environment \
-  { CORBA_NO_EXCEPTION, 0, { param: 0 }, L4_ZeroTime, \
-    L4_CompleteAddressSpace, \
-    malloc_warning, free_warning, \
-    0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
+  { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+      { param: 0 }, L4_ZeroTime, L4_CompleteAddressSpace, \
+      malloc_warning, free_warning, L4_anythread, \
+	  0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
 
 #ifdef __cplusplus
 namespace dice
 {
     extern inline
     CORBA_Environment::CORBA_Environment()
+    : _exception(),
+      _p(),
+      timeout(),
+      rcv_fpage(),
+      malloc(malloc_warning),
+      free(free_warning)
     {
-	major = 0;
-	repos_id = 0;
+	_exception._corba.major = CORBA_NO_EXCEPTION;
+	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
 	timeout = L4_Never;
 	rcv_fpage = L4_CompleteAddressSpace;
-	malloc = malloc_warning;
-	free = free_warning;
     }
 
     extern inline
     CORBA_Server_Environment::CORBA_Server_Environment()
+    : _exception(),
+      _p(),
+      timeout(),
+      rcv_fpage(),
+      malloc(malloc_warning),
+      free(free_warning),
+      partner(),
+      user_data(0),
+      ptrs_cur(0)
     {
-	major = 0;
-	repos_id = 0;
+	_exception._corba.major = CORBA_NO_EXCEPTION;
+	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
-	timeout = L4_Never;
+	timeout = L4_ZeroTime;
 	rcv_fpage = L4_CompleteAddressSpace;
-	malloc = malloc_warning;
-	free = free_warning;
-	user_data = 0;
+	partner = L4_anythread;
 	for (int i=0; i < DICE_PTRS_MAX; i++)
 	    ptrs[i] = 0;
-	ptrs_cur = 0;
     }
 }
 #endif
@@ -77,4 +87,13 @@ namespace dice
 #define random_l4_strdope_t (L4_StringItem_t){ raw: { 0, 0 } }
 #define random_l4_fpage_t L4_Nilpage
 
-#endif // __DICE_L4_V2_H__
+/*
+ * defines some values and macros for the default function
+ */
+
+#define DICE_GET_DWORD(buf, pos)   ((L4_Msg_t*)buf)->msg[pos + 1]
+#define DICE_GET_DWORD_COUNT(buf)  ((L4_Msg_t*)buf)->tag.X.u
+#define DICE_SET_DWORD_COUNT(buf, cnt)     ((L4_Msg_t*)buf)->tag.X.u = cnt
+#define DICE_SET_STRING_COUNT(buf, cnt)    ((L4_Msg_t*)buf)->tag.X.t = cnt
+
+#endif // __DICE_L4_V4_H__

@@ -52,7 +52,7 @@ int main(int argc,char **argv) {
 	int    png_size = (int)&_binary_imagedata_png_size;
 
 	/* init DOpE library */
-	dope_init();
+	if (dope_init()) return -1;
 
 	/* register DOpE-application */
 	app_id = dope_init_app("Backdrop");
@@ -68,10 +68,7 @@ int main(int argc,char **argv) {
 	/* open window */
 	dope_cmd (app_id, "vscr = new VScreen()");
 	dope_cmdf(app_id, "vscr.setmode(%d,%d,\"RGB16\")", png_w, png_h);
-	dope_cmd (app_id, "w = new Window(-content vscr)");
-	dope_cmdf(app_id, "w.set(-workx 0 -worky 0 -workw %d -workh %d)", scr_w, scr_h);
-	dope_cmd (app_id, "w.open()");
-	dope_cmd (app_id, "w.back()");
+	dope_cmdf(app_id, "w = new Window(-content vscr -workx %d)", 2*scr_w);
 	dope_bind(app_id, "vscr", "press", event_callback, NULL);
 
 	/* map vscreen buffer to local address space */
@@ -80,7 +77,10 @@ int main(int argc,char **argv) {
 	if (scr_adr)
 		png_convert_RGB16bit(png_adr, scr_adr, png_size, png_w*png_h*2, png_w);
 
-	/* update vscreen widget */
+	/* open background window and refresh vscreen */
+	dope_cmd (app_id, "w.open()");
+	dope_cmd (app_id, "w.back()");
+	dope_cmdf(app_id, "w.set(-workx 0 -worky 0 -workw %d -workh %d)", scr_w, scr_h);
 	dope_cmd( app_id, "vscr.refresh()" );
 
 	/* enter mainloop */

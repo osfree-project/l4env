@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEUnmarshalFunction.h
- *    \brief   contains the declaration of the class CL4BEUnmarshalFunction
+ *  \brief   contains the declaration of the class CL4BEUnmarshalFunction
  *
  *    \date    02/20/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /**    \class CL4BEUnmarshalFunction
  *    \ingroup backend
- *    \brief the function class for the back-end
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
@@ -42,23 +42,22 @@ class CL4BEUnmarshalFunction : public CBEUnmarshalFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CL4BEUnmarshalFunction();
     virtual ~CL4BEUnmarshalFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CL4BEUnmarshalFunction(CL4BEUnmarshalFunction &src);
 
 public:
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall);
+    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, 
+	bool bCall = false);
 
 protected:
-    virtual bool HasVariableSizedParameters(int nDirection = DIRECTION_IN | DIRECTION_OUT);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
+    virtual bool HasVariableSizedParameters(
+	int nDirection = DIRECTION_IN | DIRECTION_OUT);
 };
 
 #endif // !__DICE_L4BEUNMARSHALFUNCTION_H__

@@ -22,13 +22,15 @@
 
 char LOG_tag[9] = "vcserver";
 
+const int l4thread_max_threads = 100;
+
 // this function is meant to provide private
 // initializations for the terminal server
 int term_server_init(void)
 {
     int ret;
-    
-    myvolume        = VC_SERVER_VOLUME_ID;
+
+    myvolume = VC_SERVER_VOLUME_ID;
 
     // for we are going to handle dope terminals
     // we initialize DOpE here

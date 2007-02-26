@@ -6,9 +6,9 @@
 #include <string.h>
 #include <l4/sys/types.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/elf.h>
 
 #include "memmap.h"
-#include "elf.h"
 #include "lines.h"
 #include "rmgr.h"
 #include "version.h"
@@ -31,6 +31,7 @@ typedef struct
   unsigned short line;
 } __attribute__ ((packed)) stab_line_t;
 
+#if !defined L4BID_RELEASE_MODE
 #ifdef ARCH_x86
 static char *str_field;
 static stab_line_t *lin_field;
@@ -207,12 +208,14 @@ add_section(const stab_entry_t *se, const char *str, unsigned n)
   return 1;
 }
 #endif
+#endif
 
 static void
 extract_lines(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
 	      unsigned sh_offs, unsigned sh_strndx, unsigned task_no,
 	      l4_addr_t *from_lin, l4_addr_t *to_lin)
 {
+#if !defined L4BID_RELEASE_MODE
 #ifdef ARCH_x86
   Elf32_Shdr *sh_sym, *sh_str;
   const char *strtab;
@@ -330,6 +333,7 @@ extract_lines(unsigned elf_image, unsigned sh_num, unsigned sh_entsize,
       return;
     }
 #endif
+#endif
 }
 
 void
@@ -346,7 +350,7 @@ void
 extract_lines_from_mbinfo(l4util_mb_info_t *mbi, unsigned task_no,
 			  l4_addr_t *from_lin, l4_addr_t *to_lin)
 {
-  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)mbi->syms.e.addr;
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)(l4_addr_t)mbi->syms.e.addr;
 
   extract_lines(mbi->syms.e.addr, ehdr->e_shnum, ehdr->e_shentsize,
                 ehdr->e_shoff, ehdr->e_shstrndx, task_no, from_lin, to_lin);

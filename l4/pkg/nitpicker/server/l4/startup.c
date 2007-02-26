@@ -25,7 +25,7 @@ l4_ssize_t l4libc_heapsize = 500*1024;
 
 l4io_info_t *l4io_page = (l4io_info_t*) 0;  /* l4io info page */
 
-int config_use_l4io;
+int config_use_l4io = 1;
 
 int native_startup(int argc, char **argv) {
 

@@ -1,10 +1,11 @@
 /**
- *    \file    dice/src/be/l4/v4/L4V4BEIPC.cpp
- *    \brief    contains the implementation of the class CL4V4BEIPC
+ *  \file    dice/src/be/l4/v4/L4V4BEIPC.cpp
+ *  \brief   contains the implementation of the class CL4V4BEIPC
  *
- *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date    01/08/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -28,7 +29,9 @@
 #include "be/l4/v4/L4V4BEIPC.h"
 #include "be/l4/v4/L4V4BENameFactory.h"
 #include "be/BEContext.h"
+#include "be/BEFile.h"
 #include "be/BEFunction.h"
+#include "Compiler.h"
 
 CL4V4BEIPC::CL4V4BEIPC()
  : CL4BEIPC()
@@ -43,22 +46,19 @@ CL4V4BEIPC::~CL4V4BEIPC()
 /** \brief writes the IPC call invocation
  *  \param pFile the file to write to
  *  \param pFunction the function to call for
- *  \param pContext the context of the write operation
  */
 void
 CL4V4BEIPC::WriteCall(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
+    CBEFunction* pFunction)
 {
-    string sServerID =
-        pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    string sReturn =
-        pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
+        sTimeout = pNF->GetTimeoutServerVariable();
     else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
+        sTimeout = pNF->GetTimeoutClientVariable();
 
     // MsgTag Call(ThreadId to)
     *pFile << "\t" << sReturn << " = L4_Call_Timeouts ( *" << sServerID << ", "
@@ -68,22 +68,19 @@ CL4V4BEIPC::WriteCall(CBEFile* pFile,
 /** \brief writes the IPC receive
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
  */
 void
 CL4V4BEIPC::WriteReceive(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
+    CBEFunction* pFunction)
 {
-    string sServerID =
-        pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    string sReturn =
-        pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
+        sTimeout = pNF->GetTimeoutServerVariable();
     else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
+        sTimeout = pNF->GetTimeoutClientVariable();
 
     // MsgTag Receive(ThreadId from) (timeout: never)
     *pFile << "\t" << sReturn << " = L4_Receive_Timeout (*" << sServerID <<
@@ -95,32 +92,16 @@ CL4V4BEIPC::WriteReceive(CBEFile* pFile,
  *  \param pFunction the function to write for
  *  \param bSendFlexpage true if we send a flexpage
  *  \param bSendShortIPC true if an short IPC is sent
- *  \param pContext the context of the write operation
  */
 void
 CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
-    CBEFunction* pFunction,
-    bool bSendFlexpage,
-    bool bSendShortIPC,
-    CBEContext* pContext)
+    CBEFunction* /*pFunction*/,
+    bool /*bSendFlexpage*/,
+    bool /*bSendShortIPC*/)
 {
-    WriteReplyAndWait(pFile, pFunction, pContext);
-}
-
-/** \brief writes the IPC reply-and-wait
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
- */
-void
-CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
-{
-    string sServerID =
-        pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    string sReturn =
-        pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag ReplyWait(ThreadId to, ThreadId& from) (snd timeout: 0, rcv timeout: never)
     *pFile << "\t" << sReturn << " = L4_ReplyWait (*" << sServerID << ", " <<
@@ -130,12 +111,14 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
 /** \brief writes the IPC send
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
  */
-void CL4V4BEIPC::WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void 
+CL4V4BEIPC::WriteSend(CBEFile* pFile,
+    CBEFunction* /*pFunction*/)
 {
-    string sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    string sReturn = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Send(ThreadId to) (timeout: never)
     *pFile << "\t" << sReturn << " = L4_Send (*" << sServerID << ");\n";
@@ -144,24 +127,52 @@ void CL4V4BEIPC::WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext*
 /** \brief writes the IPC wait
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
  */
 void
 CL4V4BEIPC::WriteWait(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
+    CBEFunction* /*pFunction*/)
 {
-    string sServerID =
-        pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    string sReturn =
-        pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
-    string sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
-    else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Wait(ThreadId to) (timeout: never)
-    *pFile << "\t" << sReturn << " = L4_Wait_Timeout (" << sTimeout << ", " <<
-         sServerID << ");\n";
+    *pFile << "\t" << sReturn << " = L4_Wait (" << sServerID << ");\n";
 }
+
+/** \brief writes a reply
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V4BEIPC::WriteReply(CBEFile* /*pFile*/,
+    CBEFunction* /*pFunction*/)
+{}
+
+/** \brief writes the initialization
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V4BEIPC::WriteInitialization(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
+
+/** \brief writes the assigning of a local name to a communication port
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V4BEIPC::WriteBind(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
+
+/** \brief writes the initialization
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V4BEIPC::WriteCleanup(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
+

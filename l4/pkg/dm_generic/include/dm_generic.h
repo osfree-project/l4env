@@ -245,7 +245,7 @@ l4dm_revoke(const l4dm_dataspace_t * ds,
  *                       - #L4DM_RO     read-only access
  *                       - #L4DM_RW     read/write access
  *                       - #L4DM_RESIZE resize
- *	
+ *
  * \return  0 if caller has the access rights, error code otherwise:
  *          - -#L4_EIPC    IPC error calling dataspace manager
  *          - -#L4_EINVAL  invalid dataspace id
@@ -264,7 +264,7 @@ l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights);
  * 
  * \param   ds           Dataspace descriptor
  * \param   new_owner    New dataspace owner
- *	
+ *
  * \return  0 on success (set owner to \a new_owner), error code otherwise:
  *          - -#L4_EIPC   IPC error calling dataspace manager
  *          - -#L4_EINVAL Invalid dataspace descriptor
@@ -288,7 +288,7 @@ l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner);
  *                                           memory
  * \param   name         Copy name
  * \retval  copy         Copy dataspace id
- *	
+ *
  * \return  0 on success (\a copy contains the id of the created copy),
  *          error code otherwise:
  *          - -#L4_EIPC       IPC error calling dataspace manager
@@ -321,7 +321,7 @@ l4dm_copy(const l4dm_dataspace_t * ds, l4_uint32_t flags, const char * name,
  *                                           memory
  * \param   name         Copy name
  * \retval  copy         Dataspace id of copy
- *	
+ *
  * \return  0 on success, error code otherwise:
  *          - -#L4_EIPC       IPC error calling dataspace manager
  *          - -#L4_EINVAL     Invalid source dataspace id
@@ -347,7 +347,7 @@ l4dm_copy_long(const l4dm_dataspace_t * ds, l4_offs_t src_offs,
  * 
  * \param   ds           Dataspace id
  * \param   name         Dataspace name
- *	
+ *
  * \return  0 on success, error code otherwise:
  *          - -#L4_EINVAL  invalid dataspace id
  *          - -#L4_EPERM   caller is not the owner of the dataspace
@@ -364,7 +364,7 @@ l4dm_ds_set_name(const l4dm_dataspace_t * ds, const char * name);
  * 
  * \param   ds           Dataspace id
  * \retval  name         Dataspace name
- *	
+ *
  * \return  0 on success, error code otherwise:
  *          - -#L4_EINVAL  invalid dataspace id
  *          - -#L4_EIPC    IPC error calling dataspace manager 
@@ -388,7 +388,7 @@ l4dm_ds_show(const l4dm_dataspace_t * ds);
 /**
  * \brief   List dataspaces on debugging console
  * \ingroup api_debug
- * 
+ *
  * \param   dsm_id       Dataspace manager id, set to #L4DM_DEFAULT_DSM 
  *                       to use default dataspace manager provided by the
  *                       L4 environment
@@ -396,7 +396,7 @@ l4dm_ds_show(const l4dm_dataspace_t * ds);
  *                       all dataspaces
  * \param   flags        Flags:
  *                       - #L4DM_SAME_TASK  list dataspaces owned by task
- *	
+ *
  * \return  0 on success, error code otherwise:
  *          - -#L4_EIPC IPC error calling dataspace manager
  */
@@ -408,11 +408,11 @@ l4dm_ds_list(l4_threadid_t dsm_id, l4_threadid_t owner, l4_uint32_t flags);
 /**
  * \brief   List all dataspaces on debugging console
  * \ingroup api_debug
- * 
+ *
  * \param   dsm_id       Dataspace manager id, set to #L4DM_DEFAULT_DSM 
  *                       to use default dataspace manager provided by the
  *                       L4 environment
- *	
+ *
  * \return  0 on success, error code otherwise:
  *          - -#L4_EIPC IPC error calling dataspace manager
  */

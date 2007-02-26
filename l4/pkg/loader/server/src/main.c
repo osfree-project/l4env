@@ -60,8 +60,11 @@ main(int argc, const char **argv)
 	}
       return 1;
     }
-  if (  (error = exec_if_init())
-      ||(error = dm_if_init())
+  if (  
+#ifndef USE_LDSO
+        (error = exec_if_init()) ||
+#endif
+        (error = dm_if_init())
       ||(error = cfg_init())
       ||(error = start_app_pager()))
     return error;

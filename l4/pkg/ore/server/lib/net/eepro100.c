@@ -59,12 +59,8 @@ static int rxdmacount /* = 0 */;
    Lower values use more memory, but are faster. */
 static int rx_copybreak = 200;
 
-#ifndef __ORE__
 /* Maximum events (Rx packets, etc.) to handle at each interrupt. */
 static int max_interrupt_work = 20;
-#else
-static int max_interrupt_work = 20; // TODO: set to receive buffer size
-#endif
 
 /* Maximum number of multicast addresses to filter (vs. rx-all-multicast) */
 static int multicast_filter_limit = 64;

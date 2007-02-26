@@ -83,9 +83,9 @@ __filter_connect(dsi_component_t * comp, dsi_socket_ref_t * remote)
 			   (dsi_example_filter_socket_t *)&comp->socketref,
 			   (dsi_example_filter_socket_t *)remote,
 			   &env); 
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("connect failed (ret %d, exc %d)",ret,env.major);
+      Panic("connect failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
   
@@ -155,9 +155,9 @@ filter_open(l4dm_dataspace_t rcv_ctrl_ds, l4dm_dataspace_t rcv_data_ds,
 			  (dsi_example_filter_dataspace_t *)snd_ctrl_ds,
 			  (dsi_example_filter_dataspace_t *)snd_data_ds,
 			  &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("open socket failed (ret %d, exc %d)",ret,env.major);
+      Panic("open socket failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
   

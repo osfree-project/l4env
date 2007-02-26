@@ -1,7 +1,7 @@
 PKGDIR	?= ../..
 L4DIR	?= $(PKGDIR)/../..
 
-EXPECTED_OUT = ../expected.txt
+EXPECTED_OUT = $(SRC_DIR)/expected.txt
 
 # our "local" testapplication
 TEST_SERVER	= dice_hello_server

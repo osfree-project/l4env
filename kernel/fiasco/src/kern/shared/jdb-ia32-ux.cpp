@@ -1,14 +1,12 @@
-INTERFACE[ia32,ux]:
+INTERFACE[ia32,amd64,ux]:
 
 #include "jdb_core.h"
 #include "jdb_handler_queue.h"
+#include "jdb_entry_frame.h"
 #include "trap_state.h"
 
 class Space;
 class Thread;
-
-class Jdb_entry_frame : public Trap_state
-{};
 
 EXTENSION class Jdb : public Jdb_core
 {
@@ -36,7 +34,7 @@ private:
 };
 
 
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,amd64,ux]:
 
 #include "config.h"
 #include "div32.h"
@@ -61,6 +59,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
   switch (c)
     {
     case KEY_CURSOR_LEFT:
+    case 'h':
       if (addx)
 	{
 	  if (*addx > 0)
@@ -81,6 +80,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	return 0;
       break;
     case KEY_CURSOR_RIGHT:
+    case 'l':
       if (addx)
 	{   
 	  if (*addx < cols - 1)
@@ -101,6 +101,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	return 0;
       break;
     case KEY_CURSOR_UP:
+    case 'k':
       if (*addy > 0)
 	(*addy)--;
       else if (*absy > 0)
@@ -110,6 +111,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	}
       break;
     case KEY_CURSOR_DOWN:
+    case 'j':
       if (*addy < lines-1)
 	(*addy)++;
       else if (*absy < max_absy)
@@ -119,6 +121,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	}
       break;
     case KEY_CURSOR_HOME:
+    case 'H':
       *addy = 0;
       if (addx)
 	*addx = 0;
@@ -129,6 +132,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	}
       break;
     case KEY_CURSOR_END:
+    case 'L':
       *addy = lines-1;
       if (addx)
 	*addx = cols - 1;
@@ -139,6 +143,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	}
       break;
     case KEY_PAGE_UP:
+    case 'K':
       if (*absy >= lines)
 	{
 	  *absy -= lines;
@@ -158,6 +163,7 @@ Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
 	}
       break;
     case KEY_PAGE_DOWN:
+    case 'J':
       if (*absy+lines-1 < max_absy)
 	{
 	  *absy += lines;
@@ -466,7 +472,7 @@ Jdb::execute_command_ni(Unsigned8 const *str, int len=0)
   Thread *t = get_thread();
 
   Push_console::push(str, len, t == reinterpret_cast<Thread*>(Mem_layout::Tcbs)
-			       ? 0 : t->space());
+			       ? 0 : t->mem_space());
 
   // prevent output of sequences
   Kconsole::console()->change_state(0, 0, ~Console::OUTENABLED, 0);
@@ -501,57 +507,33 @@ Jdb::execute_command_ni(Unsigned8 const *str, int len=0)
 
 
 PUBLIC static inline
+int
+Jdb::peek_mword_task(Address virt, Task_num task, Mword *result)
+{
+  return (peek_task(virt & ~(sizeof(Mword)-1), task, result,
+	            sizeof(Mword)));
+}
+
+PUBLIC static inline
+int
+Jdb::peek_addr_task(Address virt, Task_num task, Address *result)
+{
+  return (peek_task(virt & ~(sizeof(Address)-1), task, result, 
+	            sizeof(Address)));
+}
+
+PUBLIC static inline
+int
+Jdb::poke_mword_task(Address virt, Task_num task, Mword value)
+{
+  return poke_task(virt & ~(sizeof(Mword)-1), task, value, sizeof(Mword));
+}
+
+
+PUBLIC static inline
 Jdb_entry_frame*
 Jdb::get_entry_frame()
 {
   return entry_frame;
 }
 
-
-PUBLIC inline
-Address_type
-Jdb_entry_frame::from_user()
-{
-  return cs & 3 ? ADDR_USER : ADDR_KERNEL;
-}
-
-PUBLIC inline
-Address
-Jdb_entry_frame::get_ksp()
-{
-  return (Address)&esp;
-}
-
-PUBLIC inline
-Address
-Jdb_entry_frame::_get_esp()
-{
-  return from_user() ? esp : get_ksp();
-}
-
-PUBLIC inline
-Mword
-Jdb_entry_frame::param()
-{
-  return eax;
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[ia32]:
-
-PUBLIC inline NEEDS["cpu.h"]
-Mword
-Jdb_entry_frame::_get_ss()
-{
-  return from_user() ? ss : Cpu::get_ss();
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[ux]:
-
-PUBLIC
-Mword
-Jdb_entry_frame::_get_ss()
-{
-  return ss;
-}

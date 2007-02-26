@@ -1,11 +1,12 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BEMarshaller.h
- *    \brief    contains the declaration of the class CL4V4BEMarshaller
+ *    \brief   contains the declaration of the class CL4V4BEMarshaller
  *
- *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2004
+ *    \date    06/01/2006
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2006
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,26 +27,33 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef L4V4BEO1MARSHALLER_H
-#define L4V4BEO1MARSHALLER_H
+#ifndef L4V4BEMARSHALLER_H
+#define L4V4BEMARSHALLER_H
 
 #include <be/l4/L4BEMarshaller.h>
 
 /** \class CL4V4BEMarshaller
  *  \ingroup backend
- *  \brief V4 specific marshalling routines
+ *  \brief contains the marshalling code
  */
 class CL4V4BEMarshaller : public CL4BEMarshaller
 {
-
 public:
-    /** creates an instance of this class */
+    /** constructor */
     CL4V4BEMarshaller();
     virtual ~CL4V4BEMarshaller();
 
 protected:
-    void WriteAssignment(CBEType *pType, int nStartOffset, bool& bUseConstOffset, int nAlignment, CBEContext *pContext);
-    int MarshalValue(int nBytes, int nValue, int nStartOffset, bool & bUseConstOffset, bool bIncOffsetVariable, CBEContext * pContext);
+    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+	CBETypedDeclarator *pParameter, int nDirection);
+    virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual void WriteRefstringCastMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember);
+
+protected:
+    virtual bool MarshalZeroFlexpage(CBETypedDeclarator *pMember);
+    
 };
 
 #endif

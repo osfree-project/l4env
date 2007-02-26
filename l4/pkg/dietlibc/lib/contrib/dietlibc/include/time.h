@@ -19,7 +19,8 @@ int __isleap(int year);
 
 int clock_settime(clockid_t clock_id,const struct timespec*tp);
 int clock_gettime(clockid_t clock_id,struct timespec*tp);
-int clock_getres (clockid_t clock_id,struct timespec*res);
+int clock_getres(clockid_t clock_id,struct timespec*res);
+int clock_nanosleep(clockid_t clock_id, int flags,const struct timespec *rqtp, struct timespec *rmtp);
 
 #define TIMER_ABSTIME            1
 
@@ -38,12 +39,12 @@ char *asctime_r(const struct tm *timeptr, char *buf) __THROW;
 
 char *ctime(const time_t *timep) __THROW;
 
-size_t strftime(char *s, size_t max, const char *format, const struct tm *tm) __THROW __attribute__((format(strftime,3,0)));
+size_t strftime(char *s, size_t max, const char *format, const struct tm *tm) __THROW __attribute__((__format__(__strftime__,3,0)));
 time_t time(time_t *t) __THROW;
 
 int stime(time_t *t) __THROW;
 
-double difftime(time_t time1, time_t time0) __THROW __attribute__((const));
+double difftime(time_t time1, time_t time0) __THROW __attribute__((__const__));
 
 #define CLOCKS_PER_SEC 1000000l
 

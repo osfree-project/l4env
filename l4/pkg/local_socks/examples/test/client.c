@@ -1,3 +1,19 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   local_socks/examples/test/client.c
+ * \brief  Testcase; client.
+ *
+ * \date   30/08/2004
+ * \author Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2006 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* *** GENERAL INCLUDES *** */
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,8 +68,8 @@ static void client(void *p) {
   /* send a lot of data to server process */
   LOG("Sending some data to server to benchmark throughput ...");
   gettimeofday(&tv0, NULL);
-  for (i = 0; i < 2000; i++) {
-    ret = write(fd, msg_big, 1016);
+  for (i = 0; i < 500; i++) {
+    ret = write(fd, msg_big, 4096);
     //LOG("write(): %d; errno=%d: %s", ret, errno, strerror(errno));  
     if (ret <= 0)
       break;
@@ -65,7 +81,7 @@ static void client(void *p) {
   LOG("shutdown(): %d; errno=%d: %s", ret, errno, strerror(errno));  
 #endif
 
-#if 0
+#if 1
   ret = fcntl(fd, F_SETFL, O_NDELAY);
   LOG("fcntl(): %d; errno=%d: %s", ret, errno, strerror(errno));  
   ret = fcntl(fd, F_GETFL);

@@ -19,7 +19,7 @@ struct buffer
 {
   struct l4util_buffer_head head;
   struct buffer *next, *prev;
-  l4_uint32_t d1, d2;		/* must come last - just before the
+  l4_umword_t d1, d2;		/* must come last - just before the
 				   string buffer */
 };
 

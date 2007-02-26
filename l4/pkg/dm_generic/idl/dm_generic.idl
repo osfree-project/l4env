@@ -106,6 +106,10 @@ library if_l4dm
        *	
        * \return  0 on success, error code otherwise:
        *          - -#L4_EPERM  permission denied
+       *          - -#L4_EINVAL an invalid client id was given
+       *
+       * This function is internal and should only be called by Dataspace
+       * Manager internal threads.
        */
       /***********************************************************************/ 
       long close_all([in] l4_threadid_t client, 
@@ -249,7 +253,7 @@ library if_l4dm
        */
       /***********************************************************************/ 
       long get_name([in] unsigned long ds_id, 
-	            [out, string, prealloc] char ** name);
+	            [out, string, prealloc_client] char ** name);
 
       /***********************************************************************/
       /**

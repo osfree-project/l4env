@@ -6,6 +6,8 @@
 #include "boot_cpu.h"
 #include "boot_paging.h"
 #include "mem_layout.h"
+#include "panic.h"
+#include "regdefs.h"
 
 enum
 {
@@ -37,11 +39,6 @@ enum
   INTEL_PDE_AVAIL	= 0x00000e00,
   INTEL_PDE_PFN		= 0xfffff000,
   CPUF_4MB_PAGES	= 0x00000008,
-  
-  CR0_PG		= 0x80000000,
-  CR4_PSE		= 0x00000010,
-  EFL_AC		= 0x00040000,
-  EFL_ID		= 0x00200000,
 
   BASE_TSS		= 0x08,
   KERNEL_CS		= 0x10,
@@ -59,9 +56,8 @@ enum
   SZ_G			= 0x8,
 
   GDTSZ			= (0x28/8),
-  IDTSZ			= 256,
+  IDTSZ			= 0x14,
 };
-
 
 struct pseudo_descriptor
 {
@@ -175,13 +171,13 @@ extern inline Unsigned16 get_ss()
 { Unsigned16 ss; asm volatile("movw %%ss,%w0" : "=r" (ss)); return ss; }
 
 #define set_idt(pseudo_desc) \
- asm volatile("lidt %0" : : "m" ((pseudo_desc)->limit))
+ asm volatile("lidt %0" : : "m"((pseudo_desc)->limit), "m"(*pseudo_desc))
 
 #define set_gdt(pseudo_desc) \
- asm volatile("lgdt %0" : : "m" ((pseudo_desc)->limit))
+ asm volatile("lgdt %0" : : "m"((pseudo_desc)->limit), "m"(*pseudo_desc))
 
 #define	set_tr(seg) \
- asm volatile("ltr %0" : : "rm" ((Unsigned16)(seg)))
+ asm volatile("ltr %0" : : "rm"((Unsigned16)(seg)))
 
 #define get_esp() \
  ({ register Unsigned32 _temp__; \
@@ -190,6 +186,10 @@ extern inline Unsigned16 get_ss()
 #define	get_cr0() \
  ({ register Unsigned32 _temp__; \
     asm volatile("mov %%cr0, %0" : "=r" (_temp__)); _temp__; })
+
+#define	get_cr2() \
+ ({ register Unsigned32 _temp__; \
+    asm volatile("mov %%cr2, %0" : "=r" (_temp__)); _temp__; })
 
 #define	set_cr3(value) \
  ({ register Unsigned32 _temp__ = (value); \
@@ -243,24 +243,17 @@ paging_enable(Address pdir)
 }
 
 static void
-panic(const char *str)
-{
-  printf("\n%s\n", str);
-  _exit(-1);
-}
-
-static void
 cpuid()
 {
   int orig_eflags = get_eflags();
 
   /* Check for a dumb old 386 by trying to toggle the AC flag.  */
-  set_eflags(orig_eflags ^ EFL_AC);
-  if ((get_eflags() ^ orig_eflags) & EFL_AC)
+  set_eflags(orig_eflags ^ EFLAGS_AC);
+  if ((get_eflags() ^ orig_eflags) & EFLAGS_AC)
     {
       /* It's a 486 or better.  Now try toggling the ID flag.  */
-      set_eflags(orig_eflags ^ EFL_ID);
-      if ((get_eflags() ^ orig_eflags) & EFL_ID)
+      set_eflags(orig_eflags ^ EFLAGS_ID);
+      if ((get_eflags() ^ orig_eflags) & EFLAGS_ID)
 	{
 	  int highest_val, dummy;
 	  asm volatile("cpuid" 
@@ -403,8 +396,6 @@ static void
 pdir_map_range(Address pdir_pa, Address la, Address pa,
 	       Unsigned32 size, Unsigned32 mapping_bits)
 {
-  assert(la+size-1 > la); // avoid 4GB wrap around
-
   while (size > 0)
     {
       Address *pde = pdir_find_pde(pdir_pa, la);
@@ -467,16 +458,13 @@ base_paging_init(Unsigned32 phys_mem_max)
 {
   Address size_kmem = 0 - Mem_layout::Physmem;
   Address phys_kmem = phys_mem_max > size_kmem ? phys_mem_max - size_kmem : 0;
-  extern char _end;
 
-  // we assume that we only have to map the first 4MB page ...
-  if ((Address)&_end - Mem_layout::Kernel_image > 4<<20)
-    panic("Fiasco boot system occupies more than 4MB");
-
+  // We assume that we only have to map the first 4MB page. This has
+  // to be checked before base_paging_init was called.
   ptab_alloc(&base_pdir_pa);
 
-  // Establish one-to-one mappings for the physical memory
-  pdir_map_range(base_pdir_pa, 0, 0, phys_mem_max,
+  // Establish one-to-one mapping for the first 4MB of physical memory
+  pdir_map_range(base_pdir_pa, /*virt*/0, /*phys*/0, /*size*/4 << 20,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
   // Enable superpage support if we have it
@@ -489,15 +477,23 @@ base_paging_init(Unsigned32 phys_mem_max)
   paging_enable(base_pdir_pa);
 
   // map in the first 4MB of physical memory to 0xf0000000
-  pdir_map_range(base_pdir_pa, Mem_layout::Boot_state_start, 0,
-		 Mem_layout::Boot_state_end - Mem_layout::Boot_state_start,
+  pdir_map_range(base_pdir_pa, /*virt*/Mem_layout::Boot_state_start, /*phys*/0,
+		 /*size*/Mem_layout::Boot_state_end -
+			 Mem_layout::Boot_state_start,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
-  // map in the last 64MB of physical memory to 0xfc000000
-  pdir_map_range(base_pdir_pa, Mem_layout::Physmem, phys_kmem, 
-		 0 - Mem_layout::Physmem,
+  // map in the last 60MB of physical memory to 0xfc400000
+  pdir_map_range(base_pdir_pa, /*virt*/Mem_layout::Physmem, /*phys*/phys_kmem,
+		 /*size*/size_kmem,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 }
+
+static char const * const base_regs =
+  "\n"
+  "EAX %08x EBX %08x ECX %08x EDX %08x\n"
+  "ESI %08x EDI %08x EBP %08x ESP %08x\n"
+  "EIP %08x EFLAGS %08x\n"
+  "CS %04x SS %04x DS %04x ES %04x FS %04x GS %04x\n";
 
 extern "C" FIASCO_FASTCALL
 void
@@ -505,38 +501,26 @@ trap_dump_panic(const struct trap_state *st)
 {
   int from_user = (st->cs & 3);
   int i;
-  
-  printf("EAX %08x EBX %08x ECX %08x EDX %08x\n",
-      st->eax, st->ebx, st->ecx, st->edx);
-  printf("ESI %08x EDI %08x EBP %08x ESP %08x\n",
-      st->esi, st->edi, st->ebp,
-      from_user ? st->esp : (Unsigned32)&st->esp);
-  printf("EIP %08x EFLAGS %08x\n", st->eip, st->eflags);
-  printf("CS %04x SS %04x DS %04x ES %04x FS %04x GS %04x\n",
-      st->cs & 0xffff, from_user ? st->ss & 0xffff : get_ss(),
-      st->ds & 0xffff, st->es & 0xffff,
-      st->fs & 0xffff, st->gs & 0xffff);
+
+  printf(base_regs,
+         st->eax, st->ebx, st->ecx, st->edx,
+       	 st->esi, st->edi, st->ebp, from_user ? st->esp : (Unsigned32)&st->esp,
+	 st->eip, st->eflags,
+	 st->cs & 0xffff, from_user ? st->ss & 0xffff : get_ss(),
+	 st->ds & 0xffff, st->es & 0xffff, st->fs & 0xffff, st->gs & 0xffff);
   printf("trapno %d, error %08x, from %s mode\n",
-      st->trapno, st->err, from_user ? "user" : "kernel");
+         st->trapno, st->err, from_user ? "user" : "kernel");
   if (st->trapno == 0x0d)
     {
-      if (st->err & 1)
-	printf("(external event");
-      else
-	printf("(internal event");
+      printf("(%sternal event regarding ", st->err & 1 ? "ex" : "in");
       if (st->err & 2)
-	{
-	  printf(" regarding IDT gate descriptor no. 0x%02x)\n",
-	      st->err >> 3);
-	}
+	printf("IDT gate descriptor");
       else
-	{
-	  printf(" regarding %s entry no. 0x%02x)\n",
-	      st->err & 4 ? "LDT" : "GDT", st->err >> 3);
-	}
+	printf("%cDT entry", st->err & 4 ? 'L' : 'G');
+      printf(" no. 0x%02x)\n", st->err >> 3);
     }
   else if (st->trapno == 0x0e)
-    printf("page fault linear address %08x\n", st->cr2);
+    printf("page fault linear address %08x\n", get_cr2());
 
   if (!from_user)
     {
@@ -549,11 +533,7 @@ trap_dump_panic(const struct trap_state *st)
 static void
 handle_dbf()
 {
-  printf("\n"
-         "EAX %08x EBX %08x ECX %08x EDX %08x\n"
-	 "ESI %08x EDI %08x EBP %08x ESP %08x\n"
-	 "EIP %08x EFLAGS %08x\n"
-	 "CS %04x SS %04x DS %04x ES %04x FS %04x GS %04x\n\n",
+  printf(base_regs,
 	 base_tss.eax, base_tss.ebx, base_tss.ecx, base_tss.edx,
 	 base_tss.esi, base_tss.edi, base_tss.ebp, base_tss.esp,
 	 base_tss.eip, base_tss.eflags,

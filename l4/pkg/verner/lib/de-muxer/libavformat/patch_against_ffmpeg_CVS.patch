@@ -1,0 +1,71 @@
+--- Makefile	2006-04-13 13:56:32.200254524 +0200
++++ Makefile	2006-04-13 13:32:21.299986546 +0200
+@@ -2,9 +2,9 @@
+ # libavformat Makefile
+ # (c) 2000-2003 Fabrice Bellard
+ #
+-include ../config.mak
++include ../../video/libavcodec/config.mak
+ 
+-CFLAGS=$(OPTFLAGS) -I.. -I$(SRC_PATH) -I$(SRC_PATH)/libavutil -I$(SRC_PATH)/libavcodec -DHAVE_AV_CONFIG_H -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
++CFLAGS=$(OPTFLAGS) -I$(PKGDIR_OBJ)/config -I../../support/libavutil -I../../video/libavcodec $(LIBCINCDIR_x86_tiny) -DHAVE_AV_CONFIG_H -D_GNU_SOURCE -Wall -Wno-switch
+ 
+ OBJS= utils.o cutils.o os_support.o allformats.o
+ CPPOBJS=
+@@ -97,4 +97,4 @@
+ LIBMAJOR=$(LAVFMAJOR)
+ endif
+ 
+-include $(SRC_PATH)/common.mak
++include ../../video/libavcodec/common.mak
+--- rm.c	2006-04-13 13:55:46.911190923 +0200
++++ rm.c	2006-04-13 13:55:09.490964430 +0200
+@@ -780,7 +780,7 @@
+ /* multiple of 20 bytes for ra144 (ugly) */
+ #define RAW_PACKET_SIZE 1000
+ 
+-static int sync(AVFormatContext *s, int64_t *timestamp, int *flags, int *stream_index, int64_t *pos){
++static int rm_sync(AVFormatContext *s, int64_t *timestamp, int *flags, int *stream_index, int64_t *pos){
+     RMContext *rm = s->priv_data;
+     ByteIOContext *pb = &s->pb;
+     int len, num, res, i;
+@@ -885,7 +885,7 @@
+     } else {
+         int seq=1;
+ resync:
+-        len=sync(s, &timestamp, &flags, &i, &pos);
++        len=rm_sync(s, &timestamp, &flags, &i, &pos);
+         if(len<0)
+             return AVERROR_IO;
+         st = s->streams[i];
+@@ -1040,7 +1040,7 @@
+         int seq=1;
+         AVStream *st;
+ 
+-        len=sync(s, &dts, &flags, &stream_index2, &pos);
++        len=rm_sync(s, &dts, &flags, &stream_index2, &pos);
+         if(len<0)
+             return AV_NOPTS_VALUE;
+ 
+--- mp3.c	2006-04-13 14:17:18.563500668 +0200
++++ mp3.c	2006-04-13 14:17:35.067164378 +0200
+@@ -18,6 +18,8 @@
+  */
+ #include "avformat.h"
+ 
++#include <strings.h>
++
+ #define ID3_HEADER_SIZE 10
+ #define ID3_TAG_SIZE 128
+ 
+--- utils.c	2006-04-13 14:15:48.615332565 +0200
++++ utils.c	2006-04-13 14:16:06.131975949 +0200
+@@ -18,6 +18,8 @@
+  */
+ #include "avformat.h"
+ 
++#include <strings.h>
++
+ #undef NDEBUG
+ #include <assert.h>
+ 

@@ -56,16 +56,14 @@ entry_vec0a_invalid_tss:
 
 	.globl	entry_vec08_dbf
 entry_vec08_dbf:
-	cmpb	$0,CPU_LBR
-	je	thread_handle_double_fault
-	/* disable last branch recording to ensure that the code of the
-	 * fault handler does not flush the LBR buffer */
+	testl	$0xffffffff,CPU_DEBUGCTL_BUSY
+	jnz	thread_handle_double_fault
 	pushl	%eax
 	pushl	%ecx
 	pushl	%edx
+	movl	CPU_DEBUGCTL_RESET, %eax
+	xorl	%edx, %edx
 	movl	$0x1d9,%ecx
-	rdmsr
-	andl	$0xfffffffe,%eax
 	wrmsr
 	popl	%edx
 	popl	%ecx
@@ -125,9 +123,7 @@ entry_vec3f_apic_spurious_interrupt:
 #if defined(CONFIG_JDB)
 
 	.p2align(4)
-	.global entry_sysenter_log
 	.global entry_sys_fast_ipc_log
-entry_sysenter_log:
 entry_sys_fast_ipc_log:
 	pop	%esp
 	pushl	$(GDT_DATA_USER|SEL_PL_U) /* user ss */
@@ -170,11 +166,38 @@ entry_sys_fast_ipc_log:
 
 	ESP_TO_TCB_AT %ebx
 	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	testl	$Thread_alien, OFS__THREAD__STATE (%ebx)
+	jnz	alien_sys_fast_ipc_log
 	RESET_THREAD_CANCEL_AT %ebx
-
 	call	*syscall_table
 in_slow_ipc5:
 	DO_SYSEXIT
+
+alien_sys_fast_ipc_log:
+	btrl	$17, OFS__THREAD__STATE (%ebx)	/* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	popl	%eax
+	sub	$6,(%esp)
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF, 8(%esp)
+	sub	$16,12(%esp)
+	pushl	$(0x30 << 3 | 2)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
+
+1:	/* do alien IPC and raise a trap afterwards */
+	RESET_THREAD_CANCEL_AT %ebx
+	call    *syscall_table
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF, 8(%esp)
+	pushl	$(0x30 << 3 | 6)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
 
 	.globl	in_slow_ipc5
 
@@ -183,9 +206,7 @@ in_slow_ipc5:
 
 #if (defined (CONFIG_JDB_LOGGING) || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT))
 	.p2align(4)
-	.global entry_sysenter_c
 	.global entry_sys_fast_ipc_c
-entry_sysenter_c:
 entry_sys_fast_ipc_c:
 	pop	%esp
 	pushl	$(GDT_DATA_USER|SEL_PL_U)	/* user ss */
@@ -222,19 +243,46 @@ entry_sys_fast_ipc_c:
 	pushl	%esi
 	pushl	%edx
 	pushl	12(%ecx)			/* save ecx */
-
 	leal	16(%ecx), %edx			/* adapt user esp */
 	movl	%edx,40(%esp)			/* store user esp */
-
 	ESP_TO_TCB_AT %ebx
 	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	testl	$Thread_alien, OFS__THREAD__STATE (%ebx)
+	jnz	alien_sys_fast_ipc_c
 	RESET_THREAD_CANCEL_AT %ebx
 	call    ipc_short_cut_wrapper
 in_sc_ipc2:
 	DO_SYSEXIT
+#endif
+
+	.globl alien_sys_fast_ipc_c /* Also used in shortcut */
+alien_sys_fast_ipc_c:
+	btrl	$17, OFS__THREAD__STATE (%ebx)	/* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	popl	%eax
+	sub	$6,(%esp)
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF,8(%esp)
+	sub	$16,12(%esp)
+	pushl	$(0x30 << 3 | 2)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
+
+1:	/* do alien IPC and raise a trap afterwards */
+	RESET_THREAD_CANCEL_AT %ebx
+	call    ipc_short_cut_wrapper
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF, 8(%esp)
+	pushl	$(0x30 << 3 | 6)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
 
 	.globl	in_sc_ipc2
-#endif
 
 
 	.p2align(4)

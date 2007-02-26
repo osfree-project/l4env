@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEExceptionAttribute.h
- *    \brief   contains the declaration of the class CFEExceptionAttribute
+ *  \file    dice/src/fe/FEExceptionAttribute.h
+ *  \brief   contains the declaration of the class CFEExceptionAttribute
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,14 +31,14 @@
 #define __DICE_FE_FEEXCEPTIONATTRIBUTE_H__
 
 #include "fe/FEAttribute.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFEIdentifier;
 
 /** \class CFEExceptionAttribute
- *    \ingroup frontend
- *    \brief represents an exception attribute
+ *  \ingroup frontend
+ *  \brief represents an exception attribute
  *
  * This class is used to represent an exception attribute in the IDL.
  */
@@ -48,30 +48,31 @@ class CFEExceptionAttribute : public CFEAttribute
 // standard constructor/destructor
 public:
     /** constructs an exception attribute
-     *    \param pExcepNames the names of the exceptions
+     *  \param pExcepNames the names of the exceptions
      */
     CFEExceptionAttribute(vector<CFEIdentifier*> *pExcepNames);
     virtual ~CFEExceptionAttribute();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEExceptionAttribute(CFEExceptionAttribute &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual CFEIdentifier* GetNextExceptionName(vector<CFEIdentifier*>::iterator &iter);
-    virtual vector<CFEIdentifier*>::iterator GetFirstExceptionName();
-    virtual CObject* Clone();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEExceptionAttribute(*this); }
 
 // attributes
-protected:
-    /**    \var vector<CFEIdentifier*> m_vExcepNames
-     *    \brief contais all the exception's names
+public:
+    /** \var CCollection<CFEIdentifier> m_ExceptionNames
+     *  \brief contais all the exception's names
      */
-    vector<CFEIdentifier*> m_vExcepNames;
+    CCollection<CFEIdentifier> m_ExceptionNames;
 };
 
 #endif /* __DICE_FE_FEEXCEPTIONATTRIBUTE_H__ */

@@ -126,7 +126,7 @@ int dir_add_child_dir(obj_t * parent, const char * name)
     map_insert_dir(child);
 
     LOGd(_DEBUG, "add child !");
-    
+
     return 0;  // everything is ok
 }
 
@@ -167,7 +167,7 @@ int dir_add_child_file(obj_t * parent, const char * name, object_id_t oid)
     parent->spec.dir.first_child = child;
 
     LOGd(_DEBUG, "add child !");
-    
+
     return 0;  // everything is ok
 }
 /* Find a named child for a given dir.
@@ -234,7 +234,7 @@ int check_dir_name(obj_t * parent, const char * name)
 
     // check for reserved names
     if (strlen(name) == 1)
-    {        
+    {
         /*
         // this should be found by above check
         if (name[0] == L4VFS_PATH_SEPARATOR)
@@ -244,7 +244,7 @@ int check_dir_name(obj_t * parent, const char * name)
             return 2; // "."
     }
     if (strlen(name) == 2)
-    {        
+    {
         if (strcmp(name, L4VFS_PATH_PARENT) == 0)
             return 2; // ".."
     }

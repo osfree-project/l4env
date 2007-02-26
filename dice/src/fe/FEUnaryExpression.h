@@ -88,9 +88,8 @@ protected:
 
 // Operators
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CObject* Clone();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual EXPT_OPERATOR GetOperator();
 

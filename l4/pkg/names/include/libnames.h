@@ -19,7 +19,7 @@
 /*!\brief Maximum length of a string to register with names */
 #define NAMES_MAX_NAME_LEN	32
 /*!\brief Maximum number of entries the nameserver handles */
-#define NAMES_MAX_ENTRIES	256
+#define NAMES_MAX_ENTRIES	512
 
 #ifdef __cplusplus
 extern "C" {

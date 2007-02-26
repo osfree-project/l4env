@@ -17,6 +17,9 @@ all::
 
 drops:
 	$(MAKE) -f Makefile.drops
+
+debian-pkg:
+	dpkg-buildpackage -rfakeroot -uc -us -b
 	
 endif
 

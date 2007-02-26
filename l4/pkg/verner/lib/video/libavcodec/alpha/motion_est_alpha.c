@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 #include "asm.h"
@@ -30,7 +30,7 @@ void get_pixels_mvi(DCTELEM *restrict block,
 
         p = ldq(pixels);
         stq(unpkbw(p),       block);
-        stq(unpkbw(p >> 32), block + 4); 
+        stq(unpkbw(p >> 32), block + 4);
 
         pixels += line_size;
         block += 8;
@@ -84,10 +84,9 @@ static inline uint64_t avg4(uint64_t l1, uint64_t l2, uint64_t l3, uint64_t l4)
     return r1 + r2;
 }
 
-int pix_abs8x8_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
+int pix_abs8x8_mvi(void *v, uint8_t *pix1, uint8_t *pix2, int line_size, int h)
 {
     int result = 0;
-    int h = 8;
 
     if ((size_t) pix2 & 0x7) {
         /* works only when pix2 is actually unaligned */
@@ -117,7 +116,7 @@ int pix_abs8x8_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
     return result;
 }
 
-#if 0				/* now done in assembly */
+#if 0                           /* now done in assembly */
 int pix_abs16x16_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
 {
     int result = 0;
@@ -160,10 +159,9 @@ int pix_abs16x16_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
 }
 #endif
 
-int pix_abs16x16_x2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
+int pix_abs16x16_x2_mvi(void *v, uint8_t *pix1, uint8_t *pix2, int line_size, int h)
 {
     int result = 0;
-    int h = 16;
     uint64_t disalign = (size_t) pix2 & 0x7;
 
     switch (disalign) {
@@ -189,7 +187,7 @@ int pix_abs16x16_x2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
         /* |.......l|lllllllr|rrrrrrr*|
            This case is special because disalign1 would be 8, which
            gets treated as 0 by extqh.  At least it is a bit faster
-           that way :)  */   
+           that way :)  */
         do {
             uint64_t p1_l, p1_r, p2_l, p2_r;
             uint64_t l, m, r;
@@ -203,7 +201,7 @@ int pix_abs16x16_x2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
             p2_r  = avg2(extql(m, disalign) | extqh(r, disalign), r);
             pix1 += line_size;
             pix2 += line_size;
-            
+
             result += perr(p1_l, p2_l)
                     + perr(p1_r, p2_r);
         } while (--h);
@@ -234,10 +232,9 @@ int pix_abs16x16_x2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
     return result;
 }
 
-int pix_abs16x16_y2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
+int pix_abs16x16_y2_mvi(void *v, uint8_t *pix1, uint8_t *pix2, int line_size, int h)
 {
     int result = 0;
-    int h = 16;
 
     if ((size_t) pix2 & 0x7) {
         uint64_t t, p2_l, p2_r;
@@ -288,11 +285,10 @@ int pix_abs16x16_y2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
     return result;
 }
 
-int pix_abs16x16_xy2_mvi(uint8_t *pix1, uint8_t *pix2, int line_size)
+int pix_abs16x16_xy2_mvi(void *v, uint8_t *pix1, uint8_t *pix2, int line_size, int h)
 {
     int result = 0;
-    int h = 16;
-    
+
     uint64_t p1_l, p1_r;
     uint64_t p2_l, p2_r, p2_x;
 

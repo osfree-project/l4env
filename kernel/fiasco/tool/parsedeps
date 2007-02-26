@@ -7,11 +7,21 @@ $\ = "\n";		# set output record separator
 
 my $doit = 1;
 
-while(<>) {
-  my @stuff = split /\s+/;
+my @input = <>;
+$_ = join '', @input;
 
- line: while ($_ = shift @stuff) {
+s/\\\n//sg;			# delete continuations
+
+record:
+foreach my $record (split /\n/) {
+  next if $record =~ /^$/;
+
+  my @stuff = split /\s+/, $record;
+
+ line:
+  while ($_ = shift @stuff) {
     chomp;	# strip record separator
+
     if (/^else$/) {
       $doit = 1;
       next line;
@@ -23,12 +33,13 @@ while(<>) {
     }
     
     if ($doit) {
-      s/Makefile//g;
-      
+      /:/ && ! m|^[^/]+\.o:$| && next record;
+
+      /Makefile/ && next line;
       /auto\// || /:/ || next line;
       print $_." \\";
     }
   }
+  print "";
 }
 
-print "";

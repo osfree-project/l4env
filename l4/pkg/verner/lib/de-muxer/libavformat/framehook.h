@@ -2,7 +2,7 @@
 #define _FRAMEHOOK_H
 
 /*
- * Prototypes for interface to .so that implement a video processing hook 
+ * Prototypes for interface to .so that implement a video processing hook
  */
 
 #include "avcodec.h"
@@ -24,6 +24,6 @@ extern FrameHookRelease Release;
 
 extern int frame_hook_add(int argc, char *argv[]);
 extern void frame_hook_process(struct AVPicture *pict, enum PixelFormat pix_fmt, int width, int height);
-extern void frame_hook_release();
+extern void frame_hook_release(void);
 
 #endif

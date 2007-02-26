@@ -44,11 +44,11 @@ public:
     virtual ~CCDRMarshalFunction();
 
 public:
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
 
 protected:
-    virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteMarshalling(CBEFile* pFile);
 };
 
 #endif

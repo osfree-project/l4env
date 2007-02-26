@@ -14,10 +14,12 @@
 #include "pthread.h"
 
 
+#ifndef USE_UCLIBC
 void bzero(void *s, int n);
 void bzero(void *s, int n) {
 	memset(s, 0, n);
 }
+#endif
 
 
 int pthread_create(pthread_t * thread, void * attr, void * (*start_routine)(void *), void * arg);

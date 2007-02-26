@@ -48,7 +48,7 @@ void serial_stuff(int port, int irq, int handle);
 void serial_stuff(int port, int irq, int handle){
   omega0_request_t request;
   int err, i;
-  unsigned char stat, dat, *to_send="", send_open=0;
+  char stat, dat, *to_send="", send_open=0;
   char prompt[]="hi> ";
 
   request.s.unmask = 1;
@@ -64,7 +64,7 @@ void serial_stuff(int port, int irq, int handle){
     request.s.wait = 1;
     request.s.mask = 0;
     err = omega0_request(handle, request);
-    if(err<0) LOGl("omega0_request(handle=%d, request=%#x) returned %d",
+    if(err<0) LOGl("omega0_request(handle=%d, request=%#lx) returned %d",
                    handle, request.i, err);
                    
     do{

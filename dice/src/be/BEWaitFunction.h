@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEWaitFunction.h
- *    \brief   contains the declaration of the class CBEWaitFunction
+ *  \brief   contains the declaration of the class CBEWaitFunction
  *
  *    \date    01/14/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,48 +32,50 @@
 
 #include "be/BEOperationFunction.h"
 
-/**    \class CBEWaitFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CBEWaitFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end operation
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
 class CBEWaitFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEWaitFunction(bool bOpenWait);
     virtual ~CBEWaitFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEWaitFunction(CBEWaitFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+    	bool bMarshal);
+    virtual bool DoWriteFunction(CBEHeaderFile * pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile * pFile);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteOpcodeCheck(CBEFile *pFile, CBEContext *pContext);
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall);
-    virtual bool AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
-    virtual int GetFixedSize(int nDirection, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteOpcodeCheck(CBEFile *pFile);
+    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator,
+	bool bCall = false);
+    virtual void AddParameter(CFETypedDeclarator * pFEParameter);
+    virtual void CreateObject(void);
+    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(int nDirection);
 
 protected:
-    /**    \var bool m_bOpenWait
-     *    \brief if true this is a open wait function; if false a closed wait
+    /** \var bool m_bOpenWait
+     *  \brief if true this is a open wait function; if false a closed wait
      */
     bool m_bOpenWait;
 };

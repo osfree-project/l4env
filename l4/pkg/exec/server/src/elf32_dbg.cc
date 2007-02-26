@@ -10,7 +10,7 @@
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
 
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 #include <l4/exec/errno.h>
 
 #include <stdio.h>
@@ -23,7 +23,7 @@
 #include "assert.h"
 
 /** Show one file section entry
- * 
+ *
  * \param ph		pointer to ELF32 program section
  * \param psec		pointer to associated exec object program section */
 #ifdef DEBUG_PH_SECTIONS
@@ -37,6 +37,8 @@ elf32_img_show_program_section(Elf32_Phdr *ph, exc_obj_psec_t *psec)
 		       "PT_NOTE   ","PT_SHLIB  ","PT_PHDR   "};
   if (type >=0 && type < (int)(sizeof(pn)/sizeof(char*)))
     tstr = pn[type];
+  else if (type == 0x6474e551)
+    tstr = "PT_STACK  ";
   else
     {
       sprintf(sa,"??? (%d)",type);
@@ -46,7 +48,7 @@ elf32_img_show_program_section(Elf32_Phdr *ph, exc_obj_psec_t *psec)
     lstr = "            ";
   else
     {
-      sprintf(la,"==> %08x", psec->vaddr);
+      sprintf(la,"==> %08lx", psec->vaddr);
       lstr=la;
     }
   printf("[%08x - %08x] %s (%s, %c%c%c, aln %x)\n",
@@ -66,7 +68,7 @@ elf32_img_show_symtab(elf32_obj_t *elf32_obj, exc_img_t *img)
   int i;
   Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img->vaddr;
   Elf32_Shdr *sh;
-  
+
   for (i=0; i<ehdr->e_shnum; i++)
     {
       if (!(sh = elf32_obj->img_lookup_sh(i, img)))
@@ -80,9 +82,9 @@ elf32_img_show_symtab(elf32_obj_t *elf32_obj, exc_img_t *img)
 
 	  if (!(sh_link = elf32_obj->img_lookup_sh(sh->sh_link, img)))
 	    return;
-	  
+
 	  strtab = (const char*)(img->vaddr + sh_link->sh_offset);
-	  
+
 	  printf("Symbol table has %d symbols\n", entries);
 	  for (entry=0; entry<entries; entry++)
 	    {
@@ -97,13 +99,13 @@ elf32_img_show_symtab(elf32_obj_t *elf32_obj, exc_img_t *img)
 #endif
 
 /** Show one section header table entry
- * 
+ *
  * \param sh		pointer to ELF32 header section
  * \param strtab	pointer to ELF32 string table
  * \param elf32_obj	pointer to ELF32 object */
 #ifdef DEBUG_SH_SECTIONS
 static void
-elf32_img_show_header_section(Elf32_Shdr *sh, const char *strtab, 
+elf32_img_show_header_section(Elf32_Shdr *sh, const char *strtab,
 			      elf32_obj_t *elf32_obj)
 {
   int type = sh->sh_type;
@@ -126,19 +128,19 @@ elf32_img_show_header_section(Elf32_Shdr *sh, const char *strtab,
 	nstr = strtab + sh->sh_name;
       else
 	nstr = "(sh_names?)";
-      
+
       if (sh->sh_addr)
 	{
 	  if (sh->sh_flags & SHF_ALLOC)
 	    {
 	      l4_addr_t vaddr;
 	      exc_obj_psec_t *psec;
-	      
+
 	      if (!(psec = elf32_obj->sh_psec(sh)))
 		return;
-  	      vaddr = SH_ADDR_HERE(sh, psec);
-	      
-	      printf("[%08x - %08x] => %08x: %s (%s, aln %x)\n",
+	      vaddr = SH_ADDR_HERE(sh, psec);
+
+	      printf("[%08x - %08x] => %08lx: %s (%s, aln %x)\n",
 		     sh->sh_addr, sh->sh_addr+sh->sh_size, vaddr,
 		     nstr, tstr, sh->sh_addralign);
 	    }
@@ -158,7 +160,7 @@ elf32_img_show_header_section(Elf32_Shdr *sh, const char *strtab,
 #endif
 
 /** Show one section header table entry
- * 
+ *
  * \param elf32_obj	pointer to ELF32 object
  * \param img		pointer to ELF image */
 #ifdef DEBUG_SH_SECTIONS
@@ -179,7 +181,7 @@ elf32_img_show_header_sections(elf32_obj_t *elf32_obj, exc_img_t *img)
 	return;
       strtab = (const char*)(img->vaddr + sh->sh_offset);
     }
-  
+
   printf("=== ELF header sections ===\n");
   for (i=0; i<ehdr->e_shnum; i++)
     {
@@ -192,7 +194,7 @@ elf32_img_show_header_sections(elf32_obj_t *elf32_obj, exc_img_t *img)
 
 #ifdef DEBUG_DY_SECTIONS
 /** Show one dynamic section table entry
- * 
+ *
  * \param dyn		pointer to the dynamic section table entry
  * \param strtab	pointer to string table */
 static void
@@ -227,7 +229,7 @@ elf32_img_show_dynamic_section(Elf32_Dyn *dyn, const char *strtab)
 
 #ifdef DEBUG_DY_SECTIONS
 /** Show all dynamic section table entries.
- * 
+ *
  * \param elf32_obj	pointer to ELF32 object
  * \param img		pointer to ELF image */
 int
@@ -237,7 +239,7 @@ elf32_img_show_dynamic_sections(elf32_obj_t *elf32_obj, exc_img_t *img)
   Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img->vaddr;
 
   Assert(ehdr);
-  
+
   /* search the dynamic section */
   for (int i=0; i<ehdr->e_shnum; i++)
     {
@@ -249,7 +251,7 @@ elf32_img_show_dynamic_sections(elf32_obj_t *elf32_obj, exc_img_t *img)
 	   * SHT_DYNAMIC section link is index to assciated strtab section */
 	  if (!(sh_str = elf32_obj->img_lookup_sh(sh->sh_link, img)))
 	    return -L4_EXEC_BADFORMAT;
-	  
+
 	  const char *strtab = (const char*)(img->vaddr + sh_str->sh_offset);
 	  Elf32_Dyn *dyn = (Elf32_Dyn*)(img->vaddr + sh->sh_offset);
 	  for ( ; dyn->d_tag!=DT_NULL; dyn++)
@@ -262,12 +264,12 @@ elf32_img_show_dynamic_sections(elf32_obj_t *elf32_obj, exc_img_t *img)
 #endif /* DEBUG_DY_SECTIONS */
 
 /** Show Elf32 relocation entry
- * 
+ *
  * \param rel		pointer to relocation entry
  * \param elf32_obj	pointer to ELF32 object
  * \param l4exc		pointer to exec section in the environent info page */
 void
-elf32_obj_show_reloc_entry(Elf32_Rel *rel, elf32_obj_t *elf32_obj, 
+elf32_obj_show_reloc_entry(Elf32_Rel *rel, elf32_obj_t *elf32_obj,
 		           l4exec_section_t *l4exc)
 {
   char *rstr, sa[32];
@@ -275,7 +277,7 @@ elf32_obj_show_reloc_entry(Elf32_Rel *rel, elf32_obj_t *elf32_obj,
       "R_386_GOT32   ","R_386_PLT32   ","R_386_COPY    ","R_386_GLOB_DAT",
       "R_386_JMP_SLOT","R_386_RELATIVE","R_386_GOTOFF  ","R_386_GOTPC   "};
   int type;
-  
+
   type = ELF32_R_TYPE(rel->r_info);
   if (type >=0 && type < (int)(sizeof(rt)/sizeof(char*)))
     rstr = rt[type];
@@ -288,5 +290,3 @@ elf32_obj_show_reloc_entry(Elf32_Rel *rel, elf32_obj_t *elf32_obj,
       rstr, rel->r_offset,
       elf32_obj->dyn_symbol(ELF32_R_SYM(rel->r_info)));
 }
-
-

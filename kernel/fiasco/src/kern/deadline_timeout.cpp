@@ -33,7 +33,7 @@ Deadline_timeout::Deadline_timeout (Preemption * const preemption)
 {}
 
 PRIVATE inline NEEDS ["globals.h"]
-Context * const
+Context *
 Deadline_timeout::owner() const
 {
   // We could have saved our context in our constructor, but computing

@@ -40,7 +40,7 @@ exec_if_get_symbols(app_t *app)
   if ((error = l4exec_bin_get_symbols_call(&exec_id, 
 	                                   (long*)app->env,
 				            &ds, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       app_msg(app, "Error %d (%s) getting symbols", 
 	      error, l4env_errstr(error));
@@ -92,7 +92,7 @@ exec_if_get_lines(app_t *app)
   
   if ((error = l4exec_bin_get_lines_call(&exec_id, (long*)app->env,
 					 &ds, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       app_msg(app, "Error %d (%s) getting lines", 
 	            error, l4env_errstr(error));
@@ -140,10 +140,10 @@ exec_if_link(app_t *app)
   if ((error = l4exec_bin_link_call(&exec_id, 
 				    (l4exec_envpage_t*)app->env, 
 				    &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       app_msg(app, "Error %d (%s) while linking (exc=%d)",
-		   error, l4env_errstr(error), _env.major);
+		   error, l4env_errstr(error), DICE_EXCEPTION_MAJOR(&_env));
       return error;
     }
 
@@ -173,10 +173,11 @@ exec_if_open(app_t *app, const char *fname, l4dm_dataspace_t *ds,
   if ((error = l4exec_bin_open_call(&exec_id, fname, ds,
 				    (l4exec_envpage_t*)app->env, 
 				    open_flags, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
-      app_msg(app, "Error %d (%s) while loading",
-		  error, l4env_errstr(error));
+      if (error != -L4_EXEC_INTERPRETER)
+	app_msg(app, "Error %d (%s) while loading", 
+		error, l4env_errstr(error));
       return error;
     }
 
@@ -191,7 +192,7 @@ exec_if_close(app_t *app)
 
   if ((error = l4exec_bin_close_call(&exec_id,
 				     (l4exec_envpage_t*)app->env, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       app_msg(app, "Error %d (%s) deleting task at exec server",
 		   error, l4env_errstr(error));
@@ -201,6 +202,10 @@ exec_if_close(app_t *app)
   return 0;
 }
 
+/** Call l4exec to check for file type.
+ * \param ds   dataspace containing the file image
+ * \param env  L4 environment infopage. Needed for checking the ELF class
+ *             and architecture. */
 int
 exec_if_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env)
 {
@@ -216,14 +221,14 @@ exec_if_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env)
 
   error = l4exec_bin_ftype_call(&exec_id, ds, (l4exec_envpage_t*)env, &_env);
 
-  if (_env.major == CORBA_NO_EXCEPTION &&
+  if (!DICE_HAS_EXCEPTION(&_env) &&
       (error == 0 ||
        error == -L4_EXEC_INTERPRETER ||
        error == -L4_EXEC_BADFORMAT))
     return error;
 
   printf("Error %d (%s) checking file type at exec server\n",
-      error, l4env_errstr(error));
+          error, l4env_errstr(error));
   return -L4_EINVAL;
 }
 
@@ -235,7 +240,7 @@ exec_if_get_dsym(const char *symname, l4env_infopage_t *env, l4_addr_t *addr)
 
   if ((error =l4exec_bin_get_dsym_call(&exec_id, symname, 
 				       (long*)env, addr, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Error %d (%s) retrieving dynamic symbol from exec server\n",
 	    error, l4env_errstr(error));

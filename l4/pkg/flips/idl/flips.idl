@@ -1,8 +1,10 @@
-/*
+/**
  * \brief   IDL interface for FLIPS
- * \date    2003-07-22
+ *
+ * \date    07/22/2003
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
- * \author  Jens Syckor  <js712688@inf.tu-dresden.de>
+ * \author  Jens Syckor <js712688@inf.tu-dresden.de>
+ * \author  Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  * This interface features the socket interface of FLIPS.
  * It inherites from l4vfs connection and net_io idls.
@@ -29,6 +31,4 @@ interface flips : l4vfs::network_server, l4vfs::select_notify {
 	int proc_write ([in, string] char *path,
 	                [in, ref, size_is(len)] char *src,
 	                [in] int len);
-	
-	unsigned int inet_addr_type([in] unsigned int addr);
 };

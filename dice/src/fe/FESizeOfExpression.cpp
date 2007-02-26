@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FESizeOfExpression.cpp
- *    \brief   contains the implementation of the class CFESizeOfExpression
+ *  \brief   contains the implementation of the class CFESizeOfExpression
  *
  *    \date    06/01/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,8 +32,8 @@
 CFESizeOfExpression::CFESizeOfExpression()
  : CFEExpression()
 {
-    m_pType = NULL;
-    m_pExpression = NULL;
+    m_pType = 0;
+    m_pExpression = 0;
 }
 
 /** destroys this object */
@@ -48,50 +48,29 @@ CFESizeOfExpression::~CFESizeOfExpression()
 CFESizeOfExpression::CFESizeOfExpression(string sTypeName)
  : CFEExpression(EXPR_SIZEOF, sTypeName)
 {
-    m_pType = NULL;
-    m_pExpression = NULL;
+    m_pType = 0;
+    m_pExpression = 0;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFETypeSpec *pType)
  : CFEExpression(EXPR_SIZEOF)
 {
     m_pType = pType;
-    m_pExpression = NULL;
+    m_pExpression = 0;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFEExpression *pExpression)
  : CFEExpression(EXPR_SIZEOF)
 {
-    m_pType = NULL;
+    m_pType = 0;
     m_pExpression = pExpression;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFESizeOfExpression &src)
  : CFEExpression(src)
 {
-    if (src.m_pType)
-        m_pType = (CFETypeSpec*)src.m_pType->Clone();
-    else
-        m_pType = NULL;
-    if (src.m_pExpression)
-        m_pExpression = (CFEExpression*)src.m_pExpression->Clone();
-    else
-        m_pExpression = NULL;
-}
-
-/** \brief serialize this class to the file
- *  \param pFile the file to write to
- */
-void CFESizeOfExpression::Serialize(CFile *pFile)
-{
-    pFile->Print("<expression>sizeof(");
-    if (m_pType)
-        m_pType->Serialize(pFile);
-    else if (m_pExpression)
-        m_pExpression->Serialize(pFile);
-    else
-        pFile->Print("%s", m_String.c_str());
-    pFile->Print(")</expression>");
+    CLONE_MEM(CFETypeSpec, m_pType);
+    CLONE_MEM(CFEExpression, m_pExpression);
 }
 
 /** \brief creates a copy of this object

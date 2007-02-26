@@ -2,17 +2,8 @@
 # directories.
 #
 
-srcdir := @SRCDIR@
+srcdir  := @SRCDIR@
+objbase := $(shell pwd)
 
-all:
-
-%:: force-the-rule
-	$(MAKE) -r -I$(srcdir) -f $(srcdir)/Makefile srcdir=$(srcdir) "$@"
-
-force-the-rule: ; 
-
-.PHONY: Makefile
-
-# clear all implicit rules allowing .S targets
-.SUFFIXES:
+include $(srcdir)/Makefile
 

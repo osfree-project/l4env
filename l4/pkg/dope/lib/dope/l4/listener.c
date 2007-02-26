@@ -17,35 +17,40 @@
 #include "dopeapp-server.h"
 #include <l4/thread/thread.h>
 #include "listener.h"
+#include "app_struct.h"
 
 
-char *listener_ident; /* !!! protection by sem needed! */
+void CORBA_Object_to_ident(CORBA_Object tid, char *dst, int dst_len) {
+	snprintf(dst, dst_len, "t_id=0x%08X,%08X",
+	         (int)tid->lh.low, (int)tid->lh.high);
+}
 
 
 static void listener_thread(void *arg) {
-	char listener_ident_buf[128];
-	l4_threadid_t listener_tid;
 	CORBA_Server_Environment dice_env = dice_default_server_environment;
-	
 	dice_env.user_data = arg;
-	
-	listener_tid = l4thread_l4_id( l4thread_myself() );
-	snprintf(listener_ident_buf, 127, "t_id=0x%08X,%08X",
-	                                  (int)listener_tid.lh.low,
-	                                  (int)listener_tid.lh.high);
-	listener_ident = &listener_ident_buf[0];
+
 	l4thread_started(NULL);
-	INFO(printf("DOpElib(listener_thread): entering server loop\n");)
+
 	dopeapp_listener_server_loop(&dice_env);
 }
 
 
-char *dopelib_start_listener(long id) {
-	
-	INFO(printf("DOpElib(dope_init): start listener.\n");)
-	l4thread_create_named(listener_thread,".listener",(void *)id,L4THREAD_CREATE_SYNC);
-	
-	INFO(printf("DOpElib(dope_init): listener_ident = %s\n",listener_ident);)
-	INFO(printf("DOpElib(dope_init): dope_init finished.\n");)
-	return listener_ident;
+int dopelib_start_listener(long app_id) {
+
+	struct dopelib_app *app = dopelib_apps[app_id];
+
+	l4thread_t th = l4thread_create_named(listener_thread, ".listener",
+	                                      (void *)app_id,
+	                                      L4THREAD_CREATE_SYNC);
+	app->listener = l4thread_l4_id(th);
+	return 0;
+}
+
+
+void dopelib_stop_listener(long app_id) {
+
+	struct dopelib_app *app = dopelib_apps[app_id];
+
+	l4thread_shutdown(l4thread_id(app->listener));
 }

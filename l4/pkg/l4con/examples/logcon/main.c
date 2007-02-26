@@ -8,6 +8,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/thread/thread.h>
 #include <l4/util/l4_macros.h>
+#include "log-server.h"
 
 #define LOG_BUFFERSIZE 81
 #define LOG_NAMESERVER_NAME "stdlogV05"
@@ -17,65 +18,96 @@ char LOG_tag[9] = "logcon";
 l4_ssize_t l4libc_heapsize = 16*1024;
 
 static char message_buffer[LOG_BUFFERSIZE+5];
-static volatile int contxt_init_done;
-
-typedef struct
-{
-  l4_fpage_t fpage;
-  l4_msgdope_t size;
-  l4_msgdope_t snd;
-  l4_umword_t d0, d1, d2, d3, d4, d5, d6;
-  l4_strdope_t string;
-  l4_msgdope_t result;
-} rcv_message_t;
-
-rcv_message_t message;
+static volatile int init_status;
+static char  init_buffer[200*(LOG_BUFFERSIZE+5)];
+static char *init_buffer_beg = init_buffer;
+static char *init_buffer_ptr = init_buffer;
+static int   init_buffer_len;
 
 //! the sender of the last request
 l4_threadid_t msg_sender = L4_INVALID_ID;
 
-static int 
-get_message(void)
-{
-  int err;
-  
-  message.size.md.strings = 1;
-  message.size.md.dwords = 7;
-  message.string.rcv_size = LOG_BUFFERSIZE;
-  message.string.rcv_str = (l4_umword_t)&message_buffer;
-  message.fpage.fpage = 0;
-
-  memset(message_buffer,0,LOG_BUFFERSIZE);
-  for (;;)
-    {
-      if (l4_thread_equal(msg_sender, L4_INVALID_ID))
-	{
-  	  if ((err=l4_ipc_wait(&msg_sender,
-				    &message, &message.d0, &message.d1,
-				    L4_IPC_NEVER, &message.result))!=0)
-	    return err;
-	  break;
-	} 
-      else 
-	{
-	  err = l4_ipc_reply_and_wait(msg_sender, NULL, message.d0, 0,
-				      &msg_sender,
-				      &message, &message.d0, &message.d1,
-				      L4_IPC_SEND_TIMEOUT_0, &message.result);
-	  if (err & L4_IPC_SETIMEOUT)
-	    msg_sender = L4_INVALID_ID;
-	  else
-	    break;
-	}
-    }
-  return 0;
-}
-
 extern int console_puts(const char *s);
+
 static void
 my_LOG_outstring(const char *s)
 {
   console_puts(s);
+}
+
+static void*
+msg_alloc(unsigned long size)
+{
+  if (size != LOG_BUFFERSIZE)
+    return 0;
+  return message_buffer;
+}
+
+void
+log_outstring_component (CORBA_Object _dice_corba_obj,
+                         int flush_flag,
+			 const char* string,
+			 CORBA_Server_Environment *_dice_corba_env)
+{
+  outstring(string);
+  if (init_status == 0)
+    {
+      /* console still not initialized, use init_buffer as ring buffer */
+      char c;
+      for (; (c=*string++);)
+	{
+	  if (init_buffer_ptr >= init_buffer + sizeof(init_buffer))
+	    init_buffer_ptr = init_buffer;
+	  *init_buffer_ptr++ = c;
+	  if (init_buffer_len < sizeof(init_buffer))
+	    init_buffer_len++;
+	  else
+	    init_buffer_beg = init_buffer_ptr;
+	}
+      return;
+    }
+    
+  /* wait until init buffer is written to text console */
+  while (init_status == 1)
+    l4thread_sleep(100);
+
+  /* print to L4 console */
+  printf("%s", string);
+}
+
+int
+log_channel_open_component (CORBA_Object _dice_corba_obj,
+                            l4_snd_fpage_t page,
+                            int channel,
+                            CORBA_Server_Environment *_dice_corba_env)
+{
+  return -L4_EINVAL;
+}
+
+int
+log_channel_write_component (CORBA_Object _dice_corba_obj,
+                             int channel,
+                             unsigned int offset,
+                             unsigned int size,
+                             CORBA_Server_Environment *_dice_corba_env)
+{
+  return -L4_EINVAL;
+}
+
+int
+log_channel_flush_component (CORBA_Object _dice_corba_obj,
+                             int channel,
+                             CORBA_Server_Environment *_dice_corba_env)
+{
+  return -L4_EINVAL;
+}
+
+int
+log_channel_close_component (CORBA_Object _dice_corba_obj,
+                             int channel,
+                             CORBA_Server_Environment *_dice_corba_env)
+{
+  return -L4_EINVAL;
 }
 
 static void
@@ -83,7 +115,7 @@ contxt_init_thread(void *data)
 {
   for (;;)
     {
-      if (!contxt_init_done)
+      if (init_status == 0)
 	{
 	  l4_threadid_t con_id;
 
@@ -94,7 +126,16 @@ contxt_init_thread(void *data)
 	      if ((err = contxt_init(2048, 2000)))
 		printf("Error %d opening console\n", err);
 	      else
-		contxt_init_done = 1;
+		{
+		  init_status = 1;
+		  while (init_buffer_len--)
+		    {
+		      if (init_buffer_beg >= init_buffer + sizeof(init_buffer))
+			init_buffer_beg = init_buffer;
+		      putchar(*init_buffer_beg++);
+		    }
+		  init_status = 2;
+		}
     	      l4thread_exit();
 	    }
 	}
@@ -105,11 +146,9 @@ contxt_init_thread(void *data)
 int
 main(int argc, char**argv)
 {
-  int err;
+  CORBA_Server_Environment env = dice_default_server_environment;
 
   LOG_outstring = my_LOG_outstring;
-
-  l4thread_create(contxt_init_thread, 0, L4THREAD_CREATE_ASYNC);
 
   if (!names_register(LOG_NAMESERVER_NAME))
     {
@@ -117,41 +156,11 @@ main(int argc, char**argv)
       return 1;
     }
 
+  l4thread_create(contxt_init_thread, 0, L4THREAD_CREATE_ASYNC);
+
+  env.malloc = msg_alloc;
+  env.rcv_fpage.fpage = 0;
+
   strcpy(message_buffer+LOG_BUFFERSIZE,"...\n");
-  for(;;)
-    {
-      err = get_message();
-
-      if (err == 0 || err == L4_IPC_REMSGCUT)
-	{
-	  if(message.result.md.fpage_received == 0)
-	    {
-	      switch(message.d0)
-		{
-	    	case LOG_COMMAND_LOG:
-	  	  if(message.result.md.strings!=1)
-		    {
-		      message.d0 = -L4_EINVAL;
-		      continue;
-		    }
-		  
-		  outstring(message_buffer);
-		  if (contxt_init_done)
-		    printf("%s", message_buffer);
-		  
-		  message.d0 = 0;
-		  continue;
-		}
-	    }
-	  message.d0 = -L4_EINVAL;
-	  continue;
-	}
-
-      if (err & 0x40)
-	continue;
-    
-      printf("logcon | Error %#x getting message from "l4util_idfmt".\n", 
-	  err, l4util_idstr(msg_sender));
-      msg_sender = L4_INVALID_ID;
-    }
+  log_server_loop (&env);
 }

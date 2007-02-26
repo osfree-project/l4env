@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BESwitchCase.cpp
- *    \brief   contains the implementation of the class CBESwitchCase
+ *  \file    dice/src/be/BESwitchCase.cpp
+ *  \brief   contains the implementation of the class CBESwitchCase
  *
- *    \date    01/19/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/19/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,238 +26,251 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BESwitchCase.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEType.h"
-#include "be/BEDeclarator.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BETypedef.h"
-#include "be/BEUnmarshalFunction.h"
-#include "be/BEMarshalFunction.h"
-#include "be/BEComponentFunction.h"
-#include "be/BERoot.h"
-
+#include "BESwitchCase.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEType.h"
+#include "BEDeclarator.h"
+#include "BETypedDeclarator.h"
+#include "BETypedef.h"
+#include "BEUnmarshalFunction.h"
+#include "BEMarshalFunction.h"
+#include "BEComponentFunction.h"
+#include "BERoot.h"
+#include "BEClass.h"
+#include "BEMsgBuffer.h"
+#include "BENameFactory.h"
+#include "BETrace.h"
+#include "Compiler.h"
 #include "fe/FEOperation.h"
+#include "fe/FEInterface.h"
 #include "TypeSpec-Type.h"
-#include "fe/FETaggedStructType.h"
+#include "fe/FEStructType.h"
+#include <cassert>
 
 CBESwitchCase::CBESwitchCase()
+    : CBEOperationFunction(FUNCTION_SWITCH_CASE)
 {
+    m_bSameClass = true;
     m_pUnmarshalFunction = 0;
     m_pMarshalFunction = 0;
     m_pComponentFunction = 0;
 }
 
-CBESwitchCase::CBESwitchCase(CBESwitchCase & src):CBEOperationFunction(src)
+CBESwitchCase::CBESwitchCase(CBESwitchCase & src)
+: CBEOperationFunction(src)
 {
+    m_bSameClass = src.m_bSameClass;
     m_sOpcode = src.m_sOpcode;
     m_pUnmarshalFunction = src.m_pUnmarshalFunction;
     m_pMarshalFunction = src.m_pMarshalFunction;
     m_pComponentFunction = src.m_pComponentFunction;
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CBESwitchCase::~CBESwitchCase()
 {
-
 }
 
-/**    \brief creates the back-end receive function
- *    \param pFEOperation the corresponding front-end operation
- *    \param pContext the context of the code generation
- *    \return true is successful
+/** \brief creates the back-end receive function
+ *  \param pFEOperation the corresponding front-end operation
+ *  \return true is successful
  *
- * This implementation calls the base class' implementation and then sets the name
- * of the function.
+ * This implementation calls the base class' implementation and then sets the
+ * name of the function.
  */
-bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+void
+CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 {
+    string exc = string(__func__);
     // we skip OUT functions
-    if (pFEOperation->FindAttribute(ATTR_OUT))
-    {
-        VERBOSE("CBESwitchCase::CreateBackEnd failed because it has been called for an OUT function (%s)\n", pFEOperation->GetName().c_str());
-        return true;
-    }
+    if (pFEOperation->m_Attributes.Find(ATTR_OUT))
+        return;
     // set name
-    pContext->SetFunctionType(FUNCTION_SWITCH_CASE);
-    m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+    SetFunctionName(pFEOperation, FUNCTION_SWITCH_CASE);
 
-    if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-    {
-        VERBOSE("CBESwitchCase::CreateBE failed because base function could not be created\n");
-        return false;
-    }
+    CBEOperationFunction::CreateBackEnd(pFEOperation);
+
+    CreateTrace();
 
     // get opcode const
-    m_sOpcode = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sOpcode = pNF->GetOpcodeConst(pFEOperation);
+
+    // check if this switch case is from the same class as the surrounding
+    // dispatcher function or if this is from a base class.
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->GetName() ==
+	pFEOperation->GetSpecificParent<CFEInterface>()->GetName())
+	m_bSameClass = true;
+    else
+	m_bSameClass = false;
 
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     string sFunctionName;
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    int nOldType = pContext->GetFunctionType();
 
     // check if we need unmarshalling function
-    bool bNeedUnmarshalling = false;
-    vector<CFETypedDeclarator*>::iterator iterP = pFEOperation->GetFirstParameter();
-    CFETypedDeclarator *pFEParameter;
-    while (((pFEParameter = pFEOperation->GetNextParameter(iterP)) != 0)
-           && !bNeedUnmarshalling)
+    vector<CFETypedDeclarator*>::iterator iterP;
+    for (iterP = pFEOperation->m_Parameters.begin();
+	 iterP != pFEOperation->m_Parameters.end();
+	 iterP++)
     {
-        if (pFEParameter->FindAttribute(ATTR_IN))
-            bNeedUnmarshalling = true;
-    }
-    if (bNeedUnmarshalling)
-    {
+        if (!(*iterP)->m_Attributes.Find(ATTR_IN))
+	    continue;
+
         // create references to unmarshal function
-        pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-        sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
-        m_pUnmarshalFunction = (CBEUnmarshalFunction *) pRoot->FindFunction(sFunctionName);
+        sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
+        m_pUnmarshalFunction = static_cast<CBEUnmarshalFunction *>(
+	    pRoot->FindFunction(sFunctionName, FUNCTION_UNMARSHAL));
         if (!m_pUnmarshalFunction)
         {
-             VERBOSE("CBESwitchCase::CreateBE failed because unmarshal function (%s) could not be found\n", sFunctionName.c_str());
-             return false;
+	    exc +=" failed, because unmarshal function (" +
+		sFunctionName + ") could not be found.";
+             throw new CBECreateException(exc);
         }
-        // set the call parameters: this is simple, since we use the same names and reference counts
-        vector<CBETypedDeclarator*>::iterator iter = m_pUnmarshalFunction->GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = m_pUnmarshalFunction->GetNextParameter(iter)) != 0)
+	// set the call parameters: this is simple, since we use the same
+	// names and reference counts
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = m_pUnmarshalFunction->m_Parameters.begin();
+	     iter != m_pUnmarshalFunction->m_Parameters.end();
+	     iter++)
         {
-            vector<CBEDeclarator*>::iterator iterD = pParameter->GetFirstDeclarator();
-            CBEDeclarator *pName = *iterD;
+            CBEDeclarator *pName = (*iter)->m_Declarators.First();
             m_pUnmarshalFunction->SetCallVariable(pName->GetName(),
-                pName->GetStars(), pName->GetName(), pContext);
+		pName->GetStars(), pName->GetName());
         }
+
+	break;
     }
     // check if we need marshalling function
     // basically we alwas need marshalling, because we at least transfer
     // that there was no exception
     // the only exception is if the function is a oneway (IN) function
-    if (!pFEOperation->FindAttribute(ATTR_IN))
+    if (!pFEOperation->m_Attributes.Find(ATTR_IN))
     {
         // create reference to marshal function
-        pContext->SetFunctionType(FUNCTION_MARSHAL);
-        sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
-        m_pMarshalFunction = (CBEMarshalFunction*) pRoot->FindFunction(sFunctionName);
+        sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL);
+        m_pMarshalFunction = static_cast<CBEMarshalFunction*>(
+	    pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL));
         if (!m_pMarshalFunction)
         {
-            VERBOSE("CBESwitchCase::CreateBE failed because marshal function (%s) could not be found\n", sFunctionName.c_str());
-            return false;
+	    exc += " failed, because marshal function (" + sFunctionName +
+		") could not be found.";
+            throw new CBECreateException(exc);
         }
         // set call parameters
-        vector<CBETypedDeclarator*>::iterator iter = m_pMarshalFunction->GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = m_pMarshalFunction->GetNextParameter(iter)) != 0)
+        vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = m_pMarshalFunction->m_Parameters.begin();
+	     iter != m_pMarshalFunction->m_Parameters.end();
+	     iter++)
         {
-            vector<CBEDeclarator*>::iterator iterD = pParameter->GetFirstDeclarator();
-            CBEDeclarator *pName = *iterD;
+            CBEDeclarator *pName = (*iter)->m_Declarators.First();
             m_pMarshalFunction->SetCallVariable(pName->GetName(),
-                pName->GetStars(), pName->GetName(), pContext);
+		pName->GetStars(), pName->GetName());
         }
     }
     // create reference to component function
-    pContext->SetFunctionType(FUNCTION_TEMPLATE);
-    sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
-    m_pComponentFunction = (CBEComponentFunction *) pRoot->FindFunction(sFunctionName);
+    sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
+    m_pComponentFunction = static_cast<CBEComponentFunction *>(
+	pRoot->FindFunction(sFunctionName, FUNCTION_TEMPLATE));
     if (!m_pComponentFunction)
     {
-        m_pComponentFunction = 0;
-        VERBOSE("CBESwitchCase::CreateBE failed because component function (%s) could not be found\n", sFunctionName.c_str());
-        return false;
+	exc += " failed, because component function (" + sFunctionName +
+	    ") could not be found.";
+        throw new CBECreateException(exc);
     }
-    // set the call parameters: this is simple, since we use the same names and reference counts
-    vector<CBETypedDeclarator*>::iterator iterBP = m_pComponentFunction->GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = m_pComponentFunction->GetNextParameter(iterBP)) != 0)
+    // set the call parameters: this is simple, since we use the same names
+    // and reference counts
+    vector<CBETypedDeclarator*>::iterator iterBP;
+    for (iterBP = m_pComponentFunction->m_Parameters.begin();
+	 iterBP != m_pComponentFunction->m_Parameters.end();
+	 iterBP++)
     {
-        vector<CBEDeclarator*>::iterator iterD = pParameter->GetFirstDeclarator();
-        CBEDeclarator *pName = *iterD;
+        CBEDeclarator *pName = (*iterBP)->m_Declarators.First();
         m_pComponentFunction->SetCallVariable(pName->GetName(),
-            pName->GetStars(), pName->GetName(), pContext);
+	    pName->GetStars(), pName->GetName());
     }
-
-    pContext->SetFunctionType(nOldType);
-    return true;
 }
 
-/**    \brief writes the target code
- *    \param pFile the target file
- *    \param pContext the context of the write operation
+/** \brief writes the target code
+ *  \param pFile the target file
  */
-void CBESwitchCase::Write(CBEFile * pFile, CBEContext * pContext)
+void CBESwitchCase::Write(CBEFile * pFile)
 {
-    pFile->PrintIndent("case %s:\n", m_sOpcode.c_str());
+    *pFile << "\tcase " << m_sOpcode << ":\n";
     pFile->IncIndent();
-    pFile->PrintIndent("{\n");
+    *pFile << "\t{\n";
     pFile->IncIndent();
 
-    WriteVariableDeclaration(pFile, pContext);
-    WriteVariableInitialization(pFile, DIRECTION_IN, pContext);
+    WriteVariableDeclaration(pFile);
+    WriteVariableInitialization(pFile, DIRECTION_IN);
 
     if (m_pUnmarshalFunction)
     {
         // unmarshal has void return code
-        pFile->PrintIndent("");
-        m_pUnmarshalFunction->WriteCall(pFile, string(), pContext);
-        pFile->Print("\n");
+        m_pUnmarshalFunction->WriteCall(pFile, string(), m_bSameClass);
     }
 
     // initialize parameters which depend on IN values
-    WriteVariableInitialization(pFile, DIRECTION_OUT, pContext);
+    WriteVariableInitialization(pFile, DIRECTION_OUT);
 
     if (m_pComponentFunction)
     {
+	assert(m_pTrace);
+	m_pTrace->BeforeComponent(pFile, this);
+	
         /* if this function has [allow_reply_only] attribute,
          * it has an additional parameter (_dice_reply)
          */
-        vector<CBEDeclarator*>::iterator iterRet = m_pReturnVar->GetFirstDeclarator();
-        CBEDeclarator *pRetVar = *iterRet;
-        pFile->PrintIndent("");
-        m_pComponentFunction->WriteCall(pFile, pRetVar->GetName(), pContext);
-        pFile->Print("\n");
+        CBETypedDeclarator *pReturn = GetReturnVariable();
+        CBEDeclarator *pRetVar = (pReturn) ? pReturn->m_Declarators.First() : 0;
+        m_pComponentFunction->WriteCall(pFile, 
+	    pRetVar ? pRetVar->GetName() : string(), m_bSameClass);
+
+	m_pTrace->AfterComponent(pFile, this);
     }
 
     // write marshalling
-    string sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
+    string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
     if (m_pMarshalFunction)
     {
-        if (FindAttribute(ATTR_ALLOW_REPLY_ONLY))
+        if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
         {
-            *pFile << "\tif (" << sReply << " != DICE_NO_REPLY)\n";
+            *pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
             pFile->IncIndent();
         }
 
-        pFile->PrintIndent("");
-        m_pMarshalFunction->WriteCall(pFile, string(), pContext);
-        pFile->Print("\n");
+        m_pMarshalFunction->WriteCall(pFile, string(), m_bSameClass);
 
-        if (FindAttribute(ATTR_ALLOW_REPLY_ONLY))
+        if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
             pFile->DecIndent();
     }
-    else if (FindAttribute(ATTR_IN))
+    else if (m_Attributes.Find(ATTR_IN))
     {
         /* this is a send-only function */
-        *pFile << "\t" << sReply << " = DICE_NO_REPLY;\n";
+        *pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
     }
 
-    WriteCleanup(pFile, pContext);
+    WriteCleanup(pFile);
 
     pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-    pFile->PrintIndent("break;\n");
+    *pFile << "\t}\n";
+    *pFile << "\tbreak;\n";
     pFile->DecIndent();
 }
 
-/**    \brief writes the variable declaration inside the switch case
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the variable declaration inside the switch case
+ *  \param pFile the file to write to
  *
- * local variable declaration inside a switch case include the variables, which have to be
- * unmarshaled from the message buffer and those which are returned by the called function.
+ * local variable declaration inside a switch case include the variables,
+ * which have to be unmarshaled from the message buffer and those which are
+ * returned by the called function.
  *
- * For variables, which are pointers, we have to "allocate" a unreferenced variable on the
- * stack and then assign its address to the referenced variable. E.g.
+ * For variables, which are pointers, we have to "allocate" a unreferenced
+ * variable on the stack and then assign its address to the referenced
+ * variable. E.g.
  * <code>
  * CORBA_long *t1, _t1;<br>
  * CORBA_long **t2, *_t2, __t2;<br>
@@ -266,92 +279,128 @@ void CBESwitchCase::Write(CBEFile * pFile, CBEContext * pContext)
  * t2 = \&_t2;<br>
  * </code>
  *
- * We init the return variable already here, because if it is a struct, it has to
- * be initialized on declaration.
+ * We init the return variable already here, because if it is a struct, it has
+ * to be initialized on declaration.
  */
-void CBESwitchCase::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+void
+CBESwitchCase::WriteVariableDeclaration(CBEFile * pFile)
 {
-    // declare return variable if necessary
-    m_pReturnVar->WriteZeroInitDeclaration(pFile, pContext);
-
+    // write local variable declaration
+    CBEOperationFunction::WriteVariableDeclaration(pFile);
+    // FIXME: use local variable for rest
+    
     // write parameters
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-    CBETypedDeclarator *pParam;
-    while ((pParam = GetNextParameter(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
     {
-        pFile->PrintIndent("");
-        pParam->WriteIndirect(pFile, pContext);
-        pFile->Print(";\n");
+	// skip "special" parameters
+	if (!DoWriteVariable(*iter))
+	    continue;
+	*pFile << "\t";
+        (*iter)->WriteIndirect(pFile);
+	*pFile << ";\n";
     }
 }
 
-/**    \brief initialize local variables
- *    \param pFile the file to write to
+/** \brief check if this is a special parameter
+ *  \param pParameter the parameter to check
+ *  \return true if this parameter should be used
+ *
+ * Here we filter out CORBA_Object, CORBA_Environment, and msg buffer.
+ *
+ * The easiest way to test is check if the parameter matches any of the
+ * respective private pointers.
+ */
+bool
+CBESwitchCase::DoWriteVariable(CBETypedDeclarator *pParameter)
+{
+    if (pParameter == GetObject())
+	return false;
+    if (pParameter == GetEnvironment())
+	return false;
+    if (pParameter == GetMessageBuffer())
+	return false;
+    return true;
+}
+
+/** \brief initialize local variables
+ *  \param pFile the file to write to
  *  \param nDirection the direction of the parameters to initailize
- *    \param pContext the context of the write operation
  *
  * This function takes care of the initialization of the indirect variables.
  */
-void CBESwitchCase::WriteVariableInitialization(CBEFile * pFile, int nDirection, CBEContext * pContext)
+void 
+CBESwitchCase::WriteVariableInitialization(CBEFile * pFile, 
+    int nDirection)
 {
     // initailize indirect variables
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-    CBETypedDeclarator *pParameter;
+    vector<CBETypedDeclarator*>::iterator iter;
     // first simply do dereferences
-    while ((pParameter = GetNextParameter(iter)) != 0)
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
     {
-        if (!pParameter->IsDirection(nDirection))
+	if (!DoWriteVariable(*iter))
+	    continue;
+        if (!(*iter)->IsDirection(nDirection))
             continue;
         if ((nDirection == DIRECTION_OUT) &&
-            (pParameter->FindAttribute(ATTR_IN)))
+            ((*iter)->m_Attributes.Find(ATTR_IN)))
             continue;
-        pParameter->WriteIndirectInitialization(pFile, pContext);
+        (*iter)->WriteIndirectInitialization(pFile, false);
     }
     // now initilize variables with dynamic memory
-    iter = GetFirstParameter();
-    while ((pParameter = GetNextParameter(iter)) != 0)
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
     {
-        if (!pParameter->IsDirection(nDirection))
+	if (!DoWriteVariable(*iter))
+	    continue;
+        if (!(*iter)->IsDirection(nDirection))
             continue;
         // only allocate memory for "pure" OUT parameter, because
         // IN's are referenced into the message buffer
-        // FIXME: what about INOUT, where the OUT part is bigger than the IN part?
-        if (pParameter->FindAttribute(ATTR_IN))
+	// FIXME: what about INOUT, where the OUT part is bigger than the IN
+	// part?
+	if ((*iter)->m_Attributes.Find(ATTR_IN))
             continue;
-        pParameter->WriteIndirectInitializationMemory(pFile, pContext);
+        (*iter)->WriteIndirectInitialization(pFile, true);
     }
 }
 
-/**    \brief writes the clean up code
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the clean up code
+ *  \param pFile the file to write to
  *
  * We only need to cleanup OUT parameters, which are not IN,
  * because only for those parameters a memory allocation took
  * place.
  */
-void CBESwitchCase::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
+void CBESwitchCase::WriteCleanup(CBEFile * pFile)
 {
     // cleanup indirect variables
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
     {
-        if (!pParameter->IsDirection(DIRECTION_OUT))
+	if (!DoWriteVariable(*iter))
+	    continue;
+        if (!(*iter)->IsDirection(DIRECTION_OUT))
             continue;
-        if (pParameter->FindAttribute(ATTR_IN))
+        if ((*iter)->m_Attributes.Find(ATTR_IN))
             continue;
-        pParameter->WriteCleanup(pFile, pContext);
+        (*iter)->WriteCleanup(pFile, false);
     }
 }
 
 /** \brief resets the message buffer type of the respective functions
- *  \param pContext the context of this operation
  *
  * The unmarshal and reply functions need their message buffer parameter to be
  * casted when they are called. Tell them.
  */
-void CBESwitchCase::SetMessageBufferType(CBEContext *pContext)
+void CBESwitchCase::SetMessageBufferType()
 {
     if (m_pUnmarshalFunction)
         m_pUnmarshalFunction->SetMsgBufferCastOnCall(true);
@@ -359,21 +408,28 @@ void CBESwitchCase::SetMessageBufferType(CBEContext *pContext)
         m_pMarshalFunction->SetMsgBufferCastOnCall(true);
 }
 
-/** \brief propagates the SetCallVariable call if the internal variables are Corba object and environment
+/** \brief propagates the SetCallVariable call if the internal variables are \
+ *         Corba object and environment
  *  \param sOriginalName the internal name of the variable
  *  \param nStars the new number of stars of the variable
  *  \param sCallName the external name
- *  \param pContext the context of this operation
  *
- * Since we reference the unmarshal, wait and component functions, we have to propagate
- * this call, so they initialize their arguments repectively.
+ * Since we reference the unmarshal, wait and component functions, we have to
+ * propagate this call, so they initialize their arguments repectively.
  */
-void CBESwitchCase::SetCallVariable(string sOriginalName, int nStars, string sCallName, CBEContext * pContext)
+void
+CBESwitchCase::SetCallVariable(string sOriginalName, 
+    int nStars, 
+    string sCallName)
 {
     if (m_pUnmarshalFunction)
-        m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
+        m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName);
     if (m_pMarshalFunction)
-        m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
+        m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName);
     if (m_pComponentFunction)
-        m_pComponentFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
+        m_pComponentFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName);
 }
+

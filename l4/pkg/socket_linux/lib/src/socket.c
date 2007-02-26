@@ -263,7 +263,6 @@ int sock_sendmsg(struct socket *sock, struct msghdr *msg, int size)
  * to obtain any error value.
  */
 
-//int getsockopt (int s, int level, int optname, void *optval, int *optlen) {}
 //int socketpair (int d, int type, int protocol, int *sv[2]) {}
 //int getpeername (int s, struct sockaddr *name, int *namelen) {}
 
@@ -372,6 +371,30 @@ int setsockopt (int s, int level, int optname, const void *optval, int optlen)
 	return err;
 }
 
+/** SOCKET INTERFACE: GETSOCKOPT
+ */
+int getsockopt (int s, int level, int optname, const void *optval, int * optlen)
+{
+	int err;
+	struct socket *sock;
+
+	if (optlen < 0)
+		return -EINVAL;
+
+	sock = sockfd_lookup(s, &err);
+
+	if (!sock)
+		return err;
+        
+	if (level == SOL_SOCKET)
+		err=sock_getsockopt(sock,level,optname,(char *) optval, 
+	                            optlen);
+        else
+	        err=sock->ops->getsockopt(sock, level, optname, 
+					  (char *) optval, optlen);
+
+	return err;
+}
 
 /** SOCKET INTERFACE: ACCEPT
  */
@@ -832,3 +855,18 @@ void * socket_get_private_data(int sd)
 	return sockets[sd].priv_data;
 }
 
+int getpeername(int s, struct sockaddr *name, int *namelen)
+{
+	int err;
+	struct socket *sock;
+
+	sock = sockfd_lookup(s, &err);
+
+	if (!sock)
+		return err;
+        
+	err = sock->ops->getname(sock, name, namelen, 1);
+
+	return err;
+}
+       

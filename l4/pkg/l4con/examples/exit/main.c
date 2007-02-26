@@ -81,10 +81,10 @@ int clear_screen()
       LOG("pslim_fill returned %s error", buffer);
       return -1;
     }
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
-      LOG("pslim_fill returned IPC error: 0x%02x", _env._p.ipc_error);
-      _env.major = CORBA_NO_EXCEPTION;
+      LOG("pslim_fill returned IPC error: 0x%02x", DICE_IPC_ERROR(&_env));
+      CORBA_exception_free(&_env);
     }
 
   /* setup new vfb area info */
@@ -102,10 +102,10 @@ int clear_screen()
       LOG("pslim_bmap returned %s error", buffer);
       return -1;
     }
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
-      LOG("pslim_bmap returned IPC error: 0x%02x", _env._p.ipc_error);
-      _env.major = CORBA_NO_EXCEPTION;
+      LOG("pslim_bmap returned IPC error: 0x%02x", DICE_IPC_ERROR(&_env));
+      CORBA_exception_free(&_env);
     }
   
   return 0;
@@ -173,10 +173,10 @@ int logo()
 	  LOG("pslim_set returned %s error", buffer);
 	  return -1;
 	}
-      if (_env.major != CORBA_NO_EXCEPTION)
+      if (DICE_HAS_EXCEPTION(&_env))
 	{
-	  LOG("pslim_set returned ipc error: 0x%02x", _env._p.ipc_error);
-	  _env.major = CORBA_NO_EXCEPTION;
+	  LOG("pslim_set returned ipc error: 0x%02x", DICE_IPC_ERROR(&_env));
+	  CORBA_exception_free(&_env);
 	}
 
       /* setup new vfb area info */

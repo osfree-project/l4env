@@ -27,13 +27,12 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <ctype.h>
+#include <cctype>
 #include <string>
 #include <algorithm>
-using namespace std;
+#include <cassert>
 
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -45,9 +44,9 @@ using namespace std;
 #include "fe/FEFunctionDeclarator.h"
 #include "fe/FEUnionCase.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEUnionType.h"
+#include "fe/FEEnumType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
 
@@ -108,7 +107,7 @@ bool bTaggedTypeAllowed = false;
 
 %}
 
-%option noyywrap
+%option noyywrap nounput
 
 /* some rules */
 Id                [a-zA-Z_][a-zA-Z0-9_]*
@@ -191,84 +190,101 @@ Hex_char       (L)?\'\\(x|X)[a-fA-F0-9]{1,2}\'
                         sNewFileNameGccC = sTopLevelInFileName;
                 }
 <line2>[1-4]    {
-                    // find path file file
-                    int nFlags = atoi(yytext);
-                    if (gcc_cdebug)
-                        fprintf(stderr, "C: # %d \"%s\" %d found\n", nNewLineNumberGccC,
-                            sNewFileNameGccC.c_str(), nFlags);
-                    // this is a bad hack to avoid resetting of state
-                    CParser *pParser = CParser::GetCurrentParser();
-                    switch(nFlags)
-                    {
-                    case 1:
-                    case 3:
-                        {
-                            // get path for file
-                            CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
-                            unsigned char nRet = 2;
-                            // comment following line to allow recursive self-inclusion
-                            //if (sNewFileNameGccC != sInFileName)
-                                // import this file
-                                nRet = pParser->Import(sNewFileNameGccC);
-                            switch (nRet)
-                            {
-                            case 0:
-                                // error
-                                yyterminate();
-                                break;
-                            case 1:
-                                // ok, but create file
-                                // did not create a new parser, instead we change the
-                                // current file only
-                                {
-                                    string sPath = pPreProcess->FindPathToFile(sNewFileNameGccC, gLineNumber);
-                                    string sOrigName = pPreProcess->GetOriginalIncludeForFile(sNewFileNameGccC, gLineNumber);
-                                    bool bStdInc = pPreProcess->IsStandardInclude(sNewFileNameGccC, gLineNumber);
-                                    // if path is set and origname is empty, then sNewFileNameGccC is with full path
-                                    // and FindPathToFile returned an include path that matches the beginning of the
-                                    // string. Now we get the original name by cutting off the beginning of the string,
-                                    // which is the path
-                                    if (!sPath.empty() && sOrigName.empty())
-                                        sOrigName = sNewFileNameGccC.substr(sPath.length());
-                                    if (sOrigName.empty())
-                                        sOrigName = sNewFileNameGccC;
-                                    // simply create new CFEFile and set it as current
-                                    CFEFile *pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bStdInc);
-                                    CParser::SetCurrentFile(pFEFile);
-                                    sInFileName = sNewFileNameGccC;
-                                    gLineNumber = nNewLineNumberGccC;
-                                    if (gcc_cdebug)
-                                        fprintf(stderr, " gLineNumber: %d (%s)\n", gLineNumber, sInFileName.c_str());
-                                }
-                                // fall through
-                            case 2:
-                                // ok do nothing
-                                break;
-                            }
-                        }
-                        bNeedToSetFileGccC = false;
-                        break;
-                    case 2:
-                        if (gcc_cdebug)
-                            fprintf(stderr, "Gcc-C: End of file %s, new file: %s at line %d (update? %s)\n",
-                                sInFileName.c_str(), sNewFileNameGccC.c_str(), nNewLineNumberGccC,
-                                bNeedToSetFileGccC ? "yes" : "no");
-                        // check if we have to switch the parsers back
-                        // e.g. by sending an EOF (yyterminate)
-                        if (pParser->DoEndImport())
-                        {
-                            // update state info for parent, so its has new line number
-                            // Gcc might have eliminated some lines, so old line number can be incorrect
-                            pParser->UpdateState(sNewFileNameGccC, nNewLineNumberGccC);
-                            bTaggedTypeAllowed = false;
-                            return EOF_TOKEN;
-                        }
-                        else
-                            CParser::SetCurrentFileParent();
-                        break;
-                    case 4:
-                        break;
-                    }
+    // find path file file
+    int nFlags = atoi(yytext);
+    if (gcc_cdebug)
+	fprintf(stderr, "C: # %d \"%s\" %d found\n", nNewLineNumberGccC,
+	    sNewFileNameGccC.c_str(), nFlags);
+    // this is a bad hack to avoid resetting of state
+    CParser *pParser = CParser::GetCurrentParser();
+    switch(nFlags)
+    {
+    case 1:
+	{
+	    // get path for file
+	    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+	    unsigned char nRet = 2;
+	    // comment following line to allow recursive self-inclusion
+	    //if (sNewFileNameGccC != sInFileName)
+	    // import this file
+	    nRet = pParser->Import(sNewFileNameGccC);
+	    switch (nRet)
+	    {
+	    case 0:
+		// error
+		yyterminate();
+		break;
+	    case 1:
+		// ok, but create file
+		// did not create a new parser, instead we change the
+		// current file only
+		{
+		    string sPath = pPreProcess->FindPathToFile(
+		    	sNewFileNameGccC, gLineNumber);
+		    string sOrigName = pPreProcess->GetOriginalIncludeForFile(
+		    	sNewFileNameGccC, gLineNumber);
+		    bool bStdInc = pPreProcess->IsStandardInclude(
+		    	sNewFileNameGccC, gLineNumber);
+		    // The returned path should never be empty. If it
+		    // is, then the file name sNewFileNameDCE did not
+		    // contain it. The preprocessor, however, stored
+		    // it in an additional vector, so go check there.
+		    if (sPath.empty())
+		        sPath =
+			    pPreProcess->GetIncludePath(sNewFileNameGccC);
+		    // if path is set and origname is empty, then
+		    // sNewFileNameGccC is with full path and FindPathToFile
+		    // returned an include path that matches the beginning of
+		    // the string. Now we get the original name by cutting off
+		    // the beginning of the string, which is the path
+		    if (!sPath.empty() && sOrigName.empty())
+			sOrigName = sNewFileNameGccC.substr(sPath.length());
+		    if (sOrigName.empty())
+			sOrigName = sNewFileNameGccC;
+		    // simply create new CFEFile and set it as current
+		    CFEFile *pFEFile = new CFEFile(sOrigName, sPath, 
+		    	gLineNumber, bStdInc);
+		    CParser::SetCurrentFile(pFEFile);
+		    sInFileName = sNewFileNameGccC;
+		    gLineNumber = nNewLineNumberGccC;
+		    if (gcc_cdebug)
+			fprintf(stderr, " gLineNumber: %d (%s)\n", 
+			    gLineNumber, sInFileName.c_str());
+		}
+		// fall through
+	    case 2:
+		// ok do nothing
+		break;
+	    }
+	}
+	bNeedToSetFileGccC = false;
+	break;
+    case 2:
+	if (gcc_cdebug)
+	    fprintf(stderr, "Gcc-C: End of file %s, new file: %s at line %d (update? %s)\n",
+		sInFileName.c_str(), sNewFileNameGccC.c_str(), nNewLineNumberGccC,
+		bNeedToSetFileGccC ? "yes" : "no");
+	// check if we have to switch the parsers back
+	// e.g. by sending an EOF (yyterminate)
+	if (pParser->DoEndImport())
+	{
+	    // update state info for parent, so its has new line number
+	    // Gcc might have eliminated some lines, so old line number can be
+	    // incorrect
+	    pParser->UpdateState(sNewFileNameGccC, nNewLineNumberGccC);
+	    bTaggedTypeAllowed = false;
+	    return EOF_TOKEN;
+	}
+	else
+	    CParser::SetCurrentFileParent();
+	break;
+    case 3:
+    case 4:
+	/* ignore 3 and 4, because they only provide
+	 * additional meaning to the line statement
+	 */
+	break;
+    }
                 }
 <line,line2>("\r")?"\n" {
                     // a line without the num, so only line number info
@@ -388,7 +404,9 @@ __typeof__  { bTaggedTypeAllowed = false; return TYPEOF; }
 alignof     { bTaggedTypeAllowed = false; return ALIGNOF; }
 extension   /* eat extension keyword */
 __extension__   /* eat extension keyword */
-label       { bTaggedTypeAllowed = false; return LABEL; }
+	/* removed rule: collides with pistachio header files
+	label       { bTaggedTypeAllowed = false; return LABEL; }
+	*/
 __real        { bTaggedTypeAllowed = false; return REALPART; }
 __real__    { bTaggedTypeAllowed = false; return REALPART; }
 __imag        { bTaggedTypeAllowed = false; return IMAGPART; }

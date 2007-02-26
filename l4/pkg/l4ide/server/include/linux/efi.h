@@ -232,9 +232,7 @@ typedef struct {
 	unsigned long con_out_handle;
 	unsigned long con_out;
 	unsigned long stderr_handle;
-#ifndef DDE_IDE
 	unsigned long stderr;
-#endif
 	efi_runtime_services_t *runtime;
 	unsigned long boottime;
 	unsigned long nr_tables;

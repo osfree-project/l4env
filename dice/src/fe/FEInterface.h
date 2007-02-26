@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEInterface.h
- *    \brief   contains the declaration of the class CFEInterface
+ *  \file    dice/src/fe/FEInterface.h
+ *  \brief   contains the declaration of the class CFEInterface
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,11 +30,12 @@
 #ifndef __DICE_FE_FEINTERFACE_H__
 #define __DICE_FE_FEINTERFACE_H__
 
-#include "fe/FEFileComponent.h"
+#include "FEFileComponent.h"
+#include "FEConstDeclarator.h"
 #include "Attribute-Type.h" // needed for ATTR_TYPE
+#include "template.h"
 #include <string>
 #include <vector>
-using namespace std;
 
 class CFEInterface;
 class CFETypedDeclarator;
@@ -46,7 +47,7 @@ class CFEInterfaceComponent;
 
 /** \class CFEInterface
  *    \ingroup frontend
- *    \brief the representation of an interface
+ *  \brief the representation of an interface
  *
  * This class is used to represent an interface
  */
@@ -56,122 +57,89 @@ class CFEInterface : public CFEFileComponent
 // standard constructor/destructor
 public:
     /**
-     *    \brief creates an interface representation
-     *    \param pIAttributes the attributes of the interface
-     *    \param sIName the name of the interface
-     *    \param pIBaseNames the names of the base interfaces
-     *    \param pComponents the components of the statement
+     *  \brief creates an interface representation
+     *  \param pIAttributes the attributes of the interface
+     *  \param sIName the name of the interface
+     *  \param pIBaseNames the names of the base interfaces
+     *  \param pParent reference to the parent of the interface
      */
     CFEInterface(vector<CFEAttribute*> *pIAttributes,
         string sIName,
         vector<CFEIdentifier*> *pIBaseNames,
-        vector<CFEInterfaceComponent*> *pComponents);
+        CFEBase* pParent);
     virtual ~CFEInterface();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEInterface(CFEInterface &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual void Dump();
-
-    virtual CFEAttribute* FindAttribute(ATTR_TYPE nType);
-    virtual CFEAttribute* GetNextAttribute(vector<CFEAttribute*>::iterator &iter);
-    virtual vector<CFEAttribute*>::iterator GetFirstAttribute();
-    virtual CObject* Clone();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEInterface(*this); }
 
     virtual CFEInterface* FindBaseInterface(string sName);
-    virtual CFEIdentifier* GetNextBaseInterfaceName(vector<CFEIdentifier*>::iterator &iter);
-    virtual vector<CFEIdentifier*>::iterator GetFirstBaseInterfaceName();
-
-    virtual bool CheckConsistency();
-
-    virtual CFETypedDeclarator* FindUserDefinedType(string sName);
-    virtual CFETypedDeclarator* GetNextTypeDef(vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstTypeDef();
-    virtual void AddTypedef(CFETypedDeclarator *pFETypedef);
-
-    virtual CFEConstDeclarator* FindConstant(string sName);
-    virtual CFEConstDeclarator* GetNextConstant(vector<CFEConstDeclarator*>::iterator &iter);
-    virtual vector<CFEConstDeclarator*>::iterator GetFirstConstant();
-    virtual void AddConstant(CFEConstDeclarator *pFEConstant);
-
-    virtual void AddOperation(CFEOperation *pOperation);
-    virtual int GetOperationCount(bool bCountBase = true);
-    virtual CFEOperation* GetNextOperation(vector<CFEOperation*>::iterator &iter);
-    virtual vector<CFEOperation*>::iterator GetFirstOperation();
-
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
-    virtual CFEInterface* GetNextBaseInterface(vector<CFEInterface*>::iterator &iter);
-    virtual vector<CFEInterface*>::iterator GetFirstBaseInterface();
 
-    virtual void AddDerivedInterface(CFEInterface* pDerivedInterface);
-    virtual CFEInterface* GetNextDerivedInterface(vector<CFEInterface*>::iterator &iter);
-    virtual vector<CFEInterface*>::iterator GetFirstDerivedInterface();
+    virtual void Accept(CVisitor&);
+
+    virtual int GetOperationCount(bool bCountBase = true);
 
     virtual string GetName();
-
-    virtual void AddTaggedDecl(CFEConstructedType *pFETaggedDecl);
-    virtual CFEConstructedType* GetNextTaggedDecl(vector<CFEConstructedType*>::iterator &iter);
-    virtual vector<CFEConstructedType*>::iterator GetFirstTaggedDecl();
-    virtual CFEConstructedType* FindTaggedDecl(string sName);
-
-    virtual void AddAttributeDeclarator(CFEAttributeDeclarator* pAttrDecl);
-    virtual CFEAttributeDeclarator* GetNextAttributeDeclarator(vector<CFEAttributeDeclarator*>::iterator &iter);
-    virtual vector<CFEAttributeDeclarator*>::iterator GetFirstAttributeDeclarator();
-    virtual CFEAttributeDeclarator* FindAttributeDeclarator(string sName);
+    bool Match(string sName);
 
     virtual bool IsForward();
-    virtual void AddBaseInterfaceNames(vector<CFEIdentifier*> *pSrcNames);
-    virtual void AddAttributes(vector<CFEAttribute*> *pSrcAttributes);
-
+    void AddComponents(vector<CFEInterfaceComponent*> *pComponents);
 
 // attributes
 protected:
-    /** \var vector<CFEInterface*> m_vBaseInterfaces
-     *  \brief an array of reference to the base interfaces
-     */
-    vector<CFEInterface*> m_vBaseInterfaces;
-    /** \var vector<CFEInterface*> m_vDerivedInterfaces
-     *  \brief an array of references to derived interfaces
-     */
-    vector<CFEInterface*> m_vDerivedInterfaces;
-    /**    \var string m_sInterfaceName
-     *    \brief holds a reference to the name of the interface
+    /** \var string m_sInterfaceName
+     *  \brief holds a reference to the name of the interface
      */
     string m_sInterfaceName;
-    /** \var vector<CFEIdentifier*> m_vBaseInterfaceNames
-     *  \brief holds the base interface names
-     */
-    vector<CFEIdentifier*> m_vBaseInterfaceNames;
-    /** \var vector<CFEAttributeDeclarator*> m_vAttributeDeclarators
-     *  \brief holds interface attribute member declarators
-     */
-    vector<CFEAttributeDeclarator*> m_vAttributeDeclarators;
-    /** \var vector<CFEAttribute*> m_vAttributes
+
+public:
+    /** \var CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes
      *  \brief the interface's attributes
      */
-    vector<CFEAttribute*> m_vAttributes;
-    /** \var vector<CFEConstDeclarator*> m_vConstants
+    CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CSearchableCollection<CFEConstDeclarator, string> m_Constants
      *  \brief the interface's constants
      */
-    vector<CFEConstDeclarator*> m_vConstants;
-    /** \var vector<CFETypedDeclarator*> m_vTypedefs
-     *  \brief the interface's type definitions
+    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
+    /** \var CSearchableCollection<CFEAttributeDeclarator, string> m_AttributeDeclarators
+     *  \brief holds interface attribute member declarators
      */
-    vector<CFETypedDeclarator*> m_vTypedefs;
-    /** \var vector<CFEOperation*> m_vOperations
-     *  \brief the interface's operations
-     */
-    vector<CFEOperation*> m_vOperations;
-    /** \var vector<CFEConstructedType*> m_vTaggedDeclarators
+    CSearchableCollection<CFEAttributeDeclarator, string> m_AttributeDeclarators;
+    /** \var CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators
      *  \brief the interface's constructed types
      */
-    vector<CFEConstructedType*> m_vTaggedDeclarators;
+    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
+    /** \var CCollection<CFEOperation> m_Operations
+     *  \brief the interface's operations
+     */
+    CCollection<CFEOperation> m_Operations;
+    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Typedefs
+     *  \brief the interface's type definitions
+     */
+    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
+    /** \var CCollection<CFEIdentifier> m_BaseInterfaceNames
+     *  \brief holds the base interface names
+     */
+    CCollection<CFEIdentifier> m_BaseInterfaceNames;
+    /** \var CCollection<CFEInterface> m_DerivedInterfaces
+     *  \brief an array of references to derived interfaces
+     */
+    CCollection<CFEInterface> m_DerivedInterfaces;
+    /** \var CCollection<CFEInterface> m_BaseInterfaces
+     *  \brief an array of reference to the base interfaces
+     */
+    CCollection<CFEInterface> m_BaseInterfaces;
 };
 
 #endif /* __DICE_FE_FEINTERFACE_H__ */

@@ -5,7 +5,7 @@ ivt.o: $(TCBOFFSET)
 # Add future prerequisites somewhere among the list of libraries.
 # You really should not have to add anything in the $(LD) line.
 
-$(KERNEL).image: $(srcdir)/kernel.arm.ld $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(ABI) libdrivers.a $(CXXLIB) $(MINILIBC) libgluedriverslibc.a
+$(KERNEL).image: $(srcdir)/kernel.arm.ld $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(ABI) libdrivers.a $(LIBUART) $(CXXLIB) $(MINILIBC) libgluedriverslibc.a
 	$(LINK_MESSAGE)
 	$(VERBOSE)$(LD) $(LDFLAGS) -N -defsym kernel_load_addr=$(CONFIG_KERNEL_LOAD_ADDR) \
           -T $< -o $@ $(filter-out $<,$+) $(LIBGCC)

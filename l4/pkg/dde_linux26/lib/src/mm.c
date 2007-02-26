@@ -131,7 +131,7 @@ static __inline__ int __more_kcore(l4_size_t size)
       return error;
     }
 
-  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region %d",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08lx (phys. 0x%08lx) region %d",
        size, kaddr, dm_paddr.addr, kcount);
 
   /* add new region */
@@ -331,7 +331,7 @@ static int __setup_kmem(unsigned int *max, l4_addr_t *addr)
       return error;
     }
 
-  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region 0",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08lx (phys. 0x%08lx) region 0",
        kregion_size, *addr, dm_paddr.addr);
   
   /* add free memory area to region/pool */
@@ -435,7 +435,7 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
   else
     ksize_str = "Byte";
   LOG("Using ...\n"
-      "  %d %s at 0x%08x (vmem)\n"
+      "  %d %s at 0x%08lx (vmem)\n"
       "  %d %s in %d regions (kmem)",
       max_vsize, vsize_str, vaddr, max_ksize, ksize_str, MM_KREGIONS);
 
@@ -451,13 +451,13 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
     debug = l4rm_lookup((void*)vaddr, &map_addr, &map_size, &ds, &offset, &dummy);
     if (debug != L4RM_REGION_DATASPACE)
       Panic("l4rm_lookup failed (%d)", debug);
-    LOG("vmem: ds={%3u, "l4util_idfmt"} offset=%d map_addr=0x%08x map_size=%d",
+    LOG("vmem: ds={%3u, "l4util_idfmt"} offset=%ld map_addr=0x%08lx map_size=%d",
         ds.id, l4util_idstr(ds.manager), offset, map_addr, map_size);
     
     debug = l4rm_lookup((void*)kaddr, &map_addr, &map_size, &ds, &offset, &dummy);
     if (debug != L4RM_REGION_DATASPACE)
       Panic("l4rm_lookup failed (%d)", debug);
-    LOG("kmem: ds={%3u, "l4util_idfmt"} offset=%d map_addr=0x%08x map_size=%d",
+    LOG("kmem: ds={%3u, "l4util_idfmt"} offset=%ld map_addr=0x%08lx map_size=%d",
         ds.id, l4util_idstr(ds.manager), offset, map_addr, map_size);
   }
 #endif

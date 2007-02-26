@@ -63,18 +63,3 @@ int flips_proc_write(const char *path, char *src, int len)
 
     return flips_proc_write_call(&flips_thread, path, src, len, &env);
 }
-
-unsigned int flips_inet_addr_type(unsigned addr)
-{
-    int ret;
-    CORBA_Environment env = dice_default_environment;
-
-    ret = flips_connection();
-
-    if (ret != 0)
-    {
-        return ret;
-    }
-
-    return flips_inet_addr_type_call(&flips_thread, addr, &env);
-}

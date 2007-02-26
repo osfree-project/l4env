@@ -508,7 +508,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 
 		    /* Debug helper: Addresses within the first 1K are
 		       treated as errors */
-		    if ((unsigned)p < 1024)
+		    if ((unsigned long)p < 1024)
 			p = "(NULL)";
 
 		    if (length > 0 && !ladjust) {
@@ -643,6 +643,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    capital=0;
 		    padc = '0';
 		    length = 8;
+		    longopt = 1;
 		    /*
 		     * We do this instead of just setting altfmt to TRUE
 		     * because we want 0 to have a 0x in front, and we want
@@ -684,8 +685,11 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		print_signed:
 		    if (longopt>1)
 			n = va_arg(args, long long);
-		    else
+		    else if (longopt == 1)
 			n = va_arg(args, long);
+		    else 
+		        n = va_arg(args, signed);
+
 		    if (longopt<0)
 		    	n &= 0xffff;
 		    if (n >= 0) {
@@ -701,10 +705,12 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		print_unsigned:
 		    if (longopt>1)
 			u = va_arg(args, unsigned long long);
-		    else
+		    else if (longopt == 1)
 			u = va_arg(args, unsigned long);
+		    else 
+		        u = va_arg(args, unsigned);
 		    if (longopt<0)
-		    	n &= 0xffff;
+		    	u &= 0xffff;
 		    goto print_num;
 
 		print_num:

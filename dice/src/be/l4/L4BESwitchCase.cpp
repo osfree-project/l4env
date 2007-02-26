@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BESwitchCase.cpp
- *    \brief   contains the implementation of the class CL4BESwitchCase
+ *  \file    dice/src/be/l4/L4BESwitchCase.cpp
+ *  \brief   contains the implementation of the class CL4BESwitchCase
  *
- *    \date    12/12/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    12/12/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -28,6 +28,7 @@
 
 #include "be/l4/L4BESwitchCase.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BEFile.h"
 
 #include "Attribute-Type.h"
 
@@ -46,9 +47,9 @@ CL4BESwitchCase::~CL4BESwitchCase()
 {
 }
 
-/** \brief writes the cleanup code for a switch case
+/** \brief initialize local variables
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
+ *  \param nDirection the direction of the parameters to initailize
  *
  * If we have a [out, ref] for which we allocated memory in the switch case,
  * then this memory has to be valid until the reply, which is after this
@@ -57,22 +58,52 @@ CL4BESwitchCase::~CL4BESwitchCase()
  * \todo we have to remember which indirect strings are associated with
  * dynamically allocated memory and have to be freed after the IPC.
  */
-void CL4BESwitchCase::WriteCleanup(CBEFile* pFile,  CBEContext* pContext)
+void 
+CL4BESwitchCase::WriteVariableInitialization(CBEFile * pFile, 
+    int nDirection)
+{
+    // first call the base class
+    CBESwitchCase::WriteVariableInitialization(pFile, nDirection);
+    // now check for [out, ref] and call appropriate "deferred" cleanup method
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
+    {
+	if (!DoWriteVariable(*iter))
+	    continue;
+        if (!(*iter)->IsDirection(nDirection))
+            continue;
+        if ((*iter)->m_Attributes.Find(ATTR_IN))
+            continue;
+	if (!(*iter)->m_Attributes.Find(ATTR_REF))
+	    continue;
+	(*iter)->WriteCleanup(pFile, true);
+    }
+}
+
+/** \brief writes the clean up code
+ *  \param pFile the file to write to
+ *
+ * If we have an [out, ref] skip the cleanup here, because it is already
+ * registered for "deferred" cleanup.
+ */
+void CL4BESwitchCase::WriteCleanup(CBEFile * pFile)
 {
     // cleanup indirect variables
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Parameters.begin();
+	 iter != m_Parameters.end();
+	 iter++)
     {
-        if (!pParameter->IsDirection(DIRECTION_OUT))
+	if (!DoWriteVariable(*iter))
+	    continue;
+        if (!(*iter)->IsDirection(DIRECTION_OUT))
             continue;
-        if (pParameter->FindAttribute(ATTR_IN))
+        if ((*iter)->m_Attributes.Find(ATTR_IN))
             continue;
-        // up to here the same as the base class
-        // now thest for [ref] which indicates indirect strings
-        if (pParameter->FindAttribute(ATTR_REF))
-            pParameter->WriteDeferredCleanup(pFile, pContext);
-        else
-            pParameter->WriteCleanup(pFile, pContext);
+	if ((*iter)->m_Attributes.Find(ATTR_REF))
+	    continue;
+        (*iter)->WriteCleanup(pFile, false);
     }
 }

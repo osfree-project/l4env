@@ -69,7 +69,7 @@ static int handle_presentation_error(PRESMANAGER *, PRESENTATION *, int, char *)
 
 static struct presenter_methods gen_methods;
 
-PRESENTER_VIEW *pv;
+extern PRESENTER_VIEW *pv;
 
 /**********************************/
 /*** FUNCTIONS FOR INTERNAL USE ***/
@@ -121,11 +121,11 @@ static char * calc_slide_path(char *path, char *slide_name) {
     /* alloc memory for complete path */
     complete_path = malloc(path_length+name_length+1);
 
-    if (! complete_path)
-    {
-        LOG_Error("Not enough memory!");
-        return NULL;
-    }
+    if (!complete_path)
+      {
+	LOG_Error("Not enough memory!");
+	return NULL;
+      }
 
     snprintf(complete_path,path_length+name_length+1,"%s%s",path,slide_name);
 
@@ -243,7 +243,7 @@ static int build_presentation_config (PRESMANAGER *pm, char *fname) {
         /* build path name for loading slide */
         path_slide = calc_slide_path(pres_path,slide_name);
 
-        ds = (l4dm_dataspace_t *) malloc(sizeof(l4dm_dataspace_t));
+        ds = malloc(sizeof(l4dm_dataspace_t));
 
         if (! ds || ! path_slide)
         {
@@ -462,8 +462,13 @@ static struct presmanager_methods pm_methods = {
 /*************************/
 
 static PRESMANAGER *create(void) {
-    PRESMANAGER *new = (PRESMANAGER *)malloc(sizeof(PRESENTATION)+
+    int get_struct_private_presentation_size_FIX_THIS_MESS(void);
+    PRESMANAGER *new = malloc(get_struct_private_presentation_size_FIX_THIS_MESS() +
                         sizeof(struct presenter_data));
+
+    if (!new)
+      return NULL;
+
     new->gen     = &gen_methods;
     new->pmm     = &pm_methods;
 

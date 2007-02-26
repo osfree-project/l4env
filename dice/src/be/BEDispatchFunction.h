@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEDispatchFunction.h
- *    \brief   contains the declaration of the class CBEDispatchFunction
+ *  \file    dice/src/be/BEDispatchFunction.h
+ *  \brief   contains the declaration of the class CBEDispatchFunction
  *
- *    \date    10/10/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/10/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,14 +31,14 @@
 #define BEDISPATCHFUNCTION_H
 
 #include <be/BEInterfaceFunction.h>
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CBESwitchCase;
 
-/**    \class CBEDispatchFunction
- *    \ingroup backend
- *    \brief the server loop's dispatch function class for the back-end
+/** \class CBEDispatchFunction
+ *  \ingroup backend
+ *  \brief the server loop's dispatch function class for the back-end
  *
  * This class contains the code to write a dispatch function
  */
@@ -46,50 +46,44 @@ class CBEDispatchFunction : public CBEInterfaceFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEDispatchFunction();
     virtual ~CBEDispatchFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEDispatchFunction(CBEDispatchFunction &src);
 
 public:
-    virtual CBESwitchCase* GetNextSwitchCase(vector<CBESwitchCase*>::iterator &iter);
-    virtual vector<CBESwitchCase*>::iterator GetFirstSwitchCase();
-    virtual void RemoveSwitchCase(CBESwitchCase *pFunction);
-    virtual void AddSwitchCase(CBESwitchCase *pFunction);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
-    virtual void WriteAfterParameters(CBEFile *pFile, CBEContext *pContext, bool bComma);
-    virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteSwitch(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteSetWrongOpcodeException(CBEFile* pFile, CBEContext* pContext);
-    virtual void WriteDefaultCase(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteDefaultCaseWithDefaultFunc(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteFunctionDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteBody(CBEFile *pFile, CBEContext *pContext);
-    virtual bool AddSwitchCases(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteSwitch(CBEFile *pFile);
+    virtual void WriteSetWrongOpcodeException(CBEFile* pFile);
+    virtual void WriteDefaultCase(CBEFile *pFile);
+    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile *pFile);
+    virtual void WriteDefaultCaseWithDefaultFunc(CBEFile *pFile);
+    virtual void WriteFunctionDeclaration(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteBody(CBEFile *pFile);
+    virtual bool AddSwitchCases(CFEInterface *pFEInterface);
+    virtual void AddBeforeParameters();
 
 protected:
-    /**    \var vector<CBESwitchCase*> m_vSwitchCases
-     *    \brief contains references to the interface's functions
-     */
-    vector<CBESwitchCase*> m_vSwitchCases;
     /** \var string m_sDefaultFunction
      *  \brief contains the name of the default function
      */
     string m_sDefaultFunction;
+
+public:
+    /** \var CCollection<CBESwitchCase> m_SwitchCases
+     *  \brief contains references to the interface's functions
+     */
+    CCollection<CBESwitchCase> m_SwitchCases;
 };
 
 #endif

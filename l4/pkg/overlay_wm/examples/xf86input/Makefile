@@ -2,18 +2,20 @@ PKGDIR          ?= ../..
 L4DIR           ?= $(PKGDIR)/../..
 
 ifeq ($(XF86TREE),)
+ifeq ($(XORGTREE),)
 all::
-	$(warning *** you should specify XF86TREE=/where/your/xfree/sources/reside/xc ***)
+	$(error *** you have to specify XF86TREE=/where/your/xfree/sources/reside/xc or XORGTREE ***)
 endif
-
-# sorry for my ignorance #
-XF86TREE        ?= /home/nf2/src/xfree-4.2.1
+endif
 
 TARGET           = lxevent_drv.o
 SRC_C            = lxevent.c
 MODE             = host
-LDFLAGS          = -r -nostdlib -nostartfiles
+LDFLAGS          = -shared -nostdlib -nostartfiles
 LDSCRIPT         = $(call findfile,main_rel.ld,$(L4LIBDIR))
+CFLAGS          = -fPIC
+CPPFLAGS        = -fPIC
+CRT0            = $(CRTP_DEFAULT)
 
 CPPFLAGS_lxevent.c = \
                  -Dlinux -D__i386__ \
@@ -28,6 +30,30 @@ CPPFLAGS_lxevent.c = \
                  -DX_BYTE_ORDER=X_LITTLE_ENDIAN -DNDEBUG \
                  -DFUNCPROTO=15 -DNARROWPROTO -DIN_MODULE -DXFree86Module
 
+ifneq ($(XORGTREE),)
+PRIVATE_INCDIR = .. \
+                 $(XORGTREE)/include \
+                 $(XORGTREE)/include/X11 \
+                 $(XORGTREE)/include/fonts \
+                 $(XORGTREE)/include/extensions \
+                 $(XORGTREE)/include/xserver \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/common \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/os-support \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/os-support/bus \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/xaa \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86/shadowfb \
+                 $(XORGTREE)/programs/Xserver/hw/xfree86 \
+                 $(XORGTREE)/programs/Xserver/include \
+                 $(XORGTREE)/programs/Xserver/fb \
+                 $(XORGTREE)/programs/Xserver/mi \
+                 $(XORGTREE)/programs/Xserver/afb \
+                 $(XORGTREE)/programs/Xserver/mfb \
+                 $(XORGTREE)/programs/Xserver/render \
+                 $(XORGTREE)/programs/Xserver/miext/shadow \
+                 $(PKGDIR)/include \
+                 .
+else
 PRIVATE_INCDIR = $(XF86TREE)/include \
                  $(XF86TREE)/include/X11 \
                  $(XF86TREE)/include/fonts \
@@ -48,6 +74,7 @@ PRIVATE_INCDIR = $(XF86TREE)/include \
                  $(XF86TREE)/programs/Xserver/miext/shadow \
                  $(PKGDIR)/include \
                  .
+endif
 
 INSTALLFILE_BIN_LOCAL = $(STRIP) --strip-unneeded $(1) \
                         -o $(INSTALLDIR_LOCAL)/$(1)

@@ -1,0 +1,36 @@
+verbose 0
+
+modpath "(nd)/tftpboot/cw183155/qt3"
+binpath "(nd)/tftpboot/cw183155/bin-qt"
+
+task "tmpfs"
+
+task "simple_file_server" "-v14"
+ module "fonts/fontdir"               "fontdir"
+ module "fonts/helvetica_100_50.qpf"  "helvetica_100_50.qpf"
+ module "fonts/helvetica_100_50i.qpf" "helvetica_100_50i.qpf"
+ module "fonts/helvetica_100_75.qpf"  "helvetica_100_75.qpf"
+ module "fonts/helvetica_180_50.qpf"  "helvetica_180_50.qpf"
+
+task "simple_file_server" "-v15"
+ module "text/README.qrun"            "README.qrun"
+ module "text/application.cc"         "application.cc"
+ module "images/Bay.jpg"              "Bay.jpg"
+ module "images/Fantasy.jpg"          "Fantasy.jpg"
+ module "images/GreenInfinity.jpg"    "GreenInfinity.jpg"
+ module "images/Redwoods.jpg"         "Redwoods.jpg"
+ module "images/qt.png"               "qt.png"
+ module "images/trolltech.gif"        "trolltech.gif"
+
+task "simple_file_server" "-v16"
+ module "sheep/speicher.ini"      "speicher.ini"
+ module "sheep/gameparm.ini"      "gameparm.ini"
+ module "sheep/hiscore.ini"       "hiscore.ini"
+ module "sheep/userlevels.csv"    "userlevels.csv"
+ module "sheep/levelfile.csv"     "levelfile.csv"
+ module "sheep/hiscore.csv"       "hiscore.csv"
+ module "sheep/help.rtf"          "help.rtf"
+ module "sheep/about.rtf"         "about.rtf"
+
+task "fstab" "-c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts -c/data -v15 -b/ -m/data -c/sheep -v16 -b/ -m/sheep -c/tmp -v111 -b/ -m/tmp"
+

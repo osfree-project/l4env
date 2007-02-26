@@ -34,27 +34,38 @@ typedef struct
 
 typedef struct
 {
-  l4_uint32_t struct_size;	/** <Size of structure */
-  l4_uint64_t addr;		/** <Start address */
-  l4_uint64_t size;		/** <Size of memory range */
-  l4_uint32_t type;		/** <type of memory range */
+  l4_uint32_t struct_size;	/**< Size of structure */
+  l4_uint64_t addr;		/**< Start address */
+  l4_uint64_t size;		/**< Size of memory range */
+  l4_uint32_t type;		/**< type of memory range */
   /* unspecified optional padding... */
 } l4util_mb_addr_range_t;
 
 /** usable memory "Type", all others are reserved.  */
 #define MB_ARD_MEMORY		1
 
+/**
+ * Address Range Types (ART) from "Advanced Configuration and Power Interface
+ * Specification" Rev3.0a (p. 390). Other values are undefined.
+ */
+#define MB_ART_MEMORY   1  /**< available, usable RAM */
+#define MB_ART_RESERVED 2  /**< in use or reserved by system */
+#define MB_ART_ACPI     3  /**< ACPI Reclaim Memory (RAM that contains
+			        ACPI tables) */
+#define MB_ART_NVS      4  /**< ACPI NVS Memory (must not be used by the OS */
+#define MB_ART_UNUSABLE 5  /**< memory in which errores have been detected */
+
 
 /** Drive Info structure.  */
 typedef struct
 {
-  l4_uint32_t size;		/** <The size of this structure.  */
-  l4_uint8_t drive_number;	/** <The BIOS drive number.  */
-  l4_uint8_t drive_mode;	/** <The access mode (see below).  */
-  l4_uint16_t drive_cylinders;	/** <number of cylinders  */
-  l4_uint8_t drive_heads;	/** <number of heads */
-  l4_uint8_t drive_sectors;	/** <number of sectors per track */
-  l4_uint16_t drive_ports[0];	/** <Array of I/O ports used for the drive. */
+  l4_uint32_t size;		/**< The size of this structure.  */
+  l4_uint8_t drive_number;	/**< The BIOS drive number.  */
+  l4_uint8_t drive_mode;	/**< The access mode (see below).  */
+  l4_uint16_t drive_cylinders;	/**< number of cylinders  */
+  l4_uint8_t drive_heads;	/**< number of heads */
+  l4_uint8_t drive_sectors;	/**< number of sectors per track */
+  l4_uint16_t drive_ports[0];	/**< Array of I/O ports used for the drive. */
 } l4util_mb_drive_t;
 
 /* Drive Mode.  */

@@ -45,6 +45,8 @@ struct lxevent {
 int l4libc_heapsize = 1024*1024;
 int lxev_fh;
 
+static int verbose;
+
 
 /*** UTILITY: SUBMIT LINUX EVENT TO NAMED PIPE ***/
 static void submit_event(struct lxevent *ev) {
@@ -56,7 +58,9 @@ static void submit_event(struct lxevent *ev) {
 /*** CALLBACK: CALLED FOR EACH INCOMING PRESS/RELEASE EVENT ***/
 static void button_event_callback(int type, int code) {
 	struct lxevent ev;
-	printf("lxevent(button_event_callback): type=%d, code=%d\n", type, code);
+
+	if (verbose)
+		printf("lxevent(button_event_callback): type=%d, code=%d\n", type, code);
 
 	ev.type  = EV_KEY;               /* key/button       */
 	ev.code  = code;                 /* keycode          */
@@ -69,7 +73,9 @@ static void button_event_callback(int type, int code) {
 static void motion_event_callback(int mx, int my) {
 	struct lxevent ev;
 	static int curr_mx, curr_my;
-	printf("lxevent(motion_event_callback): mx=%d, my=%d\n", mx, my);
+
+	if (verbose)
+		printf("lxevent(motion_event_callback): mx=%d, my=%d\n", mx, my);
 
 	/*
 	 * For each incoming motion event, we check if the

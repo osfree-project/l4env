@@ -30,7 +30,7 @@ Fpu::save_state (Fpu_state *s)
   assert (s->state_buffer());
 
   ptrace (Cpu::features() & FEAT_FXSR ? PTRACE_GETFPXREGS : PTRACE_GETFPREGS,
-          Space::current()->pid(), NULL, s->state_buffer());
+          current_mem_space()->pid(), NULL, s->state_buffer());
 }
 
 /**
@@ -44,7 +44,7 @@ Fpu::restore_state (Fpu_state *s)
   assert (s->state_buffer());
 
   ptrace (Cpu::features() & FEAT_FXSR ? PTRACE_SETFPXREGS : PTRACE_SETFPREGS,
-          Space::current()->pid(), NULL, s->state_buffer());
+          current_mem_space()->pid(), NULL, s->state_buffer());
 }
 
 /**

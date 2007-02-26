@@ -5,11 +5,3 @@ in an experimental stage and not cleaned up yet.
 current patches:
 ----------------
 
-obsolete patches:
------------------
-20041101_{dietlibc|l4vfs}.diff:
- - make new example programs (e.g. widgets demo) work
- - adds/fixes stat()/fstat()
- 
-dietlibc-ioctl.diff
-dope.diff

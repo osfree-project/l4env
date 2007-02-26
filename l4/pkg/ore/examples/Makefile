@@ -1,9 +1,7 @@
 PKGDIR ?= ..
 L4DIR  ?= $(PKGDIR)/../..
 
-# create examples demonstrating the use of you package in subdirectories
-# and list those subdirs in the TARGET variable.
-TARGET = ore_test arping
+TARGET = ore_test arping debug uip_ore mini_http_uip log_ore
 
 include $(L4DIR)/mk/subdir.mk
 

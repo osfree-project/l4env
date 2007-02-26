@@ -69,13 +69,7 @@ l4_threadid_t l4rm_task_pager_id;
 static void
 __get_pager(void)
 {
-  l4_umword_t dummy;
-  l4_threadid_t l4rm_task_preempter_id;
-  
-  l4rm_task_preempter_id = l4rm_task_pager_id = L4_INVALID_ID;
-  l4_thread_ex_regs(l4rm_service_id, (l4_umword_t)-1, (l4_umword_t)-1,
-		    &l4rm_task_preempter_id, &l4rm_task_pager_id,
-		    &dummy, &dummy, &dummy);
+  l4rm_task_pager_id = l4_thread_ex_regs_pager(l4rm_service_id);
 }
 
 /*****************************************************************************

@@ -1102,7 +1102,6 @@ typedef struct {
 #ifdef CONFIG_PROC_FS
 extern void proc_ide_create(void);
 extern void proc_ide_destroy(void);
-extern void recreate_proc_ide_device(ide_hwif_t *, ide_drive_t *);
 extern void destroy_proc_ide_device(ide_hwif_t *, ide_drive_t *);
 extern void destroy_proc_ide_drives(ide_hwif_t *);
 extern void create_proc_ide_interfaces(void);
@@ -1446,10 +1445,10 @@ typedef struct pkt_task_s {
 	void			*special;
 } pkt_task_t;
 
-extern inline void SELECT_DRIVE(ide_drive_t *);
-extern inline void SELECT_INTERRUPT(ide_drive_t *);
-extern inline void SELECT_MASK(ide_drive_t *, int);
-extern inline void QUIRK_LIST(ide_drive_t *);
+extern void SELECT_DRIVE(ide_drive_t *);
+extern void SELECT_INTERRUPT(ide_drive_t *);
+extern void SELECT_MASK(ide_drive_t *, int);
+extern void QUIRK_LIST(ide_drive_t *);
 
 extern void ata_input_data(ide_drive_t *, void *, u32);
 extern void ata_output_data(ide_drive_t *, void *, u32);

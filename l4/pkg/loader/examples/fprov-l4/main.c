@@ -30,15 +30,34 @@
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/env.h>
 #include <l4/util/macros.h>
+#include <l4/util/parse_cmd.h>
 
 typedef char l4_page_t[L4_PAGESIZE];
 
 static l4_threadid_t loader_id;
 static l4_threadid_t dm_id;
 
+/** Should we ignore path names and look for all files in the directory
+    the server is started in? */
+static int ignore_path;
+
 /* placeholder for mapping a L4 page */
 static l4_page_t io_buf __attribute__ ((aligned(L4_PAGESIZE)));
 static l4_page_t map_page __attribute__ ((aligned(L4_PAGESIZE)));
+static int       mapped = 1;
+
+static void
+free_map_area(void)
+{
+  if (mapped)
+    {
+      /* clear memory */
+      l4_fpage_unmap(l4_fpage((l4_umword_t)map_page, L4_LOG2_PAGESIZE,
+			      L4_FPAGE_RW, L4_FPAGE_MAP),
+		     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+      mapped = 0;
+    }
+}
 
 static void
 signal_handler(int code)
@@ -81,14 +100,14 @@ linux_enter_kdebug(void)
  * \retval _ev		Flick exception structure (unused)
  * \return		0 on success
  *			-L4_ENOMEM if allocation failed */
-l4_int32_t
-l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
-    const char* fname,
-    const l4_threadid_t *dm,
-    l4_uint32_t flags,
-    l4dm_dataspace_t *ds,
-    l4_uint32_t *size,
-    CORBA_Server_Environment *_dice_corba_env)
+long
+l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
+                             const char* fname,
+                             const l4_threadid_t *dm,
+                             unsigned long flags,
+                             l4dm_dataspace_t *ds,
+                             l4_size_t *size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   gzFile fd;
@@ -113,13 +132,27 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
   else
     fname_name++;
 
-  printf("  open \"%s\" by " l4util_idfmt "\n",
-      fname, l4util_idstr(*_dice_corba_obj));
-
-  if ((fd = gzopen(fname, "r")) == NULL)
+  if (ignore_path == 0)
     {
-      fprintf(stderr, "Can't open \"%s\"\n", fname);
-      return -L4_ENOTFOUND;
+      printf("  open \"%s\" by " l4util_idfmt "\n",
+          fname, l4util_idstr(*_dice_corba_obj));
+
+      if ((fd = gzopen(fname, "r")) == NULL)
+        {
+          fprintf(stderr, "Can't open \"%s\"\n", fname);
+          return -L4_ENOTFOUND;
+        }
+    }
+  else
+    {
+      printf("  open \"%s\" by " l4util_idfmt "\n",
+          fname_name, l4util_idstr(*_dice_corba_obj));
+
+      if ((fd = gzopen(fname_name, "r")) == NULL)
+        {
+          fprintf(stderr, "Can't open \"%s\"\n", fname_name);
+          return -L4_ENOTFOUND;
+        }
     }
 
   /* Get the size of the _uncompressed_ file */
@@ -170,14 +203,13 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
 	}
 
       /* clear memory */
-      l4_fpage_unmap(l4_fpage((l4_umword_t)map_page, L4_LOG2_PAGESIZE,
-			       L4_FPAGE_RW, L4_FPAGE_MAP),
-		     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+      free_map_area();
 
       /* map page of dataspace */
       error = l4dm_map_pages((l4dm_dataspace_t *)ds,offs,L4_PAGESIZE,
 			     (l4_addr_t)map_page,L4_LOG2_PAGESIZE,0,L4DM_RW,
 			     &fpage_addr,&fpage_size);
+      mapped = 1;
       if (error < 0)
 	{
 	  fprintf(stderr, "Error %d requesting offset %08x "
@@ -190,6 +222,10 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
 
       /* copy file contents */
       memcpy(map_page, io_buf, L4_PAGESIZE);
+
+      /* make sure that we don't have any mappings left since we transfer
+       * the dataspace to the called at the end */
+      free_map_area();
     }
 
   gzclose(fd);
@@ -208,11 +244,12 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
 }
 
 int
-main(int argc, char **argv)
+main(int argc, const char **argv)
 {
   l4_threadid_t me;
   const char *fname = strrchr(argv[0], '/');
   struct stat buf;
+  int error;
 
   if (stat("/proc/l4", &buf))
     {
@@ -226,13 +263,20 @@ main(int argc, char **argv)
   else
     fname++;
 
-  if (argc > 1)
+  if ((error = parse_cmdline(&argc, &argv,
+                'n', "nopaths", "ignore paths in file names",
+                PARSE_CMD_SWITCH, 1, &ignore_path,
+                0)))
     {
-      fprintf(stderr, "L4 file provider\n"
-	              "Usage:\n"
-	              "  %s (no arguments)\n",
-		      fname);
-      return -1;
+      switch (error)
+        {
+        case -1: printf("Bad command line parameter\n"); break;
+        case -2: printf("Out of memory in parse_cmdline()\n"); break;
+        case -3: /* Unrecognized option */ break;
+        case -4: /* Help requested */ break;
+        default: printf("Error %d in parse_cmdline()", error); break;
+        }
+      return 1;
     }
 
   /* we need the loader */

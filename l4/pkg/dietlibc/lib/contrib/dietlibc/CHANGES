@@ -1,3 +1,93 @@
+0.30:
+  put exception handling frames in read-only section on AMD64 and S/390
+  make sys/stat.h ILP64 compatible
+    (both Markus Oberhumer)
+  whoops, strptime was completely broken, and noone noticed :-)
+  fix DNS resolver to only use shorter timeout for .local queries
+  remove throw() statements for functions taking function pointer
+    arguments (qsort, besearch, ftw)
+  fix embarassing bug in pclose (Juergen Sawinski, René Rebe)
+  when asking for an IPv6 address and there is an IPv4 address in
+    /etc/hosts but not an IPv6 address, return NO_DATA without
+    querying DNS.  This is how glibc does it, and it means you can use
+    e.g. elinks to browse http://localhost/ without being connected to
+    the internet / a DNS server.
+  make libcrypt/crypt.c to work when compiled with gcc 4
+  provide toascii and ustat (Reynir Stefansson)
+  change size of struct sigaction.sa_flags from long to int on alpha.
+  beginnings of wide char string routines
+  fix regex match bug ("@(a|b)" would also match "x@z")
+  ARM big-endian support (Paul Clifford)
+  support %s in strftime, so date in embutils does :-)
+  fix two strptime bugs (Gernot Tenchio)
+  add strnlen and clearenv (for udev)
+  #define IOV_MAX in limits.h behind _XOPEN_SOURCE (for opennntpd)
+  tzfile fix (Nikola Vladov)
+  lots of fixes from Markus FX Oberhumer:
+    * better signal handling error detection
+    * setjmp.S on i386
+    * getenv on i386
+    * sys/stat.h -malign-double fix
+    * update fcntl.h for MIPS to 2.6.13 version
+    * jmp_buf is 40*8 instead of 58*8 on ppc64.
+    * This patch fixes the section of the TOC entries on ppc64
+    * libstdc++ updates for gcc 4
+    * remove cstddef and cwchar (no longer needed)
+    * int -> ssize_t for read and write
+    * sigjmp.c: __mask_was_saved was not set in all cases!
+    * another round of ILP64 cleanups
+  add ngettext, dngettext (for glib)
+  add strdupa and strndupa (for directfb)
+  add extended attribute, thread, and misc syscalls
+  Olaf: fixed my libdl code to run with gcc-4.0.x
+  support optstring starting with '-' extension in getopt_long (Jens Låås)
+  make sure ftw returns in the directory it was called from
+  Olaf: fixing a bug in timegm (an off by ONE array access)...
+
+0.29:
+  oops, fix LD_RUN_PATH unsetting (Enrico Scholz)
+  Markus Oberhumer sent the following diffs:
+    dl_iterate_phdr for libgcc_eh
+    proper endian.h recognition for __s390x__
+    rem and sdiv for sparc
+  fix stupid dns decoding bug (Gernot Tenchio)
+  #ifdef powerpc -> #ifdef __powerpc__ (Enrico Scholz)
+  struct siginfo was wrong for 64-bit platforms
+  Lots of fixes and patches from Markus Oberhumer.
+    libstdc++ compatibility
+    ilp64 compatibility
+    make diet libc compile with -Werror on 13 platforms
+    provide time() using gettimeofday for s390x
+    remove waitpid warnings on ia64, s390/x
+    provide C++ exception handling support
+  ppc64 now compiles again
+  typo in libcompat/syscall.S for WANT_THREAD_SAFE (Björn Döbel)
+  syscall.h update for all architectures
+  remove two ppc64 warnings
+  fix s/390 syscalls > 255
+  add "diet -L gcc" option to print the lib path
+  remove new gcc4 signedness warnings
+  add link.h (probably only useful to compile an ia64 cross-gcc)
+  understand -m32 on x86_64 as meaning i386
+  now that gcc 4 is out, finally switch -malign-functions to
+    -falign-functions in diet
+  MADV_* for hppa and ia64 (Enrico Scholz)
+  add _PATH_TMP to paths.h
+  support syscall on sparc and x86_64 (Herbert Poetzl)
+  change alignment code in gethostbyname_r (Herbert Poetzl)
+  avoid bus errors in DNS code
+  implement gettimeofday vsyscall for x86_64
+  replace unfinished plug&play DNS hack with zeroconf,
+    rename dietfeatures.h option to WANT_PLUGPLAY_DNS.
+    A small dns daemon can be found in contrib/dnsd.c
+    hack ugly non-thread-safe kludge to communicate proper scope_id
+      to getaddrinfo
+  fix bug regarding regular expressions like "(a|)b"
+  work around gcc 4 bug
+  make sure diet always leaves -V in front of the gcc command line
+  sparc64 fixes (Martin)
+  fix warnings in socketcall functions
+
 0.28:
   add tcgetsid (Yuri Kozlov)
   add _udivdi3, _divdi3, _umoddi3, _moddi3 for MIPS
@@ -12,6 +102,30 @@
   #include <endian.h> in syscalls.s/environ.S to make sure environ is
     actually large enough (Enrico Scholz)
   add waitpid wrapper around wait4 for arm-linux (Avinash Bhatia)
+  make res_mkquery reject invalid domains (label>64, name>255) (Nikola Vladov)
+  make res_query return TRY_AGAIN instead of NO_DATA if no answer was
+    received (Nikola Vladov)
+  fix PT_READ_U in sys/trace.h (John K. Hohm)
+  Olaf: added mmap64 wrapper (arm,mips,sparc,...)
+  work around new kernel rt signal semantics (need to set restorer function)
+  Olaf:
+    - libdl + gcc 3.4 resulted in a SIGSEGV because local names were
+      dynamically resolved....
+    - Also fixed a bug in the symbol resolver
+    - fixing the mmap64 stuff & arm/dyn_syscalls had no mmap2 (Gerrit Pape)
+  tzfile parser fix (John K. Hohm)
+  ppc64 fixes (Gwenole Beauchesne)
+  add sigisemptyset, sigandset and sigorset (John K. Hohm)
+  minor additions to make gdb 6.3 happy (John K. Hohm)
+  ld.so support for gdb (John K. Hohm)
+  implement nice(2) via setpriority() if there is no nice syscall
+  support libm.so (John K. Hohm)
+  hack rpc/xdr.h to work with gcc 4 (Andreas Jochens via Gerrit Pape)
+  make dyn didn't work for !WANT_FULL_RESOLV_CONF (Sampo Kellomaki)
+  #undef __i686 in i386/PIC.h (George Sawinski)
+  fix timegm bug (found by Nikola Vladov)
+  add sys/swap.h (George Sawinski)
+  Olaf: dynamic x86_64 support (libdl relocator and dyn_syscalls)
 
 0.27:
   change DNS routines to look for ip6.arpa instead of ip6.int

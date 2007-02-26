@@ -38,12 +38,14 @@
 /* ffmpeg stuff */
 #include <avcodec.h>
 
+#if H264_SLICE_SCHEDULE
+/* the H.264 slice scheduler */
+#include "process.h"
+#endif
+
 /* aclib */
 #include "aclib.h"
 static void *(*fastmemcpy_func) (void *to, const void *from, size_t len);
-
-/* this is an external symbol for ffmpeg */
-int mm_flags = 0;
 
 /* avcodec - internal data */
 struct ffmpeg_data
@@ -55,6 +57,7 @@ struct ffmpeg_data
   double framerate;
   /* buffer if we still have data after we got one frame */
   void *old_data;
+  int old_data_alloc;
   int old_data_size;
 };
 
@@ -93,6 +96,8 @@ static struct ffmpeg_codec ffmpeg_codecs[] = {
    {"H263", "U263", "VIV1", ""}},
   {CODEC_ID_RV10, "rv10",
    {"RV10", "RV13", ""}},
+  {CODEC_ID_H264, "h264",
+   {"H264", "X264", ""}},
   {0, NULL, {""}}
 };
 
@@ -106,7 +111,7 @@ vid_codec_ffmpeg_init (plugin_ctrl_t * attr, stream_info_t * info)
   struct ffmpeg_data *internal_data;
   static struct ffmpeg_codec *codec;
 
-  strncpy (attr->info, "libavcodec " LIBAVCODEC_VERSION, 32);
+  strncpy (attr->info, LIBAVCODEC_IDENT, 32);
 
   if (attr->mode != PLUG_MODE_DEC)
   {
@@ -171,11 +176,11 @@ vid_codec_ffmpeg_init (plugin_ctrl_t * attr, stream_info_t * info)
   /* these are codecs which we import raw, and so we may be sending a incomplete frame. */
   if ((codec->id == CODEC_ID_MJPEG) || (codec->id == CODEC_ID_MPEG1VIDEO)
       || (codec->id == CODEC_ID_MP2) || (codec->id == CODEC_ID_DVVIDEO)
-      || (codec->id == CODEC_ID_MPEG2VIDEO))
+      || (codec->id == CODEC_ID_MPEG2VIDEO) || (codec->id == CODEC_ID_H264))
   {
     if (internal_data->lavc_dec_codec->capabilities & CODEC_CAP_TRUNCATED)
-      internal_data->lavc_dec_context->flags |= CODEC_CAP_TRUNCATED;
-    LOGdL (DEBUG_CODEC, "Using CAP_truncated strategy");
+      internal_data->lavc_dec_context->flags |= CODEC_FLAG_TRUNCATED;
+    LOGdL (DEBUG_CODEC, "Using truncated strategy");
   }
   else
     /* for others we have to know width and height */
@@ -216,6 +221,11 @@ vid_codec_ffmpeg_init (plugin_ctrl_t * attr, stream_info_t * info)
 
   /* checking cpu caps for faster memcpy */
   fastmemcpy_func = determineFastMemcpy (attr->cpucaps);
+
+#if H264_SLICE_SCHEDULE
+  if (internal_data->lavc_dec_context->codec_id == CODEC_ID_H264)
+    process_init(internal_data->lavc_dec_context, NULL);
+#endif
 
   /* done */
   return 0;
@@ -315,27 +325,35 @@ vid_codec_ffmpeg_step (plugin_ctrl_t * attr, unsigned char *in_buffer,
     size -= len;
     input_ptr += len;
 
-    if (got_picture)
+    /* all input data used ?, if not copy into internal buffer,
+     * take it in next step and signal we still have data */
+    if (size > 0)
     {
-      /* we have an complete frame */
-      LOGdL (DEBUG_CODEC, "we got a frame");
-      /* all input data used ?, if not copy into internal buffer,
-       * take it in next step and signal we still have data */
-      if (size > 0)
-      {
-	LOGdL (DEBUG_CODEC, "still have data - copy into internal buffer");
-	/* we ignore all errors here ! */
-	/* realloc to fit */
-	internal_data->old_data = realloc (internal_data->old_data, size);
+      void *free_buffer = NULL;
+
+      LOGdL (DEBUG_CODEC, "still have data - copy into internal buffer");
+      /* we ignore all errors here ! */
+      /* realloc to fit */
+      if (internal_data->old_data_alloc < size) {
+	free_buffer = internal_data->old_data;
+	internal_data->old_data = malloc(size);
 	if (internal_data->old_data == NULL)
 	{
 	  LOG_Error ("realloc failed.");
 	  return -L4_ENOMEM;
 	}
-	/* memcpy into internal buffer */
-	memcpy (internal_data->old_data, input_ptr, size);
       }
+      /* memcpy into internal buffer, have to use memmove due to potential overlap */
+      memmove (internal_data->old_data, input_ptr, size);
+      internal_data->old_data_size = size;
 
+      free(free_buffer);
+    }
+
+    if (got_picture)
+    {
+      /* we have an complete frame */
+      LOGdL (DEBUG_CODEC, "we got a frame");
       break;
     }
   }
@@ -344,7 +362,7 @@ vid_codec_ffmpeg_step (plugin_ctrl_t * attr, unsigned char *in_buffer,
   if ((!is_reset_sync_point (frameattr->keyframe))
       && (!is_reconfigure_point (frameattr->keyframe)))
     frameattr->keyframe =
-      internal_data->lavc_dec_context->coded_frame->key_frame;
+      internal_data->picture->key_frame;
 
   /* check if we have to send the reconfigure signal */
   if ((internal_data->lavc_dec_context->width != internal_data->xdim)
@@ -362,8 +380,10 @@ vid_codec_ffmpeg_step (plugin_ctrl_t * attr, unsigned char *in_buffer,
   /* set data inf frame_ctrl_t */
   frameattr->vi.format = attr->target_format;
   frameattr->vi.colorspace = attr->target_colorspace;
+  frameattr->vi.framerate = internal_data->framerate;
   attr->packetsize = vid_streaminfo2packetsize (frameattr);
   frameattr->framesize = attr->packetsize - sizeof (frame_ctrl_t);
+  frameattr->frameID = internal_data->lavc_dec_context->frame_number;
 
 
   /* Now we have to convert the picture to YV12 or YUV420 (difference is U<-->V are changed */
@@ -487,6 +507,10 @@ vid_codec_ffmpeg_close (plugin_ctrl_t * attr)
 
   if (internal_data->lavc_dec_context)
   {
+#if H264_SLICE_SCHEDULE
+    if (internal_data->lavc_dec_context->codec_id == CODEC_ID_H264)
+      process_finish(internal_data->lavc_dec_context);
+#endif
 
     avcodec_close (internal_data->lavc_dec_context);
     free (internal_data->lavc_dec_context);

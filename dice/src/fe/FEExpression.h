@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEExpression.h
- *    \brief   contains the declaration of the class CFEExpression
+ *  \brief   contains the declaration of the class CFEExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -53,11 +53,10 @@ enum EXPR_TYPE {
 #include "fe/FEBase.h"
 #include "TypeSpec-Type.h"
 #include <string>
-using namespace std;
 
 /** \class CFEExpression
  *    \ingroup frontend
- *    \brief represents a simple expression
+ *  \brief represents a simple expression
  *
  * This class is used to represent a simple expression.
  */
@@ -69,32 +68,31 @@ public:
     /** standard constructor for expression */
     CFEExpression();
     /** construct an expression object
-     *    \param nType the type of the expression (NULL, TRUE, FALSE, derived expressions) */
+     *  \param nType the type of the expression (NULL, TRUE, FALSE, derived expressions) */
     CFEExpression(EXPR_TYPE nType); // NULL, TRUE, FALSE, derived
     /** construct expression object
-     *    \param nType the type of the expression (CHAR)
-     *    \param nChar the single character
+     *  \param nType the type of the expression (CHAR)
+     *  \param nChar the single character
      */
     CFEExpression(EXPR_TYPE nType, char nChar); // single char
     /** constructs an expression
-     *    \param nType the type of the expression (string)
-     *    \param sString the string
+     *  \param nType the type of the expression (string)
+     *  \param sString the string
      */
     CFEExpression(EXPR_TYPE nType, string sString); // string
     virtual ~CFEExpression();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEExpression(CFEExpression &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual string ToString();
     virtual CObject* Clone();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual EXPR_TYPE GetType();
     virtual char GetChar();
@@ -103,15 +101,15 @@ public:
 // attributes
 protected:
     /** \var EXPR_TYPE m_nType
-     *    \brief the type of the expression
+     *  \brief the type of the expression
      */
     EXPR_TYPE m_nType;
     /**    \var char m_Char
-     *    \brief if this is a character expression: the character
+     *  \brief if this is a character expression: the character
      */
     char m_Char;
     /**    \var string m_String
-     *    \brief if this is a string expression: the string
+     *  \brief if this is a string expression: the string
      */
     string m_String;
 };

@@ -1,5 +1,5 @@
-#ifndef UTIL_H__
-#define UTIL_H__
+#ifndef __L4UTIL__UTIL_H__
+#define __L4UTIL__UTIL_H__
 
 #include <l4/sys/types.h>
 #include <l4/sys/compiler.h>
@@ -39,18 +39,14 @@ L4_INLINE void l4_sleep_forever(void) __attribute__((noreturn));
 L4_INLINE void
 l4_sleep_forever(void)
 {
-  l4_msgdope_t result;
-  l4_umword_t dummy;
-  for (;;) {
-    l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
-                   L4_IPC_NEVER, &result);
-  }
+  for (;;)
+    l4_ipc_sleep(L4_IPC_NEVER);
 }
 
 /** Touch data areas to force mapping read-only */
 static inline void
 l4_touch_ro(const void*addr, unsigned size)
-{ 
+{
   volatile const char *bptr, *eptr;
 
   bptr = (const char*)(((unsigned)addr) & L4_PAGEMASK);
@@ -67,11 +63,11 @@ l4_touch_rw(const void*addr, unsigned size)
 {
   volatile char *bptr;
   volatile const char *eptr;
-      
+
   bptr = (char*)(((unsigned)addr) & L4_PAGEMASK);
   eptr = (const char*)(((unsigned)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE) {
-    char x = *bptr; 
+    char x = *bptr;
     *bptr = x;
   }
 }
@@ -79,4 +75,4 @@ l4_touch_rw(const void*addr, unsigned size)
 EXTERN_C_END
 
 
-#endif /* UTIL_H__ */
+#endif /* __L4UTIL__UTIL_H__ */

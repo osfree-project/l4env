@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEBase.h
- *    \brief   contains the declaration of the class CFEBase
+ *  \brief   contains the declaration of the class CFEBase
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,7 +32,6 @@
 
 #include "Object.h"
 #include <string>
-using namespace std;
 
 class CFile;
 class CFEFile;
@@ -43,7 +42,7 @@ class CFEConstructedType;
 
 /** \class CFEBase
  *    \ingroup frontend
- *    \brief The front-end base class
+ *  \brief The front-end base class
  *
  * This class is the base class for all classes of the front-end. It
  * implements several features, each front-end class might use.
@@ -55,23 +54,20 @@ class CFEBase : public CObject
 // standard constructor/destructor
 public:
     /** constructs a front-end base object
-     *    \param pParent the parent object of this one */
+     *  \param pParent the parent object of this one */
     CFEBase(CObject* pParent = 0);
     virtual ~CFEBase();
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEBase(CFEBase &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual void Dump();
     virtual string ToString();
 
-    virtual bool CheckConsistency();
     virtual CObject* Clone();
     virtual CFEBase* GetRoot();
 

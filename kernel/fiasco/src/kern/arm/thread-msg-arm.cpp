@@ -41,9 +41,9 @@ Thread::setup_ipc_window(unsigned win, Address address)
   // the receiver's mappings are already set up appropriately. Note that this
   // does not prevent a pagefault on either of these mappings later on, e.g.
   // if the receiver's mapping is r/o here and needs to be r/w for Long-IPC.
-  // Careful: for SMAS current_space() != space()
-  current_space()->copy_in((void*)Kmem::ipc_window(win),
-                           receiver()->space(), 
+  // Careful: for SMAS current_mem_space() != space()
+  Page_table::current()->copy_in((void*)Kmem::ipc_window(win),
+                           receiver()->mem_space()->dir(), 
                            (void*)address, 
                            Config::SUPERPAGE_SIZE * 2, true);
 }
@@ -66,12 +66,12 @@ Mword Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error)
   
   (void)error;
 
-  if (!receiver()->space()->lookup((void*)remote_pfa,0,0).is_invalid())
+  if (!receiver()->mem_space()->dir()->lookup((void*)remote_pfa,0,0).is_invalid())
     {
-      space()->copy_in((void*)pfa, 
-                       receiver()->space(), 
-                       (void*)remote_pfa, 
-                       Config::SUPERPAGE_SIZE, true);
+      mem_space()->dir()->copy_in((void*)pfa, 
+				  receiver()->mem_space()->dir(), 
+				  (void*)remote_pfa, 
+				  Config::SUPERPAGE_SIZE, true);
 
       cpu_lock.clear();
 

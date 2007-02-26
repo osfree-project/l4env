@@ -31,7 +31,7 @@ getdir 		= $(shell						\
 		  )
 
 buildmakefile = mkdir -p "$(1)";					     \
-		perl -p -i -e '$$s = "$(CURDIR)/src"; s/\@SRCDIR\@/\"$$s\"/' \
+		perl -p -i -e '$$s = "$(CURDIR)/src"; s/\@SRCDIR\@/$$s/' \
 			< $(MAKEFILETEMPL) > $(1)/Makefile
 
 ifneq ($(strip $(B)),)

@@ -1002,7 +1002,7 @@
 #define BLMOD_EN		0x00010000
 #define BIASMOD_EN		0x00020000
 
-extern unsigned int ati_regbase;
+extern l4_addr_t    ati_regbase;
 extern unsigned int blitter_may_be_busy;
 
 static inline void 

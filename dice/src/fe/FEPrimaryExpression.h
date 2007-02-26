@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEPrimaryExpression.h
- *    \brief   contains the declaration of the class CFEPrimaryExpression
+ *  \brief   contains the declaration of the class CFEPrimaryExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -38,7 +38,7 @@
 
 /**    \class CFEPrimaryExpression
  *    \ingroup frontend
- *    \brief represents a primary expression
+ *  \brief represents a primary expression
  *
  * A primary expression is a simple expression, extended by and integer
  * or float value.
@@ -49,81 +49,80 @@ class CFEPrimaryExpression : public CFEExpression
 // standard constructor/destructor
 public:
     /** construct a primary expression
-     *    \param nType the type of the expression
-     *    \param nValue the integer value of an integer expression
+     *  \param nType the type of the expression
+     *  \param nValue the integer value of an integer expression
      */
     CFEPrimaryExpression(EXPR_TYPE nType, long int nValue); // simple integer value
     /** construct a primary expression
-     *    \param nType the type of the expression
-     *    \param nValue the integer value of an integer expression
+     *  \param nType the type of the expression
+     *  \param nValue the integer value of an integer expression
      */
     CFEPrimaryExpression(EXPR_TYPE nType, unsigned long int nValue); // simple integer value
 #if SIZEOF_LONG_LONG > 0
     /** construct a primary expression
-     *    \param nType the type of the expression
-     *    \param nValue the integer value of an integer expression
+     *  \param nType the type of the expression
+     *  \param nValue the integer value of an integer expression
      */
     CFEPrimaryExpression(EXPR_TYPE nType, long long nValue); // simple integer value
     /** construct a primary expression
-     *    \param nType the type of the expression
-     *    \param nValue the integer value of an integer expression
+     *  \param nType the type of the expression
+     *  \param nValue the integer value of an integer expression
      */
     CFEPrimaryExpression(EXPR_TYPE nType, unsigned long long nValue); // simple integer value
 #endif
     /** constructs a primary expression
-     *    \param nType the type of the expression
-     *    \param fValue the floating point type if this is a floating point expression
+     *  \param nType the type of the expression
+     *  \param fValue the floating point type if this is a floating point expression
      */
     CFEPrimaryExpression(EXPR_TYPE nType, long double fValue); // simple float value
     /** construct a primary expression
-     *    \param nType the type of the expression
-     *    \param pOperand the operand if this is a operand in parenthesis
+     *  \param nType the type of the expression
+     *  \param pOperand the operand if this is a operand in parenthesis
      */
     CFEPrimaryExpression(EXPR_TYPE nType, CFEExpression *pOperand); // means '('exp')'
     virtual ~CFEPrimaryExpression();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEPrimaryExpression(CFEPrimaryExpression &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual string ToString();
     virtual CObject* Clone();
     virtual long double GetFloatValue();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual CFEExpression* GetOperand();
 
 // attributes
 protected:
     /**    \var CFEExpression *m_pOperand
-     *    \brief the contained expression " '(' expr ')' "
+     *  \brief the contained expression " '(' expr ')' "
      */
     CFEExpression *m_pOperand;
     /**    \var long int m_nValue
-     *    \brief the integer value
+     *  \brief the integer value
      */
     long int m_nValue;
     /**    \var unsigned long int m_nuValue
-     *    \brief the integer value
+     *  \brief the integer value
      */
     unsigned long int m_nuValue;
 #if SIZEOF_LONG_LONG > 0
     /**    \var long long m_nlValue
-     *    \brief the integer value
+     *  \brief the integer value
      */
     long long m_nlValue;
     /**    \var unsigned long long m_nulValue
-     *    \brief the integer value
+     *  \brief the integer value
      */
     unsigned long long int m_nulValue;
 #endif
     /**    \var long double m_fValue
-     *    \brief the float value
+     *  \brief the float value
      */
     long double m_fValue;
 };

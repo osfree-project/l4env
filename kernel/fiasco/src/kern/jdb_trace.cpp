@@ -233,6 +233,7 @@ Jdb_pf_trace::clear_restriction()
   _addr.hi      = 0;
 }
 
+PUBLIC static inline int Jdb_unmap_trace::log() { return _log; }
 PUBLIC static inline int Jdb_unmap_trace::log_buf() { return _log_to_buf; }
 
 PUBLIC static inline

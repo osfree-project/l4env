@@ -30,7 +30,7 @@ INTERFACE:
 
 //__STL_BEGIN_NAMESPACE
 
-template <class _Tp> class auto_ptr {
+template <typename _Tp> class auto_ptr {
 private:
   _Tp* _M_ptr;
 
@@ -38,7 +38,7 @@ public:
   typedef _Tp element_type;
   explicit auto_ptr(_Tp* __p = 0) __STL_NOTHROW : _M_ptr(__p) {}
   auto_ptr(auto_ptr& __a) __STL_NOTHROW : _M_ptr(__a.release()) {}
-  template <class _Tp1> auto_ptr(auto_ptr<_Tp1>& __a) __STL_NOTHROW
+  template <typename _Tp1> auto_ptr(auto_ptr<_Tp1>& __a) __STL_NOTHROW
     : _M_ptr(__a.release()) {}
   auto_ptr& operator=(auto_ptr& __a) __STL_NOTHROW {
     if (&__a != this) {
@@ -47,7 +47,7 @@ public:
     }
     return *this;
   }
-  template <class _Tp1>
+  template <typename _Tp1>
   auto_ptr& operator=(auto_ptr<_Tp1>& __a) __STL_NOTHROW {
     if (__a.get() != this->get()) {
       delete _M_ptr;
@@ -84,7 +84,7 @@ public:
 //#ifdef __SGI_STL_USE_AUTO_PTR_CONVERSIONS
 
 private:
-  template<class _Tp1> struct auto_ptr_ref {
+  template<typename _Tp1> struct auto_ptr_ref {
     _Tp1* _M_ptr;
     auto_ptr_ref(_Tp1* __p) : _M_ptr(__p) {}
   };
@@ -92,9 +92,9 @@ private:
 public:
   auto_ptr(auto_ptr_ref<_Tp> __ref) __STL_NOTHROW
     : _M_ptr(__ref._M_ptr) {}
-  template <class _Tp1> operator auto_ptr_ref<_Tp1>() __STL_NOTHROW 
+  template <typename _Tp1> operator auto_ptr_ref<_Tp1>() __STL_NOTHROW 
     { return auto_ptr_ref<_Tp>(this->release()); }
-  template <class _Tp1> operator auto_ptr<_Tp1>() __STL_NOTHROW
+  template <typename _Tp1> operator auto_ptr<_Tp1>() __STL_NOTHROW
     { return auto_ptr<_Tp1>(this->release()); }
 
 //#endif /* __SGI_STL_USE_AUTO_PTR_CONVERSIONS */

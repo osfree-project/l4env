@@ -69,9 +69,10 @@ mmap(void *start, size_t length, int prot , int flags, int fd, off_t offset)
     // test if address start is page aligned
     if (start != NULL)
     {
-        LOGd(_DEBUG, "start: %p, L4_PAGESIZE %d", start, L4_PAGESIZE);
+        LOGd(_DEBUG, "start: %p, L4_PAGESIZE %ld",
+             start, (l4_addr_t)L4_PAGESIZE);
 
-        if (((l4_int32_t)start % L4_PAGESIZE != 0) && (flags & MAP_FIXED))
+        if (((l4_addr_t)start % L4_PAGESIZE != 0) && (flags & MAP_FIXED))
         {
             LOGd(_DEBUG, "error, address start not page aligned"
                          " and MAP_FIXED flag set");
@@ -107,7 +108,7 @@ mmap(void *start, size_t length, int prot , int flags, int fd, off_t offset)
     return ret;
 }
 
-int munmap(void *start, size_t length) 
+int munmap(void *start, size_t length)
 {
     int res;
     l4dm_dataspace_t ds;
@@ -118,7 +119,7 @@ int munmap(void *start, size_t length)
     l4_threadid_t t_id, dummy;
 
     // 1. some error checks
-    if (!start || length == 0)
+    if (! start || length == 0)
     {
         errno = -EINVAL;
         return -1;
@@ -148,17 +149,11 @@ int munmap(void *start, size_t length)
 
     // if the owner of the ds is not in our task, it must have been a
     // remote mmap file server
-
-    // XXX: we now support munmap of dataspaces which where mmaped in
-    //      other threads of our task, however, other threads have no
-    //      such rights at dm_phys (dm_phys uses a thread_equal and
-    //      not a task_equal to check ownership).  Unfortunately,
-    //      there is no easy fix for this!
     if (! l4_task_equal(t_id, current->id))
     {
         if (munmap_normal)
         {
-            res = munmap_normal(current, start,length);
+            res = munmap_normal(current, start, length);
         }
         else
         {

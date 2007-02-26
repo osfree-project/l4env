@@ -61,6 +61,8 @@ void id3_buildtag(ID3TAGDATA *tag) {
 	tag->valid = 1;		/* ready for writing*/
 	}
 
+/* VERNER does not need this, it only gives a headache because of the file stuff */
+#if 0
 /*
  * write ID3 tag 
  */
@@ -74,6 +76,7 @@ int id3_writetag(char* filename, ID3TAGDATA *tag) {
 	fseek(f,0,SEEK_END); fwrite(tag->tagtext,1,128,f);
 	fclose(f); return 0;
 	}
+#endif
 
 
 

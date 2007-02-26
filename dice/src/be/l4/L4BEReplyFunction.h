@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEReplyFunction.h
- *    \brief   contains the declaration of the class CL4BEReplyFunction
+ *  \brief   contains the declaration of the class CL4BEReplyFunction
  *
  *    \date    02/07/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -45,16 +45,15 @@ public:
     virtual ~CL4BEReplyFunction();
 
 public:
-    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
 
 protected:
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteIPC(CBEFile *pFile);
+    virtual void WriteIPCErrorCheck(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
 };
 
 #endif

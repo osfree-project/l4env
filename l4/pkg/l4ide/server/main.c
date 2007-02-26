@@ -21,9 +21,9 @@ char LOG_tag[9] = CONFIG_NAME;
 const int l4thread_max_threads = CONFIG_L4IDE_MAX_THREADS;
 l4_ssize_t l4libc_heapsize = CONFIG_L4IDE_COMMAND_STACK_SIZE;
 
-static void ide_initio(void)
+static int ide_initio(void)
 {
-	l4io_info_t *info_addr=NULL;
+	l4io_info_t *info_addr = NULL;
 	l4io_init(&info_addr,L4IO_DRV_INVALID);
 	if (l4dde_pci_init()) Panic("Couldn't init PCI");
 	l4dde_mm_init(4000000,4000000);
@@ -32,20 +32,22 @@ static void ide_initio(void)
 	l4dde_irq_init(1);
 	l4dde_process_init();
 	l4dde_workqueues_init();
-}
 
-L4C_CTOR(ide_initio, L4CTOR_BACKEND);
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
+	Assert(!ide_initio());
+	l4dde_do_initcalls();
+	l4ide_init_notifications();
+	l4ide_init_driver_instances();
+
 	if (!names_register(CONFIG_NAME)) {
 	    LOG_Error("register at nameserver failed!");
 	    exit(1);
 	}
 
-	l4ide_init_notifications();
-	l4ide_init_driver_instances();
-	
 	LOG("IDE-Server is up");
 
 	l4ide_driver_service_loop();

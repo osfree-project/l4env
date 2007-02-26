@@ -6,7 +6,7 @@ L4DIR ?=	$(PKGDIR)/../../..
 SRC_C =		clientlib.c
 CLIENTIDL =	vsync.idl
 
-PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR)/../config $(PKGDIR)/include
+PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR_OBJ)/../config $(PKGDIR)/include
 
 # target
 TARGET = 	libvtsync_client.a

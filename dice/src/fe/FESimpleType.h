@@ -30,7 +30,7 @@
 #ifndef __DICE_FE_FESIMPLETYPE_H__
 #define __DICE_FE_FESIMPLETYPE_H__
 
-#include "fe/FETypeSpec.h"
+#include "FETypeSpec.h"
 
 /** \class CFESimpleType
  *  \ingroup frontend
@@ -48,7 +48,8 @@ public:
      *  \param nSize the size of the type (number of bytes)
      *  \param bShowType true if the basic type is shown
      */
-    CFESimpleType(TYPESPEC_TYPE nType, bool bUnSigned = false, bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
+    CFESimpleType(unsigned int nType, bool bUnSigned = false,
+	bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
     virtual ~CFESimpleType();
 
 protected:
@@ -59,9 +60,8 @@ protected:
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual void SetUnsigned(bool bUnsigned);
-    virtual bool CheckConsistency();
+    virtual void Accept(CVisitor&);
     virtual bool IsUnsigned();
     virtual CObject* Clone();
     virtual int GetSize();

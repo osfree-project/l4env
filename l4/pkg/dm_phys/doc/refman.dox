@@ -105,6 +105,14 @@ module = (nd)/tftpboot/dm_phys
 
 \endverbatim
 
+Examples for pool configurations.
+Note, use page size aligned values only.
+\verbatim
+--pool=1,0x00401000,0x003ff000,0x00800000,linux
+--isa=0x00800000,0x00800000,0x01000000
+\endverbatim
+
+
 For most purposes, starting DMphys without any arguments should be sufficient.  
 Possible command line arguments are:
 <dl>
@@ -146,11 +154,11 @@ Possible command line arguments are:
 
 <dt><tt> -h | --high=high </tt></dt>
   <dd> Set default max. address to <tt>high</tt>. It will be used if the
-       max. address of a poll is set to -1.</dd>
+       max. address of a pool is set to -1.</dd>
 
 <dt><tt> -R | --rmgr </tt></dt>
   <dd> Use the Resource Manager to allocate pool memory. If this option is 
-       set, a poll size must be specified for all pools (including the 
+       set, a pool size must be specified for all pools (including the 
        default memory pool!). Default is to allocate memory directly
        at Sigma0.</dd>
 

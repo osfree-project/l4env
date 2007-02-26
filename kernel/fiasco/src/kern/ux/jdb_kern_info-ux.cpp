@@ -2,6 +2,7 @@ IMPLEMENTATION [ux]:
 
 #include <cstdio>
 #include "cpu.h"
+#include "perf_cnt.h"
 #include "simpleio.h"
 #include "space.h"
 
@@ -47,7 +48,9 @@ PUBLIC
 void
 Jdb_kern_info_cpu::show()
 {
+  const char *perf_type = Perf_cnt::perf_type();
   char cpu_mhz[32];
+  char time[32];
   unsigned hz;
 
   cpu_mhz[0] = '\0';
@@ -62,5 +65,26 @@ Jdb_kern_info_cpu::show()
   printf ("CPU: %s %s\n", Cpu::model_str(), cpu_mhz);
   Cpu::show_cache_tlb_info("     ");
   show_features();
+
+  if (Cpu::have_tsc())
+    {
+      Unsigned32 hour, min, sec, ns;
+      Cpu::tsc_to_s_and_ns(Cpu::rdtsc(), &sec, &ns);
+      hour = sec  / 3600;
+      sec -= hour * 3600;
+      min  = sec  / 60;
+      sec -= min  * 60;
+      snprintf(time, sizeof(time), "%02d:%02d:%02d.%06d",
+	  hour, min, sec, ns/1000);
+    }
+  else
+    strcpy(time, "not available");
+
+  printf("\nPerformance counters: %s"
+	 "\nTime stamp counter: %s"      
+         "\n",
+	 perf_type ? perf_type : "no",
+	 time
+	 );
 }
 

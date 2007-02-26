@@ -40,8 +40,8 @@ IMPLEMENTATION:
 
 PUBLIC
 Kmem_slab::Kmem_slab(unsigned long slab_size, unsigned elem_size, 
-		     unsigned alignment)
-  : Kmem_slab_simple (slab_size, elem_size, alignment)
+		     unsigned alignment, char const *name)
+  : Kmem_slab_simple (slab_size, elem_size, alignment, name)
 {
   static bool region_initialized = false;
 
@@ -95,13 +95,20 @@ virtual
 void
 Kmem_slab::block_free(void *block, unsigned long size)
 {
+  // We didn't reserve a memory region if the allocation was just one
+  // page.  Otherwise, we need to free the region.
+  if (size == Config::PAGE_SIZE)
+    {
+      Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, block);
+      return;
+    }
+
   for (char *p = reinterpret_cast<char*>(block);
        p < reinterpret_cast<char*>(block) + size;
        p += Config::PAGE_SIZE)
-    Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, p);
+    {
+      Vmem_alloc::page_free(p);
+    }
 
-  // We didn't reserve a memory region if the allocation was just one
-  // page.  Otherwise, we need to free the region.
-  if (size != Config::PAGE_SIZE)	
-    Region::return_pages(reinterpret_cast<Address>(block), size);
+  Region::return_pages(reinterpret_cast<Address>(block), size);
 }

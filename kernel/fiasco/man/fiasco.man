@@ -26,8 +26,8 @@
 [\fB\-profstart\fP]
 [\fB\-irq0\fP]
 [\fB\-irqcom\fP|\fB\-I\-\fP]
-[\fB\-jdb_cmd\fP\fI=command]
-[\fP\fB\-always_irqack\fP]\fB proto=\fP\fIphysical_address\fP
+[\fB\-jdb_cmd=\fP\fIcommands\fP]
+[\fB\-always_irqack\fP]\fB proto=\fP\fIphysical_address\fP
 
 .SH "Description"
 Fiasco is a new \(*m\-kernel (microkernel) running on x86 PCs intended to
@@ -61,8 +61,8 @@ Will set the rate of the serial interface to n
 bytes/second. 115200 bytes/second is the default.
 .IP "\fB\-comport=\fP\fIn\fP"
 Will use COMn for serial
-communication. COM2 is the default. Possible values for \fIn\fP are 1
-and 2.
+communication. COM1 is the default. Possible values for \fIn\fP are 1,
+2, 3, and 4. n is used as I/O port if n>4.
 .IP "\fB\-hercules\fP"
 Redirect kernel messages to the Hercules (or
 other MGA\-compatible) console.
@@ -120,6 +120,9 @@ reserved for kernel use.
 .IP "\fB\-irqcom\fP or \fB\-I\-\fP"
 Disable for user tasks the IRQ
 associated with the serial port used for I/O or the kernel debugger.
+.IP "\fB\-jdb_cmd=\fP\fIcommands\fP"
+Execute Jdb commands non\-interactive at
+startup.
 .IP "\fB\-always_irqack\fP"
 IRQs are acknowledged by the kernel. Your
 userland code has to know this!

@@ -1,10 +1,14 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
+CXXFLAGS_amd64 += -mcmodel=medium
+CFLAGS_amd64 += -mcmodel=medium
+
 include $(L4DIR)/mk/Makeconf
 
-SYSTEMS		= x86 # arm
+SYSTEMS		= x86 arm amd64
 TARGET		= libuc_c++.a
+VPATH_SRC_BASE	= $(OBJ_DIR)
 
 ifneq ($(SYSTEM),)
 HAS_VISIBILITY	:= $(shell if $(CXX) -fvisibility-inlines-hidden -S -o \
@@ -13,8 +17,10 @@ HAS_VISIBILITY	:= $(shell if $(CXX) -fvisibility-inlines-hidden -S -o \
 DIRS		:= src src/abi
 SRC_CC		:= $(foreach dir,$(DIRS),$(addprefix ARCH-all/$(dir)/,\
 		     $(notdir $(wildcard ../ARCH-all/$(dir)/*.cc))))
-PRIVATE_INCDIR	= ../ARCH-all/include $(L4DIR)/include/$(ARCH)/uclibc \
-		  $(L4DIR)/include/uclibc $(L4DIR)/include
+PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-all/include \
+		  $(OBJ_DIR)/ARCH-all/include \
+                  $(OBJ_BASE)/include/$(ARCH)/uclibc \
+		  $(OBJ_BASE)/include/uclibc $(OBJ_BASE)/include
 MODE		= host
 IDL_PATH	=
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
@@ -23,17 +29,33 @@ CXXFLAGS	:= -fno-builtin -nostdinc++ -ansi
 DEFINES		:= $(HAS_VISIBILITY)
 endif
 
-FILES		:= $(PKGDIR)/lib/uclibc++/contrib_files.lst
-CONTRIB_DIR	:= $(PKGDIR)/lib/contrib/uclibc++
+FILES		:= $(PKGDIR_ABS)/lib/uclibc++/contrib_files.lst
+CONTRIB_DIR	:= $(PKGDIR_ABS)/lib/contrib/uclibc++
 
 .general.d: $(FILES)
 
 ifeq ($(SYSTEM),)
 
-all:: ARCH-all/include
+all:: include
 
-ARCH-all/include: CONTRIB
-	$(VERBOSE)PWD=$(PWD)/$@ $(MAKE) -C $@ all
+$(OBJ_DIR)/ARCH-all/include/Makefile: .general.d
+	$(VERBOSE)echo 'PKGDIR   ?= $(PKGDIR_ABS)' > $@
+	$(VERBOSE)echo 'L4DIR    ?= $(L4DIR_ABS)' >> $@
+	$(VERBOSE)echo 'OBJ_BASE ?= $(OBJ_BASE)' >> $@
+	$(VERBOSE)echo 'OBJ_DIR  ?= $(OBJ_DIR)' >> $@
+	$(VERBOSE)echo 'INSTALL_INC_PREFIX = $$(PKGNAME)' >> $@
+	$(VERBOSE)echo 'TARGET   := $$(filter-out Makefile CVS,$$(wildcard *))' >> $@
+	$(VERBOSE)echo 'include $$(L4DIR)/mk/include.mk' >> $@
+
+include: CONTRIB $(OBJ_DIR)/ARCH-all/include/Makefile
+	$(VERBOSE)PWD=$(PWD)/ARCH-all/include $(MAKE) -C \
+	   $(OBJ_DIR)/ARCH-all/include all
+
+install:: all
+	$(VERBOSE)set -e; $(foreach d,ARCH-all/include, \
+	  if [ -f $d/Makefile ]; then \
+	    PWD=$(PWD)/$d $(MAKE) -C $d $@ $(MKFLAGS); \
+	  fi;)
 
 # ok, we have a list of files to check in FILES
 # for each file do
@@ -51,12 +73,12 @@ CONTRIB:
 	  else                                                               \
 	    dest=$${file};                                                   \
 	  fi;                                                                \
-	  if [ \( ! -e ARCH-all/$${dest} \)                                  \
-	      -a \( -e $(CONTRIB_DIR)/$${file} \) ] ; then                   \
-	    ln -s$(if $(VERBOSE),,v) `$(ABS2REL)                             \
-	      ARCH-all/$$(dirname $${file})                                  \
-	      $$(dirname $(CONTRIB_DIR)/$${file})`/`basename $${file}`       \
-	      ARCH-all/$${dest};                                             \
+	  from=$(CONTRIB_DIR)/$${file};                                      \
+	  to=$(OBJ_DIR)/ARCH-all/$${dest};                                   \
+	  if [ \( ! -e $$to \) -a \( -e $$from \) ]; then                    \
+	    d=`dirname $$to`;                                                \
+	    [ -d "$$d" ] || mkdir -p $$d;                                    \
+	    ln -s$(if $(VERBOSE),,v) $$from $$to;                            \
 	    $(if $(VERBOSE),(echo -n ,;))                                    \
 	  fi;                                                                \
 	done
@@ -69,6 +91,7 @@ CONTRIB:
 endif
 
 cleanall::
-	$(VERBOSE)find . -type l | xargs rm -f$(if $(VERBOSE),,v)
+	$(VERBOSE)find $(OBJ_DIR) -type l | xargs rm -f$(if $(VERBOSE),,v)
+	$(VERBOSE)$(RM) $(OBJ_DIR)/ARCH-all/include/.general.d
 
 include $(L4DIR)/mk/lib.mk

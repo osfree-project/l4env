@@ -9,18 +9,23 @@ L4DIR	?= $(PKGDIR)/../..
 
 INSTALL_INC_PREFIX = linux-24
 
+SUFFIX_amd64 := x86_64
+SUFFIX_x86   := i386
+
 include $(L4DIR)/mk/include.mk
+
+ARCH:=$(BUILD_ARCH)
 
 # macro to establish a symlink to a dir if not already existing
 MAKELINK = if [ ! $1 -ef $2 ] ; then ln -sf $3 $2 ; fi
 
 all::
 	$(VERBOSE)$(call MAKELINK, \
-		$(INSTALLDIR_LOCAL)/$(INSTALL_INC_PREFIX)/asm-i386,\
-		$(INSTALLDIR_LOCAL)/$(INSTALL_INC_PREFIX)/asm, asm-i386)
+		$(INSTALLDIR_LOCAL)/$(INSTALL_INC_PREFIX)/asm-$(SUFFIX_$(ARCH)),\
+		$(INSTALLDIR_LOCAL)/$(INSTALL_INC_PREFIX)/asm, asm-$(SUFFIX_$(ARCH)))
 
 install::
 	$(VERBOSE)$(call MAKELINK, \
-		$(INSTALLDIR)/$(INSTALL_INC_PREFIX)/asm-i386,\
-		$(INSTALLDIR)/$(INSTALL_INC_PREFIX)/asm, asm-i386)
+		$(INSTALLDIR)/$(INSTALL_INC_PREFIX)/asm-$(SUFFIX_$(ARCH)),\
+		$(INSTALLDIR)/$(INSTALL_INC_PREFIX)/asm, asm-$(SUFFIX_$(ARCH)))
 

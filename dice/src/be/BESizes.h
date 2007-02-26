@@ -45,12 +45,16 @@ public:
     virtual ~CBESizes();
 
 public:  // Public methods
-    virtual int GetSizeOfType(int nFEType, int nFEType = 0);
-    virtual int GetSizeOfEnvType(string sName);
+    virtual int GetSizeOfType(int nFEType, int nFESize = 0);
     virtual int GetMaxSizeOfType(int nFEType);
     virtual int GetOpcodeSize();
     virtual int GetExceptionSize();
     virtual void SetOpcodeSize(int nSize);
+
+    int WordRoundUp(int nSize);
+    string WordRoundUpStr(string const &value);
+    int WordsFromBytes(int nSize);
+    string WordsFromBytesStr(string const &value);
 
 protected: // Protected attributes
     /** \var int m_nOpcodeSize

@@ -42,6 +42,7 @@ int bar();
 #line 23 "parser.cpp"
 // Try multiline NEEDS
 
+
 int baz();
 
 #line 29 "parser.cpp"

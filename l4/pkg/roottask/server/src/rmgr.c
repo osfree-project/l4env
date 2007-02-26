@@ -5,13 +5,11 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/l4_macros.h>
+#include <l4/sys/utcb.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/rmgr/proto.h>
-
-#ifndef USE_OSKIT
 #include <l4/env_support/panic.h>
 #include <l4/env_support/getchar.h>
-#endif
 
 #include "exec.h"
 #include "globals.h"
@@ -21,6 +19,7 @@
 #include "rmgr.h"
 #include "pager.h"
 #include "irq.h"
+#include "region.h"
 #include "small.h"
 #include "task.h"
 #include "iomap.h"
@@ -40,7 +39,7 @@ int           l4_version;
 int           ux_running;
 int           quiet;
 
-static char mgr_stack[MGR_STACKSIZE] __attribute__((aligned(4)));
+static char mgr_stack[MGR_STACKSIZE] __attribute__((aligned(8)));
 static void mgr(void) L4_NORETURN;
 
 l4_addr_t mem_lower;
@@ -60,16 +59,18 @@ static void
 free_init_section(void)
 {
   l4_addr_t address;
+  const l4_addr_t free_beg = l4_trunc_page(&_start);
+  const l4_addr_t free_end = l4_trunc_page(&_stext);
 
   /* free .init section */
-  for (address  = l4_trunc_page(&_start);
-       address  < l4_trunc_page(&_stext);
-       address += L4_PAGESIZE)
+  for (address  = free_beg; address < free_end; address += L4_PAGESIZE)
     {
       memset((void*)address, 0, L4_PAGESIZE);
       if (!memmap_free_page(address, O_RESERVED))
-	printf ("Error freeing .init at %08x", address);
+	printf ("ROOT: Error freeing .init at %08lx\n", address);
     }
+
+  region_free(free_beg, free_end);
 }
 
 void
@@ -102,15 +103,15 @@ rmgr_main(int memdump)
  * Transfer task create right for task no p.proto.param to sender.
  */
 
-l4_int32_t
+long
 rmgr_get_task_component(CORBA_Object _dice_corba_obj,
-                        l4_int32_t num,
+                        long num,
                         CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t n;
 
   if (do_log)
-    printf("RMGR: task_get sender=" l4util_idfmt " for task-nr=%x\n",
+    printf("ROOT: task_get sender=" l4util_idfmt " for task-nr=%lx\n",
 	   l4util_idstr(*_dice_corba_obj), num);
 
   if (num >= RMGR_TASK_MAX)
@@ -136,17 +137,17 @@ rmgr_get_task_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_set_prio_component(CORBA_Object _dice_corba_obj,
-                        const l4_threadid_t *tid, l4_int32_t prio,
+                        const l4_threadid_t *tid, long prio,
                         CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t s;
   l4_sched_param_t sched;
 
   if (do_log)
-    printf("RMGR: task_set_prio sender=" l4util_idfmt
-	   " for task=" l4util_idfmt " to prio=%x\n",
+    printf("ROOT: task_set_prio sender=" l4util_idfmt
+	   " for task=" l4util_idfmt " to prio=%lx\n",
            l4util_idstr(*_dice_corba_obj), l4util_idstr(*tid), prio);
 
   s = L4_INVALID_ID;
@@ -164,17 +165,17 @@ rmgr_set_prio_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_set_small_space_component(CORBA_Object _dice_corba_obj,
                                const l4_threadid_t *tid,
-                               l4_int32_t num,
+                               long num,
                                CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t s;
   l4_sched_param_t sched;
 
   if (do_log)
-    printf("RMGR: set_small_space sender=" l4util_idfmt
+    printf("ROOT: set_small_space sender=" l4util_idfmt
 	   " for task=" l4util_idfmt "\n",
            l4util_idstr(*_dice_corba_obj), l4util_idstr(*tid));
 
@@ -195,24 +196,25 @@ rmgr_set_small_space_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_task_new_component(CORBA_Object _dice_corba_obj,
                         const l4_taskid_t *tid,
                         l4_umword_t mcp_or_chief,
-                        l4_umword_t esp,
-                        l4_umword_t eip,
+                        l4_umword_t sp,
+                        l4_umword_t ip,
                         const l4_threadid_t *pager,
+                        const l4_threadid_t *caphandler,
                         l4_umword_t sched_param,
                         l4_taskid_t *ntid,
                         CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t n;
   l4_umword_t mcp;
-  l4_umword_t alien;
+  l4_umword_t flags;
   int task;
 
   if (do_log)
-    printf("RMGR: task_create sender=" l4util_idfmt "\n",
+    printf("ROOT: task_create sender=" l4util_idfmt "\n",
            l4util_idstr(*_dice_corba_obj));
 
   n          = *tid;
@@ -224,19 +226,29 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
       || !task_alloc(task, _dice_corba_obj->id.task))
     return 1;
 
-  alien = mcp_or_chief & L4_TASK_NEW_ALIEN;
-  mcp_or_chief &= ~L4_TASK_NEW_ALIEN;
+  flags = mcp_or_chief & L4_TASK_NEW_FLAGS_MASK;
+  mcp_or_chief &= ~L4_TASK_NEW_FLAGS_MASK;
 
   mcp = mcp_or_chief > quota_get_log_mcp(_dice_corba_obj->id.task)
         ? quota_get_log_mcp(_dice_corba_obj->id.task) : mcp_or_chief;
 
   if (do_log)
-    printf("RMGR: task_create task=" l4util_idfmt " esp=%p "
-           "eip=%p pager=" l4util_idfmt " mcp=%d\n",
-           l4util_idstr(n), (void *)esp, (void *)eip,
+    printf("ROOT: task_create task=" l4util_idfmt " sp=%p "
+           "ip=%p pager=" l4util_idfmt " mcp=%ld\n",
+           l4util_idstr(n), (void *)sp, (void *)ip,
            l4util_idstr(*pager), mcp);
 
-  n = l4_task_new(n, mcp | alien, esp, eip, *pager);
+  if (l4_is_invalid_id(*caphandler))
+    n = l4_task_new(n, mcp | flags, sp, ip, *pager);
+  else
+    {
+#ifdef ARCH_x86
+      n = l4_task_new_cap(n, mcp | flags, sp, ip, *pager, *caphandler);
+#else
+      printf("roottask: ipcmon not implemented\n");
+      n = L4_NIL_ID;
+#endif
+    }
 
   if (l4_is_nil_id(n))
     {
@@ -252,7 +264,7 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_free_task_all_component(CORBA_Object _dice_corba_obj,
                              const l4_threadid_t *tid,
                              CORBA_Server_Environment *_dice_corba_env)
@@ -260,7 +272,7 @@ rmgr_free_task_all_component(CORBA_Object _dice_corba_obj,
   int i;
 
   if (do_log)
-    printf("RMGR: task_free_all sender=" l4util_idfmt
+    printf("ROOT: task_free_all sender=" l4util_idfmt
 	   " for task=" l4util_idfmt "\n",
            l4util_idstr(*_dice_corba_obj), l4util_idstr(*tid));
 
@@ -287,14 +299,14 @@ rmgr_free_task_all_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_free_task_component(CORBA_Object _dice_corba_obj,
-                         l4_int32_t num,
+                         long num,
                          CORBA_Server_Environment *_dice_corba_env)
 {
 
   if (do_log)
-    printf("RMGR: task_free sender=" l4util_idfmt " for task-nr=%x\n",
+    printf("ROOT: task_free sender=" l4util_idfmt " for task-nr=%lx\n",
            l4util_idstr(*_dice_corba_obj), num);
 
   if (num >= RMGR_TASK_MAX)
@@ -306,7 +318,7 @@ rmgr_free_task_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_get_task_id_component(CORBA_Object _dice_corba_obj,
                            const char* modname,
                            l4_threadid_t *tid,
@@ -315,7 +327,7 @@ rmgr_get_task_id_component(CORBA_Object _dice_corba_obj,
   l4_threadid_t n = names_get_id(modname);
 
   if (do_log)
-    printf("RMGR: task_get_id sender=" l4util_idfmt " for task-name=%s\n",
+    printf("ROOT: task_get_id sender=" l4util_idfmt " for task-name=%s\n",
 	   l4util_idstr(*_dice_corba_obj), modname);
 
   if (l4_is_invalid_id(n))
@@ -331,7 +343,7 @@ rmgr_get_task_id_component(CORBA_Object _dice_corba_obj,
  * case 1. task was rmgr boot module and with quota
  * case 2. task was NOT rmgr boot module but with with quota
  */
-l4_int32_t
+long
 rmgr_set_task_id_component(CORBA_Object _dice_corba_obj,
                            const char* modname,
                            const l4_threadid_t *tid,
@@ -342,27 +354,24 @@ rmgr_set_task_id_component(CORBA_Object _dice_corba_obj,
   id.id.lthread = 0;
 
   if (do_log)
-    printf("RMGR: task_set_id sender=" l4util_idfmt
+    printf("ROOT: task_set_id sender=" l4util_idfmt
 	   " for task=" l4util_idfmt " set task-name=%s\n",
            l4util_idstr(*_dice_corba_obj),
 	   l4util_idstr(*tid), modname);
 
   if (task_owner(tid->id.task) == _dice_corba_obj->id.task)
-    {
-      names_set(id, modname);
-      cfg_quota_copy(id.id.task, modname);
-    }
+    return cfg_quota_copy(id.id.task, modname);
 
-  return 0;
+  return -1;
 }
 
-l4_int32_t
+long
 rmgr_get_irq_component(CORBA_Object _dice_corba_obj,
-                       l4_int32_t num,
+                       int num,
                        CORBA_Server_Environment *_dice_corba_env)
 {
   if (do_log)
-    printf("RMGR: get_irq sender=" l4util_idfmt " irq=%x\n",
+    printf("ROOT: get_irq sender=" l4util_idfmt " irq=%x\n",
 	l4util_idstr(*_dice_corba_obj), num);
 
   if (num >= RMGR_IRQ_MAX)
@@ -385,7 +394,7 @@ rmgr_get_irq_component(CORBA_Object _dice_corba_obj,
 
       if (!d1)
 	return 0; /* success */
-
+      
       /* failed */
       irq_free(num, _dice_corba_obj->id.task);
     }
@@ -393,13 +402,13 @@ rmgr_get_irq_component(CORBA_Object _dice_corba_obj,
   return 1;
 }
 
-l4_int32_t
+long
 rmgr_free_irq_component(CORBA_Object _dice_corba_obj,
-                        l4_int32_t num,
+                        int num,
                         CORBA_Server_Environment *_dice_corba_env)
 {
   if (do_log)
-    printf("RMGR: free_irq sender=" l4util_idfmt " irq=%x\n",
+    printf("ROOT: free_irq sender=" l4util_idfmt " irq=%x\n",
 	l4util_idstr(*_dice_corba_obj), num);
 
   if (num < RMGR_IRQ_MAX
@@ -419,7 +428,7 @@ rmgr_free_irq_component(CORBA_Object _dice_corba_obj,
 
       if (ret)
 	{
-	  printf("RMGR: free_irq: IPC error %d\n", ret);
+	  printf("ROOT: free_irq: IPC error %d\n", ret);
 	  return 1;
 	}
 
@@ -430,7 +439,7 @@ rmgr_free_irq_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_free_irq_all_component(CORBA_Object _dice_corba_obj,
                             const l4_threadid_t *tid,
                             CORBA_Server_Environment *_dice_corba_env)
@@ -438,7 +447,7 @@ rmgr_free_irq_all_component(CORBA_Object _dice_corba_obj,
   int i;
 
   if (do_log)
-    printf("RMGR: free_irq_all sender=" l4util_idfmt
+    printf("ROOT: free_irq_all sender=" l4util_idfmt
 	   " for task=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj),
 	l4util_idstr(*tid));
@@ -458,38 +467,42 @@ rmgr_free_irq_all_component(CORBA_Object _dice_corba_obj,
                             L4_IPC_SHORT_MSG, &d1, &d2,
                             L4_IPC_NEVER, &result);
 	  if (ret)
-	    printf("RMGR: free_irq_all: IPC error %d for irq %d", ret, i);
+	    printf("ROOT: free_irq_all: IPC error %d for irq %d", ret, i);
 	}
     }
 
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_dump_mem_component(CORBA_Object _dice_corba_obj,
                         CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("RMGR: dump_mem NOT implemented (called by "l4util_idfmt")\n",
-      l4util_idstr(*_dice_corba_obj));
+  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  memmap_dump();
+  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
   return 0;
 }
 
-l4_int32_t
+long
 rmgr_free_page_component(CORBA_Object _dice_corba_obj,
                          l4_addr_t address,
                          CORBA_Server_Environment *_dice_corba_env)
 {
+  long ret = 1;
+
   if (do_log)
-    printf("RMGR: free_page sender=" l4util_idfmt " for address=%x\n",
+    printf("ROOT: free_page sender=" l4util_idfmt " for address=%lx\n",
 	l4util_idstr(*_dice_corba_obj), address);
 
+  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
   if (address >= 0x40000000 && address < 0xC0000000)
     {
       address += 0x40000000;
 
       if (_dice_corba_obj->id.task != memmap_owner_page(address)
           || !memmap_free_superpage(address, _dice_corba_obj->id.task))
-	return 1; /* failure */
+	goto error;
 
       /* we can't unmap page here because the superpage was
        * granted so sender has to unmap page itself */
@@ -498,7 +511,7 @@ rmgr_free_page_component(CORBA_Object _dice_corba_obj,
     {
       if (_dice_corba_obj->id.task != memmap_owner_page(address)
           || !memmap_free_page(address, _dice_corba_obj->id.task))
-	return 1; /* failure */
+	goto error;
       else
 	{
 	  /* unmap fpage */
@@ -508,16 +521,20 @@ rmgr_free_page_component(CORBA_Object _dice_corba_obj,
 	}
     }
 
-  return 0;
+  ret = 0;
+
+error:
+  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  return ret;
 }
 
-l4_int32_t
+long
 rmgr_free_fpage_component(CORBA_Object _dice_corba_obj,
                           l4_umword_t fp,
                           CORBA_Server_Environment *_dice_corba_env)
 {
   if (do_log)
-    printf("RMGR: free_fpage sender=" l4util_idfmt "\n",
+    printf("ROOT: free_fpage sender=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj));
 
 #ifdef ARCH_x86
@@ -528,7 +545,7 @@ rmgr_free_fpage_component(CORBA_Object _dice_corba_obj,
       unsigned size = ((l4_fpage_t)fp).iofp.iosize;
 
   if (do_log)
-    printf("RMGR: free_fpage for port=%x and size=%x\n", port, size);
+    printf("ROOT: free_fpage for port=%x and size=%x\n", port, size);
 
       /* don't worry about errors */
       for (i = port; i < port + (1 << size); i++)
@@ -539,48 +556,49 @@ rmgr_free_fpage_component(CORBA_Object _dice_corba_obj,
 #endif
 
   if (do_log)
-    printf("RMGR: free_fpage Unable to handle free fpage request.\n");
+    printf("ROOT: free_fpage Unable to handle free fpage request.\n");
 
   return 1; /* failure */
 }
 
-l4_int32_t
+long
 rmgr_free_mem_all_component(CORBA_Object _dice_corba_obj,
                             const l4_threadid_t *tid,
                             CORBA_Server_Environment *_dice_corba_env)
 {
-  unsigned long p;
+  l4_addr_t p, pa, q, qa;
   /* scan all physical memory */
 
   if (do_log)
-    printf("RMGR: free_mem_all sender=" l4util_idfmt
+    printf("ROOT: free_mem_all sender=" l4util_idfmt
 	   " for task=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj),
 	l4util_idstr(*tid));
 
-  for (p = 0; p < MEM_MAX; p+= L4_SUPERPAGESIZE)
+  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  for (p = 0; p < SUPERPAGE_MAX; p++)
     {
-      if (memmap_owner_superpage(p) == tid->id.task
+      pa = p << L4_SUPERPAGESHIFT;
+      if (memmap_owner_superpage(pa) == tid->id.task
 	/* superpage belongs to exactly the one owner */
-	  && memmap_free_superpage(p, tid->id.task))
+	  && memmap_free_superpage(pa, tid->id.task))
 	{
-          l4_fpage_unmap(l4_fpage(p, L4_LOG2_SUPERPAGESIZE,
+          l4_fpage_unmap(l4_fpage(pa, L4_LOG2_SUPERPAGESIZE,
                                   L4_FPAGE_RW, L4_FPAGE_MAP),
                          L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
 	}
 
-      if (memmap_owner_superpage(p) == O_RESERVED)
+      if (memmap_owner_superpage(pa) == O_RESERVED)
 	{
-	  unsigned long q;
-
 	  /* superpage belongs to more than one owner */
-	  for (q = p; q < p + L4_SUPERPAGESIZE; q += L4_PAGESIZE)
+	  for (q = 0; q < L4_SUPERPAGESIZE/L4_PAGESIZE; q++)
 	    {
-	      if (memmap_owner_page(p) == tid->id.task
-                  && memmap_free_page(q, tid->id.task))
+	      qa = pa + (q << L4_PAGESHIFT);
+	      if (memmap_owner_page(qa) == tid->id.task
+                  && memmap_free_page(qa, tid->id.task))
 		{
 #if 0
-		  l4_fpage_unmap(l4_fpage(q, L4_LOG2_PAGESIZE,
+		  l4_fpage_unmap(l4_fpage(qa, L4_LOG2_PAGESIZE,
 					  L4_FPAGE_RW, L4_FPAGE_MAP),
 				 L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
 #endif
@@ -594,20 +612,23 @@ rmgr_free_mem_all_component(CORBA_Object _dice_corba_obj,
   for (p = 0x40000000; p < 0xC0000000; p += L4_SUPERPAGESIZE)
     memmap_free_superpage(p, tid->id.task);
 
+  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
   return 0; /* success */
 }
 
-l4_int32_t
+long
 rmgr_reserve_mem_component(CORBA_Object _dice_corba_obj,
-                           l4_addr_t size, l4_addr_t align, l4_int32_t flags,
+                           l4_addr_t size, l4_addr_t align, int flags,
                            l4_addr_t low, l4_addr_t high, l4_addr_t *addr,
                            CORBA_Server_Environment *_dice_corba_env)
 {
   l4_addr_t a;
 
   if (do_log)
-    printf("RMGR: reserve_mem sender=" l4util_idfmt "\n",
+    printf("ROOT: reserve_mem sender=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj));
+
+  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
 
   size = l4_round_page(size);
   if (align < L4_LOG2_PAGESIZE)
@@ -617,55 +638,54 @@ rmgr_reserve_mem_component(CORBA_Object _dice_corba_obj,
   flags &= RMGR_MEM_RES_FLAGS_MASK;
 
   a = reserve_range(size | align | flags, _dice_corba_obj->id.task, low, high);
+  if (do_log)
+    printf("ROOT: reserve_mem: addr:%lx\n", a);
+
   if (a != -1)
     *addr = a;
 
-  if (do_log)
-    printf("RMGR: Log: addr:%x\n", *addr);
+  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
 
-  return !!a;
+  return a != -1;
 }
 
-l4_int32_t
+void
 rmgr_get_page0_component(CORBA_Object _dice_corba_obj,
 			 l4_snd_fpage_t *page0,
                          CORBA_Server_Environment *_dice_corba_env)
 {
   if (do_log)
-    printf("RMGR: get_page0 sender=" l4util_idfmt "\n",
+    printf("ROOT: get_page0 sender=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj));
 
   page0->snd_base = 0;
   page0->fpage = l4_fpage(0, L4_LOG2_PAGESIZE, L4_FPAGE_RW, L4_FPAGE_MAP);
-
-  return 0;
 }
 
-l4_int32_t
+void
 rmgr_init_ping_component(CORBA_Object _dice_corba_obj,
-                         l4_int32_t value, l4_int32_t *not_value,
+                         long value, long *not_value,
                          CORBA_Server_Environment *_dice_corba_env)
 {
   if (do_log)
-    printf("RMGR: init_ping sender=" l4util_idfmt " for value=%x\n",
+    printf("ROOT: init_ping sender=" l4util_idfmt " for value=%lx\n",
 	l4util_idstr(*_dice_corba_obj), value);
 
   *not_value = ~value;
-  return 0;
 }
 
-l4_int32_t
+long
 rmgr_get_prio_component(CORBA_Object _dice_corba_obj,
-                        const l4_threadid_t *tid, l4_int32_t *prio,
+                        const l4_threadid_t *tid, long *prio,
                         CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("RMGR: get_prio Implemented on client side.\n");
+  printf("ROOT: get_prio Implemented on client side.\n");
   return 1;
 }
 
-l4_int32_t
+long
 rmgr_privctrl_component(CORBA_Object _dice_corba_obj,
-			l4_int32_t command, l4_int32_t param,
+			int command, int param,
 			CORBA_Server_Environment *_dice_corba_env)
 {
   return l4_privctrl(1, _dice_corba_obj->id.task);

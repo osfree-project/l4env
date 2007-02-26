@@ -9,9 +9,9 @@ class kernel_thread_t : public thread_t
 
 IMPLEMENTATION:
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <flux/machine/base_trap.h>
 #include <flux/machine/proc_reg.h>

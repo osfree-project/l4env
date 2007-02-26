@@ -24,13 +24,14 @@ SRC_C		= pci/generic.c pci/via82cxxx.c pci/piix.c \
 		  main.c
 
 ### specialties
-PRIVATE_INCDIR	= .. ../include $(PKGDIR)/include $(DDE26_INCDIR) $(LINUX26_INCDIR)
+PRIVATE_INCDIR	= $(PKGDIR)/server $(PKGDIR)/server/include $(PKGDIR)/include \
+                  $(DDE26_INCDIR) $(LINUX26_INCDIR)
 
 LIBS		= -ldde_linux26 -lio -lomega0 -ll4env -lgeneric_blk-server \
 		  -llist_alloc
 
-DEFINES		= -D__KERNEL__ -DDDE_LINUX -DDDE_IDE
-WARNINGS        = -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fomit-frame-pointer
+DEFINES = -D__KERNEL__ -DDDE_LINUX -DDDE_IDE
+WARNINGS = -Wall -Wstrict-prototypes
 
 ### act the role of ...
 include $(L4DIR)/mk/prog.mk

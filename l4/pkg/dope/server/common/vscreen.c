@@ -58,7 +58,7 @@ static struct fontman_services     *font;
 struct vscreen_data {
 	long    update_flags;
 	u8     *server_ident;        /* associated vscreen server identifier */
-	void   *server_tid;
+	THREAD *server_thread;
 	MUTEX  *sync_mutex;
 	s8      bpp;                 /* bits per pixel                               */
 	s32     xres, yres;          /* virtual screen dimensions                    */
@@ -260,6 +260,12 @@ static void vscr_handle_event(VSCREEN *vs, EVENT *e, WIDGET *from) {
  */
 static void vscr_free_data(VSCREEN *vs) {
 
+	/* shutdown vscreen server thread */
+	if (vs->vd->server_thread)
+		thread->kill_thread(vs->vd->server_thread);
+
+	vs->vd->server_thread = NULL;
+
 	/* free the mouse if it is currently grabbed inside the vscreen widget */
 	if ((userstate->get() == USERSTATE_GRAB) && (userstate->get_selected() == vs))
 		userstate->idle();
@@ -289,8 +295,12 @@ static void vscr_reg_server(VSCREEN *vs, u8 *new_server_ident) {
 /*** RETURN VSCREEN WIDGET SERVER ***/
 static u8 *vscr_get_server(VSCREEN *vs) {
 
+	/* allocate thread id for server thread */
+	vs->vd->server_thread = thread->alloc_thread();
+
 	/* start widget server */
-	if (vscr_server) vscr_server->start(vs);
+	if (vscr_server && vs->vd->server_thread)
+		vscr_server->start(vs->vd->server_thread, vs);
 
 	INFO(printf("VScreen(get_server): server_ident = %s\n", vs->vd->server_ident));
 	return vs->vd->server_ident;

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 /**
@@ -31,20 +31,8 @@
 
 //#define PRINTSTUFF
 
-#define LE_16(x)  ((((uint8_t*)(x))[1] << 8) | ((uint8_t*)(x))[0])
-#define LE_32(x)  ((((uint8_t*)(x))[3] << 24) | \
-                   (((uint8_t*)(x))[2] << 16) | \
-                   (((uint8_t*)(x))[1] << 8) | \
-                    ((uint8_t*)(x))[0])
-
-#define FOURCC_TAG( ch0, ch1, ch2, ch3 ) \
-        ( (long)(unsigned char)(ch0) | \
-        ( (long)(unsigned char)(ch1) << 8 ) | \
-        ( (long)(unsigned char)(ch2) << 16 ) | \
-        ( (long)(unsigned char)(ch3) << 24 ) )
-
-#define RIFF_TAG FOURCC_TAG('R', 'I', 'F', 'F')
-#define CDXA_TAG FOURCC_TAG('C', 'D', 'X', 'A')
+#define RIFF_TAG MKTAG('R', 'I', 'F', 'F')
+#define CDXA_TAG MKTAG('C', 'D', 'X', 'A')
 
 #define RAW_CD_SECTOR_SIZE 2352
 #define RAW_CD_SECTOR_DATA_SIZE 2304
@@ -89,7 +77,10 @@ typedef struct StrDemuxContext {
     int64_t pts;
 
     unsigned char *video_chunk;
+    AVPacket tmp_pkt;
 } StrDemuxContext;
+
+const static char sync_header[12] = {0x00,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00};
 
 static int str_probe(AVProbeData *p)
 {
@@ -108,18 +99,26 @@ static int str_probe(AVProbeData *p)
         start = 0;
 
     /* look for CD sync header (00, 0xFF x 10, 00) */
-    if ((p->buf[start + 0] != 0x00) || (p->buf[start + 1] != 0xFF) ||
-        (p->buf[start + 2] != 0xFF) || (p->buf[start + 3] != 0xFF) ||
-        (p->buf[start + 4] != 0xFF) || (p->buf[start + 5] != 0xFF) ||
-        (p->buf[start + 6] != 0xFF) || (p->buf[start + 7] != 0xFF) ||
-        (p->buf[start + 8] != 0xFF) || (p->buf[start + 9] != 0xFF) ||
-        (p->buf[start + 10] != 0xFF) || (p->buf[start + 11] != 0x00))
+    if (memcmp(p->buf+start,sync_header,sizeof(sync_header)))
         return 0;
 
     /* MPEG files (like those ripped from VCDs) can also look like this;
      * only return half certainty */
     return 50;
 }
+
+#if 0
+static void dump(unsigned char *buf,size_t len)
+{
+    int i;
+    for(i=0;i<len;i++) {
+        if ((i&15)==0) av_log(NULL, AV_LOG_DEBUG, "%04x  ",i);
+        av_log(NULL, AV_LOG_DEBUG, "%02x ",buf[i]);
+        if ((i&15)==15) av_log(NULL, AV_LOG_DEBUG, "\n");
+    }
+    av_log(NULL, AV_LOG_DEBUG, "\n");
+}
+#endif
 
 static int str_read_header(AVFormatContext *s,
                            AVFormatParameters *ap)
@@ -138,9 +137,6 @@ static int str_read_header(AVFormatContext *s,
     str->video_channel = -1;
     str->video_chunk = NULL;
 
-    /* set the pts reference (1 pts = 1/90000) */
-    s->pts_num = 1;
-    s->pts_den = 90000;
 
     /* skip over any RIFF header */
     if (get_buffer(pb, sector, RIFF_HEADER_SIZE) != RIFF_HEADER_SIZE)
@@ -156,6 +152,8 @@ static int str_read_header(AVFormatContext *s,
     for (i = 0; i < 32; i++) {
         if (get_buffer(pb, sector, RAW_CD_SECTOR_SIZE) != RAW_CD_SECTOR_SIZE)
             return AVERROR_IO;
+
+//printf("%02x %02x %02x %02x\n",sector[0x10],sector[0x11],sector[0x12],sector[0x13]);
 
         channel = sector[0x11];
         if (channel >= 32)
@@ -179,28 +177,47 @@ static int str_read_header(AVFormatContext *s,
                 st = av_new_stream(s, 0);
                 if (!st)
                     return AVERROR_NOMEM;
+                av_set_pts_info(st, 64, 1, 15);
 
                 str->channels[channel].video_stream_index = st->index;
 
-                st->codec.codec_type = CODEC_TYPE_VIDEO;
-                st->codec.codec_id = CODEC_ID_MDEC; 
-                st->codec.codec_tag = 0;  /* no fourcc */
-                st->codec.width = str->channels[channel].width;
-                st->codec.height = str->channels[channel].height;
+                st->codec->codec_type = CODEC_TYPE_VIDEO;
+                st->codec->codec_id = CODEC_ID_MDEC;
+                st->codec->codec_tag = 0;  /* no fourcc */
+                st->codec->width = str->channels[channel].width;
+                st->codec->height = str->channels[channel].height;
             }
             break;
 
         case CDXA_TYPE_AUDIO:
             /* check if this channel gets to be the dominant audio channel */
             if (str->audio_channel == -1) {
+                int fmt;
                 str->audio_channel = channel;
                 str->channels[channel].type = STR_AUDIO;
-                str->channels[channel].channels = 
+                str->channels[channel].channels =
                     (sector[0x13] & 0x01) ? 2 : 1;
-                str->channels[channel].sample_rate = 
+                str->channels[channel].sample_rate =
                     (sector[0x13] & 0x04) ? 18900 : 37800;
-                str->channels[channel].bits = 
+                str->channels[channel].bits =
                     (sector[0x13] & 0x10) ? 8 : 4;
+
+                /* allocate a new AVStream */
+                st = av_new_stream(s, 0);
+                if (!st)
+                    return AVERROR_NOMEM;
+                av_set_pts_info(st, 64, 128, str->channels[channel].sample_rate);
+
+                str->channels[channel].audio_stream_index = st->index;
+
+                fmt = sector[0x13];
+                st->codec->codec_type = CODEC_TYPE_AUDIO;
+                st->codec->codec_id = CODEC_ID_ADPCM_XA;
+                st->codec->codec_tag = 0;  /* no fourcc */
+                st->codec->channels = (fmt&1)?2:1;
+                st->codec->sample_rate = (fmt&4)?18900:37800;
+            //    st->codec->bit_rate = 0; //FIXME;
+                st->codec->block_align = 128;
             }
             break;
 
@@ -211,15 +228,15 @@ static int str_read_header(AVFormatContext *s,
     }
 
 if (str->video_channel != -1)
-  printf (" video channel = %d, %d x %d\n", str->video_channel,
+  av_log (s, AV_LOG_DEBUG, " video channel = %d, %d x %d %d\n", str->video_channel,
     str->channels[str->video_channel].width,
-    str->channels[str->video_channel].height);
+    str->channels[str->video_channel].height,str->channels[str->video_channel].video_stream_index);
 if (str->audio_channel != -1)
-  printf (" audio channel = %d, %d Hz, %d channels, %d bits/sample\n", 
-    str->video_channel,
-    str->channels[str->video_channel].sample_rate,
-    str->channels[str->video_channel].channels,
-    str->channels[str->video_channel].bits);
+   av_log (s, AV_LOG_DEBUG, " audio channel = %d, %d Hz, %d channels, %d bits/sample %d\n",
+    str->audio_channel,
+    str->channels[str->audio_channel].sample_rate,
+    str->channels[str->audio_channel].channels,
+    str->channels[str->audio_channel].bits,str->channels[str->audio_channel].audio_stream_index);
 
     /* back to the start */
     url_fseek(pb, start, SEEK_SET);
@@ -228,24 +245,20 @@ if (str->audio_channel != -1)
 }
 
 static int str_read_packet(AVFormatContext *s,
-                           AVPacket *pkt)
+                           AVPacket *ret_pkt)
 {
     ByteIOContext *pb = &s->pb;
     StrDemuxContext *str = (StrDemuxContext *)s->priv_data;
     unsigned char sector[RAW_CD_SECTOR_SIZE];
     int channel;
     int packet_read = 0;
-    int video_sector_count = 0;
-    int current_video_sector = 0;
-    int video_frame_size = 0;
-    int video_frame_index = 0;
-    int bytes_to_copy;
     int ret = 0;
+    AVPacket *pkt;
 
     while (!packet_read) {
 
         if (get_buffer(pb, sector, RAW_CD_SECTOR_SIZE) != RAW_CD_SECTOR_SIZE)
-            return -EIO;
+            return AVERROR_IO;
 
         channel = sector[0x11];
         if (channel >= 32)
@@ -258,16 +271,21 @@ static int str_read_packet(AVFormatContext *s,
             /* check if this the video channel we care about */
             if (channel == str->video_channel) {
 
+                int current_sector = LE_16(&sector[0x1C]);
+                int sector_count   = LE_16(&sector[0x1E]);
+                int frame_size = LE_32(&sector[0x24]);
+                int bytes_to_copy;
+//        printf("%d %d %d\n",current_sector,sector_count,frame_size);
                 /* if this is the first sector of the frame, allocate a pkt */
-                if (current_video_sector == 0) {
-                    video_frame_size = LE_32(&sector[0x24]);
-                    video_sector_count = LE_16(&sector[0x1E]);
-                    if (av_new_packet(pkt, video_frame_size))
-                        return -EIO;
+                pkt = &str->tmp_pkt;
+                if (current_sector == 0) {
+                    if (av_new_packet(pkt, frame_size))
+                        return AVERROR_IO;
 
-                    pkt->stream_index = 
+                    pkt->pos= url_ftell(pb) - RAW_CD_SECTOR_SIZE;
+                    pkt->stream_index =
                         str->channels[channel].video_stream_index;
-                    pkt->pts = str->pts;
+               //     pkt->pts = str->pts;
 
                     /* if there is no audio, adjust the pts after every video
                      * frame; assume 15 fps */
@@ -276,32 +294,16 @@ static int str_read_packet(AVFormatContext *s,
                 }
 
                 /* load all the constituent chunks in the video packet */
-                if (video_frame_size - video_frame_index < VIDEO_DATA_CHUNK_SIZE)
-                    bytes_to_copy = video_frame_size - video_frame_index;
-                else
-                    bytes_to_copy = VIDEO_DATA_CHUNK_SIZE;
-                if (video_frame_index < video_frame_size)
-                    memcpy(&pkt->data[video_frame_index],
-                        &sector[VIDEO_DATA_HEADER_SIZE], bytes_to_copy);
-
-#ifdef PRINTSTUFF
-printf ("  chunk %d/%d (bytes %d/%d), first 6 bytes = %02X %02X %02X %02X %02X %02X\n",
-  current_video_sector, video_sector_count,
-  video_frame_index, video_frame_size,
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 0],
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 1],
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 2],
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 3],
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 4],
-  pkt->data[current_video_sector * VIDEO_DATA_CHUNK_SIZE + 5]);
-#endif
-
-                video_frame_index += bytes_to_copy;
-                /* must keep reading sectors until all current video sectors
-                 * are consumed */
-                current_video_sector++;
-                if (current_video_sector >= video_sector_count)
-                    packet_read = 1;
+                bytes_to_copy = frame_size - current_sector*VIDEO_DATA_CHUNK_SIZE;
+                if (bytes_to_copy>0) {
+                    if (bytes_to_copy>VIDEO_DATA_CHUNK_SIZE) bytes_to_copy=VIDEO_DATA_CHUNK_SIZE;
+                    memcpy(pkt->data + current_sector*VIDEO_DATA_CHUNK_SIZE,
+                        sector + VIDEO_DATA_HEADER_SIZE, bytes_to_copy);
+                }
+                if (current_sector == sector_count-1) {
+                    *ret_pkt = *pkt;
+                    return 0;
+                }
 
             }
             break;
@@ -310,7 +312,21 @@ printf ("  chunk %d/%d (bytes %d/%d), first 6 bytes = %02X %02X %02X %02X %02X %
 #ifdef PRINTSTUFF
 printf (" dropping audio sector\n");
 #endif
-        break;
+#if 1
+            /* check if this the video channel we care about */
+            if (channel == str->audio_channel) {
+                pkt = ret_pkt;
+                if (av_new_packet(pkt, 2304))
+                    return AVERROR_IO;
+                memcpy(pkt->data,sector+24,2304);
+
+                pkt->stream_index =
+                    str->channels[channel].audio_stream_index;
+                //pkt->pts = str->pts;
+                return 0;
+            }
+#endif
+            break;
         default:
             /* drop the sector and move on */
 #ifdef PRINTSTUFF
@@ -320,7 +336,7 @@ printf (" dropping other sector\n");
         }
 
         if (url_feof(pb))
-            return -EIO;
+            return AVERROR_IO;
     }
 
     return ret;

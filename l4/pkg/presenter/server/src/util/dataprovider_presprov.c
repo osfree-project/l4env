@@ -11,6 +11,7 @@
 
 #include "presenter_conf.h"
 #include "arraylist.h"
+#include "timer.h"
 #include "module_names.h"
 #include "dataprovider.h"
 
@@ -30,6 +31,7 @@
 #define LINUX_O_RDONLY 0
 
 static struct arraylist_services *arraylist;
+static struct timer_services *timer;
 
 int init_dataprovider(struct presenter_services *p);
 static void dataprovider_wait_for_fprov(void);
@@ -62,7 +64,19 @@ ARRAYLIST * parse_config_ds(char *content) {
 
         LOGd(_DEBUG,"parsed pathname == %s",pathname);
 
-        arraylist->add_elem(al,pathname);
+        /**
+         * Look if we find a line in the form "time [minutes]".
+         */
+        if (strlen (pathname) > 5 &&
+           (pathname[0] == 't' &&
+            pathname[1] == 'i' &&
+            pathname[2] == 'm' &&
+            pathname[3] == 'e' &&
+            pathname[4] == ' '))
+          timer->timer_setabstime ((double)atoi (&pathname[5]));
+        else
+          arraylist->add_elem(al,pathname);
+        
         k=i+1;
         i++;
 
@@ -203,6 +217,7 @@ static struct dataprovider_services services = {
 
 int init_dataprovider(struct presenter_services *p) {
     arraylist = p->get_module(ARRAYLIST_MODULE);
+    timer = p->get_module(TIMER_MODULE);
 
     p->register_module(DATAPROVIDER_MODULE,&services);
 

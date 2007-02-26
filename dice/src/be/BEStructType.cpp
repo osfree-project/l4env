@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEStructType.cpp
- *    \brief   contains the implementation of the class CBEStructType
+ * \file    dice/src/be/BEStructType.cpp
+ * \brief   contains the implementation of the class CBEStructType
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ * \date    01/15/2002
+ * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,14 +26,20 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEStructType.h"
-#include "be/BEContext.h"
-#include "be/BETypedef.h"
-#include "be/BEDeclarator.h"
-#include "be/BERoot.h"
-#include "be/BEAttribute.h"
-
-#include "fe/FETaggedStructType.h"
+#include "BEStructType.h"
+#include "BEUserDefinedType.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BETypedef.h"
+#include "BEDeclarator.h"
+#include "BERoot.h"
+#include "BEAttribute.h"
+#include "BEStructType.h"
+#include "BEClassFactory.h"
+#include "BESizes.h"
+#include "BEUnionType.h"
+#include "Compiler.h"
+#include "fe/FEStructType.h"
 #include "fe/FEInterface.h"
 #include "fe/FELibrary.h"
 #include "fe/FEFile.h"
@@ -41,82 +47,191 @@
 #include "fe/FESimpleType.h"
 #include "fe/FEIsAttribute.h"
 #include "fe/FEDeclarator.h"
+#include <stdexcept>
+#include <cassert>
 
+/******************************
+ * CStructMembers
+ ******************************/
+CStructMembers::CStructMembers(vector<CBETypedDeclarator*> *src,
+    CObject *pParent)
+: CSearchableCollection<CBETypedDeclarator, string>(src, pParent)
+{ }
 
-CBEStructType::CBEStructType()
+CStructMembers::CStructMembers(CStructMembers &src)
+: CSearchableCollection<CBETypedDeclarator, string>(src)
+{ }
+
+CStructMembers::~CStructMembers()
+{ }
+
+/** \brief adds a new member to the struct members collection
+ *  \param pMember reference to the new member
+ */
+void
+CStructMembers::Add(CBETypedDeclarator *pMember)
 {
+    if (!pMember)
+        return;
+
+    if (pMember->m_Declarators.First() &&
+	Find(pMember->m_Declarators.First()->GetName()))
+	return; // member already exists
+    CSearchableCollection<CBETypedDeclarator, string>::Add(pMember);
+}
+
+/** \brief moves a member in the struct
+ *  \param sName the name of the member
+ *  \param nPos the new position in the struct
+ *
+ * If nPos is -1 this means the end of the struct.
+ * If nPos is 0 this means the begin of the struct.
+ * nPos is regarded to be zero-based.
+ * Otherwise the member is extracted from the struct
+ * and inserted before the old member with the number nPos.
+ * If the number nPos is larger than the struct size,
+ * an error is returned.
+ */
+void
+CStructMembers::Move(string sName, int nPos)
+{
+    CBETypedDeclarator *pMember = Find(sName);
+    if (!pMember)
+	return;
+
+    Remove(pMember);
+    if (nPos == -1)
+	CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, end());
+	/*vector<CBETypedDeclarator*>::push_back(pMember);*/
+
+    // get position to insert at
+    iterator i = begin();
+    while ((nPos-- > 0) && (i != end())) i++;
+    // check if nPos was too big
+    if ((nPos > 0) && (i == end()))
+    {
+	Add(pMember);
+	return;
+    }
+    // insert member
+    CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, i);
+}
+
+/** \brief moves a member in the struct
+ *  \param sName the name of the member to move
+ *  \param sBeforeHere the name of the member to move before
+ */
+void
+CStructMembers::Move(string sName, string sBeforeHere)
+{
+    CBETypedDeclarator *pMember = Find(sName);
+    if (!pMember)
+	return;
+    if (sName == sBeforeHere)
+	return;
+
+    Remove(pMember);
+    // get position of BeforeHere
+    iterator i = begin();
+    while ((i != end()) && 
+	    (!(*i)->m_Declarators.Find(sBeforeHere))) i++;
+    // check if BeforeHere was member of this struct
+    if (i == end())
+    {
+	Add(pMember);
+	return;
+    }
+    // move member
+    CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, i);
+}
+
+/******************************
+ * CBEStructType
+ ******************************/
+CBEStructType::CBEStructType()
+: m_sTag(),
+  m_Members(0, this)
+{
+    m_bForwardDeclaration = false;
 }
 
 CBEStructType::CBEStructType(CBEStructType & src)
- : CBEType(src)
+ : CBEType(src),
+   m_Members(src.m_Members)
 {
     m_sTag = src.m_sTag;
     m_bForwardDeclaration = src.m_bForwardDeclaration;
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = src.m_vMembers.begin(); iter != src.m_vMembers.end(); iter++)
-    {
-        CBETypedDeclarator *pNew = (CBETypedDeclarator*)((*iter)->Clone());
-        AddMember(pNew);
-    }
+    m_Members.Adopt(this);
 }
 
-/**    \brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEStructType::~CBEStructType()
 {
-    while (!m_vMembers.empty())
-    {
-        delete m_vMembers.back();
-        m_vMembers.pop_back();
-    }
 }
 
-/**    \brief prepares this instance for the code generation
- *    \param pFEType the corresponding front-end attribute
- *    \param pContext the context of the code generation
- *    \return true if the code generation was successful
+/** \brief prepares this instance for the code generation
+ *  \param pFEType the corresponding front-end attribute
+ *  \return true if the code generation was successful
  *
- * This implementation calls the base class' implementatio first to set default values and then adds the
- * members of the struct to this class.
+ * This implementation calls the base class' implementatio first to set
+ * default values and then adds the members of the struct to this class.
  */
-bool CBEStructType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
+void
+CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(fe) called\n", __func__);
+    
     // sets m_sName to "struct"
-    if (!CBEType::CreateBackEnd(pFEType, pContext))
-        return false;
+    CBEType::CreateBackEnd(pFEType);
     // if sequence create own members
     if (pFEType->GetType() == TYPE_ARRAY)
-        return CreateBackEndSequence((CFEArrayType*)pFEType, pContext);
+    {
+        CreateBackEndSequence((CFEArrayType*)pFEType);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s(fe) returns\n", __func__);
+	return;
+    }
     // get forward declaration
-    m_bForwardDeclaration = ((CFEConstructedType*) pFEType)->IsForwardDeclaration();
+    m_bForwardDeclaration = 
+	((CFEConstructedType*) pFEType)->IsForwardDeclaration();
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
     // iterate over members
     CFEStructType *pFEStruct = (CFEStructType *) pFEType;
-    vector<CFETypedDeclarator*>::iterator iterM = pFEStruct->GetFirstMember();
-    CFETypedDeclarator *pFEMember;
-    while ((pFEMember = pFEStruct->GetNextMember(iterM)) != 0)
+    vector<CFETypedDeclarator*>::iterator iterM;
+    for (iterM = pFEStruct->m_Members.begin();
+	 iterM != pFEStruct->m_Members.end();
+	 iterM++)
     {
-        CBETypedDeclarator *pMember = pContext->GetClassFactory()->GetNewTypedDeclarator();
-        AddMember(pMember);
-        if (!pMember->CreateBackEnd(pFEMember, pContext))
+        CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
+        m_Members.Add(pMember);
+	try
+	{
+	    pMember->CreateBackEnd(*iterM);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveMember(pMember);
+	    m_Members.Remove(pMember);
             delete pMember;
-            return false;
+            throw;
         }
     }
     // set tag
-    if (dynamic_cast<CFETaggedStructType*>(pFEType))
+    string sTag = pFEStruct->GetTag();
+    if (!sTag.empty())
     {
-        // see if we can find the original struct
-        string sTag = ((CFETaggedStructType*)pFEType)->GetTag();
-        // we start with the parent interface and walk all the way up to the root
-        CFEConstructedType *pFETaggedDecl = 0;
+	// we start with the parent interface and walk all the way up to the
+	// root
+	CFEConstructedType *pFETaggedDecl = 0;
         CFEInterface *pFEInterface = pFEType->GetSpecificParent<CFEInterface>();
         if (pFEInterface)
         {
-            pFETaggedDecl = pFEInterface->FindTaggedDecl(sTag);
+            pFETaggedDecl = pFEInterface->m_TaggedDeclarators.Find(sTag);
             if (!pFETaggedDecl)
             {
-                CFELibrary *pParentLib = pFEInterface->GetSpecificParent<CFELibrary>();
+                CFELibrary *pParentLib = 
+		    pFEInterface->GetSpecificParent<CFELibrary>();
                 while (pParentLib && !pFETaggedDecl)
                 {
                     pFETaggedDecl = pParentLib->FindTaggedDecl(sTag);
@@ -134,36 +249,65 @@ bool CBEStructType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
         }
         // now we can assign a global tag name
         if (pFETaggedDecl)
-            m_sTag = pContext->GetNameFactory()->GetTypeName(pFETaggedDecl, sTag, pContext);
+            m_sTag = pNF->GetTypeName(pFETaggedDecl, sTag);
         else
         {
             // if this is a complete type, than this should
             // be made a full name as well, since it is defined in
             // an idl file
             if (!m_bForwardDeclaration)
-                m_sTag = pContext->GetNameFactory()->GetTypeName(pFEType, sTag, pContext);
+                m_sTag = pNF->GetTypeName(pFEType, sTag);
             else
                 m_sTag = sTag;
-            // still no original struct found, than this might be a user
-            // defined struct
-            // get the size from there
-            CBESizes *pSizes = pContext->GetSizes();
-            m_nSize = pSizes->GetSizeOfEnvType(sTag);
         }
     }
 
-    return true;
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(fe) returns\n", __func__);
 }
-/**    \brief prepares this instance for the code generation
- *    \param pFEType the corresponding front-end type
- *    \param pContext the context of the code generation
- *    \return true if the code generation was successful
+
+/** \brief initialize instance of object
+ *  \param sTag the tag of the struct
+ *  \param pRefObj a reference object
+ *  \return true if successful
+ *
+ * The members are added later using AddMember.
  */
-bool CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType, CBEContext * pContext)
+void
+CBEStructType::CreateBackEnd(string sTag,
+    CFEBase *pRefObj)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(%s, %p) called\n", __func__,
+	sTag.c_str(), pRefObj);
+    // skip CBEType::CreateBackEnd to avoid asserts
+    CBEObject::CreateBackEnd(pRefObj);
+    m_nFEType = TYPE_STRUCT;
+
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sName = pNF->GetTypeName(TYPE_STRUCT, false);
+    m_sTag = sTag;
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(%s,) called\n", __func__, sTag.c_str());
+}
+
+/** \brief prepares this instance for the code generation
+ *  \param pFEType the corresponding front-end type
+ *  \return true if the code generation was successful
+ */
+void 
+CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(fe-array) called\n", __func__);
     // if sequence create own members
     if (pFEType->GetType() != TYPE_ARRAY)
-        return false;
+    {
+	string exc = string(__func__);
+	exc += " failed, because array type is no array type";
+	throw new CBECreateException(exc);
+    }
     // CLM states that (1.11)
     // that 'sequence <type, size>' will be mapped to
     // struct {
@@ -178,14 +322,17 @@ bool CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType, CBEContext * p
     vector<CFETypedDeclarator*> *pMembers = new vector<CFETypedDeclarator*>();
 
     // create the _maximum member
+    CBESizes *pSizes = CCompiler::GetSizes();
+    int nLongSize = pSizes->GetSizeOfType(TYPE_LONG, 4);
     CFETypeSpec* pFEMType = new CFESimpleType(TYPE_INTEGER, true,
-                                        true, 4/*value for LONG*/, false);
-    CFEDeclarator *pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, string("_maximum"));
+	true, nLongSize, false);
+    CFEDeclarator *pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, 
+	string("_maximum"));
     vector<CFEDeclarator*> *pFEDeclarators = new vector<CFEDeclarator*>();
     pFEDeclarators->push_back(pFEDeclarator);
     CFETypedDeclarator *pFEMember = new CFETypedDeclarator(TYPEDECL_FIELD,
-                                        pFEMType,
-                                        pFEDeclarators);
+	pFEMType,
+	pFEDeclarators);
     pFEMType->SetParent(pFEMember);
     pFEDeclarator->SetParent(pFEMember);
     pMembers->push_back(pFEMember);
@@ -193,12 +340,12 @@ bool CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType, CBEContext * p
 
     // create _length member
     pFEMType = new CFESimpleType(TYPE_INTEGER, true,
-                                        true, 4/*value for LONG*/, false);
+	true, nLongSize, false);
     pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, string("_length"));
     pFEDeclarators->push_back(pFEDeclarator);
     pFEMember = new CFETypedDeclarator(TYPEDECL_FIELD,
-                                        pFEMType,
-                                        pFEDeclarators);
+	pFEMType,
+	pFEDeclarators);
     pFEMType->SetParent(pFEMember);
     pFEDeclarator->SetParent(pFEMember);
     pMembers->push_back(pFEMember);
@@ -236,80 +383,35 @@ bool CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType, CBEContext * p
     pFEDeclarators->clear();
 
     // create struct
-    CFEStructType *pFEStruct = new CFEStructType(pMembers);
+    CFEStructType *pFEStruct = new CFEStructType(string(), pMembers);
     pFEStruct->SetParent(pFEType->GetParent());
     delete pMembers;
     delete pAttributes;
 
     // recusively call CreateBackEnd to initialize struct
-    return CreateBackEnd(pFEStruct, pContext);
+    CreateBackEnd(pFEStruct);
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s(fe-array) returns\n", __func__);
 }
 
-/**    \brief adds a new member
- *    \param pMember the new member to add
- */
-void CBEStructType::AddMember(CBETypedDeclarator * pMember)
-{
-    if (!pMember)
-        return;
-    m_vMembers.push_back(pMember);
-    pMember->SetParent(this);
-}
-
-/**    \brief removes a member from the members vector
- *    \param pMember the member to remove
- */
-void CBEStructType::RemoveMember(CBETypedDeclarator * pMember)
-{
-    if (!pMember)
-        return;
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = m_vMembers.begin(); iter != m_vMembers.end(); iter++)
-    {
-        if (*iter == pMember)
-        {
-            m_vMembers.erase(iter);
-            return;
-        }
-    }
-}
-
-/**    \brief retrieves a pointer to the first member
- *    \return a pointer to the first member
- */
-vector<CBETypedDeclarator*>::iterator CBEStructType::GetFirstMember()
-{
-    return m_vMembers.begin();
-}
-
-/**    \brief retrieves reference to next member
- *    \param iter the pointer to the next member
- *    \return a reference to the member pIter points to
- */
-CBETypedDeclarator *CBEStructType::GetNextMember(vector<CBETypedDeclarator*>::iterator &iter)
-{
-    if (iter == m_vMembers.end())
-        return 0;
-    return *iter++;
-}
-
-/**    \brief writes the structure into the target file
- *    \param pFile the target file
- *    \param pContext the context of the write operation
+/** \brief writes the structure into the target file
+ *  \param pFile the target file
  *
  * A struct looks like this:
  * <code>
- * struct &lt;tag&gt;
+ * struct \<tag\>
  * {
- *   &lt;member list&gt;
+ *   \<member list\>
  * }
  * </code>
  */
-void CBEStructType::Write(CBEFile * pFile, CBEContext * pContext)
+void CBEStructType::Write(CBEFile * pFile)
 {
     if (!pFile->IsOpen())
         return;
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called.\n", __func__);
     // open struct
     *pFile << m_sName;
     if (!m_sTag.empty())
@@ -320,16 +422,17 @@ void CBEStructType::Write(CBEFile * pFile, CBEContext * pContext)
         *pFile << "\t{\n";
         pFile->IncIndent();
         // print members
-        vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-        CBETypedDeclarator *pMember;
-        while ((pMember = GetNextMember(iter)) != 0)
+        vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = m_Members.begin();
+	     iter != m_Members.end();
+	     iter++)
         {
             // this might happend (if we add return types to a struct)
-            if (pMember->GetType()->IsVoid() &&
-                (pMember->GetSize() == 0))
+            if ((*iter)->GetType()->IsVoid() &&
+                ((*iter)->GetSize() == 0))
                 continue;
             *pFile << "\t";
-            pMember->WriteDeclaration(pFile, pContext);
+            (*iter)->WriteDeclaration(pFile);
             *pFile << ";\n";
         }
         // close struct
@@ -340,10 +443,11 @@ void CBEStructType::Write(CBEFile * pFile, CBEContext * pContext)
     {
         *pFile << " { }";
     }
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returned.\n", __func__);
 }
 
-/**    \brief calculates the size of the written string
- *    \return the length of the written string
+/** \brief calculates the size of the written string
+ *  \return the length of the written string
  *
  * This function is used to see how long the type of a parameter (or return type) is.
  * Thus no members are necessary, but we have to consider the tag if it exists.
@@ -356,55 +460,84 @@ int CBEStructType::GetStringLength()
     return nSize;
 }
 
-/**    \brief generates an exact copy of this class
- *    \return a reference to the new object
+/** \brief generates an exact copy of this class
+ *  \return a reference to the new object
  */
 CObject *CBEStructType::Clone()
 {
     return new CBEStructType(*this);
 }
 
-/**    \brief calculate the size of a struct type
- *    \return the size in bytes of the struct
+/** \brief calculate the size of a struct type
+ *  \return the size in bytes of the struct
  *
  * The struct's size is the sum of the member's size.
- * We test m_nSize on zero. If it is greater than zero, the size
- * has already been set. If it isn't we calculate it.
  *
- * If the declarator's GetSize returns 0, the member is a bitfield. We have to add
- * the bits of the declarators. If a bitfield declarator is followed by a non-bitfield
- * declarator, the size has to be aligned to the next byte.
+ * If the declarator's GetSize returns 0, the member is a bitfield. We have to
+ * add the bits of the declarators. If a bitfield declarator is followed by a
+ * non-bitfield declarator, the size has to be aligned to the next byte.
  *
- * \todo If member is indirect, we should add size of pointer instead of size of type
+ * \todo If member is indirect, we should add size of pointer instead of \
+ *       size of type
+ *
+ * Do not use cached size of struct, because it might change
  */
 int CBEStructType::GetSize()
 {
-    if (m_nSize != 0)
-        return m_nSize;
-
-    // if this is a tagged struct without members, we have to find the original struct
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s called\n", __func__);
+    
+    int nSize = 0;
+    // if this is a tagged struct without members, we have to find the
+    // original struct
     if (m_bForwardDeclaration)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEStructType::%s forward decl of %s\n", __func__,
+	    GetTag().c_str());
+
         // search for tag
         CBERoot *pRoot = GetSpecificParent<CBERoot>();
         assert(pRoot);
-        CBEStructType *pTaggedType = (CBEStructType*)pRoot->FindTaggedType(TYPE_TAGGED_STRUCT, GetTag());
-        // if found, marshal this instead
+        CBEStructType *pTaggedType = 
+	    (CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
+        // if found, get size from it
         if ((pTaggedType) && (pTaggedType != this))
         {
-            m_nSize = pTaggedType->GetSize();
-            return m_nSize;
+            nSize = pTaggedType->GetSize();
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s returns %d\n", __func__, nSize);
+            return nSize;
         }
         // if no tagged struct found, this is a user defined type
-        // we asked the sizes class in CreateBackEnd, maybe it knows my size
-        // -> m_nSize should be > 0
+	// get the size from there
+	if (!pTaggedType)
+        {
+	    CBETypedef *pTypedef = pRoot->FindTypedef(m_sTag);
+	    if (!pTypedef)
+	    {
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		    "CBEStructType::%s returns 0\n", __func__);
+		return 0;
+	    }
+	    /* since the typedef is a CBETypedDeclarator, it would evaluate
+	     * the size of it's base type and sum it for all it's declarators.
+	     * We only want it for the declarator we are using. That's why we
+	     * use a specific GetSize function instead of the generic one. */
+	    return pTypedef->GetSize(m_sTag);
+	}
     }
 
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
     int nBitSize = 0;
-    while ((pMember = GetNextMember(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s testing member %s\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
+
         // special case handling:
         // if the member is a pointer to ourself, then we
         // handle this as a variable sized entry.
@@ -416,109 +549,310 @@ int CBEStructType::GetSize()
         // To catch this we test if the type of the
         // member is a tagged struct type with the same
         // tag as we have.
-        CBEType *pMemberType = pMember->GetType();
+	// 
+        // another special case:
+        // typedef struct A A_t;
+        // struct A {
+        //   A_t *next;
+        // };
+        //
+        // To catch this, we hav to check if the type is
+        // a user defined type. If so, we get the original
+        // type, which should be the struct, and then check
+        // if it has the same tag.
+        CBEType *pMemberType = (*iter)->GetType();
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s member %s is of type %d\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    pMemberType->GetFEType());
+	
+	while (dynamic_cast<CBEUserDefinedType*>(pMemberType))
+    	    pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
+	assert(pMemberType);
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s member %s has real type %d\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    pMemberType->GetFEType());
+	
         if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
-            ((CBEStructType*)pMemberType)->HasTag(m_sTag))
+            pMemberType->HasTag(m_sTag) &&
+	    !m_sTag.empty())
         {
-            m_nSize = -1;
+	    // FIXME: get size from
+	    // CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s self reference (%s): return -1\n",
+		__func__, m_sTag.c_str());
             return -1;
         }
 
-        int nSize = pMember->GetSize();
-        if (pMember->IsString())
+        int nElemSize = (*iter)->GetSize();
+        if ((*iter)->IsString())
         {
             // a string is also variable sized member
-            m_nSize = -1;
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s string member: return -1\n", __func__);
             return -1;
         }
-        else if (pMember->IsVariableSized())
+        else if ((*iter)->IsVariableSized())
         {
             // if one of the members is variable sized,
             // the whole struct is variable sized
-            m_nSize = -1;
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s var-sized member: return -1\n",
+		__func__);
             return -1;
-//            // its of variable size
-//            m_nSize += pMember->GetType()->GetSize();    // we add the base type size
-//            // if bitfields before, align them and add them
-//            if (nBitSize > 0)
-//            {
-//                m_nSize += nBitSize / 8;
-//                if ((nBitSize % 8) > 0)
-//                    m_nSize++;
-//                nBitSize = 0;
-//            }
         }
-        else if (nSize == 0)
+        else if (nElemSize == 0)
         {
-            nBitSize += pMember->GetBitfieldSize();
+            nBitSize += (*iter)->GetBitfieldSize();
         }
         else
         {
+	    CBESizes *pSizes = CCompiler::GetSizes();
             // check for alignment:
-            // if current size (nSize) is 4 bytes or above then sum is aligned to dword size
-            // if current size (nSize) is 2 bytes then sum is aligned to word size
-            if ((nSize >= 4) && ((m_nSize % 4) > 0))
-                m_nSize += 4 - (m_nSize % 4); // dword align
-            if ((nSize == 2) && ((m_nSize % 2) > 0))
-                m_nSize++; // word align
-            m_nSize += nSize;
+	    // if current size (nSize) is 4 bytes or above then sum is aligned
+	    // to dword size 
+	    //
+	    // if current size (nSize) is 2 bytes then sum is aligned to word
+	    // size
+            if (nElemSize >= 4)
+                nSize = pSizes->WordRoundUp(nSize);
+            if ((nElemSize == 2) && ((nSize % 2) > 0))
+                nSize++; // word align
+            nSize += nElemSize;
             // if bitfields before, align them and add them
             if (nBitSize > 0)
             {
-                m_nSize += nBitSize / 8;
+                nSize += nBitSize / 8;
                 if ((nBitSize % 8) > 0)
-                    m_nSize++;
+                    nSize++;
                 nBitSize = 0;
             }
         }
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEStructType::%s size of member is %d, new total: %d\n",
+	    __func__, nElemSize, nSize);
     }
     // some bitfields left? -> align them and add them
     if (nBitSize > 0)
     {
-        m_nSize += nBitSize / 8;
+        nSize += nBitSize / 8;
         if ((nBitSize % 8) > 0)
-            m_nSize++;
+            nSize++;
     }
-    return m_nSize;
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEStructType::%s returns %d\n", __func__, nSize);
+    return nSize;
 }
 
-/**    \brief writes code to initialize a variable of this type with a zero value
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief returns the maximum size of the struct
+ *  \return the size in bytes
  *
- * A struct is usually initialized by writing a init value for all its members in a comma seperated list,
- * embraced by braces. E.g. { (CORBA_long)0, (CORBA_float)0 }
+ * First it calls the GetSize method. If that returns a negative value, it is
+ * variable sized and a maximum size calculation is feasable. The algorithm is
+ * basically the same as for GetSize, but when a member returns -1 (variable
+ * sized) then this implementation tries to determine it's maximum size.
+ *
+ * Do not use cached max size, because size might change.
  */
-void CBEStructType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
+int CBEStructType::GetMaxSize()
 {
-    pFile->Print("{ ");
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s called\n", __func__);
+    
+    int nMaxSize = GetSize();
+    if (nMaxSize > 0)
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s normal size is %d, return\n", __func__,
+	    nMaxSize);
+	return nMaxSize;
+    }
+    
+    // if this is a tagged struct without members, we have to find the
+    // original struct
+    if (m_bForwardDeclaration)
+    {
+        // search for tag
+        CBERoot *pRoot = GetSpecificParent<CBERoot>();
+        assert(pRoot);
+        CBEStructType *pTaggedType = 
+	    (CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
+        // if found, marshal this instead
+        if ((pTaggedType) && (pTaggedType != this))
+        {
+            nMaxSize = pTaggedType->GetMaxSize();
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s size of forward decl struct is %d\n",
+		__func__, nMaxSize);
+            return nMaxSize;
+        }
+        // if no tagged struct found, this is a user defined type
+        // we asked the sizes class in CreateBackEnd, maybe it knows my size
+        // -> nMaxSize should be > 0
+    }
+
+    CBESizes *pSizes = CCompiler::GetSizes();
+
+    int nBitSize = 0;
+    // reset nMaxSize, which could have been negative before
+    nMaxSize = 0;
+
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s testing member %s\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
+        // special case handling:
+        // if the member is a pointer to ourself, then we
+        // handle this as a variable sized entry.
+        // example:
+        // struct list {
+        //     struct list *prev, *next;
+        //     ...
+        // };
+        // To catch this we test if the type of the
+        // member is a tagged struct type with the same
+        // tag as we have.
+	// 
+        // another special case:
+        // typedef struct A A_t;
+        // struct A {
+        //   A_t *next;
+        // };
+        //
+        // To catch this, we hav to check if the type is
+        // a user defined type. If so, we get the original
+        // type, which should be the struct, and then check
+        // if it has the same tag.
+        CBEType *pMemberType = (*iter)->GetType();
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s member %s is of type %d\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    pMemberType->GetFEType());
+	
+	while (dynamic_cast<CBEUserDefinedType*>(pMemberType))
+    	    pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
+	assert(pMemberType);
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEStructType::%s member %s has real type %d\n",
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    pMemberType->GetFEType());
+	
+        if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
+            pMemberType->HasTag(m_sTag))
+        {
+            nMaxSize = pSizes->GetSizeOfType(TYPE_VOID_ASTERISK);
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s pointer to self, return %d\n",
+		__func__, nMaxSize);
+            return nMaxSize;
+        }
+
+        int nSize = 0;
+	if (!(*iter)->GetMaxSize(true, nSize))
+	{
+	    nMaxSize = -1;
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		"CBEStructType::%s can't determine max of member, return -1\n",
+		__func__);
+	    return -1;
+	}
+	else if (nSize == 0)
+        {
+            nBitSize += (*iter)->GetBitfieldSize();
+        }
+        else
+        {
+            // check for alignment:
+	    // if current size (nSize) is 4 bytes or above then sum is aligned
+	    // to dword size 
+	    //
+	    // if current size (nSize) is 2 bytes then sum is aligned to word
+	    // size
+	    int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
+            if (nSize >= nWordSize)
+		nMaxSize = pSizes->WordRoundUp(nMaxSize);
+            nMaxSize += nSize;
+            // if bitfields before, align them and add them
+            if (nBitSize > 0)
+            {
+                nMaxSize += nBitSize / 8;
+                if ((nBitSize % 8) > 0)
+                    nMaxSize++;
+                nBitSize = 0;
+            }
+        }
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEStructType::%s: member %s has size %d (bits %d) - total: %d\n", 
+	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(),
+	    nSize, nBitSize, nMaxSize);
+    }
+    // some bitfields left? -> align them and add them
+    if (nBitSize > 0)
+    {
+        nMaxSize += nBitSize / 8;
+        if ((nBitSize % 8) > 0)
+            nMaxSize++;
+    }
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEStructType::%s return max size %d\n",
+	__func__, nMaxSize);
+    return nMaxSize;
+}
+
+/** \brief writes code to initialize a variable of this type with a zero value
+ *  \param pFile the file to write to
+ *
+ * A struct is usually initialized by writing a init value for all its members
+ * in a comma seperated list, embraced by braces. E.g. { (CORBA_long)0,
+ * (CORBA_float)0 }
+ */
+void CBEStructType::WriteZeroInit(CBEFile * pFile)
+{
+    *pFile << "{ ";
     pFile->IncIndent();
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
     bool bComma = false;
-    while ((pMember = GetNextMember(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
         // get type
-        CBEType *pType = pMember->GetType();
+        CBEType *pType = (*iter)->GetType();
         // get declarator
-        vector<CBEDeclarator*>::iterator iterD = pMember->GetFirstDeclarator();
-        CBEDeclarator *pDecl;
-        while ((pDecl = pMember->GetNextDeclarator(iterD)) != 0)
+        vector<CBEDeclarator*>::iterator iterD;
+	for (iterD = (*iter)->m_Declarators.begin();
+	     iterD != (*iter)->m_Declarators.end();
+	     iterD++)
         {
             if (bComma)
                 *pFile << ", \n\t";
             // be C99 compliant:
-            pFile->Print("%s : ", pDecl->GetName().c_str());
-            if (pDecl->IsArray())
-                WriteZeroInitArray(pFile, pType, pDecl, pDecl->GetFirstArrayBound(), pContext);
+	    *pFile << (*iterD)->GetName() << " : ";
+            if ((*iterD)->IsArray())
+                WriteZeroInitArray(pFile, pType, *iterD,
+		    (*iterD)->m_Bounds.begin());
             else if (pType)
-                pType->WriteZeroInit(pFile, pContext);
+                pType->WriteZeroInit(pFile);
 
             bComma = true;
         }
     }
     pFile->DecIndent();
-    pFile->Print(" }");
+    *pFile << " }";
 }
 
 /** \brief checks if this is a constructed type
@@ -534,7 +868,7 @@ bool CBEStructType::IsConstructedType()
  */
 int CBEStructType::GetMemberCount()
 {
-    return m_vMembers.size();
+    return m_Members.size();
 }
 
 /** \brief tests if this type has the given tag
@@ -549,13 +883,12 @@ bool CBEStructType::HasTag(string sTag)
 /** \brief writes a cast of this type
  *  \param pFile the file to write to
  *  \param bPointer true if the cast should produce a pointer
- *  \param pContext the context of the write operation
  *
  * A struct cast is '(struct tag)'.
  */
-void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pContext)
+void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer)
 {
-    pFile->Print("(");
+    *pFile << "(";
     if (m_sTag.empty())
     {
         // no tag -> we need a typedef to save us
@@ -563,25 +896,26 @@ void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pCont
         CBETypedef *pTypedef = GetTypedef();
         assert(pTypedef);
         // get first declarator (without stars)
-        vector<CBEDeclarator*>::iterator iterD = pTypedef->GetFirstDeclarator();
-        CBEDeclarator *pDecl;
-        while ((pDecl = pTypedef->GetNextDeclarator(iterD)) != 0)
-        {
-            if (pDecl->GetStars() <= (bPointer?1:0))
-                break;
+	vector<CBEDeclarator*>::iterator iterD;
+	for (iterD = pTypedef->m_Declarators.begin();
+	    iterD != pTypedef->m_Declarators.end();
+	    iterD++)
+	{
+	    if ((*iterD)->GetStars() <= (bPointer?1:0))
+		break;
         }
-        assert(pDecl);
-        pFile->Print("%s", pDecl->GetName().c_str());
-        if (bPointer && (pDecl->GetStars() == 0))
-            pFile->Print("*");
+        assert(iterD != pTypedef->m_Declarators.end());
+	*pFile << (*iterD)->GetName();
+        if (bPointer && ((*iterD)->GetStars() == 0))
+	    *pFile << "*";
     }
     else
     {
-        pFile->Print("%s %s", m_sName.c_str(), m_sTag.c_str());
+	*pFile << m_sName << " " << m_sTag;
         if (bPointer)
-            pFile->Print("*");
+	    *pFile << "*";
     }
-    pFile->Print(")");
+    *pFile << ")";
 }
 
 /** \brief allows to access tag member
@@ -594,21 +928,20 @@ string CBEStructType::GetTag()
 
 /** \brief write the declaration of this type
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
- * Only write a 'struct &lt;tag&gt;'.
+ * Only write a 'struct \<tag\>'.
  */
-void CBEStructType::WriteDeclaration(CBEFile * pFile, CBEContext * pContext)
+void CBEStructType::WriteDeclaration(CBEFile * pFile)
 {
-    pFile->Print("%s", m_sName.c_str());    // should be set to "struct"
+    *pFile << m_sName;
     if (!m_sTag.empty())
-        pFile->Print(" %s", m_sTag.c_str());
+	*pFile << " " << m_sTag;
 }
 
 /** \brief if struct is variable size, it has to write the size
  *  \param pFile the file to write to
  *  \param pStack contains the declarator stack for constructed typed variables
- *  \param pContext the context of teh write operation
+ *  \param pUsingFunc the function to use as reference for members
  *
  * This is usually the sum of the member's sizes. Because this is only called
  * when the struct is variable sized, we have to first add all the fixed sized
@@ -620,16 +953,17 @@ void CBEStructType::WriteDeclaration(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEStructType::WriteGetSize(CBEFile * pFile,
     vector<CDeclaratorStackLocation*> *pStack,
-    CBEContext * pContext)
+    CBEFunction *pUsingFunc)
 {
     /* check for variable sized members */
     bool bVarSized = false;
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
-    while (!bVarSized && ((pMember = GetNextMember(iter)) != 0))
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end() && !bVarSized;
+	 iter++)
     {
-        if (pMember->IsVariableSized() ||
-            pMember->IsString())
+        if ((*iter)->IsVariableSized() ||
+            (*iter)->IsString())
             bVarSized = true;
     }
     if (!bVarSized && !m_sTag.empty())
@@ -642,19 +976,20 @@ void CBEStructType::WriteGetSize(CBEFile * pFile,
     bool bFirst = true;
     if (nFixedSize > 0)
     {
-        pFile->Print("%d", nFixedSize);
+	*pFile << nFixedSize;
         bFirst = false;
     }
-    iter = GetFirstMember();
-    while ((pMember = GetNextMember(iter)) != 0)
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
-        if (!pMember->IsVariableSized() &&
-            !pMember->IsString())
+        if (!(*iter)->IsVariableSized() &&
+            !(*iter)->IsString())
             continue;
         if (!bFirst)
-            pFile->Print("+");
+	    *pFile << "+";
         bFirst = false;
-        WriteGetMemberSize(pFile, pMember, pStack, pContext);
+        WriteGetMemberSize(pFile, *iter, pStack, pUsingFunc);
     }
 }
 
@@ -672,7 +1007,8 @@ int CBEStructType::GetFixedSize()
         // search for tag
         CBERoot *pRoot = GetSpecificParent<CBERoot>();
         assert(pRoot);
-        CBEStructType *pTaggedType = (CBEStructType*)pRoot->FindTaggedType(TYPE_TAGGED_STRUCT, GetTag());
+        CBEStructType *pTaggedType = 
+	    (CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
         // if found, marshal this instead
         if ((pTaggedType) && (pTaggedType != this))
         {
@@ -681,14 +1017,15 @@ int CBEStructType::GetFixedSize()
         }
     }
 
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
     int nBitSize = 0;
-    while ((pMember = GetNextMember(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
-        int nMemberSize = pMember->GetSize();
-        if (pMember->IsString() ||
-            pMember->IsVariableSized())
+        int nMemberSize = (*iter)->GetSize();
+        if ((*iter)->IsString() ||
+            (*iter)->IsVariableSized())
         {
             // its of variable size
             // if bitfields before, align them and add them
@@ -702,15 +1039,19 @@ int CBEStructType::GetFixedSize()
         }
         else if (nMemberSize == 0)
         {
-            nBitSize += pMember->GetBitfieldSize();
+            nBitSize += (*iter)->GetBitfieldSize();
         }
         else
         {
+	    CBESizes *pSizes = CCompiler::GetSizes();
             // check for alignment:
-            // if current size (nSize) is 4 bytes or above then sum is aligned to dword size
-            // if current size (nSize) is 2 bytes then sum is aligned to word size
-            if ((nMemberSize >= 4) && ((nSize % 4) > 0))
-                nSize += 4 - (nSize % 4); // dword align
+	    // if current size (nSize) is 4 bytes or above then sum is aligned
+	    // to dword size
+	    //
+	    // if current size (nSize) is 2 bytes then sum is aligned to word
+	    // size
+	    if (nMemberSize >= 4)
+                nSize = pSizes->WordRoundUp(nSize); // dword align
             if ((nMemberSize == 2) && ((nSize % 2) > 0))
                 nSize++; // word align
             nSize += nMemberSize;
@@ -738,46 +1079,51 @@ int CBEStructType::GetFixedSize()
  *  \param pFile the file to write to
  *  \param pMember the member to write for
  *  \param pStack contains the declarator stack
- *  \param pContext the context of the write operation
+ *  \param pUsingFunc the function that should be used as reference for
+ *         pMember
  *
- * This code is taken from CBEMsgBufferType::WriteInitializationVarSizedParameters
- * if something is not working, check if something changed there as well.
+ * This code is taken from
+ * CBEMsgBufferType::WriteInitializationVarSizedParameters if something is not
+ * working, check if something changed there as well.
  */
 void
 CBEStructType::WriteGetMemberSize(CBEFile *pFile,
     CBETypedDeclarator *pMember,
     vector<CDeclaratorStackLocation*> *pStack,
-    CBEContext *pContext)
+    CBEFunction *pUsingFunc)
 {
     bool bFirst = true;
-    vector<CBEDeclarator*>::iterator iterD = pMember->GetFirstDeclarator();
-    CBEDeclarator *pDecl;
-    while ((pDecl = pMember->GetNextDeclarator(iterD)) != 0)
+    vector<CBEDeclarator*>::iterator iterD;
+    for (iterD = pMember->m_Declarators.begin();
+	 iterD != pMember->m_Declarators.end();
+	 iterD++)
     {
         if (!bFirst)
         {
-            pFile->Print("+");
+	    *pFile << "+";
             bFirst = false;
         }
         // add the current decl to the stack
-        CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(pDecl);
+        CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(*iterD);
         pStack->push_back(pLoc);
         // add the member of the struct to the stack
-        pMember->WriteGetSize(pFile, pStack, pContext);
+        pMember->WriteGetSize(pFile, pStack, pUsingFunc);
         if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
         {
-            pFile->Print("*sizeof");
-            pMember->GetType()->WriteCast(pFile, false, pContext);
+	    *pFile << "*sizeof";
+            pMember->GetType()->WriteCast(pFile, false);
         }
         else if (pMember->IsString())
         {
             // add terminating zero
-            pFile->Print("+1");
-            bool bHasSizeAttr = pMember->HasSizeAttr(ATTR_SIZE_IS) ||
-                    pMember->HasSizeAttr(ATTR_LENGTH_IS) ||
-                    pMember->HasSizeAttr(ATTR_MAX_IS);
+	    *pFile << "+1";
+            bool bHasSizeAttr = 
+		pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
+		pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
+		pMember->m_Attributes.Find(ATTR_MAX_IS);
+	    CBESizes *pSizes = CCompiler::GetSizes();
             if (!bHasSizeAttr)
-                pFile->Print("+%d", pContext->GetSizes()->GetSizeOfType(TYPE_INTEGER));
+		*pFile << "+" << pSizes->GetSizeOfType(TYPE_INTEGER);
         }
         // remove the decl from the stack
         pStack->pop_back();
@@ -793,19 +1139,50 @@ bool CBEStructType::IsSimpleType()
     return false;
 }
 
-/** \brief tries to find a member with the name sName
- *  \param sName the name of the member to search
+/** \brief tries to find a member with a declarator stack
+ *  \param pStack contains the list of members to search for
+ *  \param iCurr the iterator pointing to the currently searched element
  *  \return the member found or 0 if not found
+ *
+ * Gets the first element on the stack and tries to find
  */
-CBETypedDeclarator* CBEStructType::FindMember(string sName)
+CBETypedDeclarator* 
+CBEStructType::FindMember(vector<CDeclaratorStackLocation*> *pStack,
+    vector<CDeclaratorStackLocation*>::iterator iCurr)
 {
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
-    while ((pMember = GetNextMember(iter)) != 0)
-    {
-        if (pMember->FindDeclarator(sName))
-            return pMember;
-    }
+    // if at end, return
+    if (iCurr == pStack->end())
+	return 0;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEStructType::%s(stack) called\n", __func__);
+
+    DUMP_STACK(i, pStack, "Find");
+    // try to find member for current declarator
+    string sName = (*iCurr)->pDeclarator->GetName();
+    CBETypedDeclarator *pMember = m_Members.Find(sName);
+    if (!pMember)
+	return pMember;
+
+    // no more elements in stack, we are finished
+    if (++iCurr == pStack->end())
+	return pMember;
+
+    // check member types
+    CBEType *pType = pMember->GetType();
+    while (dynamic_cast<CBEUserDefinedType*>(pType))
+	pType = dynamic_cast<CBEUserDefinedType*>(pType);
+
+    CBEStructType *pStruct = dynamic_cast<CBEStructType*>(pType);
+    if (pStruct)
+	return pStruct->FindMember(pStack, iCurr);
+
+    CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
+    if (pUnion)
+	return pUnion->FindMember(pStack, iCurr);
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEStructType::%s no member in struct or union found. return 0.\n",
+	__func__);
     return 0;
 }
 
@@ -813,14 +1190,15 @@ CBETypedDeclarator* CBEStructType::FindMember(string sName)
  *  \param nAttributeType the attribute type to look for
  *  \return the first member with the given attribute
  */
-CBETypedDeclarator* CBEStructType::FindMemberAttribute(int nAttributeType)
+CBETypedDeclarator* CBEStructType::FindMemberAttribute(ATTR_TYPE nAttributeType)
 {
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
-    while ((pMember = GetNextMember(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
-        if (pMember->FindAttribute(nAttributeType))
-            return pMember;
+        if ((*iter)->m_Attributes.Find(nAttributeType))
+            return *iter;
     }
     return 0;
 }
@@ -830,15 +1208,19 @@ CBETypedDeclarator* CBEStructType::FindMemberAttribute(int nAttributeType)
  *  \param sAttributeParameter the name of the attributes parameter to look for
  *  \return the first member with the given attribute
  */
-CBETypedDeclarator* CBEStructType::FindMemberIsAttribute(int nAttributeType, string sAttributeParameter)
+CBETypedDeclarator* 
+CBEStructType::FindMemberIsAttribute(ATTR_TYPE nAttributeType, 
+	string sAttributeParameter)
 {
-    vector<CBETypedDeclarator*>::iterator iter = GetFirstMember();
-    CBETypedDeclarator *pMember;
-    while ((pMember = GetNextMember(iter)) != 0)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
-        CBEAttribute *pAttr = pMember->FindAttribute(nAttributeType);
-        if (pAttr && pAttr->FindIsParameter(sAttributeParameter))
-            return pMember;
+        CBEAttribute *pAttr = (*iter)->m_Attributes.Find(nAttributeType);
+        if (pAttr && pAttr->m_Parameters.Find(sAttributeParameter))
+            return *iter;
     }
     return 0;
 }
+

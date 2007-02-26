@@ -91,7 +91,7 @@ clear_screen(void)
   ret = con_vc_pslim_bmap_call(&vc_l4id,
 			  &rect, 
 			  antiquewhite, indianred,
-  			  (char*)fill_bmap,
+  			  fill_bmap,
 			  275,
 			  pSLIM_BMAP_START_MSB, 
 			  &_env);

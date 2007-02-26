@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BESndFunction.h
- *    \brief   contains the declaration of the class CL4BESndFunction
+ *  \brief   contains the declaration of the class CL4BESndFunction
  *
  *    \date    06/01/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -42,15 +42,14 @@ class CL4BESndFunction : public CBESndFunction
 public:
     /** creates a new object of this class */
     CL4BESndFunction();
-    virtual ~CL4BESndFunction();
+    ~CL4BESndFunction();
 
 protected: // Protected methods
-    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
-    virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteIPCErrorCheck(CBEFile * pFile);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteIPC(CBEFile *pFile);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
 };
 
 #endif

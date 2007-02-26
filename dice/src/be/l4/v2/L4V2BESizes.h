@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/v2/L4V2BESizes.h
- *    \brief   contains the declaration of the class CL4V2BESizes
+ *  \file    dice/src/be/l4/v2/L4V2BESizes.h
+ *  \brief   contains the declaration of the class CL4V2BESizes
  *
- *    \date    10/10/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/10/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -45,8 +45,7 @@ public:
     virtual ~CL4V2BESizes();
 
 public: // Public methods
-    virtual int GetMaxShortIPCSize(int nDirection = 0);
-    virtual int GetSizeOfEnvType(string sName);
+    virtual int GetMaxShortIPCSize(void);
     virtual int GetMaxSizeOfType(int nFEType);
 };
 

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEAttributeDeclarator.h
- *    \brief   contains the declaration of the class CFEAttributeDeclarator
+ *  \brief   contains the declaration of the class CFEAttributeDeclarator
  *
  *    \date    12/17/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -52,7 +52,7 @@ public:
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEAttributeDeclarator(CFEAttributeDeclarator &src);
 

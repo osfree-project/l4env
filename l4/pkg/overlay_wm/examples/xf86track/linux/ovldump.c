@@ -45,8 +45,9 @@ void ovl_window_destroy(int id) {
 }
 
 
-void ovl_window_top(int id) {
-	printf("top window %d\n", id);
+void ovl_window_stack(int id, int neighbor_id, int behind, int do_redraw) {
+	printf("stack window %d, neighbor_id=%d, behind=%d, do_redraw=%d\n",
+	       id, neighbor_id, behind, do_redraw);
 }
 
 

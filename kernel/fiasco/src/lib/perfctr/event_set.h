@@ -5,7 +5,7 @@
  */
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
-#define UM(um)	((const struct perfctr_unit_mask*)&(um).header)
+#define UM(um)	((void*)&(um).header)
 
 struct perfctr_unit_mask_header {
     unsigned int default_value;

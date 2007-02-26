@@ -36,6 +36,11 @@ _start:
 .LCcrt0_l4env_infopage: .word crt0_l4env_infopage
 .LCstack: .word crt0_stack_high
 
+.section ".data"
+	.global __dso_handle
+__dso_handle:
+	.long 0
+
 .section ".bss"
 
 	.global	crt0_tramppage

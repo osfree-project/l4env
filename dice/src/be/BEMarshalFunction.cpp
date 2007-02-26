@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEMarshalFunction.cpp
- *    \brief   contains the implementation of the class CBEMarshalFunction
+ *  \file    dice/src/be/BEMarshalFunction.cpp
+ *  \brief   contains the implementation of the class CBEMarshalFunction
  *
- *    \date    10/09/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/09/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -25,24 +25,29 @@
  * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
-#include "be/BEMarshalFunction.h"
-#include "be/BEContext.h"
-#include "be/BEType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEOpcodeType.h"
-#include "be/BEMsgBufferType.h"
-#include "be/BEUserDefinedType.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEComponent.h"
-
+#include "BEMarshalFunction.h"
+#include "BEContext.h"
+#include "BEType.h"
+#include "BEMsgBuffer.h"
+#include "BEDeclarator.h"
+#include "BEUserDefinedType.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEComponent.h"
+#include "BEClass.h"
+#include "BESrvLoopFunction.h"
+#include "BESizes.h"
+#include "BEClassFactory.h"
+#include "BEMarshaller.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
+#include <cassert>
 
 CBEMarshalFunction::CBEMarshalFunction()
- : CBEOperationFunction()
+ : CBEOperationFunction(FUNCTION_MARSHAL)
 {
 }
 
@@ -51,165 +56,154 @@ CBEMarshalFunction::CBEMarshalFunction(CBEMarshalFunction & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CBEMarshalFunction::~CBEMarshalFunction()
 {
 }
 
-/**    \brief creates the back-end marshal function
- *    \param pFEOperation the corresponding front-end operation
- *    \param pContext the context of the code generation
- *    \return true if successful
+/** \brief creates the back-end marshal function
+ *  \param pFEOperation the corresponding front-end operation
+ *  \return true if successful
  *
  * This function should only contain OUT parameters if it is on the
  * component's side an IN parameters if it is on the client's side.
  */
-bool 
-CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, 
-    CBEContext * pContext)
+void
+CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
-    pContext->SetFunctionType(FUNCTION_MARSHAL);
     // set target file name
-    SetTargetFileName(pFEOperation, pContext);
-    // set name
-    m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-
-    if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-    {
-        VERBOSE("%s failed because base function could not be created\n", __PRETTY_FUNCTION__);
-        return false;
-    }
+    SetTargetFileName(pFEOperation);
+    // set function name
+    SetFunctionName(pFEOperation, FUNCTION_MARSHAL);
 
     // add parameters
-    if (!AddMessageBuffer(pFEOperation->GetSpecificParent<CFEInterface>(), pContext))
-    {
-        VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
-        return false;
-    }
+    CBEOperationFunction::CreateBackEnd(pFEOperation);
 
+    // add message buffer 
+    // (called before return type replacement, so we can add the "old" return
+    // type
+    AddMessageBuffer(pFEOperation);
+    
+    // replace return type after parameters are added, so the parameters can
+    // add the original return type as extra parameter
     // set return type
     if (IsComponentSide())
-    {
-        CBEType *pReturnType = pContext->GetClassFactory()->GetNewType(TYPE_VOID);
-        pReturnType->SetParent(this);
-        if (!pReturnType->CreateBackEnd(false, 0, TYPE_VOID, pContext))
-        {
-            VERBOSE("%s failed because return var could not be created\n", __PRETTY_FUNCTION__);
-            delete pReturnType;
-            return false;
-        }
-        CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
-        delete pOldType;
-    }
+	SetReturnVar(false, 0, TYPE_VOID, string());
 
+    // add marshaller and communication class
+    CreateMarshaller();
+    CreateCommunication();
+    CreateTrace();
+}
+
+/** \brief manipulate the message buffer
+ *  \param pMsgBuffer the message buffer to initialize
+ *  \return true on success
+ *
+ * Add the return variable and set the message buffer parameter as reference.
+ *
+ * We have to use the return variable parameter, because the base class
+ * function does not add the return variable to the struct if the return type
+ * of the function is void, which is always true for marshal function.
+ */
+bool 
+CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
+	return false;
+    // add return variable if we have a return parameter
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sReturn = pNF->GetReturnVariable();
+    if (FindParameter(sReturn))
+    {
+	if (!pMsgBuffer->AddReturnVariable(this))
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+		"%s failed, because couldn't added ret-var to msgbuf\n", __func__);
+	    return false;
+	}
+    }
+    // in marshal function, the message buffer is a pointer to the server's
+    // message buffer
+    pMsgBuffer->m_Declarators.First()->SetStars(1);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
     return true;
 }
 
-/**    \brief writes the variable declarations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * The variable declarations contains the return variable if needed. And a
- * temporary variable if we have any variable sized arrays. No message buffer
- * definition (its an parameter).
- */
-void 
-CBEMarshalFunction::WriteVariableDeclaration(CBEFile * pFile, 
-    CBEContext * pContext)
-{
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    // do NOT declare return variable
-    // check for temp
-    if (HasVariableSizedParameters(GetSendDirection()) || HasArrayParameters())
-    {
-        string sTmpVar = pNF->GetTempOffsetVariable(pContext);
-        string sOffsetVar = pNF->GetOffsetVariable(pContext);
-	*pFile << "\tunsigned " << sTmpVar << " __attribute__ ((unused));\n";
-	*pFile << "\tunsigned " << sOffsetVar << " __attribute__ ((unused));\n";
-    }
-    // declare local exception variable if at component's side
-    if (IsComponentSide())
-        WriteExceptionWordDeclaration(pFile, true, pContext);
-}
-
-/**    \brief writes the variable initializations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the variable initializations of this function
+ *  \param pFile the file to write to
  *
  * This implementation should initialize the pointers of the out variables. Do
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
 void 
-CBEMarshalFunction::WriteVariableInitialization(CBEFile * pFile, 
-    CBEContext * pContext)
+CBEMarshalFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
 {
 }
 
-/**    \brief writes the invocation of the message transfer
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the invocation of the message transfer
+ *  \param pFile the file to write to
  *
  * This implementation does nothing, because the unmarshalling does not
  * contain a message transfer.
  */
-void 
-CBEMarshalFunction::WriteInvocation(CBEFile * pFile, 
-    CBEContext * pContext)
+void
+CBEMarshalFunction::WriteInvocation(CBEFile * /*pFile*/)
 {
 }
 
-/** \brief writes the unmarshalling of the message
+/** \brief writes a single parameter for the function call
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it \
- *         to false if not possible
- *  \param pContext the context of the write operation
+ *  \param pParameter the parameter to be written
+ *  \param bCallFromSameClass true if called from same class
  *
- * This implementation iterates over the parameters (except the message buffer
- * itself) and unmarshals them.
+ * If the parameter is the message buffer we cast to this function's type,
+ * because otherwise the compiler issues warnings.
  */
 void 
-CBEMarshalFunction::WriteMarshalling(CBEFile * pFile, 
-    int nStartOffset, 
-    bool& bUseConstOffset, 
-    CBEContext * pContext)
+CBEMarshalFunction::WriteCallParameter(CBEFile * pFile,
+    CBETypedDeclarator * pParameter,
+    bool bCallFromSameClass)
 {
-    if (IsComponentSide())
-    {
-        // start after exception
-        nStartOffset += WriteMarshalException(pFile, nStartOffset, 
-	    bUseConstOffset, pContext);
-    }
-    else
-    {
-        // start after opcode
-	CBEClassFactory *pCF = pContext->GetClassFactory();
-        CBEOpcodeType *pOpcodeType = pCF->GetNewOpcodeType();
-        pOpcodeType->SetParent(this);
-        if (pOpcodeType->CreateBackEnd(pContext))
-            nStartOffset += pOpcodeType->GetSize();
-        delete pOpcodeType;
-    }
-    // now unmarshal rest
-    CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, 
-	bUseConstOffset, pContext);
+    // write own message buffer's name
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sName = pNF->GetMessageBufferVariable();
+    if (!bCallFromSameClass && pParameter->m_Declarators.Find(sName))
+	pParameter->GetType()->WriteCast(pFile, pParameter->HasReference());
+    // call base class
+    CBEOperationFunction::WriteCallParameter(pFile, pParameter, bCallFromSameClass);
 }
 
-/** \brief clean up the mess
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * This implementation is empty, because there is nothing to clean up.
+/** \brief get exception variable
+ *  \return a reference to the exception variable
  */
-void CBEMarshalFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
+CBETypedDeclarator*
+CBEMarshalFunction::GetExceptionVariable()
 {
+    CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
+    if (pRet)
+	return pRet;
+    
+    // if no parameter, then try to find it in the message buffer
+    CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
+	__func__, pMsgBuf);
+    if (!pMsgBuf)
+	return 0;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sName = pNF->GetExceptionWordVariable();
+    pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
+    if (!pRet)
+	pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
+	sName.c_str(), pRet);
 
+    return pRet;
 }
 
 /** \brief adds the parameters of a front-end function to this function
- *  \param pFEOperation the front-end function
- *  \param pContext the context of the code generation
  *  \return true if successful
  *
  * This implementation adds the return value to the parameter list. The return
@@ -219,55 +213,93 @@ void CBEMarshalFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
  * function is executed, we can assume, that the return variable is still the
  * original function's return variable and not the opcode return variable.
  */
-bool 
-CBEMarshalFunction::AddParameters(CFEOperation * pFEOperation, 
-    CBEContext * pContext)
+void
+CBEMarshalFunction::AddBeforeParameters()
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshalFunction::%s called\n", __func__);
+    // call base class to add object
+    CBEOperationFunction::AddBeforeParameters();
+    
     if (!GetReturnType()->IsVoid())
     {
         // create new parameter
+        CBETypedDeclarator *pReturn = GetReturnVariable();
         CBETypedDeclarator *pReturnParam = 
-	    (CBETypedDeclarator*)(m_pReturnVar->Clone());
-        CBEFunction::AddParameter(pReturnParam);
-        AddSortedParameter(pReturnParam);
+	    (CBETypedDeclarator*)(pReturn->Clone());
+        m_Parameters.Add(pReturnParam);
     }
-    // call base class to add rest
-    return CBEOperationFunction::AddParameters(pFEOperation, pContext);
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshalFunction::%s returns\n", __func__);
 }
 
-/**    \brief adds a single parameter to this function
- *    \param pFEParameter the parameter to add
- *    \param pContext the context of the code generation
- *    \return true if successful
+/** \brief add parameters after all other parameters
+ *  \return true if successful
+ *
+ * We have to write the server's message buffer type and the local variable
+ * name. We cannot use the local type, because it's not defined anywhere.
+ * To write it correctly, we have to obtain the server's message buffer's
+ * declarator, which is the name of the type.
+ */
+void CBEMarshalFunction::AddAfterParameters()
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEMarshalFunction::%s called\n", __func__);
+    
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    // get class' message buffer
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    // get its message buffer
+    CBEMsgBuffer *pSrvMsgBuffer = pClass->GetMessageBuffer();
+    assert(pSrvMsgBuffer);
+    string sTypeName = pSrvMsgBuffer->m_Declarators.First()->GetName();
+    // write own message buffer's name
+    string sName = pNF->GetMessageBufferVariable();
+    // create declarator
+    CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+    pParameter->SetParent(this);
+    pParameter->CreateBackEnd(sTypeName, sName, 1);
+    m_Parameters.Add(pParameter);
+
+    CBEOperationFunction::AddAfterParameters();
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEMarshalFunction::%s returns\n", __func__);
+}
+
+/** \brief adds a single parameter to this function
+ *  \param pFEParameter the parameter to add
  *
  * This function decides, which parameters to add and which not. The
  * parameters to marshal are for client-to-component transfer the IN
  * parameters and for component-to-client transfer the OUT and return
  * parameters. We depend on the information set in m_bComponentSide.
  */
-bool 
-CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter, 
-    CBEContext * pContext)
+void
+CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
     if (IsComponentSide())
     {
         // we transfer from the component to the client
-        if (!(pFEParameter->FindAttribute(ATTR_OUT)))
+        if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
             // skip adding a parameter if it has no OUT
-            return true;
+            return;
     }
     else
     {
-        if (!(pFEParameter->FindAttribute(ATTR_IN)))
+        if (!(pFEParameter->m_Attributes.Find(ATTR_IN)))
             // skip parameter if it has no IN
-            return true;
+            return;
     }
-    return CBEOperationFunction::AddParameter(pFEParameter, pContext);
+    return CBEOperationFunction::AddParameter(pFEParameter);
 }
 
 /** \brief checks if this parameter should be marshalled or not
  *  \param pParameter the parameter to check
- *  \param pContext the context of this marshalling
+ *  \param bMarshal true if marshaling, false if unmarshaling
  *  \return true if this parameter should be marshalled
  *
  * Return true if the at component's side, the parameter has an OUT attribute,
@@ -275,81 +307,34 @@ CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter,
  */
 bool 
 CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, 
-    CBEContext *pContext)
+	bool bMarshal)
 {
+    if (!bMarshal)
+	return false;
+
+    if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+	return false;
+
     if (IsComponentSide())
     {
-        if (pParameter->FindAttribute(ATTR_OUT))
+        if (pParameter->m_Attributes.Find(ATTR_OUT))
             return true;
     }
     else
     {
-        if (pParameter->FindAttribute(ATTR_IN))
+        if (pParameter->m_Attributes.Find(ATTR_IN))
             return true;
     }
     return false;
-}
-
-/** \brief checks if this parameter should be unmarshalled or not
- *  \param pParameter the parameter to check
- *  \param pContext the context of this unmarshalling
- *  \return true if this parameter should be unmarshalled
- */
-bool
-CBEMarshalFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, 
-    CBEContext * pContext)
-{
-    return false;
-}
-
-/** \brief writes the message buffer parameter
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the parameter
- */
-void
-CBEMarshalFunction::WriteAfterParameters(CBEFile * pFile, 
-    CBEContext * pContext, bool bComma)
-{
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (bComma)
-        *pFile << ",\n\t";
-    WriteParameter(pFile, pMsgBuffer, pContext, false /* no const msgbuf */);
-    CBEOperationFunction::WriteAfterParameters(pFile, pContext, true);
-}
-
-/** \brief writes the message buffer call parameter
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the declarators
- *
- * This is also where the environment variable is written. If the server has a
- * parameter of type Corba-Environment, it is a pointer in the server loop and
- * when calling the unmarshal function, needs no reference making '&'.
- */
-void
-CBEMarshalFunction::WriteCallAfterParameters(CBEFile * pFile, 
-    CBEContext * pContext, bool bComma)
-{
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (bComma)
-        *pFile << ",\n\t";
-    if (m_bCastMsgBufferOnCall)
-        pMsgBuffer->GetType()->WriteCast(pFile, true, pContext);
-    WriteCallParameter(pFile, pMsgBuffer, pContext);
-    CBEOperationFunction::WriteCallAfterParameters(pFile, pContext, true);
 }
 
 /** \brief tries to find a parameter by its type
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator*
-CBEMarshalFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator * CBEMarshalFunction::FindParameterType(string sTypeName)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     if (pMsgBuffer)
     {
         CBEType *pType = pMsgBuffer->GetType();
@@ -362,47 +347,6 @@ CBEMarshalFunction::FindParameterType(string sTypeName)
             return pMsgBuffer;
     }
     return CBEOperationFunction::FindParameterType(sTypeName);
-}
-
-/** \brief adds the specific message buffer parameter for this function
- *  \param pFEInterface the respective front-end interface to use as reference
- *  \param pContext the context of the create process
- *  \return true if the create process was successful
- *
- * Instead of creating a whole new message buffer type, we use the existing type
- * of the class as a user defined type.
- */
-bool 
-CBEMarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, 
-    CBEContext * pContext)
-{
-    // get class's message buffer
-    CBEClass *pClass = GetClass();
-    assert(pClass);
-    // get message buffer type
-    CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
-    assert(pMsgBuffer);
-    // we have to sort parameters before the message buffer extracts the sizes
-    SortParameters(0, pContext);
-    // msg buffer not yet initialized
-    pMsgBuffer->InitCounts(pClass, pContext);
-    // create own message buffer
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
-    m_pMsgBuffer->SetParent(this);
-    if (!m_pMsgBuffer->CreateBackEnd(pMsgBuffer, pContext))
-    {
-        delete m_pMsgBuffer;
-        m_pMsgBuffer = 0;
-        VERBOSE("%s failed because message buffer could not be created\n", 
-	    __PRETTY_FUNCTION__);
-        return false;
-    }
-    // since we reply to a specific message, we have to set the correct counts
-    m_pMsgBuffer->ZeroCounts(GetSendDirection());
-    // since InitCounts uses MAX to determine counts, the receive direction
-    // will have no effect
-    m_pMsgBuffer->InitCounts(this, pContext);
-    return true;
 }
 
 /** \brief gets the direction, which the marshal-parameters have
@@ -426,7 +370,6 @@ int CBEMarshalFunction::GetReceiveDirection()
 
 /** \brief calculates the size of the function's parameters
  *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
  *  \return the size of the parameters
  *
  * The reply function has the return value as a parameter. The base class'
@@ -434,110 +377,100 @@ int CBEMarshalFunction::GetReceiveDirection()
  * parameters. Thus the status code for the IPC is counted even though it
  * shouldn't. We have to subtract it from the calculated size.
  */
-int CBEMarshalFunction::GetSize(int nDirection, CBEContext *pContext)
+int CBEMarshalFunction::GetSize(int nDirection)
 {
-    int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
 
 /** \brief calculates the size of the function's parameters
  *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
  *  \return the size of the parameters
  */
-int CBEMarshalFunction::GetFixedSize(int nDirection,  CBEContext* pContext)
+int CBEMarshalFunction::GetFixedSize(int nDirection)
 {
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
 
 /** \brief do not count this function's return var
  *  \param nDirection the direction to count
- *  \param pContext the context of the counting
  *  \return zero
  *
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetMaxReturnSize(int nDirection, CBEContext * pContext)
+int CBEMarshalFunction::GetMaxReturnSize(int /*nDirection*/)
 {
     return 0;
 }
 
 /** \brief do not count this function's return var
  *  \param nDirection the direction to count
- *  \param pContext the context of the counting
  *  \return zero
  *
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetFixedReturnSize(int nDirection, CBEContext * pContext)
+int CBEMarshalFunction::GetFixedReturnSize(int /*nDirection*/)
 {
     return 0;
 }
 
 /** \brief do not count this function's return var
  *  \param nDirection the direction to count
- *  \param pContext the context of the counting
  *  \return zero
  *
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetReturnSize(int nDirection, CBEContext * pContext)
+int CBEMarshalFunction::GetReturnSize(int /*nDirection*/)
 {
     return 0;
 }
 
-/**    \brief writes the return statement of the function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the return statement of the function
+ *  \param pFile the file to write to
  *
- * The Marshal function has nor return value.
+ * The Marshal function has no return value.
  */
-void CBEMarshalFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
+void CBEMarshalFunction::WriteReturn(CBEFile * pFile)
 {
     *pFile << "\treturn;\n";
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A marshal function is written if client's side and IN or if component's side
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
-bool CBEMarshalFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
+bool
+CBEMarshalFunction::DoWriteFunction(CBEHeaderFile * pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (FindAttribute(ATTR_IN)))
+        (m_Attributes.Find(ATTR_IN)))
         return true;
     if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
     {
         /* look for an OUT parameter */
-        vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = GetNextParameter(iter)) != 0)
-        {
-            if (pParameter->FindAttribute(ATTR_OUT))
-                return true;
-        }
+	if (FindParameterAttribute(ATTR_OUT))
+	    return true;
         /* look for return type */
         if (GetReturnType() &&
             !GetReturnType()->IsVoid())
             return true;
         /* check for exceptions */
-        if (!FindAttribute(ATTR_NOEXCEPTIONS))
+        if (!m_Attributes.Find(ATTR_NOEXCEPTIONS))
             return true;
     }
     return false;
@@ -545,36 +478,32 @@ bool CBEMarshalFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pCo
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A marshal function is written if client's side and IN or if component's side
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
-bool CBEMarshalFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+bool
+CBEMarshalFunction::DoWriteFunction(CBEImplementationFile * pFile)
 {
-    if (!IsTargetFile((CBEImplementationFile*)pFile))
+    if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (FindAttribute(ATTR_IN)))
+        (m_Attributes.Find(ATTR_IN)))
         return true;
     if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
     {
         /* look for an OUT parameter */
-        vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = GetNextParameter(iter)) != 0)
-        {
-            if (pParameter->FindAttribute(ATTR_OUT))
-                return true;
-        }
+	if (FindParameterAttribute(ATTR_OUT))
+	    return true;
         /* look for return type */
-        if (GetReturnType() &&
-            !GetReturnType()->IsVoid())
+        CBEType *pRetType = GetReturnType();
+        if (pRetType && !pRetType->IsVoid())
             return true;
         /* check for exceptions */
-        if (!FindAttribute(ATTR_NOEXCEPTIONS))
+        if (!m_Attributes.Find(ATTR_NOEXCEPTIONS))
             return true;
     }
     return false;
 }
+

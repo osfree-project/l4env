@@ -34,25 +34,25 @@
  *** global data
  *****************************************************************************/
 
-/// number of pages in heap 
+/// number of pages in heap
 #define NUM_PAGES  (L4RM_MAX_HEAP_SIZE / L4_PAGESIZE)
 
 /// heap page table
 static int pages[NUM_PAGES];
 
-/// next heap page for allocation 
+/// next heap page for allocation
 static int heap_next_page;
 
 /// heap start address
 static l4_addr_t heap_start;
 
-///< heap page map address 
+///< heap page map address
 #define PAGE_MAP_ADDR(i) (heap_start + i * L4_PAGESIZE)
 
-/// use L4 environment services (dataspace manager) to allocate pages 
+/// use L4 environment services (dataspace manager) to allocate pages
 static int use_l4env = 0;
 
-/// Heap dataspace 
+/// Heap dataspace
 static l4dm_dataspace_t heap_ds;
 
 /// Sigma0 id
@@ -65,12 +65,12 @@ static l4_threadid_t sigma0_id = L4_INVALID_ID;
 /*****************************************************************************/
 /**
  * \brief  Allocate and map memory (Sigma0)
- * 
+ *
  * \param  page          Heap page index
- *	
+ *
  * \return pointer to heap page on success, NULL if allocation failed
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline void *
 __sigma0_allocate(int page)
 {
@@ -81,8 +81,8 @@ __sigma0_allocate(int page)
   l4_msgdope_t result;
 
   LOGdL(DEBUG_ALLOC_PAGE,
-        "L4RM heap (sigma0):\n  heap page %d at 0x%08x", page, addr);
-  
+        "L4RM heap (sigma0):\n  heap page %d at 0x"l4_addr_fmt, page, addr);
+
   if (!pages[page])
     {
       /* call pager to allocate new page */
@@ -91,18 +91,18 @@ __sigma0_allocate(int page)
                           &base, &fp.fpage, L4_IPC_NEVER, &result);
       if (error)
 	{
-	  Panic("L4RM heap: error calling task pager (result 0x%08x)!",
+	  Panic("L4RM heap: error calling task pager (result 0x"l4_addr_fmt")!",
 		result.msgdope);
 	  return NULL;
 	}
-      
+
       if (!l4_ipc_fpage_received(result))
 	{
-	  Panic("L4RM heap: page allocation failed (result 0x%08x)!",
+	  Panic("L4RM heap: page allocation failed (result 0x"l4_addr_fmt")!",
 		result.msgdope);
 	  return NULL;
 	}
-      
+
 #if DEBUG_ALLOC_PAGE
       LOG_printf("  got page at 0x%08x\n", fp.fp.page << L4_LOG2_PAGESIZE);
 #endif
@@ -115,12 +115,12 @@ __sigma0_allocate(int page)
 /*****************************************************************************/
 /**
  * \brief Allocate and map memory (L4Env)
- * 
+ *
  * \param  page          Heap page index
- *	
+ *
  * \return pointer to heap page on success, NULL if allocation failed
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline void *
 __l4env_allocate(int page)
 {
@@ -130,17 +130,17 @@ __l4env_allocate(int page)
   l4_addr_t fpage_addr;
   l4_size_t fpage_size;
   int ret;
-  
+
   LOGdL(DEBUG_ALLOC_PAGE,
-        "L4RM heap (L4Env):\n  heap page %d at 0x%08x", page, addr);
-  
+        "L4RM heap (L4Env):\n  heap page %d at 0x"l4_addr_fmt"", page, addr);
+
   if (!pages[page])
     {
       /* resize heap dataspace */
 #if DEBUG_ALLOC_PAGE
       LOG_printf("  resize heap dataspace, new size 0x%08x\n", new_size);
 #endif
-      
+
       ret = l4dm_mem_resize(&heap_ds,new_size);
       if (ret < 0)
 	{
@@ -150,14 +150,14 @@ __l4env_allocate(int page)
 	}
       pages[page] = 1;
 
-#if DEBUG_ALLOC_PAGE    
+#if DEBUG_ALLOC_PAGE
       l4dm_ds_show(&heap_ds);
 #endif
     }
-  
+
   /* map page */
 #if DEBUG_ALLOC_PAGE
-  LOG_printf("  map page, ds offset 0x%08x\n", offs);
+  LOG_printf("  map page, ds offset 0x"l4_addr_fmt"\n", offs);
 #endif
   ret = l4dm_map_pages(&heap_ds, offs, L4_PAGESIZE, addr, L4_LOG2_PAGESIZE,
 		       0, L4DM_RW, &fpage_addr, &fpage_size);
@@ -179,23 +179,23 @@ __l4env_allocate(int page)
 /*****************************************************************************/
 /**
  * \brief  Initialize memory allocation.
- * 
- * \param  have_l4env    Use the L4 environment to allocate memory 
+ *
+ * \param  have_l4env    Use the L4 environment to allocate memory
  *                       (dataspace manager)
  * \param  used          Used VM address range, do not use for internal data.
  * \param  num_used      Number of elements in \a used.
- *	
+ *
  * \return 0 on success, -1 if initalization failed.
  *
- * This function must be called before the first region descriptor / AVL tree 
- * node is allocated. Don't forget to call l4rm_heap_register() after 
- * the initialization of the region list / AVL tree to reserve the vm area 
+ * This function must be called before the first region descriptor / AVL tree
+ * node is allocated. Don't forget to call l4rm_heap_register() after
+ * the initialization of the region list / AVL tree to reserve the vm area
  * used for the heap.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4rm_heap_init(int have_l4env, 
-	       l4rm_vm_range_t used[], 
+l4rm_heap_init(int have_l4env,
+	       l4rm_vm_range_t used[],
 	       int num_used)
 {
   int i,found,ret;
@@ -203,10 +203,10 @@ l4rm_heap_init(int have_l4env,
   l4_size_t size;
   l4_threadid_t dsm_id;
 
-  /* Find heap map address. The region allocator is not yet running, we must 
-   * ensure manually that the area does not overlap any used vm ranges 
+  /* Find heap map address. The region allocator is not yet running, we must
+   * ensure manually that the area does not overlap any used vm ranges
    * (the binary and rmgr trampoline page if started by rmgr / libloader and
-   * environment info page if started by the loader). 
+   * environment info page if started by the loader).
    */
   addr = l4rm_get_vm_start();
   test_end = l4rm_get_vm_end() - L4RM_MAX_HEAP_SIZE + 1;
@@ -214,19 +214,20 @@ l4rm_heap_init(int have_l4env,
 
   if (l4rm_heap_start_addr == -1)
     {
-      /* search for suitable map address */ 
+      /* search for suitable map address */
 #if DEBUG_ALLOC_INIT
-      LOGL("testing vm range 0x%08x-0x%08x\n used areas:", addr, test_end);
+      LOGL("testing vm range 0x"l4_addr_fmt"-0x"l4_addr_fmt"\n used areas:",
+	   addr, test_end);
       for (i = 0; i < num_used; i++)
-	LOG_printf("    0x%08x-0x%08x\n", used[i].addr, 
+	LOG_printf("    0x"l4_addr_fmt"-0x"l4_addr_fmt"\n", used[i].addr,
                used[i].addr + used[i].size);
 #endif
-      
+
       found = 0;
       while ((addr < test_end) && !found)
 	{
 	  end = addr + size;
-	  
+
 	  found = 1;
 	  for (i = 0; i < num_used; i++)
 	    {
@@ -236,10 +237,10 @@ l4rm_heap_init(int have_l4env,
 		  ((used[i].addr <= addr) && (used_end >= end)))
 		{
 		  /* area overlaps used area */
-		  LOGdL(DEBUG_ALLOC_INIT, "heap 0x%08x-0x%08x\n" \
-                        "  overlaps used area at 0x%08x-0x%08x",
-                        addr, end, used[i].addr, used_end);
-		  
+		  LOGdL(DEBUG_ALLOC_INIT, "heap 0x"l4_addr_fmt"-0x"l4_addr_fmt
+		        "\n  overlaps used area at 0x"l4_addr_fmt
+			"-0x"l4_addr_fmt, addr, end, used[i].addr, used_end);
+
 		  found = 0;
 		  addr = used_end;
 		  break;
@@ -253,9 +254,9 @@ l4rm_heap_init(int have_l4env,
       addr = l4rm_heap_start_addr;
       end = addr + size;
 
-      LOGdL(DEBUG_ALLOC_INIT, "\n  testing heap map area 0x%08x-0x%08x",
-            addr, end);
-      
+      LOGdL(DEBUG_ALLOC_INIT, "\n  testing heap map area 0x"l4_addr_fmt
+	    "-0x"l4_addr_fmt, addr, end);
+
       found = 1;
       for (i = 0; i < num_used; i++)
 	{
@@ -265,9 +266,10 @@ l4rm_heap_init(int have_l4env,
 	      ((used[i].addr <= addr) && (used_end >= end)))
 	    {
 	      /* area overlaps used area */
-	      LOG_printf("L4RM: heap 0x%08x-0x%08x overlaps used area " \
-                     "at 0x%08x-0x%08x\n", addr, end, used[i].addr, used_end);
-	      
+	      LOG_printf("L4RM: heap 0x"l4_addr_fmt"-0x"l4_addr_fmt
+		     " overlaps used area at 0x"l4_addr_fmt"-0x"l4_addr_fmt"\n",
+		     addr, end, used[i].addr, used_end);
+
 	      found = 0;
 	      addr = used_end;
 	      break;
@@ -316,7 +318,7 @@ l4rm_heap_init(int have_l4env,
     }
 
 #if DEBUG_ALLOC_INIT
-  LOGL("\n  heap at 0x%08x, max %d pages", heap_start, NUM_PAGES);
+  LOGL("\n  heap at 0x"l4_addr_fmt", max %d pages", heap_start, NUM_PAGES);
   if (have_l4env)
     LOG_printf("  L4Env mode, heap dataspace %u at "l4util_idfmt"\n",
            heap_ds.id, l4util_idstr(heap_ds.manager));
@@ -331,14 +333,14 @@ l4rm_heap_init(int have_l4env,
 /*****************************************************************************/
 /**
  * \brief  Register heap area
- *	
+ *
  * \return 0 on success, -1 if registration failed.
  *
  * Register the virtual memory area used for the heap. It cannot be done
- * in l4rm_init_alloc because at that point the region list and AVL tree 
+ * in l4rm_init_alloc because at that point the region list and AVL tree
  * are not yet initialized.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4rm_heap_register(void)
 {
@@ -348,7 +350,7 @@ l4rm_heap_register(void)
   if (use_l4env)
     {
       /* attach heap dataspace */
-      ret = l4rm_direct_area_attach_to_region(&heap_ds, 
+      ret = l4rm_direct_area_attach_to_region(&heap_ds,
                                               L4RM_DEFAULT_REGION_AREA,
                                               (void *)heap_start,
                                               L4RM_MAX_HEAP_SIZE, 0, L4DM_RW);
@@ -387,10 +389,10 @@ l4rm_heap_register(void)
 /*****************************************************************************/
 /**
  * \brief  Allocate heap page
- * 
+ *
  * \return pointer to page, NULL if allocation failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void *
 l4rm_heap_alloc(void)
 {

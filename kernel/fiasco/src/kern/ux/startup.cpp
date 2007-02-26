@@ -11,9 +11,11 @@ IMPLEMENTATION:
 #include "initcalls.h"
 #include "irq.h"
 #include "jdb.h"
+#include "kernel_task.h"
 #include "kip_init.h"
 #include "kmem.h"
 #include "kmem_alloc.h"
+#include "net.h"
 #include "pic.h"
 #include "static_init.h"
 #include "timer.h"
@@ -34,8 +36,16 @@ startup_system()
   Cpu::init();
   Config::init();
   Kmem::init();
-  Kmem_alloc::init();
+  Kernel_task::init();		// enables current_mem_space()
   Kip_init::init();
+  Kmem_alloc::init();
+  
+  // must copy the KIP to allocated phys memory, because user apps cannot 
+  // access the kernel image memory
+  Kip *kip = (Kip*)Kmem_alloc::allocator()->alloc(Config::PAGE_SHIFT);
+  memcpy(kip, Kip::k(), Config::PAGE_SIZE);
+  Kip::init_global_kip(kip);
+
   Vmem_alloc::init();
   Utcb_init::init();
   Pic::init();
@@ -45,4 +55,5 @@ startup_system()
   Fpu::init();
   Timer::init();
   Fb::init();
+  Net::init();
 }

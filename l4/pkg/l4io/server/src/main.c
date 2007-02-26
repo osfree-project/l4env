@@ -17,6 +17,7 @@
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/sys/ipc.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/getopt.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/names/libnames.h>
@@ -38,6 +39,8 @@
 #include "res.h"
 #include "pci.h"
 #include "jiffies.h"
+#include "mtrr.h"
+#include "events.h"
 #include "omega0lib.h"
 
 /*
@@ -52,12 +55,17 @@ l4io_info_t io_info;
 char LOG_tag[9] = IO_NAMES_STR;
 
 /** heap */
-l4_ssize_t l4libc_heapsize = 1024 * 1024;
+l4_ssize_t l4libc_heapsize = 1 << 20;
 
-/** max number of threads */
+/** configure thread library -- max number of threads */
 const int l4thread_max_threads = IO_MAX_THREADS;
 
-int use_spec = 1;
+/** Configure thread library -- size of stack. Default is 64KB. Decrease
+ *  this number because we have some threads. */
+const l4_size_t l4thread_stack_size = 16 << 10;
+
+int use_spec = 1;		/** use special fully nesting mode */
+int use_events;			/** receive exit events */
 
 /*
  * module vars
@@ -70,6 +78,8 @@ static io_client_t io_self;
 /** I/O server claimed resources and root for client list
  *\ingroup grp_irq */
 static int io_noirq = 0;
+
+static int io_set_omega0 = 0;
 
 /** Don't list PCI devices at bootup */
 static int nolist = 0;
@@ -92,9 +102,10 @@ static int nolist = 0;
  * Register client (driver server).
  * I/O keeps a list of registered clients and only these will be served.
  */
-l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
-                                           l4_io_drv_t type,
-                                           CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_register_client_component (CORBA_Object _dice_corba_obj,
+                                 l4_io_drv_t type,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   io_client_t *c, *p;
   l4io_drv_t *drv = (l4io_drv_t *) & type;
@@ -102,7 +113,8 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
   /* some memory for new list element */
   if (!(c = malloc(sizeof(io_client_t))))
     {
-      LOGdL(DEBUG_ERRORS, "getting %d bytes of mem", sizeof(io_client_t));
+      LOGdL(DEBUG_ERRORS, "getting %ld bytes of mem", 
+	  (unsigned long)sizeof(io_client_t));
       return -L4_ENOMEM;
     }
 
@@ -113,18 +125,11 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
 
   LOGd(DEBUG_REGDRV, "registering "l4util_idfmt" {%x, %x, %x}",
        l4util_idstr(c->c_l4id), (unsigned char) c->drv.src,
-       (unsigned char) c->drv.dsi, (unsigned char) c->drv.class);
+       (unsigned char) c->drv.dsi, (unsigned char) c->drv.drv_class);
 
-  p = &io_self;
-  for (;;)
-    {
-      if (!p->next)
-        {
-          p->next = c;
-          break;
-        }
-      p = p->next;
-    }
+  for (p = &io_self; p->next; p = p->next)
+    ;
+  p->next = c;
 
   return 0;
 }
@@ -145,16 +150,39 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
  * allocation info -> all allocated resources should be freed on
  * unregistering. (just I don't mind about this at this state, later driver
  * replacing will be in scope of this)
- *
- * \todo implement if appropriate; otherwise remove from IDL too
  */
-l4_int32_t l4_io_unregister_client_component(CORBA_Object _dice_corba_obj,
-                                             CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_unregister_client_component (CORBA_Object _dice_corba_obj,
+                                   const l4_threadid_t *client,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
-  LOGd(DEBUG_REGDRV,
-       "unregistering "l4util_idfmt"\n", l4util_idstr(*_dice_corba_obj));
+  io_client_t *c, *p, tmp;
 
-  return -L4_ESKIPPED;
+  LOGd(DEBUG_REGDRV,
+       "unregistering "l4util_idfmt" (called by "l4util_idfmt")", 
+       l4util_idstr(*client), l4util_idstr(*_dice_corba_obj));
+
+  if (!l4_tasknum_equal(*_dice_corba_obj, io_self.c_l4id) &&
+      !l4_tasknum_equal(*_dice_corba_obj, *client))
+    /* A client may not unregister another client */
+    {
+      LOGd(DEBUG_REGDRV, "=> not allowed");
+      return -L4_EPERM;
+    }
+
+  tmp.c_l4id = *client;
+
+  for (p = &io_self, c = io_self.next; c; p = c, c = c->next)
+    {
+      if (client_equal(c, &tmp))
+        {
+          p->next = c->next;
+          return 0;
+        }
+    }
+
+  LOGd(DEBUG_REGDRV, "=> not found");
+  return -L4_ENOTFOUND;
 }
 
 /** Request mapping of I/O's info page.
@@ -171,9 +199,10 @@ l4_int32_t l4_io_unregister_client_component(CORBA_Object _dice_corba_obj,
  *
  * \todo check registration on info page mapping
  */
-l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
-                                    l4_snd_fpage_t *info,
-                                    CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_map_info_component (CORBA_Object _dice_corba_obj,
+                          l4_snd_fpage_t *info,
+                          CORBA_Server_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
@@ -186,12 +215,13 @@ l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
   info->fpage = l4_fpage((l4_addr_t) & io_info,
                          L4_LOG2_PAGESIZE, L4_FPAGE_RO, L4_FPAGE_MAP);
 
-  LOGd(DEBUG_MAP, "sending info fpage {0x%08x, 0x%08x}",
-       info->fpage.fp.page << 12, 1 << info->fpage.fp.size);
+  LOGd(DEBUG_MAP, "sending info fpage {0x%08lx, 0x%08lx}",
+       (unsigned long)info->fpage.fp.page << 12, 1UL << info->fpage.fp.size);
 
   /* done */
   return 0;
 }
+
 /** @} */
 /** Info initialization.
  *
@@ -251,6 +281,8 @@ static void do_args(int argc, char *argv[])
     {"nosfn", no_argument, &long_check, 3},
     {"include", required_argument, &long_check, 4},
     {"exclude", required_argument, &long_check, 5},
+    {"omega0", no_argument, &long_check, 6},
+    {"events", no_argument, &long_check, 7},
     {0, 0, 0, 0}
   };
 
@@ -277,10 +309,10 @@ static void do_args(int argc, char *argv[])
               nolist = 1;
               LOG("Disabling listing of PCI devices.");
               break;
-	    case 3:
-	      use_spec = 0;
-	      LOG("Disabling special fully nested mode.");
-	      break;
+            case 3:
+              use_spec = 0;
+              LOG("Disabling special fully nested mode.");
+              break;
             case 4:
               if(add_device_inclusion(optarg))
                 LOG("invalid vendor:device string \"%s\"", optarg);
@@ -288,6 +320,14 @@ static void do_args(int argc, char *argv[])
             case 5:
               if(add_device_exclusion(optarg))
                 LOG("invalid vendor:device string \"%s\"", optarg);
+              break;
+            case 6:
+              io_set_omega0 = 1;
+              LOG("Setting omega0 flag in info page.");
+              break;
+            case 7:
+              use_events = 1;
+              LOG("Enabling events support.");
               break;
             default:
               /* ignore unknown */
@@ -321,6 +361,11 @@ int main(int argc, char *argv[])
       return error;
     }
 
+  /* Detect support for MTRR. This needs IOPL3 to access MSRs. Maybe we should
+   * allow to disable support by command line option. */
+  if (!l4sigma0_kip_kernel_is_ux())
+    mtrr_init();
+
   /* setup self structure */
   io_self.next = NULL;
   io_self.c_l4id = l4thread_l4_id(l4thread_myself());
@@ -340,21 +385,28 @@ int main(int argc, char *argv[])
       LOGdL(DEBUG_ERRORS, "res initialization failed (%d)\n", error);
       return error;
     }
-  if ((error = io_pci_init(!nolist)))
+
+  if (!l4sigma0_kip_kernel_is_ux())
     {
-      LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);
-      return error;
-    }
-  /* skip irq handling on demand */
-  if (!io_noirq)
-    {
-      if ((error = OMEGA0_init(use_spec)))
+      if ((error = io_pci_init(!nolist)))
         {
-          LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
+          LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);
           return error;
         }
-      io_info.omega0 = 1;
+      /* skip irq handling on demand */
+      if (!io_noirq)
+        {
+          if ((error = OMEGA0_init(use_spec)))
+            {
+              LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
+              return error;
+            }
+          io_info.omega0 = 1;
+        }
     }
+
+  if (io_set_omega0)
+    io_info.omega0 = 1;
 
   /* DEBUGGING */
   //list_res();
@@ -365,6 +417,9 @@ int main(int argc, char *argv[])
       LOGdL(DEBUG_ERRORS, "can't register at names");
       return -L4_ENOTFOUND;
     }
+
+  if (use_events)
+    init_events();
 
   /* go looping */
   io_loop();

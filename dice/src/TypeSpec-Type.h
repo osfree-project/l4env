@@ -31,7 +31,13 @@
 #define __DICE_TYPESPEC_TYPE_H__
 
 
-enum TYPESPEC_TYPE {
+/** \brief defines the available types
+ *
+ * We use an anonymous enum and an integer type wherever we use the types as
+ * arguments.
+ */
+enum 
+{
     TYPE_NONE   = 0,    /**< a non-initialzed type */
     TYPE_INTEGER,       /**< the integer type */
     TYPE_LONG,          /**< basically the same as INTEGER, but needed to know them apart */
@@ -45,15 +51,14 @@ enum TYPESPEC_TYPE {
     TYPE_CHAR_ASTERISK, /**< a type for constant expressions: char* (string) */ // 10
     TYPE_STRUCT,        /**< the constructed type struct */
     TYPE_UNION,         /**< the constructed type union */
+    TYPE_IDL_UNION,     /**< an enclosed, aka. IDL, union */
     TYPE_ENUM,          /**< the constructed type enum */
     TYPE_PIPE,          /**< the constructed type pipe */
-    TYPE_TAGGED_STRUCT, /**< the constructed type tagged struct */
-    TYPE_TAGGED_UNION,  /**< the constructed type tagged union */
     TYPE_HANDLE_T,      /**< the predefined type handle_t */
     TYPE_ISO_LATIN_1,   /**< the predefined type iso_latin_1 (language type) */
     TYPE_ISO_MULTILINGUAL,  /**< the predefined type iso_multi_lingual (language type) */
-    TYPE_ISO_UCS,       /**< the predefined type iso_ucs (language type) */ // 20
-    TYPE_ERROR_STATUS_T,    /**< the predefined type error_status_t */
+    TYPE_ISO_UCS,       /**< the predefined type iso_ucs (language type) */
+    TYPE_ERROR_STATUS_T,    /**< the predefined type error_status_t */ // 20
     TYPE_FLEXPAGE,      /**< the predefined type fpage (describes a memory page) */
     TYPE_RCV_FLEXPAGE,  /**< the helper type rcv_fpage (describes the receive window for mapped memory pages) */
     TYPE_USER_DEFINED,  /**< a user defined type */
@@ -62,13 +67,14 @@ enum TYPESPEC_TYPE {
     TYPE_OCTET,         /**< CORBA: the octet type */
     TYPE_ANY,           /**< CORBA: the any type */
     TYPE_OBJECT,        /**< CORBA: the object type */
-    TYPE_TAGGED_ENUM,   /**< CORBA: the tagged enum type */ // 30
     TYPE_STRING,        /**< CORBA: an extra string type */
-    TYPE_WSTRING,       /**< CORBA: an extra wide character string type */
+    TYPE_WSTRING,       /**< CORBA: an extra wide character string type */ // 30
     TYPE_ARRAY,         /**< CORBA: an sequence type */
-    TYPE_REFSTRING,     /**< CORBA: a refstring (Flick relict) - temporary: is replaced during integrity check */
+    TYPE_REFSTRING,     /**< CORBA: a refstring */
     TYPE_GCC,           /**< GCC: gcc specific type (can be ignored) */
     TYPE_MWORD,         /**< DICE: used to get the size and string for a machine word */
+    TYPE_EXCEPTION,     /**< DICE: CORBA exception type */
+    TYPE_MESSAGE,       /**< DICE: used to determine (maximum) size for messages */
     TYPE_MAX            /**< delimiter value */
 };
 

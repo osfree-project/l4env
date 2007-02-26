@@ -40,7 +40,7 @@
 /* rt support */
 #include <l4/sys/rt_sched.h> // RT scheduling
 #include <l4/rmgr/librmgr.h> // rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
+#include <l4/sigma0/kip.h> // l4sigma0_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -208,14 +208,14 @@ work_loop (void *data)
   control_struct_t *control;
 
 #if VDEMUXER_VIDEO_BENCHMARK || VDEMUXER_AUDIO_BENCHMARK
-  rt_mon_histogram_t *hist;
+  rt_mon_histogram_t *hist = 0;
 #if BUILD_RT_SUPPORT
   rt_mon_histogram_t *hist_pipcs;
 #endif
 #endif
 
 #if RTMON_DSI_BENCHMARK
-  rt_mon_event_list_t *list;
+  rt_mon_event_list_t *list = 0;
   rt_mon_basic_event_t be;
 #endif
 
@@ -284,9 +284,9 @@ work_loop (void *data)
   /* started */
   LOGdL (DEBUG_THREAD, "work thread started.");
 
-#if VDEMUXER_VIDEO_BENCHMARK || VDEMUXER_AUDIO_BENCHMARK
+#if VDEMUXER_VIDEO_BENCHMARK
   /* monitor code start */
-  if (control->stream_type == STREAM_TYPE_VIDEO)
+  if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
   {
     /* video work_loop */
     hist = rt_mon_hist_create (VDEMUXER_VIDEO_BENCHMARK_LOW,
@@ -298,9 +298,11 @@ work_loop (void *data)
     hist_pipcs = rt_mon_hist_create (0, 25, 25,
 	"verner/demuxer/vpreemption_count", "# preempts", "frequency",
 	RT_MON_TIMER_SOURCE);
-#endif
+#endif /* BUILD_RT_SUPPORT */
   }
-  else
+#endif /* VDEMUXER_VIDEO_BENCHMARK */
+#if VDEMUXER_AUDIO_BENCHMARK
+  if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
   {
     /* audio work_loop */
     hist = rt_mon_hist_create (VDEMUXER_AUDIO_BENCHMARK_LOW,
@@ -312,9 +314,9 @@ work_loop (void *data)
     hist_pipcs = rt_mon_hist_create (0, 25, 25,
 	"verner/demuxer/apreemption_count", "# preempts", "frequency",
 	RT_MON_TIMER_SOURCE);
-#endif
+#endif /* BUILD_RT_SUPPORT */
   }
-#endif
+#endif /* VDEMUXER_AUDIO_BENCHMARK */
 
 #if RTMON_DSI_BENCHMARK
   if (control->stream_type == STREAM_TYPE_VIDEO)
@@ -341,7 +343,7 @@ work_loop (void *data)
 //	    RT_DEMUXER_AUDIO_PRIORITY);
 
   /* Get KIP */
-  kinfo = l4util_kip_map ();
+  kinfo = l4sigma0_kip_map (L4_INVALID_ID);
   if (!kinfo)
     Panic ("get KIP failed!\n");
 
@@ -430,7 +432,10 @@ work_loop (void *data)
 
 #if VDEMUXER_VIDEO_BENCHMARK || VDEMUXER_AUDIO_BENCHMARK
     /* start point */
-    rt_mon_hist_start (hist);
+    if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
+	rt_mon_hist_start (hist);
+    if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
+	rt_mon_hist_start (hist);
 #endif
 
 
@@ -445,7 +450,10 @@ work_loop (void *data)
     {
       /* reset preemption counter */
 #if VDEMUXER_VIDEO_BENCHMARK || VDEMUXER_AUDIO_BENCHMARK
-      rt_mon_hist_insert_data(hist_pipcs, control->rt_preempt_count, 1);
+      if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
+        rt_mon_hist_insert_data(hist_pipcs, control->rt_preempt_count, 1);
+      if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
+        rt_mon_hist_insert_data(hist_pipcs, control->rt_preempt_count, 1);
 #endif
       control->rt_preempt_count = 0;
       
@@ -575,7 +583,10 @@ work_loop (void *data)
 
 #if VDEMUXER_VIDEO_BENCHMARK || VDEMUXER_AUDIO_BENCHMARK
     /* end point */
-    rt_mon_hist_end (hist);
+    if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
+      rt_mon_hist_end (hist);
+    if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
+      rt_mon_hist_end (hist);
 #endif
 
   }				/* end while(1) / work_loop */
@@ -588,15 +599,22 @@ work_loop (void *data)
   /* monitor dump histogram */
   //rt_mon_hist_dump (hist);
   /* deregister histogram */
-  rt_mon_hist_free (hist);
+  if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
+    rt_mon_hist_free (hist);
+  if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
+    rt_mon_hist_free (hist);
 #if BUILD_RT_SUPPORT
-  rt_mon_hist_free (hist_pipcs);
+  if (control->stream_type == STREAM_TYPE_VIDEO && VDEMUXER_VIDEO_BENCHMARK)
+    rt_mon_hist_free (hist_pipcs);
+  if (control->stream_type == STREAM_TYPE_AUDIO && VDEMUXER_AUDIO_BENCHMARK)
+    rt_mon_hist_free (hist_pipcs);
 #endif
 #endif
 
 #if RTMON_DSI_BENCHMARK
 //  rt_mon_list_dump (list);
-  rt_mon_list_free (list);
+  if (list)
+      rt_mon_list_free (list);
 #endif
 
 #if BUILD_RT_SUPPORT
@@ -769,8 +787,9 @@ sender_open_socket (control_struct_t * control,
 
   /* set preempter */
   pager = L4_INVALID_ID;
-  l4_thread_ex_regs (work_id, -1, -1,
-		     &control->preempter_id, &pager, &word1, &word1, &word1);
+  l4_thread_ex_regs_flags(work_id, -1, -1,
+		          &control->preempter_id, &pager,
+			  &word1, &word1, &word1, L4_THREAD_EX_REGS_NO_CANCEL);
 #endif
 
   /* create socket */

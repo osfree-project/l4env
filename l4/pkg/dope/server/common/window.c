@@ -502,9 +502,9 @@ static void win_handle_event(WIDGET *w, EVENT *ev, WIDGET *from) {
 
 /*** FREE REFERENCED DATA ***/
 static void win_free_data(WINDOW *w) {
+	remove_kfocus(w);
 	destroy_win_elements(w->wind->elem);
 	destroy_win_elements(w->wind->content);
-	remove_kfocus(w);
 }
 
 

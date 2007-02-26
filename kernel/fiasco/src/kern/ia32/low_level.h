@@ -204,11 +204,7 @@
 	.endm
 
 	.macro	RESTORE_STATE_AFTER_IPC
-#ifndef CONFIG_LOCAL_IPC
 	addl	$4, %esp
-#else
-        popl    %ecx
-#endif
 	popl	%edx
 	popl	%esi
 	popl	%edi

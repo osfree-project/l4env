@@ -124,7 +124,7 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
 			     msg.packet,msg.rcv,&dummy,&dummy,
 			     L4_IPC_NEVER,&result);
 
-      LOGdL(DEBUG_MAP_PACKET,"result 0x%08x",result.msgdope);
+      LOGdL(DEBUG_MAP_PACKET,"result 0x%08lx",result.msgdope);
 
       if (ret)
         LOG_Error("DSI sync message IPC error (0x%02x)!\n",ret);

@@ -56,6 +56,7 @@ void state_init(void) {
 
         s_file->data = (l4_uint8_t *) m->mod_start;
         s_file->length = m->mod_end - m->mod_start;
+        s_file->ds = NULL;
 
         command = (char *)m->cmdline;
 
@@ -104,7 +105,6 @@ void state_init(void) {
         {
             arraylist->add_elem(files,s_file); // add dynamic loaded file
         }
-
     }
 
     if (_DEBUG)
@@ -115,9 +115,6 @@ void state_init(void) {
             LOG("file at postion %d, name: %s", i, s_file->name);
         }
     }
-
-    s_file->ds = NULL;
-
 }
 
 /*** REQUEST BINARY MODULE ***/

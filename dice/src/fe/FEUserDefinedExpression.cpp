@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEUserDefinedExpression.cpp
- *    \brief   contains the implementation of the class CFEUserDefinedExpression
+ *  \file    dice/src/fe/FEUserDefinedExpression.cpp
+ *  \brief   contains the implementation of the class CFEUserDefinedExpression
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,9 +30,10 @@
 #include "fe/FEConstDeclarator.h"
 #include "fe/FEFile.h"
 #include "fe/FEInterface.h"
-
+#include "File.h"
 // needed for Error function
 #include "Compiler.h"
+#include <cassert>
 
 CFEUserDefinedExpression::CFEUserDefinedExpression(string sExpName)
 : CFEExpression(EXPR_USER_DEFINED)
@@ -53,8 +54,8 @@ CFEUserDefinedExpression::~CFEUserDefinedExpression()
 }
 
 /**
- *    \brief returns the expression's name
- *    \return the expression's name
+ *  \brief returns the expression's name
+ *  \return the expression's name
  */
 string CFEUserDefinedExpression::GetExpName()
 {
@@ -62,8 +63,8 @@ string CFEUserDefinedExpression::GetExpName()
 }
 
 /**
- *    \brief calculates the integer value of this expression
- *    \return the integer value of this expression
+ *  \brief calculates the integer value of this expression
+ *  \return the integer value of this expression
  *
  * Searches for the definition of this expression and delegates the request to the
  * found expression.
@@ -78,11 +79,10 @@ long CFEUserDefinedExpression::GetIntValue()
     // for all interface to top most base interface
     while (pInterface)
     {
-        pConst = pInterface->FindConstant(GetExpName());
+        pConst = pInterface->m_Constants.Find(GetExpName());
         if (pConst)
             return pConst->GetValue()->GetIntValue();
-        vector<CFEInterface*>::iterator iterI = pInterface->GetFirstBaseInterface();
-        pInterface = pInterface->GetNextBaseInterface(iterI);
+        pInterface = pInterface->m_BaseInterfaces.First();
     }
     // now check if global const with name exists
     pConst = dynamic_cast<CFEFile*>(GetRoot())->FindConstDeclarator(GetExpName());
@@ -95,11 +95,11 @@ long CFEUserDefinedExpression::GetIntValue()
 }
 
 /**
- *    \brief checks if this expression is of a specific type
- *    \param nType the type to check for
- *    \return true if this expression is of the given type, false otherwise
+ *  \brief checks if this expression is of a specific type
+ *  \param nType the type to check for
+ *  \return true if this expression is of the given type, false otherwise
  */
-bool CFEUserDefinedExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEUserDefinedExpression::IsOfType(unsigned int nType)
 {
     // find const with root and interface and get its int value
     // because of scope we have to search interface first
@@ -109,11 +109,10 @@ bool CFEUserDefinedExpression::IsOfType(TYPESPEC_TYPE nType)
     // for all interface to top most base interface
     while (pInterface)
     {
-        pConst = pInterface->FindConstant(GetExpName());
+        pConst = pInterface->m_Constants.Find(GetExpName());
         if (pConst)
             return pConst->GetValue()->IsOfType(nType);
-        vector<CFEInterface*>::iterator iterI = pInterface->GetFirstBaseInterface();
-        pInterface = pInterface->GetNextBaseInterface(iterI);
+        pInterface = pInterface->m_BaseInterfaces.First();
     }
     // now check if global const with name exists
     pConst = dynamic_cast<CFEFile*>(GetRoot())->FindConstDeclarator(GetExpName());
@@ -126,25 +125,10 @@ bool CFEUserDefinedExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /**
- *    \brief creates a perfect copy of this class
- *    \return a new versin of ths object
+ *  \brief creates a perfect copy of this class
+ *  \return a new versin of ths object
  */
 CObject *CFEUserDefinedExpression::Clone()
 {
     return new CFEUserDefinedExpression(*this);
-}
-
-/** serialize this object
- *    \param pFile the file to serialize from/to
- */
-void CFEUserDefinedExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        if (m_nType == EXPR_USER_DEFINED)
-        {
-            pFile->PrintIndent("<expression>%s</expression>\n",
-                    GetExpName().c_str());
-        }
-    }
 }

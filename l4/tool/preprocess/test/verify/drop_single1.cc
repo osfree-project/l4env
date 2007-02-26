@@ -19,3 +19,12 @@ Gen_foo_ext::test()
 {
   // the test
 }
+
+#line 53 "dropsection.cpp"
+
+int
+Gen_foo::tust( int y )
+{
+  // just return y
+  return y;
+}

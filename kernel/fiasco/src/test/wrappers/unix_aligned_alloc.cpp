@@ -2,9 +2,8 @@ INTERFACE:
 
 IMPLEMENTATION:
 
+#include <cstdlib>
 #include <map>
-
-#include <stdlib.h>
 
 static std::map<unsigned, void*> _free_map;
 

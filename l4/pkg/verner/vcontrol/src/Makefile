@@ -18,7 +18,8 @@ TARGET =	vtcontrol
 SYSTEMS =	x86-l4v2
 
 # include configuration
--include $(PKGDIR)/../Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/../Makeconf.bid.local
 DEFAULT_RELOC = $(VCONTROL_RELOC)
 
 VPATH += $(PKGDIR)/../common
@@ -33,13 +34,14 @@ LIBS            =   \
 		    -ldsi \
 		    
 
-PRIVATE_INCDIR  =  . \
+PRIVATE_INCDIR  = $(SRC_DIR) . \
 		  $(PKGDIR)/../common \
 		  $(PKGDIR)/../include \
 		  $(PKGDIR)/../plugins/import $(PKGDIR)/../plugins/codec \
-                  $(PKGDIR)/../config \
+                  $(PKGDIR_OBJ)/../config \
                   $(DOPE_DIR)/include \
-                  $(DOPE_DIR)/server/include 
+                  $(DOPE_DIR)/server/include \
+		  $(OBJ_DIR) \
 
 #use petze ?
 ifeq ($(VCONTROL_PETZE),y)
@@ -53,5 +55,5 @@ SRC_DPE	= player-UI.dpe
 player-UI.o: player-UI.dpi
 
 # depend on configuration files
-$(TARGET): $(PKGDIR)/../Makeconf.bid.local
+$(TARGET): $(PKGDIR_OBJ)/../Makeconf.bid.local
 

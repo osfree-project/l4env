@@ -6,10 +6,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/reboot.h>
 #include <l4/util/util.h>
-
-#ifndef USE_OSKIT
 #include <l4/env_support/getchar.h>
-#endif
 
 #include "boot_error.h"
 #include "memmap.h"
@@ -26,10 +23,6 @@ int boot_errors = 0;
 #define COLOR_WHITE	"\033[37m"
 
 #define STR_SIZE	1024
-
-#ifdef USE_OSKIT
-int fflush(int dummy);
-#endif
 
 static void
 print_color(const char *color, const char *fmt)

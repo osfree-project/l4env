@@ -61,6 +61,13 @@
 #include <asm/uaccess.h>
 #include <asm/system.h>
 
+#ifdef __ORE__
+  #include <l4/ore/ore-dsi.h>
+  
+  extern int __l4ore_in_dataspace(void *, dsi_packet_t **, dsi_socket_t **);
+  extern void __l4ore_do_packet_commit(dsi_packet_t *, dsi_socket_t *);
+#endif
+
 int sysctl_hot_list_len = 128;
 
 static kmem_cache_t *skbuff_head_cache;
@@ -295,7 +302,22 @@ static void skb_release_data(struct sk_buff *skb)
  */
 void kfree_skbmem(struct sk_buff *skb)
 {
-	skb_release_data(skb);
+#ifdef __ORE__
+	/* skb's that are created from a DSI dataspace need to 
+	 * be handled different than those from normal memory.
+	 * We do not want to free the data area, but instead we
+	 * re-commit the belonging packet to the DSI, so that
+	 * our client can reuse it.
+	 */
+	dsi_packet_t *p;
+	dsi_socket_t *s;
+	
+    if (__l4ore_in_dataspace(skb->data, &p, &s))
+        __l4ore_do_packet_commit(p, s);
+    else
+#endif
+		skb_release_data(skb);
+		
 	skb_head_to_pool(skb);
 }
 

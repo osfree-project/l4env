@@ -26,6 +26,7 @@
 #define GFX_OP_SOLID   0
 #define GFX_OP_DARKEN  1
 #define GFX_OP_ALPHA   2
+#define GFX_OP_TINT    3
 
 /*
  * The interface to the gfx component is generic.
@@ -38,38 +39,45 @@ typedef struct gfx_interface {
 
 	/*** DRAW FILLED BOX ***
 	 *
-	 * \param dst   destination screen
-	 * \param x, y  position of the top left corner
-	 * \param w, h  size
-	 * \param rgba  color
+	 * \param dst       destination screen
+	 * \param dst_llen  destination line length
+	 * \param x, y      position of the top left corner
+	 * \param w, h      size
+	 * \param rgba      color
 	 */
-	void (*draw_box) (void *dst, int x, int y, int w, int h, u32 rgba);
+	void (*draw_box) (void *dst, int dst_llen, int x, int y, int w, int h,
+	                  u32 rgba);
 
 
 	/*** DRAW IMAGE ***
 	 *
-	 * \param dst    destination screen
-	 * \param x, y   position of the top left corner
-	 * \param img_w  width of image
-	 * \param img_h  height of image
-	 * \param src    image pixels
-	 * \param op     paint operation type
+	 * \param dst       destination screen
+	 * \param dst_llen  destination line length
+	 * \param x, y      position of the top left corner
+	 * \param img_w     width of image
+	 * \param img_h     height of image
+	 * \param src       image pixels
+	 * \param op        paint operation type
+	 * \param rgba      color for tinting operation type
 	 *
 	 * The source and destination pixel
 	 * format must be identical.
 	 */
-	void (*draw_img) (void *dst, int x, int y, int img_w, int img_h, void *src, int op);
+	void (*draw_img) (void *dst, int dst_llen, int x, int y, int img_w, int img_h,
+	                  void *src, int op, u32 rgba);
 
 
 	/*** DRAW TEXT STRING ***
 	 *
-	 * \param dst   destination screen
-	 * \param x, y  position of the top left corner
-	 * \param fnt   font to use for drawing
-	 * \param rgba  color
-	 * \param str   null-terminated ASCII string
+	 * \param dst       destination screen
+	 * \param dst_llen  destination line length
+	 * \param x, y      position of the top left corner
+	 * \param fnt       font to use for drawing
+	 * \param rgba      color
+	 * \param str       null-terminated ASCII string
 	 */
-	void (*draw_string) (void *dst, int x, int y, font *fnt, u32 rgba, u8 *str);
+	void (*draw_string) (void *dst, int dst_llen, int x, int y, font *fnt,
+	                     u32 rgba, u8 *str);
 
 } gfx_interface;
 

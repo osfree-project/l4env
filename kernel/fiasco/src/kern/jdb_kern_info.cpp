@@ -12,6 +12,8 @@ class Jdb_kern_info_module;
  */
 class Jdb_kern_info : public Jdb_module
 {
+public:
+  Jdb_kern_info() FIASCO_INIT;
 private:
   static char                 _subcmd;
   static Jdb_kern_info_module *_first;
@@ -21,9 +23,10 @@ private:
 class Jdb_kern_info_module
 {
   friend class Jdb_kern_info;
-  virtual void show(void) = 0;
-
+public:
+  Jdb_kern_info_module(char subcmd, char const *descr) FIASCO_INIT;
 private:
+  virtual void show(void) = 0;
   char                 _subcmd;
   char const           *_descr;
   Jdb_kern_info_module *_next;
@@ -32,8 +35,8 @@ private:
 
 IMPLEMENTATION:
 
+#include <cctype>
 #include <cstdio>
-#include "ctype.h"
 
 #include "cpu.h"
 #include "jdb.h"
@@ -48,7 +51,7 @@ IMPLEMENTATION:
 //===================
 
 
-PUBLIC
+IMPLEMENT
 Jdb_kern_info_module::Jdb_kern_info_module(char subcmd, char const *descr)
 {
   _subcmd = subcmd;
@@ -109,14 +112,14 @@ Jdb_kern_info::action(int cmd, void *&args, char const *&, int &)
 }
 
 PUBLIC
-int const
+int
 Jdb_kern_info::num_cmds() const
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_kern_info::cmds() const
 {
   static Cmd cs[] =
@@ -128,7 +131,7 @@ Jdb_kern_info::cmds() const
   return cs;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_kern_info::Jdb_kern_info()
   : Jdb_module("INFO")
 {}

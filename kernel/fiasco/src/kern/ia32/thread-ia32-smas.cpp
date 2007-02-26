@@ -24,10 +24,10 @@ IMPLEMENT inline NEEDS ["context.h"]
 void
 Thread::kill_small_space()
 {
-  if (space() == current_space())
+  if (mem_space() == current_mem_space())
     current()->switch_to (kernel_thread);
 
-  smas.move (space(), 0);
+  smas.move (mem_space(), 0);
 }
 
 /**
@@ -36,7 +36,7 @@ Thread::kill_small_space()
 IMPLEMENT inline NEEDS["smas.h"]
 Mword Thread::small_space( void )
 {
-  return smas.space_nr (space());
+  return smas.space_nr (mem_space());
 }
 
 /**
@@ -65,7 +65,7 @@ Thread::set_small_space(Mword nr)
 	      nr >>= 1;
 	    }
 	  smas.set_space_size(spacesize);
-	  smas.move(space(), nr >> 1);
+	  smas.move(mem_space(), nr >> 1);
 	}
     }
 }
@@ -77,33 +77,34 @@ Thread::handle_smas_page_fault (Address pfa, Mword error_code,
 				Ipc_err &ipc_code)
 {
   Address smaddr;
-  Space *smspace;
+  Mem_space *smspace;
 
   if (!smas.linear_to_small(pfa, &smspace, &smaddr))
     // give up
     return false;
 
   // doesn't work just yet
-  if (EXPECT_FALSE (space()->is_sigma0()))
+  if (EXPECT_FALSE (mem_space()->is_sigma0()))
     panic("Sigma0 cannot (yet) run in a small space.");
 
   // only interested in ourselves
-  if (space() != smspace)
+  if (mem_space() != smspace)
     return false;
 
   // lazy updating...
   if (EXPECT_TRUE (smspace->mapped (smaddr, error_code & PF_ERR_WRITE)))
     {
-      current_space()->remote_update (pfa, smspace, smaddr, 1);
+      current_mem_space()->remote_update (pfa, smspace, smaddr, 1);
       return true;
     }
 
   // Didn't work? Seems the pager is needed.
-  if (!(ipc_code = handle_page_fault_pager(smaddr, error_code)).has_error())
+  if (!(ipc_code 
+	= handle_page_fault_pager(_pager, smaddr, error_code)).has_error())
     {
       // now copy it in again
       // strange but right: may not be the same space as before
-      current_space()->remote_update (pfa, smspace, smaddr, 1);
+      current_mem_space()->remote_update (pfa, smspace, smaddr, 1);
     }
       
   return true;
@@ -113,7 +114,7 @@ IMPLEMENT inline NEEDS["smas.h","l4_types.h","kdb_ke.h"]
 bool
 Thread::handle_smas_gp_fault()
 {
-  if (!space()->is_small_space())
+  if (!mem_space()->is_small_space())
     return false;
 
   WARN("Space exceeded? Moving task %02x out of small space.\n",
@@ -122,6 +123,6 @@ Thread::handle_smas_gp_fault()
   kdb_ke("stop");
 #endif
 
-  smas.move(space(), 0);
+  smas.move(mem_space(), 0);
   return true;
 }

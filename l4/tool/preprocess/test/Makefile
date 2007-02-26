@@ -8,7 +8,8 @@ all:: test
 
 ALL_TESTS = $(TOOL_TESTS)
 TOOL_TESTS = mapping mapping_inline random random_inline extern_c static \
-  noinline explicit operator template template_inline c-preproc inline \
+  noinline explicit operator template template_inline c-preproc \
+  inline inline_noinline \
   parser parser_noinline \
   multifile variable line line_not line_nh interface comment_in_string \
   default_args drop_single1 drop_single2 drop_single3 drop_multi1 \
@@ -23,6 +24,9 @@ random_inline_flags = -i
 static_flags = -i
 
 inline_flags = -i
+
+inline_noinline_src = inline
+inline_noinline_flags =
 
 noinline_flags = -i
 

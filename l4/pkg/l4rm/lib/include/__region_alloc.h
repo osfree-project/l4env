@@ -68,6 +68,7 @@ l4rm_region_desc_alloc(void)
 
   /* setup descriptor */
   r->flags = REGION_INITIALIZER;
+  r->userptr = 0;
   r->next = NULL;
   r->prev = NULL;
 

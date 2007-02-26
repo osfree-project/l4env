@@ -1,3 +1,19 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   local_socks/examples/test/util.c
+ * \brief  Testcase; utility functions.
+ *
+ * \date   17/09/2004
+ * \author Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2006 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* *** GENERAL INCLUDES *** */
 #include <stdio.h>
 #include <stdlib.h>

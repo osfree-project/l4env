@@ -61,13 +61,13 @@ l4dm_share(const l4dm_dataspace_t * ds,
   /* call dataspace manager */
   ret = if_l4dm_generic_share_call(&(ds->manager), ds->id, &client,
                                    rights, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_generic: share failed, ds %u at "l4util_idfmt \
             ", client "l4util_idfmt" (ret %d, exc %d)!",
 	    ds->id, l4util_idstr(ds->manager), l4util_idstr(client), 
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -108,13 +108,13 @@ l4dm_revoke(const l4dm_dataspace_t * ds,
   /* call dataspace manager */
   ret = if_l4dm_generic_revoke_call(&(ds->manager), ds->id, &client,
                                     rights, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS,
             "libdm_generic: revoke failed, ds %u at "l4util_idfmt \
             ", client "l4util_idfmt" (ret %d, exc %d)!",
 	    ds->id, l4util_idstr(ds->manager), l4util_idstr(client), 
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -150,12 +150,12 @@ l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights)
   /* call dataspace manager */
   ret = if_l4dm_generic_check_rights_call(&(ds->manager), ds->id, 
                                           rights, &_env);
-  if (((ret < 0) && (ret != -L4_EPERM)) || (_env.major != CORBA_NO_EXCEPTION))
+  if (((ret < 0) && (ret != -L4_EPERM)) || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_generic: check rights failed, ds %u at "l4util_idfmt \
 	    " (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager), 
-	    ret, _env.major);
+	    ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret) 
 	return ret;
       else

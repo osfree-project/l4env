@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEConditionalExpression.h
- *    \brief   contains the declaration of the class CFEConditionalExpression
+ *  \brief   contains the declaration of the class CFEConditionalExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /**    \class CFEConditionalExpression
  *    \ingroup frontend
- *    \brief represents a conditional expression
+ *  \brief represents a conditional expression
  *
  * This class is used to represent a conditional expression. This
  * kind of expression consits of an expression, which evaluates to a
@@ -51,9 +51,9 @@ class CFEConditionalExpression : public CFEBinaryExpression
 // standard constructor/destructor
 public:
     /** constructs a conditional expression
-     *    \param pCondition the expression, which is the condition
-     *    \param pBranchTrue if the condition is true this expression is valid
-     *    \param pBranchFalse if the condition is false thsi expression is valid
+     *  \param pCondition the expression, which is the condition
+     *  \param pBranchTrue if the condition is true this expression is valid
+     *  \param pBranchFalse if the condition is false thsi expression is valid
      */
     CFEConditionalExpression(CFEExpression *pCondition,
         CFEExpression *pBranchTrue,
@@ -61,24 +61,23 @@ public:
     virtual ~CFEConditionalExpression();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEConditionalExpression(CFEConditionalExpression &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual string ToString();
     virtual CObject* Clone();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual CFEExpression* GetCondition();
 
 // attributes
 protected:
     /**    \var CFEExpression *m_pCondition
-     *    \brief the first, boolean expression
+     *  \brief the first, boolean expression
      */
     CFEExpression *m_pCondition;
 };

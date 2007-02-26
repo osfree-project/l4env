@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBESizes.h
- *    \brief   contains the declaration of the class CSockBESizes
+ *  \brief   contains the declaration of the class CSockBESizes
  *
  *    \date    11/28/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -42,18 +42,17 @@ class CSockBESizes : public CBESizes
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CSockBESizes();
     virtual ~CSockBESizes();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CSockBESizes(CSockBESizes &src);
 
 public:
     virtual int GetMaxSizeOfType(int nFEType);
-    virtual int GetSizeOfEnvType(string sName);
 
 };
 

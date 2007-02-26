@@ -1,0 +1,12 @@
+# -*- makefile -*- 
+# AMD64 Kernel Makefile
+
+entry-amd64.o:		$(TCBOFFSET)
+entry-amd64-ux.o:	$(TCBOFFSET)
+shortcut-amd64-ux.o:	$(TCBOFFSET)
+sys_call_page-asm.o:	$(TCBOFFSET)
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(LD) line.
+
+$(KERNEL):	

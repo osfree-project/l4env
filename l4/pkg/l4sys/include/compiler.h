@@ -20,6 +20,7 @@
  * \ingroup api_types_compiler
  * \hideinitializer
  */
+#ifndef L4_INLINE
 #ifndef __cplusplus
 #  ifdef __OPTIMIZE__
 #    ifdef STATIC_L4_INLINE
@@ -33,6 +34,7 @@
 #else /* __cplusplus */
 #  define L4_INLINE inline
 #endif  /* __cplusplus */
+#endif  /* L4_INLINE */
 
 /**
  * Start section with C types and functions
@@ -97,5 +99,8 @@
 #define L4_STICKY(x)	__attribute__((unused)) x
 #define L4_DEPRECATED
 #endif
+
+#define L4_stringify_helper(x) #x
+#define L4_stringify(x)        L4_stringify_helper(x)
 
 #endif /* !__L4_COMPILER_H__ */

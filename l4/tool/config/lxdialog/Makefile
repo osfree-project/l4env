@@ -1,4 +1,7 @@
-HOSTCC = gcc
+L4DIR ?= ../../..
+include $(L4DIR)/mk/Makeconf
+
+HOSTCC = $(HOST_CC)
 HOSTCFLAGS += -DLOCALE -MD
 LIBS = -lncurses
 
@@ -23,7 +26,7 @@ OBJS = checklist.o menubox.o textbox.o yesno.o inputbox.o \
 %.o: %.c
 	$(HOSTCC) $(HOSTCFLAGS) -c -o $@ $<
 
-all: ncurses lxdialog
+all:: ncurses lxdialog
 
 lxdialog: $(OBJS)
 	$(HOSTCC) -o lxdialog $(OBJS) $(LIBS)

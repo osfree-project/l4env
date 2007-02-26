@@ -5,7 +5,7 @@ include $(L4DIR)/mk/Makeconf
 
 TARGET		 = libld-l4.s.so
 MODE		 = l4env
-SYSTEMS		 = x86-l4v2 x86-l4x0 arm-l4x0
+SYSTEMS		 = x86-l4v2 arm-l4x0
 PRIVATE_INCDIR	 = $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/$(LDSO_ARCH_NAME) \
@@ -32,13 +32,21 @@ endif
 
 vpath %.c $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 vpath %.S $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
-OBJS_libld-l4.s.so = resolve.s.o ldso.s.o emul_linux.s.o infopage.s.o \
-		     helper.s.o
+SRC_C_libld-l4.s.so = ldso.c emul_linux.c infopage.c helper.c log_init.c \
+		      binary_name.c
+SRC_S_libld-l4.s.so = resolve.S
+ifeq ($(ARCH),x86)
+SRC_C_libld-l4.s.so += debug_info.c malloc.c syscall.c
+endif
 LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
-		   --discard-locals --discard-all --no-undefined -e _start
+		   --discard-locals --discard-all --no-undefined -e _start \
+		   --gc-sections
 LIBS		 = -ldm_generic.p -ldm_mem.p -lgeneric_fprov.p \
-		   -llogserver.p -lnames.p $(ROOTPLIB) -ll4util.p -ll4sys \
-		   $(GCCLIB)
+		   -lgeneric_ts.p -llogserver.p -lnames.p $(ROOTPLIB) \
+		   -ll4util.p -lsigma0.p -llist_alloc.p -ll4sys.p $(GCCLIB)
+ifeq ($(ARCH),x86)
+LIBS		+= -ldemangle.p
+endif
 OPTS		 = -Os -fno-strict-aliasing
 
 include $(L4DIR)/mk/lib.mk
@@ -48,7 +56,7 @@ ifneq ($(SYSTEM),)
 # build time), copy TARGET to the binary directory (needed for linking at
 # runtime)
 BINDIR		?= $(DROPS_STDDIR)/bin/$(subst -,/,$(SYSTEM))
-BINDIR_LOCAL	?= $(L4DIR)/bin/$(subst -,/,$(SYSTEM))
+BINDIR_LOCAL	?= $(OBJ_BASE)/bin/$(subst -,/,$(SYSTEM))
 INSTALLFILE_BIN_LOCAL ?= cp $(1) $(2) && chmod 644 $(2)
 
 all:: $(BINDIR_LOCAL)/$(TARGET)

@@ -31,6 +31,7 @@ IMPLEMENT inline
 void
 Context::switch_cpu(Context *t) 
 {
+  unsigned long dummy1, dummy2, dummy3;
   //  putchar('+');  
 #if 0
   printf("ASM: switch from %p to %p [sp=%p]\n", 
@@ -54,11 +55,14 @@ Context::switch_cpu(Context *t)
      "   ldr   pc, [sp], #4       \n"
      "1: ldmia sp!, {fp}       \n"
 
+     :
+     [new_thread] "=r"(dummy1),
+     [old_sp]     "=r"(dummy2),
+     [new_sp]     "=r"(dummy3)
      : 
-     : 
-     [new_thread] "r"(t), 
-     [old_sp] "r" (&_kernel_sp), 
-     [new_sp] "r" (t->_kernel_sp)
+     "0"(t), 
+     "1" (&_kernel_sp), 
+     "2" (t->_kernel_sp)
      : "r0", "r4", "r5", "r6", "r7", "r8", "r9", 
      "r10", "r12", "r14", "memory");
 }

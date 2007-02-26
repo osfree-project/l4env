@@ -25,7 +25,7 @@ typedef struct termstate_spec_s
     char *widget_name;            // DOpE internal widget name
                                   // users of the widget may thus use
                                   // it within their own dope_cmd commands
-    
+
     char *charbuf;                // vtextscreen character buffer
     char *attrbuf;                // vtextscreen attribute buffer
 

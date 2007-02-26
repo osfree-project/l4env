@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEIsAttribute.h
- *    \brief   contains the declaration of the class CFEIsAttribute
+ *  \brief   contains the declaration of the class CFEIsAttribute
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,15 +31,15 @@
 #define __DICE_FE_FEISATTRIBUTE_H__
 
 #include "fe/FEAttribute.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFEDeclarator;
 
 /* FIRST_IS, LAST_IS, LENGTH_IS, MIN_IS, MAX_IS, SIZE_IS, SWITCH_IS, IID_IS */
 /**    \class CFEIsAttribute
  *    \ingroup frontend
- *    \brief represents all the attributes, which end on "_IS"
+ *  \brief represents all the attributes, which end on "_IS"
  */
 class CFEIsAttribute : public CFEAttribute
 {
@@ -54,24 +54,24 @@ public:
     virtual ~CFEIsAttribute();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEIsAttribute(CFEIsAttribute &src);
 
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual CObject* Clone();
-    virtual int GetParameterCount();
-    virtual CFEDeclarator* GetNextAttrParameter(vector<CFEDeclarator*>::iterator &iter);
-    virtual vector<CFEDeclarator*>::iterator GetFirstAttrParameter();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEIsAttribute(*this); }
 
 // attributes
-protected:
-    /**    \var vector<CFEDeclarator*> m_vAttrParameters
-     *    \brief the parameters (declarators) the attribute can contain
+public:
+    /** \var CCollection<CFEDeclarator> m_AttrParameters
+     *  \brief the parameters (declarators) the attribute can contain
      */
-    vector<CFEDeclarator*> m_vAttrParameters;
+    CCollection<CFEDeclarator> m_AttrParameters;
 };
 
 #endif /* __DICE_FE_FEISATTRIBUTE_H__ */

@@ -1,0 +1,13 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l l4dope-ux \
+        -l tree_test \
+	-n9 "$@"
+

@@ -24,43 +24,50 @@
 #include "listener.h"
 #include "sync.h"
 #include "dopestd.h"
+#include "app_struct.h"
 
 extern int get_free_port(void);
 
-static char *listener_ident;
-static struct dopelib_sem *listener_init_sem;
+
+void CORBA_Object_to_ident(CORBA_Object obj, char *dst, int dst_len) {
+	snprintf(dst, dst_len, "%d", obj->sin_port);
+}
+
 
 static void *listener_thread(void *arg) {
-	char listener_ident_buf[128];
-	CORBA_Environment listener_env = dice_default_environment;
-	int listener_port = get_free_port();
-	
-	listener_ident = &listener_ident_buf[0];
-	sprintf(listener_ident, "%d", listener_port);
-	
-	listener_env.srv_port = listener_port;
+
+	CORBA_Environment listener_env = dice_default_server_environment;
+
+	struct dopelib_app *app = dopelib_apps[(int)arg];
+
+	listener_env.srv_port  = app->listener.sin_port;
 	listener_env.user_data = arg;
-	
-	dopelib_sem_post(listener_init_sem);
+
 	dopeapp_listener_server_loop(&listener_env);
 	return NULL;
 }
 
 
-char *dopelib_start_listener(long id) {
-	pthread_t listener_tid;
-	
-	/* start action listener */
-	listener_init_sem = dopelib_sem_create(1);
-	INFO(printf("DOpElib(dopelib_start_listener): creating server thread\n"));
-	pthread_create(&listener_tid,NULL,listener_thread,(void *)id);
-	INFO(printf("DOpElib(dopelib_start_listener): created.\n"));
-	dopelib_sem_wait(listener_init_sem);
-	INFO(printf("DOpElib(dopelib_start_listener): listener_ident = %s\n",listener_ident);)
-	dopelib_sem_destroy(listener_init_sem);
-	listener_init_sem = NULL;
-	
-	INFO(printf("DOpElib(dopelib_start_listener): finished.\n");)
-	return listener_ident;
+int dopelib_start_listener(long app_id) {
+
+	struct dopelib_app *app = dopelib_apps[app_id];
+	pthread_t *listener_tid = (pthread_t *)malloc(sizeof(pthread_t));
+
+	/* choose free port for the listener */
+	app->listener_ptid = listener_tid;
+	app->listener.sin_family = AF_INET;
+	app->listener.sin_port = get_free_port();
+	inet_aton("127.0.0.1", &app->listener.sin_addr);
+
+	pthread_create(listener_tid, NULL, listener_thread, (void *)app_id);
+	return 0;
+}
+
+
+void dopelib_stop_listener(long app_id) {
+
+	struct dopelib_app *app = dopelib_apps[app_id];
+	pthread_t *listener_tid = (pthread_t *)app->listener_ptid;
+	pthread_cancel(*listener_tid);
 }
 

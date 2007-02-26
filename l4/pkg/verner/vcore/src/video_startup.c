@@ -28,7 +28,7 @@
 #include "video_request_server.h"
 
 /* local */
-#if VCORE_DO_FILTER_BENCHMARK || PREDICT_DECODING_TIME
+#if VCORE_DO_FILTER_BENCHMARK || PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
 #include "timer.h"
 #endif
 
@@ -43,7 +43,7 @@ main (int argc, char **argv)
   /* init DSI */
   dsi_init ();
 
-#if VCORE_DO_FILTER_BENCHMARK || PREDICT_DECODING_TIME
+#if VCORE_DO_FILTER_BENCHMARK || PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   /* init timer for benchmarking */
   init_timer ();
 #endif

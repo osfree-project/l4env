@@ -1,9 +1,9 @@
 /**
  *    \file    dice/src/be/BEMarshaller.h
- *    \brief    contains the declaration of the class CBEMarshaller
+ *  \brief   contains the declaration of the class CBEMarshaller
  *
- *    \date    05/08/2002
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *    \date    11/18/2004
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -27,102 +27,104 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef __DICE_BEMARSHALLER_H__
-#define __DICE_BEMARSHALLER_H__
+#ifndef __DICE_BE_BEMARSHALLER_H__
+#define __DICE_BE_BEMARSHALLER_H__
 
 #include <be/BEObject.h>
 #include <vector>
-using namespace std;
+using std::vector;
 
-#include "be/BEDeclarator.h" // needed for declarator-stack
-
-class CBEFile;
-class CBEFunction;
 class CBETypedDeclarator;
-class CBEContext;
+class CBEFunction;
+class CBEMsgBuffer;
 class CBEType;
+class CDeclaratorStackLocation;
 
 /** \class CBEMarshaller
- *  \brief the class contains the marshalling code
+ *  \ingroup backend
+ *  \brief contains the marshalling code
+ *
+ * Requirements:
+ * # add local variables to function which are needed for marshalling
+ * # marshal whole function
+ * # write access to single words in the message buffer (or from function as \
+ *   if marshalled)
+ * # test if certain number of parameters fits into registers
+ * # set certain members of message buffer (e.g. opcode, zero fpage, \
+ *   exception) to zero
+ * # marshal certain members of message buffer seperately (e.g. opcode, ...)
  */
 class CBEMarshaller : public CBEObject
 {
 public:
-    /** \brief constructor of marshaller */
+    /** constructor */
     CBEMarshaller();
     virtual ~CBEMarshaller();
 
-    virtual int Marshal(CBEFile *pFile, CBEFunction *pFunction, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual int Marshal(CBEFile *pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual int Marshal(CBEFile *pFile, CBETypedDeclarator *pParameter, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalValue(CBEFile *pFile, CBEFunction *pFunction, int nBytes, int nValue, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual int Unmarshal(CBEFile * pFile, CBEFunction * pFunction, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-    virtual int Unmarshal(CBEFile * pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-    virtual int Unmarshal(CBEFile * pFile, CBETypedDeclarator * pParameter, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext * pContext);
-    virtual bool MarshalToPosition(CBEFile *pFile, CBEFunction *pFunction, int nPosition, int nPosSize, int nDirection, bool bWrite, CBEContext *pContext);
-    virtual bool MarshalToPosition(CBEFile *pFile, CBETypedDeclarator *pParameter,  int nPosition,  int nPosSize,  int nCurSize,  bool bWrite,  CBEContext * pContext);
-    virtual bool TestPositionSize(CBEFunction *pFunction, int nPosSize, int nDirection, bool bAllowSmaller, bool bAllowLarger, int nNumber, CBEContext *pContext);
+public:
+    virtual void MarshalFunction(CBEFile *pFile, int nDirection);
+    virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
+	int nDirection);
+    virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction, 
+	CBETypedDeclarator *pParameter, bool bMarshal);
+    virtual void MarshalValue(CBEFile *pFile, CBEFunction *pFunction, 
+	CBETypedDeclarator *pParameter, int nValue);
 
-protected: // Protected attributes
-  /** \var CBEFile *m_pFile
-   *  \brief the file to write to
-   */
-  CBEFile *m_pFile;
-  /** \var bool m_bMarshal
-   *  \brief true if we are marshalling; false if unmarshalling
-   */
-  bool m_bMarshal;
-  /** \var CBEType *m_pType
-   *  \brief the type of the currently marshalled variable
-   */
-  CBEType *m_pType;
-  /** \var vector<CDeclaratorStackLocation*> m_vDeclaratorStack
-   *  \brief the declarator stack for the marshalled parameter
-   */
-  vector<CDeclaratorStackLocation*> m_vDeclaratorStack;
-  /** \var CBETypedDeclarator *m_pParameter
-   *  \brief a reference to the top parameter (used to find attributes)
-   */
-  CBETypedDeclarator* m_pParameter;
-  /** \var CBEFunction *m_pFunction
-   *  \brief a reference to the function
-   */
-  CBEFunction *m_pFunction;
+    virtual bool AddLocalVariable(CBEFunction *pFunction);
 
-protected: // Protected methods
-    virtual int MarshalDeclarator(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bIncOffsetVariable, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalUnion(CBEUnionType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalCUnion(CBEUnionType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalStruct(CBEStructType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalArray(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalString(CBEType *pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual int MarshalConstArray(CBEType *pType,
-        int nStartOffset,
-        bool & bUseConstOffset,
-        bool bLastParameter,
-        vector<CBEExpression*>::iterator iter,
-        int nLevel,
-        CBEContext *pContext);
-    virtual int MarshalVariableArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
-    virtual int MarshalValue(int nBytes, int nValue, int nStartOffset, bool & bUseConstOffset, bool bIncOffsetVariable, CBEContext * pContext);
-    virtual int MarshalBitfieldStruct(CBEStructType * pType, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual void WriteBuffer(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bDereferencePosition, bool bCast, CBEContext *pContext);
-    virtual void WriteBuffer(string sTypeName, int nStartOffset, bool & bUseConstOffset, bool bDereferencePosition, bool bCast, CBEContext * pContext);
+protected:
+    CBEStructType* GetStruct(int& nDirection);
+    CBEStructType* GetStruct(CBEFunction *pFunction, int& nDirection);
+    CBEMsgBuffer* GetMessageBuffer(CBEFunction *pFunction);
 
-    virtual bool MarshalDeclaratorToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-    virtual bool MarshalArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-    virtual bool MarshalConstArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, vector<CBEExpression*>::iterator iter, int nLevel, CBEContext *pContext);
-    virtual bool MarshalStructToPosition(CBEStructType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-    virtual bool MarshalUnionToPosition(CBEUnionType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
+    virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual bool MarshalSpecialMember(CBETypedDeclarator *pMember);
+    virtual bool MarshalOpcode(CBETypedDeclarator *pMember);
+    virtual bool MarshalException(CBETypedDeclarator *pMember);
+    virtual bool MarshalReturn(CBETypedDeclarator *pMember);
+    virtual void MarshalGenericMember(int nPosition,
+	CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual void MarshalGenericValue(int nPosition, int nValue);
+    virtual bool MarshalString(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual bool MarshalArray(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual void MarshalArrayIntern(CBETypedDeclarator *pParameter, 
+	CBEType *pType, vector<CDeclaratorStackLocation*> *pStack);
+    virtual void MarshalArrayInternRef(CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual bool MarshalStruct(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual bool MarshalUnion(CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
 
-    virtual bool TestPositionSize(CBETypedDeclarator* pParameter, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-    virtual bool TestDeclaratorPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-    virtual bool TestArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-    virtual bool TestConstArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, vector<CBEExpression*>::iterator iter, int nLevel, CBEContext *pContext);
-    virtual bool TestStructPositionSize(CBEStructType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-    virtual bool TestUnionPositionSize(CBEUnionType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+	CBETypedDeclarator *pParameter, int nDirection);
+    virtual CBETypedDeclarator* FindMarshalMember(
+	vector<CDeclaratorStackLocation*> *pSack);
+    
+    virtual void WriteMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, vector<CDeclaratorStackLocation*> *pStack);
+    virtual void WriteParameter(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack, bool bPointer);
+    virtual void WriteAssignment(CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
 
-    virtual void WriteAssignment(CBEType *pType, int nStartOffset, bool &bUseConstOffset, int nAlignment, CBEContext *pContext);
+protected:
+    /** \var bool m_bMarshal
+     *  \brief true if marshaling, false if unmarshaling
+     */
+    bool m_bMarshal;
+    /** \var CBEFile *m_pFile
+     *  \brief reference to the file to write to
+     */
+    CBEFile *m_pFile;
+    /** \var CBEFunction *m_pFunction
+     *  \brief reference to the function the parameters belong to
+     */
+    CBEFunction *m_pFunction;
 };
 
-#endif  // !__DICE_BEMARSHALLER_H__
+#endif

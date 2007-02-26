@@ -4,7 +4,7 @@ L4DIR ?=	$(PKGDIR)/../..
 
 # target
 TARGET =	libdsiexmpl_receive.a
-SYSTEMS =	x86-l4v2 x86-l4x0
+SYSTEMS =	x86-l4v2
 
 # source files
 SRC_C = 	libreceive.c

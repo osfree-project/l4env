@@ -123,7 +123,7 @@ stream_io_push_component(CORBA_Object _dice_corba_obj,
     const stream_io_input_event_t *event,
     CORBA_Server_Environment *_dice_corba_env)
 {
-  struct l4input *input_ev = (struct l4input*) event;
+  stream_io_input_event_t const *input_ev = event;
 
   switch(input_ev->type)
     {

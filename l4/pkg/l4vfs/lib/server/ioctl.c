@@ -13,19 +13,19 @@
 #include <common_io-server.h>
 
 l4_int32_t
-l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
-                                object_handle_t fd,
-                                l4_int32_t cmd,
-                                l4_int8_t **arg,
-                                l4vfs_size_t *count,
-                                CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_ioctl_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t handle,
+                                 int cmd,
+                                 char **arg,
+                                 l4vfs_size_t *count,
+                                 CORBA_Server_Environment *_dice_corba_env)
     __attribute__((weak));
 
 l4_int32_t
 l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                l4_int32_t cmd,
-                                l4_int8_t **arg,
+                                int cmd,
+                                char **arg,
                                 l4vfs_size_t *count,
                                 CORBA_Server_Environment *_dice_corba_env)
 {

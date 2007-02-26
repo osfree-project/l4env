@@ -1,0 +1,6 @@
+- discovered in L4IDE
+  - Fix page_to_phys(), page_address()
+  - page_cache_release() ?
+  - kobjects - maybe very ide-specific
+- Check all initcall implementations
+- Only omega0 interrupt handling works with l4ide/bddf

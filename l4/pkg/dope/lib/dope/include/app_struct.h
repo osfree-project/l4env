@@ -21,6 +21,7 @@
 
 #define MAX_DOPE_CLIENTS 8
 
+#include "dopelib.h"
 #include "sync.h"
 
 struct dopelib_app {
@@ -32,6 +33,8 @@ struct dopelib_app {
 	long app_id;
 	struct dopelib_sem *queue_sem;
 	CORBA_Environment env;
+	CORBA_Object_base listener;
+	void *listener_ptid;         /* only used by the linux version */
 };
 
 extern struct dopelib_app *dopelib_apps[MAX_DOPE_CLIENTS];

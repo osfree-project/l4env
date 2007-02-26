@@ -69,13 +69,13 @@ l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
   int ret;
   l4rm_region_desc_t * r;
 
-  LOGdL(DEBUG_REGION_SETUP, "addr 0x%08x, size 0x%08x, type %d, flags 0x%08x",
-        *addr, size, type, flags);
+  LOGdL(DEBUG_REGION_SETUP, "addr 0x"l4_addr_fmt", size 0x%lx, type %d, " \
+        "flags 0x%08x", *addr, (l4_addr_t)size, type, flags);
 
   if ((type != L4RM_REGION_PAGER) && (type != L4RM_REGION_EXCEPTION) && 
       (type != L4RM_REGION_BLOCKED))
     return -L4_EINVAL;
-    
+
   /* allocate and setup new region descriptor */
   r = l4rm_region_desc_alloc();
   if (r == NULL)
@@ -87,7 +87,7 @@ l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
       LOGd(DEBUG_REGION_SETUP, "forward to "l4util_idfmt, l4util_idstr(pager));
 
       SET_REGION_PAGER(r);
-      r->data.pager.pager = 
+      r->data.pager.pager =
         (l4_is_invalid_id(pager)) ? l4rm_task_pager_id : pager;
       break;
 
@@ -99,7 +99,7 @@ l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
 
     case L4RM_REGION_BLOCKED:
       LOGd(DEBUG_REGION_SETUP, "blocked");
-     
+
       SET_REGION_BLOCKED(r);
       break;
     }
@@ -120,7 +120,8 @@ l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
       return ret;
     }
 
-  LOGd(DEBUG_REGION_SETUP, "using region at 0x%08x-0x%08x", r->start, r->end);
+  LOGd(DEBUG_REGION_SETUP, "using region at 0x"l4_addr_fmt"-0x"l4_addr_fmt,
+       r->start, r->end);
   *addr = r->start;
 
   /* done */

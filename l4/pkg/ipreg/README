@@ -1,0 +1,3 @@
+This package provides a very simple message-board like service. It is used as
+a temporary solution to communicate strings containing IP addresses among
+multiple L4Linux instances in the OpenTC PET demonstrator scenario.

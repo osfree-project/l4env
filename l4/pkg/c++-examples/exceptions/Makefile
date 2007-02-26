@@ -1,7 +1,7 @@
 PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../..
 
-MODE		:= sigma0
+MODE		:= l4env
 DEFAULT_RELOC_x86 = 0x01000000
 DEFAULT_RELOC_arm = 0x00100000
 
@@ -15,7 +15,7 @@ CXXLIB		= $(shell $(CXX) -print-file-name=libsupc++.a)
 GCCLIB		:= $(GCCLIB_EH) $(GCCLIB) 
 SRC_CC		:= main.cc
 TARGET		:= c++-excpt-test
-SYSTEMS		= x86-l4v2 x86-l4x0 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4x0
 
 CPPFLAGS 	+= -DLOG_TAG=\"cxxtest\"
 

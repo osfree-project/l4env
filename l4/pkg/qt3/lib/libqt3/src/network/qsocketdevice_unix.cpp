@@ -878,9 +878,16 @@ Q_LONG QSocketDevice::writeBlock( const char *data, Q_ULONG len )
     bool done = FALSE;
     int r = 0;
     bool timeout;
+    Q_ULONG left = len;
     while ( !done ) {
-	r = ::write( fd, data, len );
-	done = TRUE;
+        
+	r = ::write( fd, data + (len - left), left );
+        left -= (r > 0) ? r : 0;
+#if defined(QSOCKETDEVICE_DEBUG)
+        if (left > 0)
+            qDebug("QSocketDevice::writeBlock(): %d bytes are still left", left);
+#endif
+	done = (left == 0) || (r < 0);
 	if ( r < 0 && e == NoError &&
 	     errno != EAGAIN && errno != EWOULDBLOCK ) {
 	    switch( errno ) {
@@ -897,8 +904,8 @@ Q_LONG QSocketDevice::writeBlock( const char *data, Q_ULONG len )
 	    case EISDIR:
 	    case EBADF:
 	    case EINVAL:
-	    case EFAULT:
-	    case ENOTCONN:
+            case EFAULT:
+            case ENOTCONN:
 	    case ENOTSOCK:
 		e = Impossible;
 		break;
@@ -922,7 +929,7 @@ Q_LONG QSocketDevice::writeBlock( const char *data, Q_ULONG len )
 	    }
 	}
     }
-    return r;
+    return len - left;
 }
 
 

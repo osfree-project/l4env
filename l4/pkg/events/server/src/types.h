@@ -84,7 +84,10 @@ struct task_item {
   /* the channel the client wants to receive */
   l4_uint8_t		waiting_event_ch;
   /* giving acknowledge after process event */
-  l4_uint8_t		waiting_ack;
+  l4_uint8_t		waiting_ack:1;
+  /* task is untrusted, don't try to deliver the event if not ready */
+  l4_uint8_t		untrusted:1;
+  l4_uint8_t		dummy_bits:6;
   /* reference to first channel this task is registered for */
   struct channel_ref	*first_channel_ref;
 
@@ -144,6 +147,4 @@ typedef struct task_item task_item_t;
 typedef struct channel_item channel_item_t;
 typedef struct ack_item ack_item_t;
 
-
 #endif
-

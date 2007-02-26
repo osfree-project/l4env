@@ -1,10 +1,11 @@
 /**
- *    \file    dice/src/be/l4/v4/L4V4BECallFunction.cpp
- *    \brief    contains the implementation of the class CL4V4BECallFunction
+ *  \file    dice/src/be/l4/v4/L4V4BECallFunction.cpp
+ *  \brief   contains the implementation of the class CL4V4BECallFunction
  *
- *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date    01/08/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -27,11 +28,18 @@
 
 #include "be/l4/v4/L4V4BECallFunction.h"
 #include "be/l4/v4/L4V4BENameFactory.h"
-#include "be/l4/L4BEMsgBufferType.h"
+#include "be/l4/L4BEMarshaller.h"
 #include "be/BEContext.h"
+#include "be/BEFile.h"
 #include "be/BEDeclarator.h"
-#include "TypeSpec-Type.h"
+#include "be/BETypedDeclarator.h"
+#include "be/BESizes.h"
+#include "be/BEMsgBuffer.h"
+#include "be/BEUserDefinedType.h"
+#include "TypeSpec-L4V4Types.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4V4BECallFunction::CL4V4BECallFunction()
  : CL4BECallFunction()
@@ -43,108 +51,143 @@ CL4V4BECallFunction::~CL4V4BECallFunction()
 {
 }
 
-/** \brief writes the variable declaration
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * For V4 we only declare mr0 and the message buffer.
+/** \brief initialize instance of class
+ *  \param pFEOperation the front-end function to use as reference
+ *  \return true if successful
  */
-void CL4V4BECallFunction::WriteVariableDeclaration(CBEFile* pFile,
-    CBEContext* pContext)
+void 
+CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
 {
-    // first call base class (skip L4 class)
-    CBECallFunction::WriteVariableDeclaration(pFile, pContext);
-    // declare msgtag
-    WriteMsgTagDeclaration(pFile, pContext);
-}
+    // do not call direct base class (it adds the result var only)
+    CBECallFunction::CreateBackEnd(pFEOperation);
 
-/** \brief writes the declaration of the message tag
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- */
-void CL4V4BECallFunction::WriteMsgTagDeclaration(CBEFile *pFile,
-    CBEContext* pContext)
-{
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    *pFile << "\t// create empty msgtag\n";
-    *pFile << "\tL4_MsgTag_t " << sMsgTag << " = L4_MsgTag ();\n";
+    // add local variables
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
+    try
+    {
+	AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
+    }
+    catch (CBECreateException *e)
+    {
+	e->Print();
+	delete e;
+
+	string exc = string(__func__);
+	exc += " failed, because local variable (" + sMsgTag + 
+	    ") could not be added.";
+	throw new CBECreateException(exc);
+    }
 }
 
 /** \brief writes the marshaling of the message
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start with marshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to \
- *    false if not possible
- *  \param pContext the context of the write operation
  *
- * In V4 we marshal everything except the opcode, which goes into the message
- * tag label (this is also done in the default call-function class, so simply
- * skip L4 specific implementation.)
+ * Simply marshal the message. V4 specific is to put the message after
+ * marshalling into the message registers.
  */
 void
-CL4V4BECallFunction::WriteMarshalling(CBEFile * pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext * pContext)
+CL4V4BECallFunction::WriteMarshalling(CBEFile * pFile)
 {
-    CBECallFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    CL4BECallFunction::WriteMarshalling(pFile);
+
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    // first clear mr0 in message buffer
+    *pFile << "\tL4_MsgClear ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
+    // load msgtag into message buffer
+    *pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
+        m_sOpcodeConstName << " );\n";
+    // set dopes
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+	GetSendDirection());
+    // load the message into the UTCB
+    *pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
+}
+
+/** \brief marshals the exception
+ *  \param pFile the file to write to
+ *  \param bMarshal true if marshalling, false if unmarshalling
+ *  \return the number of bytes used to marshal the exception
+ *
+ * Because for V4 the exception is member of the message buffer and never
+ * skipped, we make this function empty because it is called explicetly in
+ * CBECallFunction::WriteUnmarshalling. The exception is (un)marshalled together
+ * with the "normal" parameters
+ */
+void
+CL4V4BECallFunction::WriteMarshalException(CBEFile* /*pFile*/,
+    bool /*bMarshal*/)
+{
 }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * Because this is the call function, we can use the IPC call of L4.
  */
 void
-CL4V4BECallFunction::WriteInvocation(CBEFile * pFile,
-    CBEContext * pContext)
+CL4V4BECallFunction::WriteInvocation(CBEFile * pFile)
 {
-    string sMsgBuffer =
-        pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    // load msgtag into message buffer
-    *pFile << "\tL4_Set_MsgLabel ( &" << sMsgBuffer << ", " <<
-        m_sOpcodeConstName << " );\n";
-    // load the message into the UTCB
-    *pFile << "\tL4_MsgLoad ( &" << sMsgBuffer << " );\n";
     // invocate
-    WriteIPC(pFile, pContext);
-    // store message
-    *pFile << "\tL4_MsgStore ( " << sMsgTag << ", &" << sMsgBuffer << " );\n";
+    WriteIPC(pFile);
     // check for errors
-    WriteIPCErrorCheck(pFile, pContext);
+    WriteIPCErrorCheck(pFile);
+}
+
+/** \brief write L4 specific unmarshalling code
+ *  \param pFile the file to write to
+ *
+ * Skip the L4 specific check for received flexpages, simply unmarshal the
+ * parameter. Before that we have to load the message registers into te
+ * message buffer.
+ */
+void 
+CL4V4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    // store message
+    *pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
+	<< " );\n";
+
+    CBECallFunction::WriteUnmarshalling(pFile);
 }
 
 /** \brief write the error checking code for the IPC
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
- * If there was an IPC error, we write this into the environment.
- * This can be done by checking if there was an error, then sets the major value
- * to CORBA_SYSTEM_EXCEPTION and then sets the ipc_error value to
+ * If there was an IPC error, we write this into the environment.  This can be
+ * done by checking if there was an error, then sets the major value to
+ * CORBA_SYSTEM_EXCEPTION and then sets the ipc_error value to
  * L4_IPC_ERROR(result).
  */
 void
-CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile,
-    CBEContext * pContext)
+CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile)
 {
-    string sResult = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
     *pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
               "\t{\n";
     pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
-    *pFile << "\tCORBA_exception_set(";
+    string sSetFunc;
+    if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
+        "CORBA_Server_Environment")
+        sSetFunc = "CORBA_server_exception_set";
+    else
+        sSetFunc = "CORBA_exception_set";
+    *pFile << "\t" << sSetFunc << " (";
     if (pDecl->GetStars() == 0)
         *pFile << "&";
-    pDecl->WriteName(pFile, pContext);
+    pDecl->WriteName(pFile);
     *pFile << ",\n";
     pFile->IncIndent();
     *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
@@ -152,84 +195,46 @@ CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile,
               "\t0);\n";
     pFile->DecIndent();
     // env.ipc_error = L4_IPC_ERROR(result);
-    *pFile << "\t";
-    pDecl->WriteName(pFile, pContext);
-    if (pDecl->GetStars())
-        *pFile << "->";
-    else
-        *pFile << ".";
-    *pFile << "_p.ipc_error = L4_ErrorCode();\n";
+    string sEnv;
+    if (pDecl->GetStars() == 0)
+	sEnv = "&";
+    sEnv += pDecl->GetName();
+    *pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
     // return
-    WriteReturn(pFile, pContext);
+    WriteReturn(pFile);
     // close }
     pFile->DecIndent();
     *pFile << "\t}\n";
 }
 
-/** \brief unmarshals the exception
- *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling
- *  \param bUseConstOffset true if nStart can be used
- *  \param pContext the context of the unmarshalling
- *  \return the number of bytes used to unmarshal the exception
- *
- * In L4 the exception is in the tag's label, so get it from there. Therefore
- * it has no size and the other parameters can be unmarshalled directly.
- */
-int
-CL4V4BECallFunction::WriteUnmarshalException(CBEFile* pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext* pContext)
-{
-    if (FindAttribute(ATTR_NOEXCEPTIONS))
-        return 0;
-    if (!m_pExceptionWord)
-        return 0;
-    // get from msgtag
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    vector<CBEDeclarator*>::iterator iterExc = m_pExceptionWord->GetFirstDeclarator();
-    CBEDeclarator *pD = *iterExc;
-    *pFile << "\t" << pD->GetName() << " = L4_Label ( " << sMsgTag << " );\n";
-    // extract the exception from the word
-    WriteEnvExceptionFromWord(pFile, pContext);
-    return 0;
-}
-
 /** \brief calculates the size of the function's parameters
  *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
  *  \return the size of the parameters
  *
- * In V4 we do not have the exception nor the opcode in the msgbuf directly,
- * but in the tag's label.
+ * In V4 we do have the exception in the msgbuf but not the opcode, which is
+ * in the tag's label.
  */
-int CL4V4BECallFunction::GetSize(int nDirection, CBEContext *pContext)
+int CL4V4BECallFunction::GetSize(int nDirection)
 {
     // get base class' size
-    int nSize = CBECallFunction::GetSize(nDirection, pContext);
-    if (nDirection & DIRECTION_OUT)
-        nSize -= pContext->GetSizes()->GetExceptionSize();
+    int nSize = CBECallFunction::GetSize(nDirection);
     if (nDirection & DIRECTION_IN)
-        nSize -= pContext->GetSizes()->GetOpcodeSize();
+        nSize -= CCompiler::GetSizes()->GetOpcodeSize();
     return nSize;
 }
 
 /** \brief calculates the size of the function's fixed-sized parameters
  *  \param nDirection the direction to count
- *  \param pContext the context of this calculation
  *  \return the size of the parameters
  *
- * In V4 we do not have the exception nor the opcode in the msgbuf directly,
- * but in the tag's label.
+ * In V4 we do have the exception in the msgbuf but not the opcode, which is
+ * in the tag's label.
  */
-int CL4V4BECallFunction::GetFixedSize(int nDirection, CBEContext *pContext)
+int CL4V4BECallFunction::GetFixedSize(int nDirection)
 {
-    int nSize = CBECallFunction::GetFixedSize(nDirection, pContext);
-    if (nDirection & DIRECTION_OUT)
-        nSize -= pContext->GetSizes()->GetExceptionSize();
+    int nSize = CBECallFunction::GetFixedSize(nDirection);
     if (nDirection & DIRECTION_IN)
-        nSize -= pContext->GetSizes()->GetOpcodeSize();
+        nSize -= CCompiler::GetSizes()->GetOpcodeSize();
     return nSize;
 }
+

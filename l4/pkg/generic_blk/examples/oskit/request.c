@@ -287,10 +287,10 @@ __request_thread(void * data)
 
   LOGdL(DEBUG_OSKIT_STARTUP, "disk size %lu MB, block size %d bytes", 
         (unsigned long)(tmp >> 20), L4BLK_BLKSIZE);
-  
+
   /* request thread started */
   l4thread_started((void *)0);
-  
+
   LOG("opened device %s (%s), disk size %lu MB",
       device_name, (readwrite) ? "rw" : "ro", (unsigned long)(tmp >> 20));
 
@@ -381,7 +381,7 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
 {
   blksrv_request_t * req;
   blksrv_request_t * rp;
-  int i,j;
+  int i, j;
   int retval = L4_ENOMEM;
 
   /* enqueue request */

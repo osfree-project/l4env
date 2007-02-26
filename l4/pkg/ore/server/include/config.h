@@ -2,13 +2,13 @@
 #define __CONFIG_H
 
 // Memory that is mapped to the Linux emulation
-#define ORE_LINUXEMUL_MEMSIZE         (8*1024*1024)
+#define ORE_LINUXEMUL_MEMSIZE         (16*1024*1024)
 
 // priority for the IRQ handler thread
 #define IRQ_HANDLER_PRIO              0xF0
 
 // maximum number of connections one instance of ORe can handle
-#define ORE_CONFIG_MAX_CONNECTIONS    8
+#define ORE_CONFIG_MAX_CONNECTIONS    30
 // maximum size of a packet
 #define ORE_CONFIG_MAX_BUF_SIZE       2000
 
@@ -18,11 +18,6 @@
 #define ERRLOG(err) if ((err)) {                                           \
 			LOG_Error("%d (%s)", (err), l4env_errstr((-err))); \
 			return err; }
-
-#define LOG_MAC_s(cond, str, mac)  LOGd(cond, "%s %02X:%02X:%02X:%02X:%02X:%02X", \
-                    (str), (mac)[0], (mac)[1], (mac)[2], (mac)[3], (mac)[4], (mac)[5]);
-
-#define LOG_MAC(cond, mac) LOG_MAC_s(cond, "MAC = ", (mac))
 
 #define LOG_SKB(s) { if ((s) != NULL)                                       \
                      {      LOG("skb            = %p", (s));                \
@@ -48,9 +43,23 @@ extern int ore_debug;
 #define ORE_DEBUG_INIT                (0 && ore_debug)
 // debug output for server components
 #define ORE_DEBUG_COMPONENTS          (0 && ore_debug)
+
+// These three are the most verbose debug messages - use with care
+// debug packet send path
+#define ORE_DEBUG_PACKET_SEND         (0 && ore_debug)
+// debug packet receive path
+#define ORE_DEBUG_PACKET_RECV         (0 && ore_debug)
+// debug all packet paths
+#define ORE_DEBUG_PACKET              (ORE_DEBUG_PACKET_SEND && \
+                                       ORE_DEBUG_PACKET_RECV && \
+                                       ore_debug)
 // debug output for linux emulation
 #define ORE_EMUL_DEBUG                (0 && ore_debug)
 // debug interrupt handling
 #define ORE_DEBUG_IRQ                 (0 && ore_debug)
+// debug event handling
+#define ORE_DEBUG_EVENTS              (0 && ore_debug)
+// debug DSI stuff
+#define ORE_DEBUG_DSI                 (0 && ore_debug)
 
 #endif /* ! __CONFIG_H */

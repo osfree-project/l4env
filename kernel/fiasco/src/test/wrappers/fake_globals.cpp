@@ -1,6 +1,6 @@
 INTERFACE:
 
-#include <stdio.h>
+#include <cstdio>
 #include <flux/x86/cpuid.h>
 
 #define panic(fmt...) printf(fmt), exit(1)

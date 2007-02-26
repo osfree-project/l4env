@@ -39,7 +39,7 @@ class CBEDispatchFunction;
 
 /**    \class CBESrvLoopFunction
  *    \ingroup backend
- *    \brief the wait-any function class for the back-end
+ *  \brief the wait-any function class for the back-end
  *
  * This class contains the code to write a wait-any function
  */
@@ -47,42 +47,48 @@ class CBESrvLoopFunction : public CBEInterfaceFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBESrvLoopFunction();
     virtual ~CBESrvLoopFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBESrvLoopFunction(CBESrvLoopFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
-    virtual bool DoUseParameterAsEnv(CBEContext *pContext);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
-    virtual void WriteLoop(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAfterParameters(CBEFile *pFile, CBEContext *pContext, bool bComma);
-    virtual bool WriteBeforeParameters(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteBody(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
-    virtual void WriteEnvironmentInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteFunctionAttributes(CBEFile* pFile,  CBEContext* pContext);
-    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteReturn(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteLoop(CBEFile *pFile);
+    virtual void WriteVariableDeclaration(CBEFile* pFile);
+    virtual void WriteDispatchInvocation(CBEFile *pFile);
+    virtual bool DoWriteFunctionInline(CBEFile *pFile);
+    virtual void WriteBody(CBEFile *pFile);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteEnvironmentInitialization(CBEFile *pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
+    virtual void WriteObjectInitialization(CBEFile *pFile);
+    virtual void WriteFunctionAttributes(CBEFile* pFile);
+    virtual void WriteReturn(CBEFile* pFile);
+    virtual void AddParameters(void);
+    virtual bool AddOpcodeVariable();
+    virtual bool AddReplyVariable();
+    virtual void CreateObject();
+
+    CBEFunction* FindGlobalFunction(CFEInterface *pFEInterface, 
+	FUNCTION_TYPE nFunctionType);
+    void SetCallVariables(CBEFunction *pFunction);
 
 protected:
-    /**    \var CBEWaitAnyFunction *m_pWaitAnyFunction
-     *    \brief needed to write wait any function calls
+    /** \var CBEWaitAnyFunction *m_pWaitAnyFunction
+     *  \brief needed to write wait any function calls
      */
     CBEWaitAnyFunction *m_pWaitAnyFunction;
     /** \var CBEReplyAnyWaitAnyFunction *m_pReplyAnyWaitAnyFunction

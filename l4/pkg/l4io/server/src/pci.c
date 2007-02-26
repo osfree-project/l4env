@@ -55,12 +55,13 @@ static inline void * _pci_get_addr(l4_io_pdev_t pdev)
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_find_device_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint16_t vendor_id,
-                                          l4_uint16_t device_id,
-                                          l4_io_pdev_t start_at,
-                                          l4_io_pci_dev_t *pci_dev,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_find_device_component (CORBA_Object _dice_corba_obj,
+                                 unsigned short vendor_id,
+                                 unsigned short device_id,
+                                 l4_io_pdev_t start_at,
+                                 l4_io_pci_dev_t *pci_dev,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   void *from, *pdev;
   unsigned int vendor = vendor_id;
@@ -108,15 +109,16 @@ l4_int32_t l4_io_pci_find_device_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_find_slot_component(CORBA_Object _dice_corba_obj,
-                                         l4_uint32_t bus,
-                                         l4_uint32_t slot,
-                                         l4_io_pci_dev_t *pci_dev,
-                                         CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_find_slot_component (CORBA_Object _dice_corba_obj,
+                               unsigned long bus,
+                               unsigned long slot,
+                               l4_io_pci_dev_t *pci_dev,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
   void *pdev;
 
-  LOGd(DEBUG_PCI, "find %02x:%02x ... ", bus, slot);
+  LOGd(DEBUG_PCI, "find %02lx:%02lx ... ", bus, slot);
 
   pdev = pci_find_slot(bus, slot);
 
@@ -147,18 +149,19 @@ l4_int32_t l4_io_pci_find_slot_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_find_class_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint32_t class_id,
-                                          l4_io_pdev_t start_at,
-                                          l4_io_pci_dev_t *pci_dev,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_find_class_component (CORBA_Object _dice_corba_obj,
+                                unsigned long class_id,
+                                l4_io_pdev_t start_at,
+                                l4_io_pci_dev_t *pci_dev,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   void *from = NULL, *pdev;
   unsigned int class = class_id;
 
   class &= 0x00ffffff;
 
-  LOGd(DEBUG_PCI, "find <%06x>  start at %x:%02x.%x ... ",
+  LOGd(DEBUG_PCI, "find <%06lx>  start at %x:%02x.%x ... ",
        class_id, start_at>>8, (start_at&0xff)>>3, start_at&7);
 
   if (start_at && !(from =  _pci_get_addr(start_at)))
@@ -198,15 +201,16 @@ l4_int32_t l4_io_pci_find_class_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_read_config_byte_component(CORBA_Object _dice_corba_obj,
-                                                l4_io_pdev_t pdev,
-                                                l4_int32_t offset,
-                                                l4_uint8_t *val,
-                                                CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_read_config_byte_component (CORBA_Object _dice_corba_obj,
+                                      l4_io_pdev_t pdev,
+                                      long offset,
+                                      unsigned char *val,
+                                      CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x byte %d%s",
+  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x byte %ld%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -227,15 +231,16 @@ l4_int32_t l4_io_pci_read_config_byte_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_read_config_word_component(CORBA_Object _dice_corba_obj,
-                                                l4_io_pdev_t pdev,
-                                                l4_int32_t offset,
-                                                l4_uint16_t *val,
-                                                CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_read_config_word_component (CORBA_Object _dice_corba_obj,
+                                      l4_io_pdev_t pdev,
+                                      long offset,
+                                      unsigned short *val,
+                                      CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x word %d%s",
+  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x word %ld%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -256,15 +261,16 @@ l4_int32_t l4_io_pci_read_config_word_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_read_config_dword_component(CORBA_Object _dice_corba_obj,
-                                                 l4_io_pdev_t pdev,
-                                                 l4_int32_t offset,
-                                                 l4_uint32_t *val,
-                                                 CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_read_config_dword_component (CORBA_Object _dice_corba_obj,
+                                       l4_io_pdev_t pdev,
+                                       long offset,
+                                       l4_uint32_t *val,
+                                       CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x dword %d%s",
+  LOGd(DEBUG_PCI_RW, "read %x:%02x.%x dword %ld%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -294,15 +300,16 @@ l4_int32_t l4_io_pci_read_config_dword_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_write_config_byte_component(CORBA_Object _dice_corba_obj,
-                                                 l4_io_pdev_t pdev,
-                                                 l4_int32_t offset,
-                                                 l4_uint8_t val,
-                                                 CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_write_config_byte_component (CORBA_Object _dice_corba_obj,
+                                       l4_io_pdev_t pdev,
+                                       long offset,
+                                       unsigned char val,
+                                       CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x byte %d (val 0x%02x)%s",
+  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x byte %ld (val 0x%02x)%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, val, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -331,15 +338,16 @@ l4_int32_t l4_io_pci_write_config_byte_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_write_config_word_component(CORBA_Object _dice_corba_obj,
-                                                 l4_io_pdev_t pdev,
-                                                 l4_int32_t offset,
-                                                 l4_uint16_t val,
-                                                 CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_write_config_word_component (CORBA_Object _dice_corba_obj,
+                                       l4_io_pdev_t pdev,
+                                       long offset,
+                                       unsigned short val,
+                                       CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x word %d (val 0x%02x)%s",
+  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x word %ld (val 0x%02x)%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, val, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -368,15 +376,16 @@ l4_int32_t l4_io_pci_write_config_word_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_write_config_dword_component(CORBA_Object _dice_corba_obj,
-                                                  l4_io_pdev_t pdev,
-                                                  l4_int32_t offset,
-                                                  l4_uint32_t val,
-                                                  CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_write_config_dword_component (CORBA_Object _dice_corba_obj,
+                                        l4_io_pdev_t pdev,
+                                        long offset,
+                                        unsigned long val,
+                                        CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
-  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x dword %d (val 0x%02x)%s",
+  LOGd(DEBUG_PCI_RW, "write %x:%02x.%x dword %ld (val 0x%02lx)%s",
        pdev>>8, (pdev&0xff)>>3, pdev&7, offset, val, pci_dev ? "" : " INVALID");
 
   if (!pci_dev)
@@ -409,9 +418,10 @@ l4_int32_t l4_io_pci_write_config_dword_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_enable_device_component(CORBA_Object _dice_corba_obj,
-                                             l4_io_pdev_t pdev,
-                                             CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_enable_device_component (CORBA_Object _dice_corba_obj,
+                                   l4_io_pdev_t pdev,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   int err;
   void *pci_dev =  _pci_get_addr(pdev);
@@ -444,9 +454,10 @@ l4_int32_t l4_io_pci_enable_device_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_disable_device_component(CORBA_Object _dice_corba_obj,
-                                              l4_io_pdev_t pdev,
-                                              CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_disable_device_component (CORBA_Object _dice_corba_obj,
+                                    l4_io_pdev_t pdev,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -471,9 +482,10 @@ l4_int32_t l4_io_pci_disable_device_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_set_master_component(CORBA_Object _dice_corba_obj,
-                                          l4_io_pdev_t pdev,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_set_master_component (CORBA_Object _dice_corba_obj,
+                                l4_io_pdev_t pdev,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -500,10 +512,11 @@ l4_int32_t l4_io_pci_set_master_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, negative error code otherwise
  */
-l4_int32_t l4_io_pci_set_power_state_component(CORBA_Object _dice_corba_obj,
-                                               l4_io_pdev_t pdev,
-                                               l4_int32_t *state,
-                                               CORBA_Server_Environment *_dice_corba_env)
+long
+l4_io_pci_set_power_state_component (CORBA_Object _dice_corba_obj,
+                                     l4_io_pdev_t pdev,
+                                     int *state,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   int old;
   void *pci_dev =  _pci_get_addr(pdev);

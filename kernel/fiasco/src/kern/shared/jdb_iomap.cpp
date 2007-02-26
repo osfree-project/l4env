@@ -1,4 +1,4 @@
-IMPLEMENTATION:
+IMPLEMENTATION[io]:
 
 #include <cstdio>
 #include <cctype>
@@ -14,6 +14,9 @@ IMPLEMENTATION:
 
 class Jdb_iomap : public Jdb_module
 {
+public:
+  Jdb_iomap() FIASCO_INIT;
+private:
   static char     first_char;
   static Task_num taskno;
 };
@@ -36,8 +39,8 @@ Jdb_iomap::show()
   Address bitmap_1, bitmap_2;
   const Address virt = Config::Small_spaces ? Mem_layout::Smas_io_bmap_bak
 					    : Mem_layout::Io_bitmap;
-  bitmap_1 = s->virt_to_phys (virt);
-  bitmap_2 = s->virt_to_phys (virt + Config::PAGE_SIZE);
+  bitmap_1 = s->mem_space()->virt_to_phys (virt);
+  bitmap_2 = s->mem_space()->virt_to_phys (virt + Config::PAGE_SIZE);
 
   Jdb::clear_screen();
   
@@ -68,7 +71,7 @@ Jdb_iomap::show()
 
   for(unsigned i = 0; i < L4_fpage::Io_port_max; i++ )
     {
-      if(s->io_lookup(i) != mapped)
+      if(s->io_space()->io_lookup(i) != mapped)
 	{
 	  if(! mapped)
 	    {
@@ -90,8 +93,8 @@ Jdb_iomap::show()
   if (!any_mapped)
     putstr("<none>");
 
-  printf("\n\nPort counter: %d ", s->get_io_counter() );
-  if(count == s->get_io_counter())
+  printf("\n\nPort counter: %ld ", s->io_space()->get_io_counter() );
+  if(count == s->io_space()->get_io_counter())
     puts("(correct)");
   else
     printf("%sshould be %d\033[m\n", Jdb::esc_emph, count);
@@ -123,7 +126,7 @@ Jdb_iomap::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_iomap::cmds() const
 {
   static Cmd cs[] =
@@ -136,13 +139,13 @@ Jdb_iomap::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_iomap::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_iomap::Jdb_iomap()
   : Jdb_module("INFO")
 {}

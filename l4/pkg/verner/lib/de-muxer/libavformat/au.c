@@ -1,4 +1,4 @@
-/* 
+/*
  * AU encoder and decoder
  * Copyright (c) 2001 Fabrice Bellard.
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 /*
@@ -39,6 +39,7 @@ static const CodecTag codec_au_tags[] = {
     { 0, 0 },
 };
 
+#ifdef CONFIG_MUXERS
 /* AUDIO_FILE header */
 static int put_au_header(ByteIOContext *pb, AVCodecContext *enc)
 {
@@ -62,7 +63,7 @@ static int au_write_header(AVFormatContext *s)
     s->priv_data = NULL;
 
     /* format header */
-    if (put_au_header(pb, &s->streams[0]->codec) < 0) {
+    if (put_au_header(pb, s->streams[0]->codec) < 0) {
         return -1;
     }
 
@@ -71,11 +72,10 @@ static int au_write_header(AVFormatContext *s)
     return 0;
 }
 
-static int au_write_packet(AVFormatContext *s, int stream_index_ptr,
-                           const uint8_t *buf, int size, int64_t pts)
+static int au_write_packet(AVFormatContext *s, AVPacket *pkt)
 {
     ByteIOContext *pb = &s->pb;
-    put_buffer(pb, buf, size);
+    put_buffer(pb, pkt->data, pkt->size);
     return 0;
 }
 
@@ -97,6 +97,7 @@ static int au_write_trailer(AVFormatContext *s)
 
     return 0;
 }
+#endif //CONFIG_MUXERS
 
 static int au_probe(AVProbeData *p)
 {
@@ -112,7 +113,7 @@ static int au_probe(AVProbeData *p)
 
 /* au input */
 static int au_read_header(AVFormatContext *s,
-                           AVFormatParameters *ap)
+                          AVFormatParameters *ap)
 {
     int size;
     unsigned int tag;
@@ -126,11 +127,11 @@ static int au_read_header(AVFormatContext *s,
         return -1;
     size = get_be32(pb); /* header size */
     get_be32(pb); /* data size */
-    
+
     id = get_be32(pb);
     rate = get_be32(pb);
     channels = get_be32(pb);
-    
+
     codec = codec_get_id(codec_au_tags, id);
 
     if (size >= 24) {
@@ -142,11 +143,12 @@ static int au_read_header(AVFormatContext *s,
     st = av_new_stream(s, 0);
     if (!st)
         return -1;
-    st->codec.codec_type = CODEC_TYPE_AUDIO;
-    st->codec.codec_tag = id;
-    st->codec.codec_id = codec;
-    st->codec.channels = channels;
-    st->codec.sample_rate = rate;
+    st->codec->codec_type = CODEC_TYPE_AUDIO;
+    st->codec->codec_tag = id;
+    st->codec->codec_id = codec;
+    st->codec->channels = channels;
+    st->codec->sample_rate = rate;
+    av_set_pts_info(st, 64, 1, rate);
     return 0;
 }
 
@@ -158,14 +160,12 @@ static int au_read_packet(AVFormatContext *s,
     int ret;
 
     if (url_feof(&s->pb))
-        return -EIO;
-    if (av_new_packet(pkt, MAX_SIZE))
-        return -EIO;
+        return AVERROR_IO;
+    ret= av_get_packet(&s->pb, pkt, MAX_SIZE);
+    if (ret < 0)
+        return AVERROR_IO;
     pkt->stream_index = 0;
 
-    ret = get_buffer(&s->pb, pkt->data, pkt->size);
-    if (ret < 0)
-        av_free_packet(pkt);
     /* note: we need to modify the packet size here to handle the last
        packet */
     pkt->size = ret;
@@ -185,8 +185,10 @@ static AVInputFormat au_iformat = {
     au_read_header,
     au_read_packet,
     au_read_close,
+    pcm_read_seek,
 };
 
+#ifdef CONFIG_MUXERS
 static AVOutputFormat au_oformat = {
     "au",
     "SUN AU Format",
@@ -199,10 +201,13 @@ static AVOutputFormat au_oformat = {
     au_write_packet,
     au_write_trailer,
 };
+#endif //CONFIG_MUXERS
 
 int au_init(void)
 {
     av_register_input_format(&au_iformat);
+#ifdef CONFIG_MUXERS
     av_register_output_format(&au_oformat);
+#endif //CONFIG_MUXERS
     return 0;
 }

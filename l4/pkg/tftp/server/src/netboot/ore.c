@@ -12,6 +12,7 @@
 #include <l4/ore/ore.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/ktrace.h>
+#include <l4/sys/ipc.h>
 #include <l4/util/util.h>
 
 /* set CONFIG_LOG_TRACE to 1 to trace the calls to the functions */
@@ -25,7 +26,8 @@
 
 typedef struct ore_client_state{
 	unsigned char   mac[6];
-	l4ore_handle_t  handle;
+	int             handle;
+    l4_timeout_t    recv_to;
 } ore_client_state;
 
 ore_client_state my_state;
@@ -61,7 +63,7 @@ static void ore_transmit(struct nic *nic, const char *d,
   } packet;
 
   int err;
-  l4ore_handle_t handle = my_state.handle;
+  int handle = my_state.handle;
 
   LOGd_Enter(CONFIG_LOG_TRACE);
 
@@ -94,13 +96,13 @@ static void ore_transmit(struct nic *nic, const char *d,
 extern int rx_drain_flag;
 static int ore_poll(struct nic *nic)
 {
-  l4ore_handle_t handle = my_state.handle;
+  int handle = my_state.handle;
   int ret, size = ETH_FRAME_LEN;
 
   LOGd_Enter(CONFIG_LOG_TRACE);
 
-  ret = l4ore_recv_nonblocking(handle, (char **)&nic->packet, &size);
-
+  ret = l4ore_recv_blocking(handle, (char **)&nic->packet, &size, my_state.recv_to);
+   
   if (ret == 0)
     {
       nic->packetlen = size;
@@ -139,6 +141,8 @@ static void ore_disable(struct dev* dev)
  * initializes our stub
  */
 
+char tftp_orename[16] = "ORe";
+
 int ore_probe(struct dev *dev, const char *type_name);
 int ore_probe(struct dev *dev, const char *type_name)
 {
@@ -147,6 +151,11 @@ int ore_probe(struct dev *dev, const char *type_name)
   int        err         = 0;
   static int initialized = PROBE_FAILED;
   l4ore_config ore_conf  = L4ORE_DEFAULT_CONFIG;
+  int exp, mant;
+
+#if 0
+  ore_conf.ro_keep_device_mac = 1;
+#endif
 
   LOGd_Enter(CONFIG_LOG_TRACE, "%s initialized",
               initialized == PROBE_WORKED ? "already" : "not yet");
@@ -154,7 +163,13 @@ int ore_probe(struct dev *dev, const char *type_name)
   if (initialized == PROBE_WORKED)
     return initialized;
 
-  err = l4ore_open("eth0", nic->node_addr, NULL, NULL, &ore_conf);
+  // accept broadcasts as we want to answer ARP requests
+  ore_conf.rw_broadcast = 1;
+  strncpy(ore_conf.ro_orename, tftp_orename, sizeof(tftp_orename));
+  tftp_orename[sizeof(tftp_orename)-1] = 0;
+  LOGd(CONFIG_LOG_TRACE, "Connecting to ORe instance %s", tftp_orename);
+  
+  err = l4ore_open("eth0", nic->node_addr, &ore_conf);
   if (err < 0)
     {
       LOGdl(CONFIG_LOG_WARN, "ore_open_string(): %s", l4env_strerror(-err));
@@ -162,8 +177,10 @@ int ore_probe(struct dev *dev, const char *type_name)
     }
 
   LOGdl(CONFIG_LOG_TRACE, "opened ORe channel: %d", err);
+  l4util_micros2l4to(500000, &mant, &exp);
   my_state.handle = err;
   memcpy(my_state.mac, nic->node_addr, 6);
+  my_state.recv_to = L4_IPC_TIMEOUT(0,0,mant,exp,0,0);
 
   initialized    = PROBE_WORKED;
   nic->priv_data = (void*)&my_state;

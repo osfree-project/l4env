@@ -18,7 +18,6 @@
 
 
 extern int mouse_x, mouse_y;      /* current mouse position */
-extern int userstate;             /* user interaction state */
 
 
 /*** INITIALIZE INPUT HANDLING ***/

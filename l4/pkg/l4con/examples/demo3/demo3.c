@@ -107,12 +107,13 @@ int draw_bird()
   ret = con_vc_pslim_bmap_call(&vc_l4id,
 			  &rect,
 			  black, cornflowerblue,
-			  (char*)cscs_bmap, 275, 
+			  cscs_bmap, 275, 
 			  pSLIM_BMAP_START_MSB, &_env);
-  if (ret || _env.major != CORBA_NO_EXCEPTION)
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       ret2ecodestr(ret, buffer);
-      printf("Error \"%s\" doing pslim_bmap (exc=%d)\n", buffer, _env.major);
+      printf("Error \"%s\" doing pslim_bmap (exc=%d)\n", buffer, 
+	  DICE_EXCEPTION_MAJOR(&_env));
       return -1;
     }
 
@@ -124,17 +125,18 @@ int draw_bird()
 
   ret = con_vc_pslim_cscs_call(&vc_l4id,
 			  &rect, 
-			  (char*)my_yuv, 128*128,
-			  (char*)(my_yuv + 128*128), 128*128/4, 
-			  (char*)(my_yuv + 128*128 + 128*128/4), 128*128/4, 
+			  (l4_uint8_t*)my_yuv, 128*128,
+			  (l4_uint8_t*)(my_yuv + 128*128), 128*128/4, 
+			  (l4_uint8_t*)(my_yuv + 128*128 + 128*128/4), 128*128/4, 
 	  		  pSLIM_CSCS_PLN_YV12,
   			  1, 
 			  &_env);
 
-  if (ret || _env.major != CORBA_NO_EXCEPTION)
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       ret2ecodestr(ret, buffer);
-      printf("Error \"%s\" doing pslim_cscs (exc=%d)\n", buffer, _env.major);
+      printf("Error \"%s\" doing pslim_cscs (exc=%d)\n", buffer, 
+	  DICE_EXCEPTION_MAJOR(&_env));
       return -1;
     }
 
@@ -162,7 +164,7 @@ int dismember_bird()
 
   ret = con_vc_pslim_bmap_call(&vc_l4id,
 			  &rect, black, lightsteelblue,
-			  (char*)copy_bmap, 275, 
+			  copy_bmap, 275, 
 		  	  pSLIM_BMAP_START_MSB, 
 	  		  &_env);
   if (ret) 

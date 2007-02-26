@@ -4,14 +4,22 @@
 // more specialized memory allocation/deallocation functions follow
 // below in the "Kmem" namespace
 
-INTERFACE [ia32,ux]:
+INTERFACE [ia32,amd64,ux]:
 
+#include "globalconfig.h"
 #include "initcalls.h"
 #include "kern_types.h"
 #include "kip.h"
 #include "mem_layout.h"
 
+#ifdef CONFIG_IA32
 class Pdir;
+#endif
+
+#ifdef CONFIG_AMD64
+class Pml4;
+#endif
+
 class Tss;
 
 /**
@@ -34,17 +42,17 @@ private:
   static Address mem_max, _himem;
 
 public:
-  enum 
+  enum
   {
     mem_tcbs     = Mem_layout::Tcbs,
     mem_user_max = Mem_layout::User_max,
   };
 
   static void init();
-  static Mword is_kmem_page_fault(Mword pfa, Mword error);
-  static Mword is_ipc_page_fault(Mword pfa, Mword error);
-  static Mword is_smas_page_fault(Mword pfa);
-  static Mword is_io_bitmap_page_fault(Mword pfa);
+  static Mword is_kmem_page_fault(Address pfa, Mword error);
+  static Mword is_ipc_page_fault(Address pfa, Mword error);
+  static Mword is_smas_page_fault(Address pfa);
+  static Mword is_io_bitmap_page_fault(Address pfa);
   static Address kcode_start();
   static Address kcode_end();
   static Address kmem_base();
@@ -53,9 +61,8 @@ public:
 
 typedef Kmem Kmem_space;
 
-IMPLEMENTATION [ia32,ux]:
+IMPLEMENTATION [ia32,ux,amd64]:
 
-#include <cstdio>
 #include <cstdlib>
 #include <cstddef>		// size_t
 #include <cstring>		// memset
@@ -72,39 +79,21 @@ IMPLEMENTATION [ia32,ux]:
 
 // static class variables
 Address       Kmem::mem_max, Kmem::_himem;
-Pdir         *Kmem::kdir;
 
-PUBLIC static inline                                              
+PUBLIC static inline
 Mword
-Kmem::is_tcb_page_fault( Address addr, Mword /*error*/ )
+Kmem::is_tcb_page_fault (Address addr, Mword)
 {
-  return (   addr >= Mem_layout::Tcbs
-	  && addr <  Mem_layout::Tcbs
-		     + (Config::thread_block_size 
-			* Config::max_threads()) );
-}
+  // Depending on the ABI we may not use the entire range for TCBs (e.g. X0)
+  // XXX should be a static compile-time assertion
+  assert (Mem_layout::Tcbs_end - Mem_layout::Tcbs 
+	  >= Config::thread_block_size * Mem_layout::max_threads());
 
-/**
- * Return Global page directory.
- * This is the master copy of the kernel's page directory. Kernel-memory
- * allocations are kept here and copied to task page directories lazily
- * upon page fault.
- * @return kernel's global page directory
- */
-PUBLIC static inline const Pdir* Kmem::dir() { return kdir; }
+  return (addr >= Mem_layout::Tcbs && addr < Mem_layout::Tcbs_end);
+}
 
 PUBLIC static inline Address Kmem::get_mem_max() { return mem_max; }
 PUBLIC static inline Address Kmem::himem() { return _himem; }
-
-/**
- * Get a pointer to the CPUs kernel stack pointer
- */
-PUBLIC static inline NEEDS ["cpu.h", "tss.h"]
-Address volatile *
-Kmem::kernel_esp()
-{
-  return reinterpret_cast<Address volatile *>(&Cpu::get_tss()->esp0);
-}
 
 /**
  * Compute a kernel-virtual address for a physical address.
@@ -132,7 +121,7 @@ Kmem::alloc_from_page(Address *from, Address size)
   return ret;
 }
 
-PRIVATE static FIASCO_INIT
+PRIVATE static
 Address
 Kmem::himem_alloc()
 {
@@ -140,5 +129,53 @@ Kmem::himem_alloc()
   memset (Kmem::phys_to_virt (_himem), 0, Config::PAGE_SIZE);
 
   return _himem;
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ia32,ux]:
+
+Pdir         *Kmem::kdir;
+
+/**
+ * Return Global page directory.
+ * This is the master copy of the kernel's page directory. Kernel-memory
+ * allocations are kept here and copied to task page directories lazily
+ * upon page fault.
+ * @return kernel's global page directory
+ */
+PUBLIC static inline const Pdir* Kmem::dir() { return kdir; }
+
+/**
+ * Get a pointer to the CPUs kernel stack pointer
+ */
+PUBLIC static inline NEEDS ["cpu.h", "tss.h"]
+Address volatile *
+Kmem::kernel_sp()
+{
+  return reinterpret_cast<Address volatile * const>(&Cpu::get_tss()->_esp0);
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[amd64]:
+
+Pml4         *Kmem::kdir;
+
+/**
+ * Return Global page directory.
+ * This is the master copy of the kernel's page directory. Kernel-memory
+ * allocations are kept here and copied to task page directories lazily
+ * upon page fault.
+ * @return kernel's global page directory
+ */
+PUBLIC static inline Pml4* Kmem::dir() { return kdir; }
+
+/**
+ * Get a pointer to the CPUs kernel stack pointer
+ */
+PUBLIC static inline NEEDS ["cpu.h", "tss.h"]
+Address volatile * const
+Kmem::kernel_sp()
+{
+  return reinterpret_cast<Address volatile * const>(&Cpu::get_tss()->_rsp0);
 }
 

@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/drivers/output_con.cc
+ * \brief  L4con framebuffer driver for Qt/Embedded.
+ *
+ * \date   10/24/2004
+ * \author Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2006 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 /*** L4-SPECIFIC INCLUDES ***/
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>

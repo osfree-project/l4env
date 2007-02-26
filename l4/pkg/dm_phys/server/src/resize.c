@@ -35,15 +35,15 @@
 /*****************************************************************************/
 /**
  * \brief Resize
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  new_size      New dataspace size
- *	
+ *
  * \return 0 on success (resized dataspace), error code otherwise:
  *         - -#L4_EINVAL  invalid dataspace
  *         - -#L4_ENOMEM  memory area not available
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __resize(dmphys_dataspace_t * ds, l4_size_t new_size)
 {
@@ -88,7 +88,7 @@ __resize(dmphys_dataspace_t * ds, l4_size_t new_size)
 	      ret = dmphys_pages_enlarge(pool, pages, add, PAGES_USER);
 	      if (ret < 0)
 		{
-		  LOGdL(DEBUG_ERRORS, 
+		  LOGdL(DEBUG_ERRORS,
                         "DMphys: enlarge page area list failed: %d!", ret);
 		  return ret;
 		}
@@ -183,16 +183,17 @@ dmphys_resize(dmphys_dataspace_t * ds, l4_size_t new_size)
  *         - -#L4_EPERM   caller is not allowed to resize the dataspace
  *         - -#L4_ENOMEM  memory area not available
  */
-/*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
-                             l4_uint32_t ds_id, l4_uint32_t new_size,
-                             CORBA_Server_Environment *_dice_corba_env)
+/*****************************************************************************/
+long
+if_l4dm_mem_resize_component (CORBA_Object _dice_corba_obj,
+                              unsigned long ds_id,
+                              unsigned long new_size,
+                              CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  
-  LOGdL(DEBUG_RESIZE, "ds %u, caller "l4util_idfmt,
+
+  LOGdL(DEBUG_RESIZE, "ds %lu, caller "l4util_idfmt,
         ds_id, l4util_idstr(*_dice_corba_obj));
 
   /* get dataspace descriptor, check if caller owns the dataspace */
@@ -201,12 +202,12 @@ if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: client "l4util_idfmt" is not allowed to resize ds %u",
+	LOGL("DMphys: client "l4util_idfmt" is not allowed to resize ds %lu",
              l4util_idstr(*_dice_corba_obj), ds_id);
-#endif      
+#endif
       return ret;
     }
 

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEMarshalFunction.h
- *    \brief   contains the declaration of the class CL4BEMarshalFunction
+ *  \brief   contains the declaration of the class CL4BEMarshalFunction
  *
  *    \date    10/10/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -33,33 +33,34 @@
 
 #include <be/BEMarshalFunction.h>
 
-/**    \class CL4BEMarshalFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CL4BEMarshalFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end operation
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
 class CL4BEMarshalFunction : public CBEMarshalFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CL4BEMarshalFunction();
-    virtual ~CL4BEMarshalFunction();
+    ~CL4BEMarshalFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CL4BEMarshalFunction(CL4BEMarshalFunction &src);
 
 public:
-    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
 
 protected:
-    virtual bool HasVariableSizedParameters(int nDirection = DIRECTION_IN | DIRECTION_OUT);
-    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
-    virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual bool HasVariableSizedParameters(
+	int nDirection = DIRECTION_IN | DIRECTION_OUT);
+    virtual void WriteMarshalling(CBEFile* pFile);
 };
 
 #endif

@@ -32,13 +32,14 @@ private:
   slab *_first_slab, *_first_available_slab, *_last_slab;
   unsigned long _slab_size;
   unsigned _elem_size, _latest_offset, _alignment;
+  char const *_name;
 };				// end declaration of class slab_cache
 
 IMPLEMENTATION:
 
-#include <stddef.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdlib>
 
 #ifndef offsetof                // should be defined in stddef.h, but isn't
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -209,6 +210,13 @@ slab::is_full()
 }
 
 PUBLIC
+inline unsigned
+slab::in_use()
+{
+  return _data._in_use;
+}
+
+PUBLIC
 void
 slab::enqueue(slab *prev)
 {
@@ -259,13 +267,15 @@ slab::operator new(size_t,
 // 
 // slab_cache_anon
 // 
-PUBLIC
+PUBLIC inline
 slab_cache_anon::slab_cache_anon(unsigned long slab_size, 
 				 unsigned elem_size, 
-				 unsigned alignment)
+				 unsigned alignment,
+				 char const * name)
   : _first_slab(0), _first_available_slab(0), _last_slab(0),
     _slab_size(slab_size), _elem_size(elem_size), 
-    _latest_offset(0), _alignment(alignment)
+    _latest_offset(0), _alignment(alignment),
+    _name (name)
 {
 }
 
@@ -347,7 +357,7 @@ slab_cache_anon::free(void *cache_entry) // return initialized member to cache
 
   if (was_full)
     {
-      if (s->next() == 0)	// have no right neighbot?
+      if (s->next() == 0)	// have no right neighbor?
 	{
 	  assert(! _first_available_slab);
 	}
@@ -415,7 +425,7 @@ slab_cache_anon::free(void *cache_entry) // return initialized member to cache
 }
 
 PUBLIC
-virtual bool 
+virtual unsigned long 
 slab_cache_anon::reap()		// request that cache returns memory to system
 {
   if (! _first_slab)
@@ -424,7 +434,7 @@ slab_cache_anon::reap()		// request that cache returns memory to system
   // never delete first slab, even if it is empty
   if (_last_slab == _first_slab
       || (! _last_slab->is_empty()))
-    return false;
+    return 0;
 
   slab *s = _last_slab;
 
@@ -432,12 +442,13 @@ slab_cache_anon::reap()		// request that cache returns memory to system
     _first_available_slab = 0;
 
   _last_slab = s->prev();
+  s->dequeue();
 
   // explicitly call destructor to delete s;
   s->~slab();
   block_free(s, _slab_size);
 
-  return true;
+  return _slab_size;
 }
 
 // Element initialization/destruction
@@ -450,3 +461,70 @@ PROTECTED
 virtual void 
 slab_cache_anon::elem_dtor(void *)
 {}
+
+// Debugging output
+
+#include <cstdio>
+
+PUBLIC 
+virtual void
+slab_cache_anon::debug_dump ()
+{
+  printf ("%s: %lu-KB slabs (",
+	  _name, _slab_size / 1024);
+
+  unsigned count, total = 0, total_elems = 0;
+  slab* s = _first_slab;
+
+  for (count = 0;
+       s && s->is_full();
+       s = s->next())
+    {
+      count++;
+      total_elems += s->in_use();
+    }
+
+  total += count;
+
+  printf ("%u full, ", count);
+
+  for (count = 0;
+       s && ! s->is_empty();
+       s = s->next())
+    {
+      if (s->is_full())
+	printf ("\n*** wrongly-enqueued full slab found\n");
+      count++;
+      total_elems += s->in_use();
+    }
+
+  total += count;
+
+  printf ("%u used, ", count);
+
+  for (count = 0;
+       s;
+       s = s->next())
+    {
+      if (! s->is_empty())
+	printf ("\n*** wrongly-enqueued nonempty slab found\n");
+      count++;
+      total_elems += s->in_use();
+    }
+
+  unsigned total_used = total;
+  total += count;
+
+  printf ("%u empty = %u total) = %lu KB,\n  %u elems (size=%u, align=%u)",
+	  count, total, total * _slab_size / 1024, 
+	  total_elems, _elem_size, _alignment);
+
+  if (total_elems)
+    printf (", overhead = %lu B (%lu B)  = %lu%% (%lu%%) \n", 
+	    total * _slab_size - total_elems * _elem_size,
+	    total_used * _slab_size - total_elems * _elem_size,
+	    100 - total_elems * _elem_size * 100 / (total * _slab_size),
+	    100 - total_elems * _elem_size * 100 / (total_used * _slab_size));
+  else
+    printf ("\n");
+}

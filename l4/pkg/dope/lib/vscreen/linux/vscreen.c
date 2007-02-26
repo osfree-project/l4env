@@ -112,7 +112,9 @@ int vscr_free_fb(void *fb_adr) {
 }
 
 
-void vscr_server_waitsync(void *id) {}
+void vscr_server_waitsync(void *id) {
+	usleep(40*1000);
+}
 
 void vscr_server_refresh(void *id, int x, int y, int w, int h) { }
 

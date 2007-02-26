@@ -35,35 +35,36 @@ then
   exit 1
 fi
 
-if [ -n "$USE_ROOTTASK" ];
-then
-  ROOTTASK=roottask
-else
-  ROOTTASK=rmgr-ux
-fi
+ROOTTASK=roottask
 
 if [ -n "$USE_SYMBOLS" ];
 then
-  SYMBOLS_ARG="-symbols ${FIASCODIR}/Symbols"
-  RMGR_ARGS="-symbols"
+  SYMBOLS_ARG="--symbols ${FIASCODIR}/Symbols"
+  ROOTTASK_ARGS="-symbols"
 fi
 
 if [ -n "$USE_LINES" ];
 then
-  LINES_ARG="-lines ${FIASCODIR}/Lines"
-  RMGR_ARGS="$RMGR_ARGS -lines"
+  LINES_ARG="--lines ${FIASCODIR}/Lines"
+  ROOTTASK_ARGS="$ROOTTASK_ARGS -lines"
 fi
 
-if [ ! -e "$L4PATH/$ROOTTASK" -o ! -e "$L4PATH/sigma0-ux" ];
+if [ ! -e "$L4PATH/sigma0" ];
 then
-  echo "Your L4PATH $L4PATH"
-  echo "doesn't look like an L4 binary directory, it's missing at least"
-  echo "sigma0-ux!"
+  echo "Your L4PATH $L4PATH is missing sigma0!"
+  exit 1
+fi
+
+if [ ! -e "$L4PATH/$ROOTTASK"  ];
+then
+  echo "Your L4PATH $L4PATH is missing $ROOTTASK!"
   exit 1
 fi
 
 [ -n "$UXMEM" ] && FIASCO="$FIASCO -m $UXMEM"
 [ -n "$UXRES" ] || UXRES="800x600@16"
+
+[ -n "$JDB_CMDS" ] && FIASCO="$FIASCO -j $JDB_CMDS"
 
 fiasco() {
   while [ -n "$1" ]; do
@@ -90,13 +91,16 @@ fiasco() {
     shift
   done
 
+  [ -n "$ENABLE_NET" ] && NET=(-net -net_program ${FIASCODIR}/ux_net)
+
   echo $FIASCODIR/$FIASCO				\
     $SYMBOLS_ARG					\
     $LINES_ARG						\
-    -rmgr       ${L4PATH}/$ROOTTASK" $RMGR_ARGS" 	\
-    -sigma0     ${L4PATH}/sigma0-ux 			\
-    -fb_program ${FIASCODIR}/ux_con			\
-    -irq0	${FIASCODIR}/irq0			\
+    -R           ${L4PATH}/$ROOTTASK" $ROOTTASK_ARGS" 	\
+    --sigma0     ${L4PATH}/sigma0 			\
+    --fb_program ${FIASCODIR}/ux_con			\
+    "${NET[@]}"						\
+    --irq0       ${FIASCODIR}/irq0			\
     "${P[@]}"
 
   [ -n "$RUN_GDB" ] && gdb_wrap="gdb $GDB_ARGS --args"
@@ -104,10 +108,11 @@ fiasco() {
   $gdb_wrap $FIASCODIR/$FIASCO				\
     $SYMBOLS_ARG					\
     $LINES_ARG						\
-    -rmgr       ${L4PATH}/$ROOTTASK" $RMGR_ARGS" 	\
-    -sigma0     ${L4PATH}/sigma0-ux 			\
-    -fb_program ${FIASCODIR}/ux_con			\
-    -irq0	${FIASCODIR}/irq0			\
+    -R           ${L4PATH}/$ROOTTASK" $ROOTTASK_ARGS" 	\
+    --sigma0     ${L4PATH}/sigma0 			\
+    --fb_program ${FIASCODIR}/ux_con			\
+    "${NET[@]}"						\
+    --irq0       ${FIASCODIR}/irq0			\
     "${P[@]}"
 }
 

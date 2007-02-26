@@ -49,6 +49,10 @@ endef
 objects = $(addsuffix .o, $(foreach mod, $(1), \
 				$(if $($(mod)_IMPL), $($(mod)_IMPL), $(mod))))
 
+ifdef BUILD_SOURCES
+
+do-all: .Unittest.deps
+
 .Unittest.deps: $(MODULES_FILE)
 	@echo "Generating $@"
 	$(VERBOSE)( $(foreach test, $(ALL_TESTS),			      \
@@ -62,7 +66,11 @@ objects = $(addsuffix .o, $(foreach mod, $(1), \
 					   $$(INTERFACES_KERNEL))))';)        \
 	)  > $@.new
 	mv $@.new $@
--include .Unittest.deps
+endif
+
+ifdef BUILD_OBJECTS
+include .Unittest.deps
+endif
 
 # List of subsystems on which KERNEL depends 
 $(ALL_TESTS): $(ABI) $(JABI) $(DRIVERS) $(LIBK) $(LIBAMM) $(CXXLIB)

@@ -1,5 +1,5 @@
 #include <l4/sys/kdebug.h>
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/reboot.h>
 
 #include <string.h>
@@ -12,9 +12,11 @@ l4util_reboot(void)
   l4_kernel_info_t *kip;
 
   /* First try UX which always is "rebooted" via JDB */
-  if ((kip = l4util_kip_map()))
+  if ((kip = l4sigma0_kip_map(L4_INVALID_ID)))
     {
-      if (strstr(l4util_kip_version_string(), "(ux)"))
+      const char *vstr = l4sigma0_kip_version_string();
+
+      if (vstr && strstr(vstr, "(ux)"))
 	{
 	  enter_kdebug("*#^");          /* Always available */
 

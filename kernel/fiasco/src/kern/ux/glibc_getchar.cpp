@@ -1,11 +1,11 @@
 IMPLEMENTATION:
 
+#include <cstdio>
 #include "console.h"
 #include "filter_console.h"
 #include "glibc_getchar.h"
 #include "kernel_console.h"
 #include "static_init.h"
-#include "stdio.h"
 
 class Glibc_getchar : public Console
 {};

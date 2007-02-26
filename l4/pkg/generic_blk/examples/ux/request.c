@@ -67,7 +67,7 @@ static unsigned long disk_size;              // disk size (blocks)
 /*****************************************************************************/
 /**
  * \brief  Copy to/from dataspaces
- * 
+ *
  * \param  buf           Local buffer
  * \param  ds_buf        Dataspace buffer descriptors
  * \param  num           Number of elements in ds_buf
@@ -75,29 +75,29 @@ static unsigned long disk_size;              // disk size (blocks)
  *                       - #COPY_TO    copy data to dataspace buffers
  *                       - #COPY_FROM  copy data from dataspace buffers
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __copy_buffer(void * buf, blksrv_buffer_t * ds_buf, int num, int direction)
 {
   int i;
   void * p;
-  
+
   p = buf;
   for (i = 0; i < num; i++)
     {
       if (direction == COPY_TO)
         {
           LOGdL(DEBUG_COPY, "copy to client buffer, " \
-                "0x%08x -> 0x%08x (%u bytes)", (l4_addr_t)p, 
+                "0x%08lx -> 0x%08lx (%lu bytes)", (l4_addr_t)p,
                 (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)ds_buf[i].size);
           memcpy(ds_buf[i].map_addr, p, ds_buf[i].size);
         }
       else
         {
           LOGdL(DEBUG_COPY, "copy from client buffer, " \
-                "0x%08x -> 0x%08x (%u bytes)",
-                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)p, 
-		(l4_addr_t)ds_buf[i].size); 
+                "0x%08lx -> 0x%08lx (%lu bytes)",
+                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)p,
+		(l4_addr_t)ds_buf[i].size);
           memcpy(p, ds_buf[i].map_addr, ds_buf[i].size);
         }
 
@@ -107,11 +107,11 @@ __copy_buffer(void * buf, blksrv_buffer_t * ds_buf, int num, int direction)
 
 /*****************************************************************************/
 /**
- * \brief  Execute request 
- * 
+ * \brief  Execute request
+ *
  * \param  request       Request descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __do_request(blksrv_request_t * request)
 {
@@ -130,7 +130,7 @@ __do_request(blksrv_request_t * request)
       LOG_Error("access beyond end of device, block %u, %u blocks, " \
                 "disk size %lu", request->req.block, request->req.count,
                 disk_size);
-      blksrv_do_notification(request->driver, request->req.req_handle, 
+      blksrv_do_notification(request->driver, request->req.req_handle,
                              L4BLK_ERROR, -L4_EINVAL);
       return;
     }
@@ -144,7 +144,7 @@ __do_request(blksrv_request_t * request)
   if (buf == NULL)
     {
       LOG_Error("buffer allocation failed");
-      blksrv_do_notification(request->driver, request->req.req_handle, 
+      blksrv_do_notification(request->driver, request->req.req_handle,
                              L4BLK_ERROR, -L4_ENOMEM);
       return;
     }
@@ -190,7 +190,7 @@ __do_request(blksrv_request_t * request)
 
   /* unmap dataspace buffers */
   for (i = 0; i < request->num; i++)
-    l4rm_detach(request->bufs[i].map_addr);  
+    l4rm_detach(request->bufs[i].map_addr);
 
   //KDEBUG("request done.");
 
@@ -205,10 +205,10 @@ __do_request(blksrv_request_t * request)
 /*****************************************************************************/
 /**
  * \brief  Request handling thread
- * 
+ *
  * \param  data          Thread data
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __request_thread(void * data)
 {
@@ -233,16 +233,16 @@ __request_thread(void * data)
       goto startup_error;
     }
   else
-    LOGdL(DEBUG_OSKIT_STARTUP, "opened device file \'%s\' (%s)", 
+    LOGdL(DEBUG_OSKIT_STARTUP, "opened device file \'%s\' (%s)",
           device_name, (readwrite) ? "rw" : "ro");
-      
+
   /* get disk size */
   if ((ret = lx_fstat(blk_fd, &sbuf)) < 0)
     LOG_Error("get disk size failed: %x", ret);
   else
     disk_size = (unsigned long)(sbuf.st_size / L4BLK_BLKSIZE);
 
-  LOGdL(DEBUG_OSKIT_STARTUP, "disk size %lu MB, block size %d bytes", 
+  LOGdL(DEBUG_OSKIT_STARTUP, "disk size %lu MB, block size %d bytes",
         (unsigned long)(sbuf.st_size >> 20), L4BLK_BLKSIZE);
 
   /* request thread started */
@@ -265,7 +265,7 @@ __request_thread(void * data)
         LOG_Error("woke up but no request pending!?");
       else
         requests = req->next;
-                    
+
       l4lock_unlock(&request_lock);
 
       /* do request */
@@ -288,10 +288,10 @@ __request_thread(void * data)
 /*****************************************************************************/
 /**
  * \brief  Start request service thread
- *	
+ *
  * \return 0 if thread started successfully, errorcode otherwise
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 blksrv_start_request_thread(void)
 {
@@ -311,7 +311,7 @@ blksrv_start_request_thread(void)
       l4thread_shutdown(t);
       return retval;
     }
-  
+
   req_id = l4thread_l4_id(t);
 
   /* done */
@@ -321,17 +321,17 @@ blksrv_start_request_thread(void)
 /*****************************************************************************/
 /**
  * \brief  Enqueue new request
- * 
+ *
  * \param  driver        Driver descriptor
  * \param  request       Request descriptor
  * \param  sg_list       Scatter gather list
  * \param  sg_num        Number of elements in scatter gather list
- *	
+ *
  * \return 0 if successfully enqueued request, errorcode otherwise
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-blksrv_enqueue_request(blksrv_driver_t * driver, 
+blksrv_enqueue_request(blksrv_driver_t * driver,
                        const l4blk_blk_request_t * request,
                        const l4blk_sg_ds_elem_t * sg_list,
                        l4_int32_t sg_num)
@@ -359,20 +359,20 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
   for (i = 0; i < sg_num; i++)
     {
       /* attach dataspace */
-      retval = l4rm_attach((l4dm_dataspace_t *)&sg_list[i].ds, sg_list[i].size, 
-                           sg_list[i].offs, L4DM_RW | L4RM_MAP, 
+      retval = l4rm_attach((l4dm_dataspace_t *)&sg_list[i].ds, sg_list[i].size,
+                           sg_list[i].offs, L4DM_RW | L4RM_MAP,
                            &req->bufs[i].map_addr);
       if (retval < 0)
         {
-          LOG_Error("attach buffer ds failed: %s (%d)", 
+          LOG_Error("attach buffer ds failed: %s (%d)",
                     l4env_errstr(retval), retval);
           for (j = 0; j < i - 1; j++)
             l4rm_detach(req->bufs[j].map_addr);
 
           goto error_bufs;
         }
-      
-      /* we must give the request thread access rights to the dataspace, 
+
+      /* we must give the request thread access rights to the dataspace,
        * it detaches the dataspace */
       retval = l4dm_share((l4dm_dataspace_t *)&sg_list[i].ds, req_id, L4DM_RW);
       if (retval < 0)
@@ -388,8 +388,8 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
       req->bufs[i].ds = sg_list[i].ds;
       req->bufs[i].size = sg_list[i].size;
 
-      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "l4util_idfmt" to %p, size %u", 
-            sg_list[i].ds.id, l4util_idstr(sg_list[i].ds.manager), 
+      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "l4util_idfmt" to %p, size %u",
+            sg_list[i].ds.id, l4util_idstr(sg_list[i].ds.manager),
             req->bufs[i].map_addr, req->bufs[i].size);
     }
 
@@ -429,10 +429,10 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
 /*****************************************************************************/
 /**
  * \brief  Set device name
- * 
+ *
  * \param  device        Device name
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 blksrv_dev_set_device(const char * device)
 {
@@ -444,7 +444,7 @@ blksrv_dev_set_device(const char * device)
 /**
  * \brief  Open device read/write
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 blksrv_dev_read_write(void)
 {
@@ -455,7 +455,7 @@ blksrv_dev_read_write(void)
 /**
  * \brief  Return number of disks
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 blksrv_dev_num(void)
 {
@@ -465,10 +465,10 @@ blksrv_dev_num(void)
 /*****************************************************************************/
 /**
  * \brief  Return disk size
- *	
+ *
  * \return Disk size
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 unsigned long
 blksrv_dev_size(void)
 {

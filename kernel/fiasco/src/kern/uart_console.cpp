@@ -26,6 +26,9 @@ static void uart_console_init_stage1()
 
 static void uart_console_init_stage2()
 {
+  if ((Kernel_uart::uart()->failed()))
+    return;
+
   int irq = -1;
   if (Config::serial_esc == Config::SERIAL_ESC_IRQ
       && (irq = Kernel_uart::uart()->irq()) == -1)

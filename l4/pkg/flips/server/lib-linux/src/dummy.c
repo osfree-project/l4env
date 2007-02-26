@@ -338,6 +338,18 @@ int kill_pg(pid_t pgrp, int sig, int priv)
 
 struct tasklet_struct bh_task_vec[32];
 
+/*** replacement for init/version.c, required by net/ipv4/ipconfig.c ***/ 
+#include <linux/uts.h>
+#include <linux/utsname.h>
+#include <linux/version.h>
+
+#define UTS_VERSION __DATE__ __TIME__
+
+struct new_utsname system_utsname = { UTS_SYSNAME, UTS_NODENAME, UTS_RELEASE, UTS_VERSION,
+	        UTS_MACHINE, UTS_DOMAINNAME
+};
+
+
 /*** lib/vsprintf.c ***/
 
 #include <stdlib.h>

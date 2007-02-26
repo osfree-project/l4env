@@ -32,12 +32,12 @@ int l4vfs_attach_namespace(l4_threadid_t server,
                                                  mounted_dir, mount_dir,
                                                  &_dice_corba_env);
 
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Attach failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_EXCEPTION_MAJOR(&_dice_corba_env) == CORBA_SYSTEM_EXCEPTION)
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
                 case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                     LOG("Server did not recognize the opcode");
@@ -47,7 +47,7 @@ int l4vfs_attach_namespace(l4_threadid_t server,
                     return 2;
                 default:
                     LOG("some other error found: %d", 
-                            _dice_corba_env.repos_id );
+                            DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                     return 3;
             }
         }
@@ -66,12 +66,12 @@ int l4vfs_detach_namespace(l4_threadid_t server,
     ret = l4vfs_extendable_detach_namespace_call(&server, mount_dir,
                                                  &_dice_corba_env);
 
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Detach failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_EXCEPTION_MAJOR(&_dice_corba_env) == CORBA_SYSTEM_EXCEPTION)
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
                 case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                     LOG("Server did not recognize the opcode");
@@ -81,7 +81,7 @@ int l4vfs_detach_namespace(l4_threadid_t server,
                     return 2;
                 default:
                     LOG("some other error found: %d", 
-                            _dice_corba_env.repos_id );
+                            DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                     return 3;
             }
         }

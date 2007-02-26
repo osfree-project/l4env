@@ -23,6 +23,7 @@
 #include "dm_phys-server.h"
 #include "__dataspace.h"
 #include "__debug.h"
+#include "__dm_phys.h"
 
 /*****************************************************************************
  *** DMphys IDL server functions
@@ -43,31 +44,31 @@
  *                        transfer the ownership.
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_transfer_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id,
-                                   const l4_threadid_t *new_owner,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_transfer_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    const l4_threadid_t *new_owner,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
 
-  LOGdL(DEBUG_TRANSFER, "ds %u, caller "l4util_idfmt", new owner "l4util_idfmt,
+  LOGdL(DEBUG_TRANSFER, "ds %lu, caller "l4util_idfmt", new owner "l4util_idfmt,
         ds_id, l4util_idstr(*_dice_corba_obj), l4util_idstr(*new_owner));
-  
+
   /* get dataspace descriptor, check if caller owns the dataspace */
   ret = dmphys_ds_get_check_owner(ds_id, *_dice_corba_obj, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id,id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id,id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
 	LOGL("DMphys: caller is not the current owner "
-	      "(ds %u, caller "l4util_idfmt")!",
+	      "(ds %lu, caller "l4util_idfmt")!",
              ds_id, l4util_idstr(*_dice_corba_obj));
-#endif	
+#endif
       return ret;
     }
 

@@ -35,7 +35,7 @@
  ************************/
 
 #include <stdio.h>
-#include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 
 
@@ -134,16 +134,16 @@
 
 
 /*** DRAW A TEXT WITH AN OUTLINE ***/
-#define DRAW_LABEL(dst_adr, x, y, bgcol, fgcol, text) {             \
-	gfx->draw_string(dst_adr, x - 1, y, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x + 1, y, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x - 1, y - 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x + 1, y - 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x - 1, y + 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x + 1, y + 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x, y - 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x, y + 1, default_font, bgcol, text); \
-	gfx->draw_string(dst_adr, x, y,     default_font, fgcol, text); \
+#define DRAW_LABEL(dst_adr, dst_llen, x, y, bgcol, fgcol, text) { \
+	gfx->draw_string(dst_adr, dst_llen, x - 1, y, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x + 1, y, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x - 1, y - 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x + 1, y - 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x - 1, y + 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x + 1, y + 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x, y - 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x, y + 1, default_font, bgcol, text); \
+	gfx->draw_string(dst_adr, dst_llen, x, y,     default_font, fgcol, text); \
 }
 
 

@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   env/include/l4/env/env.h
+ * \file   l4env/include/ARCH-x86/env.h
  * \brief  L4 Environment public interface
  * \ingroup env
  *
@@ -186,16 +186,16 @@ l4env_request_service(l4_uint32_t key,
  *
  * \param  key           config key
  * \retval cfg           configuration value
- *	
- * \return 0 on success (\a cfg contains the confguratiuo value), 
+ *
+ * \return 0 on success (\a cfg contains the confguration value),
  *         error code otherwise:
  *         - -L4_EINVAL   invalid key
  *         - -L4_ENODATA  value not set
  */
-/*****************************************************************************/ 
-int 
-l4env_request_config_u32(l4_uint32_t key, 
-			 l4_uint32_t * cfg);
+/*****************************************************************************/
+int
+l4env_request_config_u32(l4_uint32_t key,
+			 l4_addr_t * cfg);
 
 /*****************************************************************************/
 /**

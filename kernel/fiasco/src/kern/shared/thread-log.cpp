@@ -3,7 +3,6 @@ IMPLEMENTATION [log]:
 #include <alloca.h>
 #include <cstring>
 #include "config.h"
-#include "idt.h"
 #include "jdb_trace.h"
 #include "jdb_tbuf.h"
 #include "types.h"
@@ -17,7 +16,7 @@ Thread::log_page_fault()
 }
 
 /** IPC logging.
-    called from interrupt gate. 
+    called from interrupt gate.
  */
 PUBLIC inline NOEXPORT ALWAYS_INLINE
 void
@@ -54,7 +53,7 @@ Thread::sys_ipc_log()
 
       if (EXPECT_TRUE(Jdb_ipc_trace::log_buf()))
 	Jdb_tbuf::commit_entry();
-      else 
+      else
 	Jdb_tbuf::direct_log_entry(tb, "IPC");
     }
 
@@ -65,7 +64,7 @@ skip_ipc_log:
 
   if (Jdb_nextper_trace::log() && is_next_period)
     {
-      Tb_entry_ipc_res *tb = 
+      Tb_entry_ipc_res *tb =
 	    static_cast<Tb_entry_ipc_res*>(Jdb_tbuf::new_entry());
       tb->set(this, regs->ip(), ipc_regs, ipc_regs->snd_desc().raw(),
 	      entry_event_num, have_snd, is_next_period);
@@ -110,7 +109,7 @@ Thread::sys_ipc_trace()
   ipc_short_cut_wrapper();
 
   // kernel is locked here => no Lock_guard <...> needed
-  Tb_entry_ipc_trace *tb = 
+  Tb_entry_ipc_trace *tb =
     static_cast<Tb_entry_ipc_trace*>(Jdb_tbuf::new_entry());
 
   tb->set(this, ef->ip(), orig_tsc, snd_dst, regs->rcv_src(), snd_desc.raw(),
@@ -126,17 +125,17 @@ Thread::sys_ipc_trace()
 
 /** Page-fault logging.
  */
-void 
-Thread::page_fault_log(Address pfa, unsigned error_code, unsigned eip)
+void
+Thread::page_fault_log(Address pfa, unsigned error_code, unsigned long eip)
 {
   if (Jdb_pf_trace::check_restriction(current_thread()->id(), pfa))
     {
       Lock_guard <Cpu_lock> guard (&cpu_lock);
-      
+
       Tb_entry_pf *tb = static_cast<Tb_entry_pf*>
 	(EXPECT_TRUE(Jdb_pf_trace::log_buf()) ? Jdb_tbuf::new_entry()
 				    : alloca(sizeof(Tb_entry_pf)));
-      tb->set(this, eip, pfa, error_code, current_space());
+      tb->set(this, eip, pfa, error_code, current()->space());
 
       if (EXPECT_TRUE(Jdb_pf_trace::log_buf()))
 	Jdb_tbuf::commit_entry();
@@ -154,13 +153,14 @@ Thread::sys_fpage_unmap_log()
   Entry_frame *ef       = reinterpret_cast<Entry_frame*>(this->regs());
   Sys_unmap_frame *regs = reinterpret_cast<Sys_unmap_frame*>(this->regs());
 
-  if (Jdb_unmap_trace::check_restriction(current_thread()->id(), 
-				 regs->fpage().raw() & Config::PAGE_MASK))
+  if (Jdb_unmap_trace::log()
+      && Jdb_unmap_trace::check_restriction(current_thread()->id(),
+                                            regs->fpage().raw() & Config::PAGE_MASK))
     {
       Lock_guard <Cpu_lock> guard (&cpu_lock);
-      
+
       Tb_entry_unmap *tb = static_cast<Tb_entry_unmap*>
-	(EXPECT_TRUE(Jdb_unmap_trace::log_buf()) ? Jdb_tbuf::new_entry() 
+	(EXPECT_TRUE(Jdb_unmap_trace::log_buf()) ? Jdb_tbuf::new_entry()
 					     : alloca(sizeof(Tb_entry_unmap)));
       tb->set(this, ef->ip(), regs->fpage().raw(), regs->map_mask(), false);
 

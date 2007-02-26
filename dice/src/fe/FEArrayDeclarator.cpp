@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEArrayDeclarator.cpp
- *    \brief   contains the implementation of the class CFEArrayDeclarator
+ *  \brief   contains the implementation of the class CFEArrayDeclarator
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -78,8 +78,8 @@ CFEArrayDeclarator::~CFEArrayDeclarator()
 }
 
 /** retrieves a lower bound
- *    \param nDimension the requested dimension
- *    \return the lower boudn of the requested dimension
+ *  \param nDimension the requested dimension
+ *  \return the lower boudn of the requested dimension
  * If the dimension is out of range 0 is returned.
  */
 CFEExpression *CFEArrayDeclarator::GetLowerBound(unsigned int nDimension)
@@ -93,8 +93,8 @@ CFEExpression *CFEArrayDeclarator::GetLowerBound(unsigned int nDimension)
 }
 
 /** retrieves a upper bound
- *    \param nDimension the requested dimension
- *    \return the upper bound of the requested dimension
+ *  \param nDimension the requested dimension
+ *  \return the upper bound of the requested dimension
  * If the dimension is out of range 0 is returned.
  */
 CFEExpression *CFEArrayDeclarator::GetUpperBound(unsigned int nDimension)
@@ -108,9 +108,9 @@ CFEExpression *CFEArrayDeclarator::GetUpperBound(unsigned int nDimension)
 }
 
 /** adds an array bound
- *    \param pLower the lower array bound
- *    \param pUpper the upper array bound
- *    \return the dimension these two bound have been added to (-1 if some error occured)
+ *  \param pLower the lower array bound
+ *  \param pUpper the upper array bound
+ *  \return the dimension these two bound have been added to (-1 if some error occured)
  */
 int CFEArrayDeclarator::AddBounds(CFEExpression * pLower, CFEExpression * pUpper)
 {
@@ -132,7 +132,7 @@ int CFEArrayDeclarator::AddBounds(CFEExpression * pLower, CFEExpression * pUpper
 }
 
 /** retrieves the maximal dimension
- *    \return the size f the bounds collection
+ *  \return the size f the bounds collection
  */
 unsigned int CFEArrayDeclarator::GetDimensionCount()
 {
@@ -142,7 +142,7 @@ unsigned int CFEArrayDeclarator::GetDimensionCount()
 }
 
 /** creates a copy of this object
- *    \return a copy of this object
+ *  \return a copy of this object
  */
 CObject *CFEArrayDeclarator::Clone()
 {
@@ -150,16 +150,17 @@ CObject *CFEArrayDeclarator::Clone()
 }
 
 /** \brief deletes a dimension from the vounds vectors
- *    \param nIndex the dimension to erase
+ *  \param nIndex the dimension to erase
  *
- * This function removes the bounds without returning any reference to them, so if you
- * like to know where there are (e.g. keep your memory clean) get these expressions first.
+ * This function removes the bounds without returning any reference to them,
+ * so if you like to know where there are (e.g. keep your memory clean) get
+ * these expressions first.
  */
 void CFEArrayDeclarator::RemoveBounds(unsigned int nIndex)
 {
     if (m_vLowerBounds.size() != m_vUpperBounds.size())
         return;
-    if ((nIndex < 0) || (nIndex > m_vLowerBounds.size() - 1))
+    if (nIndex > m_vLowerBounds.size() - 1)
         return;
     vector<CFEExpression*>::iterator iter = m_vLowerBounds.begin();
     unsigned int i = 0;
@@ -183,54 +184,9 @@ void CFEArrayDeclarator::RemoveBounds(unsigned int nIndex)
     }
 }
 
-/** serializes this object
- *    \param pFile the file to serialize to/from
- */
-void CFEArrayDeclarator::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<array_declarator>\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
-        pFile->PrintIndent("<pointers>%d</pointers>\n", GetStars());
-        pFile->PrintIndent("<bitfields>%d</bitfields>\n", GetBitfields());
-        unsigned int i;
-        for (i = 0; i < GetDimensionCount(); i++)
-        {
-            CFEExpression *pLower = GetLowerBound(i);
-            CFEExpression *pUpper = GetUpperBound(i);
-            if (pUpper)
-            {
-                pFile->PrintIndent("<dimension>\n");
-                if (pLower)
-                {
-                    pFile->PrintIndent("<lower_bound>\n");
-                    pLower->Serialize(pFile);
-                    pFile->PrintIndent("</lower_bound>\n");
-                }
-                pFile->PrintIndent("<upper_bound>\n");
-                pUpper->Serialize(pFile);
-                pFile->PrintIndent("</upper_bound>\n");
-                pFile->PrintIndent("</dimension>\n");
-            }
-        }
-        pFile->DecIndent();
-        pFile->PrintIndent("</array_declarator>\n");
-    }
-}
-
-/**    \brief checks if this parameter is referenced
- *    \return true (an array is also a pointer)
- */
-bool CFEArrayDeclarator::IsReference()
-{
-    return ((GetStars() > 0) || (GetDimensionCount() > 0));
-}
-
-/**    \brief replaces the expression at position nIndex with a new expression
- *    \param nIndex the index of the expression to replace
- *    \param pLower the new lower bound
+/** \brief replaces the expression at position nIndex with a new expression
+ *  \param nIndex the index of the expression to replace
+ *  \param pLower the new lower bound
  */
 void CFEArrayDeclarator::ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower)
 {
@@ -242,9 +198,9 @@ void CFEArrayDeclarator::ReplaceLowerBound(unsigned int nIndex, CFEExpression * 
     pLower->SetParent(this);
 }
 
-/**    \brief replaces the expression at position nIndex with a new expression
- *    \param nIndex the index of the expression to replace
- *    \param pUpper the new upper bound
+/** \brief replaces the expression at position nIndex with a new expression
+ *  \param nIndex the index of the expression to replace
+ *  \param pUpper the new upper bound
  */
 void CFEArrayDeclarator::ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper)
 {

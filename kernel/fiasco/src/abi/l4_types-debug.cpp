@@ -26,11 +26,11 @@ L4_uid::task_from_gthread (GThread_num g)
 
 PUBLIC void L4_uid::print (int task_format = 0) const
 {
-  if(is_invalid()) 
+  if(is_invalid())
     putstr("---.--");
   else if(is_irq())
     printf("IRQ %02lx",irq());
-  else 
+  else
     printf("%*x.%02x", task_format, task(), lthread());
 }
 

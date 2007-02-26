@@ -6,9 +6,7 @@
 
 #include <l4/omega0/client.h>
 
-int init_emulation(long memsize,
-                   int use_omega0, omega0_alien_handler_t irq_handler,
-                   int ux);
+int init_emulation(long memsize);
 
 extern int netif_rx(struct sk_buff *skb);
 

@@ -64,7 +64,7 @@ static int view_place(struct view *v, int x, int y, int w, int h) {
  * \return  0 on success or a negative error code
  */
 static int view_top(struct view *v) {
-	return nitpicker_stack_view_call(&nit, (int)v, -1, 1, &env);
+	return nitpicker_stack_view_call(&nit, (int)v, -1, 1, 0, &env);
 }
 
 
@@ -73,7 +73,7 @@ static int view_top(struct view *v) {
  * \return  0 on success or a negative error code
  */
 static int view_back(struct view *v) {
-	return nitpicker_stack_view_call(&nit, (int)v, -1, 0, &env);
+	return nitpicker_stack_view_call(&nit, (int)v, -1, 0, 0, &env);
 }
 
 

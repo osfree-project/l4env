@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <l4/log/l4log.h>
+#include <l4/env/errno.h>
 
 #include "basic_io.h"
 #include "term.h"
@@ -82,11 +83,17 @@ int clientstate_open(int flags, l4_threadid_t client,
     }
     else
     {
-        clients[ret].worker = l4thread_l4_id(
-                        l4thread_create(term_read, NULL, 
-                        L4THREAD_CREATE_SYNC));
+        l4thread_t temp = l4thread_create(term_read, NULL,
+                                          L4THREAD_CREATE_SYNC);
+        if (temp < 0)
+        {
+            LOG("FAILED CREATING WORKER THREAD: %s, %d!",
+                l4env_strerror(-temp), -temp);
+            return -ENOMEM;
+        }
+        clients[ret].worker = l4thread_l4_id(temp);
     }
-            
+
     return ret;
 }
 
@@ -96,7 +103,7 @@ int clientstate_close(int handle, l4_threadid_t client)
     if (handle < 0 || handle > MAX_CLIENTS)
         return -EBADF;
 
-    // closing a non-open file ? 
+    // closing a non-open file ?
     if (!clients[handle].open)
         return -EBADF;
     // someone closing another task`s terminal?

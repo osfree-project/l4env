@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
 
@@ -58,7 +58,7 @@ int url_open(URLContext **puc, const char *filename, int flags)
     } else {
         *q = '\0';
     }
-    
+
     up = first_protocol;
     while (up != NULL) {
         if (!strcmp(proto_str, up->name))
@@ -95,22 +95,24 @@ int url_read(URLContext *h, unsigned char *buf, int size)
 {
     int ret;
     if (h->flags & URL_WRONLY)
-        return -EIO;
+        return AVERROR_IO;
     ret = h->prot->url_read(h, buf, size);
     return ret;
 }
 
+#if defined(CONFIG_MUXERS) || defined(CONFIG_PROTOCOLS)
 int url_write(URLContext *h, unsigned char *buf, int size)
 {
     int ret;
     if (!(h->flags & (URL_WRONLY | URL_RDWR)))
-        return -EIO;
+        return AVERROR_IO;
     /* avoid sending too big packets */
     if (h->max_packet_size && size > h->max_packet_size)
-        return -EIO; 
+        return AVERROR_IO;
     ret = h->prot->url_write(h, buf, size);
     return ret;
 }
+#endif //CONFIG_MUXERS || CONFIG_PROTOCOLS
 
 offset_t url_seek(URLContext *h, offset_t pos, int whence)
 {
@@ -143,18 +145,18 @@ int url_exist(const char *filename)
 offset_t url_filesize(URLContext *h)
 {
     offset_t pos, size;
-    
+
     pos = url_seek(h, 0, SEEK_CUR);
-    size = url_seek(h, 0, SEEK_END);
+    size = url_seek(h, -1, SEEK_END)+1;
     url_seek(h, pos, SEEK_SET);
     return size;
 }
 
-/* 
+/*
  * Return the maximum packet size associated to packetized file
  * handle. If the file is not packetized (stream like http or file on
  * disk), then 0 is returned.
- * 
+ *
  * @param h file handle
  * @return maximum packet size in bytes
  */
@@ -174,11 +176,11 @@ static int default_interrupt_cb(void)
     return 0;
 }
 
-/** 
+/**
  * The callback is called in blocking functions to test regulary if
  * asynchronous interruption is needed. -EINTR is returned in this
  * case by the interrupted function. 'NULL' means no interrupt
- * callback is given.  
+ * callback is given.
  */
 void url_set_interrupt_cb(URLInterruptCB *interrupt_cb)
 {

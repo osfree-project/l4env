@@ -1,9 +1,9 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../..
 
-SYSTEMS        = x86-l4v2 x86-l4x0
+SYSTEMS        = x86-l4v2
 SRC_C          = main.c
-LIBS           += -lore
+LIBS           += -lore 
 
 DEFAULT_RELOC  = 0x00980000
 TARGET         = ore_debug

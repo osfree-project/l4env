@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEEnumDeclarator.h
- *    \brief   contains the declaration of the class CFEEnumDeclarator
+ *  \brief   contains the declaration of the class CFEEnumDeclarator
  *
  *    \date    06/08/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -36,7 +36,7 @@ class CFEExpression;
 
 /** \class CFEEnumDeclarator
  *    \ingroup frontend
- *    \brief describes an enumeration's declarator
+ *  \brief describes an enumeration's declarator
  *
  * This class is used to describe a enumeration's declarator. A declarator can be, for instance,
  * a variable declaration, or a parameter. An enumeration's declarator can be assigned a value.
@@ -49,7 +49,7 @@ protected:
      */
     CFEEnumDeclarator(CFEEnumDeclarator &src);
 public:
-    /**    \brief default constructor */
+    /** \brief default constructor */
     CFEEnumDeclarator();
     /** \brief constructs a declarator object
      *  \param sName the name of this declarator
@@ -59,13 +59,12 @@ public:
     virtual ~CFEEnumDeclarator();
 
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CObject* Clone();
     virtual CFEExpression* GetInitialValue();
 
 protected:
     /**    \var CFEExpression* m_pInitialValue
-     *    \brief a reference to the initial value
+     *  \brief a reference to the initial value
      */
     CFEExpression* m_pInitialValue;
 };

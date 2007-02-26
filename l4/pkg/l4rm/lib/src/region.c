@@ -73,7 +73,8 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
 
   Assert(!FLAGS_EQUAL(region, rp));
 
-  LOGdL(DEBUG_REGION_INSERT, "insert 0x%08x-0x%08x into 0x%08x-0x%08x",
+  LOGdL(DEBUG_REGION_INSERT, "insert 0x"l4_addr_fmt"-0x"l4_addr_fmt" into 0x"
+        l4_addr_fmt"-0x"l4_addr_fmt,
         region->start, region->end, rp->start, rp->end);
 
   /* insert */
@@ -189,12 +190,12 @@ __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
 
 #if DEBUG_REGION_MODIFY
   if (region->prev)
-    LOG_printf("prev   0x%08x-0x%08x, flags 0x%08x\n",
+    LOG_printf("prev   0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
 	   region->prev->start, region->prev->end, region->prev->flags);
-  LOG_printf("region 0x%08x-0x%08x, flags 0x%08x\n",
+  LOG_printf("region 0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
 	 region->start, region->end, region->flags);
   if (region->next)
-    LOG_printf("next   0x%08x-0x%08x, flags 0x%08x\n",
+    LOG_printf("next   0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
 	   region->next->start, region->next->end, region->next->flags);
 #endif
 
@@ -303,8 +304,8 @@ __find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
 {
   l4rm_region_desc_t * rp = head;
 
-  LOGdL(DEBUG_REGION_FIND, "addr 0x%08x, size %u, area 0x%05x", 
-        addr, size, area);
+  LOGdL(DEBUG_REGION_FIND, "addr 0x"l4_addr_fmt", size %lu, area 0x%05x", 
+        addr, (l4_addr_t)size, area);
 
   /* sanity checks */
   if ((addr < vm_start) || (addr > vm_end) || ((addr + size) > vm_end))
@@ -315,8 +316,8 @@ __find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
     rp = rp->next;
   Assert(rp != NULL);
 
-  LOGdL(DEBUG_REGION_FIND, "found area 0x%08x-0x%08x, flags 0x%08x",
-        rp->start, rp->end, rp->flags);
+  LOGdL(DEBUG_REGION_FIND, "found area 0x"l4_addr_fmt"-0x"l4_addr_fmt
+        ", flags 0x%08x", rp->start, rp->end, rp->flags);
 
   /* valid area? */
   if (IS_USED_REGION(rp) || (REGION_AREA(rp) != area) || 
@@ -365,7 +366,7 @@ l4rm_init_regions(void)
   SET_REGION_FREE(head);
   SET_AREA(head, L4RM_DEFAULT_REGION_AREA);
 
-  LOGdL(DEBUG_REGION_INIT, "L4RM: vm 0x%08x-0x%08x", 
+  LOGdL(DEBUG_REGION_INIT, "L4RM: vm 0x"l4_addr_fmt"-0x"l4_addr_fmt,
         head->start, head->end + 1);
 
   /* done */
@@ -412,8 +413,8 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
   l4rm_region_desc_t * rp;
   l4_addr_t map_addr;
 
-  LOGdL(DEBUG_REGION_NEW, "addr 0x%08x, size %u, area 0x%05x, flags 0x%08x",
-        addr, size, area, flags);
+  LOGdL(DEBUG_REGION_NEW, "addr 0x"l4_addr_fmt", size %lu, area 0x%05x, "
+        "flags 0x%08x", addr, (l4_addr_t)size, area, flags);
 
   /* align size */
   size = l4_round_page(size);
@@ -458,7 +459,8 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
         }
     }
 
-  LOGd(DEBUG_REGION_NEW, "using addr 0x%08x, size %u", map_addr, size);
+  LOGd(DEBUG_REGION_NEW, "using addr 0x"l4_addr_fmt", size %lu",
+       map_addr, (l4_addr_t)size);
 
   /* setup region descriptor */
   region->start = map_addr;
@@ -469,10 +471,10 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
     area = map_addr >> L4_PAGESHIFT;
   SET_AREA(region, area);
 
-  LOGd(DEBUG_REGION_NEW, 
-       "\n create new region  0x%08x-0x%08x, flags 0x%08x\n" \
-       " in existing region 0x%08x-0x%08x, flags 0x%08x",
-       region->start, region->end, region->flags, 
+  LOGd(DEBUG_REGION_NEW,
+       "\n create new region  0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n"
+       " in existing region 0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x",
+       region->start, region->end, region->flags,
        rp->start, rp->end, rp->flags);
 
   /* insert area in region list */
@@ -588,7 +590,8 @@ l4rm_find_region(l4_addr_t addr)
     /* invalid address region */
     return NULL;
 
-  LOGdL(DEBUG_REGION_FIND, "L4RM: find <0x%08x-0x%08x>", rp->start, rp->end);
+  LOGdL(DEBUG_REGION_FIND, "L4RM: find <0x"l4_addr_fmt"-0x"l4_addr_fmt">",
+        rp->start, rp->end);
 
   /* find region descriptor the address fits into */
   while (rp && (rp->end < addr))
@@ -596,7 +599,7 @@ l4rm_find_region(l4_addr_t addr)
   Assert(rp != NULL);
 
 #if DEBUG_REGION_FIND
-  LOG_printf("  found <0x%08x-0x%08x>\n", rp->start, rp->end);
+  LOG_printf("  found <0x"l4_addr_fmt"-0x"l4_addr_fmt">\n", rp->start, rp->end);
 #endif
 
   /* found */
@@ -621,12 +624,13 @@ l4rm_unmap_region(l4rm_region_desc_t * region)
    * we try to use as few l4_fpage_unmap calls as possible to minimize the 
    * detach overhead for large regions.
    */
-  LOGdL(DEBUG_REGION_UNMAP, "unmap addr 0x%08x, size %u", addr, size);
+  LOGdL(DEBUG_REGION_UNMAP, "unmap addr 0x"l4_addr_fmt", size %lu",
+        addr, (l4_addr_t)size);
 
   while (size > 0)
     {
-      LOGd(DEBUG_REGION_UNMAP,"0x%08x, size %u (0x%08x)",
-           addr, size, size);
+      LOGd(DEBUG_REGION_UNMAP,"0x"l4_addr_fmt", size %lu (0x%lx)",
+           addr, (l4_addr_t)size, (l4_addr_t)size);
 
       /* calculate the largest fpage we can unmap at address addr, 
        * it depends on the alignment of addr and the size */
@@ -659,35 +663,38 @@ l4rm_show_region_list(void)
   LOG_printf("region list:\n");
   while (rp)
     {
-      LOG_printf("  area 0x%05x: 0x%08x - 0x%08x [%7dKiB]: ",
+      LOG_printf("  area 0x%05x: 0x"l4_addr_fmt" - 0x"l4_addr_fmt" [%7ldKiB]: ",
              REGION_AREA(rp), rp->start, rp->end, 
              (rp->end - rp->start + 1) >> 10);
       switch (REGION_TYPE(rp))
         {
         case REGION_FREE:
           if (REGION_AREA(rp) == L4RM_DEFAULT_REGION_AREA)
-            LOG_printf("free\n");
+            LOG_printf("free");
           else
-            LOG_printf("reserved\n");
+            LOG_printf("reserved");
           break;
         case REGION_DATASPACE:
-          LOG_printf("ds %d at "l4util_idfmt"\n", rp->data.ds.ds.id,
+          LOG_printf("ds %d at "l4util_idfmt, rp->data.ds.ds.id,
                  l4util_idstr(rp->data.ds.ds.manager));
           break;
         case REGION_PAGER:
-          LOG_printf("pager "l4util_idfmt"\n", 
+          LOG_printf("pager "l4util_idfmt,
 	      l4util_idstr(rp->data.pager.pager));
           break;
         case REGION_EXCEPTION:
-          LOG_printf("exception\n");
+          LOG_printf("exception");
           break;
         case REGION_BLOCKED:
-          LOG_printf("blocked\n");
+          LOG_printf("blocked");
           break;
         default:
-          LOG_printf("unknown\n");
+          LOG_printf("unknown");
         }
 
+      if (rp->userptr) LOG_printf(" (%p)", rp->userptr);
+
+      LOG_printf("\n");
       rp = rp->next;
     }
   LOG_printf("\n");

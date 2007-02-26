@@ -7,6 +7,7 @@ class Vkey
 IMPLEMENTATION [debug-serial-!ux]:
 
 #include "config.h"
+#include "cpu.h"
 #include "kernel_console.h"
 #include "kernel_uart.h"
 #include "keycodes.h"
@@ -14,29 +15,33 @@ IMPLEMENTATION [debug-serial-!ux]:
 
 static Virq vkey_irq(Config::Vkey_irq);
 
-static char vkey_buffer[256];
+static char     vkey_buffer[256];
 static unsigned vkey_tail, vkey_head;
+static Console *uart = Kconsole::console()->find_console(Console::UART);
 
 PUBLIC static
 int
 Vkey::check_(int irq = -1)
 {
+  if (!uart)
+    return 1;
+
   int  ret = 0;
   bool hit = false;
-  // disable direct console to prevent confusion of user-level keyboard or
-  // mouse drivers
-  Kconsole::console()->change_state(Console::DIRECT,0,~Console::INENABLED,0);
+
+  // disable last branch recording, branch trace recording ...
+  Cpu::debugctl_disable();
 
   while(1)
     {
-      int c = Kconsole::console()->getchar(false);
+      int c = uart->getchar(false);
 
       if (irq == Kernel_uart::uart()->irq() && c == -1)
 	{
 	  ret = 1;
 	  break;
 	}
-      
+
       if (c == -1 || c == KEY_ESC)
 	break;
 
@@ -54,14 +59,14 @@ Vkey::check_(int irq = -1)
       ret = 1;
     }
 
-  // re-enable direct console
-  Kconsole::console()->change_state(Console::DIRECT,0,~0U,Console::INENABLED);
-
   if (hit)
     vkey_irq.hit();
 
   if(Config::serial_esc == Config::SERIAL_ESC_IRQ)
     Kernel_uart::uart()->enable_rcv_irq();
+
+  // reenable debug stuff (undo debugctl_disable)
+  Cpu::debugctl_enable();
 
   return ret;
 }
@@ -102,5 +107,5 @@ IMPLEMENTATION[!debug,!serial]:
 
 PUBLIC static inline
 int
-Vkey::check_(int)
+Vkey::check_(int = -1)
 { return 0; }

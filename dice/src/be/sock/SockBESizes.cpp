@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBESizes.cpp
- *    \brief   contains the implementation of the class CSockBESizes
+ *  \brief   contains the implementation of the class CSockBESizes
  *
  *    \date    11/28/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -38,7 +38,7 @@ CSockBESizes::CSockBESizes(CSockBESizes & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CSockBESizes::~CSockBESizes()
 {
 
@@ -48,28 +48,11 @@ CSockBESizes::~CSockBESizes()
  *  \param nFEType the type to get the max-size for
  *  \return the maximum size in bytes
  */
-int CSockBESizes::GetMaxSizeOfType(int nFEType)
+int CSockBESizes::GetMaxSizeOfType(int /*nFEType*/)
 {
     // for sockets, the maximum size is approximately 8KB,
     // so we restrict this to 2KB, assuming we have a max of 4
     // var sized parameters
     // even if we would have more than 4, so what...;)
     return 2048;
-}
-
-/** \brief tries to find out the size of possible environment types
- *  \param sName the name of the environment type
- *  \return the size of this type
- */
-int CSockBESizes::GetSizeOfEnvType(string sName)
-{
-    if (sName == "sockaddr_in")
-        return sizeof(struct sockaddr);
-    if (sName == "CORBA_Object")
-        return 4; // sizeof(CORBA_Object_base*)
-    if (sName == "CORBA_Object_base")
-        return sizeof(struct sockaddr);
-    if (sName == "CORBA_Environment")
-        return 24; // 4(major+repos_id) + 4(param) + 4(srv_port) + 4(cur_socket) + 4(user_data) + 4(malloc ptr)
-    return CBESizes::GetSizeOfEnvType(sName);
 }

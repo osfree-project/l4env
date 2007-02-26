@@ -75,7 +75,7 @@ static const struct pci_device_id ati_pci_tbl[] __init =
     {0, 0, 0, 0, 0}
 };
 
-unsigned ati_regbase = 0;
+l4_addr_t ati_regbase = 0;
 unsigned blitter_may_be_busy = 0;
 int ati_supports_planar = 0;
 
@@ -432,12 +432,12 @@ ati_probe(unsigned int bus, unsigned int devfn,
   // check if we have enough memory
   if (hw_vid_mem_size < 7*1024*1024)
     {
-      printf("ati: graphics memory size less than 8MB (%dkB)\n",
+      printf("ati: graphics memory size less than 8MB (%ldkB)\n",
 	  hw_vid_mem_size/1024);
       return -L4_ENOTFOUND;
     }
 
-  if (map_io_mem(addr, 0x1000, "ctrl", &ati_regbase)<0)
+  if (map_io_mem(addr, 0x1000, 0, "ctrl", &ati_regbase)<0)
     return -L4_ENOTFOUND;
 
   ati_pci_bus = bus;
@@ -452,7 +452,7 @@ ati_probe(unsigned int bus, unsigned int devfn,
 
   init_engine();
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, "video",
+  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, 1, "video",
 		 &hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 

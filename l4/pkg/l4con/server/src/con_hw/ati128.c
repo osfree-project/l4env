@@ -62,8 +62,8 @@ static const struct pci_device_id ati128_pci_tbl[] __init =
     {0, 0, 0, 0, 0}
  };
 
-unsigned ati128_regbase = 0;
-int ati128_supports_planar = 0;
+l4_addr_t ati128_regbase = 0;
+int       ati128_supports_planar = 0;
 
 static unsigned ati_pci_bus = 0;
 static unsigned ati_pci_devfn = 0;
@@ -428,16 +428,16 @@ ati128_probe(unsigned int bus, unsigned int devfn,
   // check if we have enough memory
   if (hw_vid_mem_size < 7*1024*1024)
     {
-      printf("ati128: graphics memory size less than 8MB (%dkB)\n",
-	  hw_vid_mem_size/1024);
+      printf("ati128: graphics memory size less than 8MB (%ldkB)\n",
+	     hw_vid_mem_size/1024);
       return -L4_ENOTFOUND;
     }
 
-  if (map_io_mem(addr, 0x2000, "ctrl", &ati128_regbase)<0)
+  if (map_io_mem(addr, 0x2000, 0, "ctrl", &ati128_regbase)<0)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(vid_addr, hw_vid_mem_size, "video",
-		 &hw_map_vid_mem_addr)<0)
+  if (map_io_mem(vid_addr, hw_vid_mem_size, 1, "video",
+		 (l4_addr_t *)&hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 
   ati_pci_bus = bus;
@@ -463,4 +463,3 @@ ati128_register(void)
 {
   pci_register(ati128_pci_tbl, ati128_probe);
 }
-

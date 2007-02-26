@@ -525,7 +525,7 @@ int PCI_init(int list)
       /* Removed pci_disable_device(p); here because it produced errors with
          non-compliant drivers from grub. */
 
-      for (i=0; i<6; i++)
+      for (i = 0; i < 6; i++)
         {
           if (p->resource[i].flags & IORESOURCE_MEM)
             {
@@ -535,22 +535,14 @@ int PCI_init(int list)
 #endif
 
               /* announce memory region */
-              if(p->resource[i].start < 0x80000000){
-                  printf("WARNING: Cannot handle memory %08lx-%08lx "
-                         "for device %04x:%04x\n",
-                         p->resource[i].start,
-                         p->resource[i].end,
-                         p->vendor, p->device);
-              } else if(callback_handle_pci_device(p->vendor, p->device)){
-                  callback_announce_mem_region(
-                      p->resource[i].start,
-                      p->resource[i].end-p->resource[i].start+1);
-              } else {
-                  printf("Ignoring memory %08lx-%08lx for device %04x:%04x\n",
-                         p->resource[i].start,
-                         p->resource[i].end,
-                         p->vendor, p->device);
-              }
+              if (callback_handle_pci_device(p->vendor, p->device))
+                callback_announce_mem_region(p->resource[i].start,
+                                             p->resource[i].end-p->resource[i].start+1);
+              else
+                printf("Ignoring memory %08lx-%08lx for device %04x:%04x\n",
+                       p->resource[i].start,
+                       p->resource[i].end,
+                       p->vendor, p->device);
             }
         }
     }
@@ -588,7 +580,7 @@ unsigned short PCI_linux_to_io(void *linux_pdev, void *l4io_pdev)
   l4io->device = linus->device;
   l4io->sub_vendor = linus->subsystem_vendor;
   l4io->sub_device = linus->subsystem_device;
-  l4io->class = linus->class;
+  l4io->dev_class = linus->class;
 
   l4io->irq = linus->irq;
   for (i = 0; i < 12; i++)

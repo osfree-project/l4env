@@ -1,0 +1,35 @@
+If you want to update the FFmpeg libraries because there
+are new codecs you would like to support or other improvements,
+just follow the procedure below. In theory, this is rather
+straghtforward, but this is theory, so you mileage may vary.
+
+1. Checkout a fresh copy of FFmpeg CVS in a separate directory.
+2. ./configure it (I used the default config without parameters).
+3. The destination directories for the FFmpeg libraries are:
+	lib/video/ for libavcodec,
+	lib/video/ for libpostproc,
+	lib/de-muxer/ for libavformat,
+	lib/support/ for libavutil.
+4. In each directory, you will find a file named
+	patch_against_ffmpeg_CVS.patch,
+   which you should try to apply to each lib in turn. You may
+   have to adapt them if they no longer apply cleanly.
+   Watch out.
+5. The files
+	common.mak,
+	config.h,
+	config.mak and
+   from FFmpeg's toplevel directory should go with libavcodec
+   to lib/video/libavcodec/.
+6. However, you should compare the two config files to their
+   predecessors from the old version of libavcodec, since they
+   need adaptation. Some options make FFmpeg uncompilable,
+   others are simply not required and some build system magic
+   has also been added to config.mak. This is probably the
+   hardest part of the update.
+7. You should now be ready to actually move the libraries to
+   their target locations. When committing things to CVS, take
+   care that files are removed and added as necessary.
+8. That's all I can tell you. If it does not compile from here,
+   let alone run and actually decode, you are on your own.
+   Just smile and say the words: "I can do it!" ;)

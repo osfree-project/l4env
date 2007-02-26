@@ -107,7 +107,7 @@ strings with any number of arguments.
 The macros LOG, LOGl, LOGL and LOG_Enter come in a second flavor,
 with a condition variable as the first argument. They are called LOGd,
 LOGdl, LOGdL and LOGd_Enter. Use a condition-expression as first
-argument to the LOGd...-macros. The logging will accur if the
+argument to the LOGd...-macros. The logging will occur if the
 expression evaluates to true. If the condition-expression is constant
 and false, the whole Log-Statement will be null and void for the
 compiler.

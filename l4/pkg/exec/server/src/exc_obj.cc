@@ -246,7 +246,7 @@ exc_obj_t::relocate(l4_addr_t reloc_addr, l4env_infopage_t *env)
 {
   int i;
 
-  msg("Relocating to %08x", reloc_addr);
+  msg("Relocating to %08lx", reloc_addr);
 
   /* relocate all program sections */
   for (i=0; i<psecs_num; i++)
@@ -336,22 +336,28 @@ exc_obj_load_bin(const char *fname, const l4dm_dataspace_t *img_ds,
       if ((error = check(exc_objs->alloc(&dsc_obj, &id),
 			 "allocating object descriptor")))
 	return error;
-
-      if (!(error = ::elf32_obj_new(&img, exc_obj, env, id)) ||
-	  !(error = ::elf64_obj_new(&img, exc_obj, env, id)))
+  
+      if (!(error = ::elf32_obj_new(&img, exc_obj, env, id)) || 
+	    error == -L4_EXEC_INTERPRETER ||
+	  !(error = ::elf64_obj_new(&img, exc_obj, env, id)) ||
+	    error == -L4_EXEC_INTERPRETER)
 	{
-	  /* save anchor */
-	  *dsc_obj = *exc_obj;
+	  if (!error)
+	    {
+	      /* save anchor */
+	      *dsc_obj = *exc_obj;
 
-	  /* if we are not forced to load the exc_obj, make sharing possible */
-	  if (!force_load)
-	    (**exc_obj).set_flag(EO_SHARE);
-	  
-	  (**exc_obj).set_flag(flags);
-	  (**exc_obj).set_client(client);
+	      /* if we are not forced to load the exc_obj, make sharing
+	       * possible */
+	      if (!force_load)
+		(**exc_obj).set_flag(EO_SHARE);
 
-	  /* create object from image */
-	  error = (*exc_obj)->img_copy(&img, env);
+	      (**exc_obj).set_flag(flags);
+	      (**exc_obj).set_client(client);
+
+	      /* create object from image */
+	      error = (*exc_obj)->img_copy(&img, env);
+	    }
 	}
 
       if (error)

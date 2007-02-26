@@ -325,7 +325,7 @@ struct backing_dev_info;
 struct address_space {
 	struct inode		*host;		/* owner: inode, block_device */
 	struct radix_tree_root	page_tree;	/* radix tree of all pages */
-	spinlock_t		tree_lock;	/* beeing prepared for I/O */
+	spinlock_t		tree_lock;	/* and spinlock protecting it */
 	unsigned long		nrpages;	/* number of total pages */
 	pgoff_t			writeback_index;/* writeback starts here */
 	struct address_space_operations *a_ops;	/* methods */
@@ -341,7 +341,6 @@ struct address_space {
 };
 
 struct block_device {
-#ifndef DDE_IDE
 	dev_t			bd_dev;  /* not a kdev_t - it's a search key */
 	struct inode *		bd_inode;	/* will die */
 	int			bd_openers;
@@ -352,29 +351,14 @@ struct block_device {
 	int			bd_holders;
 	struct block_device *	bd_contains;
 	unsigned		bd_block_size;
-	struct hd_struct *	bd_part;
-	unsigned		bd_part_count;
-	int			bd_invalidated;
-	struct gendisk *	bd_disk;
-	struct list_head	bd_list;
-#else /* DDE_IDE */
-	dev_t			bd_dev;  /* not a kdev_t - it's a search key */
-	struct inode *		bd_inode;	/* will die */
-	int			bd_openers;
-	struct semaphore	bd_sem;	/* open/close mutex */
-	struct semaphore	bd_mount_sem;	/* mount mutex */
-//	struct list_head	bd_inodes;
-	void *			bd_holder;
-	int			bd_holders;
-	struct block_device *	bd_contains;
-	unsigned		bd_block_size;
+#ifdef DDE_IDE
 	loff_t			bd_size; /* size of device in bytes */
+#endif /* DDE_IDE */
 	struct hd_struct *	bd_part;
 	unsigned		bd_part_count;
 	int			bd_invalidated;
 	struct gendisk *	bd_disk;
 	struct list_head	bd_list;
-#endif /* DDE_IDE */
 	/*
 	 * Private data.  You must have bd_claim'ed the block_device
 	 * to use this.  NOTE:  bd_claim allows an owner to claim
@@ -768,7 +752,7 @@ struct super_block {
 	struct block_device	*s_bdev;
 	struct list_head	s_instances;
 	struct quota_info	s_dquot;	/* Diskquota specific options */
-	
+
 	int			s_frozen;
 	wait_queue_head_t	s_wait_unfrozen;
 
@@ -788,8 +772,8 @@ struct super_block {
  */
 enum {
 	SB_UNFROZEN = 0,
-	SB_FREEZE_WRITE = 1,
-	SB_FREEZE_READ = 2,
+	SB_FREEZE_WRITE	= 1,
+	SB_FREEZE_TRANS = 2,
 };
 
 #define vfs_check_frozen(sb, level) \
@@ -1224,16 +1208,16 @@ extern char * getname(const char __user *);
 extern void vfs_caches_init(unsigned long);
 
 #define __getname()	kmem_cache_alloc(names_cachep, SLAB_KERNEL)
-#define __putname(name)	kmem_cache_free(names_cachep, (void *)(name))
+#define __putname(name) kmem_cache_free(names_cachep, (void *)(name))
 #ifndef CONFIG_AUDITSYSCALL
-#define putname(name)	__putname(name)
+#define putname(name)   __putname(name)
 #else
 #define putname(name)							\
-	do {
-		if (unlikely(current->audit_context))
-			audit_putname(name);
-		else
-			__putname(name);
+	do {								\
+		if (unlikely(current->audit_context))			\
+			audit_putname(name);				\
+		else							\
+			__putname(name);				\
 	} while (0)
 #endif
 
@@ -1581,7 +1565,7 @@ static inline char *alloc_secdata(void)
 
 static inline void free_secdata(void *secdata)
 { }
-#endif  /* CONFIG_SECURITY */
+#endif	/* CONFIG_SECURITY */
 
 #endif /* __KERNEL__ */
 #endif /* _LINUX_FS_H */

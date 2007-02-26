@@ -1,4 +1,4 @@
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,amd64,ux]:
 
 #include <cstdio>
 #include <cctype>
@@ -15,6 +15,9 @@ IMPLEMENTATION[ia32,ux]:
 
 class Jdb_bt : public Jdb_module, public Jdb_input_task_addr
 {
+public:
+  Jdb_bt() FIASCO_INIT;
+private:
   static char     dummy;
   static char     first_char;
   static char     first_char_addr;
@@ -34,18 +37,20 @@ Task_num  Jdb_bt::task;
 static void
 Jdb_bt::get_user_eip_ebp(Address &eip, Address &ebp)
 { 
-  if (task == 0)
+  if (task == Config::kernel_taskno)
     {
       // kernel thread doesn't execute user code -- at least we hope so :-)
       ebp = eip = 0;
       return;
     }
 
-  Thread *t        = Thread::lookup(tid);
+  Thread *t        = Thread::id_to_tcb(tid);
   Address tcb_next = (Address)context_of(t->get_kernel_sp()) + Context::size;
   Mword *ktop      = (Mword *)tcb_next;
   Jdb::Guessed_thread_state state = Jdb::guess_thread_state(t);
 
+  eip = ktop[-5];
+  
   if (state == Jdb::s_ipc)
     {
       // If thread is in IPC, EBP lays on the stack (see C-bindings). EBP
@@ -57,6 +62,16 @@ Jdb_bt::get_user_eip_ebp(Address &eip, Address &ebp)
       if (entry_ss & 3)
 	{
 	  // kernel entered from user level
+	  if (eip >= Mem_layout::Syscalls)
+	    {
+	      if (Jdb::peek_addr_task(entry_esp, task, &eip) == -1)
+		{
+		  printf("\n esp page invalid");
+		  ebp = eip = 0;
+		  return;
+		}
+	      entry_esp += sizeof(Mword);
+	    }
 
 #ifdef CONFIG_ABI_X0
 	  // see X0 C-bindings
@@ -89,7 +104,6 @@ Jdb_bt::get_user_eip_ebp(Address &eip, Address &ebp)
       ebp = get_user_ebp_following_kernel_stack();
     }
 
-  eip = ktop[-5];
 }
 
 static Mword
@@ -107,8 +121,8 @@ Jdb_bt::get_user_ebp_following_kernel_stack()
       Mword m1, m2;
 
       if (  (ebp == 0)
-	  ||(Jdb::peek_addr_task(ebp,   0 /*kernel*/, &m1) == -1)
-	  ||(Jdb::peek_addr_task(ebp+4, 0 /*kernel*/, &m2) == -1))
+	  ||(Jdb::peek_addr_task(ebp, 0 /*kernel*/, &m1) == -1)
+	  ||(Jdb::peek_addr_task(ebp+sizeof(Mword), 0 /*kernel*/, &m2) == -1))
 	// invalid ebp -- leaving
 	return 0;
 
@@ -138,7 +152,7 @@ Jdb_bt::get_kernel_eip_ebp(Mword &eip1, Mword &eip2, Mword &ebp)
     }
   else
     {
-      Mword *ksp = (Mword*) Thread::lookup(tid)->get_kernel_sp();
+      Mword *ksp = (Mword*) Thread::id_to_tcb(tid)->get_kernel_sp();
       Mword tcb  = Mem_layout::Tcbs + tid.gthread()*Context::size;
       Mword tcb_next = tcb + Context::size;
 
@@ -163,17 +177,18 @@ Jdb_bt::get_kernel_eip_ebp(Mword &eip1, Mword &eip2, Mword &ebp)
 
 /** Show one backtrace item we found. Add symbol name and line info */
 static void
-Jdb_bt::show_item(int nr, Address addr, Address_type user)
+Jdb_bt::show_item(int nr, Address ksp, Address addr, Address_type user)
 {
   char buffer[74];
 
-  printf(" %s#%d  "L4_PTR_FMT"", nr<10 ? " ": "", nr, addr);
+  printf(" %s#%d "L4_PTR_FMT" "L4_PTR_FMT"", nr<10 ? " ": "", nr, ksp, addr);
 
   Address sym_addr = addr;
   if (Jdb_symbol::match_addr_to_symbol_fuzzy(&sym_addr, 
 					     user == ADDR_KERNEL ? 0 : task, 
 				     	     buffer,
-					     60 < sizeof(buffer) ? 60 : sizeof(buffer))
+					     56 < sizeof(buffer) 
+					            ? 56 : sizeof(buffer))
       // if the previous symbol is to far away assume that there is no
       // symbol for that entry
       && (addr-sym_addr < 1024))
@@ -201,14 +216,14 @@ Jdb_bt::show_item(int nr, Address addr, Address_type user)
 static void
 Jdb_bt::show_without_ebp()
 {
-  Mword *ksp      = (Mword*) Thread::lookup(tid)->get_kernel_sp();
+  Mword *ksp      = (Mword*) Thread::id_to_tcb(tid)->get_kernel_sp();
   Mword tcb_next  = Mem_layout::Tcbs + (tid.gthread()+1)*Context::size;
 
   // search for valid eip
-  for (int i=0, j=1; (unsigned)(ksp+i)<tcb_next-20; i++)
+  for (int i=0, j=1; (Address)(ksp+i)<tcb_next-20; i++)
     {
       if (Mem_layout::in_kernel_code(ksp[i])) 
-	show_item(j++, ksp[i], ADDR_KERNEL);
+	show_item(j++, (Address)(ksp+i), ksp[i], ADDR_KERNEL);
     }
 }
 
@@ -222,8 +237,8 @@ Jdb_bt::show(Mword ebp, Mword eip1, Mword eip2, Address_type user)
       if (i > 1)
 	{
 	  if (  (ebp == 0)
-	      ||(Jdb::peek_addr_task(ebp,   task, &m1) == -1)
-	      ||(Jdb::peek_addr_task(ebp+4, task, &m2) == -1))
+	      ||(Jdb::peek_addr_task(ebp, task, &m1) == -1)
+	      ||(Jdb::peek_addr_task(ebp+sizeof(Mword), task, &m2) == -1))
 	    // invalid ebp -- leaving
 	    return;
 
@@ -247,7 +262,7 @@ Jdb_bt::show(Mword ebp, Mword eip1, Mword eip2, Address_type user)
 	  m2 = eip2;
 	}
 
-      show_item(i, m2, user);
+      show_item(i, ebp, m2, user);
     }
 }
 
@@ -295,7 +310,7 @@ Jdb_bt::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	}
       else if (args == &tid)
 	{
-	  if (!Thread::lookup(tid)->is_valid())
+	  if (!Thread::id_to_tcb(tid)->is_valid())
 	    {
 	      puts(" Invalid thread");
 	      return NOTHING;
@@ -351,7 +366,7 @@ start_backtrace_known_ebp:
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_bt::cmds() const
 {
   static Cmd cs[] =
@@ -365,13 +380,13 @@ Jdb_bt::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_bt::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_bt::Jdb_bt()
   : Jdb_module("INFO")
 {}

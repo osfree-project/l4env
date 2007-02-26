@@ -13,18 +13,17 @@
 #include <stdio.h>
 
 #include <l4/names/libnames.h>
+#include <l4/util/l4_macros.h>
 
-int main(int argc, char**argv){
-    char name[NAMES_MAX_NAME_LEN];
-    l4_threadid_t id;
-    int i;
+int main(int argc, char**argv)
+{
+  char name[NAMES_MAX_NAME_LEN];
+  l4_threadid_t id;
+  int i;
 
-    for(i=0;i<NAMES_MAX_ENTRIES; i++){
-	if(names_query_nr(i, name, sizeof(name), &id)){
-	    printf("%02x.%02x: %s\n",
-		   id.id.task, id.id.lthread, name);
-	}
-    }
+  for(i=0;i<NAMES_MAX_ENTRIES; i++)
+    if (names_query_nr(i, name, sizeof(name), &id))
+      printf(l4util_idfmt": %s\n", l4util_idstr(id), name);
 
-    return 0;
+  return 0;
 }

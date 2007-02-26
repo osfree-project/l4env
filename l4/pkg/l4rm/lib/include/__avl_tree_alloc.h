@@ -48,7 +48,7 @@ L4_INLINE void
 avlt_free_node(avlt_t * node);
 
 /* DEBUG */
-unsigned int
+l4_addr_t
 avlt_node_index(avlt_t * node);
 
 /*****************************************************************************

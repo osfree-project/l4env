@@ -22,6 +22,7 @@
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/rmgr/librmgr.h>
+#include <l4/sigma0/sigma0.h>
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
@@ -128,12 +129,7 @@ ipc_error(char * msg, int error)
 static void
 sit_and_wait(int exp)
 {
-  l4_umword_t ignore;
-  l4_msgdope_t dope;
-
-  l4_timeout_t t = L4_IPC_TIMEOUT(255,exp,255,exp,0,0);
-
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, t , &dope);
+  l4_ipc_sleep(L4_IPC_TIMEOUT(255,exp,255,exp,0,0));
 }
 
 
@@ -141,10 +137,7 @@ sit_and_wait(int exp)
 static void
 wait_forever(void)
 {
-  l4_umword_t ignore;
-  l4_msgdope_t dope;
-
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER , &dope);
+  l4_ipc_sleep(L4_IPC_NEVER);
 }
 
 
@@ -295,7 +288,7 @@ unshare_data(l4_addr_t addr, l4_threadid_t tid)
     }
 
   if (debugpager)
-   printf("unshared data page %08x => %08x client "l4util_idfmt"\n",
+   printf("unshared data page %08lx => %08lx client "l4util_idfmt"\n",
       addr, new_page, l4util_idstr(tid));
 
   if (debugpager)
@@ -314,7 +307,6 @@ pager_thread(void)
   l4_addr_t fault_address, fault_eip;
   l4_snd_fpage_t fp;
   l4_msgdope_t dope;
-  l4_umword_t ignore;
 
   /* get first page fault */
   res = l4_ipc_wait(&src,			 /* source */
@@ -334,7 +326,7 @@ pager_thread(void)
 
       // do not lock in pager, because this gives dead locks
       if(debugpager)
-	printf("[%s page fault in "l4util_idfmt" at %08x (EIP %08x) ",
+	printf("[%s page fault in "l4util_idfmt" at %08lx (EIP %08lx) ",
 	       rw_page_fault ? "write" : "read",
 	       l4util_idstr(src), fault_address, fault_eip);
 				/* in Code */
@@ -379,16 +371,17 @@ pager_thread(void)
       else
 	{
            if(!debugpager)
-	     printf("[%s page fault in "l4util_idfmt" at %08x (EIP %08x) ",
+	     printf("[%s page fault in "l4util_idfmt" at %08lx (EIP %08lx) ",
 		     rw_page_fault ? "write" : "read",
 		     l4util_idstr(src), fault_address, fault_eip);
 	    printf("stop pager]\n");
 	    enter_kdebug("stop");
-	    l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER , &dope);
+	    fp.snd_base = 0;
+	    l4_ipc_sleep(L4_IPC_NEVER);
 	}
 
       if(debugpager)
-	printf(" %s (%s), base : %08x, size : %d, offset : %08x]\n",
+	printf(" %s (%s), base : %08x, size : %d, offset : %08lx]\n",
 	       fp.fpage.fp.grant ? "grant" : "map",
 	       fp.fpage.fp.write ? "WR" : "RO",
 	       fp.fpage.fp.page << L4_PAGESHIFT,
@@ -533,37 +526,41 @@ otask3(void)
 
 // save data segment so we are able to copy-on-write it for new childs */
 static void
-save_data(void)
+save_data(l4_threadid_t pager)
 {
   l4_addr_t beg  = l4_trunc_page(&_etext);
   l4_addr_t end  = l4_round_page(&_end);
 
   my_program_data_copy = rmgr_reserve_mem(end-beg, L4_LOG2_PAGESIZE, 0, 0, 0);
-  if (!my_program_data_copy)
+  if (my_program_data_copy == ~0U)
     {
-      printf("Cannot allocate %dkB memory for unsharing data section\n",
+      printf("Cannot allocate %ldkB memory for unsharing data section\n",
 	  (end-beg)/1024);
       enter_kdebug("out of memory");
     }
 
+  l4sigma0_map_mem(pager,
+      		   my_program_data_copy, my_program_data_copy, end-beg);
   memcpy((void*)my_program_data_copy, (void*)&_etext, &_end-&_etext);
 }
 
 // reserve pool for copy-on-write
 static void
-reserve_cow(void)
+reserve_cow(l4_threadid_t pager)
 {
   cow_pool = rmgr_reserve_mem(COW_POOL_PAGES*L4_PAGESIZE,
                               L4_LOG2_PAGESIZE, 0, 0, 0);
-  if (!cow_pool)
+  if (cow_pool == ~0U)
     {
       printf("Cannot allocate %dkB memory for cow pool!\n",
 	  COW_POOL_PAGES*L4_PAGESIZE/1024);
       enter_kdebug("out of memory");
     }
 
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw((void*)cow_pool, COW_POOL_PAGES*L4_PAGESIZE);
+  l4sigma0_map_mem(pager,
+      		   (l4_addr_t)&_stext, (l4_addr_t)&_stext, &_etext-&_stext);
+  l4sigma0_map_mem(pager,
+      		   cow_pool, cow_pool, COW_POOL_PAGES*L4_PAGESIZE);
   cow_pages = COW_POOL_PAGES;
 }
 
@@ -574,7 +571,6 @@ main(void)
   l4_threadid_t my_id, my_preempter, my_pager, new_pager;
 
   l4_umword_t ignore;
-  l4_msgdope_t dope;
   l4_threadid_t t, new_t;
 
   int tasks;
@@ -586,18 +582,14 @@ main(void)
   /* this call initialized the names library
      -- must be done before save_data()! */
   names_register("eventdemo");
-
-  /* call this at the very beginning! */
-  save_data();
-  reserve_cow();
-
-  printf("starting event server demo...\n");
-
+  
   get_thread_ids(&my_id,&my_preempter,&my_pager,NULL);
 
-  my_preempter = L4_INVALID_ID;
-  new_pager = my_pager;
+  /* call this at the very beginning! */
+  save_data(my_pager);
+  reserve_cow(my_pager);
 
+  printf("starting event server demo...\n");
 
   /* get task numbers */
   tasks = get_tasks();
@@ -607,7 +599,6 @@ main(void)
     printf("got not enough tasks!!!");
     enter_kdebug("main");
   }
-
 
   /* start pager */
   get_thread_ids(&my_id,&my_preempter,&my_pager,NULL);
@@ -665,7 +656,7 @@ main(void)
 
 
   /* wait forever */
-  l4_ipc_receive(L4_NIL_ID, 0, &ignore, &ignore, L4_IPC_NEVER, &dope);
+  l4_ipc_sleep(L4_IPC_NEVER);
 
   return 0;
 }

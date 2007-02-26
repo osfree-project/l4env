@@ -68,13 +68,13 @@ static int get_event(EVENT *e) {
 		break;
 
 	case EV_KEY:
-		if (ev[curr_ev].value) {
+		if (ev[curr_ev].value == 1) {
 
 			/* key or button pressed */
 			INFO(printf("Mouse(update): pressed\n");)
 			e->type = EVENT_PRESS;
 			e->code = ev[curr_ev].code;
-		} else {
+		} else if (ev[curr_ev].value == 0) {
 
 			/* key or button button released */
 			INFO(printf("Mouse(update): released\n");)

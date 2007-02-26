@@ -1,93 +1,56 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include <flux/x86/cpuid.h>
-
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sys/kernel.h>
+#include <l4/sigma0/sigma0.h>
+#include <l4/sigma0/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/rmgr/proto.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
 #include <l4/util/irq.h>
 #include <l4/util/apic.h>
-#include <l4/sys/kernel.h>
+#include <l4/util/cpu.h>
 
 #include <l4/util/perform.h>
 #include <l4/util/rdtsc.h>
 
-static l4_kernel_info_t * const l4_kernel_info = (l4_kernel_info_t *)0x1000;
+static l4_kernel_info_t * l4_kernel_info;
 static long long nmi_perf = 0;
-
-/* Get kernel info page. We need it for the kernel timer tick. */
-static void
-map_kernel_info_page(void)
-{
-  int error;
-  l4_msgdope_t result;
-  l4_snd_fpage_t fpage;
-  l4_threadid_t rmgr_pager_id;
-
-  rmgr_pager_id = rmgr_id;
-  rmgr_pager_id.id.lthread = RMGR_LTHREAD_PAGER;
-
-  error = l4_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, 1, 1,
-                           L4_IPC_MAPMSG((l4_addr_t)l4_kernel_info,
-                                         L4_LOG2_PAGESIZE),
-                           &fpage.snd_base, &fpage.fpage.fpage,
-                           L4_IPC_NEVER, &result);
-  if (error)
-    {
-      printf("Can't map KI page");
-      exit(-1);
-    }
-  else if (!l4_ipc_fpage_received(result))
-    {
-      printf("CPUfreq: KI page not mapped");
-      exit(-1);
-    }
-}
 
 /* Map apic memory mapped i/o registers */
 static void
-apic_map_iopage(unsigned long map_addr)
+apic_map_iopage(l4_addr_t map_addr)
 {
-  int error;
-  l4_umword_t dummy;
   l4_addr_t page_addr;
-  l4_msgdope_t result;
   l4_threadid_t rmgr_pager_id;
 
   apic_done();
-    
-  page_addr = (APIC_PHYS_BASE & L4_SUPERPAGEMASK) - 0x40000000;
-
+ 
+  page_addr = l4_trunc_superpage(APIC_PHYS_BASE);
   rmgr_pager_id = rmgr_id;
   rmgr_pager_id.id.lthread = RMGR_LTHREAD_PAGER;
 
   for (;;)
     {
-      error = l4_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, page_addr, 0,
-			       L4_IPC_MAPMSG(map_addr,L4_LOG2_SUPERPAGESIZE),
-			       &dummy, &dummy,
-			       L4_IPC_NEVER, &result);
-      if (error)
+      switch (l4sigma0_map_iomem(rmgr_pager_id, page_addr, map_addr,
+				 L4_SUPERPAGESIZE, 0))
 	{
-	  printf("Can't map APIC page (error %02x)", error);
+	case -2:
+	  printf("Can't map APIC page (IPC error)\n");;
 	  exit(-1);
-	}
-      else if (!l4_ipc_fpage_received(result))
-	{
+
+	case -3:
 	  /* apic page is not mapped, so wait a little bit and try again */
 	  printf("Can't map APIC page, trying again...\n");
 	  l4_sleep(100);
 	  continue;
 	}
-      else
-	break;
+      break;
     }
 
   /* tell apic library where the APIC is */
@@ -104,13 +67,13 @@ apic_unmap_iopage(void)
       printf("Can't unmap APIC page");
       exit(-1);
     }
-  
+
   l4_fpage_unmap(l4_fpage(apic_map_base & L4_SUPERPAGEMASK,
 			  L4_LOG2_SUPERPAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-  
+
   apic_done();
-  
+
   rmgr_free_page((APIC_PHYS_BASE & L4_SUPERPAGEMASK) - 0x40000000);
 }
 
@@ -121,7 +84,7 @@ check_getirqs(void)
 {
   l4_uint32_t clock = (l4_uint32_t)l4_kernel_info->clock;
   l4_uint32_t count;
-  
+
   for (count=0x20000000; count; count--)
     if (clock != (l4_uint32_t)l4_kernel_info->clock)
       break;
@@ -152,39 +115,39 @@ try_to_activate_apic(void)
 	  printf(", No IRQs!\n");
 	  return 0;
 	}
-      
+
       printf(", Not working!\n");
       return 0;
     }
-  
+
   printf(" Not present!\n");
   return 0;
 }
 
-/* Initialize local APIC. 
+/* Initialize local APIC.
  * Returns 1 on success */
 static int
 init_apic(void)
 {
   int have_apic = 1;
- 
+
   /* map kernel info page */
-  map_kernel_info_page();
-  
+  l4_kernel_info = l4sigma0_kip_map(L4_INVALID_ID);
+
   /* map APIC memory mapped i/o registers */
   apic_map_iopage(APIC_MAP_BASE);
 
-  if (   !apic_test_present() 
+  if (   !apic_test_present()
       || !apic_check_working())
     have_apic = try_to_activate_apic();
-  
+
   if (have_apic)
     {
       apic_soft_enable();
       printf("Local APIC version 0x%02lx, activating watchdog...\n",
 	  GET_APIC_VERSION(apic_read(APIC_LVR)));
     }
-  
+
   return have_apic;
 }
 
@@ -199,36 +162,51 @@ set_nmi_counter_local(void)
 #endif
 }
 
-int 
+int
 main(int argc, char **argv)
 {
   unsigned long long val;
-  struct cpu_info cpu;
   unsigned long hz;
   unsigned long to;
+  unsigned char vendor_string[13];
+  unsigned long dummy;
+  unsigned long version;
+  unsigned long family;
 
   /* Set to high priority so no other L4 task get scheduled until
    * we are going into the wait loop */
   if (rmgr_set_prio(l4_myself(), 0xff))
     printf("Can't set priority of myself to 255!!\n");
 
-  /* Check for CPU type */
-  cpuid(&cpu);
+  if (!l4util_cpu_has_cpuid())
+    {
+      printf("CPUID not support by CPU\n");
+      exit(1);
+    }
+
+  vendor_string[12] = 0;
+  l4util_cpu_cpuid(0, &dummy,
+                   (unsigned long *)vendor_string,
+                   (unsigned long *)(vendor_string + 8),
+                   (unsigned long *)(vendor_string + 4));
+
+  l4util_cpu_cpuid(1, &version, &dummy, &dummy, &dummy);
+  family = (version >> 8) & 0xf;
 
 #ifdef CPU_P6
-  if ((memcmp(cpu.vendor_id, "GenuineIntel", 12)) || (cpu.family < 6))
+  if ((memcmp(vendor_string, "GenuineIntel", 12)) || (family < 6))
     {
       printf("CPU must be at least an Intel P6!\n");
       return -1;
     }
 #else
-  if ((memcmp(cpu.vendor_id, "AuthenticAMD", 12)) || (cpu.family < 6))
+  if ((memcmp(vendor_string, "AuthenticAMD", 12)) || (family < 6))
     {
       printf("CPU must be at least an AMD K7!\n");
       return -1;
     }
 #endif
-  
+
   if (!rmgr_init())
     {
       printf("Error initializing rmgr\n");
@@ -284,7 +262,7 @@ main(int argc, char **argv)
   l4_i586_wrmsr(MSR_K7_PERFCTR0, &val);
   l4_i586_wrmsr(MSR_K7_PERFCTR1, &val);
 #endif
-  
+
   /* enable int, os, user mode, events: cpu clocks not halted */
 #ifdef CPU_P6
   val = P6CNT_IE | P6CNT_K | P6CNT_U | P6_CPU_CLK_UNHALTED;
@@ -302,7 +280,7 @@ main(int argc, char **argv)
 
   /* unmap APIC flexpage so other server can use it */
   apic_unmap_iopage();
-  
+
   /* enable both performance counters */
 #ifdef CPU_P6
   val = P6CNT_EN;
@@ -327,7 +305,6 @@ main(int argc, char **argv)
       l4_sleep(1000);
       set_nmi_counter_local();
     }
-  
+
   return 0;
 }
-

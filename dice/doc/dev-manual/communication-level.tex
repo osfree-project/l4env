@@ -157,3 +157,48 @@ stateful server or even CORBA compiant service handling.  Since there has been
 no need for these technologies, no ideas exist on how to integrate this into
 \dice{}.
 
+\subsection{Synchronous and Asynchronous Communication}
+Synchronous and asynchronous communication can be implemented for client
+and server independently. This results, combined with the directional
+differences (call, one-way send, receive), in a matrix illustrated below.
+
+\begin{table}[ht]
+ \begin{center}
+  \begin{tabular}{|l|l|l|}
+    \hline 
+    & synchronous & asynchronous \\ 
+    & server & server \\ 
+    \hline
+    synchronous  & RPC  & for instance,\\
+    client       &      & multi-threaded server \\ 
+    \hline
+    asynchronous & DoS possible: server    & $\rightarrow$ like asynchronous \\
+    client       & has to wait indefinetly & one-way messages \\
+                 & to deliver reply        & \\
+    \hline
+  \end{tabular}
+ \end{center}
+ \caption{\texttt call}
+ \label{table:sync-aync-call}
+\end{table}
+
+\begin{table}[ht]
+ \begin{center}
+  \begin{tabular}{|l|l|l|}
+    \hline 
+    & synchronous & asynchronous \\ 
+    & server & server \\ 
+    \hline
+    synchronous  & N/A                    & message delivered to receiver \\
+    client       & expect status of       & queue; server picks up \\ 
+                 & delivery (done by IPC) & message later \\
+    \hline
+    asynchronous & ?                      & ?                               \\
+    client       &                        & \\
+    \hline
+  \end{tabular}
+ \end{center}
+ \caption{\texttt one-way}
+ \label{table:sync-aync-one-way}
+\end{table}
+

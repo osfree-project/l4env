@@ -18,7 +18,7 @@
 #include <stdarg.h>
 #include <l4/sys/types.h>
 
-#include "ctype.h"
+#include <linux/ctype.h>
 
 unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base);
 unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)

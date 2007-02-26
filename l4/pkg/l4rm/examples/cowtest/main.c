@@ -68,7 +68,7 @@ int main(void)
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds1 to region at 0x%08x\n",addr1);
+  printf("attached ds1 to region at 0x%08lx\n",addr1);
 
   /* open new ds 2 by copying ds1 (without copy on write) */
   if ((ret = l4dm_copy(&ds1,0,"ds 2",&ds2)))
@@ -84,7 +84,7 @@ int main(void)
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds2 to region at 0x%08x\n",addr2);
+  printf("attached ds2 to region at 0x%08lx\n",addr2);
 
   /* open new ds 3 by copying ds1 (with copy on write) */
   if ((ret = l4dm_copy(&ds1,L4DM_COW,"ds 3",&ds3)))
@@ -100,7 +100,7 @@ int main(void)
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds3 to region at 0x%08x\n",addr3);
+  printf("attached ds3 to region at 0x%08lx\n",addr3);
 
   enter_kdebug("stop");
 

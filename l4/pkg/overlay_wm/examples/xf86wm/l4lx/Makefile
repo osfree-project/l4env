@@ -3,7 +3,7 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = ovlwm
 MODE             = l4linux
-SYSTEMS          = x86-l4v2 x86-l4x0
+SYSTEMS          = x86-l4v2
 
 LIBCINCDIR       = $(addprefix -I,$(L4INCDIR))
 #LIBS             = -ll4lxovlwindow -lnames -ll4util -lrmgr -ldm_mem -lX11 -lXext -pthread 

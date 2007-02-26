@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEStructType.cpp
- *    \brief   contains the implementation of the class CFEStructType
+ *  \file    dice/src/fe/FEStructType.cpp
+ *  \brief   contains the implementation of the class CFEStructType
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,80 +26,45 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FEStructType.h"
-#include "fe/FETaggedStructType.h"
+#include "FEStructType.h"
+#include "FETypedDeclarator.h"
+#include "FEInterface.h"
+#include "FELibrary.h"
+#include "FEFile.h"
 #include "File.h"
+#include "Compiler.h"
+#include "Visitor.h"
+#include <iostream>
 
-CFEStructType::CFEStructType(vector<CFETypedDeclarator*> * pMembers)
-: CFEConstructedType(TYPE_STRUCT)
+CFEStructType::CFEStructType(string sTag, 
+    vector<CFETypedDeclarator*> * pMembers)
+: CFEConstructedType(TYPE_STRUCT),
+    m_Members(pMembers, this)
 {
-    if (pMembers)
-        m_vMembers.swap(*pMembers);
-    else
+    m_sTag = sTag;
+    if (!pMembers)
         m_bForwardDeclaration = true;
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = m_vMembers.begin(); iter != m_vMembers.end(); iter++)
-    {
-        (*iter)->SetParent(this);
-    }
 }
 
 CFEStructType::CFEStructType(CFEStructType & src)
-: CFEConstructedType(src)
+: CFEConstructedType(src),
+    m_Members(src.m_Members)
 {
-    vector<CFETypedDeclarator*>::iterator iter = src.m_vMembers.begin();
-    for (; iter != src.m_vMembers.end(); iter++)
-    {
-        CFETypedDeclarator *pNew = (CFETypedDeclarator*)((*iter)->Clone());
-        m_vMembers.push_back(pNew);
-        pNew->SetParent(this);
-    }
+    m_sTag = src.m_sTag;
+    m_Members.Adopt(this);
 }
 
 /** cleans up the struct object (delete all members) */
 CFEStructType::~CFEStructType()
-{
-    while (!m_vMembers.empty())
-    {
-        delete m_vMembers.back();
-        m_vMembers.pop_back();
-    }
-}
-
-/** retrieves a pointer to the first member
- *    \return an iterator, which points to the first member
- */
-vector<CFETypedDeclarator*>::iterator CFEStructType::GetFirstMember()
-{
-    return m_vMembers.begin();
-}
-
-/** retrieves the next member of the struct
- *    \param iter the iterator, which points to the next member
- *    \return the next member object
- */
-CFETypedDeclarator *CFEStructType::GetNextMember(vector<CFETypedDeclarator*>::iterator &iter)
-{
-    if (iter == m_vMembers.end())
-        return 0;
-    return *iter++;
-}
-
-/** copies the struct object
- *    \return a reference to the new struct object
- */
-CObject *CFEStructType::Clone()
-{
-    return new CFEStructType(*this);
-}
+{ }
 
 /** tries to find a member by its name
- *    \param sName the name to look for
- *    \return the member if found, 0 if no such member
+ *  \param sName the name to look for
+ *  \return the member if found, 0 if no such member
  */
 CFETypedDeclarator *CFEStructType::FindMember(string sName)
 {
-    if (m_vMembers.empty())
+    if (m_Members.empty())
         return 0;
     if (sName.empty())
         return 0;
@@ -109,109 +74,69 @@ CFETypedDeclarator *CFEStructType::FindMember(string sName)
     string::size_type iPtr = sName.find("->");
     string::size_type iUse;
     if ((iDot == string::npos) && (iPtr == string::npos))
-        iUse = string::npos;
+	iUse = string::npos;
     else if ((iDot == string::npos) && (iPtr != string::npos))
-        iUse = iPtr;
+	iUse = iPtr;
     else if ((iDot != string::npos) && (iPtr == string::npos))
-        iUse = iDot;
+	iUse = iDot;
     else
-        iUse = (iDot < iPtr) ? iDot : iPtr;
+	iUse = (iDot < iPtr) ? iDot : iPtr;
     string sBase,
-    sMember;
+	   sMember;
     if ((iUse != string::npos) && (iUse > 0))
     {
-        sBase = sName.substr(0, iUse);
-        if (iUse == iDot)
-            sMember = sName.substr(sName.length() - (iDot + 1));
-        else
-            sMember = sName.substr(sName.length() - (iDot + 2));
+	sBase = sName.substr(0, iUse);
+	if (iUse == iDot)
+	    sMember = sName.substr(sName.length() - (iDot + 1));
+	else
+	    sMember = sName.substr(sName.length() - (iDot + 2));
     }
     else
-        sBase = sName;
+	sBase = sName;
 
-    vector<CFETypedDeclarator*>::iterator iter = GetFirstMember();
-    CFETypedDeclarator *pTD;
-    while ((pTD = GetNextMember(iter)) != 0)
+    vector<CFETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	 iter != m_Members.end();
+	 iter++)
     {
-        if (pTD->FindDeclarator(sBase))
-        {
-            if ((iUse != string::npos) && (iUse > 0))
-            {
-                // if the found typed declarator has a constructed type (struct)
-                // search for the second part of the name there
-                if (dynamic_cast<CFEStructType*>(pTD->GetType()))
-                {
-                    if (!(((CFEStructType *)(pTD->GetType()))->FindMember(sMember)))
-                    {
-                        // no nested member with that name found
-                        return 0;
-                    }
-                }
-            }
-            // return the found typed declarator
-            return pTD;
-        }
+	if ((*iter)->m_Declarators.Find(sBase))
+	{
+	    if ((iUse != string::npos) && (iUse > 0))
+	    {
+		// if the found typed declarator has a constructed type (struct)
+		// search for the second part of the name there
+		CFEStructType *pStruct = 
+		    dynamic_cast<CFEStructType*>((*iter)->GetType());
+		if (pStruct)
+		{
+		    if (!pStruct->FindMember(sMember))
+		    {
+			// no nested member with that name found
+			return 0;
+		    }
+		}
+	    }
+	    // return the found typed declarator
+	    return *iter;
+	}
     }
 
-    return 0;
+    return (CFETypedDeclarator*)0;
 }
 
-/** \brief checks consitency
- *  \return false if error occurs, true if everything is fine
- *
- * A struct is consistent if all members are consistent.
+/** \brief accepts the iterations of the visitor
+ *  \param v reference to the visitor
  */
-bool CFEStructType::CheckConsistency()
+void
+CFEStructType::Accept(CVisitor& v)
 {
-    vector<CFETypedDeclarator*>::iterator iter = GetFirstMember();
-    CFETypedDeclarator *pMember;
-    while ((pMember = GetNextMember(iter)) != 0)
+    v.Visit(*this);
+
+    vector<CFETypedDeclarator*>::iterator iter;
+    for (iter = m_Members.begin();
+	iter != m_Members.end();
+	iter++)
     {
-        if (!(pMember->CheckConsistency()))
-            return false;
+	(*iter)->Accept(v);
     }
-    return true;
-}
-
-/** serialize this object
- *    \param pFile the file to serialize to/from
- */
-void CFEStructType::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<struct_type>\n");
-        pFile->IncIndent();
-        SerializeMembers(pFile);
-        pFile->DecIndent();
-        pFile->PrintIndent("</struct_type>\n");
-    }
-}
-
-/** serialize this object
- *    \param pFile the file to serialize to/from
- */
-void CFEStructType::SerializeMembers(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        vector<CFETypedDeclarator*>::iterator iter = GetFirstMember();
-        CFEBase *pElement;
-        while ((pElement = GetNextMember(iter)) != 0)
-        {
-            pFile->PrintIndent("<member>\n");
-            pFile->IncIndent();
-            pElement->Serialize(pFile);
-            pFile->DecIndent();
-            pFile->PrintIndent("</member>\n");
-        }
-    }
-}
-
-/**    \brief test if this struct has members
- *    \return true if struct has members
- */
-bool CFEStructType::HasMembers()
-{
-    return !m_vMembers.empty();
 }

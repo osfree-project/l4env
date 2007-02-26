@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file    l4sys/includes/ARCH-x86/L4API-l4v2/ktrace.h
+ * \file    l4sys/include/ARCH-x86/L4API-l4v2/ktrace.h
  * \brief   L4 kernel event tracing
  * \ingroup api_calls
  */
@@ -10,6 +10,7 @@
 #define __L4_KTRACE_H__
 
 #include <l4/sys/types.h>
+#include <l4/sys/ktrace_events.h>
 
 #define LOG_EVENT_CONTEXT_SWITCH   0  /**< Event: context switch
 				       **  \ingroup api_calls_fiasco
@@ -26,6 +27,25 @@
 #define LOG_EVENT_THREAD_EX_REGS   4  /**< Event: thread_ex_regs
 				       **  \ingroup api_calls_fiasco
 				       **/
+#define LOG_EVENT_TRAP             5  /**< Event: Trap occured
+				       **  \ingroup api_calls_fiasco
+				       **/
+#define LOG_EVENT_PF_RES           6  /**< Event: Pagefpault resolved
+				       **  \ingroup api_calls_fiasco
+				       **/
+#define LOG_EVENT_SCHED            7  /**< Event: Scheduling context
+				       **  loaded, saved or invalidated
+				       **  \ingroup api_calls_fiasco
+				       **/
+#define LOG_EVENT_PREEMPTION       8  /**< Event: Preemption IPC sent
+				       **  \ingroup api_calls_fiasco
+				       **/
+#define LOG_EVENT_LIPC             9  /**< Event: ???
+				       **  \ingroup api_calls_fiasco
+				       **/
+#define LOG_EVENT_TASK_NEW        10  /**< Event: New task created
+				       **  \ingroup api_calls_fiasco
+				       **/
 
 #define LOG_EVENT_MAX_EVENTS      16  /**< Maximum number of events
 				       **  \ingroup api_calls_fiasco
@@ -35,20 +55,23 @@
  * Tracebuffer status.
  * \ingroup api_calls_fiasco
  */
+// keep in sync with fiasco/src/jabi/jdb_ktrace.cpp
 typedef struct
 {
   /// Address of tracebuffer 0
-  l4_umword_t tracebuffer0;
+  l4_tracebuffer_entry_t * tracebuffer0;
   /// Size of tracebuffer 0
   l4_umword_t size0;
   /// Version number of tracebuffer 0 (incremented if tb0 overruns)
-  l4_umword_t version0;
+  volatile l4_uint64_t version0;
   /// Address of tracebuffer 1 (there is no gap between tb0 and tb1)
-  l4_umword_t tracebuffer1;
+  l4_tracebuffer_entry_t * tracebuffer1;
   /// Size of tracebuffer 1 (same as tb0)
   l4_umword_t size1;
   /// Version number of tracebuffer 1 (incremented if tb1 overruns)
-  l4_umword_t version1;
+  volatile l4_uint64_t version1;
+  /// Address of the most current event in tracebuffer.
+  volatile l4_tracebuffer_entry_t * current_entry;
   /// Available LOG events
   l4_umword_t logevents[LOG_EVENT_MAX_EVENTS];
 
@@ -60,33 +83,37 @@ typedef struct
   l4_umword_t scaler_ns_to_tsc;
 
   /// Number of context switches (intra AS or inter AS)
-  l4_umword_t cnt_context_switch;
+  volatile l4_umword_t cnt_context_switch;
   /// Number of inter AS context switches
-  l4_umword_t cnt_addr_space_switch;
+  volatile l4_umword_t cnt_addr_space_switch;
   /// How often was the IPC shortcut taken
-  l4_umword_t cnt_shortcut_failed;
+  volatile l4_umword_t cnt_shortcut_failed;
   /// How often was the IPC shortcut not taken
-  l4_umword_t cnt_shortcut_success;
+  volatile l4_umword_t cnt_shortcut_success;
   /// Number of hardware interrupts (without kernel scheduling interrupt)
-  l4_umword_t cnt_irq;
+  volatile l4_umword_t cnt_irq;
   /// Number of long IPCs
-  l4_umword_t cnt_ipc_long;
+  volatile l4_umword_t cnt_ipc_long;
   /// Number of page faults
-  l4_umword_t cnt_page_fault;
+  volatile l4_umword_t cnt_page_fault;
   /// Number of faults (application runs at IOPL 0 and tries to execute
   /// cli, sti, in, or out but does not have a sufficient in the I/O bitmap)
-  l4_umword_t cnt_io_fault;
+  volatile l4_umword_t cnt_io_fault;
   /// Number of tasks created
-  l4_umword_t cnt_task_create;
+  volatile l4_umword_t cnt_task_create;
   /// Number of reschedules
-  l4_umword_t schedule;
+  volatile l4_umword_t cnt_schedule;
+  /// Number of flushes of the I/O bitmap. Increases on context switches
+  /// between two small address spaces if at least one of the spaces has
+  /// an I/O bitmap allocated.
+  volatile l4_umword_t cnt_iobmap_tlb_flush;
 
 } l4_tracebuffer_status_t;
 
 /**
  * Return tracebuffer status.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return Pointer to tracebuffer status struct.
  */
 L4_INLINE l4_tracebuffer_status_t *
@@ -95,7 +122,7 @@ fiasco_tbuf_get_status(void);
 /**
  * Return the physical address of the tracebuffer status struct.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return physical address of status struct.
  */
 L4_INLINE l4_addr_t
@@ -106,7 +133,7 @@ fiasco_tbuf_get_status_phys(void);
  * \ingroup api_calls_fiasco
  *
  * \param  text   Logging text
- * \return Pointer to tracebuffer entry 
+ * \return Pointer to tracebuffer entry
  */
 L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text);
@@ -120,21 +147,21 @@ fiasco_tbuf_log(const char *text);
  * \param  v1     first value
  * \param  v2     second value
  * \param  v3     third value
- * \return Pointer to tracebuffer entry 
+ * \return Pointer to tracebuffer entry
  */
 L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3);
 
 /**
  * Clear tracebuffer.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_clear(void);
 
 /**
  * Dump tracebuffer to kernel console.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_dump(void);
@@ -176,8 +203,8 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text)
 {
   l4_umword_t offset;
-  asm volatile("int $3; cmpb $29, %%al" 
-	      : "=a" (offset) 
+  asm volatile("int $3; cmpb $29, %%al"
+	      : "=a" (offset)
 	      : "a" (1), "d" (text));
   return offset;
 }
@@ -186,8 +213,8 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3)
 {
   l4_umword_t offset;
-  asm volatile("int $3; cmpb $29, %%al" 
-	      : "=a" (offset) 
+  asm volatile("int $3; cmpb $29, %%al"
+	      : "=a" (offset)
 	      : "a" (4), "d" (text), "c" (v1), "S" (v2), "D" (v3));
   return offset;
 }

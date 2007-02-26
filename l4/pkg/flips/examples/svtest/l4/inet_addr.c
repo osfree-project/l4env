@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifndef USE_UCLIBC
 unsigned long int inet_addr(const char *cp) {
   struct in_addr foo;
   if (inet_aton(cp,&foo))
@@ -9,3 +10,4 @@ unsigned long int inet_addr(const char *cp) {
   else
     return (unsigned long int)-1;
 }
+#endif

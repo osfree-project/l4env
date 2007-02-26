@@ -32,7 +32,6 @@
 
 #include "fe/FEBase.h"
 #include <vector>
-using namespace std;
 
 /** \class CFEFileComponent
  *  \ingroup frontend
@@ -43,7 +42,7 @@ class CFEFileComponent : public CFEBase
 
 // standard constructor/destructor
 public:
-    CFEFileComponent();
+    CFEFileComponent(CFEBase* pParent);
     virtual ~CFEFileComponent();
 
 protected:

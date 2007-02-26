@@ -22,6 +22,8 @@
 \setlength{\parindent}{0cm}
 \setlength{\parskip}{0.2cm plus 0.1cm minus 0.1cm}
 
+\usepackage{hyperref}
+
 \begin{document}
 
 % create a new length, which can be used as a base-length for columns
@@ -139,7 +141,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Building Infrastructure for DROPS (BID) Tutorial}
-\author{Jork Löser\\drops@os.inf.tu-dresden.de}
+\author{Jork Löser \qquad Ronald Aigner\\l4-hackers@os.inf.tu-dresden.de}
 \date{\today}
 \maketitle
 
@@ -168,22 +170,17 @@ file system. For understanding the example programs, you should be
 familiar with C.
 
 Compiling packages for DROPS requires a specific compilation
-environment to be setup up. This environment contains IDL compilers,
+environment to be set up. This environment contains IDL compilers,
 special versions of a standard C library, various Linux kernel
 sources, compiled DROPS packages and others. A tutorial on how to set
 up this environment can be found in \cite{drops:building}. We assume
 the environment being set up correctly.
 
-\todo{Mention that we do not need the whole environment for our
-tutorial. The different things (Linux kernels, OSKit, tools) must be
-mentioned in the cited tutorial separately, and we have to say here
-which sections in this tutorial require which things. In the cited
-tutorial, also mention that if you are at the Operating Systems Group
-at TU~Dresden (TUD) with access to the file server
-\name{kurt.inf.tu-dresden.de}, most of these files are already
-installed at /home/drops/. Mention which files.
-}
-
+We assume that you checked out the L4Env \cite{www:l4env} module from the
+DROPS download page \cite{drops:download} and build the environment.  To test
+your package, you will also need the Fiasco module. If you are at the
+Operating Systems Group here at TU Dresden with access to the file server
+\name{os.inf.tu-dresden.de}, most of these files are installed at /home/drops.
 
 \section{Finding around}
 
@@ -191,20 +188,16 @@ Lets assume your base directory where your DROPS-sources are is
 «§(HOME)/src». After checking out the files using CVS, you end up with
 a couple of directories:
 
-\begin{descriptiontable}{oskit10}
+\begin{descriptiontable}{xxxxxxxxxx}
   l4/           & the L4 directory, later referenced as §(L4DIR). \\
-  oskit/        & the ``old'' FLUX OSKit~0.6, a libc. \\
-  oskit10/      & the ``new'' FLUX OSKit~1.0, a collection of libcs.
-                  \\
-  linux22/      & L4Linux 2.2 \\
+  l4linux-2.6/  & L4Linux 2.6 \\
 \end{descriptiontable}
 
 There might be others as well, likely Linux kernels, which are needed
 by some DROPS packages. Within the L4 directory, you will find
 
 \begin{descriptiontable}{l4/include}
-  l4/kernel     & sources of L4 micro kernel implementations, among
-                  them FIASCO. \\
+  l4/kernel     & sources of L4 micro kernel implementations, primarily FIASCO. \\
   l4/pkg        & base directory of all DROPS packages. \\
   l4/tool       & tools for compilation, among them the IDL compiler
                   DICE.\\
@@ -236,7 +229,7 @@ name it hiworld. You create the package by creating a directory called
 |~/src/l4/pkg> mkdir hiworld|
 
 This directory is called \emph{package dir} and will be referenced as
-«§(PKDIR)». Switch to the directory and use the template provided by
+«§(PKGDIR)». Switch to the directory and use the template provided by
 BID to create the basic directory structure together with some
 Makefiles:
 
@@ -281,7 +274,7 @@ Compile the program:
 |~/src/l4/pkg/hiworld/server/src> make|
 
 This will create a directory («OBJ-x86_586-l4v2/») where all compiled
-files will go into. You will find the compiled binary in this
+files will go. You will find the compiled binary in this
 directory, its name is the name of the package: «hiworld». The binary
 is also installed into «§(L4DIR)/bin». If you did the setup for
 installing the binaries (see Section~\ref{sec:bootbin}), it should be
@@ -298,6 +291,12 @@ binaries as well; your boot loader found all the files; your test
 machine executed the micro kernel and the applications), you should
 see the 'Hi world' near the bottom of the screen attached to your test
 node.
+
+You may also run your application using Fiasco-UX (refer to
+Section~\ref{sec:fiascoux} for instructions on building and using). The
+respective start script is:
+
+\examplefile{hello}{hi-runux}
 
 In this section we
 \BI
@@ -321,7 +320,7 @@ the former function.
 \subsection{IDL file}
 
 We start with writing a corresponding IDL file. Therefore, switch
-into «idl/» and create the file «hiworld.idl»:
+into «§(PKGDIR)/idl/» and create the file «hiworld.idl»:
 
 \examplefile{hiworld/idl/hiworld.idl}{hi-idl}
 
@@ -341,7 +340,7 @@ communication between client and server. For details on the IDL file
 syntax, the meaning of the command line switches or the generated
 source code, please see the documentation of the IDL compiler
 \name{dice}, which you can build yourself in «§(L4DIR)/tool/dice/doc/»
-or find it in \cite{dice}.
+or find it in \cite{dice-man}.
 
 
 \subsection{Server side}
@@ -383,7 +382,7 @@ the hello world server.
 The functions exported by the library will be declared as prototypes
 in an include file. The include file will also be made available for
 other packages by BID. Let us create the include file first. Switch to
-the «include/» directory and create the new file «hiworld.h»:
+the «§(PKGDIR)/include/» directory and create the new file «hiworld.h»:
 
 \examplefile{hiworld/include/hiworld.h}{hi-include}
 
@@ -393,7 +392,7 @@ be accessed with «\#include <l4/hiworld/hiworld.h>» later:
 
 |~/src/l4/pkg/hiworld/include> make|
 
-Client libraries are typically build in the «lib/» directory of a
+Client libraries are typically build in the «§(PKGDIR)/lib/» directory of a
 package. Like in the server directory, there is a «src/» subdirectory. 
 Switch into it and create the new file «encap.c» containing the
 encapsulation code:
@@ -417,7 +416,7 @@ Finally, build the library and install it, so others can use it:
 
 The last piece is the client program actually triggering the actions
 at the server. We see it as an example on how to use our hello world
-server, and consequently place it into the «examples/» directory tree.
+server, and consequently place it into the «§(PKGDIR)/examples/» directory tree.
 Create a new subdirectory there:
 
 |~/src/l4/pkg/hiworld/examples> mkdir client|
@@ -463,7 +462,7 @@ automatically. Thus it becomes:
 \examplefile{hiworld/examples/Makefile}{hi-examples-makefile}
 
 Now, you could do a «make» in «hiworld/» to rebuild your whole package
-(probably nothing actually gets actually built, as everything should
+(probably nothing actually gets built, as everything should
 be up to date). Or, you could do a «make clean» in «hiworld/» to
 delete all generated intermediate files in your package and only keep
 the generated library and the binaries. A «make cleanall» removes
@@ -497,9 +496,6 @@ In this section we
 \section{Installing binaries for booting}
 \label{sec:bootbin}
 
-\todo{This section should go into the building tutorial mentioned in
-Section~\ref{sec:assumptions}.}
-
 BID can automatically install your compiled binaries so you can boot
 them later using the network. Therefore, after compilation binaries
 are stripped and copied into «§(L4DIR)/bin» per default. Make this a
@@ -507,16 +503,35 @@ symbolic link to your actual file server directory, and you are set.
 
 At TUD, this requires two steps: Ensure the tftp server finds the
 binaries within your home directory. Then, ensure the binaries are
-installed into this directory. Thus at \emph{erwin.inf.tu-dresden.de}:
+installed into this directory. Thus at \emph{os.inf.tu-dresden.de}:
 
-|kurt:/home/yourname> mkdir -p boot/bin|\\
-|kurt:/home/yourname> ln -s /tftpboot/yourname boot|
+|os:/home/yourname> mkdir -p boot|\\
+|os:/home/yourname> ln -s boot /tftpboot/yourname|
 
-(The latter may require administrator rights, ask the administrator in
-this case.) At your \emph{workstation}, where kurt:oshome is mounted
+(The latter step may require administrator rights, ask the administrator in
+this case.) At your \emph{workstation}, where os-home:/home is mounted
 (we assume /home to be the mountpoint):
 
-|~/src/l4> ln -s /home/YOURNAME/boot/bin|
+|~/src/l4> ln -s bin /home/YOURNAME/boot/bin|
+
+\pagebreak
+\section{Using Fiasco-UX to run L4 applications}
+\label{sec:fiascoux}
+
+Fiasco can be build to run as Linux user application -- Fiasco-UX. The steps
+to build Fiasco-UX you may obtain from the Fiasco-UX homepage
+\cite{fiasco-ux}.
+
+To simplify running application we provide a set of scripts that wrap the
+typical options of Fiasco-UX. Please check out «l4/tool/runux». Change into
+that directory and edit the file hello.
+
+\examplefile{hello}{hi-runux}
+
+This script will start Fiasco-UX with the basic servers required by the hello
+binary. These servers you have already seen in the Grub boot list. To start
+the hiserver/hiclient example simply replace the line containing hiworld with
+respective lines for hiserver and hiclient.
 
 \section{FAQ}
 

@@ -69,15 +69,13 @@ extern
 #endif
 void __L4_copy_syscalls_in (L4_Word_t dest);
 
-char syscall_stubs[4096] __attribute__ ((aligned (4096)));
+extern char syscall_stubs[4096];
 
 /* send startup ipc to task */
 static void send_startup_ipc (L4_ThreadId_t tid, L4_Word_t ip, L4_Word_t sp)
 {
-#if 0
-    printf ("sending startup message to %lx, (ip=%lx, sp=%lx)\n",
-	    (long) tid.raw, (long) ip, (long) sp);
-#endif
+//     printf ("%s: sending startup message to %08lx, (ip=%08lx, sp=%08lx)\n",
+// 	__FUNCTION__, (long) tid.raw, (long) ip, (long) sp);
     L4_Msg_t msg;
     L4_MsgClear (&msg);
     L4_MsgAppendWord (&msg, ip);
@@ -86,7 +84,7 @@ static void send_startup_ipc (L4_ThreadId_t tid, L4_Word_t ip, L4_Word_t sp)
     L4_Send (tid);
 }
 
-static void pager (void);
+static void pager (void) __attribute__((unused));
 static void pager (void)
 {
     L4_ThreadId_t tid;
@@ -101,6 +99,9 @@ static void pager (void)
     L4_KernelInterfacePage_t * kip =
 	(L4_KernelInterfacePage_t *) L4_GetKernelInterface ();
 
+    tid = L4_Myself();
+//     printf ("%s: I am %08lx\n", __FUNCTION__, tid.raw);
+
     /* Find smallest supported page size. There's better at least one
      * bit set. */
     for (page_bits = 0;  
@@ -109,20 +110,20 @@ static void pager (void)
 
     for (;;)
     {
-	tag = L4_Wait_Timeout (L4_Never, &tid);
+	tag = L4_Wait (&tid);
 
 	for (;;)
 	{
 	    L4_MsgStore (tag, &msg);
 
-//	    printf ("Pager got msg from %p (%p, %p, %p)\n",
-//		    (void *) tid.raw, (void *) tag.raw,
-//		    (void *) L4_Get (&msg, 0), (void *) L4_Get (&msg, 1));
+// 	    printf ("%s: Pager got msg from %08lx (%08lx, %lx, %lx)\n", 
+// 		__FUNCTION__, tid.raw, tag.raw, 
+// 		L4_MsgWord (&msg, 0), L4_MsgWord (&msg, 1));
 
 	    if (L4_Label (tag) == 0)
 	    {
-	        L4_Word_t sp = L4_MsgWord(&msg, 0);
-		L4_Word_t ip = L4_MsgWord(&msg, 1);
+	        L4_Word_t ip = L4_MsgWord(&msg, 0);
+		L4_Word_t sp = L4_MsgWord(&msg, 1);
 		L4_ThreadId_t thread = { .raw = L4_MsgWord(&msg, 2) };
 
 		send_startup_ipc ( thread, ip, sp );
@@ -132,8 +133,8 @@ static void pager (void)
 	    if (L4_UntypedWords (tag) != 2 || L4_TypedWords (tag) != 0 ||
 		!L4_IpcSucceeded (tag))
 	    {
-		printf ("dice_testsuite: malformed pagefault IPC from %p (tag=%p)\n",
-			(void *) tid.raw, (void *) tag.raw);
+		printf ("%s: malformed pagefault IPC from %08lx (tag=%08lx)\n",
+		    __FUNCTION__, tid.raw, tag.raw);
 		L4_KDB_Enter ("malformed pf");
 		break;
 	    }
@@ -145,12 +146,12 @@ static void pager (void)
 	    // original stubs and map in this copy.
 	    if (faddr >= (L4_Word_t) &__L4_syscalls_start &&
 		faddr <  (L4_Word_t) &__L4_syscalls_end)
-	      {
+	    {
 		__L4_copy_syscalls_in ((L4_Word_t) syscall_stubs);
 		mapaddr = (L4_Word_t) syscall_stubs;
-	      }
+      	    }
 	    else
-	      mapaddr = faddr;
+  		mapaddr = faddr;
 	    
 	    L4_MsgClear (&msg);
 	    page = L4_FpageLog2 (mapaddr, page_bits);

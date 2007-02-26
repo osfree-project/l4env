@@ -8,7 +8,7 @@ L4DIR  ?= $(PKGDIR)/../..
 # create an idl file an assign its name to IDL
 IDL				= signal.idl
 IDL_EXPORT_STUB	= signal.idl
-IDL_FLAGS		+= -t -fl4types -fserver-parameter 
+IDL_FLAGS		+= -t
 
 MODE			= l4env_base
 

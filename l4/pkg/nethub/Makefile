@@ -22,19 +22,19 @@ client_lib: client_lib.lib
 
 examples: client_lib.lib
 
-$(addsuffix .include,$(SUBDIRS)): %.include: %
+$(addsuffix .include,$(SUBDIRS)):: %.include: %
 	$(MAKE) -C $(subst .include,,$@) include
 
-$(addsuffix .idl,$(SUBDIRS)): %.idl: %
+$(addsuffix .idl,$(SUBDIRS)):: %.idl: %
 	$(MAKE) -C $(subst .idl,,$@) idl
 
-$(addsuffix .lib,$(SUBDIRS)): %.lib: %
+$(addsuffix .lib,$(SUBDIRS)):: %.lib: %
 	$(MAKE) -C $(subst .lib,,$@) lib
 
-client_lib.lib: base_lib.include base_lib.idl base_lib.lib
+client_lib.lib:: base_lib.include base_lib.idl base_lib.lib
 
-client_lib.include: base_lib.include base_lib.idl
-	
+client_lib.include:: base_lib.include base_lib.idl
+
 
 # these targets are phony
 .PHONY: include idl lib

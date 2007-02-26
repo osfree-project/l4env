@@ -49,11 +49,11 @@ static s32     curr_state = USERSTATE_IDLE; /* current user state         */
 static WIDGET *curr_selected;               /* currently selected widget  */
 static WIDGET *curr_mfocus;                 /* current mouse focus        */
 static WINDOW *curr_window;                 /* currently active window    */
+static WIDGET *curr_receiver;               /* current receiver of motion */
 static void  (*curr_motion_callback)  (WIDGET *,int,int);
 static void  (*curr_release_callback) (WIDGET *,int,int);
 static void  (*curr_tick_callback)    (WIDGET *,int,int);
 static int     press_cnt;                   /* number of pressed keys     */
-static EVENT   event;
 static char    keytab[DOPE_KEY_MAX];
 static s32     curr_keystate;               /* current key state          */
 static s32     curr_keycode;                /* code of curr. pressed key  */
@@ -121,10 +121,10 @@ static void set_pos(long mx, long my) {
  * focus from other applications.
  */
 static void set_active_window(WINDOW *w, int force) {
-	if (!w || w == curr_window) return;
-	if (!force && curr_window && curr_window->wd->app_id != w->wd->app_id) return;
+	if (w == curr_window) return;
+	if (!force && curr_window && w && curr_window->wd->app_id != w->wd->app_id) return;
 
-	w->win->activate(w);
+	if (w) w->win->activate(w);
 
 	if (curr_window) curr_window->gen->dec_ref((WIDGET *)curr_window);
 	curr_window = w;
@@ -253,10 +253,45 @@ static int tick_handle_delay(void *arg) {
 }
 
 
+/*** UPDATE MOUSE FOCUS ***/
+static void update_mfocus(void) {
+	static EVENT event;
+
+	WIDGET *new_mfocus = NULL;
+
+	if (press_cnt != 0) return;
+
+	/* FIXME: scr->find must be added here! */
+	new_mfocus = curr_scr->gen->find((WIDGET *)curr_scr, curr_mx, curr_my);
+
+	if (new_mfocus == curr_mfocus) return;
+
+	if (curr_mfocus) {
+		curr_mfocus->gen->set_mfocus(curr_mfocus, 0);
+		if (curr_mfocus->wd->flags & WID_FLAGS_HIGHLIGHT)
+			curr_mfocus->gen->update(curr_mfocus);
+		event.type = EVENT_MOUSE_LEAVE;
+		curr_mfocus->gen->handle_event(curr_mfocus, &event, NULL);
+		curr_mfocus->gen->dec_ref(curr_mfocus);
+	}
+	if (new_mfocus) {
+		new_mfocus->gen->set_mfocus(new_mfocus, 1);
+		if (new_mfocus->wd->flags & WID_FLAGS_HIGHLIGHT)
+			new_mfocus->gen->update(new_mfocus);
+		event.type = EVENT_MOUSE_ENTER;
+		new_mfocus->gen->handle_event(new_mfocus, &event, NULL);
+		new_mfocus->gen->inc_ref(new_mfocus);
+	}
+	curr_mfocus = new_mfocus;
+}
+
+
 static void handle(void) {
-	static long old_mx, old_my, old_mb;
-	static WIDGET *new_mfocus = NULL;
-	static long update_needed = 0;
+	static long    old_mx, old_my, old_mb;
+	static long    update_needed = 0;
+	static EVENT   event;
+
+	WIDGET *new_mfocus = NULL;
 
 	old_mx = curr_mx;
 	old_my = curr_my;
@@ -264,12 +299,15 @@ static void handle(void) {
 
 	while (input->get_event(&event)) {
 		switch (event.type) {
+
 		case EVENT_MOTION:
 			set_pos(curr_mx + event.rel_x, curr_my + event.rel_y);
 			break;
+
 		case EVENT_ABSMOTION:
 			set_pos(event.abs_x, event.abs_y);
 			break;
+
 		case EVENT_PRESS:
 			press_cnt++;
 
@@ -286,7 +324,9 @@ static void handle(void) {
 				curr_keycode  = 0;
 			}
 			break;
+
 		case EVENT_RELEASE:
+
 			press_cnt--;
 
 			if (event.code == DOPE_BTN_LEFT)  curr_mb = curr_mb & 0x00fe;
@@ -297,31 +337,48 @@ static void handle(void) {
 			break;
 		}
 
-		if ((event.type == EVENT_PRESS || event.type == EVENT_RELEASE)
-		 && curr_mfocus) {
+		update_mfocus();
 
-			WINDOW *w = (WINDOW *)curr_mfocus->gen->get_window(curr_mfocus);
+		if ((event.type == EVENT_PRESS) || (event.type == EVENT_RELEASE)) {
+
 			WIDGET *win_kfocus = NULL;
 
 			/* make clicked window the active one */
-			if (key_sets_focus(event.code)) set_active_window(w, 1);
+			if (curr_mfocus && key_sets_focus(event.code)) {
+				WINDOW *w = (WINDOW *)curr_mfocus->gen->get_window(curr_mfocus);
+				set_active_window(w, 1);
+			}
 
 			if (curr_window) {
 				win_kfocus = curr_window->win->get_kfocus(curr_window);
 
 				/* redefine keyboard focus */
-				if (key_sets_focus(event.code) && curr_mfocus != win_kfocus)
+				if (curr_mfocus && key_sets_focus(event.code) && curr_mfocus != win_kfocus)
 					curr_mfocus->gen->focus(curr_mfocus);
 
 				/* request new keyboard focus - just in case it denied the focus */
 				win_kfocus = curr_window->win->get_kfocus(curr_window);
 			}
 
-			/* send keyboard event to actually focused widget if set */
-			if (win_kfocus && !key_sets_focus(event.code))
-				win_kfocus->gen->handle_event(win_kfocus, &event, NULL);
-			else
-				curr_mfocus->gen->handle_event(curr_mfocus, &event, NULL);
+			if ((event.type == EVENT_PRESS) && (press_cnt == 1)) {
+
+				WIDGET *old_receiver = curr_receiver;
+
+				/* send keyboard event to actually focused widget if set */
+				if (win_kfocus && !key_sets_focus(event.code)) {
+					if (win_kfocus) win_kfocus->gen->inc_ref(win_kfocus);
+					curr_receiver = win_kfocus;
+				} else {
+					if (curr_mfocus) curr_mfocus->gen->inc_ref(curr_mfocus);
+					curr_receiver = curr_mfocus;
+				}
+
+				if (old_receiver)
+					old_receiver->gen->dec_ref(old_receiver);
+			}
+
+			if (curr_receiver)
+				curr_receiver->gen->handle_event(curr_receiver, &event, NULL);
 		}
 	}
 
@@ -336,27 +393,6 @@ static void handle(void) {
 	switch (curr_state) {
 
 	case USERSTATE_IDLE:
-		/* FIXME: scr->find must be added here! */
-		new_mfocus = curr_scr->gen->find((WIDGET *)curr_scr, curr_mx, curr_my);
-		if (press_cnt == 0 && new_mfocus != curr_mfocus) {
-			if (curr_mfocus) {
-				curr_mfocus->gen->set_mfocus(curr_mfocus, 0);
-				if (curr_mfocus->wd->flags & WID_FLAGS_HIGHLIGHT)
-					curr_mfocus->gen->update(curr_mfocus);
-				event.type = EVENT_MOUSE_LEAVE;
-				curr_mfocus->gen->handle_event(curr_mfocus, &event, NULL);
-				curr_mfocus->gen->dec_ref(curr_mfocus);
-			}
-			if (new_mfocus) {
-				new_mfocus->gen->set_mfocus(new_mfocus, 1);
-				if (new_mfocus->wd->flags & WID_FLAGS_HIGHLIGHT)
-					new_mfocus->gen->update(new_mfocus);
-				event.type = EVENT_MOUSE_ENTER;
-				new_mfocus->gen->handle_event(new_mfocus, &event, NULL);
-				new_mfocus->gen->inc_ref(new_mfocus);
-			}
-			curr_mfocus = new_mfocus;
-		}
 
 		/* if mouse position changed -> deliver motion event */
 		if (old_mx != curr_mx || old_my != curr_my) {
@@ -373,9 +409,8 @@ static void handle(void) {
 		
 	case USERSTATE_TOUCH:
 		
-		if (curr_tick_callback) {
+		if (curr_tick_callback)
 			curr_tick_callback(curr_selected, curr_mx - omx, curr_my - omy);
-		}
 
 		if (press_cnt == 0) idle();
 
@@ -481,6 +516,61 @@ static long get_keystate(long keycode) {
 }
 
 
+/*** RELEASE REFERENCES TO WIDGETS OF SPECIFIED APPLICATION ***
+ *
+ * When an application exists, we need to prevent further references to
+ * widgets of the application, for example the mouse focus. Therefore,
+ * this function should be called on application exit.
+ */
+static void release_app(int app_id) {
+
+	if (curr_selected && (curr_selected->gen->get_app_id(curr_selected) == app_id))
+		idle();
+
+	if (curr_window && (curr_window->gen->get_app_id((WIDGET *)curr_window) == app_id))
+		set_active_window(NULL, 1);
+
+	if (curr_mfocus && (curr_mfocus->gen->get_app_id(curr_mfocus) == app_id)) {
+		curr_mfocus->gen->dec_ref(curr_mfocus);
+		curr_mfocus = NULL;
+	}
+
+	if (curr_receiver && (curr_receiver->gen->get_app_id(curr_receiver) == app_id)) {
+		curr_receiver->gen->dec_ref(curr_receiver);
+		curr_receiver = NULL;
+	}
+
+	curr_receiver = NULL;
+	curr_selected = NULL;
+	curr_window   = NULL;
+	curr_mfocus   = NULL;
+}
+
+
+/*** RELEASE WIDGET FROM USERSTATE MANAGER ***
+ *
+ * When we destroy or relocate widgets, we need to flush its
+ * old relationship with the userstate manager.
+ */
+static void release_widget(WIDGET *w) {
+	WIDGET *cw;
+
+	/* check if widget has the current mouse focus as child */
+	if (curr_mfocus && w->gen->related_to(w, curr_mfocus)) {
+		cw = curr_mfocus;
+		curr_mfocus = NULL;
+		cw->gen->dec_ref(cw);
+	}
+
+	/* check if widget has the current mouse focus as child */
+	if (curr_receiver && w->gen->related_to(w, curr_receiver)) {
+		cw = curr_receiver;
+		curr_receiver = NULL;
+		cw->gen->dec_ref(cw);
+	}
+}
+
+
 /****************************************
  *** SERVICE STRUCTURE OF THIS MODULE ***
  ****************************************/
@@ -503,6 +593,8 @@ static struct userstate_services services = {
 	get_ascii,
 	set_max_mx,
 	set_max_my,
+	release_app,
+	release_widget,
 };
 
 

@@ -87,8 +87,8 @@ l4th_tcb_init(void)
     }
 
   LOGdL(DEBUG_TCB_INIT, 
-        "tcb size = %d, table size = %u, ds %u at "l4util_idfmt \
-        ", mapped to 0x%08x", sizeof(l4th_tcb_t), table_size,
+        "tcb size = %zd, table size = %zu, ds %u at "l4util_idfmt \
+        ", mapped to 0x%08lx", sizeof(l4th_tcb_t), table_size,
         tcb_table.ds.id, l4util_idstr(tcb_table.ds.manager), 
         tcb_table.map_addr);
 

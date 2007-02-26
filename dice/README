@@ -50,10 +50,20 @@ the -I option.
 (If you have an older version of Dice installed, make sure,
 its header files are not included.)
 
-Thanx for using DICE (let's roll the dice)
+Bugs
+====
+ To report bugs, send an email to dice@os.inf.tu-dresden.de
+or ra3@os.inf.tu-dresden.de.
+
+Mailinglist
+===========
+There exists a low-traffic mailinglist for Dice related stuff:
+to subscribe visit http://os.inf.tu-dresden.de/mailman/listinfo/dice.
+To simply post a bug or question, send an email to
+dice@os.inf.tu-dresden.de.
+
+
+Thanx for using DICE
 Ronald Aigner
 
-send bugs to: ra3@os.inf.tu-dresden.de
-dice mailing list: dice@os.inf.tu-dresden.de
-
-file last modified: 08/27/04
+file last modified: 06/14/06

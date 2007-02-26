@@ -28,7 +28,8 @@
 
 #include "BEReplyCodeType.h"
 #include "be/BEContext.h"
-
+#include "BENameFactory.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 
 CBEReplyCodeType::CBEReplyCodeType()
@@ -46,18 +47,25 @@ CBEReplyCodeType::~CBEReplyCodeType()
 }
 
 /** \brief creates the back-end structure for a type class for opcodes
- *  \param pContext the context of the code generation
  *  \return true if code generation was successful
  *
- * This implementation sets the basic members, but uses special values, specific for opcodes.
+ * This implementation sets the basic members, but uses special values,
+ * specific for opcodes.
  */
-bool CBEReplyCodeType::CreateBackEnd(CBEContext * pContext)
+void
+CBEReplyCodeType::CreateBackEnd()
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEReplyCodeType::%s() called\n", __func__);
+    
     m_bUnsigned = false;
     m_nSize = 2;    // bytes
     m_nFEType = TYPE_INTEGER;
-    m_sName = pContext->GetNameFactory()->GetTypeName(m_nFEType, false, pContext, m_nSize);
-    return true;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sName = pNF->GetTypeName(m_nFEType, false, m_nSize);
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEReplyCodeType::%s() returns\n", __func__);
 }
 
 /** \brief generates an exact copy of this class
@@ -67,3 +75,4 @@ CObject *CBEReplyCodeType::Clone()
 {
     return new CBEReplyCodeType(*this);
 }
+

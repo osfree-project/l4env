@@ -315,7 +315,8 @@ static void write_raw(char *raw_pic_mem, int raw_pic_size)
 
 static void get_fb(void)
 {
-  l4_addr_t fpage_addr, fpage_size;
+  l4_addr_t fpage_addr;
+  l4_size_t fpage_size;
   l4dm_dataspace_t ds;
   CORBA_Environment env = dice_default_environment;
   int i, pages, error;

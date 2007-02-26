@@ -87,7 +87,7 @@ l4_int32_t l4vfs_getdents(l4_threadid_t server,
 
     return l4vfs_basic_io_getdents_call(&server,
                                         fd,
-                                        dirp,
+                                        &dirp,
                                         &count,
                                         &_dice_corba_env);
 }

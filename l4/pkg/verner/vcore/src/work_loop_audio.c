@@ -44,7 +44,7 @@
 #include <l4/sys/rt_sched.h> // RT scheduling
 #include <l4/util/atomic.h>
 #include <l4/rmgr/librmgr.h> // for rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
+#include <l4/sigma0/kip.h> // l4sigma0_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -218,7 +218,7 @@ work_loop_audio (void *data)
 
 #if !RT_USE_CPU_RESERVE
   /* Get KIP */
-  kinfo = l4util_kip_map ();
+  kinfo = l4sigma0_kip_map (L4_INVALID_ID);
   if (!kinfo)
     Panic ("get KIP failed!\n");
 #endif

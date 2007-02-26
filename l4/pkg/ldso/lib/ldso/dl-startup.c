@@ -96,9 +96,12 @@
 
 #include <l4/env/env.h>
 #include <l4/sys/kdebug.h>
+#include <l4/sys/syscalls.h>
 #include <l4/util/mb_info.h>
-#include "infopage.h"
+#include <l4/log/l4log.h>
+#include "debug_info.h"
 #include "emul_linux.h"
+#include "infopage.h"
 
 
 /* Static declarations */
@@ -120,26 +123,26 @@ strong_alias(__rtld_stack_end, __libc_stack_end); /* Exported version of __rtld_
 
 static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 {
-//	unsigned int argc; // fm3
+//	unsigned int argc; /* fm3 */
 	char **argv, **envp;
 	unsigned long load_addr;
 	ElfW(Addr) got;
-//	unsigned long *aux_dat; // fm3
+//	unsigned long *aux_dat; /* fm3 */
 	ElfW(Ehdr) *header;
 	struct elf_resolve tpnt_tmp;
 	struct elf_resolve *tpnt = &tpnt_tmp;
 	ElfW(auxv_t) auxvt[AT_EGID + 1];
 	ElfW(Dyn) *dpnt;
-	char* null = 0; // fm3
-	envp = &null; // fm3
-	argv = &null; // fm3
+	char* null = 0; /* fm3 */
+	envp = &null; /* fm3 */
+	argv = &null; /* fm3 */
 
 	/* WARNING! -- we cannot make _any_ funtion calls until we have
 	 * taken care of fixing up our own relocations.  Making static
 	 * inline calls is ok, but _no_ function calls.  Not yet
 	 * anyways. */
 
-#if 0
+#if 0 /* fm3 */
 	/* First obtain the information on the stack that tells us more about
 	   what binary is loaded, where it is loaded, etc, etc */
 	GET_ARGV(aux_dat, args);
@@ -304,10 +307,18 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	}
 #endif
 
+#ifdef ARCH_x86
+    /* fm3: We are compiled with -fPIC. If we enter the kernel using the
+	 * syscall page, fixup the addresses of the .l4sys.data section
+	 * (see crtx/lib/src/ARCH-xxx/main_rel.ld) */
+    l4sys_fixup_abs_syscalls();
+#endif
+
 	/* Wahoo!!! */
 	SEND_STDERR_DEBUG("Done relocating ldso; we can now use globals and make function calls!\n");
 
 	global_env = env;
+	LOG_setup_tag();
 
 	/* Now we have done the mandatory linking of some things.  We are now
 	   free to start using global variables, since these things have all been
@@ -325,12 +336,17 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	_dl_elf_main = (int (*)(int, char **, char **)) auxvt[AT_ENTRY].a_un.a_val;
 	SEND_ADDRESS_STDERR_DEBUG(_dl_elf_main, 1);
 
+#ifdef ARCH_x86
+	/* fm3: load symbols of binary, register combined symbols at kernel */
+	_dl_debug_info_sum();
+#endif
+
 	infopage_add_mmap_area();
-#if DEBUG_LEVEL==1
-	mmap_list_regions();
+#if DEBUG_LEVEL>0
+	_dl_mmap_list_regions(1);
+#endif
 #if DEBUG_LEVEL>1
 	infopage_show_sections();
-#endif
 #endif
 
 	START();

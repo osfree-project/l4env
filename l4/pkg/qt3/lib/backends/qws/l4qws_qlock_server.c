@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/backends/qws/l4qws_qlock_server.c
+ * \brief  L4-specific QLock implementation.
+ *
+ * \date   11/02/2004
+ * \author Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2006 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 /*** GENERAL INCLUDES ***/
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
 /*!
- * \file	con/include/l4/l4con/l4contxt.h
+ * \file	l4con/include/l4contxt.h
  * \brief	libcontxt client interface
  *
  * \date	2002

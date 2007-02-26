@@ -36,7 +36,7 @@
 #include <l4/env/errno.h>
 
 /* xvid stuff */
-#include <xvid_10.h>		/* comes with XviD */
+#include <xvid.h>		/* comes with XviD */
 
 /* local */
 #include "vc_xvid_10.h"

@@ -24,6 +24,7 @@
 #include <l4/dope/dopelib.h>
 #include <l4/dope/vscreen.h>
 #include <l4/dope/keycodes.h>
+#include "log-server.h"
 
 /* XXX vt100 needs this ugly stuff */
 int _DEBUG = 0;
@@ -260,111 +261,78 @@ static l4lock_t logmsg_mutex = L4LOCK_UNLOCKED;
 #define LOG_NAMESERVER_NAME "stdlogV05"
 #define LOG_COMMAND_LOG 0
 
-/*** LOGSERVER: GET NEXT IPC ***/
-static int get_msg(char *msgbuf, unsigned msgbuf_size)
+void
+log_outstring_component (CORBA_Object _dice_corba_obj,
+    int flush_flag,
+    const char* string, 
+    CORBA_Server_Environment *_dice_corba_env)
 {
-	int err;
+	slist_t *p;
+  	char *new_string = strdup(string);
 
-	static l4_threadid_t client = L4_INVALID_ID;
-	static struct {
-		l4_fpage_t   fpage;
-		l4_msgdope_t size;
-		l4_msgdope_t send;
-		l4_umword_t  dw0, dw1/*, dw2, dw3, dw4, dw5, dw6*/;
-		l4_strdope_t string;
-		l4_msgdope_t result;
-	} msg;
-
-	msg.size.md.strings = 1;
-	msg.size.md.dwords = 2;
-	msg.string.rcv_size = msgbuf_size;
-	msg.string.rcv_str = (l4_umword_t) msgbuf;
-	msg.fpage.fpage = 0;
-
-	memset(msgbuf, 0, LOG_BUFFERSIZE);
-	while (1) {
-		if (l4_thread_equal(client, L4_INVALID_ID)) {
-			err = l4_ipc_wait(&client, &msg, &msg.dw0, &msg.dw1,
-			                  L4_IPC_NEVER,
-			                  &msg.result);
-		} else {
-			err = l4_ipc_reply_and_wait(client, NULL, msg.dw0, 0,
-			                            &client, &msg, &msg.dw0, &msg.dw1,
-			                            L4_IPC_SEND_TIMEOUT_0,
-			                            &msg.result);
-			/* don't care for non-listening clients */
-			if (err == L4_IPC_SETIMEOUT) {
-				client = L4_INVALID_ID;
-				continue;
-			}
-		}
-
-		if (err == 0 || err == L4_IPC_REMSGCUT) {
-			if (msg.result.md.fpage_received == 0) {
-				switch (msg.dw0) {
-				case LOG_COMMAND_LOG:
-					if (msg.result.md.strings != 1) {
-						msg.dw0 = -L4_EINVAL;
-						continue;
-					}
-					/* GOTCHA */
-					return 0;
-				}
-			}
-			msg.dw0 = -L4_EINVAL;
-			continue;
-		}
-
-		/* IPC was canceled - try again */
-		if (err == L4_IPC_RECANCELED)
-			continue;
-
-		/* hm, serious error ? */
-		snprintf(msgbuf, msgbuf_size,
-		         "dmon     | Error %#x getting log message from " l4util_idfmt"\n",
-		         err, l4util_idstr(client));
-		client = L4_INVALID_ID;
-		return err;
+	/* 1: write to kernel debugger */
+	outstring(new_string);
+	
+	/* 2: hand over message to logger */
+	p = list_new_entry(new_string);
+	if (!p) {
+	    outstring("OUCH!\n");
+	    return;
 	}
+	l4lock_lock(&logmsg_mutex);
+	logmsg = list_append(logmsg, p);
+	l4lock_unlock(&logmsg_mutex);
+	l4semaphore_up(&logmsg_sema);
+}
+
+int
+log_channel_open_component (CORBA_Object _dice_corba_obj,
+    l4_snd_fpage_t page,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+    return -L4_EINVAL;
+}
+
+int
+log_channel_write_component (CORBA_Object _dice_corba_obj,
+    int channel,
+    unsigned int offset,
+    unsigned int size,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+    return -L4_EINVAL;
+}
+
+int
+log_channel_flush_component (CORBA_Object _dice_corba_obj,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+    return -L4_EINVAL;
+}
+
+int
+log_channel_close_component (CORBA_Object _dice_corba_obj,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+    return -L4_EINVAL;
 }
 
 /*** LOGSERVER: SERVER LOOP ***/
 static void logsrv_loop(void *p)
 {
+	CORBA_Server_Environment env = dice_default_server_environment;
+	env.rcv_fpage.fpage = 0;
+	env.malloc = (dice_malloc_func)malloc;
+    
 	/* setup logserver */
 	if (!names_register(LOG_NAMESERVER_NAME))
 		Panic("Could not register %s at names", LOG_NAMESERVER_NAME);
 
 	l4thread_started(NULL);
-
-	while (1) {
-		slist_t *p;
-		char *msgbuf;
-
-		/* alloc new buffer */
-		msgbuf = malloc(LOG_BUFFERSIZE + 5);
-		if (!msgbuf) {
-			enter_kdebug("OUCH!");
-		}
-
-		if (get_msg(msgbuf, LOG_BUFFERSIZE))
-			strcpy(msgbuf + LOG_BUFFERSIZE, "...\n");
-
-		/* 1: write to kernel debugger */
-		outstring(msgbuf);
-
-		/* 2: hand over message to logger */
-		p = list_new_entry(msgbuf);
-		if (!p) {
-			outstring("OUCH!\n");
-			free(msgbuf);
-			continue;
-		}
-		l4lock_lock(&logmsg_mutex);
-		logmsg = list_append(logmsg, p);
-		l4lock_unlock(&logmsg_mutex);
-		l4semaphore_up(&logmsg_sema);
-	}
+	log_server_loop(&env);
 
 }
 

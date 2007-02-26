@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/CPreProcess.cpp
- *    \brief   contains the implementation of the class CPreProcess
+ *  \file    dice/src/CPreProcess.cpp
+ *  \brief   contains the implementation of the class CPreProcess
  *
- *    \date    Mon Jul 28 2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Mon Jul 28 2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -33,31 +33,28 @@
 #include "CPreProcess.h"
 #include "CParser.h"
 #include "Compiler.h"
-#include <errno.h> // needed for errno
+#include "Error.h"
+#include <cerrno> // needed for errno
 #include <unistd.h> // needed for pipe
 #include <sys/wait.h> // needed for waitpid
 #include <sys/types.h> // needed for waitpid
 #include <sys/stat.h> // needed for open
 #include <fcntl.h> // needed for open
 #include "fe/FEFile.h"
+#include <iostream>
+#include <cassert>
 
 //@{
 /** globale pre-processor variables and function */
 extern FILE *incin,*incout;
+/** the lexer function to get the tokens */
 extern int inclex();
-//@}
-
-//@{
-/** some external config variables */
-extern const char* dice_configure_gcc;
-extern const char* dice_compile_gcc;
 //@}
 
 /** the name of the input file */
 extern string sInFileName;
-/** the name of the include path */
-extern string sInPathName;
-/** back up name of the top level input file - we need this when scanning included files */
+/** back up name of the top level input file - we need this when scanning
+ * included files */
 extern string sTopLevelInFileName;
 
 /** a reference to the currently parsed file */
@@ -72,18 +69,15 @@ CPreProcess::CPreProcess()
     m_sCPPArgs = 0;
     m_nCPPArgCount = 0;
     char *sCPP = getenv("CXX");
+    char *sgcc = strdup("gcc");
     if (!sCPP)
         sCPP = getenv("CC");
     if (sCPP && (strlen(sCPP) > 0))
       m_sCPPProgram = strdup(sCPP);
-    else if (TestCPP("gcc"))
-      m_sCPPProgram = strdup("gcc");
-    else if (dice_configure_gcc)
-      m_sCPPProgram = strdup(dice_configure_gcc);
-    else if (dice_compile_gcc)
-      m_sCPPProgram = strdup(dice_compile_gcc);
+    else if (TestCPP(sgcc))
+      m_sCPPProgram = sgcc;
     else
-      m_sCPPProgram = strdup("gcc");
+      m_sCPPProgram = sgcc;
     char* sC = CheckCPPforArguments(m_sCPPProgram);
     if (m_sCPPProgram)
         free(m_sCPPProgram);
@@ -93,12 +87,7 @@ CPreProcess::CPreProcess()
     // to allow distinction between GCC's CPP and DICE's CPP invocation
     AddCPPArgument("-DDICE");
     //AddCPPArgument("-P");
-    for (int i=0; i<MAX_INCLUDE_PATHS; i++)
-        m_sIncludePaths[i] = "";
     m_nCurrentIncludePath = -1;
-    m_pBookmarkHead = m_pBookmarkTail = 0;
-    for (int i=0; i<PROGRAM_OPTION_GROUPS; i++)
-        m_nOptions[i] = 0;
 }
 
 /** destroys the preprocess object */
@@ -110,17 +99,10 @@ CPreProcess::~CPreProcess()
             free(m_sCPPArgs[i]);
         m_sCPPArgs[i] = 0;
     }
+    if (m_sCPPArgs)
+	free(m_sCPPArgs);
     if (m_sCPPProgram)
         free(m_sCPPProgram);
-    inc_bookmark_t *bookmark;
-    while ((bookmark = PopIncludeBookmark()) != 0)
-    {
-        if (bookmark->m_pFromFile)
-            delete bookmark->m_pFromFile;
-        if (bookmark->m_pFilename)
-            delete bookmark->m_pFilename;
-        delete bookmark;
-    }
     m_pPreProcessor = 0;
 }
 
@@ -146,33 +128,30 @@ char ** CPreProcess::GetCPPArguments()
     return m_sCPPArgs;
 }
 
-/** \brief adds a include path
- *  \param sPath the path to add
- *  \return the index of the new path, or -1 if max limit reached
+/** \brief removes double slashes from the filenames
+ *  \param s the string to remove slashes from
+ *  \return the string with slashes removed
  */
-int CPreProcess::AddIncludePath(string sPath)
+string CPreProcess::RemoveSlashes(string & s)
 {
-    // search for last
-    int nCurrent = 0;
-    while (!m_sIncludePaths[nCurrent].empty()) nCurrent++;
-    if (nCurrent < MAX_INCLUDE_PATHS)
-    {
-        // add trailing slash if not present
-        if (sPath[sPath.length()-1] != '/')
-            sPath += "/";
-        m_sIncludePaths[nCurrent] = sPath;
-        return nCurrent;
-    }
-    return -1;
+    // do not use realpath, because we want to keep relative paths
+    string::size_type pos;
+    while ((pos = s.find("//")) != string::npos)
+	s.erase(pos, 1);
+    return s;
 }
 
 /** \brief adds a include path
- *  \param sNewPath the path to add
- *  \return the index of the new path, or -1 if max limit reached
+ *  \param sPath the path to add
  */
-int CPreProcess::AddIncludePath(const char* sNewPath)
+void CPreProcess::AddIncludePath(string sPath)
 {
-    return AddIncludePath(string(sNewPath));
+    // add trailing slash if not present
+    if (sPath[sPath.length()-1] != '/')
+	sPath += "/";
+    // normalize any double slashes (//)
+    RemoveSlashes(sPath);
+    m_vIncludePaths.push_back(sPath);
 }
 
 /** \brief adds another C pre-processor argument
@@ -205,9 +184,8 @@ void CPreProcess::AddCPPArgument(const char* sNewArgument)
 /** \brief explicetly sets the CPP
  *  \param sCPP the name of the new CPP
  *
- * Since this is always called after the constructor, we savely
- * override the configured CPP. This can be used to specify a
- * different CPP at runtime.
+ * Since this is always called after the constructor, we savely override the
+ * configured CPP. This can be used to specify a different CPP at runtime.
  */
 bool CPreProcess::SetCPP(const char* sCPP)
 {
@@ -232,9 +210,11 @@ void CPreProcess::CPPErrorHandling()
 {
     char *s = strerror(errno);
     if (s)
-        CCompiler::Error("execvp(\"%s\", cpp_args) returned: %s\n", m_sCPPProgram, s);
+        CCompiler::Error("execvp(\"%s\", cpp_args) returned: %s\n", 
+	    m_sCPPProgram, s);
     else
-        CCompiler::Error("execvp(\"%s\", cpp_args) returned an unknown error\n", m_sCPPProgram);
+        CCompiler::Error("execvp(\"%s\", cpp_args) returned an unknown error\n",
+	    m_sCPPProgram);
 }
 
 /** \brief runs the C pre-processor
@@ -246,19 +226,16 @@ int CPreProcess::ExecCPP(FILE *fInput, FILE* fOutput)
 {
     if (!m_sCPPProgram ||
         (strlen(m_sCPPProgram) == 0))
-    {
-        CCompiler::Error("No preprocessor (gcc or cpp) set.\n");
-        return 3;
-    }
+	throw new error::preprocess_error("No preprocessor set.\n");
 
     int pipes[2];
     if (pipe(pipes) == -1)
-        return 1;
+	throw new error::preprocess_error("Could not open pipe.\n");
 
     int pid = fork();
     int status;
     if (pid == -1)
-        return 2;
+	throw new error::preprocess_error("Could not fork preprocess.\n");
 
     // in child process call cpp
     if (pid == 0)
@@ -281,49 +258,47 @@ int CPreProcess::ExecCPP(FILE *fInput, FILE* fOutput)
             sArgs[i+1] = m_sCPPArgs[i];
         execvp(m_sCPPProgram, sArgs);
         CPPErrorHandling();
-        return 3;
+	throw new error::preprocess_error("Could not start preprocess program.\n");
     }
     // parent -> wait for cpp
     waitpid(pid, &status, 0);
 
-    return status;
+    return WEXITSTATUS(status);
 }
 
 /** \brief pre-process the file
  *  \param sFilename the filename of the file to pre-process
  *  \param bDefault true if the file to pre-process is a default file
- *  \param bVerbose true if the preprocessor should print verboe output
  *  \return true if successful
  *
  * First we scan for include/import, and then we run CPP.
  */
-FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
+FILE* CPreProcess::PreProcess(string sFilename, bool bDefault)
 {
-    FILE *fInput = OpenFile(sFilename, bDefault, bVerbose);
+    FILE *fInput = OpenFile(sFilename, bDefault);
     if (!fInput)
         return 0; // open file already printed error message
 
     sInFileName = sFilename;
     if (sInFileName.empty())
         sInFileName = "<stdin>";
-    // we add the current path to the file-name so it conformes to the stored file-name
-    // generated by Gcc
-    if (m_nCurrentIncludePath >= 0)
-        sTopLevelInFileName = m_sIncludePaths[m_nCurrentIncludePath] + sFilename;
+    // we add the current path to the file-name so it conformes to the stored
+    // file-name generated by Gcc
+    if (m_nCurrentIncludePath >= 0 &&
+	m_nCurrentIncludePath < (int)m_vIncludePaths.size())
+        sTopLevelInFileName = m_vIncludePaths[m_nCurrentIncludePath] +
+	    sFilename;
     else
         sTopLevelInFileName = sFilename;
 
-    if (bVerbose)
-        printf("Start preprocessing input file (\"%s\") ...\n", sTopLevelInFileName.c_str());
-    // turn debugging on
-    if (bVerbose)
-        nGlobalDebug++;
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Start preprocessing input file (\"%s\") ...\n",
+	sTopLevelInFileName.c_str());
     // search for import and include statements
     FILE *fOutput;
     string s, sBase;
-    if (IsOptionSet(PROGRAM_KEEP_TMP_FILES))
+    if (CCompiler::IsOptionSet(PROGRAM_KEEP_TMP_FILES))
     {
-        sBase = sFilename.substr(sFilename.rfind('/')-1);
+        sBase = sFilename.substr(sFilename.rfind('/')+1);
         s = "temp1-" +  sBase;
         fOutput = fopen(s.c_str(), "w+");
     }
@@ -331,28 +306,24 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
         fOutput = tmpfile();
     if (!fOutput)
     {
-        fprintf(stderr, "could not create temporary file\n");
+        std::cerr << "could not create temporary file\n";
         if (fInput != 0)
             fclose(fInput);
         return 0;
     }
 
     // check if parser has to contribute something
+    // Parser has to set at least the line statement correctly
     CParser *pParser = CParser::GetCurrentParser();
     pParser->PrepareEnvironment(sFilename, fInput, fOutput);
     // search fInput for import statements
     incin = fInput;
     incout = fOutput;
     rewind(incin);
-    // set start of file statement
-    fprintf(incout, "#line 1 \"%s\"\n", sInFileName.c_str());
     // set line number count to start
     gLineNumber = 1;
     inclex();
 
-    // turn debugging off
-    if (bVerbose)
-        nGlobalDebug--;
     // close input of preprocess
     if (!sFilename.empty())    // _not_ stdin
         fclose(fInput);
@@ -360,7 +331,7 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
     // now all includes and imports are scanned
 
     // get new temp file
-    if (IsOptionSet(PROGRAM_KEEP_TMP_FILES))
+    if (CCompiler::IsOptionSet(PROGRAM_KEEP_TMP_FILES))
     {
         s = "temp2-" + sBase;
         fInput = fopen(s.c_str(), "w+");
@@ -369,7 +340,7 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
         fInput = tmpfile();
     if (!fInput)
     {
-        fprintf(stderr, "could not create temporary file\n");
+        std::cerr << "could not create temporary file\n";
         if (fOutput != 0)
             fclose(fOutput);
         return 0;
@@ -378,27 +349,37 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
     rewind(fOutput);
 
     // turn verboseness of CPP on
-    if (bVerbose)
+    if (CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_PARSER))
     {
         AddCPPArgument("-v");
         AddCPPArgument("-H");
     }
 
     // run cpp preprocessor
-    int iRet;
-    if ((iRet = ExecCPP(fOutput, fInput)) > 0)
+    try
     {
-        fprintf(stderr, "could not preprocess input file \"%s\" (returned %d).\n", sInFileName.c_str(), iRet);
-        return 0;
+	int ret;
+	if ((ret = ExecCPP(fOutput, fInput)) > 0)
+	{
+	    std::cerr << "Preprocessing \"" << sInFileName << "\" returned " << 
+		ret << ".\n";
+	    return 0;
+	}
+    }
+    catch (error::preprocess_error *e)
+    {
+	std::cerr << "Preprocessing error: " << e->what() << std::endl;
+	delete e;
+
+	return 0;
     }
     // close input file of cpp scanner
     fclose(fOutput);
 
-    if (bVerbose)
-        printf("... finished preprocessing input file.\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "... finished preprocessing input file.\n");
 
     // set input to beginning of file again
-    fseek(fInput, 0, SEEK_SET);
+    rewind(fInput);
 
     if (!fInput)
         CCompiler::Error("No input file.\n");
@@ -409,33 +390,35 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault, bool bVerbose)
 /** \brief tries to open a file (and use the search paths)
  *  \param sName the name of the file
  *  \param bDefault true if the file is a deafult file ('<' file '>')
- *  \param bVerbose true if the preprocessor should produce verbose output
  *  \param bIgnoreErrors true if this function should not print any errors, but return a 0 handle
  *  \return a file descriptior if file found
  */
-FILE* CPreProcess::OpenFile(string sName, bool bDefault, bool bVerbose, bool bIgnoreErrors)
+FILE* 
+CPreProcess::OpenFile(string sName, 
+    bool bDefault, 
+    bool bIgnoreErrors)
 {
+    RemoveSlashes(sName);
+    
     string sCurPath;
-    if (m_nCurrentIncludePath < 0)
+    if (m_nCurrentIncludePath < 0 || bDefault)
         sCurPath = "";
     else
-        sCurPath = m_sIncludePaths[m_nCurrentIncludePath];
+        sCurPath = m_vIncludePaths[m_nCurrentIncludePath];
     /* try to open included file */
-    if (bVerbose)
-    {
-        if (sCurPath.empty())
-            printf("try to open include \"%s\"\n",sName.c_str());
-        else
-            printf("try to open include \"%s\" in path \"%s\"\n",sName.c_str(),sCurPath.c_str());
-    }
+    if (sCurPath.empty())
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open include \"%s\"\n", sName.c_str());
+    else
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open include \"%s\" in path \"%s\"\n",
+	    sName.c_str(), sCurPath.c_str());
     FILE *fReturn = 0;
-    if (sCurPath.empty() || bDefault)
+    if (sCurPath.empty()) // also empty if default
     {
         // check if this is a file
         if (CheckName(sName))
             fReturn = fopen(sName.c_str(), "r");
         else
-            fReturn = NULL;
+            fReturn = 0;
     }
     else
     {
@@ -443,67 +426,63 @@ FILE* CPreProcess::OpenFile(string sName, bool bDefault, bool bVerbose, bool bIg
         if (CheckName(s))
             fReturn = fopen(s.c_str(), "r");
         else
-            fReturn = NULL;
+            fReturn = 0;
     }
-    if (fReturn && bVerbose)
-        printf("success\n");
+    if (fReturn)
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Success\n");
 
     if (!fReturn)
     {
         /* not in current directory -> search paths */
-        int i = 0;
-        while (!fReturn && (i < MAX_INCLUDE_PATHS))
-        {
-            if (!(m_sIncludePaths[i].empty()))
-            {
-                if (bVerbose)
-                    printf("Search file in path \"%s\".\n", m_sIncludePaths[i].c_str());
-                string s = m_sIncludePaths[i];
-                if (s[s.length()] != '/')
-                    s += "/";
-                s += sName;
-                if (CheckName(s))
-                {
-                    m_nCurrentIncludePath = i;
-                    if (bVerbose)
-                        printf("try to open with path %s\n",s.c_str());
-                    // it's there
-                    fReturn = fopen(s.c_str(), "r");
-                }
-            }
-            i++;
+	for (int i = 0; i < (int)m_vIncludePaths.size() && !fReturn; i++)
+	{
+	    string s = m_vIncludePaths[i];
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Search file in path \"%s\".\n", s.c_str());
+	    s += sName;
+	    if (CheckName(s))
+	    {
+		m_nCurrentIncludePath = i;
+		sCurPath = m_vIncludePaths[i];
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open with path %s.\n", s.c_str());
+		// it's there
+		fReturn = fopen(s.c_str(), "r");
+	    }
         }
     }
-    else
-        m_nCurrentIncludePath = -1;
 
-    if (bVerbose && (m_nCurrentIncludePath >= 0) && fReturn)
-        printf("Found file \"%s\" in path \"%s\".\n", sName.c_str(), m_sIncludePaths[m_nCurrentIncludePath].c_str());
+    if (fReturn)
+    {
+	if (sCurPath.empty())
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Found file \"%s\" in current path.\n",
+		sName.c_str());
+	else
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Found file \"%s\" in path \"%s\".\n",
+		sName.c_str(), m_vIncludePaths[m_nCurrentIncludePath].c_str());
+    }
 
     if (!fReturn && !bIgnoreErrors)
     {
-        if (bVerbose)
-            printf("Couldn't find file\n");
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Couldn't find file\n");
         CFEFile *pCurFile = CParser::GetCurrentFile();
         if (!pCurFile)
         {
-            fprintf(stderr, "dice: %s: No such file or directory.\n", sName.c_str());
+            std::cerr << "dice: " << sName << ": No such file or directory.\n";
             return 0;
         }
         /* if not open by now, couldn't find file */
         if (pCurFile->GetParent())
         {
             // run to top
-            CFEFile *pFile = pCurFile->GetSpecificParent<CFEFile>(1); // returns this, if it is the file itself
+            CFEFile *pFile = pCurFile->GetSpecificParent<CFEFile>(1); 
             vector<CFEFile*> vStack;
             while (pFile)
             {
                 vStack.insert(vStack.begin(), pFile);
-                pFile = pFile->GetSpecificParent<CFEFile>(1); // returns this, if it is the file itself
+                pFile = pFile->GetSpecificParent<CFEFile>(1); 
             }
             // down in line
             if (vStack.size() > 1)
-                fprintf(stderr, "In file included ");
+                std::cerr << "In file included ";
             vector<CFEFile*>::iterator iter = vStack.begin();
             while (iter != vStack.end())
             {
@@ -517,11 +496,11 @@ FILE* CPreProcess::OpenFile(string sName, bool bDefault, bool bVerbose, bool bIg
                     nLine = FindLineNbOfInclude(sFileName, ((CFEFile*)(pFEFile->GetParent()))->GetFullFileName());
                 else
                     nLine = FindLineNbOfInclude(sFileName, pFEFile->GetFullFileName());
-                fprintf(stderr, "from %s:%d", sFileName.c_str(), nLine);
+                std::cerr << "from " << sFileName << ":" << nLine;
                 if (iter+1 != vStack.end())
-                    fprintf(stderr, ",\n                 ");
+                    std::cerr << ",\n                 ";
                 else
-                    fprintf(stderr, ":\n");
+                    std::cerr << ":\n";
                 iter++;
             }
         }
@@ -529,22 +508,18 @@ FILE* CPreProcess::OpenFile(string sName, bool bDefault, bool bVerbose, bool bIg
         if (sFileName.empty())
             sFileName = sTopLevelInFileName;
         int nLine = FindLineNbOfInclude(sName, sFileName);
-        fprintf(stderr, "%s:%d: %s: No such file or directory.\n", sFileName.c_str(), nLine, sName.c_str());
+        std::cerr << sFileName << ":" << nLine << ": " << sName << 
+	    ": No such file or directory.\n";
     }
     if (!fReturn)
         return 0;
 
-    if (m_nCurrentIncludePath >= 0)
-    {
-        if (!m_sIncludePaths[m_nCurrentIncludePath].empty())
-        {
-            if (m_sIncludePaths[m_nCurrentIncludePath][m_sIncludePaths[m_nCurrentIncludePath].length()-1] != '/')
-                m_sIncludePaths[m_nCurrentIncludePath] += "/";
-        }
-    }
+    /* store path and file name to map them later */
+    CIncludeStatement b(false, bDefault, false, false, sName, string(), sCurPath, 0);
+    m_vOpenBookmarks.push_back(b);
 
     /* switch to buffer */
-    return (fReturn != 0)? fReturn : stdin;
+    return (fReturn != 0) ? fReturn : stdin;
 }
 
 /** \brief try to execute cpp
@@ -553,7 +528,7 @@ FILE* CPreProcess::OpenFile(string sName, bool bDefault, bool bVerbose, bool bIg
  *
  * If we can execute cpp, it is found in the PATH.
  */
-bool CPreProcess::TestCPP(const char* sCPP)
+bool CPreProcess::TestCPP(char* sCPP)
 {
     if (!sCPP)
         return false;
@@ -566,10 +541,7 @@ bool CPreProcess::TestCPP(const char* sCPP)
     // in child process call cpp
     if (pid == 0)
     {
-        char *sArgs[3];
-        sArgs[0] = (char*)sCPP;
-        sArgs[1] = "--version";
-        sArgs[2] = 0;
+	char * const sArgs[3] = {sCPP, "--version", 0 };
         // close stdout
         int fd = open("/dev/null", O_APPEND);
         fclose(stdout);
@@ -601,14 +573,28 @@ bool CPreProcess::CheckName(string sPathToFile)
 }
 
 /** \brief retrieve the current include path
+ *  \param sFilename the filename to get the path for
  *  \return the name of the current include path
  */
-string CPreProcess::GetCurrentIncludePath()
+string CPreProcess::GetIncludePath(string sFilename)
 {
-    string sPath;
-    if (m_nCurrentIncludePath >= 0) // set by PreProcess (or rather OpenFile)
-        sPath = m_sIncludePaths[m_nCurrentIncludePath];
-    return sPath;
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called.\n", __func__,
+	sFilename.c_str());
+    
+    vector<CIncludeStatement>::iterator iter;
+    for (iter = m_vOpenBookmarks.begin();
+	 iter != m_vOpenBookmarks.end();
+	 iter++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s comparing %s to %s\n", 
+	    __func__, sFilename.c_str(),
+	    (*iter).m_sFilename.c_str());
+	if ((*iter).m_sFilename == sFilename)
+	    return (*iter).m_sPath;
+    }
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s nothing found, return \"\"\n",
+	__func__);
+    return string();
 }
 
 /** \brief tries to find the suitable path for a given file name
@@ -616,45 +602,93 @@ string CPreProcess::GetCurrentIncludePath()
  *  \param nLineNb
  *  \return the path to the file
  *
- * The function searches the stored include statements to find one, where the stored filename
- * is part of the given filename and the linenumbers match. It also checks if the resulting string
- * is one of the given include paths.
+ * The function searches the stored include statements to find one, where the
+ * stored filename is part of the given filename and the linenumbers match. It
+ * also checks if the resulting string is one of the given include paths.
  */
-string CPreProcess::FindPathToFile(string sFilename, int nLineNb)
+string CPreProcess::FindPathToFile(string sFilename, unsigned int nLineNb)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s, %d) called\n", __func__,
+	sFilename.c_str(), nLineNb);
+    
     if (sFilename.empty())
         return string();
 
-    inc_bookmark_t *pCurrent;
-    for (pCurrent = FirstIncludeBookmark(); pCurrent != 0; pCurrent = pCurrent->m_pNext)
+    // normalize any double slashes (//) as was done for m_vIncludePaths
+    RemoveSlashes(sFilename);
+    
+    vector<CIncludeStatement>::iterator i;
+    for (i = m_vBookmarks.begin(); 
+	i != m_vBookmarks.end();
+	i++)
     {
         // if no file-name, move on
-        if (!(pCurrent->m_pFilename))
+        if ((*i).m_sFilename.empty())
             continue;
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s comparing to (%s, %d)\n",
+	    __func__, (*i).m_sFilename.c_str(),
+	    (*i).m_nLineNb);
+	
         // test line numbers
-        if (pCurrent->m_nLineNb != nLineNb)
+        if ((*i).m_nLineNb != nLineNb)
             continue;
         // test for file name
         int nPos;
-        if ((nPos = sFilename.rfind(*(pCurrent->m_pFilename))) < 0)
+        if ((nPos = sFilename.rfind((*i).m_sFilename)) < 0)
             continue;
-        // file name found, now extract path
-        string sPath = sFilename.substr(0, nPos);
+	// file name found, now extract path
+	string sPath = sFilename.substr(0, nPos);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s path should be %s\n", __func__,
+	    sPath.c_str());
+	
         // now search if path is in include paths
-        for (int i=0; !m_sIncludePaths[i].empty(); i++)
+        for (vector<string>::iterator i2 = m_vIncludePaths.begin(); 
+	     i2 != m_vIncludePaths.end();
+	     i2++)
         {
-            if (m_sIncludePaths[i] == sPath)
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s comparing path to %s\n",
+		__func__, (*i2).c_str());
+	    
+            if ((*i2) == sPath)
                 return sPath;
+
+	    /* This is a fix for gcc 3.3: newer version will generate
+	     * preprocess output which contains relative paths, e.g.,
+	     * /usr/include/linux/../blah.h. gcc 3.3 on the other hand will
+	     * generate /usr/include/blah.h. To catch this, we have to call
+	     * realpath on the stored paths.
+	     */
+	    char *real_path = realpath((*i2).c_str(), NULL);
+	    if (real_path)
+	    {
+		/* realpath removes trainling slashes, but we need trailing
+		 * slashes for comparison.
+		 */
+		string s = string(real_path) + "/";
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		    "%s comparing path to %s\n", __func__, s.c_str());
+
+		if (sPath == s);
+		    return sPath;
+	    }
         }
     }
 
     // now we try to find the include path at the beginning of the string
-    for (int i=0; !m_sIncludePaths[i].empty(); i++)
+    for (vector<string>::iterator i2 = m_vIncludePaths.begin();
+	 i2 != m_vIncludePaths.end();
+	 i2++)
     {
-        if (sFilename.substr(0, m_sIncludePaths[i].length()) == m_sIncludePaths[i])
-            return m_sIncludePaths[i];
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "%s try to find path %s in filename\n", __func__, (*i2).c_str());
+	
+        if (sFilename.substr(0, (*i2).length()) == (*i2))
+            return *i2;
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s nothing found, returning \"\"\n",
+	__func__);
     return string();
 }
 
@@ -663,65 +697,32 @@ string CPreProcess::FindPathToFile(string sFilename, int nLineNb)
  *  \param nLineNb the line number where the include statemenet appeared on
  *  \return the text of the original include statement.
  */
-string CPreProcess::GetOriginalIncludeForFile(string sFilename, int nLineNb)
+string CPreProcess::GetOriginalIncludeForFile(string sFilename, unsigned int nLineNb)
 {
     if (sFilename.empty())
         return string();
 
-    inc_bookmark_t *pCurrent;
-    for (pCurrent = FirstIncludeBookmark(); pCurrent != 0; pCurrent = pCurrent->m_pNext)
+    RemoveSlashes(sFilename);
+
+    vector<CIncludeStatement>::iterator i;
+    for (i = m_vBookmarks.begin(); 
+	i != m_vBookmarks.end();
+	i++)
     {
         // if no file-name, move on
-        if (!(pCurrent->m_pFilename))
+        if ((*i).m_sFilename.empty())
             continue;
         // test line numbers
-        if (pCurrent->m_nLineNb != nLineNb)
+        if ((*i).m_nLineNb != nLineNb)
             continue;
         // test for file name
         int nPos;
-        if ((nPos = sFilename.rfind(*(pCurrent->m_pFilename))) < 0)
+        if ((nPos = sFilename.rfind((*i).m_sFilename)) < 0)
             continue;
         // file name found, return it
-        return *(pCurrent->m_pFilename);
+        return (*i).m_sFilename;
     }
     return string();
-}
-
-/** \brief pushes a include bookmark to the top of the list
- *  \param pNew the new bookmark
- */
-void CPreProcess::AddIncludeBookmark(inc_bookmark_t* pNew)
-{
-    pNew->m_pNext = 0;
-    pNew->m_pPrev = m_pBookmarkTail;
-    if (m_pBookmarkTail != 0)
-        m_pBookmarkTail->m_pNext = pNew;
-    m_pBookmarkTail = pNew;
-    if (!m_pBookmarkHead)
-        m_pBookmarkHead = pNew;
-}
-
-/** \brief removes a include bookmark from the top of the list
- *  \return the top element
- */
-inc_bookmark_t* CPreProcess::PopIncludeBookmark()
-{
-    if (!m_pBookmarkHead)
-        return 0;
-    if (m_pBookmarkHead->m_pNext != 0)
-        m_pBookmarkHead->m_pNext->m_pPrev = 0;
-    inc_bookmark_t *tmp = m_pBookmarkHead;
-    m_pBookmarkHead = m_pBookmarkHead->m_pNext;
-    tmp->m_pNext = 0;
-    return tmp;
-}
-
-/** \brief returns a reference to the current include bookmark
- *  \return a reference to the current include bookmark
- */
-inc_bookmark_t* CPreProcess::FirstIncludeBookmark()
-{
-    return m_pBookmarkHead;
 }
 
 /** \brief checks if the given file is included as standard include
@@ -729,26 +730,30 @@ inc_bookmark_t* CPreProcess::FirstIncludeBookmark()
  *  \param nLineNb the line number of the include statement
  *  \return true if standard include
  */
-bool CPreProcess::IsStandardInclude(string sFilename, int nLineNb)
+bool CPreProcess::IsStandardInclude(string sFilename, unsigned int nLineNb)
 {
     if (sFilename.empty())
         return false;
 
-    inc_bookmark_t *pCurrent;
-    for (pCurrent = FirstIncludeBookmark(); pCurrent != 0; pCurrent = pCurrent->m_pNext)
+    RemoveSlashes(sFilename);
+
+    vector<CIncludeStatement>::iterator i;
+    for (i = m_vBookmarks.begin();
+	 i != m_vBookmarks.end();
+	 i++)
     {
         // if no file-name, move on
-        if (!(pCurrent->m_pFilename))
+        if ((*i).m_sFilename.empty())
             continue;
         // test line numbers
-        if (pCurrent->m_nLineNb != nLineNb)
+        if ((*i).m_nLineNb != nLineNb)
             continue;
         // test for file name
         int nPos;
-        if ((nPos = sFilename.rfind(*(pCurrent->m_pFilename))) < 0)
+        if ((nPos = sFilename.rfind((*i).m_sFilename)) < 0)
             continue;
         // file name found, now extract standard include
-        return pCurrent->m_bStandard;
+        return (*i).m_bStandard;
     }
     return false;
 }
@@ -767,23 +772,25 @@ int CPreProcess::FindLineNbOfInclude(string sFilename, string sFromFile)
     if (sFromFile.empty()) // if no from file, this may be top???
         return 1;
 
-    inc_bookmark_t *pCurrent;
-    for (pCurrent = FirstIncludeBookmark(); pCurrent != 0; pCurrent = pCurrent->m_pNext)
+    vector<CIncludeStatement>::iterator i;
+    for (i = m_vBookmarks.begin();
+	i != m_vBookmarks.end();
+	i++)
     {
         // if no file-name, move on
-        if (!(pCurrent->m_pFilename))
+        if ((*i).m_sFilename.empty())
             continue;
         // if no from file-name, move on
-        if (!(pCurrent->m_pFromFile))
+        if ((*i).m_sFromFile.empty())
             continue;
         // test for file name
-        if (sFilename.rfind(*(pCurrent->m_pFilename)) < 0)
+        if (sFilename.rfind((*i).m_sFilename) == string::npos)
             continue;
         // test for from file name
-        if (sFromFile.rfind(*(pCurrent->m_pFromFile)) < 0)
+        if (sFromFile.rfind((*i).m_sFromFile) == string::npos)
             continue;
         // file name found, now return line number
-        return pCurrent->m_nLineNb;
+        return (*i).m_nLineNb;
     }
     return 1;
 }
@@ -796,32 +803,37 @@ int CPreProcess::FindLineNbOfInclude(string sFilename, string sFromFile)
  *  \param bStandard true if the include is a standard include ('<'file'>')
  *  \return true if include statement already exists
  */
-bool CPreProcess::AddInclude(string sFile, string sFromFile, int nLineNb, bool bImport, bool bStandard)
+bool 
+CPreProcess::AddInclude(string sFile,
+    string sFromFile,
+    unsigned int nLineNb,
+    bool bImport,
+    bool bStandard)
 {
+    RemoveSlashes(sFile);
+
     // check if this include statement already exists
-    inc_bookmark_t *pCurrent;
-    for (pCurrent = FirstIncludeBookmark(); pCurrent != 0; pCurrent = pCurrent->m_pNext)
+    vector<CIncludeStatement>::iterator i;
+    for (i = m_vBookmarks.begin();
+	i != m_vBookmarks.end();
+	i++)
     {
-        if (*(pCurrent->m_pFilename) != sFile)
+        if ((*i).m_sFilename != sFile)
             continue;
-        if (*(pCurrent->m_pFromFile) != sFromFile)
+        if ((*i).m_sFromFile != sFromFile)
             continue;
-        if (pCurrent->m_nLineNb != nLineNb)
+        if ((*i).m_nLineNb != nLineNb)
             continue;
-        if (pCurrent->m_bImport != bImport)
+        if ((*i).m_bImport != bImport)
             continue;
-        if (pCurrent->m_bStandard != bStandard)
+        if ((*i).m_bStandard != bStandard)
             continue;
         return true;
     }
     // now create new entry
-    inc_bookmark_t* pNew = new_include_bookmark();
-    pNew->m_pFilename = new string(sFile);
-    pNew->m_pFromFile = new string(sFromFile);
-    pNew->m_nLineNb = nLineNb;
-    pNew->m_bImport = bImport;
-    pNew->m_bStandard = bStandard;
-    AddIncludeBookmark(pNew);
+    CIncludeStatement inc(false, bStandard, false, bImport, sFile, sFromFile,
+	string(), nLineNb);
+    m_vBookmarks.push_back(inc);
     // return if entry existed before
     return false;
 }
@@ -858,58 +870,39 @@ char* CPreProcess::CheckCPPforArguments(const char* sCPP)
     return strdup(sC.c_str());
 }
 
-/** \brief set options of the preprocessor
- *  \param nOptionAdd the options to add
- *  \param nOptionRemove the options to removes
- *
- * If you add and remove the same option, it is added.
- */
-void CPreProcess::SetOption(unsigned int nOptionAdd, unsigned int nOptionRemove)
-{
-    m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nOptionRemove)] &=
-        ~PROGRAM_OPTION_OPTION(nOptionRemove);
-    m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nOptionAdd)] |=
-        ~PROGRAM_OPTION_OPTION(nOptionAdd);
-}
-
-/** \brief test if an option is set
- *    \param nRawOption the option to test for
- *  \return true if the option is set
- */
-bool CPreProcess::IsOptionSet(unsigned int nRawOption)
-{
-    return (m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nRawOption)] &
-        PROGRAM_OPTION_OPTION(nRawOption)) > 0;
-}
-
 /** \brief search for the first include statement in the given file
- *  \param sFilename the name of the file to search for
  *  \return a reference to the include bookmark
  */
-inc_bookmark_t* CPreProcess::GetFirstIncludeInFile(string sFilename)
+vector<CIncludeStatement>::iterator
+CPreProcess::GetFirstIncludeInFile()
 {
-    if (!m_pBookmarkHead)
-        return 0;
-    if (*(m_pBookmarkHead->m_pFromFile) == sFilename)
-        return m_pBookmarkHead;
-    return GetNextIncludeInFile(sFilename, m_pBookmarkHead);
+    return m_vBookmarks.begin();
 }
 
 /** \brief search for the next include statement in the given file
  *  \param sFilename the name of the file containing the include statements
- *  \param pPrev the pointer to the bookmark of the previous include statement
- *  \return a reference to the next include statement or NULL if no more include statements
+ *  \param iter the pointer to the bookmark of the previous include statement
+ *  \return a reference to the next include statement or 0 if no more include statements
  */
-inc_bookmark_t* CPreProcess::GetNextIncludeInFile(string sFilename, inc_bookmark_t* pPrev)
+CIncludeStatement*
+CPreProcess::GetNextIncludeInFile(string sFilename,
+    vector<CIncludeStatement>::iterator & iter)
 {
     // iterate over bookmarks
-    inc_bookmark_t *pCur = pPrev;
-    while (pCur)
+    for (; iter != m_vBookmarks.end(); iter++)
     {
-        pCur = pCur->m_pNext;
-        if (pCur && (*(pCur->m_pFromFile) == sFilename))
-            return pCur;
+	if ((*iter).m_sFromFile == sFilename)
+	{
+	    /* I know it looks ugly, but we first have to derefence the
+	     * iterator to get the element type and then create a reference to
+	     * that element.
+	     */
+	    CIncludeStatement *ret = &(*iter);
+	    iter++;
+	    return ret;
+	}
     }
     // nothing found
-    return 0;
+    return (CIncludeStatement*)0;
 }
+

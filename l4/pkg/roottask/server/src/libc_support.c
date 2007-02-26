@@ -25,7 +25,7 @@ reset_malloc(void)
 }
 
 void *
-malloc(unsigned int size)
+malloc(size_t size)
 {
   void *a;
   l4_size_t *s;
@@ -42,7 +42,7 @@ malloc(unsigned int size)
 }
 
 void *
-calloc(unsigned int nmemb, unsigned int size)
+calloc(size_t nmemb, size_t size)
 {
   size_t sz = size*nmemb;
   return (nmemb && (sz/nmemb != size)) 
@@ -51,10 +51,10 @@ calloc(unsigned int nmemb, unsigned int size)
 }
 
 void *
-realloc(void *ptr, unsigned int size)
+realloc(void *ptr, size_t size)
 {
   void *p = malloc(size);
-  if (ptr)
+  if (ptr && p)
     memcpy(p, ptr, size);
   return p;
 }
@@ -64,3 +64,8 @@ void free(void *ptr)
   l4_size_t *s = (l4_size_t*)ptr - 1;
   l4la_free(&__malloc_list, s, *s);
 }
+
+extern __typeof(malloc)  demangle_malloc  __attribute__((alias("malloc")));
+extern __typeof(calloc)  demangle_calloc  __attribute__((alias("calloc")));
+extern __typeof(realloc) demangle_realloc __attribute__((alias("realloc")));
+extern __typeof(free)    demangle_free    __attribute__((alias("free")));

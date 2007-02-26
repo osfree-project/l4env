@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "dsputil.h"
 
@@ -48,7 +48,7 @@ int ff_mdct_init(MDCTContext *s, int nbits, int inverse)
         s->tcos[i] = -cos(alpha);
         s->tsin[i] = -sin(alpha);
     }
-    if (fft_init(&s->fft, s->nbits - 2, inverse) < 0)
+    if (ff_fft_init(&s->fft, s->nbits - 2, inverse) < 0)
         goto fail;
     return 0;
  fail:
@@ -74,7 +74,7 @@ int ff_mdct_init(MDCTContext *s, int nbits, int inverse)
  * @param input N/2 samples
  * @param tmp N/2 samples
  */
-void ff_imdct_calc(MDCTContext *s, FFTSample *output, 
+void ff_imdct_calc(MDCTContext *s, FFTSample *output,
                    const FFTSample *input, FFTSample *tmp)
 {
     int k, n8, n4, n2, n, j;
@@ -98,7 +98,7 @@ void ff_imdct_calc(MDCTContext *s, FFTSample *output,
         in1 += 2;
         in2 -= 2;
     }
-    fft_calc(&s->fft, z);
+    ff_fft_calc(&s->fft, z);
 
     /* post rotation + reordering */
     /* XXX: optimize */
@@ -126,7 +126,7 @@ void ff_imdct_calc(MDCTContext *s, FFTSample *output,
  * @param out N/2 samples
  * @param tmp temporary storage of N/2 samples
  */
-void ff_mdct_calc(MDCTContext *s, FFTSample *out, 
+void ff_mdct_calc(MDCTContext *s, FFTSample *out,
                   const FFTSample *input, FFTSample *tmp)
 {
     int i, j, n, n8, n4, n2, n3;
@@ -155,8 +155,8 @@ void ff_mdct_calc(MDCTContext *s, FFTSample *out,
         CMUL(x[j].re, x[j].im, re, im, -tcos[n8 + i], tsin[n8 + i]);
     }
 
-    fft_calc(&s->fft, x);
-  
+    ff_fft_calc(&s->fft, x);
+
     /* post rotation */
     for(i=0;i<n4;i++) {
         re = x[i].re;
@@ -171,5 +171,5 @@ void ff_mdct_end(MDCTContext *s)
 {
     av_freep(&s->tcos);
     av_freep(&s->tsin);
-    fft_end(&s->fft);
+    ff_fft_end(&s->fft);
 }

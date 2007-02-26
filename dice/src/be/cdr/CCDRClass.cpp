@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/cdr/CCDRClass.cpp
- *    \brief   contains the implementation of the class CCDRClass
+ *  \file    dice/src/be/cdr/CCDRClass.cpp
+ *  \brief   contains the implementation of the class CCDRClass
  *
- *    \date    10/28/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/28/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,8 +32,10 @@
 #include "be/BEUnmarshalFunction.h"
 #include "be/BEComponentFunction.h"
 #include "be/BEDispatchFunction.h"
-
+#include "be/BEClassFactory.h"
+#include "Compiler.h"
 #include "fe/FEOperation.h"
+#include "fe/FEInterface.h"
 #include "Attribute-Type.h"
 
 CCDRClass::CCDRClass()
@@ -48,177 +50,229 @@ CCDRClass::~CCDRClass()
 
 /** \brief internal function to create the back-end functions
  *  \param pFEOperation the respective front-end function
- *  \param pContext the context of the create process
  *  \return true if successful
  *
- * A function has to be generated depending on its attributes. If it is a call function,
- * we have to generate different back-end function than for a message passing function.
+ * A function has to be generated depending on its attributes. If it is a call
+ * function, we have to generate different back-end function than for a
+ * message passing function.
  *
- * We depend on the fact, that either the [in] or the [out] attribute are specified.
- * Never both may appear.
+ * We depend on the fact, that either the [in] or the [out] attribute are
+ * specified.  Never both may appear.
  */
-bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
+void 
+CCDRClass::CreateBackEnd(CFEOperation* pFEOperation)
 {
-    // call CBEObject's CreateBackEnd method
-    if (!CBEObject::CreateBackEnd(pFEOperation))
-        return false;
+    string exc = string(__func__);
+    // set source information
+    CBEObject::CreateBackEnd(pFEOperation);
 
     CFunctionGroup *pGroup = new CFunctionGroup(pFEOperation);
-    AddFunctionGroup(pGroup);
+    m_FunctionGroups.Add(pGroup);
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
 
-    if (!(pFEOperation->FindAttribute(ATTR_IN)) &&
-        !(pFEOperation->FindAttribute(ATTR_OUT)))
+    if (!(pFEOperation->m_Attributes.Find(ATTR_IN)) &&
+        !(pFEOperation->m_Attributes.Find(ATTR_OUT)))
     {
         // the call case:
         // for client side: marshal unmarshal
-        CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
-        AddFunction(pFunction);
+        CBEOperationFunction *pFunction = pCF->GetNewMarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(false);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because call function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because call function could not be created for " +
+		pFEOperation->GetName();
+	    throw new CBECreateException(exc);
         }
 
-        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
-        AddFunction(pFunction);
+        pFunction = pCF->GetNewUnmarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(false);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because unmarshal function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because unmarshal function could not be created" \
+		" for " + pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
 
         // server side
-        pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
-        AddFunction(pFunction);
+        pFunction = pCF->GetNewMarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because call function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because call function could not be created for " +
+		pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
 
-        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
-        AddFunction(pFunction);
+        pFunction = pCF->GetNewUnmarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because unmarshal function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because unmarshal function could not be created" \
+		" for " + pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
 
-        pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
-        AddFunction(pFunction);
+        pFunction = pCF->GetNewComponentFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because component function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+	    
+	    exc += " failed, because component function could not be created" \
+		" for " + pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
     }
     else
     {
         // the MP case
-        bool bComponent = (pFEOperation->FindAttribute(ATTR_OUT));
+        bool bComponent = (pFEOperation->m_Attributes.Find(ATTR_OUT));
         // sender: marshal
-        CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
-        AddFunction(pFunction);
+        CBEOperationFunction *pFunction = pCF->GetNewMarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(bComponent);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because send function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because send function could not be created for " +
+		pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
 
         // receiver: unmarshal
-        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
-        AddFunction(pFunction);
+        pFunction = pCF->GetNewUnmarshalFunction();
+        m_Functions.Add(pFunction);
         pFunction->SetComponentSide(!bComponent);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        pGroup->m_Functions.Add(pFunction);
+	try
+	{
+	    pFunction->CreateBackEnd(pFEOperation);
+	}
+	catch (CBECreateException *e)
         {
-            RemoveFunction(pFunction);
+	    m_Functions.Remove(pFunction);
             delete pFunction;
-            VERBOSE("%s failed, because wait function could not be created for %s\n",
-                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-            return false;
+	    e->Print();
+	    delete e;
+
+	    exc += " failed, because wait function could not be created for " +
+		pFEOperation->GetName();
+            throw new CBECreateException(exc);
         }
 
         // if we send oneway to the server we need a component function
-        if (pFEOperation->FindAttribute(ATTR_IN))
+        if (pFEOperation->m_Attributes.Find(ATTR_IN))
         {
-            pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
-            AddFunction(pFunction);
+            pFunction = pCF->GetNewComponentFunction();
+            m_Functions.Add(pFunction);
             pFunction->SetComponentSide(true);
-            pGroup->AddFunction(pFunction);
-            if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+            pGroup->m_Functions.Add(pFunction);
+	    try
+	    {
+		pFunction->CreateBackEnd(pFEOperation);
+	    }
+	    catch (CBECreateException *e)
             {
-                RemoveFunction(pFunction);
+		m_Functions.Remove(pFunction);
                 delete pFunction;
-                VERBOSE("%s failed, because component function could not be created for %s\n",
-                        __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
-                return false;
+		e->Print();
+		delete e;
+
+		exc += " failed, because component function could not be" \
+		    " created for " + pFEOperation->GetName();
+                throw new CBECreateException(exc);
             }
         }
     }
-
-    // sort the parameters of the functions
-    vector<CBEFunction*>::iterator iter = GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(iter)) != 0)
-    {
-        if (!pFunction->SortParameters(0, pContext))
-        {
-            VERBOSE("%s failed, because the parameters of function %s could not be sorted\n",
-                __PRETTY_FUNCTION__, pFunction->GetName().c_str());
-            return false;
-        }
-    }
-
-    return true;
 }
 
 /** \brief adds the functions for an interface
  *  \param pFEInterface the interface to add the functions for
- *  \param pContext the context of this operation
  *  \return true if successful
  */
-bool CCDRClass::AddInterfaceFunctions(CFEInterface* pFEInterface,  CBEContext* pContext)
+void
+CCDRClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 {
-    CBEInterfaceFunction *pFunction = pContext->GetClassFactory()->GetNewDispatchFunction();
-    AddFunction(pFunction);
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEInterfaceFunction *pFunction = pCF->GetNewDispatchFunction();
+    m_Functions.Add(pFunction);
     pFunction->SetComponentSide(true);
-    if (!pFunction->CreateBackEnd(pFEInterface, pContext))
+    try
     {
-        RemoveFunction(pFunction);
-        VERBOSE("CBEClass::CreateBackEnd failed because dispatch function could not be created\n");
-        delete pFunction;
-        return false;
+	pFunction->CreateBackEnd(pFEInterface);
     }
-    return true;
+    catch (CBECreateException *e)
+    {
+	m_Functions.Remove(pFunction);
+        delete pFunction;
+	e->Print();
+	delete e;
+
+	string exc = string(__func__);
+	exc += " failed because dispatch function could not be created";
+        throw new CBECreateException(exc);
+    }
 }
+

@@ -66,7 +66,7 @@ Space_index::Space_index(unsigned number) // type-conversion cons.:
 { }
 
 PUBLIC inline 
-Space_index::operator unsigned () // return chief number
+Space_index::operator unsigned ()
 { return space_id; }
 
 PUBLIC inline NEEDS [Space_registry]
@@ -106,15 +106,25 @@ Space_index::chief() // return chief number
 
 PUBLIC static inline NEEDS[Space_registry::Space_registry]
 bool 
-Space_index::add(Space *new_space, unsigned new_number)
+Space_index::add(Space *new_space, unsigned new_number,
+		 unsigned *out_chief)
 {
-  Space_registry o(spaces[new_number]);
-  assert(o.state.dead);
+  Space_registry o, n;
 
-  Space_registry n;
-  n.space = new_space;
+  do 
+    {
+      o = (spaces[new_number]);
+      if (! o.state.dead)
+	return false;
 
-  return cas (&spaces[new_number], o, n);
+      n.space = new_space;
+    }
+  while (! cas (&spaces[new_number], o, n));
+
+  if (out_chief)
+    *out_chief = o.state.chief;
+
+  return true;
 }
 
 

@@ -26,15 +26,17 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/cdr/CCDRClassFactory.h"
-#include "be/cdr/CCDRClient.h"
-#include "be/cdr/CCDRClass.h"
-#include "be/cdr/CCDRComponentFunction.h"
-#include "be/cdr/CCDRMarshalFunction.h"
-#include "be/cdr/CCDRUnmarshalFunction.h"
+#include "CCDRClassFactory.h"
+#include "CCDRClient.h"
+#include "CCDRClass.h"
+#include "CCDRComponentFunction.h"
+#include "CCDRMarshalFunction.h"
+#include "CCDRUnmarshalFunction.h"
+#include "Compiler.h"
+#include <iostream>
 
-CCDRClassFactory::CCDRClassFactory(bool bVerbose)
- : CBEClassFactory(bVerbose)
+CCDRClassFactory::CCDRClassFactory()
+ : CBEClassFactory()
 {
 }
 
@@ -48,8 +50,7 @@ CCDRClassFactory::~CCDRClassFactory()
  */
 CBEClient* CCDRClassFactory::GetNewClient()
 {
-    if (m_bVerbose)
-        printf("CBEClassFactory: created class CCDRClient\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CCDRClient\n");
     return new CCDRClient();
 }
 
@@ -58,8 +59,7 @@ CBEClient* CCDRClassFactory::GetNewClient()
  */
 CBEClass* CCDRClassFactory::GetNewClass()
 {
-    if (m_bVerbose)
-        printf("CBEClassFactory: created class CCDRClass\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CCDRClass\n");
     return new CCDRClass();
 }
 
@@ -68,8 +68,8 @@ CBEClass* CCDRClassFactory::GetNewClass()
  */
 CBEComponentFunction* CCDRClassFactory::GetNewComponentFunction()
 {
-    if (m_bVerbose)
-        printf("CBEClassFactory: created class CCDRComponentFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEClassFactory: created class CCDRComponentFunction\n");
     return new CCDRComponentFunction();
 }
 
@@ -78,8 +78,8 @@ CBEComponentFunction* CCDRClassFactory::GetNewComponentFunction()
  */
 CBEMarshalFunction* CCDRClassFactory::GetNewMarshalFunction()
 {
-    if (m_bVerbose)
-        printf("CBEClassFactory: created class CCDRMarshalFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEClassFactory: created class CCDRMarshalFunction\n");
     return new CCDRMarshalFunction();
 }
 
@@ -88,7 +88,17 @@ CBEMarshalFunction* CCDRClassFactory::GetNewMarshalFunction()
  */
 CBEUnmarshalFunction* CCDRClassFactory::GetNewUnmarshalFunction()
 {
-    if (m_bVerbose)
-        printf("CBEClassFactory: created class CCDRUnmarshalFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEClassFactory: created class CCDRUnmarshalFunction\n");
     return new CCDRUnmarshalFunction();
+}
+
+/** \brief creates a new object of the class CBECommunication
+ *  \return a reference to the new instance
+ */
+CBECommunication* CCDRClassFactory::GetNewCommunication()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEClassFactory: created no communication class\n");
+    return (CBECommunication*)0;
 }

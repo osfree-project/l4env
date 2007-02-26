@@ -38,7 +38,7 @@ memmap_init(void)
   unsigned i;
   __superpage_t *s;
 
-  memset(__memmap, O_RESERVED, MEM_MAX/L4_PAGESIZE);
+  memset(__memmap, O_RESERVED, PAGE_MAX);
   for (s = __memmap4mb, i = 0; i < SUPERPAGE_MAX; i++, s++)
     *s = (__superpage_t) { 0, O_RESERVED, 0 };
 }
@@ -62,6 +62,8 @@ memmap_set_page(l4_addr_t address, owner_t owner)
   owner_t *m       = __memmap    + (address - ram_base)/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (address-ram_base >= mem_high)
     return 0;			/* address exceeds __memmap array */
   if (*m == owner)
@@ -82,6 +84,8 @@ memmap_free_page(l4_addr_t address, owner_t owner)
   owner_t *m       = __memmap    + (address - ram_base)/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (s->owner == O_FREE)
     return 1;			/* belonging superpage already free */
   if (s->owner != O_RESERVED)
@@ -101,6 +105,8 @@ memmap_free_page(l4_addr_t address, owner_t owner)
 
   if (s->free_pages == L4_SUPERPAGESIZE/L4_PAGESIZE)
     s->owner = O_FREE;
+  else if (s->free_pages == 1)
+    s->owner = O_RESERVED;
   return 1;
 }
 
@@ -110,6 +116,8 @@ memmap_alloc_page(l4_addr_t address, owner_t owner)
   owner_t *m       = __memmap    + (address - ram_base)/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (address-ram_base >= mem_high)
     return 0;			/* address exceedxs _memmap array */
   if (*m == owner || s->owner == owner)
@@ -127,8 +135,26 @@ memmap_alloc_page(l4_addr_t address, owner_t owner)
       return 0;
 
   s->free_pages--;
-
   *m = owner;
+
+  if (s->free_pages == 0)
+    {
+      /* no free pages in superpage -- check if the whole page belongs to
+       * owner */
+      owner_t *sm = __memmap +
+	             (l4_trunc_superpage(address) - ram_base)/L4_PAGESIZE;
+
+      for (m=sm; m<sm+L4_SUPERPAGESIZE/L4_PAGESIZE; m++)
+	{
+	  if (*m != owner)
+	    /* at least one page doesn't belong to owner */
+	    return 1;
+	}
+
+      /* whole superpage belongs to owner */
+      s->owner = owner;
+    }
+
   return 1;
 }
 
@@ -138,8 +164,11 @@ memmap_owner_page(l4_addr_t address)
   owner_t *m       = __memmap    + (address - ram_base)/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return O_RESERVED;		/* address exceeds __memmap4mb array */
   if (address-ram_base >= mem_high)
     return O_RESERVED;		/* address exceeds __memmap array */
+
   return s->owner == O_RESERVED ? *m : s->owner;
 }
 
@@ -148,6 +177,8 @@ memmap_free_superpage(l4_addr_t address, owner_t owner)
 {
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (s->owner == O_FREE)
     return 1;			/* already free */
   if (s->owner != owner)
@@ -169,6 +200,8 @@ memmap_alloc_superpage(l4_addr_t address, owner_t owner)
 {
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (s->owner == owner)
     return 1;			/* already allocated */
   if (s->owner != O_FREE)
@@ -217,14 +250,13 @@ memmap_alloc_superpage(l4_addr_t address, owner_t owner)
 
       /* ok, we're the exclusive owner of this superpage */
       memset(sm, O_FREE, L4_SUPERPAGESIZE/L4_PAGESIZE);
-
     }
   else
     {
       if (owner >= O_USER)
 	if (! quota_alloc_mem(owner, address & L4_SUPERPAGEMASK,
 			      L4_SUPERPAGESIZE))
-	return 0;
+	  return 0;
     }
 
   s->owner = owner;
@@ -236,6 +268,9 @@ memmap_owner_superpage(l4_addr_t address)
 {
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return O_RESERVED;		/* address exceeds __memmap4mb array */
+
   return s->owner;
 }
 
@@ -244,6 +279,8 @@ memmap_nrfree_superpage(l4_addr_t address)
 {
   __superpage_t *s = __memmap4mb + (address - ram_base)/L4_SUPERPAGESIZE;
 
+  if (s >= __memmap4mb + SUPERPAGE_MAX)
+    return 0;			/* address exceeds __memmap4mb array */
   if (s->owner == O_FREE || s->owner == O_RESERVED)
     return s->free_pages;
 
@@ -256,7 +293,7 @@ memmap_dump_region(l4_addr_t start, l4_addr_t end, owner_t owner)
   const char *h_beg = l4_version == VERSION_FIASCO ? "\033[33m" : "";
   const char *h_end = l4_version == VERSION_FIASCO ? "\033[m"   : "";
 
-  printf("  [%08x-%08x) [%s%6dKB%s] ",
+  printf("  [%08lx-%08lx) [%s%7ldKB%s] ",
       start, end, owner == O_FREE ? h_beg : "", 
       (end-start) >> 10, owner == O_FREE ? h_end : "");
   if (owner == O_FREE)
@@ -275,12 +312,12 @@ memmap_dump_area(l4_addr_t start, l4_addr_t end, owner_t owner)
 
   while ((region = region_find(start + ram_base, end + ram_base)) > 0)
     {
-      region_t *r = get_region(region);
+      region_t *r = region_get(region);
 
       if (r->begin > start + ram_base)
 	memmap_dump_region(start + ram_base, r->begin, owner);
 
-      printf("  [%08x-%08x) [%6dKB] %s",
+      printf("  [%08lx-%08lx) [%7ldKB] %s",
 	  r->begin, r->end, (r->end - r->begin) >> 10, r->name);
       putchar('\n');
       start = r->end - ram_base;
@@ -297,18 +334,18 @@ memmap_dump(void)
   owner_t old_state, new_state;
 
   printf("Roottask memmap:\n");
-  for (old_state = memmap_owner_page(0), start = end = 0;
-       end < (l4_addr_t)MEM_MAX; end += L4_PAGESIZE)
+  for (old_state = memmap_owner_page(ram_base), start = end = 0;
+       end < PAGE_MAX; end++)
     {
-      new_state = memmap_owner_page(end);
+      new_state = memmap_owner_page((end<<L4_PAGESHIFT) + ram_base);
       if (old_state != new_state)
 	{
-	  memmap_dump_area(start, end, old_state);
+	  memmap_dump_area(start<<L4_PAGESHIFT, end<<L4_PAGESHIFT, old_state);
 	  old_state = new_state;
 	  start     = end;
 	}
     }
-  memmap_dump_area(start, end, old_state);
+  memmap_dump_area(start<<L4_PAGESHIFT, end<<L4_PAGESHIFT, old_state);
 }
 
 l4_addr_t

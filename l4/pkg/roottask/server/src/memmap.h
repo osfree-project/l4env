@@ -6,17 +6,26 @@
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
  * \author      Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
  *
- **/
+ */
 #ifndef MEMMAP_H
 #define MEMMAP_H
 
-#ifdef ARCH_arm
-#define MEM_MAX		(64 << 20)
+#if defined(ARCH_arm)
+#define MEM_MAX		(1024 << 20)	// 1GB
+#define PAGE_MAX	(MEM_MAX / 4096)
+#define SUPERPAGE_MAX	(4 << 10)
+#elif defined(ARCH_x86)
+#define MEM_MAX		(0)		// 4GB
+#define PAGE_MAX	(1 << 20)
+#define SUPERPAGE_MAX	(1 << 10)
+#elif defined(ARCH_amd64)
+#define MEM_MAX		(0x100000000UL)	// 4GB
+#define PAGE_MAX	(1 << 20)
+#define SUPERPAGE_MAX	(2 << 10)
 #else
-#define MEM_MAX		(1024 << 20)
+#error Invalid architecture
 #endif
-#define PAGE_MAX	MEM_MAX/L4_PAGESIZE
-#define SUPERPAGE_MAX	1024
+
 
 #ifndef __ASSEMBLER__
 

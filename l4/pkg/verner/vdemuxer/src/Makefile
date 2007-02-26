@@ -4,7 +4,8 @@ PKGDIR          ?= ..
 L4DIR 		?= $(PKGDIR)/../../..
 
 # include configuration
--include $(PKGDIR)/../Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/../Makeconf.bid.local
 DEFAULT_RELOC = $(VDEMUXER_RELOC)
 
 TARGET 		= vtdemuxer 
@@ -46,6 +47,7 @@ endif
 ifeq ($(VDEMUXER_BUILD_MP3),y)
 SRC_C		+= demux_mp3.c  
 endif
+SRC_C		+= demux_raw.c
 #
 # not ready yet
 #ifeq ($(VDEMUXER_BUILD_LIBAVFORMAT),y)
@@ -67,19 +69,19 @@ endif
 
 #LIBS
 LIBS +=		-ldsi -lparsecmdline \
-		-lprobelib -lmpg123\
-		-lcr7libc -lcr7libm
+		-lprobelib -lmpg123
 
 
-PRIVATE_LIBDIR  = $(PKGDIR)/../lib/
+PRIVATE_LIBDIR  = $(PKGOBJ_DIR)/../lib
 
 #INCLUDES
 PRIVATE_INCDIR  =  \
 		  $(PKGDIR)/../common \
 		  $(PKGDIR)/../lib/include \
+		  $(PKGDIR_OBJ)/../lib/include \
 		  $(PKGDIR)/include \
 		  $(PKGDIR)/../include \
-	          $(PKGDIR)/../config \
+	          $(PKGDIR_OBJ)/../config \
 		  $(PKGDIR)/../plugins/import \
 		  $(PKGDIR)/../plugins/io \
 		  $(PKGDIR)/../lib/de-muxer/libavformat
@@ -114,6 +116,4 @@ endif
 include $(L4DIR)/mk/prog.mk
 
 #depend on configuration files
-$(TARGET): $(PKGDIR)/../Makeconf.bid.local
-
-Makefile: $(PKGDIR)/../Makeconf.bid.local
+Makefile.inc: $(PKGDIR_OBJ)/../Makeconf.bid.local

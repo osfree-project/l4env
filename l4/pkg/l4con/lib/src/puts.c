@@ -34,16 +34,13 @@ puts(const char*s)
  * \return  >=0 ok, EOF else
  */
 int
-contxt_puts(const char*s)
+contxt_puts(const char *s)
 {
   if (__init)
     {
-      contxt_write(s, strlen(s));
+      int ret = contxt_write(s, strlen(s));
       contxt_putchar('\n');
+      return ret + 1;
     }
-  else
-     return LOG_puts(s);
-  
-  return 1;
+  return LOG_puts(s);
 }
-

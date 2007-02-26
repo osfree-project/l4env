@@ -43,7 +43,7 @@ public:
     /** \brief constructor
      */
     CL4BEHeaderFile();
-    virtual ~CL4BEHeaderFile();
+    ~CL4BEHeaderFile();
 
 protected:
     /** \brief copy constructor
@@ -52,7 +52,7 @@ protected:
     CL4BEHeaderFile(CL4BEHeaderFile &src);
 
 protected:
-    virtual void WriteHelperFunctions(CBEContext * pContext);
+    virtual void WriteHelperFunctions();
 };
 
 #endif // !__DICE_L4BEHEADERFILE_H__

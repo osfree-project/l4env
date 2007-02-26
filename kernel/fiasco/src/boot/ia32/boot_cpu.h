@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-extern void base_paging_init (Unsigned32);
-extern void base_cpu_setup (void);
+void base_paging_init (Unsigned32);
+void base_cpu_setup (void);
 
 #endif

@@ -1,4 +1,4 @@
-/*
+/**
  * \brief   grub loader specific plugin for file-I/O
  * \date    2004-03-17
  * \author  Carsten Rietzschel <cr7@os.inf.tu-dresden.de>
@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 /* OSKit */
@@ -274,7 +275,7 @@ io_grubfs_init_grub_mods (void)
     fops_file[err][0] = mod->mod_start;
     fops_file[err][1] = mod->mod_end;
     fops_file_no++;
-    printf ("grubfs: init file %i with %d bytes from %p to %p\n", err,
+    printf ("grubfs: init file %i with %ld bytes from %p to %p\n", err,
 	    fops_file[err][1] - fops_file[err][0], (void *) fops_file[err][0],
 	    (void *) fops_file[err][1]);
 

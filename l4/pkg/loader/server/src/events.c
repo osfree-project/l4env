@@ -82,9 +82,9 @@ events_init_and_wait(void *dummy)
       /* call service thread to free resources, this must be done to
        * synchronize the manipulation of loader data structures */
       ret = l4loader_app_kill_call(&loader_service_id, &tid, 0, &_env);
-      if (_env.major != CORBA_NO_EXCEPTION)
+      if (DICE_HAS_EXCEPTION(&_env))
         LOG_Error("handle exit event: call to service thread failed " \
-                  "(exc %d)!", _env.major);
+                  "(exc %d)!", DICE_EXCEPTION_MAJOR(&_env));
     }
 }
 
@@ -101,7 +101,7 @@ init_events(void)
 
       events_tid = l4thread_create_long(L4THREAD_INVALID_ID,
 					events_init_and_wait, 
-					"loader.events", L4THREAD_INVALID_SP,
+					".events", L4THREAD_INVALID_SP,
 					L4THREAD_DEFAULT_SIZE,
 					L4THREAD_DEFAULT_PRIO,
 					0, L4THREAD_CREATE_ASYNC);

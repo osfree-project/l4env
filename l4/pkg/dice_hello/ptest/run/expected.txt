@@ -1,4 +1,4 @@
-dice_clt| hello is 9.2
+dice_clt| hello is 9.02
 dice_srv| hello: f1: 5
 dice_clt| f1 returned: 50
 dice_srv| hello: f2: 27

@@ -84,7 +84,8 @@ interface nitpicker {
 	 * bottom of the view stack, specify neighbor = -1 and
 	 * behind = 0.
 	 */
-	int stack_view([in] int view_id, [in] int neighbor_id, [in] int behind);
+	int stack_view([in] int view_id, [in] int neighbor_id, [in] int behind,
+	               [in] int do_redraw);
 
 	/*** SET TITLE INFORMATION OF A VIEW ***/
 	int set_view_title([in] int view_id, [in, string] char *title);

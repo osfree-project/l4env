@@ -3,7 +3,7 @@ INTERFACE:
 #include "paging.h"
 #include "kern_types.h"
 
-class Space;
+class Mem_space;
 
 class Vmem_alloc
 {
@@ -27,7 +27,7 @@ public:
    */
   static void *page_alloc (void *address,
 			   Zero_fill zf = NO_ZERO_FILL,
-			   Page::Attribs pa = Page::USER_NO);
+			   Page::Attribs pa = Page::USER_NO | Page::CACHEABLE);
 
   /**
    * Free the page at the given virtual address.  If kernel memory was

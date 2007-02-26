@@ -8,14 +8,16 @@ s = value
 ABS_FUNC(l4_atomic_add, 0xffffe000)
 ABS_FUNC(l4_atomic_cmpxchg, 0xffffe100)
 ABS_FUNC(l4_atomic_cmpxchg_res, 0xffffe200)
-#endif
 
+#else
 
 /* Using the above gives problems when using it in shared libs
  * due to relocation which actually shouldn't happen */
 
 #define JUMP_CODE(name)			\
 	.global name;			\
+	.type name, #function;		\
+	.size name, 12;			\
 	name:				\
 		ldr	pc, .LC##name;	\
 		/* Will return to our caller */
@@ -28,3 +30,4 @@ JUMP_CODE(l4_atomic_cmpxchg_res)
 .LCl4_atomic_add:         .word 0xffffe000
 .LCl4_atomic_cmpxchg:     .word 0xffffe100
 .LCl4_atomic_cmpxchg_res: .word 0xffffe200
+#endif

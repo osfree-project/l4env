@@ -2,7 +2,7 @@
 /*****************************************************************************/
 /**
  * \file    dm_phys/include/consts.h
- * \brief   DMphys, public constants 
+ * \brief   DMphys, public constants
  * \ingroup api
  *
  * \date    11/23/2001
@@ -23,11 +23,11 @@
 
 /* memory pools (see server/include/__config.h) */
 #define L4DM_MEMPHYS_DEFAULT     0   /**< \ingroup api_open
-				      **  Use default memory pool 
+				      **  Use default memory pool
 				      **/
 #define L4DM_MEMPHYS_ISA_DMA     7   /**< \ingroup api_open
-				      **  Use ISA DMA capable memory 
-				      **  (below 16MB) 
+				      **  Use ISA DMA capable memory
+				      **  (below 16MB)
 				      **/
 
 /* open arguments */
@@ -35,15 +35,15 @@
 				      **  find an appropriate memory area
 				      **/
 
-/* Flags, see l4/dm_generic/consts.h for the definition of the 
- * flag bit mask 
+/* Flags, see l4/dm_generic/consts.h for the definition of the
+ * flag bit mask
  */
 #define L4DM_MEMPHYS_SUPERPAGES  0x00010000   /**< \ingroup api_open
-					       **  Open/map: force super-pages 
+					       **  Open/map: force super-pages
 					       **/
 #define L4DM_MEMPHYS_SAME_POOL   0x00020000   /**< \ingroup api_open
-					       **  Copy: use same pool like 
-					       **  source to allocate memory 
+					       **  Copy: use same pool like
+					       **  source to allocate memory
 					       **/
 
 /* debug keys */

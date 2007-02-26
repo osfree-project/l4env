@@ -12,7 +12,7 @@
 #ifndef __TRAMPOLINE_H_
 #define __TRAMPOLINE_H_
 
-void task_trampoline(l4_addr_t entry, void *mbi, void *env);
+void task_trampoline(l4_addr_t entry, void *mbi, void *env, unsigned mb_flag);
 extern char _task_trampoline_end;
 
 #endif

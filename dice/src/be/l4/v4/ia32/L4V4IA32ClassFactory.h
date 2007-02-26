@@ -1,10 +1,11 @@
 /**
- *	\file	dice/src/be/l4/v4/ia32/L4V4IA32ClassFactory.h
- *	\brief	contains the declaration of the class CL4V4IA32ClassFactory
+ *  \file   dice/src/be/l4/v4/ia32/L4V4IA32ClassFactory.h
+ *  \brief  contains the declaration of the class CL4V4IA32ClassFactory
  *
- *	\date	02/08/2004
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date   02/08/2004
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -38,21 +39,13 @@
 class CL4V4IA32ClassFactory : public CL4V4BEClassFactory
 {
 public:
-    /**	\brief constructor
-	 *	\param bVerbose true if class should print status output
-	 */
-	CL4V4IA32ClassFactory(bool bVerbose = false);
+    /** \brief constructor
+     */
+    CL4V4IA32ClassFactory();
     virtual ~CL4V4IA32ClassFactory();
-
-protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CL4V4IA32ClassFactory(CL4V4IA32ClassFactory &src);
 
 public:
     virtual CBECommunication* GetNewCommunication();
-	virtual CBECallFunction* GetNewCallFunction();
 };
 
 #endif

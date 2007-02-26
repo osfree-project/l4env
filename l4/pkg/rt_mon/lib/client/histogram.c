@@ -208,8 +208,9 @@ rt_mon_hist_reset(rt_mon_histogram_t * hist)
     hist->val_count = 0;
 
     /* do the calculation for the integer-scalers here */
-    hist->low_int   = hist->low;
-    hist->bin_int_scaler = hist->high-hist->low;
+    // yeah, but why?  This should be the contents of the comment ...
+    hist->low_int        = hist->low;
+    hist->bin_int_scaler = hist->high - hist->low;
 }
 
 void rt_mon_hist_free(rt_mon_histogram_t * hist)

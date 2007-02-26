@@ -33,9 +33,9 @@
  *****************************************************************************/
 
 /* set bit */
-#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT
+#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT32
 L4_INLINE void
-l4util_set_bit(int b, volatile l4_umword_t * dest)
+l4util_set_bit32(int b, volatile l4_uint32_t * dest)
 {
   __asm__ __volatile__
     (
@@ -49,10 +49,17 @@ l4util_set_bit(int b, volatile l4_umword_t * dest)
      );
 }
 
-/* clear bit */
-#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT
+#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT
 L4_INLINE void
-l4util_clear_bit(int b, volatile l4_umword_t * dest)
+l4util_set_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_set_bit32(b, (volatile l4_uint32_t*)dest);
+}
+
+/* clear bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT32
+L4_INLINE void
+l4util_clear_bit32(int b, volatile l4_uint32_t * dest)
 {
   __asm__ __volatile__
     (
@@ -66,7 +73,15 @@ l4util_clear_bit(int b, volatile l4_umword_t * dest)
      );
 }
 
+#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT
+L4_INLINE void
+l4util_clear_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_clear_bit32(b, (volatile l4_uint32_t*)dest);
+}
+
 /* change bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_COMPLEMENT_BIT
 L4_INLINE void
 l4util_complement_bit(int b, volatile l4_umword_t * dest)
 {
@@ -83,9 +98,9 @@ l4util_complement_bit(int b, volatile l4_umword_t * dest)
 }
 
 /* test bit */
-#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT
+#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT32
 L4_INLINE int
-l4util_test_bit(int b, volatile l4_umword_t * dest)
+l4util_test_bit32(int b, volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -103,6 +118,14 @@ l4util_test_bit(int b, volatile l4_umword_t * dest)
      );
 
   return (int)bit;
+}
+
+/* test bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT
+L4_INLINE int
+l4util_test_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_test_bit32(b, (volatile l4_uint32_t*)dest);
 }
 
 /* bit test and set */
@@ -181,7 +204,7 @@ l4util_bsr(l4_umword_t word)
 {
   int tmp;
 
-  if (word == 0)
+  if (EXPECT_FALSE(word == 0))
     return -1;
 
   __asm__ __volatile__
@@ -203,7 +226,7 @@ l4util_bsf(l4_umword_t word)
 {
   int tmp;
 
-  if (word == 0)
+  if (EXPECT_FALSE(word == 0))
     return -1;
 
   __asm__ __volatile__
@@ -226,19 +249,18 @@ l4util_find_first_set_bit(void * dest, l4_size_t size)
 
   __asm__ __volatile__
     (
-     "xorl  %%eax,%%eax		\n\t"
      "repe; scasl		\n\t"
      "jz    1f			\n\t"
      "leal  -4(%%edi),%%edi	\n\t"
      "bsfl  (%%edi),%%eax	\n"
      "1:			\n\t"
-     "subl  %%ebx,%%edi		\n\t"
+     "subl  %%esi,%%edi		\n\t"
      "shll  $3,%%edi		\n\t"
      "addl  %%edi,%%eax		\n\t"
      :
-     "=a" (res), "=&c" (dummy0), "=&D" (dummy1)
+     "=a" (res), "=c" (dummy0), "=D" (dummy1)
      :
-     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+     "a"(0), "c" ((size+31) >> 5), "D" (dest), "S" (dest));
 
   return res;
 }
@@ -254,21 +276,19 @@ l4util_find_first_zero_bit(void * dest, l4_size_t size)
 
   __asm__ __volatile__
     (
-     "movl   $-1,%%eax		\n\t"
-     "xorl   %%edx,%%edx	\n\t"
      "repe;  scasl		\n\t"
      "je     1f			\n\t"
      "xorl   -4(%%edi),%%eax	\n\t"
      "subl   $4,%%edi		\n\t"
      "bsfl   %%eax,%%edx	\n"
      "1:			\n\t"
-     "subl   %%ebx,%%edi	\n\t"
+     "subl   %%esi,%%edi	\n\t"
      "shll   $3,%%edi		\n\t"
      "addl   %%edi,%%edx	\n\t"
      :
-     "=d" (res), "=&c" (dummy0), "=&D" (dummy1), "=&a" (dummy2)
+     "=d" (res), "=c" (dummy0), "=D" (dummy1), "=a" (dummy2)
      :
-     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+     "a" (~0), "c" ((size+31) >> 5), "d"(0), "D" (dest), "S" (dest));
 
   return res;
 }

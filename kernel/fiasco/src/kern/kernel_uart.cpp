@@ -23,7 +23,7 @@ private:
    * @param uart, the instantiation to start.
    * @param port, the com port number.
    */
-  bool startup( unsigned port );
+  bool startup(unsigned port, int irq=-1);
 };
 
 //---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ IMPLEMENTATION [serial]:
 #include "panic.h"
 
 PUBLIC static FIASCO_CONST
-Uart *const
+Uart *
 Kernel_uart::uart()
 {
   static Kernel_uart c;
@@ -52,18 +52,19 @@ Kernel_uart::Kernel_uart()
 {
   char const * const cmdline = Cmdline::cmdline();
   char *s;
+  bool ok;
 
   unsigned n = Config::default_console_uart_baudrate;
   Uart::TransferMode m = Uart::MODE_8N1;
   unsigned p = Config::default_console_uart;
+  int      i = -1;
 
   if (  (s = strstr(cmdline, " -comspeed "))
       ||(s = strstr(cmdline, " -comspeed=")))
     {
-      n = strtoul(s + 11, 0, 0);
-      if(n>115200) 
+      if ((n = strtoul(s + 11, 0, 0)) > 115200)
 	{
-	  puts ("-comspeed greater than 115200 not supported (use 115200)!");
+	  puts ("-comspeed > 115200 not supported (using 115200)!");
 	  n = 115200;
 	}
     }
@@ -72,11 +73,14 @@ Kernel_uart::Kernel_uart()
       ||(s = strstr(cmdline, " -comport=")))
     p = strtoul(s + 10, 0, 0);
 
-  if(!startup(p))
-    panic("uart_init: comport %d is not accepted by the uart driver!\n",p);
+  if ((s = strstr(cmdline, " -comirq=")))
+    i = strtoul(s + 9, 0, 0);
 
-  if(!change_mode(m, n))
-    panic("uart_init: somthing is wrong with the baud rate (%d)!\n",n);
+  if (!(ok = startup(p, i)))
+    printf("Comport 0x%04x is not accepted by the uart driver!\n", p);
+
+  if (ok && !change_mode(m, n))
+    panic("Somthing is wrong with the baud rate (%d)!\n", n);
 }
 
 IMPLEMENT

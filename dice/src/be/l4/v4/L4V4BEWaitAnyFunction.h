@@ -31,24 +31,24 @@
 
 /** \class CL4V4BEWaitAnyFunction
  *    \ingroup backend
- *    \brief V4 specific implementation of wait-any function
+ *  \brief V4 specific implementation of wait-any function
  */
 class CL4V4BEWaitAnyFunction : public CL4BEWaitAnyFunction
 {
 public:
     /** \brief creates a new instance of this class
-     *    \param bOpenWait true if wait is for any sender
-     *    \param bReply true if reply is send before wait
+     *  \param bOpenWait true if wait is for any sender
+     *  \param bReply true if reply is send before wait
      */
     CL4V4BEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CL4V4BEWaitAnyFunction();
 
 protected:
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIPCReplyWait(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteIPCReplyWait(CBEFile *pFile);
+    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void WriteIPCErrorCheck(CBEFile *pFile);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
 };
 
 #endif

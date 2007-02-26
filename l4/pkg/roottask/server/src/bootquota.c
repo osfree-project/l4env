@@ -30,6 +30,25 @@ static int             max_cfg_bootquota;
 void
 cfg_bootquota_set(const char *cfg_name, const bootquota_t * const b)
 {
+  int j;
+
+  for (j = 0; j < max_cfg_bootquota; j++)
+    if (!strcmp(cfg_bootquota[j].name, cfg_name))
+      {
+	/* merge quotas */
+	bootquota_t *c = &cfg_bootquota[j].bootquota;
+	if (b->mcp != 255)
+	  c->mcp = b->mcp;
+	if (b->prio != 0x10)
+	  c->prio = b->prio;
+	if (b->small_space != 0xff)
+	  c->small_space = b->small_space;
+	if (b->mods != 0)
+	  c->mods = b->mods;
+	return;
+      }
+
+  /* add new quota */
   if (max_cfg_bootquota < sizeof(cfg_bootquota)/sizeof(cfg_bootquota[0]))
     {
       cfg_bootquota[max_cfg_bootquota].name      = cfg_name;

@@ -50,52 +50,45 @@ channel_item_t*	channel_list = NULL;
      
 /* searching for the channel event_ch in the channel_list */
 #define find_channel(event_ch, curr_channel, prev_channel)		\
-									\
-  curr_channel = channel_list;						\
-  prev_channel = NULL;							\
-									\
-  while (curr_channel != NULL)						\
-    if (curr_channel->event_ch == event_ch)				\
+  do									\
     {									\
-      break;								\
+      curr_channel = channel_list;					\
+      prev_channel = NULL;						\
+      while (curr_channel != NULL)					\
+        {								\
+	  if (curr_channel->event_ch == event_ch)			\
+	    break;							\
+	  prev_channel = curr_channel;					\
+	  curr_channel = curr_channel->next_item;			\
+    	}								\
+      LOGd(DEBUGLVL(3), "channel:%d %sfound", 				\
+	   event_ch, curr_channel ? "" : "NOT "); 			\
     }									\
-    else								\
-    {									\
-      prev_channel = curr_channel;					\
-      curr_channel = curr_channel->next_item;				\
-    }									\
-  if (curr_channel != NULL)						\
-  { LOGd(DEBUGLVL(3), "channel:%d found", event_ch); }			\
-  else									\
-    LOGd(DEBUGLVL(3), "channel:%d NOT found", event_ch)
+  while (0)
 
 /* searching for a registered task in a channel */
 #define find_task_for_channel(curr_channel, task, pr,			\
 			      curr_task_ref, prev_task_ref)		\
-  for (pr = L4EVENTS_MAX_PRIORITY; pr >= 0; pr--)			\
-  {									\
-    prev_task_ref = NULL;						\
-    curr_task_ref = curr_channel->first_task_ref[pr];			\
-									\
-    while (curr_task_ref != NULL)					\
-      if (curr_task_ref->task_item->taskid == task)			\
-      {									\
-	break;								\
-      }									\
-      else								\
-      {									\
-        prev_task_ref = curr_task_ref;					\
-        curr_task_ref = curr_task_ref->next_ref;			\
-      }									\
-    if (curr_task_ref != NULL)						\
-      if (curr_task_ref->task_item->taskid == task)			\
-        break;								\
-  }									\
-  if (curr_task_ref != NULL)						\
-  {  LOGd(DEBUGLVL(3), "task:%d found for channel:%d",			\
-	task, curr_channel->event_ch); }				\
-    LOGd(DEBUGLVL(3), "task:%d NOT found for channel:%d",		\
-	task, curr_channel->event_ch)
-
+  do									\
+    {									\
+      for (pr = L4EVENTS_MAX_PRIORITY; pr >= 0; pr--)			\
+	{								\
+	  prev_task_ref = NULL;						\
+	  curr_task_ref = curr_channel->first_task_ref[pr];		\
+	  while (curr_task_ref != NULL)					\
+	    {								\
+	      if (curr_task_ref->task_item->taskid == task)		\
+		break;							\
+	      prev_task_ref = curr_task_ref;				\
+	      curr_task_ref = curr_task_ref->next_ref;			\
+	    }								\
+	  if (curr_task_ref &&						\
+	      curr_task_ref->task_item->taskid == task)			\
+	    break;							\
+	}								\
+      LOGd(DEBUGLVL(3), "task:%d %sfound for channel:%d", task,		\
+    	   curr_task_ref ? "" : "NOT ", curr_channel->event_ch);	\
+    }									\
+  while (0)
 
 #endif

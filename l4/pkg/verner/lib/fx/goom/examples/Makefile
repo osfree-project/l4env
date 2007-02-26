@@ -9,7 +9,7 @@ PRIVATE_INCDIR = ../../ $(SDL_INCDIR)
 
 SRC_C          = main.c
 	
-LIBS           += -lfxgoom -lSDL -ll4dope -lvscreen -ldsound -lcr7libm 
+LIBS           += -lfxgoom -lSDL -ll4dope -lvscreen -ldsound 
 
 include $(L4DIR)/mk/prog.mk
 

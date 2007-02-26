@@ -1,11 +1,12 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 
-SYSTEMS  = x86-l4v2 x86-l4x0
+SYSTEMS  = x86-l4v2
 
 TARGET   = libl4vfs_name_server.a
 
 SRC_C_libl4vfs_name_server.a = name_server.c
+SRC_C_libl4vfs_name_server.p.a = $(SRC_C_libl4vfs_name_server.a)
 
 MODE     = l4env_minimal
 

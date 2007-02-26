@@ -1,0 +1,35 @@
+#include <l4/sys/types.h>
+#include <l4/dm_generic/types.h>
+#include <l4/ore/ore-types.h>
+
+library ore
+{
+    [uuid(1)]
+    interface rxtx
+    {
+        /** send a buffer over an established connection using string IPC 
+         *
+         *  \param buf           data to send
+         *  \param size          size of buf
+         *  \param tx_blocking   ORE_BLOCKING_CALL for blocking rx,
+         *                       ORE_NONBLOCKING_CALL for non-blocking rx
+         */
+        int send(   [in,ref,size_is(size), max_is(2000)] char *buf,
+                    [in] l4_size_t                           size);
+         
+        /** receive data over an established connection using string IPC
+	     *
+         *  \param buf           data to receive
+         *  \param size          size of rx buf
+         *  \param real_size     if buf is too small, the size really needed
+         *                       to receive the packet
+         *  \param rx_blocking   ORE_BLOCKING_CALL for blocking rx,
+         *                       ORE_NONBLOCKING_CALL for non-blocking rx
+         */
+        [allow_reply_only]
+        int recv([out,prealloc_client,ref,size_is(real_size), max_is(2000)] char **buf,
+                 [in] l4_size_t      size,
+                 [out] l4_size_t     *real_size,
+                 [in] int            rx_blocking);    
+    };
+};

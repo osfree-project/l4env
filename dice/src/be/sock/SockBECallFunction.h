@@ -48,16 +48,14 @@ public:
     CSockBECallFunction();
     virtual ~CSockBECallFunction();
 
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+
 protected:
     /** \brief copy constructor */
     CSockBECallFunction(CSockBECallFunction &src);
 
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-
-public:
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
 };
 
 #endif

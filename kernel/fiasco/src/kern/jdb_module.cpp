@@ -215,7 +215,7 @@ public:
    * @see cmds()
    *
    */
-  virtual int const num_cmds() const = 0;
+  virtual int num_cmds() const = 0;
 
   /**
    * The commands this module provides.
@@ -230,7 +230,7 @@ public:
    * @see Cmd
    * @see action()
    */
-  virtual Cmd const *const cmds() const = 0;
+  virtual Cmd const * cmds() const = 0;
 
   /**
    * Get the category of this module.
@@ -354,12 +354,12 @@ public:
   /**
    * Get the name of this category.
    */
-  char const *const name() const;
+  char const * name() const;
 
   /**
    * Get the description of this category.
    */
-  char const *const description() const;
+  char const * description() const;
 
   /**
    * Get the next category.
@@ -450,14 +450,14 @@ Jdb_category::Jdb_category( char const *const name,
 }
 
 IMPLEMENT inline
-char const *const Jdb_category::name() const
+char const * Jdb_category::name() const
 {
   return _name;
 }
 
 
 IMPLEMENT inline
-char const *const Jdb_category::description() const
+char const * Jdb_category::description() const
 {
   return _desc;
 }
@@ -495,9 +495,7 @@ Jdb_module *Jdb_module::_first = 0;
 
 IMPLEMENT inline
 Jdb_module *Jdb_module::first()
-{
-  return _first;
-}
+{ return _first; }
 
 IMPLEMENT
 Jdb_module::Jdb_module( char const *category )
@@ -512,21 +510,16 @@ IMPLEMENT
 Jdb_module::~Jdb_module()
 {
   if(_next)
-    {
-      _next->_prev = _prev;
-    }
+    _next->_prev = _prev;
 
   if(_prev)
-    {
-      _prev->_next = _next;
-    }
+    _prev->_next = _next;
   else
     { // I'm the first
       assert(_first==this);
       _first = _next;
     }
 }
-
 
 IMPLEMENT
 Jdb_module::Cmd const*
@@ -554,14 +547,9 @@ Jdb_module::has_cmd( char const* cmd, bool short_mode ) const
 IMPLEMENT inline
 Jdb_category const *
 Jdb_module::category() const
-{
-  return _cat;
-}
+{ return _cat; }
 
 IMPLEMENT inline
 Jdb_module *
 Jdb_module::next() const
-{
-  return _next;
-}
-
+{ return _next; }

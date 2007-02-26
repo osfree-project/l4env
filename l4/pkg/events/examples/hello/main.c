@@ -29,8 +29,6 @@ int
 main(int argc, char **argv)
 {
   l4_threadid_t th;
-  l4_msgdope_t result;
-  l4_umword_t d1, d2;
   l4events_event_t event;
   l4events_nr_t eventnr;
   int i;
@@ -56,9 +54,7 @@ main(int argc, char **argv)
       printf("hello: My thread-id is "l4util_idfmt"\n", l4util_idstr(th));
 
       /* wait .5 sec */
-      l4_ipc_receive(L4_NIL_ID, 0, &d1, &d2,
-		     L4_IPC_TIMEOUT(0,0,122,9,0,0), &result);
-
+      l4_ipc_sleep(L4_IPC_TIMEOUT(0,0,122,9,0,0));
     }
 
   printf("RMGR memory dump before exit event\n"

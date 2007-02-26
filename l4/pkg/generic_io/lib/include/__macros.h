@@ -51,14 +51,18 @@ extern inline int nLOG2(l4_uint32_t word)
  */
 extern inline int DICE_ERR(int ret, CORBA_Environment *_env)
 {
-  if (ret || (_env->major != CORBA_NO_EXCEPTION))
+  if (DICE_HAS_EXCEPTION(_env)
+#ifdef DEBUG_ERRORS
+    || ret
+#endif
+  )
     {
       LOG_Error("call failed (ret %d \"%s\", exc %d) --- maybe this is okay for you!",
-                ret, l4env_strerror(-ret), _env->major);
+                ret, l4env_strerror(-ret), DICE_EXCEPTION_MAJOR(_env));
       return ret ? ret : -L4_EIPC;
     }
   else
-    return 0;
+    return ret;
 }
 
 #endif

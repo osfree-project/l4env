@@ -26,16 +26,31 @@
 #include "sync.h"
 #include "events.h"
 #include "init.h"
+#include "misc.h"
+
+
+/*** UTILITY: CONVERT CALLBACK FUNCTION TO BIND ARGUMENT STRING ***/
+char *dopelib_callback_to_bindarg(void (*callback)(dope_event *,void *),
+                                  void *arg,
+                                  char *dst_buf, int dst_len) {
+
+	snprintf(dst_buf, dst_len, "#! %lx %lx", (long)callback, (long)arg);
+	return dst_buf;
+}
 
 
 /*** INTERFACE: BIND AN EVENT TO A DOpE WIDGET ***/
 void dope_bind(long id, const char *var, const char *event_type,
                void (*callback)(dope_event *,void *), void *arg) {
-	static char cmdbuf[257];
+	char cmdbuf[256];
+	char bindbuf[64];
 
 	dopelib_mutex_lock(dopelib_cmdf_mutex);
-	snprintf(cmdbuf, 256, "%s.bind(\"%s\",\"#! %lx %lx\")",
-	         var, event_type, (u32)callback, (u32)arg);
+
+	dopelib_callback_to_bindarg(callback, arg, bindbuf, sizeof(bindbuf));
+	snprintf(cmdbuf, sizeof(cmdbuf), "%s.bind(\"%s\",\"%s\")",
+	         var, event_type, bindbuf);
+
 	dope_cmd(id,cmdbuf);
 	dopelib_mutex_unlock(dopelib_cmdf_mutex);
 }
@@ -44,19 +59,15 @@ void dope_bind(long id, const char *var, const char *event_type,
 /*** INTERFACE: BIND AN EVENT TO A DOpE WIDGET SPECIFIED AS FORMAT STRING ***/
 void dope_bindf(long id, const char *varfmt, const char *event_type,
                 void (*callback)(dope_event *,void *), void *arg,...) {
-	static char cmdbuf[257];
-	static char varstr[1024];
+	char varstr[512];
 	va_list list;
 
-	dopelib_mutex_lock(dopelib_cmdf_mutex);
+	/* decode varargs */
 	va_start(list, arg);
-	vsnprintf(varstr, 1024, varfmt, list);
+	vsnprintf(varstr, sizeof(varstr), varfmt, list);
 	va_end(list);
 
-	snprintf(cmdbuf, 256, "%s.bind(\"%s\",\"#! %lx %lx\")",
-	 varstr,event_type, (u32)callback, (u32)arg);
-	dope_cmd(id, cmdbuf);
-	dopelib_mutex_unlock(dopelib_cmdf_mutex);
+	dope_bind(id, varstr, event_type, callback, arg);
 }
 
 

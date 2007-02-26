@@ -354,6 +354,9 @@ STATIC_INITIALIZE(Console_buffer);
 
 class Jdb_cb : public Jdb_module
 {
+public:
+  Jdb_cb() FIASCO_INIT;
+private:
   static char  first_char;
   static char  search_str[30];
   static Mword output_lines;
@@ -402,7 +405,7 @@ Jdb_cb::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_cb::cmds() const
 {
   static const Cmd cs[] =
@@ -415,13 +418,13 @@ Jdb_cb::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_cb::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_cb::Jdb_cb()
   : Jdb_module("GENERAL")
 {

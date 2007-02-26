@@ -133,7 +133,8 @@ Kdb::init_kdb_cons()
 {
   char const *cmdline = Cmdline::cmdline();
   
-  if (strstr(cmdline, " -nokdb") || strstr(cmdline, " -noserial"))
+  if (strstr(cmdline, " -nokdb") || strstr(cmdline, " -noserial") ||
+      Kernel_uart::uart()->failed())
     return;
 
   // Tell the generic serial GDB code how to send and receive characters.
@@ -160,14 +161,14 @@ Kdb::init_kdb_cons()
      The com_cons itself uses only polling for communication;
      the interrupt is only used to allow the remote debugger
      to stop us at any point, e.g. when the user presses CTRL-C.  */
-   if (! strstr(cmdline, " -I-") && !strstr(cmdline, " -irqcom"))
-     {
-       Idt::set_entry (0x20 + com_irq, (unsigned) gdb_pc_com_intr, false);
-       gdb_pc_com_irq = com_irq;
+  if (! strstr(cmdline, " -I-") && !strstr(cmdline, " -irqcom"))
+    {
+      Idt::set_entry (0x20 + com_irq, (unsigned long) gdb_pc_com_intr, false);
+      gdb_pc_com_irq = com_irq;
 
-       com->enable_rcv_irq();
-       Pic::enable(com_irq);
-     }
+      com->enable_rcv_irq();
+      Pic::enable(com_irq);
+    }
 }
 
 PRIVATE static

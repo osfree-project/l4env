@@ -57,8 +57,8 @@ l4thread_init(void)
 
   LOGdL(DEBUG_CONFIG,"l4thread config:\n" \
         " max. threads:       %d\n" \
-        " default stack size: %u\n" \
-        " max. stack size:    %u\n" \
+        " default stack size: %zu\n" \
+        " max. stack size:    %zu\n" \
         " default priority:   %d",
         l4thread_max_threads, l4thread_stack_size,
         l4thread_max_stack, l4thread_default_prio);

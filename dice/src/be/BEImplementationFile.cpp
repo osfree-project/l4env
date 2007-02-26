@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEImplementationFile.cpp
- * \brief   contains the implementation of the class CBEImplementationFile
+ *  \file    dice/src/be/BEImplementationFile.cpp
+ *  \brief   contains the implementation of the class CBEImplementationFile
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,19 +32,23 @@
 #include "BEFunction.h"
 #include "BEClass.h"
 #include "BENameSpace.h"
+#include "BETrace.h"
 #include "IncludeStatement.h"
-
+#include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
+#include <iostream>
+#include <cassert>
 
 CBEImplementationFile::CBEImplementationFile()
 {
     m_pHeaderFile = 0;
 }
 
-CBEImplementationFile::CBEImplementationFile(CBEImplementationFile & src):CBEFile(src)
+CBEImplementationFile::CBEImplementationFile(CBEImplementationFile & src)
+ : CBEFile(src)
 {
     m_pHeaderFile = src.m_pHeaderFile;
 }
@@ -74,7 +78,7 @@ CBEHeaderFile *CBEImplementationFile::GetHeaderFile()
 
 /** \brief prepares the header file for the back-end
  *  \param pFEFile the corresponding front-end file
- *  \param pContext the context of the code generation
+ *  \param nFileType the type of the file
  *  \return true if the creation was successful
  *
  * An implementation file's only included file is it's header file.
@@ -82,80 +86,87 @@ CBEHeaderFile *CBEImplementationFile::GetHeaderFile()
  * the header file for the implementation file resides in the same
  * directory.
  */
-bool CBEImplementationFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
+void
+CBEImplementationFile::CreateBackEnd(CFEFile * pFEFile,
+    FILE_TYPE nFileType)
 {
-    m_sFileName = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
-    m_nFileType = pContext->GetFileType();
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEFile);
-    return true;
 }
 
 /** \brief prepares the header file for the back-end
  *  \param pFELibrary the corresponding front-end library
- *  \param pContext the context of the code generation
+ *  \param nFileType the type of the file
  *  \return true if creation was successful
  */
-bool CBEImplementationFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * pContext)
+void
+CBEImplementationFile::CreateBackEnd(CFELibrary * pFELibrary,
+    FILE_TYPE nFileType)
 {
-    m_sFileName = pContext->GetNameFactory()->GetFileName(pFELibrary, pContext);
-    m_nFileType = pContext->GetFileType();
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFELibrary, m_nFileType);
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFELibrary);
-    return true;
 }
 
 /** \brief prepares the back-end file for usage as per interface file
  *  \param pFEInterface the respective interface to prepare for
- *  \param pContext the context of the code generation
+ *  \param nFileType the type of the file
  *  \return true if code generation was successful
  */
-bool CBEImplementationFile::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext)
+void
+CBEImplementationFile::CreateBackEnd(CFEInterface *pFEInterface,
+    FILE_TYPE nFileType)
 {
-    m_sFileName = pContext->GetNameFactory()->GetFileName(pFEInterface, pContext);
-    m_nFileType = pContext->GetFileType();
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEInterface);
-    return true;
 }
 
 /** \brief prepares the back-end file for usage as per operation file
  *  \param pFEOperation the respective front-end operation to prepare for
- *  \param pContext the context of the code generation
+ *  \param nFileType the type of the file
  *  \return true if back-end was created correctly
  */
-bool CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+void
+CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation,
+    FILE_TYPE nFileType)
 {
-    m_sFileName = pContext->GetNameFactory()->GetFileName(pFEOperation, pContext);
-    m_nFileType = pContext->GetFileType();
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEOperation, m_nFileType);
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEOperation);
-
-    return true;
 }
 
 /** \brief writes the content of the implementation file to the target file
- *  \param pContext the context of the write operation
  *
- * Because  a header file only contains the function definitions, this implementation
- * only opens the file, writes the include statements and uses the base class' Write
+ * Because  a header file only contains the function definitions, this
+ * implementation only opens the file, writes the include statements and uses
+ * the base class' Write
  * function to print the functions.
  */
-void CBEImplementationFile::Write(CBEContext * pContext)
+void CBEImplementationFile::Write(void)
 {
-    string sOutputDir = pContext->GetOutputDir();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    string sOutputDir = CCompiler::GetOutputDir();
     string sFilename;
     if (!sOutputDir.empty())
         sFilename = sOutputDir;
     sFilename += GetFileName();
-    if (!Open(sFilename, CFile::Write))
+    if (!Open(sFilename))
     {
-        fprintf(stderr, "Could not open implementation file %s\n",
-            sFilename.c_str());
+	std::cerr << "Could not open implementation file " << sFilename << "\n";
         return;
     }
     // sort our members/elements depending on source line number
@@ -163,7 +174,10 @@ void CBEImplementationFile::Write(CBEContext * pContext)
     CreateOrderedElementList();
 
     // write intro
-    WriteIntro(pContext);
+    WriteIntro();
+
+    // write default includes (trace)
+    WriteDefaultIncludes();
 
     // write target file
     vector<CObject*>::iterator iter = m_vOrderedElements.begin();
@@ -185,40 +199,42 @@ void CBEImplementationFile::Write(CBEContext * pContext)
             // brace functions with extern C
             if (nLastType == 4)
             {
-                Print("#ifdef __cplusplus\n");
-                Print("}\n");
-                Print("#endif\n\n");
+		m_file << 
+		    "#ifdef __cplusplus\n" <<
+		    "}\n" <<
+		    "#endif\n\n";
             }
-            Print("\n");
+	    m_file << "\n";
             nLastType = nCurrType;
             // brace functions with extern C
             if (nCurrType == 4)
             {
-                Print("#ifdef __cplusplus\n");
-                Print("extern \"C\" {\n");
-                Print("#endif\n\n");
+		m_file <<
+		    "#ifdef __cplusplus\n" <<
+		    "extern \"C\" {\n" <<
+		    "#endif\n\n";
             }
         }
         // add pre-processor directive to denote source line
-        if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
+        if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-            Print("# %d \"%s\"\n", (*iter)->GetSourceLine(),
-                (*iter)->GetSourceFileName().c_str());
+	    m_file << "# " << (*iter)->GetSourceLine() << " \"" << 
+		(*iter)->GetSourceFileName() << "\"\n";
         }
         // now really write the element
         switch (nCurrType)
         {
         case 1:
-            WriteInclude((CIncludeStatement*)(*iter), pContext);
+            WriteInclude((CIncludeStatement*)(*iter));
             break;
         case 2:
-            WriteClass((CBEClass*)(*iter), pContext);
+            WriteClass((CBEClass*)(*iter));
             break;
         case 3:
-            WriteNameSpace((CBENameSpace*)(*iter), pContext);
+            WriteNameSpace((CBENameSpace*)(*iter));
             break;
         case 4:
-            WriteFunction((CBEFunction*)(*iter), pContext);
+            WriteFunction((CBEFunction*)(*iter));
             break;
         default:
             break;
@@ -227,13 +243,14 @@ void CBEImplementationFile::Write(CBEContext * pContext)
     // if last element was function, close braces
     if (nLastType == 4)
     {
-        Print("#ifdef __cplusplus\n");
-        Print("}\n");
-        Print("#endif\n\n");
+	m_file <<
+	    "#ifdef __cplusplus\n" <<
+	    "}\n" <<
+	    "#endif\n\n";
     }
 
     // write helper functions, if any
-    WriteHelperFunctions(pContext);
+    WriteHelperFunctions();
 
     // close file
     Close();
@@ -241,31 +258,44 @@ void CBEImplementationFile::Write(CBEContext * pContext)
 
 /** \brief writes a class
  *  \param pClass the class to write
- *  \param pContext the context of the write operation
  */
-void CBEImplementationFile::WriteClass(CBEClass *pClass, CBEContext *pContext)
+void CBEImplementationFile::WriteClass(CBEClass *pClass)
 {
     assert(pClass);
-    pClass->Write(this, pContext);
+    pClass->Write(this);
 }
 
 /** \brief writes the namespace
  *  \param pNameSpace the namespace to write
- *  \param pContext the context of the write operation
  */
-void CBEImplementationFile::WriteNameSpace(CBENameSpace *pNameSpace, CBEContext *pContext)
+void
+CBEImplementationFile::WriteNameSpace(CBENameSpace *pNameSpace)
 {
     assert(pNameSpace);
-    pNameSpace->Write(this, pContext);
+    pNameSpace->Write(this);
 }
 
 /** \brief writes the function
  *  \param pFunction the function to write
- *  \param pContext the context of the write operation
  */
-void CBEImplementationFile::WriteFunction(CBEFunction *pFunction, CBEContext *pContext)
+void
+CBEImplementationFile::WriteFunction(CBEFunction *pFunction)
 {
     assert(pFunction);
-    if (pFunction->DoWriteFunction(this, pContext))
-        pFunction->Write(this, pContext);
+    if (pFunction->DoWriteFunction(this))
+        pFunction->Write(this);
 }
+
+/** \brief writes includes, which have to appear before any type definition
+ */
+void
+CBEImplementationFile::WriteDefaultIncludes(void)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBETrace *pTrace = pCF->GetNewTrace();
+    pTrace->DefaultIncludes(this);
+    delete pTrace;
+}
+

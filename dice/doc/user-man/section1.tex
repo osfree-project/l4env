@@ -4,54 +4,46 @@
 \chapter{Interface Definitions}
 \label{section1}
 
-The use of IDL compilers is well established 
-in distributed systems. An IDL compiler provides you
-with a level of abstraction for the communication with a 
+The use of IDL compilers is well established in distributed systems. An IDL
+compiler provides you with a level of abstraction for the communication with a
 remote service.
 
-Assuming you want to write a server for L4 manually, you
-have to solve several problems. You have to communicate
-your request from a client to the server, which means that you
-build a message and send an IPC containing this message
-to the server. The server has to wait for request,
-extract the data from the message, and dispatches the
-request to the appropriate function, which does the
-requested work. After this function returns, the server
-has to pack the response into another message and reply
-to the client.
+Assuming you want to write a server for L4 manually, you have to solve several
+problems. You have to communicate your request from a client to the server,
+which means that you build a message and send an IPC containing this message
+to the server. The server has to wait for request, extract the data from the
+message, and dispatches the request to the appropriate function, which does
+the requested work. After this function returns, the server has to pack the
+response into another message and reply to the client.
 
-With the help of an IDL compiler you can automate all of the
-above steps --- except the implementation of the server
-function. All you have to do is to write a description of the 
-server's interface using an interface description language 
-(IDL) and translate this description with \dice{}.
+With the help of an IDL compiler you can automate all of the above
+steps---except the implementation of the server function. All you have to do
+is to write a description of the server's interface using an interface
+description language (IDL) and translate this description with \dice{}.
 
-Currently, \dice{} supports two different interface
-description languages --- CORBA 
-IDL and DCE IDL. Since we think that DCE IDL is more
-powerful, we added options to express
-L4 specific properties to the DCE IDL. These attributes
-are described in detail in section~\ref{sec:attributes}.
+Currently, \dice{} supports two different interface description
+languages---CORBA IDL and DCE IDL. Since we think that DCE IDL is more
+powerful, we added options to express L4 specific properties to the DCE IDL.
+These attributes are described in detail in section~\ref{sec:attributes}.
 
-For the CORBA IDL there exist multiple well-defined 
-language mappings. Since these are widely accepted,
-\dice{} generates code that conforms to the CORBA C
+For the CORBA IDL there exist multiple well-defined language mappings. Since
+these are widely accepted, \dice{} generates code that conforms to the CORBA C
 language mapping \cite{corba-clm}.
 
 \section{A Simple Interface}
 
-To illustrate the use of \dice{} we show a simple example
-here. The language of our IDL examples is DCE IDL. See
-the appendix for a CORBA IDL version of the example.
+To illustrate the use of \dice{} we show a simple example here. The language
+of our IDL examples is DCE IDL. See the appendix for a CORBA IDL version of
+the example.
 
 \subsection{Interface Description Language}
+
 An interface description file consists of at least an {\em interface
-specification} which includes one or more {\em function declarations}.
-As described above a client may send data to the server and
-receive a response containing data. We have to differentiate
-these different direction of data transfer from each other. Data sent to
-the server has the attribute \verb|in| and data sent back to
-the client has the attribute \verb|out|.
+specification} which includes one or more {\em function declarations}.  As
+described above a client may send data to the server and receive a response
+containing data. We have to differentiate these different direction of data
+transfer from each other. Data sent to the server has the attribute \verb|in|
+and data sent back to the client has the attribute \verb|out|.
 
 \begin{verbatim}
 interface simple
@@ -60,11 +52,11 @@ interface simple
 }
 \end{verbatim}
 
-The above example sends a simple parameter to the server and
-does not expect return values. Nonetheless, the client continues
-its work only after it received an (empty) 
-answer from the server. These calls are always synchronous.
-Asynchronous calls are described in detail in section~\ref{sec:asynchronous}.
+The above example sends a simple parameter to the server and does not expect
+return values. Nonetheless, the client continues its work only after it
+received an (empty) answer from the server. These calls are always
+synchronous.  Asynchronous calls are described in detail in
+section~\ref{sec:asynchronous}.
 
 \section{Supported Types}
 
@@ -112,10 +104,9 @@ unsigned long long & 64 bit & 0... 18'446'744'073'709'551'615 \\
 \end{tabular}
 \end{center}
 
-Note that the interface description language do \emph{not} provide
-a type to describe a machine word. To use parameters of the type
-machine word, import a header file defining such a type an use this
-type.
+Note that the interface description language do \emph{not} provide a type to
+describe a machine word. To use parameters of the type machine word, import a
+header file defining such a type an use this type.
 
 \subsection{Floating Point Types}
 The DCE and CORBA IDL support the following types:
@@ -151,9 +142,9 @@ boolean & 8 bit & {\tt true}, {\tt false} \\
 \end{tabular}
 \end{center}
 
-The type {\tt boolean} is mapped to a {\tt unsigned char} type and
-therefore has a size of 8 bit. Its values are {\tt false} if zero
-and {\tt true} otherwise.
+The type {\tt boolean} is mapped to a {\tt unsigned char} type and therefore
+has a size of 8 bit. Its values are {\tt false} if zero and {\tt true}
+otherwise.
 
 \dice{} supports the following miscellaneous types for the
 CORBA IDL:
@@ -171,20 +162,19 @@ octet & 8 bit & 0... 255 \\
 \end{tabular}
 \end{center}
 
-The types {\tt char} and {\tt wchar} have a special semantic in the
-CORBA IDL. Even though they might contains integer values, they are
-interpreted as characters. The CORBA specification allows the communication
-code to transform character sets and thereby change the integer value of
-a character. If you do not intend to transfer string, but rather sequences
-of 8 Bit values, use the {\tt octet} type instead.
+The types {\tt char} and {\tt wchar} have a special semantic in the CORBA IDL.
+Even though they might contains integer values, they are interpreted as
+characters. The CORBA specification allows the communication code to transform
+character sets and thereby change the integer value of a character. If you do
+not intend to transfer string, but rather sequences of 8 Bit values, use the
+{\tt octet} type instead.
 
 \subsection{L4 specific types}
-There are some L4 specific types, which have been added to the
-IDLs to support L4 specific semantics.
-One of these types is the flexpage type, which expresses the
-mapping of memory pages from one address space into another.
-A flexpage can be transmitted using the {\tt flexpage} (or {\tt fpage})
-type.
+
+There are some L4 specific types, which have been added to the IDLs to support
+L4 specific semantics.  One of these types is the flexpage type, which
+expresses the mapping of memory pages from one address space into another.  A
+flexpage can be transmitted using the {\tt flexpage} (or {\tt fpage}) type.
 
 \begin{verbatim}
 void map([in] fpage page);
@@ -192,32 +182,32 @@ void map([in] fpage page);
 
 \section{Constructed Types}
 
-\dice{} transmits constructed types as well. You may either include
-or import a type via the mechanisms described in section~\ref{sec:import}
-or you define it within the IDL file. The latter approach has the
-advantage that you can give hints to the IDL compiler on how to
-transmit the type. The disadvantage is, that you have to either
-use the generated data type in your wrapper code or cast your own 
-data type to the generated data type when using the generated stubs.
+\dice{} transmits constructed types as well. You may either include or import
+a type via the mechanisms described in section~\ref{sec:import} or you define
+it within the IDL file. The latter approach has the advantage that you can
+give hints to the IDL compiler on how to transmit the type. The disadvantage
+is, that you have to either use the generated data type in your wrapper code
+or cast your own data type to the generated data type when using the generated
+stubs.
 
 \subsection{Aliased Types}
-You may use {\tt typedef} to define alias names for types, which
-can be used as types of parameters or members of other constructed 
-types.
+
+You may use {\tt typedef} to define alias names for types, which can be used
+as types of parameters or members of other constructed types.
 
 \begin{verbatim}
 typedef int buffer50[50];
 \end{verbatim}
 
-The specified types are provided in the generated header files and
-can therefore be used in your code.
+The specified types are provided in the generated header files and can
+therefore be used in your code.
 
 \subsection{Arrays and Sequences}
 You may specify arrays in your IDL files.
 
-Arrays are denoted by brackets, and may contain lower and upper bounds.
-You may also specify a variable sized array by using an asterisk instead
-of an empty pair of brackets.
+Arrays are denoted by brackets, and may contain lower and upper bounds.  You
+may also specify a variable sized array by using an asterisk instead of an
+empty pair of brackets.
 
 \begin{verbatim}
 typedef int unboundArray[];
@@ -225,10 +215,9 @@ typedef int unboundArray2[*];
 \end{verbatim}
 
 The following example describes an array with 20 elements of type \verb|long|.
-There are different ways to express this. As mentioned you may specify 
-lower bounds for arrays. The generated stub code will then transmit
-the data starting with the lower bound of the array ({\em currently
-not implemented}). 
+There are different ways to express this. As mentioned you may specify lower
+bounds for arrays. The generated stub code will then transmit the data
+starting with the lower bound of the array ({\em currently not implemented}). 
 
 \begin{verbatim}
 void array1([in] long param[20]);
@@ -278,19 +267,20 @@ the function, which means you cannot declare a variable of this type outside
 the function.
 
 \subsubsection{Strings}
-Strings are regarded as a variable sized array of characters, which is 
-zero-terminated.
-This allows to omit the specification of length attributes for the 
-parameter. Instead you specify an \verb|string| attribute. The generated
-code will use string functions to determine the length of the string.
+
+Strings are regarded as a variable sized array of characters, which is
+zero-terminated.  This allows to omit the specification of length attributes
+for the parameter. Instead you specify an \verb|string| attribute. The
+generated code will use string functions to determine the length of the
+string.
 
 \begin{verbatim}
 void hello([in, string] char* world);
 \end{verbatim}
 
 In CORBA IDL you may specify strings with boundary (similar to the sequence
-type). The CORBA C Language Mapping defines to map strings and wide-strings
-to \verb|char*| and \verb|wchar*| respectively, ignoring the boundaries. This
+type). The CORBA C Language Mapping defines to map strings and wide-strings to
+\verb|char*| and \verb|wchar*| respectively, ignoring the boundaries. This
 implies that you may have to enforce the boundaries yourself.
 
 \begin{verbatim}
@@ -302,13 +292,14 @@ typedef char* my_name;
 \end{verbatim}
 
 \subsection{Structured Types}
-Within the IDL file you may specify a structured type --- a \verb|struct|
- --- the same way as you would within a C/C++ header file. Furthermore
-it is possible to specify attributes with each member of the defined
-\verb|struct|. One of the allowed attributes is \verb|size_is|, which
-is described in more detail in Section~\ref{sec:attributes}. It allows
-you to specify the run-time size of an array. The definition of such a
-structure could look like this:
+
+Within the IDL file you may specify a structured type---a \verb|struct|---the
+same way as you would within a C/C++ header file. Furthermore it is possible
+to specify attributes with each member of the defined \verb|struct|.  One of
+the allowed attributes is \verb|size_is|, which is described in more detail in
+Section~\ref{sec:attributes}. It allows you to specify the run-time size of an
+array. The definition of such a structure could look like this:
+
 \begin{verbatim}
 struct _string
 {
@@ -325,17 +316,17 @@ This is similar to the usage as parameters:
 % Valid attributes are:
 % ...
 
-A \verb|struct| is mostly marshaled by copying it as is into the 
-message buffer. If the \verb|struct| contains variable sized members,
-such as the \verb|buffer| member of the above example, these are
-marshaled separately after the parameter of the structured type.
+A \verb|struct| is mostly marshaled by copying it as is into the message
+buffer. If the \verb|struct| contains variable sized members, such as the
+\verb|buffer| member of the above example, these are marshaled separately
+after the parameter of the structured type.
 
 % packed structs!
 
 \subsubsection{Bit-fields}
-You may specify bit-fields in a structured type. Consider that this 
-is highly platform dependent and the usage of bit-fields may lead
-to unwanted results.
+
+You may specify bit-fields in a structured type. Consider that this is highly
+platform dependent and the usage of bit-fields may lead to unwanted results.
 
 \begin{verbatim}
 struct {
@@ -346,14 +337,15 @@ struct {
 \end{verbatim}
 
 \subsection{Unions}
-Within your IDL specification you
-may define a union in C syntax or in IDL syntax. The difference is made
-when marshaling the union into the message buffer. A ``C-style'' union
-is simply copied into the message buffer. Therefore it will consume the
-space of the largest of its members.
+
+Within your IDL specification you may define a union in C syntax or in IDL
+syntax. The difference is made when marshaling the union into the message
+buffer. A ``C-style'' union is simply copied into the message buffer.
+Therefore it will consume the space of the largest of its members.
 
 The ``IDL-style'' union declares a decision making variable, which is then
 used to select the member to transmit. Such a union could look like this:
+
 \begin{verbatim}
 union switch(long which_member) _union
 {
@@ -368,19 +360,19 @@ default:
   byte status;
 };
 \end{verbatim}
+
 If the variable \verb|which_member| has the value 1, the member \verb|l_mem|
 is transmitted. When defining a switch variable and the case statement, you
 have to consider that they are used in a C switch statement for comparison.
-Thus it is valid to use a \verb|char s_var| and define the cases with character
-values.
+Thus it is valid to use a \verb|char s_var| and define the cases with
+character values.
 
-The generated code for an ``IDL-style'' union includes a switch statement to 
+The generated code for an ``IDL-style'' union includes a switch statement to
 decide which member to transmit. This may be relevant if the union may
-tremendously vary in size and a comparison would possibly minimize the
-amount of data to be copied. But, such a union will always need the switch
-variable to be transmitted as well --- at the receiver's side there is 
-also a switch statement which decides what to unmarshal from the message 
-buffer.
+tremendously vary in size and a comparison would possibly minimize the amount
+of data to be copied. But, such a union will always need the switch variable
+to be transmitted as well --- at the receiver's side there is also a switch
+statement which decides what to unmarshal from the message buffer.
 
 A union may also have constructed or variable sized members. Members of
 variable size are marshaled after the union.
@@ -395,10 +387,10 @@ interface derived : base1, base2
 ...
 \end{verbatim}
 
-The main difference to C++ class derivation is, that you mostly use derived 
+The main difference to C++ class derivation is, that you mostly use derived
 classes to overload functionality of the base classes. Since there is no
-implementation in an IDL file, which could be overloaded, the main purpose
-of interface derivation is the expansion of the base interface' functionality.
+implementation in an IDL file, which could be overloaded, the main purpose of
+interface derivation is the expansion of the base interface' functionality.
 This is done by specifying new functions in the derived interface.
 
 You may use interface derivation to unify multiple interface definitions
@@ -411,39 +403,38 @@ interface all_in_one :
 \end{verbatim}
 
 The generated server loop will be able to receive message from \verb|base1|,
-\verb|base2|, and \verb|another_scope::base3|. The server loop
-distinguishes the different function calls from another as described
-in the following section (Section~\ref{sec:opcode}).
+\verb|base2|, and \verb|another_scope::base3|. The server loop distinguishes
+the different function calls from another as described in the following
+section (Section~\ref{sec:opcode}).
 
 \section{Constants}
-You may specify constant by either using the \verb|#define| statement
-or a {\tt const} declaration. The \verb|#define| statement is parsed
-by the pre-processor and will not appear in the generated code. The
-{\tt const} declaration will appear in the generated code as they have
-been defined in the IDL file.
+
+You may specify constant by either using the \verb|#define| statement or a
+{\tt const} declaration. The \verb|#define| statement is parsed by the
+pre-processor and will not appear in the generated code. The {\tt const}
+declaration will appear in the generated code as they have been defined in the
+IDL file.
 
 \begin{verbatim}
 const int foo = 4;
 \end{verbatim}
 
-You may use the declared {\tt const} variables when specifying the sizes
-of arrays, etc.
+You may use the declared {\tt const} variables when specifying the sizes of
+arrays, etc.
 
 \section{Attributes}
 \label{sec:attributes}
 
-This section describes some attributes, which are available
-with the DCE IDL. If an attribute is available for CORBA IDL as well
-this is specifically mentioned.
+This section describes some attributes, which are available with the DCE IDL.
+If an attribute is available for CORBA IDL as well this is specifically
+mentioned.
 
-Attributes are used to propagate knowledge about the target
-environment or usage context of the IDL specification to \dice{}.
-Some attributes are used to generate code optimized for a
-specific platform or architecture. Others will influence the
-generation of the target code to exploit features of a specific 
-L4 ABI. Therefore the attributes are important to provide
-\dice{} with knowledge about the IDL specification and optimization
-potential.
+Attributes are used to propagate knowledge about the target environment or
+usage context of the IDL specification to \dice{}.  Some attributes are used
+to generate code optimized for a specific platform or architecture. Others
+will influence the generation of the target code to exploit features of a
+specific L4 ABI. Therefore the attributes are important to provide \dice{}
+with knowledge about the IDL specification and optimization potential.
 
 However, there are attributes which might be ignored on some platforms.
 
@@ -465,15 +456,13 @@ and
 \end{verbatim}
 express the same semantics.
 
-You may also specify a parameter or constant as the 
-argument of the attribute.
+You may also specify a parameter or constant as the argument of the attribute.
 
-The \verb|length_is| or \verb|size_is| attributes are used
-to determine the length of a variable sized array at run-time.
-The generated code will transmit only the specified number of
-elements instead of the maximum size. The \verb|str| parameter
-does not have a maximum size to keep the example simple. A maximum
-size will enable the server loop or client stubs to know the
+The \verb|length_is| or \verb|size_is| attributes are used to determine the
+length of a variable sized array at run-time.  The generated code will
+transmit only the specified number of elements instead of the maximum size.
+The \verb|str| parameter does not have a maximum size to keep the example
+simple. A maximum size will enable the server loop or client stubs to know the
 size of memory to allocate for the array.
 
 The example:
@@ -481,92 +470,129 @@ The example:
 [in, size_is(len)] char str[], 
 [in] int len
 \end{verbatim}
-specifies a variable sized array of bytes, which has a length
-of \verb|len|. \verb|len| has to be either a parameter or
-a constant. \dice{} first searches for parameters with the
-specified name and, if it does not find one, it searches for
-a constant with that name. An error is generated if neither 
-is given.
+
+specifies a variable sized array of bytes, which has a length of \verb|len|.
+\verb|len| has to be either a parameter or a constant. \dice{} first searches
+for parameters with the specified name and, if it does not find one, it
+searches for a constant with that name. An error is generated if neither is
+given.
 
 %TODO: exact semantics of _is attributes
 %TODO: are there other attributes relevant for arrays
 
 \subsection{Strings}
-As described above is it possible to define the run-time length
-of a variable sized array using the \verb|length_is| or 
-\verb|size_is| attribute. This may also be used for strings.
-If you know that the parameter you will transmit is a zero-terminated string,
-you can also let the generated code calculate the size of
-the string. You simply specify the \verb|string| attribute.
+
+As described above is it possible to define the run-time length of a variable
+sized array using the \verb|length_is| or \verb|size_is| attribute. This may
+also be used for strings.  If you know that the parameter you will transmit is
+a zero-terminated string, you can also let the generated code calculate the
+size of the string. You simply specify the \verb|string| attribute.
 
 \begin{verbatim}
 [in, string] char* str
 \end{verbatim}
 
-In this example the \verb|str| parameter does not have a maximum
-size, because it can be any size. 
+In this example the \verb|str| parameter does not have a maximum size, because
+it can be any size. 
 
 \subsection{Indirect Parts IPC}
-L4 allows you to transmit any data using 
-indirect part IPC. You specify the address and size 
-of the original data and at receiver's side the address and 
-size of the receive buffer and the kernel copies the data
-directly. Without indirect parts the data is copied from the
-source address to the message buffer, the kernel copies the message buffer
-from senders side to the receiver's message buffer,
-and the receiver copies the data from the message buffer to the target variables.
-The downside of the indirect part IPC is, that the
-kernel may have to establish additional temporary mappings 
-of the data areas.
 
-To make \dice{} use indirect part IPC for a specific parameter
-you may use the \verb|ref| attribute. You have to combine it
-with either the \verb|size_is| attribute or the \verb|string| attribute
-to specify the size of a variable sized array.
+L4 allows you to transmit any data using indirect part IPC. You specify the
+address and size of the original data and at receiver's side the address and
+size of the receive buffer and the kernel copies the data directly. Without
+indirect parts the data is copied from the source address to the message
+buffer, the kernel copies the message buffer from senders side to the
+receiver's message buffer, and the receiver copies the data from the message
+buffer to the target variables.  The downside of the indirect part IPC is,
+that the kernel may have to establish additional temporary mappings of the
+data areas.
+
+To make \dice{} use indirect part IPC for a specific parameter you may use the
+\verb|ref| attribute. You have to combine it with either the \verb|size_is|
+attribute or the \verb|string| attribute to specify the size of a variable
+sized array.
 
 \begin{verbatim}
 [in, size_is(size), ref] long data[],
 [in] long size
 \end{verbatim}
 
-You may also transmit any other kind of data using indirect 
-part IPC. Only specify the \verb|ref| attribute with the respective
-parameter and the size of the data to be transmitted. 
+You may also transmit any other kind of data using indirect part IPC. Only
+specify the \verb|ref| attribute with the respective parameter and the size of
+the data to be transmitted. 
 
-With the L4 version 4 back-end all constructed data types will be
-transmitted using indirect parts, even if no \verb|ref| attribute 
-has been specified.
+With the L4 version 4 back-end all constructed data types will be transmitted
+using indirect parts, even if no \verb|ref| attribute has been specified (or
+rather, the compiler may choose parameters to transmit as indirect parts as it
+seems fit).
+
+Be aware that for indirect parts with the \verb|[out]| attribute the receive
+buffer has to be allocated before the IPC is initiated.  Thus, the \verb|size|
+parameter also has to have an \verb|[in]| attribute. The \verb|[out]|
+attribute has to be present, so that the \verb|size| parameter is used to set
+the send size of the indirect part.
 
 \subsection{Receiving Indirect Parts}
+
 The CORBA C Language Mapping specifies for the reception of variable sized
-parameters the allocation of memory using the \verb|CORBA_alloc| function.
-If you know the receive buffer for the variable sized parameter before
-calling the client stub, you may want to give this buffer to the client
-stub, so the data is copied directly into this buffer. This can be done
-using \verb|prealloc| attribute:
+parameters the allocation of memory using the \verb|CORBA_alloc| function.  If
+you know the receive buffer for the variable sized parameter before calling
+the client stub, you may want to give this buffer to the client stub, so the
+data is copied directly into this buffer. This can be done using
+\verb|prealloc_client| attribute:
+
 \begin{verbatim}
-[out, prealloc, size_is(len)] char** str,
-[out] int len
+[out, prealloc_client, size_is(len), ref] char** str,
+[out, in] int *len
 \end{verbatim}
 
-{\em The Section~\ref{sec:mem-indirect-parts} contains further information
-on the memory management of indirect parts.}
+{\em The Section~\ref{sec:mem-indirect-parts} contains further information on
+the memory management of indirect parts.}
+
+Even though, the receive buffer for the indirect part has been allocated
+beforehand, the size element of the indirect part is set to the value of the
+\verb|len| parameter.  Thus, this parameter should have the \verb|[in]|
+attribute to indicate this situation.  Also, the very parameter is used to set
+the actual transmitted size when sending from the server to the client.
+Therefore, you should set this variable to the actual size of the buffer to be
+sent back to the client.  Otherwise the kernel might abort the IPC with an
+error (if the size specified is larger than the buffer).
+
+{\em Also note that the \verb|str| parameter has an additional reference as
+\verb|out| parameter even though it is preallocated and thus no memory
+allocation is necessary in the stub.}
+
+Note: The \verb|prealloc_client| attribute also has the counter-part
+\verb|prealloc_server|.  Using this attribute will generate code that
+allocates memory for the parameter in the server side dispatcher function.
+The allocated memory is then handed to the component function for using.
+Because the environment's \verb|malloc| (or the \verb|CORBA_alloc|) function
+is used for this parameter on every invocation of the respective operation,
+the memory should eventually be freed.  This is automatically done by the
+generated code.  It registers the allocated memory pointer in the
+environment's pointer list.  This list is iterated after the
+receipt\footnote{Freeing the memory before sending the message is not possible,
+because the memory is needed during the reply.} of the next message and freed.
+If you want to keep the memory for further processing, you have to remove the
+memory from the list.  Usually the usage of \verb|prealloc_server| is not
+necessary.
 
 \subsection{Error Function}
-Usually the server ignores IPC errors when sending a reply to a client or
-waiting for a new request. Sometimes it is useful to use timeouts when
-waiting for new request to ``do something else'' meanwhile. The wait timeout 
-can be specified in the \verb|CORBA_Environment| parameter of the
-server loop. But how do you know when the timeout has been triggered and
-what does the server loop do?
 
-For this scenario, there exists an attribute --- \verb|error_function| --- which
-makes the server loop call the specified function on every IPC error.
-This allows you to implement a specific behavior for the IPC error. The
-called function takes only one parameter --- an \verb|l4_msgdope_t| variable.
-This can be used to check the origin of the error and take appropriate
-measures.  To distinguish client and server error functions, one can
-use the \verb|error_function_client| and \verb|error_function_server| attributes
+Usually the server ignores IPC errors when sending a reply to a client or
+waiting for a new request. Sometimes it is useful to use timeouts when waiting
+for new request to ``do something else'' meanwhile. The wait timeout can be
+specified in the \verb|CORBA_Environment| parameter of the server loop. But
+how do you know when the timeout has been triggered and what does the server
+loop do?
+
+For this scenario, there exists an attribute --- \verb|error_function| ---
+which makes the server loop call the specified function on every IPC error.
+This allows you to implement a specific behavior for the IPC error. The called
+function takes only one parameter --- an \verb|l4_msgdope_t| variable.  This
+can be used to check the origin of the error and take appropriate measures.
+To distinguish client and server error functions, one can use the
+\verb|error_function_client| and \verb|error_function_server| attributes
 respectively. Using these attributes overrides \verb|error_function|.
 
 % XXX Todo
@@ -578,12 +604,12 @@ respectively. Using these attributes overrides \verb|error_function|.
 % the IDL compiler do what you want
 
 \subsection{Using other types for transmition}
-Sometimes it is convenient to use other types to transmit the data,
-than are used when calling a function. An example is the usage of
-a constructed type, which contains variable sized members, which
-are known only at run-time. If this type is declared in a C header
-file, it is not possible to add attributes to the variable sized
-member to define the run-time size. 
+
+Sometimes it is convenient to use other types to transmit the data, than are
+used when calling a function. An example is the usage of a constructed type,
+which contains variable sized members, which are known only at run-time. If
+this type is declared in a C header file, it is not possible to add attributes
+to the variable sized member to define the run-time size. 
 
 The attribute \verb|transmit_as| lets you define the type to use
 when transmitting the data:
@@ -603,67 +629,62 @@ The example:
 will transmit \verb|t| as a variable sized array of type \verb|unsigned char|
 with size \verb|size| instead of \verb|var_struct|.
 
-{\em Consider that the latter example requires the specification of
-a pointer parameter. Without the \verb|transmit_as| attribute this
-would have the semantic of an array of type \verb|var_struct| and
-\verb|size| members. But with the \verb|transmit_as| attribute the
-parameter \verb|t| is considered a variable sized array with 
-\verb|size| elements of type \verb|unsigned char|.}
+{\em Consider that the latter example requires the specification of a pointer
+parameter. Without the \verb|transmit_as| attribute this would have the
+semantic of an array of type \verb|var_struct| and \verb|size| members. But
+with the \verb|transmit_as| attribute the parameter \verb|t| is considered a
+variable sized array with \verb|size| elements of type \verb|unsigned char|.}
 
 \section{Imported and Included Files}
 \label{sec:import}
 
-\dice{} provides you with two mechanisms to include other IDL or
-C/C++ files into your IDL file. The first is the well known 
-preprocessor directive \verb|#include|. The second is the \verb|import|
-statement. Both are resolved by \dice{}'s preprocessor.
-Including a file using \verb|import| implies that the content 
-of this file is only scanned for IDL syntax. This includes
-C/C++ style type and constant definitions, but excludes C style 
-function declarations and definitions.
+\dice{} provides you with two mechanisms to include other IDL or C/C++ files
+into your IDL file. The first is the well known preprocessor directive
+\verb|#include|. The second is the \verb|import| statement. Both are resolved
+by \dice{}'s preprocessor.  Including a file using \verb|import| implies that
+the content of this file is only scanned for IDL syntax. This includes C/C++
+style type and constant definitions, but excludes C style function
+declarations and definitions.
 
-\dice{} automatically scans the file \verb|dice-corba-types.h|
-to know all the CORBA types. This file is searched in L4 tree's
-include path and the include path where dice headers might be
-installed to. To avoid inclusion of unwanted header files the
-two include paths contain the \verb|/dice| sub-directory.
-If you receive the error '\verb|dice-corba-types.h| cannot
-be found', please check if your \verb|$(L4DIR)/include/dice| or
-\verb|/usr/local/include/dice| contain that file. If not, fix
-your installation or run \verb|make| in the \dice{} source
-directory.
+\dice{} automatically scans the file \verb|dice-corba-types.h| to know all the
+CORBA types. This file is searched in L4 tree's include path and the include
+path where dice headers might be installed to. To avoid inclusion of unwanted
+header files the two include paths contain the \verb|/dice| sub-directory.  If
+you receive the error '\verb|dice-corba-types.h| cannot be found', please
+check if your \verb|$(L4DIR)/include/dice| or \verb|/usr/local/include/dice|
+contain that file. If not, fix your installation or run \verb|make| in the
+\dice{} source directory.
 
 \subsection{C/C++ Attributes}
-If you specify attributes (\verb|__attribute__((...))|)
-with a type definition, they are ignored by the IDL compiler. This is
-important if you specify attributes responsible for the memory
-layout of a data type. Thus, if you define C types using attributes
-check the generated C code to see if you data type is really copied
-the way you intended. (For example, the \verb|packed| attribute of
-structs.)
+
+If you specify attributes (\verb|__attribute__((...))|) with a type
+definition, they are ignored by the IDL compiler. This is important if you
+specify attributes responsible for the memory layout of a data type. Thus, if
+you define C types using attributes check the generated C code to see if you
+data type is really copied the way you intended. (For example, the
+\verb|packed| attribute of structs.)
 
 \section{Message Passing}
 \label{sec:message-passing}
-Traditional RPC semantics include the sequence of actions of sending a
-request to a server, processing the request and waiting for a reply.
-Opposed to that, exist programming languages, which use communication
-mechanisms to synchronize or exchange data at specific points in the
-program. In Ada these points are called ``rendevouz''. With this technique
-it is possible to write programs, where activity is associated the
-flow of data.
 
-To provide the level of abstraction we introduced for RPCs for message
-passing also, we extended the DCE IDL to let \dice{} generate simple
-communication stubs.
+Traditional RPC semantics include the sequence of actions of sending a request
+to a server, processing the request and waiting for a reply.  Opposed to that,
+exist programming languages, which use communication mechanisms to synchronize
+or exchange data at specific points in the program. In Ada these points are
+called ``rendezvous''. With this technique it is possible to write programs,
+where activity is associated the flow of data.
 
-A ``rendevouz'' point is given on L4 when one thread waits for a
-specific message and another thread is sending this message to the
-waiting thread. Since a message is defined in the IDL by an operation of an 
-interface, we associate an attribute with the operation to denote 
-the message passing semantic. It is possible for a message to be
-consumed by a thread or emitted by it. This is similar to the semantic
-for parameters of a RPC. Thus we used the \verb|in| and \verb|out|
-attribute for message passing.
+To provide the level of abstraction we introduced for RPCs for message passing
+also, we extended the DCE IDL to let \dice{} generate simple communication
+stubs.
+
+A ``rendezvous'' point is given on L4 when one thread waits for a specific
+message and another thread is sending this message to the waiting thread.
+Since a message is defined in the IDL by an operation of an interface, we
+associate an attribute with the operation to denote the message passing
+semantic. It is possible for a message to be consumed by a thread or emitted
+by it. This is similar to the semantic for parameters of a RPC. Thus we used
+the \verb|in| and \verb|out| attribute for message passing.
 
 \begin{verbatim}
 interface mp
@@ -698,7 +719,7 @@ attribute, known from DCE IDL.
 \subsection{Optimizations}
 If you would like to use message passing stubs and know what you are
 doing, you might want to use some extra attributes. Assuming you do
-use the the message passing function as \emph{send} and \emph{receive}
+use the message passing function as \emph{send} and \emph{receive}
 pairs only---meaning no single spot where you wait for more than one
 message. You can specify the \verb|noopcode| attribute for a function.
 This attribute makes \dice{} skip opcode marshaling and unmarshaling.
@@ -758,71 +779,73 @@ job -- it has to be unique.
 The \verb|_component| function may create a worker thread, which does all the
 processing of the job. To be able to send the result of the job back to the
 client the server will need to store the association of client ID to job ID.
-(In fact the client ID could be used as job ID if a client ID cannot be used
-again while the job is still being processed, e.g. the client did not receive
-a reply yet.) The worker thread should be informed about the job to process. 
+(In fact the client ID could be used as job ID if a client ID cannot be
+used again while the job is still being processed, e.g. the client did not
+receive a reply yet.) The worker thread should be informed about the job to 
+process. 
 
-After the job is finished the worker thread should invoke the \verb|notify|
+After the job is finished the worker thread should invoke the \verb|notify| 
 function with the job ID (\verb|p1|) and the result (\verb|p2|). The
-implementation (\verb|_component| function) of this method calls the
-\verb|_reply| function of the \verb|foo| method.
+implementation (\verb|_component| function) of this method calls the \verb|_reply|
+function of the \verb|foo| method.
 
 \subsubsection{Remarks}
 To send a reply to a client you have to store its ID and an identifier
 for the job/request. (Remember: \verb|CORBA_Object| is a pointer.)
 
-For some architectures (e.g. L4 version 2) the client initiated a call which
-expects the reply from the same thread as the request has been sent to.
-Therefore, you will need for each asynchronous function a function in the
-server loop which delivers the replies.
+For some architectures (e.g. L4 version 2) the client initiated a
+call which expects the reply from the same thread as the request
+has been sent to. Therefore, you will need for each asynchronous function
+a function in the server loop which delivers the replies.
 
 Inspect the example \verb|async| for an implementation example.
 
 \section{Thoughts About \dice{} Specific Types}
+When using IDL types, they mostly can be mapped to L4 specific 
+message types using attributes. An indirect part is for 
+instance denoted by the DCE \verb|ref| attribute. It thereby
+follows the semantic declared in the DCE IDL specification.
 
-When using IDL types, they mostly can be mapped to L4 specific message types
-using attributes. An indirect part is for instance denoted by the DCE
-\verb|ref| attribute. It thereby follows the semantic declared in the DCE IDL
-specification.
-
-However, there are some L4 specific IPC semantics, which are hard to express
-using attributes. The following few sections will try to explain the semantic
-of some of the L4 specific types and ideas on how to represent them using
-other methods then currently used ones ({\tt flexpage} type).
+However, there are some L4 specific IPC semantics, which
+are hard to express using attributes. The following few
+sections will try to explain the semantic of some of the L4
+specific types and ideas on how to represent them using other 
+methods then currently used ones ({\tt flexpage} type).
 
 \subsection{\tt flexpage}
 \label{sec:flexpage}
-
-A flexpage is a memory region consisting of at least one memory frame which
-can be transferred from one address space to another (or rather the rights to
-access it). It consists of a base address, a size, and the transferred rights,
-including the ownership. There also apply restrictions to the address --- it
-has to be page size aligned --- and the size of a flexpage.  To express this
-using attributes, we could write something like: 
-
-\begin{verbatim} 
-[in, memory, size_is(pages), rights(access)] 
-void* base_address, [in] unsigned int pages,
-[in] unsigned int access 
-\end{verbatim} 
-
-This scheme would add two new attributes (\verb|memory| and \verb|rights|) and
-require the user to know all necessary parameters. This can be simplified by
-using a predefined type, such as: 
-
-\begin{verbatim} 
-typedef struct { 
-  [memory, size_is(pages), rights(access)] 
-  void *base_address; 
-  unsigned int pages;
-  unsigned int access; 
-} flexpage; 
-\end{verbatim} 
-
-An IDL compiler should map this constructed type onto the existing
-\verb|l4_fpage_t| type of L4 and use it appropriately.  Since one of the goals
-of the IDL compiler is the usage of existing data types --- such as
-\verb|l4_fpage_t| --- this would be contra productive.
+A flexpage is a memory region consisting of at least one 
+memory frame which can be transferred from one address space
+to another (or rather the rights to access it). It consists
+of a base address, a size, and the transferred rights, including
+the ownership. There also apply restrictions to the address ---
+it has to be page size aligned --- and the size of a flexpage.
+To express this using attributes, we could write
+something like:
+\begin{verbatim}
+[in, memory, size_is(pages), 
+rights(access)] void* base_address, 
+[in] unsigned int pages,
+[in] unsigned int access
+\end{verbatim}
+This scheme would add two new attributes (\verb|memory| and
+\verb|rights|) and require the user to know all necessary
+parameters. This can be simplified by using a predefined 
+type, such as:
+\begin{verbatim}
+typedef struct {
+[memory, size_is(pages), rights(access)]
+void *base_address;
+unsigned int pages;
+unsigned int access;
+} flexpage;
+\end{verbatim}
+An IDL compiler should map this constructed type 
+onto the existing \verb|l4_fpage_t| type of L4 and use it
+appropriately.
+Since one of the goals of the IDL compiler is the usage of 
+existing data types --- such as \verb|l4_fpage_t| --- this would
+be contra productive.
 
 Therefore we decided to use the special type \verb|flexpage| or
 \verb|fpage|. It is directly mapped to the \verb|l4_fpage_t| type

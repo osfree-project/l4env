@@ -41,7 +41,7 @@ class CL4BESwitchCase : public CBESwitchCase
 public:
     /** \brief creates this class */
     CL4BESwitchCase();
-    virtual ~CL4BESwitchCase();
+    ~CL4BESwitchCase();
 
 
 protected:
@@ -51,7 +51,8 @@ protected:
     CL4BESwitchCase(CL4BESwitchCase &src);
 
 protected:
-    virtual void WriteCleanup(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile, int nDirection);
+    virtual void WriteCleanup(CBEFile *pFile);
 };
 
 #endif

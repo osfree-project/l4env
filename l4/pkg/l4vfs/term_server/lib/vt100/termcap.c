@@ -65,7 +65,7 @@ int vt100_tcsetattr( termstate_t *term, struct termios *termios_p )
         LOGd(_DEBUG,"Canonical mode ON");
         term->term_mode = VT100MODE_COOKED;
     }
-    else 
+    else
     {
         LOGd(_DEBUG, "Canonical mode OFF");
         term->term_mode = VT100MODE_RAW;
@@ -81,7 +81,7 @@ int vt100_tcsetattr( termstate_t *term, struct termios *termios_p )
         LOGd(_DEBUG, "Turning echo OFF.");
         term->echo = 0;
     }
-    
+
     return 0;
 }
 

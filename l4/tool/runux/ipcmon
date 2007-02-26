@@ -1,0 +1,15 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco\
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l simple_ts \
+	-l "ipcmon -w" \
+	-l "ipcmon_test2" \
+	-l bmodfs \
+        -d ${L4PATH}/ipcmon_test \
+        -d ${CFGPATH}/ipcmon_test.cfg \
+	-l "loader --fprov=BMODFS ipcmon_test.cfg"	\

@@ -13,6 +13,7 @@ public:
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
+#include "jdb_tbuf_init.h"
 #include "globals.h"
 #include "kmem_alloc.h"
 #include "kmem_space.h"
@@ -33,17 +34,11 @@ Jdb::init()
 
   Jdb::jdb_enter.add(&enter);
   Jdb::jdb_leave.add(&leave);
+
+  Jdb_tbuf_init::init(0);
 }
 
-IMPLEMENT inline
-bool Jdb_entry_frame::from_user() const
-{ return (spsr & 0x1f) == 0x10; }
-
-IMPLEMENT inline
-Address Jdb_entry_frame::ip() const
-{ return pc; }
-
-IMPLEMENT 
+IMPLEMENT
 Context *Jdb::current_context()
 {
   return context_of((void*)entry_frame->ksp);
@@ -65,7 +60,7 @@ Jdb::peek_mword_task(Address virt, Task_num task, Mword *result)
 
   Address phys;
 
-  if (task == 0 || task == 2)
+  if (task == Config::kernel_taskno || task == Config::sigma0_taskno)
     {
       if (Mem_layout::in_kernel(virt))
 	{
@@ -84,7 +79,7 @@ Jdb::peek_mword_task(Address virt, Task_num task, Mword *result)
       if (!s)
 	return -1;
 
-      phys = s->virt_to_phys_s0((void *)virt);
+      phys = s->mem_space()->virt_to_phys_s0((void *)virt);
 
       if (phys == (Address)-1)
 	return -1;
@@ -137,3 +132,38 @@ Jdb::at_jdb_leave()
 {
   Mem_unit::flush_cache();
 }
+
+PUBLIC static inline
+void
+Jdb::enter_getchar()
+{}
+
+PUBLIC static inline
+void
+Jdb::leave_getchar()
+{}
+
+PUBLIC static
+void
+Jdb::write_tsc_s(Signed64 /*tsc*/, char * /*buf*/, int /*maxlen*/, bool /*sign*/)
+{}
+
+PUBLIC static
+void
+Jdb::write_tsc(Signed64 /*tsc*/, char * /*buf*/, int /*maxlen*/, bool /*sign*/)
+{}
+
+//---------------------------------------------------------------------------
+IMPLEMENT inline
+Address_type
+Jdb_entry_frame::from_user() const
+{ return (spsr & 0x1f) == 0x10 ? ADDR_USER : ADDR_KERNEL; }
+
+IMPLEMENT inline
+Address Jdb_entry_frame::ip() const
+{ return pc; }
+
+PUBLIC inline
+Mword
+Jdb_entry_frame::param() const
+{ return r[0]; }

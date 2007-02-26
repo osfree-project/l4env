@@ -57,4 +57,7 @@ l4th_thread_setup_stack(l4_addr_t addr, l4_size_t size, l4_threadid_t thread,
 void
 l4th_thread_entry(void);
 
+void
+l4th_thread_setup_arch(l4th_tcb_t * tcb);
+
 #endif /* !_THREAD___THREAD_H */

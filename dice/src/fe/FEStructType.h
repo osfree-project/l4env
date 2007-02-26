@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEStructType.h
- *    \brief   contains the declaration of the class CFEStructType
+ *  \file    dice/src/fe/FEStructType.h
+ *  \brief   contains the declaration of the class CFEStructType
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,49 +30,51 @@
 #ifndef __DICE_FE_FESTRUCTTYPE_H__
 #define __DICE_FE_FESTRUCTTYPE_H__
 
-#include "fe/FEConstructedType.h"
-#include "fe/FETypedDeclarator.h"
+#include "FEConstructedType.h"
+#include "FETypedDeclarator.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 /**    \class CFEStructType
  *    \ingroup frontend
- *    \brief represent the struct type
+ *  \brief represent the struct type
  */
 class CFEStructType : public CFEConstructedType
 {
 
 // standard constructor/destructor
 public:
-    /** constructs a struct object
-     *    \param pMembers the members of the struct object
+    /** \brief constructs a struct object
+     *  \param sTag the tag of the struct
+     *  \param pMembers the members of the struct object
      */
-    CFEStructType(vector<CFETypedDeclarator*> *pMembers);
+    CFEStructType(string sTag, vector<CFETypedDeclarator*> *pMembers);
     virtual ~CFEStructType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEStructType(CFEStructType &src);
-    virtual void SerializeMembers(CFile *pFile);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
-    virtual CFETypedDeclarator* FindMember(string sName);
-    virtual CObject* Clone();
-    virtual CFETypedDeclarator* GetNextMember(vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstMember();
-    virtual bool HasMembers();
+    virtual void Accept(CVisitor&);
+
+    CFETypedDeclarator* FindMember(string sName);
+
+    /** copies the struct object
+     *  \return a reference to the new struct object
+     */
+    virtual CObject* Clone()
+    { return new CFEStructType(*this); }
 
 // Attributes
-protected:
-    /** \var vector<CFETypedDeclarator*> m_vMembers
+public:
+    /** \var CSearchableCollection<CFETypedDeclarator> m_Members
      *  \brief the members of the structure
      */
-    vector<CFETypedDeclarator*> m_vMembers;
+    CCollection<CFETypedDeclarator> m_Members;
 };
 
 #endif /* __DICE_FE_FESTRUCTTYPE_H__ */

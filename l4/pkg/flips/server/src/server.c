@@ -39,6 +39,11 @@ void flips_session_thread(void *arg)
 {
 	l4_threadid_t *my_tid_ptr = (l4_threadid_t *) arg;
 	CORBA_Server_Environment env = dice_default_server_environment;
+
+	/* keep all options open */
+	env.malloc = CORBA_alloc;
+	env.free = CORBA_free;
+
 	l4_threadid_t my_tid = l4_myself();
 	*my_tid_ptr = my_tid;
 	LOGd(FLIPS_DEBUG, "Flips(session_thread): new thread_id %x.%x\n",
@@ -66,12 +71,13 @@ l4_int32_t l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
  * The len parameter is a int-pointer to circumvent a misbehaviour
  * of DICE when specifying an [in]-parameter as size for an [out]-string.
  */
-l4_int32_t l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
-                                          object_handle_t s,
-                                          l4_int8_t **buf,
-                                          l4vfs_size_t *len,
-                                          l4_int16_t *_dice_reply,
-                                          CORBA_Server_Environment * _dice_corba_env)
+l4vfs_ssize_t
+l4vfs_common_io_read_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t s,
+                                char **buf,
+                                l4vfs_size_t *len,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -89,12 +95,13 @@ l4_int32_t l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: WRITE TO SOCKET
  */
-l4_int32_t l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
-                                           object_handle_t s,
-                                           const l4_int8_t *buf,
-                                           l4vfs_size_t *count,
-                                           l4_int16_t *_dice_reply,
-                                           CORBA_Server_Environment * _dice_corba_env)
+l4vfs_ssize_t
+l4vfs_common_io_write_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t s,
+                                 const char *buf,
+                                 l4vfs_size_t *count,
+                                 short *_dice_reply,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 	if (!client_owns_sid(CORBA_Object, s))
@@ -108,12 +115,12 @@ l4_int32_t l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
 /** IDL INTERFACE: IOCTL
  */
 l4_int32_t
-l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
-                                object_handle_t fd,
-                                l4_int32_t cmd,
-                                l4_int8_t **arg,
-                                l4vfs_size_t *count,
-                                CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_ioctl_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t fd,
+                                 int cmd,
+                                 char **arg,
+                                 l4vfs_size_t *count,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
 
 	int ret;
@@ -139,11 +146,11 @@ l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
 }
 
 void
-l4vfs_select_notify_request_component(CORBA_Object _dice_corba_obj,
-                                      object_handle_t fd,
-                                      l4_int32_t mode,
-                                      const l4_threadid_t *notif_tid,
-                                      CORBA_Server_Environment *_dice_corba_env)
+l4vfs_select_notify_request_component (CORBA_Object _dice_corba_obj,
+                                       object_handle_t fd,
+                                       int mode,
+                                       const l4_threadid_t *notif_tid,
+                                       CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 
@@ -158,11 +165,11 @@ l4vfs_select_notify_request_component(CORBA_Object _dice_corba_obj,
 }
 
 void
-l4vfs_select_notify_clear_component(CORBA_Object _dice_corba_obj,
-                                    object_handle_t fd,
-                                    l4_int32_t mode,
-                                    const l4_threadid_t *notif_tid,
-                                    CORBA_Server_Environment *_dice_corba_env)
+l4vfs_select_notify_clear_component (CORBA_Object _dice_corba_obj,
+                                     object_handle_t fd,
+                                     int mode,
+                                     const l4_threadid_t *notif_tid,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 
@@ -179,12 +186,13 @@ l4vfs_select_notify_clear_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: READ FROM PROC ENTRY
  */
-l4_int32_t flips_proc_read_component(CORBA_Object _dice_corba_obj,
-                                     const char *path,
-                                     l4_int8_t dst[4096],
-                                     l4_int32_t offset,
-                                     l4_int32_t *len,
-                                     CORBA_Server_Environment * _dice_corba_env)
+int
+flips_proc_read_component (CORBA_Object _dice_corba_obj,
+                           const char* path,
+                           char dst[4096],
+                           int offset,
+                           int *len,
+                           CORBA_Server_Environment *_dice_corba_env)
 {
 	int res;
 
@@ -199,28 +207,16 @@ l4_int32_t flips_proc_read_component(CORBA_Object _dice_corba_obj,
 
 /** IDL INTERFACE: WRITE TO PROC ENTRY
  */
-l4_int32_t flips_proc_write_component(CORBA_Object _dice_corba_obj,
-                                      const char *path,
-                                      const l4_int8_t *src,
-                                      l4_int32_t len,
-                                      CORBA_Server_Environment * _dice_corba_env)
+int
+flips_proc_write_component (CORBA_Object _dice_corba_obj,
+                            const char* path,
+                            const char *src,
+                            int len,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
 
 	err = liblinux_proc_write(path, (char *)src, len);
-	return err;
-}
-
-/** IDL INTERFACE: INET ADDR TYPE
- */
-l4_uint32_t flips_inet_addr_type_component(CORBA_Object _dice_corba_obj,
-                                           l4_uint32_t addr,
-                                           CORBA_Server_Environment * _dice_corba_env)
-{
-	int err;
-
-	err = liblinux_inet_addr_type(addr);
-
 	return err;
 }
 

@@ -20,10 +20,10 @@ IMPLEMENTATION:
  * This module handles some commands that
  * change Jdb prompt settings.
  */
-class Jdb_pcm
-  : public Jdb_module
+class Jdb_pcm : public Jdb_module
 {
 public:
+  Jdb_pcm() FIASCO_INIT;
 private:
   static char subcmd;
   static char prompt_color;
@@ -161,13 +161,13 @@ Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &)
 }
 
 PUBLIC
-int const Jdb_pcm::num_cmds() const
+int Jdb_pcm::num_cmds() const
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const Jdb_pcm::cmds() const
+Jdb_module::Cmd const * Jdb_pcm::cmds() const
 {
   static Cmd cs[] =
     { 
@@ -186,13 +186,13 @@ Jdb_module::Cmd const *const Jdb_pcm::cmds() const
   return cs;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_pcm::Jdb_pcm()
   : Jdb_module("GENERAL")
 {}
 
 
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,ux,amd64]:
 
 #include "cpu.h"
 
@@ -218,6 +218,8 @@ Jdb_pcm::wait_for_escape(Console *cons)
 
 
 IMPLEMENTATION[arm]:
+
+#include "processor.h"
 
 PRIVATE
 int

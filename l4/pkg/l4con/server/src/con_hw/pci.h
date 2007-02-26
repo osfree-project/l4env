@@ -15,6 +15,7 @@
 
 #include <l4/pci/libpci.h>
 #include <l4/generic_io/libio.h>
+#include "iomem.h"
 #include "init.h"
 
 #define __init	__attribute__((section(".text.init")))
@@ -90,7 +91,4 @@ void pci_resource(unsigned int bus, unsigned int devfn, int num,
 	    l4io_pci_writel_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
-
-
 #endif
-

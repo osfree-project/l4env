@@ -41,7 +41,7 @@ int preregister(void)
 
     id.id.task = 2;
     id.id.chief = rmgr_id.id.task;
-    if (!server_names_register(&me, "Sigma0", &id, 0))
+    if (!server_names_register(&me, "sigma0", &id, 0))
       return 0;
 
 
@@ -56,7 +56,7 @@ int preregister(void)
 
     for (i=0; i < RMGR_IRQ_MAX; i++) {
 	id.id.lthread = i + RMGR_IRQ_LTHREAD;
-	sprintf(buffer, "rmgr.IRQ-%X", i);
+	sprintf(buffer, "rmgr.irq%02X", i);
 	if (!server_names_register(&me, buffer, &id, 0))
 	  return 0;
     }

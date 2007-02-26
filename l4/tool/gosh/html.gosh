@@ -43,10 +43,16 @@ proc p_style_end {} {
 
 ### FILTER TEXTUAL OUTPUT ###
 proc out_html {string} {
-	global references
+	global references config_html_keep_tags
 
 	set string " $string "
-	
+
+	# prevent < and > to be interpreted as html tags #
+	if {!$config_html_keep_tags} {
+		regsub -all {<} $string {_§%and%§_lt;} string
+		regsub -all {>} $string {_§%and%§_gt;} string
+	}
+
 	# italic style #
 	while {[regexp {([ \"\(])_(.+?)_([ \)\.\",!?])} $string dummy head_char emph_text tail_char]} {
 		regsub -all {_} $emph_text " " emph_text
@@ -60,8 +66,8 @@ proc out_html {string} {
 	}
 	
 	# monospace style #
-	while {[regexp {([ \"\(])\'(.+?)\'([ \)\.\",!?])} $string dummy head_char code_text tail_char]} {
-		regsub {([ \"\(])\'(.+?)\'([ \)\.\",!?])} $string "$head_char<code>$code_text</code>$tail_char" string
+	while {[regexp {([ \"\(])\'(.+?)\'([ \-\)\.\",!?])} $string dummy head_char code_text tail_char]} {
+		regsub {([ \"\(])\'(.+?)\'([ \-\)\.\",!?])} $string "$head_char<code>$code_text</code>$tail_char" string
 	}
 	
 	# FIXME: kick out monospace style via hashes #
@@ -100,6 +106,7 @@ proc out_html {string} {
 			if {$tooltip == ""} {
 				set tooltiptext ""
 			}
+			regsub {^http:([^/])} $url {\1} url
 			regsub { +$} $linktext "" linktext
 			regsub -all {&} $url "_§%and%§_" url
 			regsub -all -- {---} $url      "_§%3xminus%§_" url
@@ -174,6 +181,7 @@ proc produce_tail_html {} {
 
 ### VERBATIM  ###
 proc process_verbatim_html {txtblock} {
+	global config_html_keep_tags
 	while {[lindex $txtblock end] == ""} {
 		set txtblock [lrange $txtblock 0 [expr [llength $txtblock]-2]]
 	}
@@ -182,6 +190,12 @@ proc process_verbatim_html {txtblock} {
 		set txt [linetxt $txtline]
 		regsub {^\!} $txt "" txt
 		regsub -all {\t} $txt "  " txt
+		regsub -all {&} $txt "_§%and%§_" txt
+		if {!$config_html_keep_tags} {
+			regsub -all {<} $txt {_§%and%§_lt;} txt
+			regsub -all {>} $txt {_§%and%§_gt;} txt
+		}
+		regsub -all {_§%and%§_} $txt {\&} txt
 		puts "$txt"
 	}
 	puts "</pre>"
@@ -197,15 +211,7 @@ proc process_itemize_html {txtblock} {
 ### ITEM ###
 proc process_item_html {itemtxtblock} {
 	printline "<li>"
-	set txtline [lindex $itemtxtblock 0]
-	set txtline [lineregsub {^\*\ } $txtline ""]
-	set txtline [lineregsub {^\#\ } $txtline ""]
-	lappend txtblock $txtline
-	foreach txtline [lrange $itemtxtblock 1 end] {
-		set txtline [lineregsub {^\ \ } $txtline ""]
-		lappend txtblock $txtline
-	}
-	handle_txtblock item $txtblock
+	handle_txtblock item [extract_item_text $itemtxtblock]
 	printline "</li>"
 }
 
@@ -214,7 +220,6 @@ proc process_description_html {txtblock} {
 	printline "<dl>"
 	handle_txtblock description $txtblock
 	printline "</dl>"
-#	printline "<br/>"
 }
 
 ### DESCRIPTION ITEM ###
@@ -347,41 +352,90 @@ proc process_image_html {txtblock} {
 }
 
 
+### DETERMINE NUMBER OF TABLE COLUMNS
+#
+# 'rows' contains the complete table information as a list of rows.
+# Each row is a two-element list {<rowtype> <rowtextlines>}.
+# Each rowtextline is a two-element list of {<line number> <string>}.
+# A table string is contains pipe symbols as column separators.
+#
+proc table_num_cols {rows} {
+	return [llength [split [lindex [lindex [lindex [lindex $rows 0] 1] 0] 1] "|"]]
+}
+
+
+### REQUEST LIST OF TEXT LINES OF SPECIFIED TABLE CELL ###
+proc table_row_cell_txt {row col_idx} {
+	set row_type  [lindex $row 0]
+	set row_lines [lindex $row 1]
+
+	set cell_txt ""
+
+	if {$row_type == "tabrow"} {
+		foreach row_line $row_lines {
+
+			set col_txt_list [split [linetxt $row_line] "|"]
+
+			if {$col_idx < [llength $col_txt_list]} {
+				set col_txt [lindex $col_txt_list $col_idx]
+				lappend cell_txt $col_txt
+			}
+		}
+	}
+	return $cell_txt
+}
+
+
 ### TABLE ###
-proc output_table_html {head rows caption} {
+proc output_table_html {col_attr rows caption} {
 	global references
 	set cap ""
-	foreach capline $caption {
-		set txt [linetxt $capline]
+	foreach cap_line $caption {
+		set txt [linetxt $cap_line]
 		regsub  {^ +} $txt " "  txt
 		append cap $txt
 	}
-	if {[regexp {^\[table (.+)\](.*)$} $cap dummy caplab captxt]} {
-		printline "<a name=\"[label_html \"$caplab\"]\"></a>"
+	if {[regexp {^\[table ([^ \]]+)} $cap dummy cap_lab cap_txt]} {
+		printline "<a name=\"[label_html \"$cap_lab\"]\"></a>"
 	}
+
 	printline "<br/><center><table cellspacing=\"0\" cellpadding=\"3\" border=\"1\">"
-	
-	print "[indent]<tr>"
-	foreach headcell [lrange $head 0 end] {
-		print "[indent]<th bgcolor=#f0f7ff>[lindex $headcell 1]<br/></th>"
+	printline "<tr>"
+
+	set num_cols [table_num_cols $rows]
+	set first_row 1
+	foreach row $rows {
+		set row_type  [lindex $row 0]
+		set row_lines [lindex $row 1]
+
+		if {$row_type == "tabrow"} {
+			for {set col 0} {$col < $num_cols} {incr col} {
+				set cell_txt [table_row_cell_txt $row $col]
+
+				set cell_tag "td"
+				if {$first_row} { set cell_tag "th" }
+
+				set cell_out " <$cell_tag>"
+				foreach cell_txt_line $cell_txt {
+					append cell_out "[out_html $cell_txt_line]<br/>"
+				}
+				append cell_out "</$cell_tag>"
+				printline "$cell_out"
+			}
+		}
+
+		if {$row_type == "tabhline"} {
+			printline "</tr><tr>"
+		}
+
+		set first_row 0
 	}
 	printline "</tr>"
-	
-	foreach row $rows {
-		if {[lindex $row 0] == "text"} {
-			printline "<tr>"
-			set cells [lindex $row 1]
-			foreach cell [lrange $cells 0 end] {
-				printline "<td>[out_html $cell]</td>"
-			}
-			printline "</tr>"
-		}
-	}
 	printline "</table>"
 
-	if {[regexp {^\[table (.+)\](.*)$} $cap dummy caplab captxt]} {
-		regsub  {^ +} $captxt ""  captxt
-		printline "Table $references($caplab,index): [out_html $captxt]"
+	if {[regexp {^\[table ([^ \]]+)[^\]]*\](.*)$} $cap dummy cap_lab cap_txt]} {
+		regsub  {^ +} $cap_txt ""  cap_txt
+		printline "Table $references($cap_lab,index): [out_html $cap_txt]"
 	}
 	printline "</center><br/>"
 }
@@ -401,3 +455,4 @@ set config_html_toc       [regexp {\--html-toc}       $argv dummy]
 set config_html_p_justify [regexp {\--html-p-justify} $argv dummy]
 set config_html_p_colored [regexp {\--html-p-colored} $argv dummy]
 set config_html_sec_enum  [regexp {\--html-sec-enum}  $argv dummy]
+set config_html_keep_tags [regexp {\--html-keep-tags} $argv dummy]

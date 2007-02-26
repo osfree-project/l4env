@@ -6,6 +6,7 @@ INTERFACE:
 #include "sched_context.h"
 
 class Entry_frame;
+class Mem_space;
 class Space;
 class Thread_lock;
 
@@ -128,6 +129,7 @@ IMPLEMENTATION:
 #include "globals.h"		// current()
 #include "lock_guard.h"
 #include "logdefs.h"
+#include "mem_layout.h"
 #include "processor.h"
 #include "space.h"
 #include "std_macros.h"
@@ -232,6 +234,19 @@ Context::state_add (Mword const bits)
 }
 
 /**
+ * Add bits in state flags. Unsafe (non-atomic) and
+ *        fast version -- you must hold the kernel lock when you use it.
+ * @pre cpu_lock.test() == true
+ * @param bits bits to be added to state flags
+ */ 
+PUBLIC inline
+void
+Context::state_add_dirty (Mword bits)
+{ 
+  _state |=bits;
+}
+
+/**
  * Atomically delete bits from state flags.
  * @param bits bits to be removed from state flags
  * @return 1 if all of the bits that were removed had previously been set
@@ -241,6 +256,19 @@ void
 Context::state_del (Mword const bits)
 {
   atomic_and (&_state, ~bits);
+}
+
+/**
+ * Delete bits in state flags. Unsafe (non-atomic) and
+ *        fast version -- you must hold the kernel lock when you use it.
+ * @pre cpu_lock.test() == true
+ * @param bits bits to be removed from state flags
+ */
+PUBLIC inline
+void
+Context::state_del_dirty (Mword bits)
+{
+  _state &=~bits;
 }
 
 /**
@@ -310,18 +338,26 @@ Context::space() const
   return _space;
 }
 
+/** Convenience function: Return memory space. */
+PUBLIC inline NEEDS["space.h"]
+Mem_space*
+Context::mem_space() const
+{
+  return _space->mem_space();
+}
+
 /** Thread lock.
     @return the thread lock used to lock this context.
  */
 PUBLIC inline
-Thread_lock * const
+Thread_lock *
 Context::thread_lock() const
 {
   return _thread_lock;
 }
 
 PUBLIC inline
-unsigned short const
+unsigned short
 Context::mcp() const
 {
   return _mcp;
@@ -331,7 +367,7 @@ Context::mcp() const
     @return return registers
  */
 PUBLIC inline NEEDS["entry_frame.h"]
-Entry_frame * const
+Entry_frame *
 Context::regs() const
 {
   return reinterpret_cast<Entry_frame *>
@@ -368,7 +404,7 @@ Context::dec_lock_cnt()
     @return lock count
  */
 PUBLIC inline
-int const
+int
 Context::lock_cnt() const
 {
   return _lock_cnt;
@@ -469,7 +505,7 @@ Context::schedule()
  * Return if there is currently a schedule() in progress
  */
 PUBLIC static inline
-bool const
+bool
 Context::schedule_in_progress()
 {
   return _schedule_in_progress;
@@ -479,7 +515,7 @@ Context::schedule_in_progress()
  * Return true if s can preempt the current scheduling context, false otherwise
  */
 PUBLIC static inline NEEDS ["globals.h"]
-bool const
+bool
 Context::can_preempt_current (Sched_context const * const s)
 {
   // XXX: Workaround for missing priority boost implementation
@@ -495,7 +531,7 @@ Context::can_preempt_current (Sched_context const * const s)
  * Return currently active global Sched_context.
  */
 PUBLIC static inline
-Sched_context * const
+Sched_context *
 Context::current_sched()
 {
   return _current_sched;
@@ -532,7 +568,7 @@ Context::set_current_sched (Sched_context * const sched)
 /**
  * Invalidate (expire) currently active global Sched_context.
  */
-PROTECTED static
+PROTECTED static inline NEEDS["logdefs.h","timeout.h"]
 void
 Context::invalidate_sched()
 {
@@ -586,7 +622,7 @@ Context::set_sched (Sched_context * const sched)
  * @return Period length in usecs
  */
 PUBLIC inline
-Unsigned64 const
+Unsigned64
 Context::period() const
 {
   return _period;
@@ -608,7 +644,7 @@ Context::set_period (Unsigned64 const period)
  * @return Scheduling mode
  */
 PUBLIC inline
-Context::Sched_mode const
+Context::Sched_mode
 Context::mode() const
 {
   return _mode;
@@ -648,7 +684,7 @@ Context::update_ready_list()
  * @return 1 if thread is in ready-list, 0 otherwise
  */
 PUBLIC inline
-Mword const
+Mword
 Context::in_ready_list() const
 {
   return _ready_next != 0;
@@ -690,8 +726,6 @@ Context::ready_enqueue()
       if (this == current())
         _prio_next[prio] = this;
     }
-
-  send_activation (2); // Send unblock message
 }
 
 /**
@@ -718,8 +752,6 @@ Context::ready_dequeue()
 
   while (!_prio_next[_prio_highest] && _prio_highest)
     _prio_highest--;
-
-  send_activation (1); // Send block message
 }
 
 /** Helper.  Context that helps us by donating its time to us. It is
@@ -727,7 +759,7 @@ Context::ready_dequeue()
     @return context that helps us and should be activated after freeing a lock.
 */
 PUBLIC inline
-Context * const
+Context *
 Context::helper() const
 {
   return _helper;
@@ -757,7 +789,7 @@ Context::set_helper (enum Helping_mode const mode)
             switch_exec()'ed.
 */
 PUBLIC inline
-Context * const
+Context *
 Context::donatee() const
 {
   return _donatee;
@@ -771,7 +803,7 @@ Context::set_donatee (Context * const donatee)
 }
 
 PUBLIC inline
-Mword * const
+Mword *
 Context::get_kernel_sp() const
 {
   return _kernel_sp;
@@ -923,7 +955,7 @@ PUBLIC
 GThread_num
 Context::gthread_calculated()
 {
-  const Mword mask = Config::thread_block_size*Config::max_threads() - 1;
+  const Mword mask = Config::thread_block_size * Mem_layout::max_threads() - 1;
 
   return (((Address)this - Mem_layout::Tcbs) & mask) /
 	 Config::thread_block_size;
@@ -1036,29 +1068,3 @@ protected:
   void *_utcb_handler;
 };
 
-//----------------------------------------------------------------------------
-INTERFACE[!act_ipc]:
-
-EXTENSION class Context
-{
-protected:
-  // make sure that there is no virtual function
-  void send_activation (unsigned);
-};
-
-IMPLEMENTATION[!act_ipc]:
-
-IMPLEMENT inline
-void
-Context::send_activation (unsigned)
-{}
-
-
-//----------------------------------------------------------------------------
-INTERFACE[act_ipc]:
-
-EXTENSION class Context
-{
-protected:
-  virtual void send_activation (unsigned) = 0;
-};

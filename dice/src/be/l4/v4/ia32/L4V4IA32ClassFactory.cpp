@@ -1,10 +1,11 @@
 /**
- *	\file	dice/src/be/l4/v4/ia32/L4V4IA32ClassFactory.cpp
- *	\brief	contains the implementation of the class CL4V4IA32ClassFactory
+ *  \file   dice/src/be/l4/v4/ia32/L4V4IA32ClassFactory.cpp
+ *  \brief  contains the implementation of the class CL4V4IA32ClassFactory
  *
- *	\date	02/08/2004
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date   02/08/2004
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -26,16 +27,11 @@
  */
 #include "be/l4/v4/ia32/L4V4IA32ClassFactory.h"
 #include "be/l4/v4/ia32/L4V4IA32IPC.h"
-#include "be/l4/v4/ia32/L4V4IA32CallFunction.h"
+#include "Compiler.h"
+#include <iostream>
 
-
-CL4V4IA32ClassFactory::CL4V4IA32ClassFactory(bool bVerbose)
- : CL4V4BEClassFactory(bVerbose)
-{
-}
-
-CL4V4IA32ClassFactory::CL4V4IA32ClassFactory(CL4V4IA32ClassFactory &src)
- : CL4V4BEClassFactory(src)
+CL4V4IA32ClassFactory::CL4V4IA32ClassFactory()
+ : CL4V4BEClassFactory()
 {
 }
 
@@ -49,17 +45,7 @@ CL4V4IA32ClassFactory::~CL4V4IA32ClassFactory()
  */
 CBECommunication* CL4V4IA32ClassFactory::GetNewCommunication()
 {
-    if (m_bVerbose)
-	    printf("CL4V4IA32ClassFactory: created class CL4V4IA32IPC\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4IA32ClassFactory: created class CL4V4IA32IPC\n");
     return new CL4V4IA32IPC();
-}
-
-/** \brief creates a new instance of the CL4V4IA32CallFunction
- *  \return a reference to the new instance
- */
-CBECallFunction* CL4V4IA32ClassFactory::GetNewCallFunction()
-{
-    if (m_bVerbose)
-	    printf("CL4V4IA32ClassFactory: created class CL4V4IA32CallFunction\n");
-    return new CL4V4IA32CallFunction();
 }

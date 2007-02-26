@@ -22,7 +22,7 @@
 static char __irq_stacks[RMGR_IRQ_MAX * __IRQ_STACKSIZE];
 
 void
-__irq_thread(unsigned irq);
+__irq_thread(unsigned long irq);
 
 static int
 irq_attach(unsigned irq)
@@ -47,15 +47,34 @@ irq_detach(unsigned irq)
   l4_umword_t dummy;
   l4_msgdope_t result;
 
+
   l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
 		 L4_IPC_RECV_TIMEOUT_0, &result);
 
   return 1;
 }
 
+#if defined(ARCH_amd64)
+void
+__x_irq_thread(unsigned long irq);
+
+asm  
+("__irq_thread: \n\t"
+ " popq %rsi \n\t"
+ " popq %rdi \n\t"
+ " pushq 0 \n\t"
+ " jmp __x_irq_thread \n\t"
+);
+
+
+void
+__x_irq_thread(unsigned long irq)
+
+#else
 /* code for irq-thread */
 void
-__irq_thread(unsigned irq)
+__irq_thread(unsigned long irq)
+#endif
 {
   l4_umword_t d1, d2, r1;
   l4_msgdope_t result;
@@ -129,7 +148,7 @@ __irq_thread(unsigned irq)
 int
 irq_get(int i)
 {
-  unsigned *sp;
+  unsigned long *sp;
   int error;
   l4_umword_t code, dummy;
   l4_msgdope_t result;
@@ -137,7 +156,7 @@ irq_get(int i)
 
   t = myself;
   t.id.lthread = LTHREAD_NO_IRQ(i);
-  sp = (unsigned *)(__irq_stacks + (i + 1) * __IRQ_STACKSIZE);
+  sp = (unsigned long*)(__irq_stacks + (i + 1) * __IRQ_STACKSIZE);
 
       *--sp = i;		/* pass irq number as argument to thr func */
       *--sp = 0;		/* faked return address */

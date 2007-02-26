@@ -1,6 +1,5 @@
 /*!
  * \author Jork Loeser <jork.loeser@os.inf.tu-dresden.de>
- *         Bjoern Doebel <doebel@os.inf.tu-dresden.de>
  * locking with the rtnl semaphore
  * Functions originally in net/core/rtnetlink.c
  */

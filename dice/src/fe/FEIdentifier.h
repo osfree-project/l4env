@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEIdentifier.h
- *    \brief   contains the declaration of the class CFEIdentifier
+ *  \brief   contains the declaration of the class CFEIdentifier
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,11 +32,10 @@
 
 #include "fe/FEBase.h"
 #include <string>
-using namespace std;
 
 /**    \class CFEIdentifier
  *    \ingroup frontend
- *    \brief represents any identifier in the IDL
+ *  \brief represents any identifier in the IDL
  *
  * This class is used to represent any identifier in the IDL
  */
@@ -48,15 +47,15 @@ public:
     /**    default constructor */
     CFEIdentifier();
     /** constructs an identifier object
-     *    \param sName a string, defining the name of the identifier
+     *  \param sName a string, defining the name of the identifier
      */
     CFEIdentifier(string sName);
     /** copy constructor for this class
-     *    \param src the source object for this new object
+     *  \param src the source object for this new object
      */
     CFEIdentifier(CFEIdentifier& src);
     /** constructs an identifier object
-     *    \param sName a character string, defining the name of the identifier
+     *  \param sName a character string, defining the name of the identifier
      */
     CFEIdentifier(const char* sName);
     virtual ~CFEIdentifier();
@@ -71,10 +70,12 @@ public:
     bool operator==(CFEIdentifier&);
     bool operator==(string& Name);
 
+    bool Match(string sName);
+
 // attributes
 protected:
     /**    \var string m_sName
-     *    \brief the name of the identifier
+     *  \brief the name of the identifier
      */
     string m_sName;
 };

@@ -2,7 +2,7 @@
 PKGDIR ?= ../..
 L4DIR  ?=  $(PKGDIR)/../..
 
-SYSTEMS = x86-l4v2 x86-l4x0
+SYSTEMS = x86-l4v2
 
 # source files
 SERVERIDL_libl4vfs_mmap_object_server-server.a = mmap_object_server.idl       \
@@ -33,11 +33,22 @@ SERVERIDL_libl4vfs_select_notify-server.a      = select_notify.idl
 
 SERVERIDL_libl4vfs_common_io_notify-server.a   = common_io_notify.idl
 
+
+SERVERIDL_libl4vfs_mmap_object_server-server.p.a = $(SERVERIDL_libl4vfs_mmap_object_server-server.a)
+SERVERIDL_libl4vfs_object_server-server.p.a      = $(SERVERIDL_libl4vfs_object_server-server.a)
+SERVERIDL_libl4vfs_name_server-server.p.a        = $(SERVERIDL_libl4vfs_name_server-server.a)
+SERVERIDL_libl4vfs_network_server-server.p.a     = $(SERVERIDL_libl4vfs_network_server-server.a)
+SERVERIDL_libl4vfs_select_listener-server.p.a    = $(SERVERIDL_libl4vfs_select_listener-server.a)
+SERVERIDL_libl4vfs_select_notify-server.p.a      = $(SERVERIDL_libl4vfs_select_notify-server.a)
+SERVERIDL_libl4vfs_common_io_notify-server.p.a   = $(SERVERIDL_libl4vfs_common_io_notify-server.a)
+
 SRC_C   = mkdir.c rev_resolve.c creat.c getdents.c ioctl.c fcntl.c unlink.c   \
           rmdir.c fsync.c lseek.c stat.c access.c
 
-SRC_C_libl4vfs_common_io_notify-server.a += common_io_notify.c
-SRC_C_libl4vfs_network_server-server.a   += socketpair.c 
+SRC_C_libl4vfs_common_io_notify-server.a   = common_io_notify.c
+SRC_C_libl4vfs_network_server-server.a     = socketpair.c getpeername.c getsockopt.c
+SRC_C_libl4vfs_common_io_notify-server.p.a = $(SRC_C_libl4vfs_common_io_notify-server.a)
+SRC_C_libl4vfs_network_server-server.p.a   = $(SRC_C_libl4vfs_network_server-server.a)
 
 MODE    = l4env_minimal
 

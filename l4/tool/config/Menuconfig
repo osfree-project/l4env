@@ -1327,7 +1327,7 @@ save_configuration () {
 	echo "#define $DEF_CONFIG_MACRO" >> $CONFIG_H
 
 	echo -n "."
-	if . $CONFIG_IN >>.menuconfig.log 2>&1
+	if . $CONFIG_IN >>$OBJ_DIR_EXPORT/.menuconfig.log 2>&1
 	then
 		mv $CONFIG_H $DEF_CONFIG_H
 
@@ -1467,7 +1467,7 @@ fi
 
 
 # Fresh new log.
->.menuconfig.log
+>$OBJ_DIR_EXPORT/.menuconfig.log
 
 # Load the functions used by the config.in files.
 echo -n "Preparing scripts: functions" 
@@ -1521,8 +1521,8 @@ else
 fi
 
 # Remove log if empty.
-if [ ! -s .menuconfig.log ] ; then
-	rm -f .menuconfig.log
+if [ ! -s $OBJ_DIR_EXPORT/.menuconfig.log ] ; then
+	rm -f $OBJ_DIR_EXPORT/.menuconfig.log
 fi
 
 exit 0

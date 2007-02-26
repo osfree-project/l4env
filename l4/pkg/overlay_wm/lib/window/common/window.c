@@ -93,8 +93,21 @@ void ovl_window_place(int win_id, int x, int y, int w, int h) {
 
 
 /*** INTERFACE: TOP THE SPECIFIED OVERLAY WINDOW ***/
-void ovl_window_top(int win_id) {
-	overlay_top_window_call(ovl_window_srv, win_id, &env);
+void ovl_window_stack(int win_id, int neighbor_id, int behind, int do_redraw) {
+	overlay_stack_window_call(ovl_window_srv, win_id, neighbor_id, behind,
+	                          do_redraw, &env);
+}
+
+
+/*** INTERFACE: SET TITLE OF OVERLAY WINDOW ***/
+void ovl_window_title(int win_id, const char *title) {
+	overlay_title_window_call(ovl_window_srv, win_id, title, &env);
+}
+
+
+/*** INTERFACE: DEFINE BACKGROUND OVERLAY WINDOW ***/
+void ovl_set_background(int bg_win_id) {
+	overlay_set_background_call(ovl_window_srv, bg_win_id, &env);
 }
 
 

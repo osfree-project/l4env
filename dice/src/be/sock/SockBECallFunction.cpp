@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/sock/SockBECallFunction.cpp
- *    \brief   contains the implementation of the class CSockBECallFunction
+ *  \file    dice/src/be/sock/SockBECallFunction.cpp
+ *  \brief   contains the implementation of the class CSockBECallFunction
  *
- *    \date    11/28/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    11/28/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,12 +26,17 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/sock/SockBECallFunction.h"
+#include "SockBECallFunction.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
 #include "be/BEMarshaller.h"
-#include "be/BEMsgBufferType.h"
-#include "be/sock/BESocket.h"
+#include "be/BEMsgBuffer.h"
+#include "be/BENameFactory.h"
+#include "be/BEDeclarator.h"
+#include "BESocket.h"
+#include "Compiler.h"
+#include "TypeSpec-Type.h"
+#include <cassert>
 
 CSockBECallFunction::CSockBECallFunction()
 {
@@ -42,7 +47,7 @@ CSockBECallFunction::CSockBECallFunction(CSockBECallFunction & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CSockBECallFunction::~CSockBECallFunction()
 {
 
@@ -50,7 +55,6 @@ CSockBECallFunction::~CSockBECallFunction()
 
 /** \brief invoke the call to the server
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * Now this is a bit hairy:
  * -# need to open socke (socket call)
@@ -59,67 +63,70 @@ CSockBECallFunction::~CSockBECallFunction()
  * -# receive from socket
  * -# clode socket
  */
-void CSockBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+void
+CSockBECallFunction::WriteInvocation(CBEFile * pFile)
 {
+    CBECommunication *pComm = GetCommunication();
+    assert(pComm);
     // create socket
-    m_pComm->WriteInitialization(pFile, this, pContext);
+    pComm->WriteInitialization(pFile, this);
     // call
-    m_pComm->WriteCall(pFile, this, pContext);
+    pComm->WriteCall(pFile, this);
     // close socket
-    m_pComm->WriteCleanup(pFile, this, pContext);
-}
-
-/** \brief writes varaible declarations
- *  \param pFile the file to write to
- *  \param pContext the context of the write
- *
- * This declares variables, needed for the socket implementation, such
- * as a socket (int).
- */
-void CSockBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
-{
-    // write base class' variables
-    CBECallFunction::WriteVariableDeclaration(pFile, pContext);
-    // write this directly, because we know this runs on Linux
-    pFile->PrintIndent("int sd, dice_ret_size;\n");
-    // needed for receive
-    string sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", sObj.c_str());
-}
-
-/** \brief writes the marshaling of the message
- *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start with marshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *  \param pContext the context of the write operation
- */
-void CSockBECallFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
-{
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    // marshal opcode
-    nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
-    // marshal rest
-    pMarshaller->Marshal(pFile, this, 0/*all types*/, 0/*all parameters*/, nStartOffset, bUseConstOffset, pContext);
-    delete pMarshaller;
+    pComm->WriteCleanup(pFile, this);
 }
 
 /** \brief initializes the variables
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CSockBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void 
+CSockBECallFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    CBECallFunction::WriteVariableInitialization(pFile, pContext);
-    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-    // msgbuffer is always pointer: either variable sized or char[]
-    pFile->PrintIndent("bzero(%s, ", sMsgBuffer.c_str());
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pMsgBuffer->IsVariableSized())
-    {
-        pFile->Print("%s);\n", sOffset.c_str());
-    }
+    CBECallFunction::WriteVariableInitialization(pFile);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sOffset = pNF->GetOffsetVariable();
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    string sPtrName, sSizeName;
+    if (pMsgBuffer->m_Declarators.First()->GetStars() == 0)
+	sPtrName = "&";
     else
-        pFile->Print("sizeof(%s));\n", sMsgBuffer.c_str());
+	sSizeName = "*";
+    sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
+    sSizeName += pMsgBuffer->m_Declarators.First()->GetName(); 
+
+    *pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
 }
+
+/** \brief initialize the instance of this class
+ *  \param pFEOperation the front-end operation to use as reference
+ *  \return true if successful
+ */
+void
+CSockBECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
+{
+    CBECallFunction::CreateBackEnd(pFEOperation);
+
+    string exc = string(__func__);
+    // add local variables
+    string sCurr;
+    try
+    {
+	sCurr = string("dice_ret_size");
+	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+	// reuse pType (its been cloned)
+	sCurr = string("sd");
+	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+
+    	// needed for receive
+	string sInit = "sizeof(*" + 
+	    CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+	sCurr = string("dice_fromlen");
+	AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
+    }
+    catch (CBECreateException *e)
+    {
+	exc += " failed, because variable " + sCurr + " could not be created.";
+	throw new CBECreateException(exc);
+    }
+}
+

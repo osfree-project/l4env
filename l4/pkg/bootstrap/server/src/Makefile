@@ -1,162 +1,284 @@
-
-DO_ARCH		?= x86
-
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
-SYSTEMS		:= x86-l4v2
-ifeq ($(DO_ARCH), arm)
-SYSTEMS		:= arm-l4x0
-endif
-
-PRIVATE_INCDIR	= $(PKGDIR)/server/src
-
-TARGET		= bootstrap
-MODE		= sigma0
-
-L4LIBS		= -ll4sys
-
-LINK_ADDR	= 0x00100000
-MOD_ADDR        = 0x02000000
 
 DEFAULT_RELOC_arm := 0x02000000
 
-SRC_C_x86-l4v2	= startup.c exec.c region.c module.c \
-		  base_critical.c \
-		  init_l4_gmd.c init_ibm_nucleus.c init_hazelnut.c \
-		  ARCH-x86/serial.c
-SRC_S_x86-l4v2	= ARCH-x86/crt0.S
-SRC_C_arm-l4x0	= startup.c exec.c region.c module.c base_critical.c
+include $(L4DIR)/mk/Makeconf
+-include $(OBJ_DIR)/Makeconf.local
+
+SYSTEMS		:= x86 amd64
+ifeq ($(BUILD_ARCH),arm)
+SYSTEMS		:= arm-l4x0
+# ARM always uses single image mode
+ENTRY		:= auto-build-entry
+endif
+
+
+PRIVATE_INCDIR	 = $(SRC_DIR) $(SRC_DIR)/ARCH-$(ARCH)
+
+# special include directories only needed for <l4/sys/kernel.h>
+PRIVATE_INCDIR_init_kip_v2.o      = $(OBJ_BASE)/include/$(ARCH)/l4v2
+PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/$(L4ABI)
+
+TARGET		:= bootstrap
+TARGET_BIN	 = $(TARGET)
+MODE		 = sigma0
+
+LIBC_SUPPORT_C_x86             := libc_support.c
+LIBC_SUPPORT_C_amd64           := libc_support.c
+LIBC_SUPPORT_C_arm-sa1000      := libc_support.c
+LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
+
+SRC_C		+= startup.c exec.c region.c module.c base_critical.c patch.c 
+SRC_C_x86	+= init_kip_v4.c serial.c 
+SRC_CC_x86	+= init_kip_v2.cc
+SRC_C_amd64	+= init_kip_v4.c serial.c
+SRC_CC_amd64	+= init_kip_v2.cc
+SRC_CC_arm-l4x0	+= init_kip_arm.cc $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
 ARM_DRV_TYPE	?= sa1000
+
+OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
+
+LINK_ADDR	 = 0x00100000
+MOD_ADDR         = 0x02000000
+SRC_S		:= crt0.S
 ifeq ($(ARCH),arm)
-DRV_LIBS	= -larm_drv-$(ARM_DRV_TYPE)
+DRV_LIBS	:= -larm_drv-$(ARM_DRV_TYPE) -larm_uart -lcxx_base -lcxx_io -lcxx_io_kdebug
+CPPFLAGS	+= -DARCH_arm_$(ARM_DRV_TYPE)
 endif
-ifeq ($(ARCH),x86)
-CRT0		=
+CRT0		 =
+LDSCRIPT	 = bootstrap.ld
+LDNMAGIC	 =
+
+PRIVATE_INCDIR	+= $(OBJ_BASE)/include/l4/arm_drivers
+
+vpath serial.c        $(SRC_DIR)/ARCH-x86
+vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
+vpath crt0.S	      $(SRC_DIR)/ARCH-$(ARCH)
+
+MODULE_PATH     ?= $(INSTALLDIR_LOCAL)
+MODULE_LIST     ?= modules.list
+
+# can be overwritten by Makeconf.local
+XEN		?= 0
+COMPRESS	?= 0
+LOADER_MBI	?= 0
+REALMODE_LOADING ?= 0
+RML		?= 0
+
+ifneq ($(REALMODE_LOADING)$(RML),00)
+REALMODE_LOADING := 1
 endif
-LDSCRIPT	= ARCH-$(ARCH)/bootstrap.ld
-
-MODULE_PATH     = $(INSTALLDIR_LOCAL)
-MODULE_LIST     = modules.list
-
-XEN		 = 0
-COMPRESS	 = 0
-LOADER_MBI	 = 0
-REALMODE_LOADING = 0
 
 ifeq ($(ARCH),arm)
-LOADER_MBI	 = 1
+LOADER_MBI	 := 1
 endif
 
 ifneq ($(XEN_PATH),)
-XEN		= 1
+XEN		 := 1
 endif
 
-ifeq ($(XEN),1)
-LOADER_MBI	= 1
+ifneq ($(XEN),0)
+LOADER_MBI	 = 1
 SRC_C		+= ARCH-x86/xen.c
-LINK_ADDR	= 0xf0100000
-MOD_ADDR	= 0xc2000000
+LINK_ADDR	 = 0xf0100000
+MOD_ADDR	 = 0xc2000000
 CPPFLAGS	+= -DXEN -DSINGLE_SECTION
 XEN_PATH	?= /your/path/to/xen
 CPPFLAGS	+= -I$(XEN_PATH)/xen-2.0/xen/include \
 		   -I$(XEN_PATH)/xen-2.0/extras/mini-os
 endif
 
-ifeq ($(LOADER_MBI),1)
+# convenience
+ifneq ($(E),)
+ENTRY		:= $(E)
+endif
+
+ifneq ($(ENTRY),)
+TARGET		:= bootstrap.image
+INSTALL_TARGET	+= bootstrap_$(ENTRY)
+bootstrap_$(ENTRY): bootstrap.stripped
+	$(VERBOSE)ln -f $< $@
+endif
+
+ifneq ($(REALMODE_LOADING),0)
+LOADER_MBI	 = 1
+CPPFLAGS	+= -DREALMODE_LOADING -DSINGLE_SECTION
+# don't install bootstrap_$(ENTRY)
+INSTALL_TARGET	 = bootstrap.load
+endif
+
+ifneq ($(LOADER_MBI),0)
 SRC_C		+= loader_mbi.c
 MOD_ADDR	 = 0x00150000
 CPPFLAGS	+= -DLOADER_MBI
 endif
 
-ifeq ($(REALMODE_LOADING),1)
-CPPFLAGS	+= -DREALMODE_LOADING -DSINGLE_SECTION
-INSTALL_TARGET	+= bootstrap.load
-endif
-
-ifeq ($(COMPRESS),1)
+ifneq ($(COMPRESS),0)
 SRC_C		+= uncompress.c gunzip.c
 CPPFLAGS	+= -DCOMPRESS
-export COMPRESS
+endif
+
+ifneq ($(MEM),)
+CPPFLAGS	+= -DMEMORY=$(MEM)
+endif
+
+ifeq ($(ARCH),arm)
+BOOTSTRAP_RAW	:= bootstrap.raw
+endif
+
+ifeq ($(ARCH),amd64)
+all:: libc32.a bootstrap32
+ifeq ($(INSTALL_TARGET),bootstrap)
+INSTALL_TARGET	:= bootstrap32
+endif
+TARGET_BIN	:= bootstrap32
 endif
 
 include $(L4DIR)/mk/prog.mk
 
+CXXFLAGS += -fno-rtti -fno-exceptions
+
 ifneq ($(SYSTEM),)
- ifneq ($(ENTRY)$(E),)
+ ifneq ($(ENTRY),)
   ifeq ($(ARCH),arm)
    CROSS_COMPILE := arm-linux-
   endif
-  BUILD_DUMMY := $(shell SEARCHPATH=$(LOCAL_SEARCH_PATH):$(MODULE_PATH) \
-                         CROSS_COMPILE=$(CROSS_COMPILE) \
-			 ARCH=$(ARCH) \
-                         ../build.pl ../$(MODULE_LIST) $(firstword $(E) $(ENTRY)) \
-			   || echo X-build-failed-X)
-  ifeq ($(BUILD_DUMMY),X-build-failed-X)
-   $(error Processing of module list failed!)
-  else
-   BUILD_DUMMY := $(shell echo $(BUILD_DUMMY))
+  ifeq ($(filter clean cleanall,$(MAKECMDGOALS)),)
+    BUILD_DUMMY := $(shell SEARCHPATH=$(LOCAL_SEARCH_PATH):$(MODULE_PATH) \
+                           CROSS_COMPILE=$(CROSS_COMPILE) \
+			   OPT_ARCH=$(ARCH) \
+			   OPT_COMPRESS=$(COMPRESS) \
+                           $(SRC_DIR)/build.pl $(SRC_DIR)/$(MODULE_LIST) $(ENTRY) 2>&1 | tee build.log 1>&2 \
+                     || echo X-build-failed-X)
+    ifeq ($(BUILD_DUMMY),X-build-failed-X)
+     $(error Processing of module list failed!)
+    else
+     BUILD_DUMMY := $(shell echo $(BUILD_DUMMY))
+    endif
+    # mod.make.inc is generated by build.pl
+    include mod.make.inc
   endif
 
-  # mod.make.inc is generated by build.pl
-  include mod.make.inc
-  OBJS_bootstrap   += $(MODULE_OBJECT_FILES)
-  CPPFLAGS         += -DIMAGE_MODE
-  BOOTSTRAP_LD_dep := mod.make.inc
-  STARTUP_C_dep    := mod.make.inc
+  OBJS_bootstrap.image += $(MODULE_OBJECT_FILES)
+  CPPFLAGS             += -DIMAGE_MODE
+  BOOTSTRAP_LD_dep     := mod.make.inc
+  STARTUP_C_dep        := mod.make.inc
  endif
 endif
 
 CPPFLAGS	+= -DMODADDR=$(MOD_ADDR)
 
-L4LIBS		= $(DRV_LIBS)
+L4LIBS		 = $(DRV_LIBS)
 
-SUPCLIB_diet	= libc_support.c
-LIBCLIB_diet	= -nostdlib $(GCCLDNOSTDLIB) -ldiet_c -ldietlibc_support \
-		  -ldiet_be_l4_start_stop -ldiet_be_sigma0_mem -ldiet_c  \
-		  -ll4util_light -ldiet_c $(GCCLIB) -ldiet_c
-SUPCLIB_uc	= libc_support.c
-LIBCLIB_uc	= -nostdlib $(GCCLDNOSTDLIB) -luc_c -luclibc_support     \
-		  -luc_be_l4_start_stop -luc_be_sigma0_mem -luc_c        \
-		  -ll4util_light -luc_c $(GCCLIB) -luc_c
-SUPCLIB_oskit	= ARCH-x86/oskit_support.c
-LIBCLIB_oskit	= -nostdlib -lkern -lmc -llmm $(GCCLIB)
+LIBCLIB_diet	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -ldiet_c $(GCCLIB)
+LIBCLIB_uc	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -luc_c $(GCCLIB)
 
-LIBCLIBS	= $(LIBCLIB_$(LIBC_TYPE))
-SRC_C		+= $(SUPCLIB_$(LIBC_TYPE))
+LIBCLIBS	 = $(LIBCLIB_$(LIBC_TYPE))
 
+SRC_C		+= $(LIBC_SUPPORT_C_$(ARCH)) \
+		   $(LIBC_SUPPORT_C_$(ARCH)-$(ARM_DRV_TYPE))
 
 ifneq ($(SYSTEM),)
 
-all:: bootstrap.image
+all:: $(BOOTSTRAP_RAW) bootstrap.stripped
+
+# image for use with pxelinux
+bootstrap.load: $(TARGET_BIN) bootsect.o.img setup.o.img
+	@$(GEN_MESSAGE)
+	$(VERBOSE)objcopy -O binary -R .note -R .comment -S $< $<.load.bin
+	$(VERBOSE)cat bootsect.o.img setup.o.img $<.load.bin > $@
 
 bootsect.o.img: ARCH-x86/bootsect.S Makefile
-	$(CC) -traditional -nostdinc -nostdlib -c $<
-	$(LD) -m elf_i386 -Ttext 0x0 -s --oformat binary bootsect.o -o $@
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(CC) -traditional -nostdinc -nostdlib -c $<
+	$(VERBOSE)$(LD) -m elf_i386 -Ttext 0x0 -o $@ -s --oformat binary \
+	  bootsect.o
+	$(VERBOSE)chmod -x $@
 
 setup.o.img: ARCH-x86/setup.S Makefile
-	$(CC) -traditional -nostdinc -nostdlib -c $<
-	$(LD) -m elf_i386 -Ttext 0x0 -s --oformat binary -e begtext setup.o -o $@
-	dd if=/dev/zero bs=1 count=$$((3072 - `wc -c < setup.o.img`)) >> setup.o.img
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(CC) -traditional -nostdinc -nostdlib -DARCH_$(ARCH) -c $<
+	$(VERBOSE)$(LD) -m elf_i386 -Ttext 0x0 -o $@ -s --oformat binary \
+	  -e begtext setup.o
+	$(VERBOSE)dd if=/dev/zero bs=1 count=$$((3072 - `wc -c < setup.o.img`)) >> setup.o.img 2> /dev/null
+	$(VERBOSE)chmod -x $@
 
-bootstrap.load.build: bootstrap bootsect.o.img setup.o.img
-	objcopy -O binary -R .note -R .comment -S bootstrap bootstrap.bin
-	cat bootsect.o.img setup.o.img bootstrap.bin > bootstrap.load
+# raw version without ELF, primarily useful for ARM
+bootstrap.raw: $(TARGET_BIN)
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(OBJCOPY) -S $< $@.stripped
+	$(VERBOSE)$(OBJCOPY) -O binary $@.stripped $@
+	$(VERBOSE)$(RM) -f $@.stripped
 
-bootstrap.load: bootstrap.load.build
+# stripped version of bootstrap
+bootstrap.stripped: $(TARGET_BIN)
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(OBJCOPY) -S $< $@
 
-bootstrap.image: bootstrap
-	@echo "  ... Generating $@"
-	$(VERBOSE)$(OBJCOPY) -S $< $*.stripped
-	$(VERBOSE)$(OBJCOPY) -O binary $*.stripped $@
 endif
 
 $(TARGET): $(LDSCRIPT) $(OBJS_$(TARGET))
 
-vpath $(LDSCRIPT).in ..
-
 startup.o: $(STARTUP_C_dep)
 
 $(LDSCRIPT): $(LDSCRIPT).in Makefile $(BOOTSTRAP_LD_dep)
-	$(VERBOSE)echo "  ... Generating $@"
-	$(VERBOSE)mkdir -p $(dir $@)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)cpp -P $(CPPFLAGS) -DLINKADDR=$(LINK_ADDR) $< $@;
+
+ifneq ($(SYSTEM),)
+
+clean::
+	$(VERBOSE)$(RM) mod.make.inc mod*.bin mbi_modules.bin $(LDSCRIPT)
+	$(VERBOSE)$(RM) setup.o.img bootsect.o.img
+	$(VERBOSE)$(RM) $(SRC32_C:.c=.o32) $(SRC32_S:.S=.o32)
+
+cleanall::
+	$(VERBOSE)$(RM) bootstrap_* bootstrap.*
+
+endif
+
+clean cleanall::
+	$(VERBOSE)$(MAKE) -C $(SRC_DIR)/ARCH-amd64/libc32 $@
+
+ifeq ($(ARCH),amd64)
+
+vpath %.c             $(SRC_DIR)/ARCH-amd64
+vpath %.S             $(SRC_DIR)/ARCH-amd64
+vpath %.c             $(SRC_DIR)/ARCH-amd64/boot32
+vpath %.S             $(SRC_DIR)/ARCH-amd64/boot32
+vpath bootstrap.ld.in $(SRC_DIR)/ARCH-x86
+
+SRC32_C		 = boot_cpu.c boot_kernel.c load_elf.c minilibc_support.c
+SRC32_S		 = boot.S boot_idt.S
+OBJ32		 = $(SRC32_S:.S=.o32) $(SRC32_C:.c=.o32)
+CC32		 = $(filter-out -m64, $(CC))
+CFLAGS32	:= $(filter-out -m64, $(CFLAGS)) -m32
+
+.PHONY: libc32.a
+libc32.a:
+	$(VERBOSE)$(MAKE) O=$(OBJ_BASE) -C $(SRC_DIR)/ARCH-amd64/libc32
+
+bootstrap32: $(OBJ32) bootstrap32.bin $(OBJ_DIR)/ARCH-amd64/libc32/OBJ-$(ARCH)_$(CPU)/libc32.a
+	@$(LINK_MESSAGE)
+	$(VERBOSE)$(CC32) -o $@ -nostdlib -static \
+	  -Wl,-T,$(SRC_DIR)/ARCH-amd64/boot32/bootstrap32.ld,--gc-sections $^ -lgcc
+	$(VERBOSE)chmod 755 $@
+
+bootstrap32.bin: $(TARGET)
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(OBJCOPY) -S $< bootstrap64.bin
+	$(VERBOSE)chmod -x bootstrap64.bin
+	$(VERBOSE)$(OBJCOPY) -B i386 -I binary -O elf32-i386 bootstrap64.bin $@
+
+%.o32: %.c
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CC32) -o $@ -c $(DEPEND_FLAG) \
+	  $(CPPFLAGS) $(CFLAGS32) $(call absfilename,$<)
+
+%.o32: %.S
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CC32) -o $@ -c $(DEPEND_FLAG) \
+	  $(CPPFLAGS) $(CFLAGS32) $(call absfilename,$<)
+
+endif

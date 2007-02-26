@@ -1,13 +1,26 @@
-PKGDIR  = ../..
-L4DIR   ?= $(PKGDIR)/../..
+# scan the L4 global configuration file
+PKGDIR	?= ../..
+L4DIR	?= $(PKGDIR)/../..
 
-INCS            = -I../include
+DROPSCONF	= y
 
-TARGET          = names
-DEFAULT_RELOC   = 0x00F00000
-MODE            = sigma0
-LIBS            = -llogserver
+TARGET		  = $(PKGNAME)
+DEFAULT_RELOC_x86 = 0x002d0000
+DEFAULT_RELOC_arm = 0x00100000
+MODE		  = sigma0
+SERVERIDL	  = names.idl
 
-SRC_C           = names.c
+PRIVATE_INCDIR	  = $(PKGDIR)/server/include
+
+SRC_C		 += names.c predefined.c
+
+ifeq ($(ARCH),x86)
+LIBS		 += -llogserver
+endif
+
+ifeq ($(CONFIG_EVENT),y)
+SRC_C		 += events.c
+LIBS		 += -levents -ll4util -lnames
+endif
 
 include $(L4DIR)/mk/prog.mk

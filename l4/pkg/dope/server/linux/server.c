@@ -27,6 +27,7 @@
 #include "script.h"
 #include "scope.h"
 #include "screen.h"
+#include "scheduler.h"
 #include "userstate.h"
 
 int init_server(struct dope_services *d);
@@ -36,6 +37,7 @@ static struct thread_services    *thread;
 static struct appman_services    *appman;
 static struct script_services    *script;
 static struct screen_services    *screen;
+static struct scheduler_services *scheduler;
 static struct userstate_services *userstate;
 
 long dope_manager_init_app_component(CORBA_Object _dice_corba_obj,
@@ -64,6 +66,8 @@ void dope_manager_deinit_app_component(CORBA_Object _dice_corba_obj,
                                        long app_id,
                                        CORBA_Environment *_dice_corba_env) {
 	INFO(printf("Server(deinit_app): application (id=%lu) deinit requested\n", app_id);)
+	scheduler->release_app(app_id);
+	userstate->release_app(app_id);
 	screen->forget_children(app_id);
 	appman->unreg_app(app_id);
 }
@@ -161,6 +165,7 @@ int init_server(struct dope_services *d) {
 	userstate = d->get_module("UserState 1.0");
 	scope     = d->get_module("Scope 1.0");
 	screen    = d->get_module("Screen 1.0");
+	scheduler = d->get_module("Scheduler 1.0");
 
 	d->register_module("Server 1.0", &services);
 	return 1;

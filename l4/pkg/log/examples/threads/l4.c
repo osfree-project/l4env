@@ -36,7 +36,7 @@ static void work(void*data){
 int main(int argc, char**argv){
   int i;
   
-  l4_uint32_t dummy;
+  l4_umword_t dummy;
   l4_threadid_t tid, preempter, pager;
 
   LOG("we are alive, creating other threads now");

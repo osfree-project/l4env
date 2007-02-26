@@ -11,7 +11,7 @@ environment. That's where its name is from:
 <b>D</b>rops <b>I</b>dl <b>C</b>ompil<b>E</b>r.
 
 Input files should be written in either DCE IDL or CORBA IDL. If 
-the IDL file is written using the latter language, the -C option 
+the IDL file is written using the latter language, the -x option 
 should be used. IDL files should have the suffix <b>.idl</b>. The 
 compiler uses this suffix to differentiate different kinds of input 
 files. Inside an IDL file the <i>include</i> command can be used to 
@@ -45,12 +45,13 @@ loop threads and calls the client stubs.
 --help, --version, --verbose
 
 \subsection preprocess Preprocessing Options
--E, --preprocess, -I, -D, --with-cpp, -nostdinc, --corba, -M, -MM, -MD, -MD
+-E, --preprocess, -I, -D, --with-cpp, -nostdinc, --corba, -M, -MM, -MD, 
+-MMD, -MF, -MP
 
 \subsection backend Code Generation Options
---create-inline, --no-opcodes, --create-skeleton, --template, --server-timeout,
+--create-inline, --no-opcodes, --create-skeleton, --template,
 --filename-prefix, --include-prefix, -f, 
---back-end, --client, --server, --testsuite, --message-passing
+--back-end, --client, --server, --message-passing
 
 \section REQUIREMENTS REQUIREMENTS
 This compiler uses 'cpp' for preprocessing its input files. Thus 
@@ -77,17 +78,8 @@ It is useful if you use dice from a distributed binary package.
 It is <b>not</b> useful if you use dice from a source code package.</DD>
 
 <DT><b>--verbose, -v</b> &lt;level&gt;</DT>
-<DD>Sets the verbose level of the compiler. The verbose level 
-specifies, how much of the debug output the user will see. The 
-level may be one of the following numbers:
-<BR>1 - lets only the back-end generate output
-<BR>2 - lets the back-end and the data-representation generate output
-<BR>3 - lets the back-end, the data-representation and the front-end classes
-generate output
-<BR>4 - lets the factories (name and class factory) generate output
-<BR>5 - lets all of the above generate output
-<BR>6 - lets all of the above plus the parser generate output
-<BR>7 - lets only the parser generate output
+<DD>Sets the (optional) verbose level of the compiler. The verbose level
+specifies, how much of the debug output the user will see.
 </DD>
 
 </DL>
@@ -100,12 +92,6 @@ generate output
 <DD>Stops the compiler after preprocessing the input file. The 
 output is printed to stdout. 
 </DD>
-
-<DT><b>-EXML</b></DT>
-<DD>Stops the compiler after parsing the input file. The compiler 
-prints the intermediate representation into an XML file. The file 
-name is the same as the IDL file's with the idl extension replaced 
-with xml.</DD>
 
 <DT><b>--preprocess, -P</b> &lt;string&gt;</DT>
 <DD>Hands the <i>string</i> as is to the preprocessor (cpp).</DD>
@@ -122,9 +108,7 @@ same as -P<i>string</i>.</DD>
 is also used by dice to find imported files.</DD>
 
 <DT><b>-D</b>&lt;symbol&gt;</DT>
-<DD>Handed to preprocessor (same as -P-D<i>symbol</i>).
-<i>symbol</i> may also be used with -fuse-symbols to generate
-target code which respected defined symbols.</DD>
+<DD>Handed to preprocessor (same as -P-D<i>symbol</i>).</DD>
 
 <DT><b>--with-cpp=</b>&lt;cpp&gt;</DT>
 <DD>Defines own preprocessor. The order to determine the used
@@ -136,9 +120,10 @@ preprocessor is this:
 <br>5. CPP available when compiling dice
 </DD>
 
-<DT><b>--corba, -C</b></DT>
-<DD>Regards the input file as CORBA IDL file. If not specified the 
-input file is regarded as DCE IDL file.</DD>
+<DT><b>-x</b> &lt;language&gt;</DT>
+<DD>Specify the language of the main input file (C/C++ header files are
+recognized by their extension). Possible values are: dce corba. Defaults to
+'dce'.</DD>
 
 <DT><b>-M</b></DT>
 <DD>Print the <i>#include</i>d file hierarchy to stdout. Does not compile or
@@ -157,6 +142,14 @@ continues with the compilation or generation of intermediate files.</DD>
 <DT><b>-MMD</b></DT>
 <DD>Same as <b>-MD</b> but does skip standard include files, just like
 <b>-MM</b>.</DD>
+
+<DT><b>-MF</b> &lt;filename&gt;</DT>
+<DD>Generated the dependency output into the specified file. Requires one of
+the options -M,-MM,-MD, or -MMD.</DD>
+
+<DT><b>-MP</b></DT>
+<DD>Generates for all files, which the target files depend on, phony targets
+in the dependency list.</DD>
 
 </DL>
 
@@ -210,15 +203,9 @@ interface
 <BR><i>function</i> or 4 to generate one client C file per function
 </DD>
 
-<DT><b>-fctypes</b></DT>
-<DD>Use C-sytle type names instead of CORBA type names ('long'
-instead of 'CORBA_long').
-</DD>
-
-<DT><b>-fl4types</b></DT>
-<DD>Use L4-style type names instead of CORBA type names
-('l4_int32_t' instead of 'CORBA_long'). This option implies
-<i>-fctypes</i> for all non-C-style type names.
+<DT><b>-fcorbatypes</b></DT>
+<DD>Use CORBA-sytle type names instead of C type names ('CORBA_long'
+instead of 'long').
 </DD>
 
 <DT><b>-fopcode-size=</b>&lt;size&gt;</DT>
@@ -231,16 +218,6 @@ instead of 'CORBA_long').
 <BR>It is recommended to use the <i>--no-opcode</i> options with
 sizes smaller than four bytes, since Dice generated opcodes use
 four bytes.
-</DD>
-
-<DT><b>-fserver-parameter</b></DT>
-<DD>Generates a server loop which expects a void* parameter, which
-is cast to the internal CORBA_Environment variable. This way the
-user can specify if he wants to provide own values in for the 
-CORBA_Environment.
-<BR>However, there are cases, where the parameter is mandatory.
-For example if the server receives flexpages, the parameter has
-to provide an environment whith a proper receive flexpage set.
 </DD>
 
 <DT><b>-fno-server-loop</b> or <b>-fno-srvloop</b></DT>
@@ -277,8 +254,7 @@ memory for variable or fixed sized arrays dynamically.
 </DD>
 
 <DT><b>-fforce-env-malloc</b></DT>
-<DD>Force the use of CORBA_Environment's malloc member. This is
-useful for server's without -fserver-parameter option. Otherwise
+<DD>Force the use of CORBA_Environment's malloc member. Otherwise
 CORBA_alloc is used, because it is assumed that the server has
 a default CORBA_Environment, which does not contain a valid malloc
 function. 
@@ -329,26 +305,18 @@ to trace output all trace messages (client, server, and
 message buffer).
 </DD>
 
+<DT><b>-ftrace-lib=&lt;tracelib&gt;</b></DT>
+<DD>Specify a dynamic library that provides a tracing class derived from
+CBETrace.  The provided tracing class is called whenever tracing code has to
+be generated.  Using this plugin architecture you can generate your own
+tracing code to instrument Dice generated code.  For further details refer to
+the user manual.
+
 <DT><b>-fzero-msgbuf</b></DT>
 <DD>Fills the memory region occupied by the message buffer
 with zeros for each call and before each wait/reply-and-wait.
 This means that the message buffer is 'clean' when data
 is put into it.
-</DD>
-
-<DT><b>-ftest-no-success-message</b></DT>
-<DD>The testsuite will only print error messages. This is
-useful if you test large arrays and don't want to see 
-success messages scroll by, thus missing the important 
-failure messages.
-</DD>
-
-<DT><b>-fuse-symbols</b></DT>
-<DD>Generated code may include <i>ifdef</i>'s to provide
-code for different compile time conditions. These conditions
-are usually marked by symbols. If you know the symbols when
-using dice and are sure they won't change you can let dice
-evaluate them and generate appropriate code.
 </DD>
 
 <DT><b>-fno-send-canceled-check</b></DT>
@@ -412,16 +380,6 @@ maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
 
 <DT><b>--server, -s</b></DT>
 <DD>Generates server side code only.</DD>
-
-<DT><b>--testsuite, -T</b> &lt;<i>thread</i> | <i>task</i>&gt;</DT>
-<DD>Generates a testsuite for the specified IDL file. The compiler 
-will overwrite any server skeleton files. It generates additionally 
-a test-suite file. You may compile the generated C files and link 
-them to an executable, which will run on a bare L4 environment. 
-The test application will output any transmission error between 
-client and server. You can also specify whether the generated testsuites
-run in seperated threads (but the same address space) or in
-speperate tasks. If neither is specified <i>thread</i> is chosen.</DD>
 
 <DT><b>--message-passing, -m</b></DT>
 <DD>Generates the message passing functions for RPC style functions

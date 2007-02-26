@@ -86,10 +86,11 @@ __ds_list_iterator(dmphys_dataspace_t * ds, void * data)
  *         - -#L4_EPERM   caller is not the owner of the dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id, const char* name,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_set_name_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    const char* name,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
@@ -100,12 +101,12 @@ if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: client "l4util_idfmt" does not own dataspace %u",
+	LOGL("DMphys: client "l4util_idfmt" does not own dataspace %lu",
 	     l4util_idstr(*_dice_corba_obj), ds_id);
-#endif      
+#endif
       return ret;
     }
 
@@ -129,18 +130,19 @@ if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
  *         - -#L4_EINVAL  invalid dataspace id
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_get_name_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id, char* *name,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_get_name_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    char **name,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
-  
+
   /* get dataspace descriptor */
   ds = dmphys_ds_get(ds_id);
   if (ds == NULL)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: invalid dataspace %u, caller "l4util_idfmt,
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid dataspace %lu, caller "l4util_idfmt,
             ds_id, l4util_idstr(*_dice_corba_obj));
       return -L4_EINVAL;
     }
@@ -164,18 +166,18 @@ if_l4dm_generic_get_name_component(CORBA_Object _dice_corba_obj,
  *         - -#L4_EINVAL invalid dataspace id
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_show_ds_component(CORBA_Object _dice_corba_obj,
-                                  l4_uint32_t ds_id,
-                                  CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_show_ds_component (CORBA_Object _dice_corba_obj,
+                                   unsigned long ds_id,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
-  
+
   /* get dataspace descriptor */
   ds = dmphys_ds_get(ds_id);
   if (ds == NULL)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: invalid dataspace %u, caller "l4util_idfmt,
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid dataspace %lu, caller "l4util_idfmt,
             ds_id, l4util_idstr(*_dice_corba_obj));
       return -L4_EINVAL;
     }
@@ -199,11 +201,11 @@ if_l4dm_generic_show_ds_component(CORBA_Object _dice_corba_obj,
  * \param  _dice_corba_env    Server environment
  */
 /*****************************************************************************/ 
-void 
-if_l4dm_generic_list_component(CORBA_Object _dice_corba_obj,
-                               const l4_threadid_t *owner,
-                               l4_uint32_t flags,
-                               CORBA_Server_Environment *_dice_corba_env)
+void
+if_l4dm_generic_list_component (CORBA_Object _dice_corba_obj,
+                                const l4_threadid_t *owner,
+                                unsigned long flags,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   l4_size_t sum = 0;
 

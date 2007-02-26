@@ -39,7 +39,7 @@ static cfg_quota_t cfg_quota[RMGR_CFG_MAX];
 static unsigned    max_cfg_quota;
 
 static inline int
-__quota_check_addr(addr_quota_t q, l4_addr_t where, unsigned amount)
+__quota_check_addr(addr_quota_t q, l4_addr_t where, unsigned long amount)
 {
   return ( (q.max >= amount && q.current <= q.max - amount) ?
               ((q.low <= where && q.high >= where + amount - 1) ?
@@ -47,7 +47,7 @@ __quota_check_addr(addr_quota_t q, l4_addr_t where, unsigned amount)
 }
 
 static inline int
-__quota_check_u16(u16_quota_t q, l4_addr_t where, unsigned amount)
+__quota_check_u16(u16_quota_t q, l4_addr_t where, unsigned long amount)
 {
   return ( (q.max >= amount && q.current <= q.max - amount) ?
               ((q.low <= where && q.high >= where + amount - 1) ?
@@ -55,7 +55,7 @@ __quota_check_u16(u16_quota_t q, l4_addr_t where, unsigned amount)
 }
 
 static inline int
-__quota_check_u8(u8_quota_t q, l4_addr_t where, unsigned amount)
+__quota_check_u8(u8_quota_t q, l4_addr_t where, unsigned long amount)
 {
   return ( (q.max >= amount && q.current <= q.max - amount) ?
               ((q.low <= where && q.high >= where + amount - 1) ?
@@ -63,19 +63,19 @@ __quota_check_u8(u8_quota_t q, l4_addr_t where, unsigned amount)
 }
 
 static inline int
-__quota_free_addr(addr_quota_t q, unsigned amount)
+__quota_free_addr(addr_quota_t q, unsigned long amount)
 {
    return (q.current -= amount);
 }
 
 static inline int
-__quota_free_u16(u16_quota_t q, unsigned amount)
+__quota_free_u16(u16_quota_t q, unsigned long amount)
 {
    return (q.current -= amount);
 }
 
 static inline int
-__quota_free_u8(u8_quota_t q, unsigned amount)
+__quota_free_u8(u8_quota_t q, unsigned long amount)
 {
    return (q.current -= amount);
 }
@@ -152,7 +152,7 @@ cfg_quota_set(const char *cfg_name, const quota_t * const q)
   return 0;
 }
 
-void
+int
 cfg_quota_copy(unsigned i, const char *name)
 {
   int j;
@@ -161,8 +161,10 @@ cfg_quota_copy(unsigned i, const char *name)
     if (is_program_in_cmdline(name, cfg_quota[j].name))
       {
 	quota[i] = cfg_quota[j].quota;
-	return;
+	return 0;
       }
+
+  return -1;
 }
 
 void
@@ -178,7 +180,7 @@ quota_reset(owner_t task)
 }
 
 int
-quota_check_mem(owner_t t, l4_addr_t where, unsigned amount)
+quota_check_mem(owner_t t, l4_addr_t where, unsigned long amount)
 {
   return (where < mem_high)
 	    ? __quota_check_addr(quota[t].mem, where, amount)
@@ -192,18 +194,18 @@ quota_check_allow_cli(owner_t t)
 }
 
 int
-quota_alloc_mem(owner_t t, l4_addr_t where, unsigned amount)
+quota_alloc_mem(owner_t t, l4_addr_t where, unsigned long amount)
 {
   int res;
 
   if (where < mem_high)
     {
-      if ((res = __quota_check_addr(quota[t].mem, where,amount)))
+      if ((res = __quota_check_addr(quota[t].mem, where, amount)))
         quota[t].mem.current += amount;
     }
   else
     {
-      if ((res = __quota_check_addr(quota[t].himem, where,amount)))
+      if ((res = __quota_check_addr(quota[t].himem, where, amount)))
         quota[t].himem.current += amount;
     }
 
@@ -239,7 +241,7 @@ quota_alloc_irq(owner_t t, l4_uint32_t where)
 }
 
 int
-quota_free_mem(owner_t t, l4_addr_t where, unsigned amount)
+quota_free_mem(owner_t t, l4_addr_t where, unsigned long amount)
 {
   return (where < mem_high)
 	    ? __quota_free_addr(quota[t].mem, amount)
@@ -266,7 +268,7 @@ quota_free_irq(owner_t t, l4_addr_t where)
 }
 
 void
-quota_add_mem(owner_t t, unsigned amount)
+quota_add_mem(owner_t t, unsigned long amount)
 {
   quota[t].mem.current += amount;
 }

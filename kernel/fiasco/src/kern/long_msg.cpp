@@ -37,7 +37,7 @@ Long_msg::msg_word (Mword *msg, unsigned index) const
   if (index < num_snd_reg_words())
     return Sys_ipc_frame::msg_word (index);
 
-  return current_space()->peek_user (msg + index + 3);
+  return current_mem_space()->peek_user (msg + index + 3);
 }
 
 IMPLEMENT inline NEEDS ["space.h"]
@@ -47,5 +47,5 @@ Long_msg::set_msg_word (Mword *msg, unsigned index, Mword value)
   if (index < num_rcv_reg_words())
     Sys_ipc_frame::set_msg_word (index, value);
 
-  current_space()->poke_user (msg + index + 3, value);
+  current_mem_space()->poke_user (msg + index + 3, value);
 }

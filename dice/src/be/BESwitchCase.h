@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BESwitchCase.h
- *    \brief   contains the declaration of the class CBESwitchCase
+ *  \brief   contains the declaration of the class CBESwitchCase
  *
  *    \date    01/29/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -38,7 +38,7 @@ class CBEMarshalFunction;
 
 /**    \class CBESwitchCase
  *    \ingroup backend
- *    \brief the function class for the back-end
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
@@ -46,41 +46,69 @@ class CBESwitchCase : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBESwitchCase();
     virtual ~CBESwitchCase();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBESwitchCase(CBESwitchCase &src);
 
 public:
-    virtual void Write(CBEFile *pFile, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual void SetMessageBufferType(CBEContext *pContext);
-    virtual void SetCallVariable(string sOriginalName, int nStars, string sCallName, CBEContext * pContext);
+    virtual void Write(CBEFile *pFile);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+
+    virtual void SetMessageBufferType();
+    virtual void SetCallVariable(string sOriginalName, int nStars, 
+	string sCallName);
+    
+    /** \brief tests if this function should be written
+     *  \return true if successful
+     */
+    virtual bool DoWriteFunction(CBEHeaderFile * /*pFile*/) 
+    { return true; }
+    /** \brief tests if this function should be written
+     *  \return true if successful
+     */
+    virtual bool DoWriteFunction(CBEImplementationFile * /*pFile*/)
+    { return true; }
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, int nDirection, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile, int nDirection);
+    virtual void WriteVariableDeclaration(CBEFile *pFile);
+    virtual void WriteCleanup(CBEFile *pFile);
+    virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);
+
+    /** \brief writes the initialization of the variables
+     */
+    virtual void WriteVariableInitialization(CBEFile * /*pFile*/)
+    { }
+    /** \brief writes the invocation of the message transfer
+     */
+    virtual void WriteInvocation(CBEFile * /*pFile*/)
+    { }
 
 protected:
-    /**    \var string m_sOpcode
-     *    \brief the opcode constant
+    /** \var bool m_bSameClass
+     *  \brief true if switch case is from the same class as the dispatcher
+     *  function
+     */
+    bool m_bSameClass;
+    /** \var string m_sOpcode
+     *  \brief the opcode constant
      */
     string m_sOpcode;
-    /**    \var CBEUnmarshalFunction *m_pUnmarshalFunction
-     *    \brief a reference to the corresponding unmarshal function
+    /** \var CBEUnmarshalFunction *m_pUnmarshalFunction
+     *  \brief a reference to the corresponding unmarshal function
      */
     CBEUnmarshalFunction *m_pUnmarshalFunction;
-    /**    \var CBEMarshalFunction *m_pMarshalFunction
-     *    \brief a reference to the corresponding marshal function
+    /** \var CBEMarshalFunction *m_pMarshalFunction
+     *  \brief a reference to the corresponding marshal function
      */
     CBEMarshalFunction *m_pMarshalFunction;
-    /**    \var CBEComponentFunction *m_pComponentFunction
-     *    \brief a reference to the corresponding component function
+    /** \var CBEComponentFunction *m_pComponentFunction
+     *  \brief a reference to the corresponding component function
      */
     CBEComponentFunction *m_pComponentFunction;
 };

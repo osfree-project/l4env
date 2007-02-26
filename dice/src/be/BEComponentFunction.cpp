@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEComponentFunction.cpp
- *    \brief   contains the implementation of the class CBEComponentFunction
+ *  \file    dice/src/be/BEComponentFunction.cpp
+ *  \brief   contains the implementation of the class CBEComponentFunction
  *
- *    \date    01/18/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/18/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,416 +26,441 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEComponentFunction.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEType.h"
-#include "be/BEDeclarator.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BERoot.h"
-#include "be/BETestFunction.h"
-#include "be/BEClass.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEComponent.h"
-#include "be/BEExpression.h"
-#include "be/BEReplyCodeType.h"
-
+#include "BEComponentFunction.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEType.h"
+#include "BEDeclarator.h"
+#include "BETypedDeclarator.h"
+#include "BERoot.h"
+#include "BEClass.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEHeaderFile.h"
+#include "BEComponent.h"
+#include "BEExpression.h"
+#include "BEReplyCodeType.h"
+#include "BEAttribute.h"
+#include "Compiler.h"
 #include "Attribute-Type.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 #include "fe/FEFile.h"
 #include "fe/FEExpression.h"
+#include <sstream>
+#include <cassert>
 
 CBEComponentFunction::CBEComponentFunction()
+    : CBEOperationFunction(FUNCTION_TEMPLATE)
 {
     m_pFunction = 0;
-    m_pReplyVar = 0;
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
+	m_nSkipParameter = 0;
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	m_nSkipParameter = 3;
 }
 
 CBEComponentFunction::CBEComponentFunction(CBEComponentFunction & src)
 : CBEOperationFunction(src)
 {
     m_pFunction = 0;
-    m_pReplyVar = 0;
+    m_nSkipParameter = src.m_nSkipParameter;
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CBEComponentFunction::~CBEComponentFunction()
 {
-    if (m_pReplyVar)
-        delete m_pReplyVar;
 }
 
-/**    \brief creates the call function
- *    \param pFEOperation the front-end operation used as reference
- *    \param pContext the context of the write operation
- *    \return true if successful
+/** \brief creates the call function
+ *  \param pFEOperation the front-end operation used as reference
+ *  \return true if successful
  *
- * This implementation only sets the name of the function. And it stores a reference to
- * the client side function in case this implementation is tested.
+ * This implementation only sets the name of the function. And it stores a
+ * reference to the client side function in case this implementation is
+ * tested.
  */
-bool CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+void
+CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
-    pContext->SetFunctionType(FUNCTION_TEMPLATE);
     // set target file name
-    SetTargetFileName(pFEOperation, pContext);
+    SetTargetFileName(pFEOperation);
     // get own name
-    m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-
-    if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-        return false;
+    SetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
+    
+    CBEOperationFunction::CreateBackEnd(pFEOperation);
 
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
 
     // check the attribute
-    if (pFEOperation->FindAttribute(ATTR_IN))
-        pContext->SetFunctionType(FUNCTION_SEND);
+    FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
+    if (pFEOperation->m_Attributes.Find(ATTR_IN))
+	nFunctionType = FUNCTION_SEND;
     else
-        pContext->SetFunctionType(FUNCTION_CALL);
+	nFunctionType = FUNCTION_CALL;
 
-    string sFunctionName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-    m_pFunction = pRoot->FindFunction(sFunctionName);
+    string exc = string(__func__);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sFunctionName = pNF->GetFunctionName(pFEOperation, nFunctionType);
+    m_pFunction = pRoot->FindFunction(sFunctionName, nFunctionType);
     if (!m_pFunction)
     {
-        VERBOSE("%s failed because component's function (%s) could not be found\n",
-                __PRETTY_FUNCTION__, sFunctionName.c_str());
-        return false;
+	exc += " failed because component's function (" + sFunctionName +
+	    ") could not be found.";
+        throw new CBECreateException(exc);
     }
 
-    /* if [allow_reply_only] then set reply variable */
-    if (pFEOperation->FindAttribute(ATTR_ALLOW_REPLY_ONLY))
-    {
-        // return type -> set to IPC reply code
-        CBEReplyCodeType *pReplyType = pContext->GetClassFactory()->GetNewReplyCodeType();
-        if (!pReplyType->CreateBackEnd(pContext))
-        {
-            delete pReplyType;
-            VERBOSE("%s failed because return var could not be set\n",
-                __PRETTY_FUNCTION__);
-            return false;
-        }
-        string sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
-        if (m_pReplyVar)
-            delete m_pReplyVar;
-        m_pReplyVar = new CBETypedDeclarator();
-        if (!m_pReplyVar->CreateBackEnd(pReplyType, sReply, pContext))
-        {
-            delete pReplyType;
-            VERBOSE("%s failed because return var could not be set\n",
-                __PRETTY_FUNCTION__);
-            return false;
-        }
-
-        /* clone declarator (for call) and set stars for first */
-        vector<CBEDeclarator*>::iterator iterR = m_pReplyVar->GetFirstDeclarator();
-        CBEDeclarator *pDecl = *iterR;
-        pDecl->IncStars(1);
-        SetCallVariable(m_pReplyVar, pDecl->GetName(), 0, pContext);
-    }
-
-    // the return value "belongs" to the client function (needed to determine global test variable's name)
-    m_pReturnVar->SetParent(m_pFunction);
-
-    return true;
-}
-
-/**    \brief writes the variable declarations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * The variable declarations of the component function skeleton is usually empty.
- * If we write the test-skeleton and have a variable sized parameter, we need a temporary
- * variable.
- */
-void CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
-{
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-    {
-        pFile->PrintIndent("#warning \"%s is not implemented!\"\n", GetName().c_str());
-           return;
-    }
-
-    m_pReturnVar->WriteZeroInitDeclaration(pFile, pContext);
+    // the return value "belongs" to the client function (needed to determine
+    // global test variable's name)
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    pReturn->SetParent(m_pFunction);
 
     // check for temp
-    if (m_pFunction->HasVariableSizedParameters() || m_pFunction->HasArrayParameters())
+    if (m_pFunction->HasVariableSizedParameters() ||
+        m_pFunction->HasArrayParameters())
     {
-        vector<CBETypedDeclarator*>::iterator iterP = m_pFunction->GetFirstParameter();
-        CBETypedDeclarator *pParameter;
         int nVariableSizedArrayDimensions = 0;
-        while ((pParameter = m_pFunction->GetNextParameter(iterP)) != 0)
+        vector<CBETypedDeclarator*>::iterator iterP;
+	for (iterP = m_pFunction->m_Parameters.begin();
+	     iterP != m_pFunction->m_Parameters.end();
+	     iterP++)
         {
             // now check each decl for array dimensions
-            vector<CBEDeclarator*>::iterator iterD = pParameter->GetFirstDeclarator();
-            CBEDeclarator *pDecl;
-            while ((pDecl = pParameter->GetNextDeclarator(iterD)) != 0)
+            vector<CBEDeclarator*>::iterator iterD;
+	    for (iterD = (*iterP)->m_Declarators.begin();
+		 iterD != (*iterP)->m_Declarators.end();
+		 iterD++)
             {
-                int nArrayDims = pDecl->GetStars();
+                int nArrayDims = (*iterD)->GetStars();
                 // get array bounds
-                vector<CBEExpression*>::iterator iterB = pDecl->GetFirstArrayBound();
-                CBEExpression *pBound;
-                while ((pBound = pDecl->GetNextArrayBound(iterB)) != 0)
+                vector<CBEExpression*>::iterator iterB;
+		for (iterB = (*iterD)->m_Bounds.begin();
+		     iterB != (*iterD)->m_Bounds.end();
+		     iterB++)
                 {
-                    if (!pBound->IsOfType(EXPR_INT))
+                    if (!(*iterB)->IsOfType(EXPR_INT))
                         nArrayDims++;
                 }
                 // calc max
-                nVariableSizedArrayDimensions = (nArrayDims > nVariableSizedArrayDimensions) ? nArrayDims : nVariableSizedArrayDimensions;
+                nVariableSizedArrayDimensions = 
+		    (nArrayDims > nVariableSizedArrayDimensions) ? 
+		    nArrayDims : nVariableSizedArrayDimensions;
             }
             // if type of parameter is array, check that too
-            if (pParameter->GetType()->GetSize() < 0)
+            if ((*iterP)->GetType()->GetSize() < 0)
                 nVariableSizedArrayDimensions++;
             // if array dims
             // if parameter has size attributes, we assume
             // that it is an array of some sort
-            if ((pParameter->FindAttribute(ATTR_SIZE_IS) ||
-                pParameter->FindAttribute(ATTR_LENGTH_IS)) &&
+            if (((*iterP)->m_Attributes.Find(ATTR_SIZE_IS) ||
+                (*iterP)->m_Attributes.Find(ATTR_LENGTH_IS)) &&
                 (nVariableSizedArrayDimensions == 0))
                 nVariableSizedArrayDimensions = 1;
         }
 
-        // for variable sized arrays we need a temporary variable
-        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        for (int i=0; i<nVariableSizedArrayDimensions; i++)
-        {
-            pFile->PrintIndent("unsigned %s%d __attribute__ ((unused));\n", sTmpVar.c_str(), i);
-        }
+	string sCurr;
+	try
+	{
+	    // for variable sized arrays we need a temporary variable
+	    string sTmpVar = pNF->GetTempOffsetVariable();
+	    for (int i=0; i < nVariableSizedArrayDimensions; i++)
+	    {
+		std::ostringstream os;
+		os << i;
+		sCurr = sTmpVar + os.str();
+		AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
+                
+		CBETypedDeclarator *pVariable = m_LocalVariables.Find(sCurr);
+		pVariable->AddLanguageProperty(string("attribute"), 
+		    string("__attribute__ ((unused))"));
+	    }
 
-        // need a "pure" temp var as well
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sTmpVar.c_str());
+	    // need a "pure" temp var as well
+	    sCurr = sTmpVar;
+	    AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
+	    
+	    CBETypedDeclarator *pVariable = m_LocalVariables.Find(sTmpVar);
+	    pVariable->AddLanguageProperty(string("attribute"), 
+		string("__attribute__ ((unused))"));
 
-        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sOffsetVar.c_str());
+	    sCurr = pNF->GetOffsetVariable();
+	    AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
+	    pVariable = m_LocalVariables.Find(sCurr);
+	    pVariable->AddLanguageProperty(string("attribute"), 
+		string("__attribute__ ((unused))"));
+	}
+	catch (CBECreateException *e)
+	{
+	    e->Print();
+	    delete e;
+	    
+	    exc += " failed, because local variable (" + sCurr +
+		") could not be added.";
+	    throw new CBECreateException(exc);
+	}
     }
 }
 
-/**    \brief writes the variable initializations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief adds parameters before all other parameters
  *
- * This implementation should initialize the message buffer and the pointers of the out variables.
+ * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
+ * The component function has a _non_const CORBA_Object.
  */
-void CBEComponentFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void
+CBEComponentFunction::AddBeforeParameters(void)
 {
-
+    CBEOperationFunction::AddBeforeParameters();
+    // add no const C attribute
+    CBETypedDeclarator *pObj = GetObject();
+    if (pObj)
+	pObj->AddLanguageProperty(string("noconst"), string());
 }
 
-/**    \brief writes the marshalling of the message
- *    \param pFile the file to write to
- *  \param nStartOffset the position in the message buffer to start marshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *    \param pContext the context of the write operation
- *
- * This implementation does not use the base class' marshal mechanisms, because it does
- * something totally different. It write test-suite's compare operations instead of parameter
- * marshalling.
+/** \brief add parameters after other parameters
+ *  \return true if successful
  */
-void CBEComponentFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
+void
+CBEComponentFunction::AddAfterParameters()
 {
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-           return;
-
-    CBETestFunction *pTestFunc = pContext->GetClassFactory()->GetNewTestFunction();
-    assert(m_pFunction);
-    vector<CBETypedDeclarator*>::iterator iter = m_pFunction->GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = m_pFunction->GetNextParameter(iter)) != 0)
+    if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
     {
-        if (!pParameter->FindAttribute(ATTR_IN))
-            continue;
-        if (pParameter->FindAttribute(ATTR_IGNORE))
-            continue;
-        pTestFunc->CompareVariable(pFile, pParameter, pContext);
+	// return type -> set to IPC reply code
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
+	pReplyType->CreateBackEnd();
+
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sReply = pNF->GetReplyCodeVariable();
+	CBETypedDeclarator *pReplyVar = new CBETypedDeclarator();
+	pReplyVar->CreateBackEnd(pReplyType, sReply);
+	// delete type: cloned by typed decl create function
+	delete pReplyType;
+
+	// make dice-reply a reference, so it can be set in the component
+	// function
+	CBEDeclarator *pDecl = pReplyVar->m_Declarators.First();
+	pDecl->SetStars(1);
+	// add before SetCallVariable, so this method will find the parameter
+	// to set the call variable for
+        m_Parameters.Add(pReplyVar);
+	pReplyVar->AddLanguageProperty(string("noconst"), string());
+
+	// we are not allowed to set the call variable here, because that
+	// would start copying the parameters to the call parameter list,
+	// which would omit anything defined in "AddAfterParameters"...
+	// Do it later.
     }
+    
+    CBEOperationFunction::AddAfterParameters();
 }
 
-/**    \brief writes the invocation of the message transfer
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the variable declarations of this function
+ *  \param pFile the file to write to
+ *
+ * The variable declarations of the component function skeleton is usually
+ * empty.  If we write the test-skeleton and have a variable sized parameter,
+ * we need a temporary variable.
+ */
+void
+CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile)
+{
+    *pFile << "\t#warning \"" << GetName() << " is not implemented!\"\n";
+    return;
+}
+
+/** \brief writes the variable initializations of this function
+ *  \param pFile the file to write to
+ *
+ * This implementation should initialize the message buffer and the pointers
+ * of the out variables.
+ */
+void
+CBEComponentFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+{}
+
+/** \brief writes the marshalling of the message
+ *  \param pFile the file to write to
+ *
+ * This implementation does not use the base class' marshal mechanisms,
+ * because it does something totally different. It write test-suite's compare
+ * operations instead of parameter marshalling.
+ */
+void
+CBEComponentFunction::WriteMarshalling(CBEFile * /*pFile*/)
+{}
+
+/** \brief writes the invocation of the message transfer
+ *  \param pFile the file to write to
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBEComponentFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
-{
+void 
+CBEComponentFunction::WriteInvocation(CBEFile * /*pFile*/)
+{}
 
-}
-
-/**    \brief writes the unmarshalling of the message
- *    \param pFile the file to write to
- *  \param nStartOffset the position int the message buffer to start unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *    \param pContext the context of the write operation
+/** \brief writes the unmarshalling of the message
+ *  \param pFile the file to write to
  *
- * This implementation should unpack the out parameters from the returned message structure
+ * This implementation should unpack the out parameters from the returned
+ * message structure
  */
-void CBEComponentFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
-{
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        return;
+void
+CBEComponentFunction::WriteUnmarshalling(CBEFile * /*pFile*/)
+{}
 
-    CBETestFunction *pTestFunc = pContext->GetClassFactory()->GetNewTestFunction();
-    assert(m_pFunction);
-    vector<CBETypedDeclarator*>::iterator iter = m_pFunction->GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = m_pFunction->GetNextParameter(iter)) != 0)
-    {
-        if (!(pParameter->FindAttribute(ATTR_OUT)))
-            continue;
-        pTestFunc->InitLocalVariable(pFile, pParameter, pContext);
-    }
-    // init return
-    pTestFunc->InitLocalVariable(pFile, m_pReturnVar, pContext);
-}
-
-/**    \brief clean up the mess
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * This implementation cleans up allocated memory inside this function
- */
-void CBEComponentFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
-{
-
-}
-
-/**    \brief writes the return statement
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the return statement
+ *  \param pFile the file to write to
  *
  * This implementation should write the return statement if one is necessary.
  * (return type != void)
  */
-void CBEComponentFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
+void CBEComponentFunction::WriteReturn(CBEFile * /*pFile*/)
+{}
+
+/** \brief writes the declaration of a function to the target file
+ *  \param pFile the target file to write to
+ *
+ * For C write normal function declaration. For C++ write abstract function.
+ */
+void 
+CBEComponentFunction::WriteFunctionDeclaration(CBEFile * pFile)
 {
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        return;
-    /* set reply variable to DICE_REPLY */
-    if (m_pReplyVar)
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
-        vector<CBEDeclarator*>::iterator iterR = m_pReplyVar->GetFirstDeclarator();
-        CBEDeclarator *pDecl = *iterR;
-        *pFile << "\t*" << pDecl->GetName() << " = DICE_REPLY;\n";
+	CBEOperationFunction::WriteFunctionDeclaration(pFile);
+	return;
     }
-    CBEOperationFunction::WriteReturn(pFile, pContext);
+
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    {
+	// CPP TODOs:
+	// TODO: component functions at server side could be pure virtual to be 
+	// overloadable
+	// TODO: interface functions and component functions are public,
+	// everything else should be protected
+
+	m_nParameterIndent = pFile->GetIndent();
+	*pFile << "\tvirtual ";
+	// <return type>
+	WriteReturnType(pFile);
+	// in the header file we add function attributes
+	WriteFunctionAttributes(pFile);
+	*pFile << "\n";
+	// <name> (
+	*pFile << "\t" << GetName() << " (";
+	m_nParameterIndent += GetName().length() + 2;
+	
+	// <parameter list>
+	if (!WriteParameterList(pFile))
+	    *pFile << "void";
+	
+	// ); newline
+	*pFile << ") = 0;\n";
+    }
 }
 
-/**    \brief writes the function definition
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
  *
- * Because we need a declaration of the global test variables before writing the
- * function, we overloaded this function.
+ * If C backend then write definition as empty body with compile time warning.
+ * If C++ do write abstract function declaration if header file otherwise
+ * write nothing.
  */
-void CBEComponentFunction::WriteFunctionDefinition(CBEFile * pFile, CBEContext * pContext)
+void 
+CBEComponentFunction::WriteFunctionDefinition(CBEFile * pFile)
 {
-    if (!pFile->IsOpen())
-        return;
-
-    WriteGlobalVariableDeclaration(pFile, pContext);
-    pFile->Print("\n");
-
-    return CBEOperationFunction::WriteFunctionDefinition(pFile, pContext);
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
+    {
+	CBEOperationFunction::WriteFunctionDefinition(pFile);
+	return;
+    }
 }
-
-/**    \brief writes the global test variables
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+    
+/** \brief test if function should be written inline
+ *  \param pFile the file to write to
  *
- * The global test variables are named by the function's name and the parameter name.
+ * Never write inline function for component function.
  */
-void CBEComponentFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+bool
+CBEComponentFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
 {
-    // only write global variables for testsuite
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        return;
-
-    assert(m_pFunction);
-    vector<CBETypedDeclarator*>::iterator iter = m_pFunction->GetFirstParameter();
-    CBETypedDeclarator *pParameter;
-    while ((pParameter = m_pFunction->GetNextParameter(iter)) != 0)
-    {
-        pFile->Print("extern ");
-        pParameter->WriteGlobalTestVariable(pFile, pContext);
-    }
-    // declare return variable
-    if (!GetReturnType()->IsVoid())
-    {
-        pFile->Print("extern ");
-        m_pReturnVar->WriteGlobalTestVariable(pFile, pContext);
-    }
+    return false;
 }
 
 /** \brief add this function to the implementation file
  *  \param pImpl the implementation file
- *  \param pContext the context of the create process
  *  \return true if successful
  *
- * A component function is only added if the testsuite or create-skeleton option is set.
+ * A component function is only added if the create-skeleton
+ * option is set.
  */
-bool CBEComponentFunction::AddToFile(CBEImplementationFile * pImpl, CBEContext * pContext)
+bool
+CBEComponentFunction::AddToFile(CBEImplementationFile * pImpl)
 {
-    if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE) &&
-        !pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
+    if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
         return true;  // fake success, without adding function
-    return CBEOperationFunction::AddToFile(pImpl, pContext);
+    return CBEOperationFunction::AddToFile(pImpl);
 }
 
 /** \brief set the target file name for this function
  *  \param pFEObject the front-end reference object
- *  \param pContext the context of this operation
  *
  * The implementation file for a component-function (server skeleton) is
  * the FILETYPE_TEMPLATE file.
  */
-void CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext)
+void
+CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject)
 {
-    CBEOperationFunction::SetTargetFileName(pFEObject, pContext);
-    pContext->SetFileType(FILETYPE_TEMPLATE);
-    if (dynamic_cast<CFEFile*>(pFEObject))
-        m_sTargetImplementation = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
-    else
-        m_sTargetImplementation = pContext->GetNameFactory()->GetFileName(pFEObject->GetSpecificParent<CFEFile>(0), pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEOperationFunction::SetTargetFileName(pFEObject);
+    if (!dynamic_cast<CFEFile*>(pFEObject))
+	pFEObject = pFEObject->GetSpecificParent<CFEFile>(0);
+    m_sTargetImplementation = pNF->GetFileName(pFEObject, FILETYPE_TEMPLATE);
 }
 
 /** \brief test the target file name with the locally stored file name
  *  \param pFile the file, which's file name is used for the comparison
  *  \return true if is the target file
  */
-bool CBEComponentFunction::IsTargetFile(CBEImplementationFile * pFile)
+bool 
+CBEComponentFunction::IsTargetFile(CBEImplementationFile * pFile)
 {
     long length = m_sTargetImplementation.length();
+    if (!pFile->IsOfFileType(FILETYPE_TEMPLATE))
+	return false;
+    // check internal (local) name
     if ((m_sTargetImplementation.substr(length - 11) != "-template.c") &&
 	(m_sTargetImplementation.substr(length - 12) != "-template.cc"))
         return false;
-    string sBaseLocal = m_sTargetImplementation.substr(0, length-11);
+    string sBaseLocal = m_sTargetImplementation.substr(0, length - 11);
+    // check filename
     string sBaseTarget = pFile->GetFileName();
     length = sBaseTarget.length();
     if (length <= 11)
         return false;
-    if ((sBaseTarget.substr(length-11) != "-template.c") &&
-	(sBaseTarget.substr(length-12) != "-template.cc"))
-        return false;
-    sBaseTarget = sBaseTarget.substr(0, length-11);
-    if (sBaseTarget == sBaseLocal)
-        return true;
+    if ((sBaseTarget.substr(length - 11) != "-template.c") &&
+	(sBaseTarget.substr(length - 12) != "-template.cc"))
+	return false;
+    sBaseTarget = sBaseTarget.substr(0, length - 11);
+    // compare common parts
+    if (sBaseLocal == sBaseTarget)
+	return true;
     return false;
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if successful
  *
- * A component function is written to an implementation file only if the options
- * PROGRAM_GENERATE_TEMPLATE or  PROGRAM_GENERATE_TESTSUITE are set. It is always
- * written to an header file. These two conditions are only true for the component's
- * side. (The function would not have been created if the attributes (IN,OUT) were
- * not empty).
+ * A component function is written to an implementation file only if the
+ * options PROGRAM_GENERATE_TEMPLATE are set.
+ * It is always written to an header file. These two conditions are only true
+ * for the component's side. (The function would not have been created if the
+ * attributes (IN,OUT) were not empty).
  */
-bool CBEComponentFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
+bool
+CBEComponentFunction::DoWriteFunction(CBEHeaderFile * pFile)
 {
     if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
         return false;
@@ -446,72 +471,56 @@ bool CBEComponentFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * p
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if successful
  *
- * A component function is written to an implementation file only if the options
- * PROGRAM_GENERATE_TEMPLATE or  PROGRAM_GENERATE_TESTSUITE are set. It is always
- * written to an header file. These two conditions are only true for the component's
- * side. (The function would not have been created if the attributes (IN,OUT) were
- * not empty).
+ * A component function is written to an implementation file only if the
+ * options PROGRAM_GENERATE_TEMPLATE are set.
+ * It is always written to an header file. These two conditions are only true
+ * for the component's side. (The function would not have been created if the
+ * attributes (IN,OUT) were not empty).
  */
-bool CBEComponentFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+bool
+CBEComponentFunction::DoWriteFunction(CBEImplementationFile * pFile)
 {
     if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
         return false;
     if (!IsTargetFile(pFile))
         return false;
-    return (pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE) ||
-            pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE));
+    return CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE);
 }
 
-/** \brief writes the reply code var (if set)
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the parameter
+/** \brief test if a specific parameter should be tested
+ *  \param pParameter the parameter to test
+ *  \return true if this parameter should be tested
  */
-void CBEComponentFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
+bool
+CBEComponentFunction::DoTestParameter(CBETypedDeclarator *pParameter)
 {
-    if (m_pReplyVar)
-    {
-        if (bComma)
-            *pFile << ",\n\t";
-        WriteParameter(pFile, m_pReplyVar, pContext, false /* no const with reply var */);
-        bComma = true;
-    }
-    CBEOperationFunction::WriteAfterParameters(pFile, pContext, bComma);
+    if (pParameter == m_pFunction->GetObject())
+	return false;
+    if (pParameter == m_pFunction->GetEnvironment())
+	return false;
+    return true;
 }
 
-/** \brief writes the reply code call parameter
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma has to be written before the declarators
- */
-void CBEComponentFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
-{
-    if (m_pReplyVar)
-    {
-        if (bComma)
-            *pFile << ",\n\t";
-        WriteCallParameter(pFile, m_pReplyVar, pContext);
-        bComma = true;
-    }
-    CBEOperationFunction::WriteCallAfterParameters(pFile, pContext, bComma);
-}
-
-/**    \brief writes additional parameters before the parameter list
- *    \param pFile the file to print to
- *    \param pContext the context of the write operation
- *    \return true if this function wrote something
+/** \brief check if parameter should be written
+ *  \param pParam the parameter to test
+ *  \return true if writing param, false if not
  *
- * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
+ * Do not write CORBA_Object and CORBA_Env depending on m_nSkipParameter map.
  */
-bool CBEComponentFunction::WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext)
+bool
+CBEComponentFunction::DoWriteParameter(CBETypedDeclarator *pParam)
 {
-    if (m_pCorbaObject)
-    {
-        WriteParameter(pFile, m_pCorbaObject, pContext, false /* no const with object */);
-        return true;
-    }
-    return false;
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"%s(%s) called, m_nSkipParameter = %d\n", __func__,
+	pParam->m_Declarators.First()->GetName().c_str(), m_nSkipParameter);
+    if ((m_nSkipParameter & 1) &&
+	pParam == GetObject())
+	return false;
+    if ((m_nSkipParameter & 2) &&
+	pParam == GetEnvironment())
+	return false;
+    return CBEOperationFunction::DoWriteParameter(pParam);
 }
+

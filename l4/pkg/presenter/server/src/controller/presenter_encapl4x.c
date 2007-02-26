@@ -96,7 +96,7 @@ static int calc_amount_of_pages(void) {
                 return -1;
         }
         else {
-                LOGd(_DEBUG,"attached ds at dezimal address %d",content_addr);
+                LOGd(_DEBUG,"attached ds at dezimal address %ld",content_addr);
         }
 
 	content = (char *) content_addr;

@@ -15,7 +15,7 @@ IMPLEMENTATION:
 
 /**
  * 'IRQ' module.
- * 
+ *
  * This module handles the 'R' command that
  * provides IRQ attachment and listing functions.
  */
@@ -61,16 +61,16 @@ Jdb_pic::action( int cmd, void *&/*args*/, char const *&/*fmt*/, int & )
 }
 
 PUBLIC
-int const Jdb_pic::num_cmds() const
-{ 
+int Jdb_pic::num_cmds() const
+{
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const Jdb_pic::cmds() const
+Jdb_module::Cmd const *Jdb_pic::cmds() const
 {
   static Cmd cs[] =
-    {{ 0, "P", "pic", "", "P\tshow pic state", 0 }};
+    {{ 0, "i", "pic", "", "i\tshow pic state", 0 }};
 
   return cs;
 }

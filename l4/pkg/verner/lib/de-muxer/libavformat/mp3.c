@@ -1,4 +1,4 @@
-/* 
+/*
  * MP3 encoder and decoder
  * Copyright (c) 2003 Fabrice Bellard.
  *
@@ -14,10 +14,11 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-
 #include "avformat.h"
+
+#include <strings.h>
 
 #define ID3_HEADER_SIZE 10
 #define ID3_TAG_SIZE 128
@@ -167,7 +168,7 @@ static int id3_match(const uint8_t *buf)
             (buf[9] & 0x80) == 0);
 }
 
-static void id3_get_string(char *str, int str_size, 
+static void id3_get_string(char *str, int str_size,
                            const uint8_t *buf, int buf_size)
 {
     int i, c;
@@ -190,7 +191,7 @@ static int id3_parse_tag(AVFormatContext *s, const uint8_t *buf)
 {
     char str[5];
     int genre;
-    
+
     if (!(buf[0] == 'T' &&
           buf[1] == 'A' &&
           buf[2] == 'G'))
@@ -252,13 +253,14 @@ static int mp3_read_header(AVFormatContext *s,
     if (!st)
         return AVERROR_NOMEM;
 
-    st->codec.codec_type = CODEC_TYPE_AUDIO;
-    st->codec.codec_id = CODEC_ID_MP3;
+    st->codec->codec_type = CODEC_TYPE_AUDIO;
+    st->codec->codec_id = CODEC_ID_MP3;
+    st->need_parsing = 1;
 
     /* try to get the TAG */
     if (!url_is_streamed(&s->pb)) {
         /* XXX: change that */
-        filesize = url_filesize(url_fileno(&s->pb));
+        filesize = url_fsize(&s->pb);
         if (filesize > 128) {
             url_fseek(&s->pb, filesize - 128, SEEK_SET);
             ret = get_buffer(&s->pb, buf, ID3_TAG_SIZE);
@@ -294,17 +296,14 @@ static int mp3_read_packet(AVFormatContext *s, AVPacket *pkt)
 {
     int ret, size;
     //    AVStream *st = s->streams[0];
-    
+
     size= MP3_PACKET_SIZE;
 
-    if (av_new_packet(pkt, size) < 0)
-        return -EIO;
+    ret= av_get_packet(&s->pb, pkt, size);
 
     pkt->stream_index = 0;
-    ret = get_buffer(&s->pb, pkt->data, size);
     if (ret <= 0) {
-        av_free_packet(pkt);
-        return -EIO;
+        return AVERROR_IO;
     }
     /* note: we need to modify the packet size here to handle the last
        packet */
@@ -317,16 +316,16 @@ static int mp3_read_close(AVFormatContext *s)
     return 0;
 }
 
+#ifdef CONFIG_MUXERS
 /* simple formats */
 static int mp3_write_header(struct AVFormatContext *s)
 {
     return 0;
 }
 
-static int mp3_write_packet(struct AVFormatContext *s, int stream_index,
-			    const uint8_t *buf, int size, int64_t pts)
+static int mp3_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
-    put_buffer(&s->pb, buf, size);
+    put_buffer(&s->pb, pkt->data, pkt->size);
     put_flush_packet(&s->pb);
     return 0;
 }
@@ -343,6 +342,7 @@ static int mp3_write_trailer(struct AVFormatContext *s)
     }
     return 0;
 }
+#endif //CONFIG_MUXERS
 
 AVInputFormat mp3_iformat = {
     "mp3",
@@ -352,17 +352,18 @@ AVInputFormat mp3_iformat = {
     mp3_read_header,
     mp3_read_packet,
     mp3_read_close,
-    .extensions = "mp2,mp3", /* XXX: use probe */
+    .extensions = "mp2,mp3,m2a", /* XXX: use probe */
 };
 
+#ifdef CONFIG_MUXERS
 AVOutputFormat mp2_oformat = {
     "mp2",
     "MPEG audio layer 2",
     "audio/x-mpeg",
 #ifdef CONFIG_MP3LAME
-    "mp2",
+    "mp2,m2a",
 #else
-    "mp2,mp3",
+    "mp2,mp3,m2a",
 #endif
     0,
     CODEC_ID_MP2,
@@ -386,13 +387,16 @@ AVOutputFormat mp3_oformat = {
     mp3_write_trailer,
 };
 #endif
+#endif //CONFIG_MUXERS
 
 int mp3_init(void)
 {
     av_register_input_format(&mp3_iformat);
+#ifdef CONFIG_MUXERS
     av_register_output_format(&mp2_oformat);
 #ifdef CONFIG_MP3LAME
     av_register_output_format(&mp3_oformat);
-#endif    
+#endif
+#endif //CONFIG_MUXERS
     return 0;
 }

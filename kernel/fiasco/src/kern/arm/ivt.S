@@ -35,18 +35,18 @@
  * Enter kernel mode (i.e. switch from any exception mode to the 
  * kernel mode and transfer the exception state).
  */
-.macro  switch_to_kernel
+.macro  __switch_to_kernel reg
 	str	lr, s_lr
-	mrs	lr, spsr
-	str	lr, s_spsr
+	mrs	\reg, spsr
+	str	\reg, s_spsr
 	msr	cpsr_c, #0xd3
-	nop
-	nop
-	nop
 	str	lr, [sp, #-8]!
 	ldr	lr, s_spsr
 	msr	spsr, lr
 	ldr	lr, s_lr
+.endm
+.macro  switch_to_kernel
+	__switch_to_kernel r14
 .endm
 
 /*************************************************************************
@@ -288,7 +288,7 @@ prefetch_abort: @ A real prefetch abort occured --- handled as a page fault
 kernel_prefetch_abort:			@ Kernel generated IAbort
 					@ Should not get IAborts in kernel
 					@ Kernel Panic
-	switch_to_kernel
+@	switch_to_kernel
 	adr	r0, kernel_prefetch_abort_label
 	b	kern_kdebug_entry
 
@@ -423,11 +423,13 @@ irq_entry:
 #if 0 /*def EXCEPTION_VECTOR_RELOCATED*/
         bl      irq_handler
 #else
+@	ldr	r0, [sp,#28]
         mov     lr, pc
         ldr     pc, 1f
 #endif
-	ldmia	sp!, {r0 - r3, r12}		@ Restore user state
+	ldmia	sp, {r0 - r3, r12}		@ Restore user state
         msr	cpsr_c, #0xd3 // disable IRQs
+	add	sp, sp, #20
 	return_from_exception
 #if 1	
 1:	.word	irq_handler
@@ -505,7 +507,8 @@ sys_##name##_entry:			  \
 #define SYSCALL(name)			\
 	.word sys_##name##_wrapper
 #endif
-	
+
+.globl sys_call_table
 sys_call_table:
 	.word sys_kdb_ke
 	.word sys_kdb_ke
@@ -519,6 +522,30 @@ SYSCALL(thread_ex_regs)
 SYSCALL(task_new)
 	.word sys_kdb_ke
 	
+	.align 4	
+	.global leave_by_trigger_exception
+
+leave_by_trigger_exception:
+	sub 	sp, sp, #20   // restore old return frame
+	stmdb 	sp!, {r0 - r12}
+
+	/* restore original IP */
+	CONTEXT_OF r1, sp
+	ldr 	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
+	and	r2, r0, #0x03  /* cut out IRQ flags */
+	and 	r0, r0, #~0x03 /* mask out lowest two bits */
+	str	r0, [sp, #(13*4 + 16)]
+	mov     r0, #~0
+	str	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
+
+	/* enforce user mode */
+	ldr	r0, [sp, #(13*4 + 12)]
+	and 	r0, r0, #~0xcf /* mask out mode bits and IRQ flags */
+	orr	r0, r0, r2, LSL #6 /* restore IRQ flags to old values */
+	str	r0, [sp, #(13*4 + 12)]
+
+	enter_slowtrap_w_stack 0x00500000
+
 	
 kernel_prefetch_abort_label: .string "Kernel prefetch abort"
 missed_excpt_ret_label:      .string "ERROR in exception return"
@@ -570,7 +597,7 @@ kern_kdebug_entry:
 	str	lr,_kdebug_stack_top-16
         adr     sp,_kdebug_stack_top-(15*4 + 16)
         stmia   sp,{r0-r14}^
-        nop
+@	adr     r1, fiq_label
         mov     r0, sp
 	adr	lr, 1f
 	ldr	pc, 3b

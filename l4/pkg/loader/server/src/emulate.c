@@ -167,7 +167,7 @@ map_mmio_page(emu_desc_t *desc)
 	Panic("Can't initialize L4 I/O server");
 
       if (!(vm_addr = l4io_request_mem_region(desc->phys_addr, 
-					      desc->phys_size, &offs)))
+					      desc->phys_size, 0, &offs)))
 	Panic("Can't request mem region %08x size %08x from l4io.",
 	    desc->phys_addr, desc->phys_size);
 

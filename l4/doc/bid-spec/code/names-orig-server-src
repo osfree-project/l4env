@@ -1,41 +1,26 @@
 # scan the L4 global configuration file
-ifeq (${L4_DIR},)
-  L4DIR = ../../../..
-else
-  L4DIR = ${L4_DIR}
+PKGDIR	?= ../..
+L4DIR	?= $(PKGDIR)/../..
+
+DROPSCONF	= y
+
+TARGET		  = $(PKGNAME)
+DEFAULT_RELOC_x86 = 0x002d0000
+DEFAULT_RELOC_arm = 0x00100000
+MODE		  = sigma0
+SERVERIDL	  = names.idl
+
+PRIVATE_INCDIR	  = $(PKGDIR)/server/include
+
+SRC_C		 += names.c predefined.c
+
+ifeq ($(ARCH),x86)
+LIBS		 += -llogserver
 endif
 
-PRIVATE_INCDIR  = ../include ../../../log/include
-
-TARGET_STAT     = names
-DEFAULT_RELOC   = 0x00F00000
-
-include $(L4DIR)/Makeconf
-
-L4_LIB          = -llogserver -ll4util -lmc -loskit_support
-
-SRC_C           = names.c
-
-
-.PHONY:	all install clean cleanall
-ifeq ($(MAKECMDGOALS),bin)
-.PHONY: $(TARGET) $(TARGETS)
+ifeq ($(CONFIG_EVENT),y)
+SRC_C		 += events.c
+LIBS		 += -levents -ll4util -lnames
 endif
 
-OBJS +=	$(L4DIR)/lib/crt0_getopt.o
-
-all bin: $(TARGET_STAT)
-
-$(TARGET_STAT): $(OBJS) $(LIBDEPS) $(LDDEPS)
-        $(LINK_MESSAGE)
-        $(VERBOSE)$(LD) -N $(LDFLAGS) -o $@ $(OBJS) $(L4ALL_LIBDIR)\
-                $(L4_LIB)
-        $(VERBOSE)$(INSTALL) -s -m 755 $@ $(L4DIR)/bin
-
-include $(L4DIR)/Makeconf.stdtargets
-
-ifneq ($(MAKECMDGOALS),clean)
-ifneq ($(MAKECMDGOALS),cleanall)
--include $(DEPS)
-endif
-endif
+include $(L4DIR)/mk/prog.mk

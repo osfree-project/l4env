@@ -18,7 +18,7 @@
 
 extern int    scr_width, scr_height;    /* screen dimensions      */
 extern int    scr_depth;                /* color depth            */
-extern int    scr_linelength;           /* bytes per scanline     */
+extern int    scr_llen;                 /* bytes per scanline     */
 extern void  *scr_adr;                  /* physical screen adress */
 
 

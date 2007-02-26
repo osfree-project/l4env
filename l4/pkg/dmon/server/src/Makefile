@@ -4,6 +4,9 @@ L4DIR  ?= $(PKGDIR)/../..
 TARGET = $(PKGNAME)
 DEFAULT_RELOC = 0x00400000
 
+# use dietlibc_r
+WANT_THREADSAFE = 1
+
 SRC_C = dmon.c dumper.c logger.c
 DPE_dmon.c = dmon.dpi
 
@@ -19,5 +22,8 @@ ifneq ($(WITH_TMPFS),)
 endif
 
 PRIVATE_INCDIR = .
+
+SERVERIDL	= log.idl
+IDL_PKGDIR	= $(PKGDIR_OBJ)/../log
 
 include $(L4DIR)/mk/prog.mk

@@ -22,8 +22,8 @@ public:
 
   // all the following methods are arch dependent
   static void init() FIASCO_INIT;
-  static unsigned const state_size();
-  static unsigned const state_align();
+  static unsigned state_size();
+  static unsigned state_align();
   static void init_state( Fpu_state *);
   static void restore_state( Fpu_state * );
   static void save_state( Fpu_state * );
@@ -63,32 +63,32 @@ bool Fpu::is_owner(Context *owner)
 IMPLEMENTATION [!fpu]:
 
 IMPLEMENT inline
-void Fpu::init_state (Fpu_state *)
+void Fpu::init_state(Fpu_state *)
 {}
 
 IMPLEMENT inline
-unsigned const Fpu::state_size()
+unsigned Fpu::state_size()
 {
   return 0;
 }
 
 IMPLEMENT inline
-unsigned const Fpu::state_align()
+unsigned Fpu::state_align()
 {
   return 0;
 }
 
 IMPLEMENT
-void Fpu::init() 
+void Fpu::init()
 {}
-   
+
 IMPLEMENT inline
-void Fpu::save_state( Fpu_state * ) 
-{}  
+void Fpu::save_state(Fpu_state *)
+{}
 
 
 IMPLEMENT inline
-void Fpu::restore_state( Fpu_state * ) 
+void Fpu::restore_state(Fpu_state *)
 {}
 
 IMPLEMENT inline

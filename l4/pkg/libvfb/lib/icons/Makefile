@@ -4,12 +4,14 @@ L4DIR     ?= $(PKGDIR)/../..
 SRC_C      = icons.c
 
 MODE       = l4env_minimal
-SYSTEMS    = x86-l4v2 x86-l4x0
+SYSTEMS    = x86-l4v2
 TARGET     = libvfb_icons.a
 
 FILES_DIR ?= $(PKGDIR)/lib/icons/images
 FILES      = tree_corner.png tree_cross.png tree_minus.png tree_none.png  \
-             tree_plus.png tree_vert.png folder_grey.png misc.png unknown.png
+             tree_plus.png tree_vert.png                                  \
+             folder_grey.png misc.png unknown.png filetype_vt.png         \
+             filetype_dpe.png filetype_txt.png
 #FILES     := $(wildcard $(FILES_DIR)/*.png)
 
 OBJS      += $(FILES:.png=.o)

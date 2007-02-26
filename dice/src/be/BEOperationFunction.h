@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEOperationFunction.h
- *    \brief   contains the declaration of the class CBEOperationFunction
+ *  \brief   contains the declaration of the class CBEOperationFunction
  *
  *    \date    01/14/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,43 +32,41 @@
 
 #include "be/BEFunction.h"
 
-class CBEContext;
 class CFEOperation;
 class CFETypedDeclarator;
 class CFEIdentifier;
 class CFEAttribute;
 
-/**    \class CBEOperationFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CBEOperationFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end operation
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
 class CBEOperationFunction : public CBEFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
-    CBEOperationFunction();
+    CBEOperationFunction(FUNCTION_TYPE nFunctionType);
     virtual ~CBEOperationFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEOperationFunction(CBEOperationFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual CBEClass* GetClass();
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
 protected:
-    virtual bool AddAttributes(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool AddExceptions(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool AddParameters(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool AddParameter(CFETypedDeclarator *pFEParameter, CBEContext *pContext);
-    virtual bool AddException(CFEIdentifier *pFEException, CBEContext *pContext);
-    virtual bool AddAttribute(CFEAttribute *pFEAttribute, CBEContext *pContext);
-    virtual int WriteMarshalOpcode(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
+    virtual bool AddAttributes(CFEOperation *pFEOperation);
+    virtual bool AddExceptions(CFEOperation *pFEOperation);
+    virtual void AddParameters(CFEOperation *pFEOperation);
+    virtual void AddParameter(CFETypedDeclarator *pFEParameter);
+    virtual bool AddException(CFEIdentifier *pFEException);
+    virtual bool AddAttribute(CFEAttribute *pFEAttribute);
 };
 
 #endif // !__DICE_BEOPERATIONFUNCTION_H__

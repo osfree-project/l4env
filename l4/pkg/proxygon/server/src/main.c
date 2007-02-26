@@ -58,7 +58,8 @@ int main(int argc, char **argv) {
 	}
 
 	/* init DOpE application */
-	dope_init();
+	if (dope_init()) return -1;
+
 	app_id = dope_init_app("Proxygon");
 
 	/* start thread that handles the if serverloop */

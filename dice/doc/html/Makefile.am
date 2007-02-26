@@ -29,7 +29,7 @@ all-local:
 endif
 
 version.dox:
-	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
+	@echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
-	rm -rf html/
+	@rm -rf html/

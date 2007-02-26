@@ -1,15 +1,17 @@
 PKGDIR        ?= ../../..
 L4DIR         ?= $(PKGDIR)/../..
-SYSTEMS        = x86-l4v2 x86-linux x86-l4x0
+SYSTEMS        = x86-l4v2 x86-linux
 TARGET         = libdata.a
 OBJS           = bumpmap.o light.o
 INSTALL_TARGET =
 
-vpath %.xga ..
+vpath %.xga $(SRC_DIR)
 
 include $(L4DIR)/mk/lib.mk
 
 %.o: %.xga
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
+	$(VERBOSE)outputto=$$(pwd)/$@;                                    \
+	   (cd $(SRC_DIR) && \
+	    $(LD) -r --oformat default -o $$outputto -b binary $(notdir $^))
 

@@ -2,23 +2,23 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 
 #include "exec.h"
 
 // our stdlib seems to have no alloca
-#ifndef ARCH_arm /* Just a reminder that dietlibc has it, oskit lacks it... */
-void
-*alloca(size_t size);
-#endif
+//#ifndef ARCH_arm /* Just a reminder that dietlibc has it, oskit lacks it... */
+//void
+//*alloca(size_t size);
+//#endif
 
 int
 exec_load_elf(exec_read_func_t *read, exec_read_exec_func_t *read_exec,
 	      void *handle, const char **error_msg, l4_addr_t *entry)
 {
   l4_size_t actual;
-  Elf32_Ehdr x;
-  Elf32_Phdr *phdr, *ph;
+  MY_EHDR x;
+  MY_PHDR *phdr, *ph;
   l4_size_t phsize;
   int i;
   int result;
@@ -36,7 +36,7 @@ exec_load_elf(exec_read_func_t *read, exec_read_exec_func_t *read_exec,
     return *error_msg="no ELF executable", -1;
 
   /* Make sure the file is of the right architecture.  */
-  if ((x.e_ident[EI_CLASS] != ELFCLASS32) ||
+  if ((x.e_ident[EI_CLASS] != MY_EI_CLASS) ||
       (x.e_ident[EI_DATA] != MY_EI_DATA) ||
       (x.e_machine != MY_E_MACHINE))
     return *error_msg="wrong ELF architecture", -1;
@@ -44,7 +44,7 @@ exec_load_elf(exec_read_func_t *read, exec_read_exec_func_t *read_exec,
   *entry = (l4_addr_t) x.e_entry;
 
   phsize = x.e_phnum * x.e_phentsize;
-  phdr   = (Elf32_Phdr *)alloca(phsize);
+  phdr = (MY_PHDR *)alloca(phsize);
 
   result = (*read)(handle, x.e_phoff, phdr, phsize, &actual);
   if (result)
@@ -54,7 +54,7 @@ exec_load_elf(exec_read_func_t *read, exec_read_exec_func_t *read_exec,
 
   for (i = 0; i < x.e_phnum; i++)
     {
-      ph = (Elf32_Phdr *)((l4_addr_t)phdr + i * x.e_phentsize);
+      ph = (MY_PHDR *)((l4_addr_t)phdr + i * x.e_phentsize);
       if (ph->p_type == PT_LOAD)
 	{
 	  exec_sectype_t type = EXEC_SECTYPE_ALLOC |

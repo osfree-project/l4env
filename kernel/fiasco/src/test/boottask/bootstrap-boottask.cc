@@ -2,9 +2,8 @@
    paging just enough so that L4 can run in its native address space 
    at 0xf0001000, and then start up L4.  */
 
-#include <assert.h>
-#include <string.h>
-
+#include <cassert>
+#include <cstring>
 #include <flux/x86/multiboot.h>
 #include <flux/x86/base_paging.h>
 #include <flux/x86/base_cpu.h>

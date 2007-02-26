@@ -26,28 +26,35 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BECallFunction.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEAttribute.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEClient.h"
-#include "be/BEMsgBufferType.h"
-
+#include "BECallFunction.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEType.h"
+#include "BETypedDeclarator.h"
+#include "BEAttribute.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEClient.h"
+#include "BEMsgBuffer.h"
+#include "BEDeclarator.h"
+#include "BESizes.h"
+#include "BETrace.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
+#include <cassert>
 
 CBECallFunction::CBECallFunction()
+    : CBEOperationFunction(FUNCTION_CALL)
 {
+    m_nSkipParameter = 0;
 }
 
 CBECallFunction::CBECallFunction(CBECallFunction & src)
- : CBEOperationFunction(src)
+: CBEOperationFunction(src)
 {
+    m_nSkipParameter = src.m_nSkipParameter;
 }
 
 /** \brief destructor of target class */
@@ -56,251 +63,393 @@ CBECallFunction::~CBECallFunction()
 
 }
 
-/** \brief writes the variable declarations of this function
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * The variable declarations of the call function include the message buffer
- * for send and receive.  This implementation should initialize the message
- * buffer and the pointers of the out variables.  It sets the return variable
- * (if it exists) to a zero value.
- *
- * If we have variable sized array parameters, we need the temp offset
- * variable.
- */
-void 
-CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, 
-    CBEContext * pContext)
-{
-    VERBOSE("CBECallFunction::WriteVariableDeclaration called %s in %s\n",
-        GetName().c_str(), pFile->GetFileName().c_str());
-    // declare message buffer
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteDefinition(pFile, false, pContext);
-    // declare return variable
-    WriteReturnVariableDeclaration(pFile, pContext);
-    // check for temp
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    if (HasVariableSizedParameters() || HasArrayParameters())
-    {
-        string sOffsetVar = pNF->GetOffsetVariable(pContext);
-        string sTmpVar = pNF->GetTempOffsetVariable(pContext);
-	*pFile << "\tunsigned " << sTmpVar << " __attribute__ ((unused));\n";
-	*pFile << "\tunsigned " << sOffsetVar << " __attribute__ ((unused));\n";
-    }
-    if (!FindAttribute(ATTR_NOEXCEPTIONS))
-        // declare local exception variable
-        WriteExceptionWordDeclaration(pFile, false /* do not init variable*/, 
-	    pContext);
-}
-
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void 
-CBECallFunction::WriteVariableInitialization(CBEFile * pFile, 
-    CBEContext * pContext)
+void
+CBECallFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    VERBOSE("CBECallFunction::WriteVariableInitialization called %s in %s\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBECallFunction::WriteVariableInitialization called %s in %s\n",
         GetName().c_str(), pFile->GetFileName().c_str());
     // init message buffer
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, pContext);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    pMsgBuffer->WriteInitialization(pFile, this, 0, 0);
 }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
-{
-
-}
+void CBECallFunction::WriteInvocation(CBEFile * /*pFile*/)
+{}
 
 /** \brief writes the unmarshalling of the message
  *  \param pFile the file to write to
- *  \param nStartOffset the position in the message buffer to start with 
- *         unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to i
- *         false if not possible
- *  \param pContext the context of the write operation
  *
  * This implementation should unpack the out parameters from the returned
  * message structure
  */
-void 
-CBECallFunction::WriteUnmarshalling(CBEFile * pFile, 
-    int nStartOffset, 
-    bool& bUseConstOffset, 
-    CBEContext * pContext)
+void
+CBECallFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    VERBOSE("CBECallFunction::WriteUnmarshalling(%s) called\n", 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
 
+    assert(m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
+    {
+	m_pTrace->BeforeUnmarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+
     // unmarshal exception first
-    nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
-    // test for exception and return
-    WriteExceptionCheck(pFile, pContext); // resets exception
+    WriteMarshalException(pFile, false);
     // unmarshal return variable
-    nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+    WriteMarshalReturn(pFile, false);
+
     // now unmarshal rest
-    CBEOperationFunction::WriteUnmarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    CBEOperationFunction::WriteUnmarshalling(pFile);
 
-    VERBOSE("CBECallFunction::WriteUnmarshalling(%s) finished\n", GetName().c_str());
-}
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterUnmarshalling(pFile, this);
+	m_bTraceOn = false;
+    }
 
-/** \brief clean up the mess
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * This implementation cleans up allocated memory inside this function
- */
-void CBECallFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
-{
-    VERBOSE("CBECallFunction::WriteCleanup(%s) called (finished)\n",
-        GetName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__, 
+	GetName().c_str());
 }
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation used as reference
- *  \param pContext the context of the write operation
  *  \return true if successful
  *
  * This implementation only sets the name of the function.
  */
-bool CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+void 
+CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
-    VERBOSE("%s for operation %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
         pFEOperation->GetName().c_str());
 
-    // call CBEObject's CreateBackEnd method
-    if (!CBEObject::CreateBackEnd(pFEOperation))
-        return false;
-
-    pContext->SetFunctionType(FUNCTION_CALL);
     // set target file name
-    SetTargetFileName(pFEOperation, pContext);
-    // set own name
-    m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+    SetTargetFileName(pFEOperation);
+    // set name
+    SetFunctionName(pFEOperation, FUNCTION_CALL);
 
-    if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-        return false;
-
+    CBEOperationFunction::CreateBackEnd(pFEOperation);
     // add msg buffer
     // its the last, because it needs the existing BE parameters
-    if (!AddMessageBuffer(pFEOperation, pContext))
-        return false;
+    AddMessageBuffer(pFEOperation);
+    // then add as local variable
+    AddLocalVariable(GetMessageBuffer());
+    // add exception variable
+    AddExceptionVariable();
+    CBETypedDeclarator *pException = GetExceptionVariable();
+    if (pException)
+    {
+	// this is a stupid trick: in order to make the marshalling logic
+	// unmarshal the exception into the environment, we need a parameter
+	// or local variable with that name. Even though we never use it.
+	pException->AddLanguageProperty(string("attribute"), 
+	    string("__attribute__ ((unused))"));
+    }
+    // add marshaller and communication class
+    CreateMarshaller();
+    CreateCommunication();
+    CreateTrace();
 
-    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+    // set initializer of return variable to zero
+    CBETypedDeclarator *pVariable = GetReturnVariable();
+    if (pVariable)
+        pVariable->SetDefaultInitString(string("0"));
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+}
+
+/** \brief manipulate the message buffer
+ *  \param pMsgBuffer the message buffer to initialize
+ *  \return true on success
+ */
+bool 
+CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
+	return false;
+    // check return type (do test here because sometimes we like to call
+    // AddReturnVariable under different constraints--return parameter)
+    CBEType *pType = GetReturnType();
+    assert(pType);
+    if (pType->IsVoid())
+	return true; // having a void return type is not an error
+    // add return variable
+    if (!pMsgBuffer->AddReturnVariable(this))
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because return var could not be added to msgbuf\n",
+	    __func__);
+	return false;
+    }
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
     return true;
 }
 
 /** \brief checks if this parameter has to be marshalled or not
  *  \param pParameter the parameter to be checked
- *  \param pContext the context of this marshalling
+ *  \param bMarshal true if marshaling, false if unmarshaling
  *  \return true if this parameter is marshalled
  *
  * Only marshal those parameters with an IN attribute
  */
-bool CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter, CBEContext *pContext)
+bool 
+CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
+	bool bMarshal)
 {
-    if (pParameter->FindAttribute(ATTR_IN))
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
+    	__func__, pParameter->m_Declarators.First()->GetName().c_str(), 
+	(bMarshal) ? "yes" : "no",
+	pParameter->m_Attributes.Find(ATTR_IN) ? "yes" : "no",
+	pParameter->m_Attributes.Find(ATTR_OUT) ? "yes" : "no");
+    if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+	return false;
+    if (bMarshal && pParameter->m_Attributes.Find(ATTR_IN))
         return true;
-    return false;
-}
-
-/** \brief check if this parameter has to be unmarshalled
- *  \param pParameter the parameter to unmarshal
- *  \param pContext the context of this unmarshalling
- *  \return true if the parameter should be unmarshalled
- *
- * unmarshal all OUT parameters
- */
-bool CBECallFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext * pContext)
-{
-    if (pParameter->FindAttribute(ATTR_OUT))
-        return true;
+    if (!bMarshal && pParameter->m_Attributes.Find(ATTR_OUT))
+	return true;
     return false;
 }
 
 /** \brief checks if this function should be written
  *  \param pFile the target file to write to
- *  \param pContext the context of this write operation
  *  \return true if successful
  *
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
  */
-bool CBECallFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
+bool CBECallFunction::DoWriteFunction(CBEHeaderFile * pFile)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBECallFunction::%s(%s) called for %s\n", __func__, 
+	pFile->GetFileName().c_str(), GetName().c_str());
+
     if (!IsTargetFile(pFile))
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBECallFunction::%s failed: wrong target file\n", __func__);
         return false;
+    }
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
+	__func__);
     return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 
 /** \brief checks if this function should be written
  *  \param pFile the target file to write to
- *  \param pContext the context of this write operation
  *  \return true if successful
  *
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
  */
-bool CBECallFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+bool CBECallFunction::DoWriteFunction(CBEImplementationFile * pFile)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBECallFunction::%s(%s) called for %s\n", __func__, 
+	pFile->GetFileName().c_str(), GetName().c_str());
+
     if (!IsTargetFile(pFile))
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBECallFunction::%s failed: wrong target file\n", __func__);
         return false;
+    }
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
+	__func__);
     return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 
 /** \brief calcualtes the size of this function
  *  \param nDirection the direction to calulate the size for
- *  \param pContext the context of the calculation
  *  \return the size of the function's parameters in bytes
  */
-int CBECallFunction::GetSize(int nDirection, CBEContext * pContext)
+int CBECallFunction::GetSize(int nDirection)
 {
     // get base class' size
-    int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_IN) &&
-        !FindAttribute(ATTR_NOOPCODE))
-        nSize += pContext->GetSizes()->GetOpcodeSize();
+        !m_Attributes.Find(ATTR_NOOPCODE))
+        nSize += CCompiler::GetSizes()->GetOpcodeSize();
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
 
 /** \brief calculates the size of the fixed sized params of this function
  *  \param nDirection the direction to calc
- *  \param pContext the context of this counting
  *  \return the size of the params in bytes
  */
-int CBECallFunction::GetFixedSize(int nDirection, CBEContext *pContext)
+int CBECallFunction::GetFixedSize(int nDirection)
 {
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_IN) &&
-        !FindAttribute(ATTR_NOOPCODE))
-        nSize += pContext->GetSizes()->GetOpcodeSize();
+        !m_Attributes.Find(ATTR_NOOPCODE))
+        nSize += CCompiler::GetSizes()->GetOpcodeSize();
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
 
-/** \brief write the variable declaration for the return variable
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
+/** \brief writes the declaration of a function to the target file
+ *  \param pFile the target file to write to
  *
- * We declare the return variable in a seperate function, because we might want to call
- * this function undependently from the other variable declarations.
+ * For C++ we have some additional wrapper functions. One without the server
+ * id and one without server id and environment.
  */
-void CBECallFunction::WriteReturnVariableDeclaration(CBEFile *pFile, CBEContext *pContext)
+void 
+CBECallFunction::WriteFunctionDeclaration(CBEFile * pFile)
 {
-    m_pReturnVar->WriteZeroInitDeclaration(pFile, pContext);
+    // check C++
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    {
+	// write version without server id and environment
+	m_nSkipParameter = 3; /* skip both */
+	CBEOperationFunction::WriteFunctionDefinition(pFile);
+	
+	// write version without server id
+	m_nSkipParameter = 1; /* skip object */
+	CBEOperationFunction::WriteFunctionDefinition(pFile);
+    }
+    // finally write base class function declaration
+    m_nSkipParameter = 0;
+    CBEOperationFunction::WriteFunctionDeclaration(pFile);
+}
+
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
+ *
+ * If this is a header file and we have been called because of inlining, and
+ * its C++ then write the wrapper functions.
+ */
+void 
+CBECallFunction::WriteFunctionDefinition(CBEFile * pFile)
+{
+    if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE) &&
+	pFile->IsOfFileType(FILETYPE_HEADER) &&
+	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    {
+	// write version without server id and environment
+	m_nSkipParameter = 3; /* skip both */
+	CBEOperationFunction::WriteFunctionDefinition(pFile);
+	
+	// write version without server id
+	m_nSkipParameter = 1; /* skip object */
+	CBEOperationFunction::WriteFunctionDefinition(pFile);
+    }
+    // finally write base class function declaration
+    m_nSkipParameter = 0;
+    CBEOperationFunction::WriteFunctionDefinition(pFile);
+}
+
+/** \brief writes the return type of a function
+ *  \param pFile the file to write to
+ *
+ * For C++ we are completely virtual
+ */
+void
+CBECallFunction::WriteReturnType(CBEFile * pFile)
+{
+    if (pFile->IsOfFileType(FILETYPE_HEADER) &&
+	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	*pFile << "virtual ";
+    CBEOperationFunction::WriteReturnType(pFile);
+}
+
+/** \brief writes the body of the function to the target file
+ *  \param pFile the file to write to
+ */
+void
+CBECallFunction::WriteBody(CBEFile * pFile)
+{
+    if (m_nSkipParameter == 0)
+    {
+	CBEOperationFunction::WriteBody(pFile);
+	return;
+    }
+
+    if (m_nSkipParameter == 1)
+    {
+	// use the _dice_server member to call one of the other functions
+	CBEDeclarator *pObj = GetObject()->m_Declarators.First();
+	string sObj = string("&_dice_server");
+	SetCallVariable(pObj->GetName(), 0, sObj);
+
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	string sReturn;
+	if (!pReturn->GetType()->IsVoid())
+	{
+	    pReturn->WriteInitDeclaration(pFile, string());
+	    sReturn = pReturn->m_Declarators.First()->GetName();
+	}
+	
+	m_nSkipParameter = 0;
+	CBEOperationFunction::WriteCall(pFile, sReturn, true);
+	m_nSkipParameter = 1;
+
+	if (!pReturn->GetType()->IsVoid())
+	    WriteReturn(pFile);
+
+	RemoveCallVariable(sObj);
+	return;
+    }
+
+    if (m_nSkipParameter == 3)
+    {
+	// construct a default environment and call the next function
+	*pFile << "\tCORBA_Environment _env;\n";
+	CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
+	string sEnv = string("_env");
+	SetCallVariable(pEnv->GetName(), 0, sEnv);
+
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	string sReturn;
+	if (!pReturn->GetType()->IsVoid())
+	{
+	    pReturn->WriteInitDeclaration(pFile, string());
+	    sReturn = pReturn->m_Declarators.First()->GetName();
+	}
+	
+	m_nSkipParameter = 1;
+	CBEOperationFunction::WriteCall(pFile, sReturn, true);
+	m_nSkipParameter = 3;
+
+	if (!pReturn->GetType()->IsVoid())
+	    WriteReturn(pFile);
+
+	RemoveCallVariable(sEnv);
+    }
+}
+
+/** \brief check if parameter should be written
+ *  \param pParam the parameter to test
+ *  \return true if writing param, false if not
+ *
+ * Do not write CORBA_Object and CORBA_Env depending on m_nSkipParameter map.
+ */
+bool
+CBECallFunction::DoWriteParameter(CBETypedDeclarator *pParam)
+{
+    if ((m_nSkipParameter & 1) &&
+	pParam == GetObject())
+	return false;
+    if ((m_nSkipParameter & 2) &&
+	pParam == GetEnvironment())
+	return false;
+    return CBEOperationFunction::DoWriteParameter(pParam);
 }

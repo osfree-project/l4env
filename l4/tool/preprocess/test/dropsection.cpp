@@ -49,3 +49,12 @@ Gen_foo::foo( int y )
   return y;
 }
 
+IMPLEMENTATION [{!bax,!ixbix}]:
+
+PUBLIC int
+Gen_foo::tust( int y )
+{
+  // just return y
+  return y;
+}
+

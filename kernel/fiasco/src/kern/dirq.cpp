@@ -92,22 +92,16 @@ Dirq::hit()
       set_receiver (_irq_thread);
       if (!Config::Irq_shortcut)
 	{
-	  // for LIPC, we are denying LIPC send
-	  // reason: an LIPC operation always consists of a send+receive part
-	  // so we force the LIPC sender to a kernel ipc call/reply_wait 
-	  // to finisch this irq IPC
-	  _irq_thread->deny_lipc_snd();
-
 	  // in profile mode, don't optimize
 	  // in non-profile mode, enqueue _after_ shortcut if still necessary
-	  sender_enqueue(_irq_thread->sender_list());
+	  sender_enqueue(_irq_thread->sender_list(), 255);
 	}
  
       // if the thread is waiting for this interrupt, make it ready;
       // this will cause it to run irq->receiver_ready(), which
       // handles the rest
 
-      // XXX careful!  This code may run in midst of an ipc_send_regs
+      // XXX careful!  This code may run in midst of an do_ipc()
       // operation (or similar)!
 
       if (_irq_thread->sender_ok (this))
@@ -115,7 +109,7 @@ Dirq::hit()
 	  if (EXPECT_TRUE
 	      (current() != _irq_thread
                && Context::can_preempt_current (_irq_thread->sched())
-	       // avoid race in ipc_send_regs() after Thread_send_in_progress
+	       // avoid race in do_ipc() after Thread_send_in_progress
 	       // flag was deleted from _irq_thread's thread state
 	       && !(_irq_thread->state() & 
 		               (Thread_ready | Thread_delayed_deadline))
@@ -146,6 +140,7 @@ Dirq::hit()
 	      // quick as possible.
 	      // 
 	      // XXX We must own the kernel lock for this optimization!
+	      //
 
     	      Sys_ipc_frame* dst_regs = _irq_thread->rcv_regs();
 	      Mword *esp = reinterpret_cast<Mword*>(dst_regs);
@@ -170,7 +165,6 @@ Dirq::hit()
 	      maybe_enable();
 
 	      // ipc completed
-	      _irq_thread->deny_lipc();
     	      _irq_thread->state_change_dirty(~Thread_ipc_mask, 0);
 
 	      // in case a timeout was set
@@ -186,7 +180,6 @@ Dirq::hit()
 	    }
 	  // we don't need to manipulate the state in a safe way
       	  // because we are still running with interrupts turned off
-	  _irq_thread->deny_lipc();
 	  _irq_thread->state_change_dirty(~Thread_busy, Thread_ready);
 	  _irq_thread->ready_enqueue();
 	}
@@ -194,7 +187,7 @@ Dirq::hit()
       if (Config::Irq_shortcut)
 	// in profile mode, don't optimize
 	// in non-profile mode, enqueue after shortcut if still necessary
-	sender_enqueue(_irq_thread->sender_list());
+	sender_enqueue(_irq_thread->sender_list(), 255);
     }
 }
 

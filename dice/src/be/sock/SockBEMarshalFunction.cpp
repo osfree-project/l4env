@@ -29,8 +29,8 @@
 #include "be/sock/SockBEMarshalFunction.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
-#include "be/BEMsgBufferType.h"
 #include "be/BEDeclarator.h"
+#include "be/BEMsgBuffer.h"
 
 CSockBEMarshalFunction::CSockBEMarshalFunction()
 {
@@ -48,27 +48,16 @@ CSockBEMarshalFunction::~CSockBEMarshalFunction()
 }
 
 /** \brief remove references from message buffer
- *  \param pFEInterface the front-end interface to use as reference
- *  \param pContext the context of the create process
+ *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-bool CSockBEMarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext)
+bool
+CSockBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEMarshalFunction::AddMessageBuffer(pFEInterface, pContext))
+    if (!CBEMarshalFunction::MsgBufferInitialization(pMsgBuffer))
         return false;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
+    CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
+    pDecl->SetStars(0);
     return true;
 }
 
-/** \brief write the parameters after the "normal" parameters
- *  \param pFile the file to print to
- *  \param pContext the context of the write operation
- *  \param bComma true if a comma should be written before the parameters
- */
-void CSockBEMarshalFunction::WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma)
-{
-    m_bCastMsgBufferOnCall = false;
-    CBEMarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
-}

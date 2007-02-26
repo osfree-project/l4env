@@ -8,7 +8,7 @@ class List_alloc;
 
 class Kmem_alloc : public Mapped_allocator
 {
-  Kmem_alloc::Kmem_alloc();
+  Kmem_alloc();
 
 private:
   static Helping_lock lmm_lock;
@@ -38,6 +38,11 @@ Kmem_alloc::init()
 }
 
 PUBLIC
+void
+Kmem_alloc::dump() const
+{ a->dump(); }
+
+PUBLIC
 void *
 Kmem_alloc::alloc(size_t o)
 {
@@ -48,6 +53,14 @@ Kmem_alloc::alloc(size_t o)
     ret = a->alloc(1UL << o, o);
   }
   
+  if (!ret)
+    {
+      Mapped_alloc_reaper::morecore (/* despeate= */ true);
+      
+      Helping_lock_guard guard (&lmm_lock);
+      ret = a->alloc(1UL << o, o);
+    }
+
   if (!ret)
     kdb_ke ("KERNEL: Out of memory!");
   

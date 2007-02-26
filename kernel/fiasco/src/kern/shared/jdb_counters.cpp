@@ -11,6 +11,8 @@ IMPLEMENTATION:
 
 class Jdb_counters : public Jdb_module
 {
+public:
+  Jdb_counters() FIASCO_INIT;
 private:
   static char counters_cmd;
 };
@@ -62,7 +64,7 @@ Jdb_counters::action(int cmd, void *&, char const *&, int &)
 }
 
 PUBLIC
-Jdb_counters::Cmd const *const
+Jdb_counters::Cmd const *
 Jdb_counters::cmds() const
 {
   static Cmd cs[] =
@@ -74,13 +76,13 @@ Jdb_counters::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_counters::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_counters::Jdb_counters()
   : Jdb_module("MONITORING")
 {}

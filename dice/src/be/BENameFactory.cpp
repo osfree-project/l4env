@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BENameFactory.cpp
+ * \file    dice/src/be/BENameFactory.cpp
  * \brief   contains the implementation of the class CBENameFactory
  *
- *    \date    01/10/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ * \date    01/10/2002
+ * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -33,119 +33,114 @@
 #include "be/BEType.h"
 #include "be/BEClass.h"
 #include "be/BENameSpace.h"
-
+#include "be/BETypedDeclarator.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "fe/FEConstDeclarator.h"
-
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include <typeinfo>
 #include <algorithm>
-#include <ctype.h>
-using namespace std;
+#include <cctype>
+#include <iostream>
+#include <sstream>
+#include <cassert>
 
-CBENameFactory::CBENameFactory(bool bVerbose)
+CBENameFactory::CBENameFactory()
 {
-    m_bVerbose = bVerbose;
-}
-
-CBENameFactory::CBENameFactory(CBENameFactory & src)
-: CBEObject(src)
-{
-    m_bVerbose = src.m_bVerbose;
 }
 
 /** \brief the destructor of this class */
 CBENameFactory::~CBENameFactory()
 {
-
 }
 
 /** \brief creates the file-name for a specific file type
- *  \param pFEBase a reference for the front-end class, which defines granularity (IDLFILE, MODULE, INTERFACE, OPERATION)
- *  \param pContext the context of the generated name
+ *  \param pFEBase a reference for the front-end class, which defines \
+ *         granularity (IDLFILE, MODULE, INTERFACE, OPERATION)
+ *  \param nFileType the type of the file
  *  \return a reference to the created name or 0 if some error occured
  *
- * We have several file types: we have one header file and opcode file per front-end IDL file.
- * There may be several implementation files for a front-end IDL file.
- * E.g. one per IDL file, one per module, one per interface or one per function.
+ * We have several file types: we have one header file and opcode file per
+ * front-end IDL file.  There may be several implementation files for a
+ * front-end IDL file.  E.g. one per IDL file, one per module, one per
+ * interface or one per function.
  */
-string CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
+string 
+CBENameFactory::GetFileName(CFEBase * pFEBase,
+    FILE_TYPE nFileType)
 {
-    if (m_bVerbose)
-        printf("CBENameFactory::GetFileName\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s called\n",
+	__func__);
 
     if (!pFEBase)
     {
-        if (m_bVerbose)
-            printf("CBENameFactory::GetFileName failed because front-end class is 0\n");
-        return string();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBENameFactory::%s failed because front-end class is 0\n", __func__);
+	return string();
     }
 
     string sReturn;
-    string sPrefix = pContext->GetFilePrefix();
-    int nFileType = pContext->GetFileType();
+    string sPrefix = CCompiler::GetFilePrefix();
 
     // first check non-IDL files
-    if (dynamic_cast<CFEFile*>(pFEBase))
+    CFEFile *pFEFile = dynamic_cast<CFEFile *>(pFEBase);
+    if (pFEFile)
     {
-        if (!((CFEFile *) pFEBase)->IsIDLFile())
-        {
-            // get file-name
-            sReturn = sPrefix;
-            sReturn += ((CFEFile *) pFEBase)->GetFileName();
-            // deliver filename
-            if (m_bVerbose)
-                printf("CBENameFactory::GetFileName(%s, filetype:%d) = %s (!IDL file)\n",
-                        typeid(*pFEBase).name(), nFileType, sReturn.c_str());
+	if (!pFEFile->IsIDLFile())
+	{
+	    // get file-name
+	    sReturn = sPrefix;
+	    sReturn += pFEFile->GetFileName();
+	    // deliver filename
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBENameFactory::%s(%s, filetype: %d) = %s (!IDL file)\n",
+		__func__, typeid(*pFEBase).name(), nFileType, 
+		sReturn.c_str());
 
-            return sReturn;
-        }
+	    return sReturn;
+	}
     }
     // test for header files
     if ((nFileType == FILETYPE_CLIENTHEADER) ||
-        (nFileType == FILETYPE_COMPONENTHEADER) ||
-        (nFileType == FILETYPE_OPCODE) ||
-        (nFileType == FILETYPE_TESTSUITE) ||
-        (nFileType == FILETYPE_TEMPLATE) ||
-        (nFileType == FILETYPE_COMPONENTIMPLEMENTATION))
+	(nFileType == FILETYPE_COMPONENTHEADER) ||
+	(nFileType == FILETYPE_OPCODE) ||
+	(nFileType == FILETYPE_TEMPLATE) ||
+	(nFileType == FILETYPE_COMPONENTIMPLEMENTATION))
     {
-        // should only be files
-        if (!dynamic_cast<CFEFile*>(pFEBase))
-        {
-            if (m_bVerbose)
-                printf("%s failed because filetype required CFEFile  wasn't\n",
-		    __PRETTY_FUNCTION__);
-            return string();
-        }
-        // assemble string
-        sReturn = sPrefix;
-        sReturn += ((CFEFile *) pFEBase)->GetFileNameWithoutExtension();
-        switch (nFileType)
-        {
-        case FILETYPE_CLIENTHEADER:
-            sReturn += "-client";
-            break;
-        case FILETYPE_COMPONENTHEADER:
-            sReturn += "-server";
-            break;
-        case FILETYPE_COMPONENTIMPLEMENTATION:
-            sReturn += "-server";
-            break;
-        case FILETYPE_OPCODE:
-            sReturn += "-sys";
-            break;
-        case FILETYPE_TESTSUITE:
-            sReturn += "-testsuite";
-            break;
-        case FILETYPE_TEMPLATE:
-            sReturn += "-template";
-            break;
-        default:
-            break;
-        }
+	// should only be files
+	if (!pFEFile)
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s failed because filetype required CFEFile and it wasn't\n",
+		__func__);
+	    return string();
+	}
+	// assemble string
+	sReturn = sPrefix;
+	sReturn += pFEFile->GetFileNameWithoutExtension();
+	switch (nFileType)
+	{
+	case FILETYPE_CLIENTHEADER:
+	    sReturn += "-client";
+	    break;
+	case FILETYPE_COMPONENTHEADER:
+	    sReturn += "-server";
+	    break;
+	case FILETYPE_COMPONENTIMPLEMENTATION:
+	    sReturn += "-server";
+	    break;
+	case FILETYPE_OPCODE:
+	    sReturn += "-sys";
+	    break;
+	case FILETYPE_TEMPLATE:
+	    sReturn += "-template";
+	    break;
+	default:
+	    break;
+	}
 	// add extension
 	// FIXME: use extra function to overload
 	switch (nFileType)
@@ -153,15 +148,14 @@ string CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 	case FILETYPE_CLIENTHEADER:
 	case FILETYPE_COMPONENTHEADER:
 	case FILETYPE_OPCODE:
-	    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 		sReturn += ".hh";
 	    else
 		sReturn += ".h";
 	    break;
 	case FILETYPE_COMPONENTIMPLEMENTATION:
-	case FILETYPE_TESTSUITE:
 	case FILETYPE_TEMPLATE:
-	    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 		sReturn += ".cc";
 	    else
 		sReturn += ".c";
@@ -169,463 +163,480 @@ string CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 	default:
 	    break;
 	}
-        if (m_bVerbose)
-            printf("CBENameFactory::GetFileName(%s, filetype:%d) = %s (header, opcode, testuite)\n",
-                typeid(*pFEBase).name(), nFileType, sReturn.c_str());
-        return sReturn;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBENameFactory::%s(%s, filetype: %d) = %s (header, opcode)\n",
+	    __func__, typeid(*pFEBase).name(), nFileType, sReturn.c_str());
+	return sReturn;
     }
 
-
-    if (pContext->IsOptionSet(PROGRAM_FILE_IDLFILE) ||
-        pContext->IsOptionSet(PROGRAM_FILE_ALL))
+    if (CCompiler::IsFileOptionSet(PROGRAM_FILE_IDLFILE) ||
+	CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL))
     {
-        // filename := [&lt;prefix&gt;]&lt;IDL-file-name&gt;-(client|server|testsuite|opcode).c
-        // check FE type
-        if (!dynamic_cast<CFEFile*>(pFEBase))
-        {
-            if (m_bVerbose)
-                printf("CBENameFactory::GetFileName failed because PROGRAM_FILE_IDLFILE/ALL and not CFEFile\n");
-            return string();
-        }
-        // get FE file
-        CFEFile *pFEFile = (CFEFile *) pFEBase;
-        // get file-name
-        sReturn = sPrefix;
-        sReturn += pFEFile->GetFileNameWithoutExtension();
-        sReturn += "-client";
-	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
-    	    sReturn += ".cc";
+	// filename := [\<prefix\>]\<IDL-file-name\>-(client|server|opcode).c
+	// check FE type
+	if (!pFEFile)
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s failed because PROGRAM_FILE_IDLFILE/ALL and not CFEFile\n",
+		__func__);
+	    return string();
+	}
+	// get file-name
+	sReturn = sPrefix;
+	sReturn += pFEFile->GetFileNameWithoutExtension();
+	sReturn += "-client";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	    sReturn += ".cc";
 	else
 	    sReturn += ".c";
     }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_MODULE))
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_MODULE))
     {
-        // filename := [&lt;prefix&gt;]&lt;libname&gt;-(client|server).c
-        // check FE type
-        // can also be interface (if FILE_MODULE, but top level interface)
-        if (dynamic_cast<CFEInterface*>(pFEBase))
-        {
-            pContext->ModifyOptions(PROGRAM_FILE_INTERFACE, PROGRAM_FILE_MODULE);
-            string sReturn = GetFileName(pFEBase, pContext);
-            pContext->ModifyOptions(PROGRAM_FILE_MODULE, PROGRAM_FILE_INTERFACE);
-            return sReturn;
-        }
-        // else if no lib: return 0
-        if (!dynamic_cast<CFELibrary*>(pFEBase))
-        {
-            if (m_bVerbose)
-                printf("CBENameFactory::GetFileName failed because PROGRAM_FILE_MODULE and not CFELibrary\n");
-            return string();
-        }
-        // get libname-name
-        sReturn = sPrefix;
-        CFELibrary *pFELibrary = (CFELibrary *) pFEBase;
-        // always prefix with IDL filename
-        sReturn += pFELibrary->GetSpecificParent<CFEFile>(0)->GetFileNameWithoutExtension();
-        sReturn += "-";
-        sReturn += pFELibrary->GetName();
-        sReturn += "-client";
-	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	// filename := [\<prefix\>]\<libname\>-(client|server).c
+	// check FE type
+	// can also be interface (if FILE_MODULE, but top level interface)
+	if (dynamic_cast<CFEInterface*>(pFEBase))
+	{
+	    return GetFileName(pFEBase, nFileType);
+	}
+	// else if no lib: return 0
+	if (!dynamic_cast<CFELibrary*>(pFEBase))
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBENameFactory::%s failed because PROGRAM_FILE_MODULE and not CFELibrary\n",
+		__func__);
+	    return string();
+	}
+	// get libname-name
+	sReturn = sPrefix;
+	CFELibrary *pFELibrary = static_cast<CFELibrary *>(pFEBase);
+	// always prefix with IDL filename
+	sReturn += pFELibrary->GetSpecificParent<CFEFile>(0)->
+	    GetFileNameWithoutExtension();
+	sReturn += "-";
+	sReturn += pFELibrary->GetName();
+	sReturn += "-client";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	    sReturn += ".cc";
 	else
-    	    sReturn += ".c";
+	    sReturn += ".c";
     }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_INTERFACE))
     {
-        // filename := [&lt;prefix&gt;][&lt;libname&gt;_]&lt;interfacename&gt;-(client|server).c
-        // can also be library (if FILE_INTERFACE, but library with types or constants)
-        if (dynamic_cast<CFELibrary*>(pFEBase))
-        {
-            pContext->ModifyOptions(PROGRAM_FILE_MODULE, PROGRAM_FILE_INTERFACE);
-            string sReturn = GetFileName(pFEBase, pContext);
-            pContext->ModifyOptions(PROGRAM_FILE_INTERFACE, PROGRAM_FILE_MODULE);
-            return sReturn;
-        }
-        // check FE type
-        if (!dynamic_cast<CFEInterface*>(pFEBase))
-        {
-            if (m_bVerbose)
-                printf("CBENameFactory::GetFileName failed because PROGRAM_FILE_INTERFACE and not CFEInterface\n");
-            return string();
-        }
-        // get interface name
-        sReturn = sPrefix;
-        CFEInterface *pFEInterface = (CFEInterface *) pFEBase;
-        // always prefix with IDL filename
-        sReturn += pFEInterface->GetSpecificParent<CFEFile>(0)->GetFileNameWithoutExtension();
-        sReturn += "-";
-        string sLibs;
-        CFELibrary *pFELibrary = pFEInterface->GetSpecificParent<CFELibrary>();
-        while (pFELibrary)
-        {
-            sLibs = pFELibrary->GetName() + "_" + sLibs;
-            pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
-        }
-        sReturn += sLibs;
-        sReturn += pFEInterface->GetName();
-        sReturn += "-client";
-	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	// filename :=
+	// [\<prefix\>][\<libname\>_]\<interfacename\>-(client|server).c
+	// can also be library (if FILE_INTERFACE, but library with types or
+	// constants)
+	if (dynamic_cast<CFELibrary*>(pFEBase))
+	{
+	    return GetFileName(pFEBase, nFileType);
+	}
+	// check FE type
+	if (!dynamic_cast<CFEInterface*>(pFEBase))
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+"CBENameFactory::%s failed because PROGRAM_FILE_INTERFACE and not CFEInterface\n",
+		__func__);
+	    return string();
+	}
+	// get interface name
+	sReturn = sPrefix;
+	CFEInterface *pFEInterface = (CFEInterface *) pFEBase;
+	// always prefix with IDL filename
+	sReturn += pFEInterface->GetSpecificParent<CFEFile>(0)->
+	    GetFileNameWithoutExtension();
+	sReturn += "-";
+	string sLibs;
+	CFELibrary *pFELibrary = pFEInterface->GetSpecificParent<CFELibrary>();
+	while (pFELibrary)
+	{
+	    sLibs = pFELibrary->GetName() + "_" + sLibs;
+	    pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+	}
+	sReturn += sLibs;
+	sReturn += pFEInterface->GetName();
+	sReturn += "-client";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	    sReturn += ".cc";
 	else
-    	    sReturn += ".c";
+	    sReturn += ".c";
+
     }
-    else if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION))
+    else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION))
     {
-        // filename := [&lt;prefix&gt;][&lt;libname&gt;_][&lt;interfacename&gt;_]&lt;funcname&gt;-(client|server).c
-        // can also be library (if contains types or constants)
-        if (dynamic_cast<CFELibrary*>(pFEBase))
-        {
-            pContext->ModifyOptions(PROGRAM_FILE_MODULE, PROGRAM_FILE_FUNCTION);
-            string sReturn = GetFileName(pFEBase, pContext);
-            pContext->ModifyOptions(PROGRAM_FILE_FUNCTION, PROGRAM_FILE_MODULE);
-            return sReturn;
-        }
-        // can also be interface (if contains types or constants)
-        if (dynamic_cast<CFEInterface*>(pFEBase))
-        {
-            pContext->ModifyOptions(PROGRAM_FILE_INTERFACE, PROGRAM_FILE_FUNCTION);
-            string sReturn = GetFileName(pFEBase, pContext);
-            pContext->ModifyOptions(PROGRAM_FILE_FUNCTION, PROGRAM_FILE_INTERFACE);
-            return sReturn;
-        }
-        // check FE type
-        if (!dynamic_cast<CFEOperation*>(pFEBase))
-        {
-            if (m_bVerbose)
-                printf("CBENameFactory::GetFileName failed because PROGRAM_FILE_FUNCTION and not CFEOperation\n");
-            return string();
-        }
-        // get class
-        sReturn = sPrefix;
-        CFEOperation *pFEOperation = (CFEOperation *) pFEBase;
-        // always prefix with IDL filename
-        sReturn += pFEOperation->GetSpecificParent<CFEFile>(0)->GetFileNameWithoutExtension();
-        sReturn += "-";
-        string sLibs;
-        CFELibrary *pFELibrary = pFEOperation->GetSpecificParent<CFELibrary>();
-        while (pFELibrary)
-        {
-            sLibs = pFELibrary->GetName() + "_" + sLibs;
-            pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
-        }
-        sReturn += sLibs;
-        if (pFEOperation->GetSpecificParent<CFEInterface>())
-        {
-            sReturn += pFEOperation->GetSpecificParent<CFEInterface>()->GetName();
-            sReturn += "_";
-        }
-        // get operation's name
-        sReturn += pFEOperation->GetName();
-        sReturn += "-client";
-	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	// filename := [\<prefix\>][\<libname\>_][\<interfacename\>_]\<funcname\>-(client|server).c
+	// can also be library (if contains types or constants)
+	if (dynamic_cast<CFELibrary*>(pFEBase))
+	{
+	    return GetFileName(pFEBase, nFileType);
+	}
+	// can also be interface (if contains types or constants)
+	if (dynamic_cast<CFEInterface*>(pFEBase))
+	{
+	    return GetFileName(pFEBase, nFileType);
+	}
+	// check FE type
+	if (!dynamic_cast<CFEOperation*>(pFEBase))
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+"CBENameFactory::%s failed because PROGRAM_FILE_FUNCTION and not CFEOperation\n",
+		__func__);
+	    return string();
+	}
+	// get class
+	sReturn = sPrefix;
+	CFEOperation *pFEOperation = (CFEOperation *) pFEBase;
+	// always prefix with IDL filename
+	sReturn += pFEOperation->GetSpecificParent<CFEFile>(0)->
+	    GetFileNameWithoutExtension();
+	sReturn += "-";
+	string sLibs;
+	CFELibrary *pFELibrary = pFEOperation->GetSpecificParent<CFELibrary>();
+	while (pFELibrary)
+	{
+	    sLibs = pFELibrary->GetName() + "_" + sLibs;
+	    pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+	}
+	sReturn += sLibs;
+	if (pFEOperation->GetSpecificParent<CFEInterface>())
+	{
+	    sReturn += pFEOperation->GetSpecificParent<CFEInterface>()->
+		GetName();
+	    sReturn += "_";
+	}
+	// get operation's name
+	sReturn += pFEOperation->GetName();
+	sReturn += "-client";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	    sReturn += ".cc";
 	else
-    	    sReturn += ".c";
+	    sReturn += ".c";
     }
-    if (m_bVerbose)
-        printf("CBENameFactory::GetFileName(%s, filetype:%d) = %s\n",
-            typeid(*pFEBase).name(), nFileType, sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s(%s, filetype: %d) = %s\n", __func__,
+	typeid(*pFEBase).name(), nFileType, sReturn.c_str());
     return sReturn;
 }
 
 /** \brief get the file name used in an include statement
  *  \param pFEBase the front-end class used to derive the name from
- *  \param pContext the context of this create process
+ *  \param nFileType the type of the file
  *  \return a file name suitable for an include statement
  *
- * A file-name suitable for an include statement contains the original relative
- * path used when the file was included into the idl file. If the original file
- * was the top file, there is no difference to the GetFileName function.
+ * A file-name suitable for an include statement contains the original
+ * relative path used when the file was included into the idl file. If the
+ * original file was the top file, there is no difference to the GetFileName
+ * function.
  */
-string CBENameFactory::GetIncludeFileName(CFEBase * pFEBase, CBEContext * pContext)
+string 
+CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
+    FILE_TYPE nFileType)
 {
     // first get the file name as usual
     // adds prefix to non-IDL files
-    string sName = GetFileName(pFEBase, pContext);
+    string sName = GetFileName(pFEBase, nFileType);
     // extract the relative path from the original FE file
     CFEFile *pFEFile = pFEBase->GetSpecificParent<CFEFile>(0);
     // if no IDL file, return original name
     string sOriginalName = pFEFile->GetFileName();
     if (!pFEFile->IsIDLFile())
-        return sName;
+	return sName;
     // get file name (which contains relative path) and extract it
     // it is everything up to the last '/'
     int nPos = sOriginalName.rfind('/');
     string sPath;
     if (nPos > 0)
-        sPath = sOriginalName.substr(0, nPos + 1);
+	sPath = sOriginalName.substr(0, nPos + 1);
     // concat path and name and return
     return sPath + sName;
 }
 
-/** \brief gets the filename used in an include statement if no FE class available
+/** \brief gets the filename used in an include statement if no FE class \
+ *         available
  *  \param sBaseName the name of the original include statement
- *  \param pContext the context of this operation
  *  \return the new name in the include statement
  *
- * We treat the file as non-IDL file. Otherwise there would have been a FE class
- * to use as reference.
+ * We treat the file as non-IDL file. Otherwise there would have been a FE
+ * class to use as reference.
  */
-string CBENameFactory::GetIncludeFileName(string sBaseName, CBEContext* pContext)
+string
+CBENameFactory::GetIncludeFileName(string sBaseName)
 {
     // get file-name
-    string sReturn = pContext->GetFilePrefix() + sBaseName;
+    string sReturn = CCompiler::GetFilePrefix() + sBaseName;
     // deliver filename
-    if (m_bVerbose)
-        printf("CBENameFactory::GetFileName(filetype:%d) = %s (!IDL file)\n",
-                pContext->GetFileType(), sReturn.c_str());
-
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s = %s (!IDL file)\n",
+	__func__, sReturn.c_str());
     return sReturn;
 }
 
 /** \brief creates the name of a type
  *  \param nType the type of the type (char, int, bool, ...)
  *  \param bUnsigned true if the wished type name should be for an unsigned type
- *  \param pContext the context of the code generation
  *  \param nSize the size of the type (long int, ...)
  *  \return the string describing the type
  *
  * This function returns the C representations of the given types.
  */
-string CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize)
+string 
+CBENameFactory::GetCORBATypeName(int nType, 
+    bool bUnsigned, 
+    int nSize)
 {
     string sReturn;
-    if (pContext->IsOptionSet(PROGRAM_USE_CTYPES))
-        sReturn = GetCTypeName(nType, bUnsigned, pContext, nSize);
-    if (!sReturn.empty())
-        return sReturn;
     switch (nType)
     {
-    case TYPE_NONE:
-        sReturn = "_UNDEFINED_";
-        break;
     case TYPE_INTEGER:
     case TYPE_LONG:
-        switch (nSize)
-        {
-        case 1:
-            sReturn = "CORBA_small";
-            break;
-        case 2:
-            if (bUnsigned)
-                sReturn = "CORBA_unsigned_short";
-            else
-                sReturn = "CORBA_short";
-            break;
-        case 4:
-            if (bUnsigned)
-                sReturn = "CORBA_unsigned_";
-            else
-                sReturn = "CORBA_";
-            if (nType == TYPE_LONG)
-                sReturn += "long";
-            else
-                sReturn += "int";
-            break;
-        case 8:
-            if (bUnsigned)
-                sReturn = "CORBA_unsigned_long_long";
-            else
-                sReturn = "CORBA_long_long";
-            break;
-        }
-        break;
+	switch (nSize)
+	{
+	case 1:
+	    sReturn = "CORBA_small";
+	    break;
+	case 2:
+	    if (bUnsigned)
+		sReturn = "CORBA_unsigned_short";
+	    else
+		sReturn = "CORBA_short";
+	    break;
+	case 4:
+	    if (bUnsigned)
+		sReturn = "CORBA_unsigned_";
+	    else
+		sReturn = "CORBA_";
+	    if (nType == TYPE_LONG)
+		sReturn += "long";
+	    else
+		sReturn += "int";
+	    break;
+	case 8:
+	    if (bUnsigned)
+		sReturn = "CORBA_unsigned_long_long";
+	    else
+		sReturn = "CORBA_long_long";
+	    break;
+	}
+	break;
     case TYPE_MWORD:
-        sReturn = "CORBA_unsigned_long";
-        break;
+	sReturn = "CORBA_unsigned_long";
+	break;
     case TYPE_VOID:
-        sReturn = "CORBA_void";
-        break;
+	sReturn = "CORBA_void";
+	break;
     case TYPE_FLOAT:
-        sReturn = "CORBA_float";
-        break;
+	sReturn = "CORBA_float";
+	break;
     case TYPE_DOUBLE:
-        sReturn = "CORBA_double";
-        break;
+	sReturn = "CORBA_double";
+	break;
     case TYPE_LONG_DOUBLE:
-        sReturn = "CORBA_long_double";
-        break;
+	sReturn = "CORBA_long_double";
+	break;
     case TYPE_CHAR:
-        if (bUnsigned)
-            sReturn = "CORBA_unsigned_char";
-        else
-            sReturn = "CORBA_char";
-        break;
+	if (bUnsigned)
+	    sReturn = "CORBA_unsigned_char";
+	else
+	    sReturn = "CORBA_char";
+	break;
     case TYPE_STRING:
-        sReturn = "CORBA_char";
-        break;
+	sReturn = "CORBA_char";
+	break;
     case TYPE_WCHAR:
     case TYPE_WSTRING:
-        sReturn = "CORBA_wchar";
-        break;
+	sReturn = "CORBA_wchar";
+	break;
     case TYPE_BOOLEAN:
-        sReturn = "CORBA_boolean";
-        break;
+	sReturn = "CORBA_boolean";
+	break;
     case TYPE_BYTE:
-        sReturn = "CORBA_byte";
-        break;
+	sReturn = "CORBA_byte";
+	break;
     case TYPE_VOID_ASTERISK:
-        sReturn = "CORBA_void_ptr";
-        break;
+	sReturn = "CORBA_void_ptr";
+	break;
     case TYPE_CHAR_ASTERISK:
-        sReturn = "CORBA_char_ptr";
-        break;
-    case TYPE_ARRAY:
-    case TYPE_STRUCT:
-    case TYPE_TAGGED_STRUCT:
-        sReturn = "struct";
-        break;
-    case TYPE_UNION:
-    case TYPE_TAGGED_UNION:
-        sReturn = "union";
-        break;
-    case TYPE_ENUM:
-    case TYPE_TAGGED_ENUM:
-        sReturn = "enum";
-        break;
-    case TYPE_PIPE:
-        sReturn = "_UNDEFINED_1";
-        break;
-    case TYPE_HANDLE_T:
-        sReturn = "handle_t";
-        break;
+	sReturn = "CORBA_char_ptr";
+	break;
     case TYPE_OCTET:        // 8-bit type, which will never be converted
-        sReturn = "CORBA_char";
-        break;
-    case TYPE_ANY:
-    case TYPE_OBJECT:
-    case TYPE_ISO_LATIN_1:
-    case TYPE_ISO_MULTILINGUAL:
-    case TYPE_ISO_UCS:
-    case TYPE_ERROR_STATUS_T:
-        sReturn = "_UNDEFINED_2";
-        break;
-    case TYPE_USER_DEFINED:
-        sReturn.erase(sReturn.begin(), sReturn.end());
-        break;
+	sReturn = "CORBA_char";
+	break;
     default:
-        sReturn = "_UNDEFINED_def";
-        break;
+	{
+	    std::ostringstream os;
+	    os << nType;
+	    sReturn = "_UNDEFINED_def_" + os.str();
+	}
+	break;
     }
 
-    if (m_bVerbose)
-        printf("CBENameFactory::%s Generated type name \"%s\" for type code %d\n",
-            __FUNCTION__, sReturn.c_str(), nType);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s Generated type \"%s\" for code %d\n",
+	__func__, sReturn.c_str(), nType);
     return sReturn;
 }
 
 /** \brief creates the C-style name of a type
  *  \param nType the type of the type (char, int, bool, ...)
  *  \param bUnsigned true if the wished type name should be for an unsigned type
- *  \param pContext the context of the code generation
  *  \param nSize the size of the type (long int, ...)
  *  \return the string describing the type
  *
- * This function skips types, which it won't provide names for. This way the GetTypeName
- * function will set the name for it.
+ * This function skips types, which it won't provide names for. This way the
+ * GetTypeName function will set the name for it.
  */
-string CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize)
+string 
+CBENameFactory::GetTypeName(int nType, 
+    bool bUnsigned, 
+    int nSize)
 {
     string sReturn;
+    if (CCompiler::IsOptionSet(PROGRAM_USE_CORBA_TYPES))
+	sReturn = GetCORBATypeName(nType, bUnsigned, nSize);
+    if (!sReturn.empty())
+	return sReturn;
     switch (nType)
     {
+    case TYPE_NONE:
+	sReturn = "_UNDEFINED_";
+	break;
     case TYPE_INTEGER:
     case TYPE_LONG:
-        switch (nSize)
-        {
-        case 1:
-            sReturn = "unsigned char";
-            break;
-        case 2:
-            if (bUnsigned)
-                sReturn = "unsigned short";
-            else
-                sReturn = "short";
-            break;
-        case 4:
-            if (bUnsigned)
-                sReturn = "unsigned ";
-            if (nType == TYPE_LONG)
-                sReturn += "long";
-            else
-                sReturn += "int";
-            break;
-        case 8:
+	switch (nSize)
+	{
+	case 1:
+	    sReturn = "unsigned char";
+	    break;
+	case 2:
+	    if (bUnsigned)
+		sReturn = "unsigned short";
+	    else
+		sReturn = "short";
+	    break;
+	case 4:
+	case 0:
+	    if (bUnsigned)
+		sReturn = "unsigned ";
+	    if (nType == TYPE_LONG)
+		sReturn += "long";
+	    else
+		sReturn += "int";
+	    break;
+	case 8:
 #if SIZEOF_LONG_LONG > 0
-            if (bUnsigned)
-                sReturn = "unsigned long long";
-            else
-                sReturn = "long long";
+	    if (bUnsigned)
+		sReturn = "unsigned long long";
+	    else
+		sReturn = "long long";
 #else
-            if (bUnsigned)
-                sReturn = "unsigned long";
-            else
-                sReturn = "long";
+	    if (bUnsigned)
+		sReturn = "unsigned long";
+	    else
+		sReturn = "long";
 #endif
-            break;
-        }
-        break;
+	    break;
+	}
+	break;
+    case TYPE_MWORD:
+	sReturn = "unsigned long";
+	break;
     case TYPE_VOID:
-        sReturn = "void";
-        break;
+	sReturn = "void";
+	break;
     case TYPE_FLOAT:
-        sReturn = "float";
-        break;
+	sReturn = "float";
+	break;
     case TYPE_DOUBLE:
-        sReturn = "double";
-        break;
+	sReturn = "double";
+	break;
     case TYPE_LONG_DOUBLE:
-        sReturn = "long double";
-        break;
+	sReturn = "long double";
+	break;
     case TYPE_CHAR:
-        if (bUnsigned)
-            sReturn = "unsigned char";
-        else
-            sReturn = "char";
-        break;
+	if (bUnsigned)
+	    sReturn = "unsigned char";
+	else
+	    sReturn = "char";
+	break;
     case TYPE_STRING:
-        sReturn = "char";
-        break;
+	sReturn = "char";
+	break;
+    case TYPE_WCHAR:
+	if (bUnsigned)
+	    sReturn = "unsigned short";
+	else
+	    sReturn = "short";
+	break;
+    case TYPE_WSTRING:
+	sReturn = "short";
+	break;
+    case TYPE_BOOLEAN:
+	sReturn = "unsigned char";
+	break;
     case TYPE_BYTE:
-        sReturn = "unsigned char";
-        break;
+	sReturn = "unsigned char";
+	break;
     case TYPE_VOID_ASTERISK:
-        sReturn = "void*";
-        break;
+	sReturn = "void*";
+	break;
     case TYPE_CHAR_ASTERISK:
-        sReturn = "char*";
-        break;
+	sReturn = "char*";
+	break;
     case TYPE_STRUCT:
-    case TYPE_TAGGED_STRUCT:
-        sReturn = "struct";
-        break;
+	sReturn = "struct";
+	break;
+    case TYPE_IDL_UNION:
     case TYPE_UNION:
-    case TYPE_TAGGED_UNION:
-        sReturn = "union";
-        break;
+	sReturn = "union";
+	break;
     case TYPE_ENUM:
-    case TYPE_TAGGED_ENUM:
-        sReturn = "enum";
-        break;
+	sReturn = "enum";
+	break;
+    case TYPE_PIPE:
+	sReturn = "_UNDEFINED_1";
+	break;
+    case TYPE_HANDLE_T:
+	sReturn = "handle_t";
+	break;
+    case TYPE_OCTET:        // 8-bit type, which will never be converted
+	sReturn = "char";
+	break;
+    case TYPE_ANY:
+    case TYPE_OBJECT:
+    case TYPE_ISO_LATIN_1:
+    case TYPE_ISO_MULTILINGUAL:
+    case TYPE_ISO_UCS:
+    case TYPE_ERROR_STATUS_T:
+	sReturn = "_UNDEFINED_2";
+	break;
+    case TYPE_USER_DEFINED:
+	sReturn.clear();
+	break;
+    case TYPE_EXCEPTION:
+	sReturn = "dice_CORBA_exception_type";
+	break;
     default:
-        sReturn.erase(sReturn.begin(), sReturn.end());
-        break;
+	{
+	    std::ostringstream os;
+	    os << nType;
+	    sReturn = "_UNDEFINED_def_" + os.str();
+	}
+	break;
     }
-    if (m_bVerbose)
-        printf("CBENameFactory::%s Generated type name \"%s\" for type code %d\n",
-               __FUNCTION__, sReturn.c_str(), nType);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBENameFactory::%s: generated type name \"%s\" for type code %d\n",
+	__func__, sReturn.c_str(), nType);
     return sReturn;
 }
 
 /** \brief creates the name of a function
  *  \param pFEOperation the function to create a name for
- *  \param pContext the context of the name generation
+ *  \param nFunctionType the type of the function
  *  \return the name of the back-end function
  *
  * The name has to be unique, therefore it is build using parent interfaces
  * and libraries.  The name looks like this:
  *
- * [&lt;library name&gt;_]&lt;interface name&gt;_&lt;operation name&gt;
+ * [\<library name\>_]\<interface name\>_\<operation name\>
  *
  * The function type determines the ending:
  * - FUNCTION_SEND: "_send"
@@ -638,6 +649,7 @@ string CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
  * - FUNCTION_CALL: "_call"
  * - FUNCTION_SWITCH_CASE: "_call"
  * - FUNCTION_TEMPLATE:   "_component"   (10)
+ * - FUNCTION_REPLY: "_reply"
  *
  * The three other function types should not be used with this implementation,
  * because these are interface functions.  If they are (accidentally) used
@@ -650,37 +662,35 @@ string CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
  * \todo if nested library use all lib names
  */
 string 
-CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, 
-    CBEContext * pContext)
+CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
+    FUNCTION_TYPE nFunctionType)
 {
     if (!pFEOperation)
     {
-        if (m_bVerbose)
-            printf("%s failed because the operation is 0\n",
-		__PRETTY_FUNCTION__);
-        return string();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBENameFactory::%s failed because the operation is 0\n",
+	    __func__);
+	return string();
     }
-    // get interface and library for operation
     CFEInterface *pFEInterface = 
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CFELibrary *pFELibrary = pFEOperation->GetSpecificParent<CFELibrary>();
-    // get file type
-    int nFunctionType = pContext->GetFunctionType() & FUNCTION_NOTESTFUNCTION;
     // check for interface functions
     if ((nFunctionType == FUNCTION_WAIT_ANY) ||
-        (nFunctionType == FUNCTION_RECV_ANY) ||
-        (nFunctionType == FUNCTION_SRV_LOOP) ||
-        (nFunctionType == FUNCTION_DISPATCH) ||
-        (nFunctionType == FUNCTION_REPLY_ANY_WAIT_ANY))
-        return GetFunctionName(pFEInterface, pContext);
+	(nFunctionType == FUNCTION_RECV_ANY) ||
+	(nFunctionType == FUNCTION_SRV_LOOP) ||
+	(nFunctionType == FUNCTION_DISPATCH) ||
+	(nFunctionType == FUNCTION_REPLY_WAIT))
+	return GetFunctionName(pFEInterface, nFunctionType);
 
     string sReturn;
-    if ((pContext->GetFunctionType() & FUNCTION_TESTFUNCTION) > 0)
-        sReturn += "test_";
-    if (pContext->IsBackEndSet(PROGRAM_BE_C))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
-	if (pFELibrary)
-	    sReturn += pFELibrary->GetName() + "_";
+	while (pFELibrary)
+	{
+	    sReturn = pFELibrary->GetName() + "_" + sReturn;
+	    pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+	}
 	if (pFEInterface)
 	    sReturn += pFEInterface->GetName() + "_";
     }
@@ -688,134 +698,118 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
     switch (nFunctionType)
     {
     case FUNCTION_SEND:
-        sReturn += "_send";
-        break;
+	sReturn += "_send";
+	break;
     case FUNCTION_RECV:
-        sReturn += "_recv";
-        break;
+	sReturn += "_recv";
+	break;
     case FUNCTION_WAIT:
-        sReturn += "_wait";
-        break;
+	sReturn += "_wait";
+	break;
     case FUNCTION_CALL:
     case FUNCTION_SWITCH_CASE:
-	if (pContext->IsBackEndSet(PROGRAM_BE_C))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	    sReturn += "_call";
-        break;
+	break;
     case FUNCTION_UNMARSHAL:
-        sReturn += "_unmarshal";
-        break;
+	sReturn += "_unmarshal";
+	break;
     case FUNCTION_MARSHAL:
-        sReturn += "_marshal";
-        break;
+	sReturn += "_marshal";
+	break;
     case FUNCTION_TEMPLATE:
-	if (pContext->IsBackEndSet(PROGRAM_BE_C))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	    sReturn += "_component";
-        break;
+	break;
     case FUNCTION_REPLY_RECV:
-        sReturn += "_reply_recv";
-        break;
+	sReturn += "_reply_recv";
+	break;
     case FUNCTION_REPLY_WAIT:
-        sReturn += "_reply_wait";
-        break;
+	sReturn += "_reply_wait";
+	break;
     case FUNCTION_REPLY:
-        sReturn += "_reply";
-        break;
+	sReturn += "_reply";
+	break;
     default:
-        break;
+	break;
     }
 
-    if (m_bVerbose)
-        printf("CBENameFactory::GetFunctionName(%s, functiontype:%d) = %s\n",
-               pFEOperation->GetName().c_str(), nFunctionType,
-               sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
+	__func__, pFEOperation->GetName().c_str(), nFunctionType,
+	sReturn.c_str());
     return sReturn;
 }
 
 /** \brief creates the name of a function
  *  \param pFEInterface the interface to create a name for
- *  \param pContext the context of the name generat
+ *  \param nFunctionType the type of the function
  *  \return the name of the interface's function
  *
  * This implementation creates function names for interface functions. The
  * name looks like this:
  *
- * [&lt;library name&gt;_]&lt;interface name&gt;
+ * [\<library name\>_]\<interface name\>
  *
  * The function type determines which ending is added to the above string
  * - FUNCTION_WAIT_ANY: "_wait_any"    (9)
  * - FUNCTION_RECV_ANY: "_recv_any"    (9)
  * - FUNCTION_SRV_LOOP: "_server_loop" (12)
  * - FUNCTION_DISPATCH: "_dispatch"    (9)
- * - FUNCTION_REPLY_ANY_WAIT_ANY: "_reply_and_wait"  (15)
+ * - FUNCTION_REPLY_WAIT: "_reply_and_wait"  (15)
  *
  *    \todo if nested libraries regard them as well
  */
 string 
-CBENameFactory::GetFunctionName(CFEInterface * pFEInterface, 
-    CBEContext * pContext)
+CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
+    FUNCTION_TYPE nFunctionType)
 {
     if (!pFEInterface)
-       	return string();
-    
-    // get function type
-    int nFunctionType = pContext->GetFunctionType() & FUNCTION_NOTESTFUNCTION;
-    
+	return string();
+
     string sReturn;
-    if ((pContext->GetFunctionType() & FUNCTION_TESTFUNCTION) > 0)
-    	sReturn += "test_";
-    if (pContext->IsBackEndSet(PROGRAM_BE_C))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
-	if (pFEInterface->GetSpecificParent<CFELibrary>())
-	    sReturn += pFEInterface->GetSpecificParent<CFELibrary>()
-		->GetName() +  "_";
-	sReturn += pFEInterface->GetName();
+	CFELibrary *pFELibrary = pFEInterface->GetSpecificParent<CFELibrary>();
+	while (pFELibrary)
+	{
+	    sReturn = pFELibrary->GetName() + "_" + sReturn;
+	    pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+	}
     }
-    else if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
-    {
-	sReturn += "_dice";
-    }
+    else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	sReturn += "_dice_";
+    sReturn += pFEInterface->GetName();
     switch (nFunctionType)
     {
     case FUNCTION_WAIT_ANY:
-     	sReturn += "_wait_any";
-     	break;
+	sReturn += "_wait_any";
+	break;
     case FUNCTION_RECV_ANY:
-        sReturn += "_recv_any";
-        break;
+	sReturn += "_recv_any";
+	break;
     case FUNCTION_SRV_LOOP:
-        sReturn += "_server_loop";
-        break;
+	sReturn += "_server_loop";
+	break;
     case FUNCTION_DISPATCH:
-        sReturn += "_dispatch";
-        break;
-    case FUNCTION_REPLY_ANY_WAIT_ANY:
-        sReturn += "_reply_and_wait";
-        break;
+	sReturn += "_dispatch";
+	break;
+    case FUNCTION_REPLY_WAIT:
+	sReturn += "_reply_and_wait";
+	break;
     default:
-        break;
+	break;
     }
 
-    if (m_bVerbose)
-        printf("CBENameFactory::GetFunctionName(%s, functiontype:%d) = %s\n",
-               pFEInterface->GetName().c_str(), nFunctionType,
-               sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
+	__func__, pFEInterface->GetName().c_str(), nFunctionType,
+	sReturn.c_str());
     return sReturn;
-}
-
-/** \brief creates the name of "other" functions
- *  \param nFunctionType the type of the function
- *  \param pContext the omnipresent context
- *  \return the name of the function
- */
-string 
-CBENameFactory::GetFunctionName(int nFunctionType, CBEContext *pContext)
-{
-    return string();
 }
 
 /** \brief creates a unique define label for a header file name
  *  \param sFilename the filename to create the define for
- *  \param pContext the context of the name generation
  *  \return a unique define label
  *
  * To build a unique define label from a file name there is not much to do -
@@ -824,371 +818,326 @@ CBENameFactory::GetFunctionName(int nFunctionType, CBEContext *pContext)
  * characters" with underscores. Because define labale commonly are uppercase,
  * we do that as well
  */
-string CBENameFactory::GetHeaderDefine(string sFilename, CBEContext * pContext)
+string 
+CBENameFactory::GetHeaderDefine(string sFilename)
 {
     if (sFilename.empty())
-    return string();
+	return string();
 
     // add underscores
     string sReturn;
     sReturn = "__" + sFilename + "__";
     // make uppercase
-    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
+    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
     // replace "nonconforming characters"
     string::size_type pos;
     while ((pos = sReturn.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")) != string::npos)
-        sReturn[pos] = '_';
-//     sReturn.ReplaceExcluding("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", '_');
+	sReturn[pos] = '_';
 
     return sReturn;
 }
 
 /** \brief generates a define symbol to brace the definition of a type
  *  \param sTypedefName the name of the typedef to brace
- *  \param pContext the context of the code generation
  *  \return the define symbol
  *
  * Add to the type's name two underscores on either side and the "typedef_"
  * string. Then remove "nonconforming characters" and make the string
  * uppercase.
  */
-string CBENameFactory::GetTypeDefine(string sTypedefName, CBEContext * pContext)
+string CBENameFactory::GetTypeDefine(string sTypedefName)
 {
     if (sTypedefName.empty())
-        return string();
+	return string();
 
     // add underscores
     string sReturn;
     sReturn = "__typedef_" + sTypedefName + "__";
     // make uppercase
-    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
+    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
     // replace "nonconforming characters"
     string::size_type pos;
     while ((pos = sReturn.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")) != string::npos)
-        sReturn[pos] = '_';
+	sReturn[pos] = '_';
 
     return sReturn;
 }
 
 /** \brief generates a variable name for the return variable of a function
- *  \param pContext the context of the variable
  *  \return a variable name for the return variable
  */
-string CBENameFactory::GetReturnVariable(CBEContext * pContext)
+string CBENameFactory::GetReturnVariable()
 {
     return string("_dice_return");
 }
 
 /** \brief generates a variable name for the opcode variable
- *  \param pContext the context of the variable
  *  \return a variable name for the opcode variable
  */
-string CBENameFactory::GetOpcodeVariable(CBEContext * pContext)
+string CBENameFactory::GetOpcodeVariable()
 {
     return string("_dice_opcode");
 }
 
 /** \brief generates a variable name for the server loop reply code variable
- *  \param pContext the context of the variable
  *  \return a variable name for the reply code variable
  */
-string CBENameFactory::GetReplyCodeVariable(CBEContext * pContext)
+string CBENameFactory::GetReplyCodeVariable()
 {
     return string("_dice_reply");
 }
 
 /** \brief generates the variable name for the return variable of the server loop
- *  \param pContext the context of the variable
  *  \return a variable name for the return variable
  */
-string CBENameFactory::GetSrvReturnVariable(CBEContext * pContext)
+string CBENameFactory::GetSrvReturnVariable()
 {
     return string("_dice_srv_return");
 }
 
 /** \brief generate the constant name of the function's opcode
  *  \param pFunction the operation to generate the opcode for
- *  \param pContext the context of the name generation
  *  \return a string containing the opcode constant name
  *
  * A opcode constant is usually named:
- * [&lt;library name&gt;_]&lt;interface name&gt;_&lt;function name&gt;_opcode
+ * [\<library name\>_]\<interface name\>_\<function name\>_opcode
  */
-string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction, CBEContext * pContext)
+string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 {
     if (!pFunction)
     {
-        if (m_bVerbose)
-            printf("CBENameFactory::GetOpcodeConst failed because function is 0\n");
-        return string();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBENameFactory::%s failed because function is 0\n", __func__);
+	return string();
     }
 
     string sReturn;
-    CBEClass *pClass = pFunction->GetClass();
+    CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
     // if pClass != 0 search for FE function
     if (pClass)
     {
-        CFunctionGroup *pGroup = pClass->FindFunctionGroup(pFunction);
-        if (pGroup)
-        {
-            return GetOpcodeConst(pGroup->GetOperation(), pContext);
-        }
+	CFunctionGroup *pGroup = pClass->FindFunctionGroup(pFunction);
+	if (pGroup)
+	{
+	    return GetOpcodeConst(pGroup->GetOperation());
+	}
     }
 
-    CBENameSpace *pNameSpace = (pClass) ? pClass->GetNameSpace() : 0;
+    CBENameSpace *pNameSpace = (pClass) ? 
+	pClass->GetSpecificParent<CBENameSpace>() : 0;
     if (pNameSpace)
-        sReturn += (pNameSpace->GetName()) + "_";
+	sReturn += (pNameSpace->GetName()) + "_";
     if (pClass)
-        sReturn += (pClass->GetName()) + "_";
+	sReturn += (pClass->GetName()) + "_";
     sReturn += pFunction->GetName() + "_opcode";
     // make upper case
-    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
+    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 
-    if (m_bVerbose)
-        printf("CBENameFactory::GetOpcodeConst(BE:%s) = %s\n",
-               pFunction->GetName().c_str(), sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s(BE: %s) = %s\n", __func__,
+	pFunction->GetName().c_str(), sReturn.c_str());
     return sReturn;
 }
 
 /** \brief generate the constant name of the function's opcode
  *  \param pFEOperation the operation to generate the opcode for
- *  \param pContext the context of the name generation
  *  \return a string containing the opcode constant name
  *
  * A opcode constant is usually named:
- * [&lt;library name&gt;_]&lt;interface name&gt;_&lt;function name&gt;_opcode
+ * [\<library name\>_]\<interface name\>_\<function name\>_opcode
  */
-string CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation, CBEContext * pContext)
+string 
+CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
 {
     if (!pFEOperation)
     {
-        if (m_bVerbose)
-            printf("CBENameFactory::GetOpcodeConst failed because FE function is 0\n");
-        return string();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBENameFactory::%s failed because FE function is 0\n",
+	    __func__);
+	return string();
     }
 
     string sReturn;
-    CFEInterface *pFEInterface = pFEOperation->GetSpecificParent<CFEInterface>();
-    CFELibrary *pFELibrary = (pFEInterface) ? pFEInterface->GetSpecificParent<CFELibrary>() : 0;
+    CFEInterface *pFEInterface = 
+	pFEOperation->GetSpecificParent<CFEInterface>();
+    CFELibrary *pFELibrary = (pFEInterface) ? 
+	pFEInterface->GetSpecificParent<CFELibrary>() : 0;
     if (pFELibrary)
-        sReturn += (pFELibrary->GetName()) + "_";
+	sReturn += (pFELibrary->GetName()) + "_";
     if (pFEInterface)
-        sReturn += (pFEInterface->GetName()) + "_";
+	sReturn += (pFEInterface->GetName()) + "_";
     sReturn += pFEOperation->GetName() + "_opcode";
     // make upper case
-    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
+    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 
-    if (m_bVerbose)
-        printf("CBENameFactory::GetOpcodeConst(FE:%s) = %s\n",
-               pFEOperation->GetName().c_str(), sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s(FE: %s) = %s\n", __func__,
+	pFEOperation->GetName().c_str(), sReturn.c_str());
     return sReturn;
 }
 
 /** \brief generate the constant name of the interface's base opcode
  *  \param pClass the interface to generate the opcode for
- *  \param pContext the context of the name generation
  *  \return a string containing the base-opcode constant name
  *
  * A opcode constant is usually named:
- * [&lt;library name&gt;_]&lt;interface name&gt;_base_opcode
+ * [\<library name\>_]\<interface name\>_base_opcode
  */
-string CBENameFactory::GetOpcodeConst(CBEClass * pClass, CBEContext * pContext)
+string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
 {
     if (!pClass)
     {
-        if (m_bVerbose)
-            printf("CBENameFactory::GetOpcodeConst failed because class is 0\n");
-        return string();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBENameFactory::%s failed because class is 0\n", __func__);
+	return string();
     }
 
     string sReturn;
-    CBENameSpace *pNameSpace = pClass->GetNameSpace();
+    CBENameSpace *pNameSpace = pClass->GetSpecificParent<CBENameSpace>();
     if (pNameSpace)
-        sReturn += (pNameSpace->GetName()) + "_";
+	sReturn += (pNameSpace->GetName()) + "_";
     sReturn += pClass->GetName() + "_base_opcode";
     // make upper case
-    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
+    transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 
-    if (m_bVerbose)
-        printf("CBENameFactory::GetOpcodeConst(C:%s) = %s\n",
-               pClass->GetName().c_str(), sReturn.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBENameFactory::%s(C: %s) = %s\n", __func__, 
+	pClass->GetName().c_str(), sReturn.c_str()); 
     return sReturn;
 }
 
 /** \brief generates the inline prefix
- *  \param pContext the context of the write operation
  *  \return a string containing the prefix (usually "inline")
+ *
+ * Default to "static inline" to avoid warnings about non-defined revious
+ * prototype. This does not allow to use the function where the header is not
+ * included but that can be fixed by using -i extern.
  */
-string CBENameFactory::GetInlinePrefix(CBEContext * pContext)
+string CBENameFactory::GetInlinePrefix()
 {
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_INLINE_EXTERN))
-        return string("extern inline");
-    else if (pContext->IsOptionSet(PROGRAM_GENERATE_INLINE_STATIC))
-        return string("static inline");
+    if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE_EXTERN))
+	return string("extern inline");
     else
-        return string("inline");
+	return string("static inline");
 }
 
 /** \brief general function for accessing strings of derived name factories
  *  \param nStringCode the identifier of the requested string
- *  \param pContext the context of the string generation
  *  \param pParam additional unknown parameter
  *  \return the requested string
  *
- * If using an instance of this class, the explicit functions cover all requested strings.
- * This functions should only be accessed in derived name factories.
+ * If using an instance of this class, the explicit functions cover all
+ * requested strings.  This functions should only be accessed in derived name
+ * factories.
  */
-string CBENameFactory::GetString(int nStringCode, CBEContext * pContext, void *pParam)
+string CBENameFactory::GetString(int /*nStringCode*/,
+    void* /*pParam*/)
 {
     return string();
 }
 
 /** \brief generates the variable name for the CORBA_object parameter
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetCorbaObjectVariable(CBEContext * pContext)
+string CBENameFactory::GetCorbaObjectVariable()
 {
     return string("_dice_corba_obj");
 }
 
 /** \brief generates the variable name for the CORBA_environment parameter
- *  \param pContext the context of the code generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetCorbaEnvironmentVariable(CBEContext * pContext)
+string CBENameFactory::GetCorbaEnvironmentVariable()
 {
     return string("_dice_corba_env");
 }
 
 /** \brief generates the variable name for a message buffer
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetMessageBufferVariable(CBEContext * pContext)
+string CBENameFactory::GetMessageBufferVariable()
 {
     return string("_dice_msg_buffer");
 }
 
 /** \brief generates the name of the message buffer's type
  *  \param pFEInterface the interface this name is for
- *  \param pContext the context of the name generation
  *  \return the name of the type
  */
-string CBENameFactory::GetMessageBufferTypeName(CFEInterface * pFEInterface, CBEContext * pContext)
+string CBENameFactory::GetMessageBufferTypeName(CFEInterface * pFEInterface)
 {
-    return GetMessageBufferTypeName(pFEInterface->GetName(), pContext);
+    return GetMessageBufferTypeName(pFEInterface->GetName());
 }
 
 /** \brief generates the name of the message buffer's type
  *  \param sInterfaceName the name of the interface this message buffer is for
- *  \param pContext the context of the code generation
  *  \return the name of the type;
  */
-string CBENameFactory::GetMessageBufferTypeName(string sInterfaceName, CBEContext * pContext)
+string CBENameFactory::GetMessageBufferTypeName(string sInterfaceName)
 {
-    string sBase = GetMessageBufferTypeName(pContext);
+    string sBase = GetMessageBufferTypeName();
     if (sInterfaceName.empty())
-        return string("dice_") + sBase;
+	return string("dice_") + sBase;
 
     return sInterfaceName + string("_") + sBase;
 }
 
 /** \brief generates the name of the message buffer's type
- *  \param pContext the context of the name generation
  *  \return the base name of the message buffer type
  *
- * This function is used internally to get the "base" of the type name _and_ its
- * used if the the name is later altered by teh calling function (e.g. add scopes, etc.)
+ * This function is used internally to get the "base" of the type name _and_
+ * its used if the the name is later altered by teh calling function (e.g. add
+ * scopes, etc.)
  */
-string CBENameFactory::GetMessageBufferTypeName(CBEContext *pContext)
+string CBENameFactory::GetMessageBufferTypeName()
 {
     return "msg_buffer_t";
 }
 
 /** \brief generates the variable of the client side timeout
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetTimeoutClientVariable(CBEContext * pContext)
+string CBENameFactory::GetTimeoutClientVariable()
 {
     return string("timeout");
 }
 
 /** \brief generates the variable of the component side timeout
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetTimeoutServerVariable(CBEContext * pContext)
+string CBENameFactory::GetTimeoutServerVariable()
 {
     return string("timeout");
 }
 
 /** \brief generates the variable of the client side scheduling options
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetScheduleClientVariable(CBEContext * pContext)
+string CBENameFactory::GetScheduleClientVariable()
+{
+    return string();
+}
+
+/** \brief generates the variable of the server side scheduling options
+ *  \return the name of the variable
+ */
+string CBENameFactory::GetScheduleServerVariable()
 {
     return string();
 }
 
 /** \brief generates the variable containing the component identifier
- *  \param pContext the context of the name generation
  *  \return  the name of the variable
  */
-string CBENameFactory::GetComponentIDVariable(CBEContext * pContext)
+string CBENameFactory::GetComponentIDVariable()
 {
     return string("componentID");
 }
 
-/** \brief generate a global variable name for the testsuite
- *  \param pParameter the parameter to make a global name for
- *  \param pContext the context of the name generation
- *  \return the name of the global variable
- */
-string CBENameFactory::GetGlobalTestVariable(CBEDeclarator * pParameter,
-                         CBEContext * pContext)
-{
-    if (!pParameter)
-        return string();
-    // can be the parameter of a function
-    CBEFunction *pFunc = pParameter->GetSpecificParent<CBEFunction>();
-    if (pFunc)
-        return pFunc->GetName() + "_" + pParameter->GetName();
-    return string();
-}
-
-/** \brief generate a global variable name for the return value of a function
- *  \param pFunction the function to generate the return var for
- *  \param pContext the context of the name generation
- *  \return the name of the global return variable
- */
-string CBENameFactory::GetGlobalReturnVariable(CBEFunction * pFunction,
-                           CBEContext * pContext)
-{
-    if (!pFunction)
-        return string();
-    string sRetVar = GetReturnVariable(pContext);
-    return pFunction->GetName() + "_" + sRetVar;
-}
-
-/** \brief generates the message buffers member for a specific type
- *  \param pType the type fot which the member is searched
- *  \param pContext the context of the name generation
- *  \return the name of the message buffer's member responsible for the type
- */
-string CBENameFactory::GetMessageBufferMember(CBEType * pType, CBEContext * pContext)
-{
-    return GetMessageBufferMember(pType->GetFEType(), pContext);
-}
-
 /** \brief generates the message buffers member for a specific type
  *  \param nFEType  the type fot which the member is searched
- *  \param pContext the context of the name generation
  *  \return the name of the message buffer's member responsible for the type
  */
-string CBENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pContext)
+string CBENameFactory::GetMessageBufferMember(int nFEType)
 {
     string sReturn;
     switch (nFEType)
@@ -1209,8 +1158,6 @@ string CBENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pContext
     case TYPE_UNION:
     case TYPE_ENUM:
     case TYPE_PIPE:
-    case TYPE_TAGGED_STRUCT:
-    case TYPE_TAGGED_UNION:
     case TYPE_HANDLE_T:
     case TYPE_ISO_LATIN_1:
     case TYPE_ISO_MULTILINGUAL:
@@ -1223,18 +1170,17 @@ string CBENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pContext
     case TYPE_OCTET:
     case TYPE_ANY:
     case TYPE_OBJECT:
-    case TYPE_TAGGED_ENUM:
     case TYPE_STRING:
     case TYPE_WSTRING:
     case TYPE_ARRAY:
-        sReturn = "_bytes";
-        break;
+	sReturn = "_UNDEFINED_member";
+	break;
     case TYPE_REFSTRING:
-        sReturn = "_strings";
-        break;
+	sReturn = "_strings";
+	break;
     default:
-        sReturn = "_stuff";
-        break;
+	sReturn = "_stuff";
+	break;
     }
     return sReturn;
 }
@@ -1254,19 +1200,17 @@ string CBENameFactory::GetSwitchVariable()
 }
 
 /** \brief generates the variable name of the offset variable
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetOffsetVariable(CBEContext * pContext)
+string CBENameFactory::GetOffsetVariable()
 {
     return string("_dice_offset");
 }
 
 /** \brief generates the variable name of a temporary offset variable
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CBENameFactory::GetTempOffsetVariable(CBEContext * pContext)
+string CBENameFactory::GetTempOffsetVariable()
 {
     return string("_dice_tmp_offset");
 }
@@ -1298,27 +1242,26 @@ string CBENameFactory::GetServerParameterName()
 /** \brief get a scoped name for a tagged declarator or typedef
  *  \param pFERefType the class to use as reference in the hierarchy
  *  \param sName the name to scope
- *  \param pContext the context of this name creation
  *  \return the scoped name
  *
- * This function is used to generate a suitable name for a tagged decl, typedef or
- * type declaration with a flat namespace.
+ * This function is used to generate a suitable name for a tagged decl,
+ * typedef or type declaration with a flat namespace.
  */
-string CBENameFactory::GetTypeName(CFEBase *pFERefType, string sName, CBEContext *pContext)
+string CBENameFactory::GetTypeName(CFEBase *pFERefType, string sName)
 {
     string sReturn;
     // check for parent interface
     CFEInterface *pInterface = pFERefType->GetSpecificParent<CFEInterface>();
     if (pInterface)
     {
-        sReturn = pInterface->GetName() + "_";
+	sReturn = pInterface->GetName() + "_";
     }
     // check for parent libraries
     CFELibrary *pLib = pFERefType->GetSpecificParent<CFELibrary>();
     while (pLib)
     {
-        sReturn = pLib->GetName() + "_" + sReturn;
-        pLib = pLib->GetSpecificParent<CFELibrary>();
+	sReturn = pLib->GetName() + "_" + sReturn;
+	pLib = pLib->GetSpecificParent<CFELibrary>();
     }
     // add original name
     sReturn += sName;
@@ -1327,24 +1270,23 @@ string CBENameFactory::GetTypeName(CFEBase *pFERefType, string sName, CBEContext
 
 /** \brief get a scoped name for the constant
  *  \param pFEConstant the constant which's name should be scoped
- *  \param pContext the context of this scoping
  *  \return the scoped named
  */
-string CBENameFactory::GetConstantName(CFEConstDeclarator* pFEConstant, CBEContext* pContext)
+string CBENameFactory::GetConstantName(CFEConstDeclarator* pFEConstant)
 {
     string sReturn;
     // check for parent interface
     CFEInterface *pInterface = pFEConstant->GetSpecificParent<CFEInterface>();
     if (pInterface)
     {
-        sReturn = pInterface->GetName() + "_";
+	sReturn = pInterface->GetName() + "_";
     }
     // check for parent libraries
     CFELibrary *pLib = pFEConstant->GetSpecificParent<CFELibrary>();
     while (pLib)
     {
-        sReturn = pLib->GetName() + "_" + sReturn;
-        pLib = pLib->GetSpecificParent<CFELibrary>();
+	sReturn = pLib->GetName() + "_" + sReturn;
+	pLib = pLib->GetSpecificParent<CFELibrary>();
     }
     // add original name
     sReturn += pFEConstant->GetName();
@@ -1352,12 +1294,11 @@ string CBENameFactory::GetConstantName(CFEConstDeclarator* pFEConstant, CBEConte
 }
 
 /** \brief creates the name of a dummy variable
- *  \param pContext the context of the name creation
  *  \return the name of the dummy variable
  *
  *  \todo count the dummy variables in the context
  */
-string CBENameFactory::GetDummyVariable(CBEContext* pContext)
+string CBENameFactory::GetDummyVariable()
 {
     return string("dummy");
 }
@@ -1365,7 +1306,108 @@ string CBENameFactory::GetDummyVariable(CBEContext* pContext)
 /** \brief returns the variable name of a exception word variable
  *  \return the string _exception
  */
-string CBENameFactory::GetExceptionWordVariable(CBEContext *pContext)
+string CBENameFactory::GetExceptionWordVariable()
 {
     return string("_exception");
 }
+
+/** \brief returns the name of the message buffer struct member
+ *  \param nDirection the transfer direction of the struct
+ *  \param sFuncName if not empty the operation's name should be added
+ *  \param sClassName if not empty the class's name should be added
+ *  \return the name of the union member
+ */
+string CBENameFactory::GetMessageBufferStructName(int nDirection,
+    string sFuncName, string sClassName)
+{
+    string sReturn;
+    assert((sFuncName.empty() && sClassName.empty()) ||
+	(!sFuncName.empty() && !sClassName.empty()));
+    if (!sClassName.empty())
+	sReturn = sClassName;
+    if (!sClassName.empty() && !sFuncName.empty())
+	sReturn += "_";
+    if (!sFuncName.empty())
+	sReturn += sFuncName;
+    if (nDirection == DIRECTION_IN)
+	sReturn += "_in";
+    else if (nDirection == DIRECTION_OUT)
+	sReturn += "_out";
+    else
+	sReturn += "_word";
+    return sReturn;
+}
+
+/** \brief returns the name of a word sized member of the message buffer
+ *  \return the generated name
+ */
+string
+CBENameFactory::GetWordMemberVariable()
+{
+    return string("_word");
+}
+
+/** \brief returns the name of a word sized member of the message buffer
+ *  \param nNumber the number of the member (zero based index)
+ *  \return the generated name
+ */
+string
+CBENameFactory::GetWordMemberVariable(int nNumber)
+{
+    std::ostringstream os;
+    string sReturn = GetWordMemberVariable();
+    os << nNumber;
+    return sReturn + os.str();
+}
+
+/** \brief get the name for a local variable which is the size variable of
+ *         some parameter
+ *  \param pStack the declarator stack containing the parameter to get the
+ *         local variable for
+ *  \return the name of the size variable
+ */
+string 
+CBENameFactory::GetLocalSizeVariableName(
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    string sReturn = GetLocalVariableName(pStack);
+    sReturn += "_size";
+    return sReturn;
+}
+
+/** \brief get the name for a local variable using a declarator stack
+ *  \param pStack the declarator stack pointing to the current loc of the var
+ *  \return the name of the local variable
+ */
+string
+CBENameFactory::GetLocalVariableName(
+    vector<CDeclaratorStackLocation*> *pStack)
+{
+    string sReturn = string("_dice");
+    assert(pStack);
+    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
+    for (; iter != pStack->end(); iter++)
+	sReturn += string("_") + (*iter)->pDeclarator->GetName();
+    return sReturn;
+}
+
+/** \brief get the name for the padding member
+ *  \param nPadType the type of the padding member
+ *  \param nPadToType the type of the member to insert the padding before
+ *  \return the name of this member
+ */
+string
+CBENameFactory::GetPaddingMember(int nPadType, 
+    int nPadToType)
+{
+    string sReturn = string("_dice_pad_");
+    string sType = GetTypeName(nPadToType, false);
+    sReturn += sType;
+    sReturn += "_with_";
+    sType = GetTypeName(nPadType, false);
+    sReturn += sType;
+    // replace spaces in type names
+    replace_if(sReturn.begin(), sReturn.end(), ::isspace, '_');
+    return sReturn;
+}
+

@@ -30,10 +30,6 @@ class Thread_lock
 private:
   Switch_lock _switch_lock;
   Switch_hint _switch_hint;
-
-  void lock_utcb();
-  void unlock_utcb();
-
 };
 
 IMPLEMENTATION:
@@ -42,12 +38,13 @@ IMPLEMENTATION:
 #include "lock_guard.h"
 #include "cpu_lock.h"
 #include "thread_state.h"
+#include "cpu.h"
 
 /** Context this thread lock belongs to.
     @return context locked by this thread lock
  */
 PRIVATE inline
-Context * const
+Context *
 Thread_lock::context() const
 {
   // We could have saved our context in our constructor, but computing
@@ -71,7 +68,7 @@ Thread_lock::set_switch_hint (Switch_hint const hint)
     @return true if we owned the lock already.  false otherwise.
  */
 PUBLIC
-bool const
+bool
 Thread_lock::test_and_set()
 {
   Lock_guard <Cpu_lock> guard (&cpu_lock);
@@ -79,7 +76,26 @@ Thread_lock::test_and_set()
   if (_switch_lock.test_and_set ()) // Get the lock
     return true;
 
-  lock_utcb();  
+  context()->set_donatee (current()); // current get time of context
+
+  set_switch_hint (SWITCH_ACTIVATE_HIGHER);
+
+  return false;
+}
+
+/** Lock a context.
+    @return true if we owned the lock already.  false otherwise.
+    @pre caller holds cpu lock
+ */
+PUBLIC inline NEEDS["switch_lock.h","cpu_lock.h","globals.h", Thread_lock::context]
+bool
+Thread_lock::test_and_set_dirty()
+{
+
+  assert(cpu_lock.test());
+
+  if (_switch_lock.test_and_set_dirty ()) // Get the lock
+    return true;
 
   context()->set_donatee (current()); // current get time of context
 
@@ -87,6 +103,7 @@ Thread_lock::test_and_set()
 
   return false;
 }
+
 
 /** Lock a thread.
     If the lock is occupied, enqueue in list of helpers and lend CPU
@@ -97,6 +114,19 @@ void
 Thread_lock::lock()
 {
   check (test_and_set() == false);
+}
+
+/** Lock a thread.
+    If the lock is occupied, enqueue in list of helpers and lend CPU 
+    to current lock owner until we are the lock owner.
+    @pre caller holds cpu lock
+ */
+PUBLIC inline NEEDS["globals.h"]
+void
+Thread_lock::lock_dirty()
+{
+  // removed assertion, because we do lazy locking
+  test_and_set_dirty();
 }
 
 /** Free the lock.
@@ -112,8 +142,6 @@ Thread_lock::clear()
   Switch_hint hint = _switch_hint;	// Save hint before unlocking
 
   Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-  unlock_utcb();
 
   // Passing on the thread lock implies both passing _switch_lock
   // and setting context()'s donatee to the new owner.  This must be
@@ -157,11 +185,87 @@ Thread_lock::clear()
   context()->ready_enqueue();
 }
 
+/** Free the lock.
+    First return the CPU to helper or next lock owner, whoever has the higher 
+    priority, given that thread's priority is higher that ours.
+    Finally, switch to locked thread if that thread has a higher priority,
+    and/or the switch hint says we should.
+    Assumes caller hold cpu lock
+ */
+PUBLIC
+void
+Thread_lock::clear_dirty()
+{
+  assert(cpu_lock.test());
+
+  Switch_hint hint = _switch_hint;
+
+  if(test())
+    {
+      _switch_lock.clear_dirty();
+      context()->set_donatee (_switch_lock.lock_owner());       // (*)
+    }
+  else
+    {
+      //      assert(!context()->donatee());
+    }
+
+  assert(cpu_lock.test());
+
+  // We had locked ourselves, remain current
+  if (context() == current())
+    return;
+
+  // Unlocked thread not ready, remain current
+  if (!(context()->state() & Thread_ready))
+    return;
+
+  // Switch to lockee's execution context if the switch hint says so
+  if (hint == SWITCH_ACTIVATE_LOCKEE)
+    {
+      current()->switch_exec_locked (context(), Context::Not_Helping);
+      return;
+    }
+
+  // Switch to lockee's execution context and timeslice if its priority
+  // is higher than the current priority
+  if (Context::can_preempt_current (context()->sched()))
+    {
+      current()->switch_to_locked (context());
+      return;
+    }
+
+  context()->ready_enqueue();
+}
+
+/** Free the lock.
+    First return the CPU to helper or next lock owner, whoever has the higher 
+    priority, given that thread's priority is higher that ours.
+    Finally, switch to locked thread if that thread has a higher priority,
+    and/or the switch hint says we should.
+    Assumes caller hold cpu lock
+ */
+PUBLIC inline
+void
+Thread_lock::clear_dirty_dont_switch()
+{
+  assert(cpu_lock.test());
+
+  if(EXPECT_TRUE(!test()))
+    return;
+
+  _switch_lock.clear_dirty();
+  context()->set_donatee (_switch_lock.lock_owner());   // (*)
+
+  assert(cpu_lock.test());
+}
+
+
 /** Lock owner.
     @return current owner of the lock.  0 if there is no owner.
  */
 PUBLIC inline
-Context * const
+Context *
 Thread_lock::lock_owner() const
 {
   return _switch_lock.lock_owner();
@@ -171,58 +275,9 @@ Thread_lock::lock_owner() const
     @return true if lock is set.
  */
 PUBLIC inline
-bool const
+bool
 Thread_lock::test()
 {
   return _switch_lock.test();
 }
 
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION[!lipc]:
-
-/** Dummy function to hold code in thread_lock generic.
- */
-IMPLEMENT inline 
-void
-Thread_lock::lock_utcb() {}
-
-/** Dummy function to hold code in thread_lock generic.
- */
-IMPLEMENT inline 
-void
-Thread_lock::unlock_utcb() {}
-
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION[lipc]:
-
-#include "l4_types.h"
-
-/** Set the thread lock in the utcb. That mean's disabling LIPC.
-    Should be atomically with the normal thread lock.
- */
-IMPLEMENT inline  NEEDS ["l4_types.h", Thread_lock::context]
-void
-Thread_lock::lock_utcb()
-{
-  // We need to test for the UTCB, because "fresh" threads can be locked,
-  // but they dont have an UTCB.
-
-  if (context()->utcb())
-    context()->utcb()->lock_dirty();
-}
-
-/** Clear the thread lock in the utcb. That might enable LIPC again.
- */
-IMPLEMENT inline NEEDS ["l4_types.h", Thread_lock::context]
-void
-Thread_lock::unlock_utcb()
-{
-  // lock free now -> "unlock" UTCB
-  // We need to test for the UTCB too, because on "killed" threads, the utcb is 
-  // already gone
-
-  if (context()->utcb())
-    context()->utcb()->unlock_dirty();
-}

@@ -96,9 +96,10 @@ int omega0_call_long(int handle, omege0_request_descriptor type,
   	l4_fpage_t	rcv_fpage;
   	l4_msgdope_t	size;
   	l4_msgdope_t	snd;
+	l4_umword_t     dw0, dw1;
   	l4_threadid_t	threadid;
   	} message= {rcv_fpage:{0}, size:L4_IPC_DOPE(4,0), snd:L4_IPC_DOPE(4,0),
-  	           threadid:thread};
+                    dw0:0, dw1:0, threadid:thread};
   
 /* krishna: talk to `omega0_management_thread' if handle is 0 */
   if(handle)

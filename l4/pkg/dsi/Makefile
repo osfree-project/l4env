@@ -2,7 +2,9 @@
 PKGDIR		= .
 L4DIR		?= $(PKGDIR)/../..
 
-# no targets, we only use well known subdirs
+ifneq ($(filter clean cleanall,$(MAKECMDGOALS)),)
+TARGET		= lib lib-1ipc
+endif
 
 # include subdir role
 include $(L4DIR)/mk/subdir.mk

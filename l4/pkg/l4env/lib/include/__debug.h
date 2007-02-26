@@ -2,7 +2,7 @@
 /*****************************************************************************/
 /**
  * \file   l4env/lib/include/__debug.h
- * \brief  Debug config. 
+ * \brief  Debug config.
  *
  * \date   07/27/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
@@ -10,16 +10,16 @@
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/

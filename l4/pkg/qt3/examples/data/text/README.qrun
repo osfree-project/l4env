@@ -1,0 +1,4 @@
+This is an application launcher. It uses 'loader' and 'l4exec' and is
+similar to 'launchpad' an 'run'. It can use TFTP or any other file provider
+as a source for loader scripts and binaries.
+

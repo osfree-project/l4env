@@ -30,7 +30,7 @@ library l4vfs
         [oneway]
         void read_notify([in] object_handle_t handle,
                          [in] l4vfs_ssize_t retval,
-                         [in, size_is(count),ref,prealloc] char *buf,
+                         [in, size_is(count),ref/*,prealloc*/] char *buf,
                          [in] l4vfs_size_t *count,
                          [in] l4_threadid_t source);
 

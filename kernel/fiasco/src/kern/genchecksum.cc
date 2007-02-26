@@ -8,7 +8,7 @@ static char buffer[128];
 static int  buf_idx;
 static int  buf_chars;
 
-static char *hexchars = "0123456789abcdef";
+static char const *hexchars = "0123456789abcdef";
 
 extern "C" void exit(int status);
 

@@ -80,7 +80,7 @@ void tree_node_create_dope_repr(const tree_node_t * node)
     dope_cmdf(app_id, "tree_name_%d.set(-text \"%s\")", id, node->name);
     dope_cmdf(app_id, "tree_header_%d.place(tree_name_%d, -column 1 -row 0)",
               id, id);
-    
+
     // icon
     dope_cmd(app_id, "temp = new VScreen()");
     dope_cmdf(app_id, "temp.set(-fixw %d -fixh %d)", 16, 16);
@@ -114,13 +114,12 @@ void tree_node_create_dope_repr(const tree_node_t * node)
         if (node->expanded == 0)              // '+' non-leaf node
         {
             dope_cmd(app_id, "temp.share(tree_plus)");
-            dope_bind(app_id, "temp", "press", press_callback, (void *)(node));
         }
         else                                  // '-' non-leaf node
         {
             dope_cmd(app_id, "temp.share(tree_minus)");
-            dope_bind(app_id, "temp", "press", press_callback, (void *)(node));
         }
+        dope_bind(app_id, "temp", "press", press_callback, (void *)(node));
     }
     // pad the ruler with vert elements
     dope_cmd(app_id, "tempg = new Grid()");

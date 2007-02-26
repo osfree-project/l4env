@@ -13,7 +13,7 @@
 #                                  'uic': User Interface Compiler
 # You better have them installed on your machine ;)
 UIC		= uic
-MOC		= moc
+MOC		= $(L4DIR)/pkg/qt3/lib/libqt3/bin/moc
 
 # Qt needs all this. The current path '.' is required in the
 # include path, DEFINES must be kept in sync with library
@@ -22,7 +22,6 @@ PRIVATE_INCDIR  += $(L4DIR)/include/qt3 .
 CXXFLAGS	+= -fno-exceptions -fno-rtti
 DEFINES		+= -DQWS -DQ_OS_DROPS -DQT_THREAD_SUPPORT
 
-USE_DIETLIBC	= y
 MALLOC_BACKEND	= -lc_be_simple_mem
 WANT_THREADSAFE	= 1
 
@@ -43,12 +42,12 @@ else
 endif
 
 
-# Qt libraries and additional L4VFS/dietlibc libs
+# Qt libraries and additional L4VFS/*libc libs
 LIBS		+= -l$(LIBQT3_EMBEDDED)                                \
 		  -lqt3_qws_client -lqt3_qws_server                    \
-		  -lqt3_thread -lqt3_misc -lqt3_io_$(QT3_IO_BACKEND)   \
-		  -ll4z                                                \
-		  -lc_be_socket_io -lc_be_select -ll4vfs_net_io  \
+		  -lqt3_thread -lqt3_misc                              \
+		  -lqt3_io_$(strip $(QT3_IO_BACKEND)) -ll4z            \
+		  -lc_be_socket_io -lc_be_select -ll4vfs_net_io        \
 		  -ll4vfs_select_listener-server -ll4vfs_select        \
 		  -ll4vfs_extendable -ll4vfs_name_server -lrtc         \
 		  -lcxx_base -lcxx_util -lcxx_io_kdebug -lcxx_io       \

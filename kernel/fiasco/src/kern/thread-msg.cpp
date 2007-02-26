@@ -19,7 +19,7 @@ private:
    * @return true if the partner had the page mapped and we could copy
    *         false if the partner needs to map the page himself first
    */
-  Mword update_ipc_window (Address pfa, Mword error_code, Address remote_pfa);
+  Mword update_ipc_window (Address pfa, Address remote_pfa, Mword error_code);
 };
 
 IMPLEMENTATION:
@@ -83,6 +83,7 @@ Thread::reset_ipc_window()
 }
 
 
+
 /** Handle a page fault that occurred in one of the ``IPC-window''
     virtual-address-space regions.
     @param pfa virtual address of page fault
@@ -135,7 +136,6 @@ Thread::handle_ipc_page_fault (Address pfa, Mword error_code)
       if (! (state() & Thread_ipc_in_progress))
 	{
 	  assert (state() & Thread_cancel);
-
 	  return Ipc_err::Seaborted;
 	}
 
@@ -161,10 +161,9 @@ IMPLEMENTATION:
 PRIVATE
 Ipc_err Thread::ipc_snd_fpage(Thread* receiver,
 			      L4_fpage from_fpage, L4_fpage to_fpage,
-			      Address offset, bool grant, bool finish,
-			      bool dont_switch)
+			      Address offset, bool grant, bool finish)
 {
-  Lock_guard <Thread_lock> guard (receiver->thread_lock());
+  receiver->thread_lock()->lock();
 
   if (EXPECT_FALSE (((receiver->state() & (Thread_rcvlong_in_progress|
 					   Thread_ipc_in_progress))
@@ -176,71 +175,25 @@ Ipc_err Thread::ipc_snd_fpage(Thread* receiver,
   Ipc_err ret = fpage_map(space(), from_fpage,
 			  receiver->space(), to_fpage,
 			  offset, grant);
-
-  if (finish)			// should we finish the IPC operation?
+  if(!finish)
     {
-      reset_ipc_window();
-      
-      // if we must finish the IPC operation, set the receiver's return code
-      // and return the sender's return code (instead of the receiver's)
-      receiver->rcv_regs()->msg_dope (ret);
-      ret = ret.has_error() ? Ipc_err(ret.error() | Ipc_err::Send_error)
-			    : Ipc_err(0);
-
-      // After this point we are able to receive!
-      // Make sure that we are not if there was a send error.
-      state_del ((ret.has_error() ? Thread_ipc_in_progress : 0) |
-		  Thread_send_in_progress);
-
-      wake_receiver(receiver);
-
-      if(!dont_switch)
-	receiver->thread_lock()->set_switch_hint(SWITCH_ACTIVATE_LOCKEE);
+      receiver->thread_lock()->clear();
+      return ret;
     }
 
+  reset_ipc_window();
+      
+  // if we must finish the IPC operation, set the receiver's return code
+  // and return the sender's return code (instead of the receiver's)
+  receiver->rcv_regs()->msg_dope (ret);
+  ret = ret.has_error() ? Ipc_err(ret.error() | Ipc_err::Send_error)
+    : Ipc_err(0);
+  
   return ret;
 }
 
 IMPLEMENTATION:
 
-PRIVATE inline
-void
-Thread::wake_receiver (Thread *receiver)
-{
-  // If neither IPC partner is delayed, just update the receiver's state
-  if (EXPECT_TRUE (!((state() | receiver->state()) & Thread_delayed_ipc)))
-    {
-      receiver->state_change (~Thread_ipc_mask, Thread_ready);
-      return;
-    }
-
-  // Critical section if either IPC partner is delayed until its next period
-  Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-  // Sender has no receive phase and deadline timeout already hit
-  if ( (state() & (Thread_receiving |
-		   Thread_delayed_deadline | Thread_delayed_ipc)) ==
-      Thread_delayed_ipc)
-    {
-      state_change_dirty (~Thread_delayed_ipc, 0);
-      switch_sched (sched_context()->next());
-      _deadline_timeout.set (Timer::system_clock() + period());
-    }
-
-  // Receiver's deadline timeout already hit
-  if ( (receiver->state() & (Thread_delayed_deadline |
-                             Thread_delayed_ipc) ==   
-	                     Thread_delayed_ipc))      
-    {
-      receiver->state_change_dirty (~Thread_delayed_ipc, 0);   
-      receiver->switch_sched (receiver->sched_context()->next());
-      receiver->_deadline_timeout.set (Timer::system_clock() +
-                                       receiver->period());
-    }
-
-  receiver->state_change_dirty (~(Thread_ipc_mask|Thread_delayed_ipc),
-				Thread_ready);
-}
 
 /** Finish an IPC.
     @param receiver the receiver of our message
@@ -249,9 +202,9 @@ Thread::wake_receiver (Thread *receiver)
  */
 PRIVATE
 Ipc_err
-Thread::ipc_finish (Thread *receiver, Ipc_err new_state, bool dont_switch)
+Thread::ipc_finish (Thread *receiver, Ipc_err new_state)
 {
-  Lock_guard <Thread_lock> guard (receiver->thread_lock());
+  receiver->thread_lock()->lock();
 
   reset_ipc_window();
 
@@ -263,19 +216,6 @@ Thread::ipc_finish (Thread *receiver, Ipc_err new_state, bool dont_switch)
     return Ipc_err(Ipc_err::Seaborted);
 
   receiver->commit_ipc_success (receiver->rcv_regs(), new_state);
-
-  // set the source local-id
-  set_source_local_id(receiver, receiver->rcv_regs());
-
-  // After this point we are able to receive!
-  // Make sure that we are not if there was a send error.
-  state_del ((new_state.has_error() ? Thread_ipc_in_progress : 0) |
-             Thread_send_in_progress);
-
-  wake_receiver (receiver);
-
-  if(!dont_switch)
-    receiver->thread_lock()->set_switch_hint (SWITCH_ACTIVATE_LOCKEE);
 
   return new_state.has_error()
          ? Ipc_err (new_state.error() | Ipc_err::Send_error)
@@ -300,7 +240,6 @@ Ipc_err Thread::ipc_continue(Ipc_err ipc_code)
        != (Thread_polling_long|Thread_ipc_in_progress|Thread_send_in_progress))
       || receiver() !=  thread_lock()->lock_owner())
     return Ipc_err(Ipc_err::Reaborted);
-
   // Tell it the error code
   _pagein_status_code = ipc_code.raw();
 
@@ -355,8 +294,8 @@ IMPLEMENTATION [!ux]:
  * Carry out long IPC.
  *
  * This method assumes that IPC handshake has finished successfully
- * (ipc_send_regs()).  Its arguments must correspond to those
- * supplied to ipc_send_regs().
+ * (do_ipc()).  Its arguments must correspond to those
+ * supplied to do_ipc().
  * The method copies data from the sender's address space into the receiver's
  * using IPC address-space windows.  During copying, page faults in
  * both the sender's and the receiver's buffer can occur, leading to
@@ -374,16 +313,14 @@ Ipc_err
 Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 {
   Long_msg *regs = (Long_msg*)i_regs;
-  bool dont_switch = (Config::deceit_bit_disables_switch &&
-		      i_regs->snd_desc().deceite());
-
   // just copy the message here.  don't care about pages not being
   // mapped in -- this is completely handled in the page fault handler.
 
   // XXX bound check missing!
 
   // 2 dwords in registers
-  L4_msgdope result_dope (Sys_ipc_frame::num_reg_words(), 0);
+  L4_msgdope result_dope (i_regs->snd_desc(),
+      Sys_ipc_frame::num_reg_words(), 0);
   Ipc_err result_err (0);
 
   barrier();
@@ -412,7 +349,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       if (EXPECT_FALSE(invalid_ipc_buffer(snd_descr)))
 	{
 	  _recover_jmpbuf = 0;
-          return ipc_finish (partner, Ipc_err::Remsgcut, dont_switch);
+          return ipc_finish (partner, Ipc_err::Remsgcut);
 	}
 
       rcv_descr = 0;   // default is receiver expects short message
@@ -428,7 +365,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 
         // IPC has been aborted
 	  if (!partner->in_long_ipc (this))
-	    return ipc_finish (partner, Ipc_err::Reaborted, dont_switch);
+	    return ipc_finish (partner, Ipc_err::Reaborted);
 
           rcv_descr = reinterpret_cast<message_header*>
             (Kmem::ipc_window(0)
@@ -439,7 +376,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       bool snd_fpages = regs->snd_desc().map();
 
       // make sure this is not a register-only send operation -- such
-      // operations should have been handled by ipc_send_regs()
+      // operations should have been handled by do_ipc().
       // long IPC, or sending (short or long) fpage (or both)
       assert (snd_descr || snd_fpages);
 
@@ -459,7 +396,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       if (EXPECT_FALSE (snd_fpages && !rcv_fpage.is_valid()))
         {
           _recover_jmpbuf = 0;
-          return ipc_finish (partner, Ipc_err::Remsgcut, dont_switch);
+          return ipc_finish (partner, Ipc_err::Remsgcut);
         }
 
       Ipc_err ret;
@@ -478,13 +415,13 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	    {
 	      // This is not a valid flexpage, so do not try to send it.
 	      // Also, don't try to transfer any more flexpages.
-	      // XXX this test could also be done in ipc_send_regs().
+	      // XXX this test could also be done in short ipc.
 
 	      // short-fpage send?
 	      if (snd_short_fpage)
 		{
 		  _recover_jmpbuf = 0;
-		  return ipc_finish (partner, 0, dont_switch);
+		  return ipc_finish (partner, 0);
 		}
 
 	      // don't try to send more flexpages
@@ -493,9 +430,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  else
 	    {
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
-				   regs->msg_word (0) & Config::PAGE_MASK,
-				   snd_fpage.grant(), snd_short_fpage,
-				   dont_switch);
+				   regs->msg_word (0),
+				   snd_fpage.grant(), snd_short_fpage);
 
 	      // short-fpage send?
 	      if (snd_short_fpage)
@@ -511,7 +447,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 		{
 		  _recover_jmpbuf = 0;
 		  partner->rcv_regs()->msg_dope (result_dope);
-		  return ipc_finish (partner, result_err, dont_switch);
+		  return ipc_finish (partner, result_err);
 		}
 	    }
 	}
@@ -520,7 +456,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       assert (snd_descr);
 
       // We start by transferring dwords and do flexpage mappings on our way.
-      L4_msgdope snd_snddope (space()->peek_user (&snd_descr->snd_dope));
+      L4_msgdope snd_snddope (mem_space()->peek_user (&snd_descr->snd_dope));
       int snd_words = snd_snddope.mwords();
 
       // We must stop now if we don't have a receive buffer.  Check
@@ -533,7 +469,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	    result_err.error (Ipc_err::Remsgcut);
 
 	  partner->rcv_regs()->msg_dope (result_dope);
-	  return ipc_finish (partner, result_err, dont_switch);
+	  return ipc_finish (partner, result_err);
         }
 
       // OK, so we have a long receive buffer.
@@ -546,7 +482,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  // XXX if the memcpy() fails somewhere in the middle because
 	  // of a page fault, we don't report the memory words that
 	  // have already been copied.
-	  space()->copy_from_user (
+	  mem_space()->copy_from_user (
 	      rcv_descr->words + Sys_ipc_frame::num_reg_words(),
 	      snd_descr->words + Sys_ipc_frame::num_reg_words(),
 	      min - Sys_ipc_frame::num_reg_words());
@@ -577,9 +513,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 
 	      // otherwise, map
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
-				   regs->msg_word ((Mword *) snd_descr, n) 
-				   & Config::PAGE_MASK,
-				   snd_fpage.grant(), false, false);
+				   regs->msg_word ((Mword *) snd_descr, n),
+				   snd_fpage.grant(), false);
 
 	      if (EXPECT_FALSE (ret.has_error()))
 		break;
@@ -598,7 +533,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  // a mapping couldn't be established
 	  _recover_jmpbuf = 0;
 	  partner->rcv_regs()->msg_dope (result_dope);
-	  return ipc_finish(partner, ret, dont_switch);
+	  return ipc_finish(partner, ret);
 	}
       else if (snd_words > rcv_words)
 	{
@@ -606,13 +541,13 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  _recover_jmpbuf = 0;
 	  result_err.combine (Ipc_err (Ipc_err::Remsgcut));
 	  partner->rcv_regs()->msg_dope (result_dope);
-	  return ipc_finish(partner, result_err, dont_switch);
+	  return ipc_finish(partner, result_err);
 	}
 
       // All right -- the direct string in the message buffer has been
       // transferred.  Now tackle the indirect strings.
 
-      L4_msgdope snd_sizedope (space()->peek_user (&snd_descr->size_dope));
+      L4_msgdope snd_sizedope (mem_space()->peek_user (&snd_descr->size_dope));
 
       L4_str_dope *snd_strdope = reinterpret_cast<L4_str_dope *>
             (snd_descr->words + snd_sizedope.mwords());
@@ -625,8 +560,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 
       while (snd_strings && rcv_strings)
 	{
-	  Unsigned8 *from      = space()->peek_user (&snd_strdope->snd_str);
-	  size_t     from_size = space()->peek_user (&snd_strdope->snd_size);
+	  Unsigned8 *from      = mem_space()->peek_user(&snd_strdope->snd_str);
+	  size_t     from_size = mem_space()->peek_user(&snd_strdope->snd_size);
 	  Unsigned8 *to        = rcv_strdope->rcv_str;
 	  size_t     to_size   = rcv_strdope->rcv_size;
 
@@ -634,10 +569,10 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 			   partner->invalid_ipc_buffer(to)))
 	    {
 	      _recover_jmpbuf = 0;
-	      return ipc_finish (partner, Ipc_err::Remsgcut, dont_switch);
+	      return ipc_finish (partner, Ipc_err::Remsgcut);
 	    }
 
-	  // silently limit sizes to 4MB
+	  // silently limit sizes to superpage size
 	  if (to_size > Config::SUPERPAGE_SIZE)
 	    to_size = Config::SUPERPAGE_SIZE;
 	  if (from_size > Config::SUPERPAGE_SIZE)
@@ -651,9 +586,9 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 
 	      // IPC has been aborted
 	      if (!partner->in_long_ipc (this))
-		return ipc_finish (partner, Ipc_err::Reaborted, dont_switch);
+		return ipc_finish (partner, Ipc_err::Reaborted);
 
-	      space()->copy_from_user
+	      mem_space()->copy_from_user
 		((Unsigned8*) (Kmem::ipc_window(1)
 			       + (((Address)to) & ~Config::SUPERPAGE_MASK)),
 		 from, min);
@@ -681,7 +616,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	result_err.combine (Ipc_err (Ipc_err::Remsgcut));
 
       partner->rcv_regs()->msg_dope (result_dope);
-      return ipc_finish (partner, result_err, dont_switch);
+      return ipc_finish (partner, result_err);
     }
   else
     {
@@ -695,7 +630,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       result_err.combine(error);
 
       partner->rcv_regs()->msg_dope (result_dope);
-      return ipc_finish (partner, result_err, dont_switch);
+      return ipc_finish (partner, result_err);
     }
 }
 

@@ -70,9 +70,6 @@ static l4thread_t softirq_tid[SOFTIRQ_THREADS];
 /** softirq semaphore */
 static l4semaphore_t softirq_sema = L4SEMAPHORE_LOCKED;
 
-/** initialization flag */
-static int _initialized = 0;
-
 /** @} */
 /** \name Softirqs
  *
@@ -430,7 +427,7 @@ static void dde_softirq_thread(int num)
   softirq_tid[num] = l4thread_myself();
 
   if (l4dde_process_add_worker())
-      Panic("l4dde_process_add_worker() failed");
+    Panic("l4dde_process_add_worker() failed");
 
   ++local_bh_count(smp_processor_id());
 
@@ -468,6 +465,9 @@ int l4dde_softirq_init()
 #error SOFTIRQ_THREADS has to be 1
 #else
   int err;
+
+  /* initialization flag */
+  static int _initialized = 0;
 
   if (_initialized)
     return 0;

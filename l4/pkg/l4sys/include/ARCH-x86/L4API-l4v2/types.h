@@ -272,6 +272,10 @@ typedef union {
  */
 #define L4_IOPORT_MAX  (1L << L4_WHOLE_IOADDRESS_SPACE)
 
+#define L4_FPAGE_CACHE_OPT     (0x200)
+#define L4_FPAGE_CACHE_ENABLE  (L4_FPAGE_CACHE_OPT | 0x400)
+#define L4_FPAGE_CACHE_DISABLE L4_FPAGE_CACHE_OPT
+
 /**
  * Send flexpage types
  * \ingroup api_types_fpage
@@ -545,7 +549,7 @@ l4_is_io_page_fault(unsigned address)
 {
   l4_fpage_t t;
   t.fpage = address;
-  return(t.iofp.f == 0xf);
+  return(t.iofp.f == 0xf && t.iofp.zero2 == 0);
 }
 
 L4_INLINE l4_threadid_t

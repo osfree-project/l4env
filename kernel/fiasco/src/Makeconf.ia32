@@ -1,9 +1,9 @@
 # -*- makefile -*-
 
 OPT_SHARED_FLAGS	+= $(call CHECKCC,-finline-limit=10000,) 
-
 OPT_CXXFLAGS		+= $(call CHECKCXX,--param large-function-insns=10000)
 OPT_CFLAGS		+= $(call CHECKCC,--param large-function-insns=10000)
+
 # The -Os option of gcc-4.0 sets max-inline-insns-single to 5 which prevents
 # inlining of almost every function
 NOOPT_SHARED_FLAGS	+= $(call CHECKCC,--param max-inline-insns-single=50)
@@ -46,3 +46,5 @@ endif
 ifeq ($(CONFIG_IA32_K8),y)
   SHARED_FLAGS		+= $(call CHECKCC,-march=k8,-march=i686)
 endif
+
+OFORMAT			:= default

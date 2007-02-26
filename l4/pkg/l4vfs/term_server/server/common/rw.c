@@ -66,9 +66,9 @@ void l4vfs_term_server_internal_start_read_component(
     // terminal state
     termstate_t *term;
     CORBA_Environment env = dice_default_environment;
-    
+
     l4semaphore_down(&(clients[fd].client_sem));
-    
+
     // read object id, ...
     object = clients[fd].object_id;
     // ... get term state, ...
@@ -76,10 +76,12 @@ void l4vfs_term_server_internal_start_read_component(
     // ... read rw mode ...
     mode   = clients[fd].rw_mode;
     // ... allocate mem for the buffer
+    // fixme: how about alloca?  should be faster and is freed
+    //        automatically on return
     mybuf  = (char *)malloc(*count*sizeof(char));
-    
+
     l4semaphore_up(&(clients[fd].client_sem));
-    
+
     // call read
     ret    = vt100_read(term, mybuf, *count, mode);
     // count will now give the size of the buffer for sending data

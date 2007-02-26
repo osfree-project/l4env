@@ -75,53 +75,13 @@
   DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_next,		NEXT)
   DUMP_OFFSET  (SCHED_CONTEXT, MAX, sizeof (Sched_context))
 
+  DUMP_MEMBER1 (SPACE, Space, _mem_space._dir,                  PGTABLE)
+
   DUMP_MEMBER1 (IRQ, Irq, _queued,				QUEUED)
 
   DUMP_MEMBER1 (TBUF_STATUS, Tracebuffer_status, kerncnts,      KERNCNTS)
-
-#ifdef CONFIG_LOCAL_IPC
-//  dumpzero = true;
-
-//  puts("\n/* Utcb */\n");
-
-  DUMP_MEMBER1 (UTCB, Utcb, _id,                        UTCB_ID)
-  DUMP_MEMBER1 (UTCB, Utcb, _esp,                       ESP)
-  DUMP_MEMBER1 (UTCB, Utcb, _eip,                       EIP)
-  DUMP_MEMBER1 (UTCB, Utcb, _state,			STATUSWORD)
-  DUMP_MEMBER1 (UTCB, Utcb, _snd_state,			SND_STATUS)
-
-  DUMP_BITSHIFT(UTCB, sizeof(Utcb))
-  DUMP_OFFSET  (USERTCB, MAX, sizeof (Utcb))
-
-  DUMP_CONSTANT(UTCB_SENDSTATE_SENDERQUEUED, Utcb::Send_state_queued)
-#if 0
-  unsigned open_wait_state = (unsigned)
-    (Mem_layout::V2_utcb_addr + sizeof(Utcb) * Utcb::State_openwait);
-
-  DUMP_CONSTANT(UTCB_STATE_OPENWAIT, open_wait_state);
-#endif
-  DUMP_CONSTANT(UTCB_STATE_NO_LIPC, Utcb::State_no_lipc)
-  DUMP_CONSTANT(UTCB_ADDR_MASK, Utcb::Utcb_addr_mask)
-
-
-
-  DUMP_MEMBER1 (THREAD, Context,  _utcb,		UTCB_PTR)
-  DUMP_MEMBER1 (THREAD, Context,  _local_id,            LOCAL_ID)
-  DUMP_MEMBER1 (THREAD, Receiver,  _lipc_possible,	LIPC)
-  DUMP_BITSHIFT(THREAD, THREAD_BLOCK_SIZE)
-
-  DUMP_CONSTANT(MAX_THREADS_PER_TASK, 1 << L4_uid::Lthread_size)
-
-  DUMP_CONSTANT(CURRENT_UTCBPTR, Mem_layout::Utcb_ptr_page)
-  DUMP_CONSTANT(KIP_INDEX, Mem_layout::Kip_index)
-  DUMP_CONSTANT(V2_UTCB_ADDR, Mem_layout::V2_utcb_addr)
-
-  DUMP_OFFSET  (ENTRY_FRAME, MAX, sizeof(Entry_frame))
-
-  DUMP_MEMBER1 (KIP, Kip,  lipc_code,		LIPC_CODE)
-
-//  dumpzero = false;
-#endif
+  
+  DUMP_MEMBER1 (THREAD, Thread, _exc_ip,	        EXCEPTION_IP)
 
   DUMP_CAST_OFFSET (Thread, Receiver)
   DUMP_CAST_OFFSET (Thread, Sender)

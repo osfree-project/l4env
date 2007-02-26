@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEBase.cpp
- *    \brief   contains the implementation of the class CFEBase
+ *  \brief   contains the implementation of the class CFEBase
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -30,7 +30,7 @@
 
 #include <string>
 #include <typeinfo>
-using namespace std;
+#include <iostream>
 
 /////////////////////////////////////////////////////////////////////////////
 // Base class
@@ -52,10 +52,11 @@ CFEBase::~CFEBase()
 }
 
 /** \brief returns the root file object
- *    \return the root object
+ *  \return the root object
  *
- * This function climbs the chain of parents up until it found the top level file.
- * If it is a file itself and has no parent its the top level file itself.
+ * This function climbs the chain of parents up until it found the top level
+ * file.  If it is a file itself and has no parent its the top level file
+ * itself.
  */
 CFEBase *CFEBase::GetRoot()
 {
@@ -72,39 +73,11 @@ CFEBase *CFEBase::GetRoot()
 }
 
 /** copies the object
- *    \return a reference to the new base object
+ *  \return a reference to the new base object
  */
 CObject *CFEBase::Clone()
 {
     return new CFEBase(*this);
-}
-
-/** \brief base method for consistency checks
- *  \return true if element is consistent, false if not
- */
-bool CFEBase::CheckConsistency()
-{
-    return true;
-}
-
-/** for debugging purposes only */
-void CFEBase::Dump()
-{
-    printf("Dump: class %s\n", typeid(*this).name());
-}
-
-/**    \brief serialize object
- *    \param pFile the file to serialize from/to
- *
- * Writes the object into the specified file. The file-format is XML.
- *
- * This implementation does nothing, because we don't have information to
- * store or retrieve.
- */
-void CFEBase::Serialize(CFile * pFile)
-{
-    // empty, because base has no data to store
-    TRACE("not serializing\n");
 }
 
 /** \brief print the object to a string

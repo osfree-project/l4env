@@ -449,7 +449,7 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
           msg_buf.buf.rcv_str = (l4_addr_t)socket->data_area;
           msg_buf.buf.rcv_size = socket->data_size;
 
-          LOGdL(DEBUG_COPY_PACKET,"rcv str at 0x%08x",msg_buf.buf.rcv_str);
+          LOGdL(DEBUG_COPY_PACKET,"rcv str at 0x%08lx",msg_buf.buf.rcv_str);
           LOGdL(DEBUG_COPY_PACKET,"size %u",socket->data_size);
 
           msg.rcv = &msg_buf;
@@ -967,7 +967,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
 	  (size == 0))
 	{
 	  /* invalid data area */
-	  LOG_Error ("DSI: invalid data area (addr 0x%08x, size %u)",
+	  LOG_Error ("DSI: invalid data area (addr 0x%08lx, size %u)",
                      (l4_addr_t)addr, size);
 	  return -L4_EINVAL;
 	}

@@ -25,6 +25,7 @@ IMPLEMENTATION:
 #include <unistd.h>
 #include "boot_info.h"
 #include "initcalls.h"
+#include "kmem.h"
 #include "pic.h"
 #include "warn.h"
 
@@ -126,6 +127,15 @@ Fb::init()
       puts ("Problems setting up console interrupt!");
       exit (1);
     }
+
+  Kip::k()->vhw()->set_desc(Vhw_entry::TYPE_FRAMEBUFFER,
+                         Boot_info::fb_virt(), Boot_info::fb_size(),
+                         Pic::IRQ_CON,
+                         Pic::get_pid_for_irq_prov(Pic::IRQ_CON), 0);
+  Kip::k()->vhw()->set_desc(Vhw_entry::TYPE_INPUT,
+                         Boot_info::input_start(), Boot_info::input_size(),
+                         Pic::IRQ_CON,
+                         Pic::get_pid_for_irq_prov(Pic::IRQ_CON), 0);
 
   printf ("Starting Framebuffer: %ux%u@%u\n\n",
           Boot_info::fb_width(), Boot_info::fb_height(),

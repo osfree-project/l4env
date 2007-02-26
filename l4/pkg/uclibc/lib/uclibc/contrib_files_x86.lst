@@ -1,32 +1,33 @@
 include/sys/ucontext.h
-libc/string/wstring.c				bcopy__FN
-libc/string/wstring.c				bzero__FN
-libc/string/i386/string.c			strcpy__FN
-libc/string/i386/string.c			strncpy__FN
-libc/string/i386/string.c			strcat__FN
-libc/string/i386/string.c			strncat__FN
-libc/string/i386/string.c			strcmp__FN
-libc/string/i386/string.c			strncmp__FN
-libc/string/i386/string.c			strchr__FN
-libc/string/i386/string.c			strrchr__FN
-libc/string/i386/string.c			strlen__FN
-libc/string/i386/string.c			strnlen__FN
-libc/string/i386/string.c			memcpy__FN
-libc/string/i386/string.c			memmove__FN
-libc/string/i386/string.c			memchr__FN
-libc/string/i386/string.c			memset__FN
-libc/string/generic/memcmp.c
-libc/string/generic/memmem.c
-libc/string/generic/mempcpy.c
-libc/string/generic/memcopy.h
-libc/string/generic/memrchr.c
-libc/string/generic/rawmemchr.c
-libc/string/generic/strchrnul.c
-libc/string/generic/strcspn.c
-libc/string/generic/strsep.c
-libc/string/generic/strspn.c
-libc/string/generic/strstr.c
-libc/string/generic/strtok_r.c
+libc/string/_string.h
+libc/string/bcopy.c
+libc/string/bzero.c
+libc/string/i386/memchr.c
+libc/string/i386/memcpy.c
+libc/string/i386/memmove.c
+libc/string/i386/memset.c
+libc/string/i386/strcat.c
+libc/string/i386/strchr.c
+libc/string/i386/strcmp.c
+libc/string/i386/strcpy.c
+libc/string/i386/strlen.c
+libc/string/i386/strncat.c
+libc/string/i386/strncmp.c
+libc/string/i386/strncpy.c
+libc/string/i386/strnlen.c
+libc/string/i386/strrchr.c
+libc/string/memcmp.c
+libc/string/memmem.c
+libc/string/mempcpy.c
+libc/string/memcopy.h
+libc/string/memrchr.c
+libc/string/rawmemchr.c
+libc/string/strchrnul.c
+libc/string/strcspn.c
+libc/string/strsep.c
+libc/string/strspn.c
+libc/string/strstr.c
+libc/string/strtok_r.c
 libc/sysdeps/linux/common/bits/confname.h
 libc/sysdeps/linux/common/bits/dirent.h
 libc/sysdeps/linux/common/bits/environments.h
@@ -41,6 +42,7 @@ libc/sysdeps/linux/common/bits/local_lim.h
 libc/sysdeps/linux/common/bits/mathcalls.h
 libc/sysdeps/linux/common/bits/nan.h
 libc/sysdeps/linux/common/bits/netdb.h
+libc/sysdeps/linux/common/bits/poll.h
 libc/sysdeps/linux/common/bits/posix1_lim.h
 libc/sysdeps/linux/common/bits/posix2_lim.h
 libc/sysdeps/linux/common/bits/posix_opt.h
@@ -73,6 +75,7 @@ libc/sysdeps/linux/i386/setjmp.S
 libc/sysdeps/linux/i386/__longjmp.S
 libc/sysdeps/linux/i386/bsd-setjmp.S
 libc/sysdeps/linux/i386/bsd-_setjmp.S
+libc/sysdeps/linux/i386/bits/atomic.h
 libc/sysdeps/linux/i386/bits/byteswap.h
 libc/sysdeps/linux/i386/bits/endian.h
 libc/sysdeps/linux/i386/bits/fcntl.h
@@ -83,6 +86,8 @@ libc/sysdeps/linux/i386/bits/mathdef.h
 libc/sysdeps/linux/i386/bits/mman.h
 libc/sysdeps/linux/i386/bits/select.h
 libc/sysdeps/linux/i386/bits/setjmp.h
+libc/sysdeps/linux/i386/bits/stackinfo.h
+libc/sysdeps/linux/i386/bits/uClibc_arch_features.h
 libc/sysdeps/linux/i386/bits/wordsize.h
 libc/sysdeps/linux/i386/bits/resource.h
 libc/sysdeps/linux/i386/sys/ucontext.h

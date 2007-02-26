@@ -23,7 +23,7 @@ Cmdline::init (const char *line)
 }
 
 PUBLIC static inline
-char const * const
+char const *
 Cmdline::cmdline()
 {
   return _cmdline;

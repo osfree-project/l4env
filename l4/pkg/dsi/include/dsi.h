@@ -172,7 +172,7 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
  * convenience functions                                                     *
  *****************************************************************************/
 
-int dsi_thread_start_worker(dsi_socket_t * socket, l4_uint32_t * ret_code);
+int dsi_thread_start_worker(dsi_socket_t * socket, l4_umword_t * ret_code);
 int dsi_thread_worker_wait(dsi_socket_t ** socket);
 int dsi_thread_worker_started(int ret_code);
 int dsi_socket_local_create(dsi_stream_cfg_t cfg, l4dm_dataspace_t *ctrl_ds,

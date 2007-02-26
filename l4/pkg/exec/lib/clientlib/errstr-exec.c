@@ -21,11 +21,12 @@
 asm("l4exec_err_strings_sym:");
 
 L4ENV_ERR_DESC_STATIC(err_strings,
-    { L4_EXEC_BADFORMAT,  "EXEC: Invalid file format" },
-    { L4_EXEC_BADARCH,    "EXEC: Invalid ELF architecture" },
-    { L4_EXEC_CORRUPT,    "EXEC: ELF file corrupt" },
-    { L4_EXEC_NOSTANDARD, "EXEC: Entry point not found" },
-    { L4_EXEC_LINK,       "EXEC: Linker error(s)" }
+    { L4_EXEC_BADFORMAT,   "EXEC: Invalid file format" },
+    { L4_EXEC_BADARCH,     "EXEC: Invalid ELF architecture" },
+    { L4_EXEC_CORRUPT,     "EXEC: ELF file corrupt" },
+    { L4_EXEC_NOSTANDARD,  "EXEC: Entry point not found" },
+    { L4_EXEC_LINK,        "EXEC: Linker error(s)" },
+    { L4_EXEC_INTERPRETER, "EXEC: Binary depends on libld-l4.s.so" },
 );
 
 static void

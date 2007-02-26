@@ -98,9 +98,9 @@ unsigned long FASTCALL(__get_free_pages(unsigned int gfp_mask, unsigned int orde
     }
 
   /* address info */
-  address_add_region(page, dm_paddr.addr, size);
+  l4dde_add_region(page, dm_paddr.addr, size);
 
-  LOGd(DEBUG_PALLOC, "allocated %d pages @ 0x%08x (phys. 0x%08x)",
+  LOGd(DEBUG_PALLOC, "allocated %d pages @ 0x%08lx (phys. 0x%08lx)",
        pages, page, dm_paddr.addr);
 
   return (unsigned long) page;

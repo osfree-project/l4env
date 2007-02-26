@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEFile.cpp
- *    \brief   contains the implementation of the class CFEFile
+ *  \file    dice/src/fe/FEFile.cpp
+ *  \brief   contains the implementation of the class CFEFile
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -29,373 +29,197 @@
 #include "IncludeStatement.h"
 #include "File.h"
 #include "CPreProcess.h" // needed to get include statements
-#include "fe/FEFile.h"
-#include "fe/FETypedDeclarator.h"
-#include "fe/FEConstDeclarator.h"
-#include "fe/FEConstructedType.h"
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
-#include "fe/FEInterface.h"
-#include "fe/FELibrary.h"
-
-#include <ctype.h>
+#include "FEFile.h"
+#include "FETypedDeclarator.h"
+#include "FEConstDeclarator.h"
+#include "FEConstructedType.h"
+#include "FEStructType.h"
+#include "FEUnionType.h"
+#include "FEEnumType.h"
+#include "FEInterface.h"
+#include "FELibrary.h"
+#include "Compiler.h"
+#include "Visitor.h"
+#include <iostream>
+#include <cctype>
 #include <algorithm>
-using namespace std;
+#include <cassert>
 
-CFEFile::CFEFile(string sFileName, string sPath, int nIncludedOnLine, int nStdInclude)
+CFEFile::CFEFile(string sFileName,
+    string sPath,
+    int nIncludedOnLine,
+    int nStdInclude)
+: m_Constants(0, this),
+    m_Typedefs(0, this),
+    m_TaggedDeclarators(0, this),
+    m_Libraries(0, this),
+    m_Interfaces(0, this),
+    m_ChildFiles(0, this),
+    m_Includes(0, this)
 {
     // this procedure is interesting for included files:
-    // if the statement was: #include "l4/sys/types.h" and the path where the file
-    // was found is "../../include" the following string are created:
+    // if the statement was: #include "l4/sys/types.h" and the path where the
+    // file was found is "../../include" the following string are created:
     //
-    // m_sFileName = "l4/sys/types.h"
+    // m_sFilename = "l4/sys/types.h"
     // m_sFilenameWithoutExtension = "types"
     // m_sFileExtension = "h"
     // m_sFileWithPath = "../../include/l4/sys/types.h"
     assert(!sFileName.empty());
-    m_sFileName = sFileName;
-    if (!m_sFileName.empty())
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d, %d) called\n", 
+	__func__, sFileName.c_str(), sPath.c_str(), nIncludedOnLine,
+	nStdInclude);
+    
+    m_sFilename = sFileName;
+    // first strip of extension  (the string after the last '.')
+    int iDot = m_sFilename.rfind('.');
+    if (iDot < 0)
     {
-        // first strip of extension  (the string after the last '.')
-        int iDot = m_sFileName.rfind('.');
-        if (iDot < 0)
-        {
-            m_sFilenameWithoutExtension = m_sFileName;
-            m_sFileExtension.erase(m_sFileExtension.begin(), m_sFileExtension.end());
-        }
-        else
-        {
-            m_sFilenameWithoutExtension = m_sFileName.substr(0, iDot);
-            m_sFileExtension = m_sFileName.substr(iDot + 1);
-        }
-        // now strip of the path
-        int iSlash = m_sFilenameWithoutExtension.rfind('/');
-        if (iSlash >= 0)
-        {
-            m_sFilenameWithoutExtension =
-                m_sFilenameWithoutExtension.substr(iSlash + 1);
-        }
-        // now generate full filename with path
-        if (!sPath.empty())
-        {
-            bool bLastSlash = sPath[sPath.length()-1] == '/';
-            m_sFileWithPath = sPath;
-            if (!bLastSlash)
-                m_sFileWithPath += "/";
-            m_sFileWithPath += m_sFileName;
-        }
-        else
-            m_sFileWithPath = m_sFileName;
+	m_sFilenameWithoutExtension = m_sFilename;
+	m_sFileExtension.clear();
     }
     else
     {
-        m_sFilenameWithoutExtension.erase(m_sFilenameWithoutExtension.begin(), 
-	    m_sFilenameWithoutExtension.end());
-        m_sFileExtension.erase(m_sFileExtension.begin(), 
-	    m_sFileExtension.end());
-        m_sFileWithPath.erase(m_sFileWithPath.begin(), m_sFileWithPath.end());
+	m_sFilenameWithoutExtension = m_sFilename.substr(0, iDot);
+	m_sFileExtension = m_sFilename.substr(iDot + 1);
     }
+    // now strip of the path
+    int iSlash = m_sFilenameWithoutExtension.rfind('/');
+    if (iSlash >= 0)
+    {
+	m_sFilenameWithoutExtension =
+	    m_sFilenameWithoutExtension.substr(iSlash + 1);
+    }
+    // now generate full filename with path
+    if (!sPath.empty())
+    {
+	bool bLastSlash = sPath[sPath.length()-1] == '/';
+	m_sFileWithPath = sPath;
+	if (!bLastSlash)
+	    m_sFileWithPath += "/";
+	m_sFileWithPath += m_sFilename;
+    }
+    else
+	m_sFileWithPath = m_sFilename;
     m_nStdInclude = nStdInclude;
     m_nIncludedOnLine = nIncludedOnLine;
 
     // make file extension lower case
     transform(m_sFileExtension.begin(), m_sFileExtension.end(),
-        m_sFileExtension.begin(), tolower);
+        m_sFileExtension.begin(), _tolower);
 
     // get includes from preprocessor
     CPreProcess *pPreprocess = CPreProcess::GetPreProcessor();
-    inc_bookmark_t *pCur = pPreprocess->GetFirstIncludeInFile(m_sFileName);
-    while (pCur)
+    vector<CIncludeStatement>::iterator i = pPreprocess->GetFirstIncludeInFile();
+    CIncludeStatement *b;
+    while ((b = pPreprocess->GetNextIncludeInFile(m_sFilename, i)) != 0)
     {
-        string sFileName = *(pCur->m_pFilename);
+        string sIncName = b->m_sFilename;
         // test if idl file
         bool bIDL = false;
-        int iDot = sFileName.rfind('.');
-        if (iDot > 0)
+        int iPos = sIncName.rfind('.');
+        if (iPos > 0)
         {
-            string s = sFileName.substr(sFileName.length() - (iDot + 1));
-            transform(s.begin(), s.end(), s.begin(), tolower);
+            string s = sIncName.substr(sIncName.length() - (iPos + 1));
+            transform(s.begin(), s.end(), s.begin(), _tolower);
             if (s == "idl")
                 bIDL = true;
         }
         // extract include information and add it to m_vIncludes
-        CIncludeStatement *pNew = new CIncludeStatement(bIDL,
-            pCur->m_bStandard, false, sFileName);
-        AddInclude(pNew);
+        CIncludeStatement *pNew = new CIncludeStatement(*b);
+	pNew->m_bIDLFile = bIDL;
+        m_Includes.Add(pNew);
         // set source file info
-        pNew->SetSourceLine(pCur->m_nLineNb);
-        pNew->SetSourceFileName(m_sFileName);
-        // now get next
-        pCur = pPreprocess->GetNextIncludeInFile(m_sFileName, pCur);
+        pNew->SetSourceLine(b->m_nLineNb);
+        pNew->SetSourceFileName(m_sFilename);
     }
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilename: %s\n", __func__, 
+	m_sFilename.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilenameWithoutExtension: %s\n",
+	__func__, m_sFilenameWithoutExtension.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFileExtension: %s\n",
+	__func__, m_sFileExtension.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFileWithPath: %s\n",
+	__func__, m_sFileWithPath.c_str());
 }
 
 CFEFile::CFEFile(CFEFile & src)
-: CFEBase(src)
+: CFEBase(src),
+    m_Constants(src.m_Constants),
+    m_Typedefs(src.m_Typedefs),
+    m_TaggedDeclarators(src.m_TaggedDeclarators),
+    m_Libraries(src.m_Libraries),
+    m_Interfaces(src.m_Interfaces),
+    m_ChildFiles(src.m_ChildFiles),
+    m_Includes(src.m_Includes)
 {
-    m_sFileName = src.m_sFileName;
+    m_sFilename = src.m_sFilename;
     m_sFileExtension = src.m_sFileExtension;
     m_sFilenameWithoutExtension = src.m_sFilenameWithoutExtension;
     m_sFileWithPath = src.m_sFileWithPath;
     m_nStdInclude = src.m_nStdInclude;
     m_nIncludedOnLine = src.m_nIncludedOnLine;
-
-    COPY_VECTOR(CFEConstructedType, m_vTaggedDecls, iterTD);
-    COPY_VECTOR(CFEConstDeclarator, m_vConstants, iterC);
-    COPY_VECTOR(CFETypedDeclarator, m_vTypedefs, iterT);
-    COPY_VECTOR(CFELibrary, m_vLibraries, iterL);
-    COPY_VECTOR(CFEInterface, m_vInterfaces, iterI);
-    COPY_VECTOR(CFEFile, m_vChildFiles, iterF);
-    COPY_VECTOR(CIncludeStatement, m_vIncludes, iterIF);
 }
 
 /** cleans up the file object */
 CFEFile::~CFEFile()
-{
-    DEL_VECTOR(m_vTaggedDecls);
-    DEL_VECTOR(m_vConstants);
-    DEL_VECTOR(m_vTypedefs);
-    DEL_VECTOR(m_vLibraries);
-    DEL_VECTOR(m_vInterfaces);
-    DEL_VECTOR(m_vChildFiles);
-    DEL_VECTOR(m_vIncludes);
-}
+{ }
 
 /** copies the object
- *    \return a reference to the new file object
+ *  \return a reference to the new file object
  */
 CObject *CFEFile::Clone()
 {
     return new CFEFile(*this);
 }
 
-/** \brief adds another (included) file to this file hierarchy
- *  \param pNewChild the (included) file to add
- */
-void CFEFile::AddChild(CFEFile * pNewChild)
-{
-    if (!pNewChild)
-        return;
-    m_vChildFiles.push_back(pNewChild);
-    pNewChild->SetParent(this);
-}
-
-/** returns a pointer to the first included file
- *    \return a pointer to the first included file
- */
-vector<CFEFile*>::iterator CFEFile::GetFirstChildFile()
-{
-    return m_vChildFiles.begin();
-}
-
-/** returns a refrence to the next included file
- *    \param iter the pointer to the next included file
- *    \return a refrence to the next included file
- */
-CFEFile *CFEFile::GetNextChildFile(vector<CFEFile*>::iterator &iter)
-{
-    if (iter == m_vChildFiles.end())
-        return 0;
-    return *iter++;
-}
-
-/**    adds an interface to this file
- *    \param pInterface the new interface to add
- */
-void CFEFile::AddInterface(CFEInterface * pInterface)
-{
-    if (!pInterface)
-        return;
-    m_vInterfaces.push_back(pInterface);
-    pInterface->SetParent(this);
-}
-
-/** returns a pointer to the first interface
- *    \return a pointer to the first interface
- */
-vector<CFEInterface*>::iterator CFEFile::GetFirstInterface()
-{
-    return m_vInterfaces.begin();
-}
-
-/** returns a reference to the next interface
- *    \param iter a pointer to the next interface
- *    \return a reference to the next interface
- */
-CFEInterface *CFEFile::GetNextInterface(vector<CFEInterface*>::iterator &iter)
-{
-    if (iter == m_vInterfaces.end())
-        return 0;
-    return *iter++;
-}
-
-/** adds an library to this file
- *    \param pLibrary the new library to add
- */
-void CFEFile::AddLibrary(CFELibrary * pLibrary)
-{
-    if (!pLibrary)
-        return;
-    m_vLibraries.push_back(pLibrary);
-    pLibrary->SetParent(this);
-}
-
-/**    returns a pointer to the first library
- *    \return a pointer to the first library
- */
-vector<CFELibrary*>::iterator CFEFile::GetFirstLibrary()
-{
-    return m_vLibraries.begin();
-}
-
-/**    returns a reference to the next library in this file
- *    \param iter a pointer to the next library in this file
- *    \return a reference to the next library in this file
- */
-CFELibrary *CFEFile::GetNextLibrary(vector<CFELibrary*>::iterator &iter)
-{
-    if (iter == m_vLibraries.end())
-        return 0;
-    return *iter++;
-}
-
-/**    adds a type definition to this file
- *    \param pTypedef the new type definition
- */
-void CFEFile::AddTypedef(CFETypedDeclarator * pTypedef)
-{
-    if (!pTypedef)
-        return;
-    m_vTypedefs.push_back(pTypedef);
-    pTypedef->SetParent(this);
-}
-
-/** returns a pointer to the first type definition
- *    \return a pointer to the first type definition
- */
-vector<CFETypedDeclarator*>::iterator CFEFile::GetFirstTypedef()
-{
-    return m_vTypedefs.begin();
-}
-
-/** \brief returns a reference to the next type defintion
- *  \param iter a pointer to the next type defintion
- *  \return a reference to the next type defintion
- */
-CFETypedDeclarator *CFEFile::GetNextTypedef(vector<CFETypedDeclarator*>::iterator &iter)
-{
-    if (iter == m_vTypedefs.end())
-        return 0;
-    return *iter++;
-}
-
-/** adds the declaration of a constant to this file
- *    \param pConstant the new constant to add
- */
-void CFEFile::AddConstant(CFEConstDeclarator * pConstant)
-{
-    if (!pConstant)
-        return;
-    m_vConstants.push_back(pConstant);
-    pConstant->SetParent(this);
-}
-
-/** returns a pointer to the first constant of this file
- *    \return a pointer to the first constant of this file
- */
-vector<CFEConstDeclarator*>::iterator CFEFile::GetFirstConstant()
-{
-    return m_vConstants.begin();
-}
-
-/** returns a reference to the next constant definition in this file
- *    \param iter the pointer to the next constant definition
- *    \return a reference to the next constant definition in this file
- */
-CFEConstDeclarator *CFEFile::GetNextConstant(vector<CFEConstDeclarator*>::iterator &iter)
-{
-    if (iter == m_vConstants.end())
-        return 0;
-    return *iter++;
-}
-
-/** \brief adds the definition of a tagged struct or union to this file
- *    \param pTaggedDecl the new declaration of this file
- */
-void CFEFile::AddTaggedDecl(CFEConstructedType * pTaggedDecl)
-{
-    if (!pTaggedDecl)
-        return;
-    m_vTaggedDecls.push_back(pTaggedDecl);
-    pTaggedDecl->SetParent(this);
-}
-
-/** returns a pointer to the first tagged declarator
- *    \return a pointer to the first tagged declarator
- */
-vector<CFEConstructedType*>::iterator CFEFile::GetFirstTaggedDecl()
-{
-    return m_vTaggedDecls.begin();
-}
-
-/** returns a reference to the next tagged declarator
- *    \param iter the pointer to the next tagged declarator
- *    \return a reference to the next tagged declarator
- */
-CFEConstructedType *CFEFile::GetNextTaggedDecl(vector<CFEConstructedType*>::iterator &iter)
-{
-    if (iter == m_vTaggedDecls.end())
-        return 0;
-    return *iter++;
-}
-
 /** returns the file's name
- *    \return the file's name
+ *  \return the file's name
  */
 string CFEFile::GetFileName()
 {
-    return m_sFileName;
+    return m_sFilename;
 }
 
 /** returns a reference to the user defined type
- *    \param sName the name of the type to search for
- *    \return a reference to the user defined type, or 0 if it does not exist
+ *  \param sName the name of the type to search for
+ *  \return a reference to the user defined type, or 0 if it does not exist
  */
 CFETypedDeclarator *CFEFile::FindUserDefinedType(string sName)
 {
     if (sName.empty())
         return 0;
     // first search own typedefs
-    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypedef();
-    CFETypedDeclarator *pTypedDecl;
-    while ((pTypedDecl = GetNextTypedef(iterT)) != 0)
-    {
-        if (pTypedDecl->FindDeclarator(sName))
-            return pTypedDecl;
-    }
+    CFETypedDeclarator *pTypedDecl = m_Typedefs.Find(sName);
+    if (pTypedDecl)
+	return pTypedDecl;
     // then search interfaces
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    CFEInterface *pInterface;
-    while ((pInterface = GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = m_Interfaces.begin();
+	 iterI != m_Interfaces.end();
+	 iterI++)
     {
-        if ((pTypedDecl = pInterface->FindUserDefinedType(sName)))
+        if ((pTypedDecl = (*iterI)->m_Typedefs.Find(sName)))
             return pTypedDecl;
     }
     // then search libraries
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pLibrary;
-    while ((pLibrary = GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = m_Libraries.begin();
+	 iterL != m_Libraries.end();
+	 iterL++)
     {
-        if ((pTypedDecl = pLibrary->FindUserDefinedType(sName)))
+        if ((pTypedDecl = (*iterL)->FindUserDefinedType(sName)))
             return pTypedDecl;
     }
     // next search included files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pTypedDecl = pFile->FindUserDefinedType(sName)))
+        if ((pTypedDecl = (*iterF)->FindUserDefinedType(sName)))
             return pTypedDecl;
     }
     // none found
@@ -409,42 +233,34 @@ CFETypedDeclarator *CFEFile::FindUserDefinedType(string sName)
 CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
 {
     // own tagged decls
-    vector<CFEConstructedType*>::iterator iterC = GetFirstTaggedDecl();
-    CFEConstructedType* pTaggedDecl;
-    while ((pTaggedDecl = GetNextTaggedDecl(iterC)) != 0)
-    {
-        if (dynamic_cast<CFETaggedStructType*>(pTaggedDecl))
-            if (((CFETaggedStructType*)pTaggedDecl)->GetTag() == sName)
-                return pTaggedDecl;
-        if (dynamic_cast<CFETaggedUnionType*>(pTaggedDecl))
-            if (((CFETaggedUnionType*)pTaggedDecl)->GetTag() == sName)
-                return pTaggedDecl;
-        if (dynamic_cast<CFETaggedEnumType*>(pTaggedDecl))
-            if (((CFETaggedEnumType*)pTaggedDecl)->GetTag() == sName)
-                return pTaggedDecl;
-    }
+    CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
+    if (pTaggedDecl)
+	return pTaggedDecl;
     // search interfaces
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    CFEInterface *pInterface;
-    while ((pInterface = GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = m_Interfaces.begin();
+	 iterI != m_Interfaces.end();
+	 iterI++)
     {
-        if ((pTaggedDecl = pInterface->FindTaggedDecl(sName)) != 0)
+        if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)) != 0)
             return pTaggedDecl;
     }
     // search libs
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pLibrary;
-    while ((pLibrary = GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = m_Libraries.begin();
+	 iterL != m_Libraries.end();
+	 iterL++)
     {
-        if ((pTaggedDecl = pLibrary->FindTaggedDecl(sName)) != 0)
+        if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)) != 0)
             return pTaggedDecl;
     }
     // search included files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pTaggedDecl = pFile->FindTaggedDecl(sName)) != 0)
+        if ((pTaggedDecl = (*iterF)->FindTaggedDecl(sName)) != 0)
             return pTaggedDecl;
     }
     // nothing found:
@@ -452,17 +268,17 @@ CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
 }
 
 /** returns a reference to the user defined type
- *    \param sName the name of the type to search for
- *    \return a reference to the user defined type, or 0 if it does not exist
+ *  \param sName the name of the type to search for
+ *  \return a reference to the user defined type, or 0 if it does not exist
  */
 CFETypedDeclarator* CFEFile::FindUserDefinedType(const char *sName)
 {
     return FindUserDefinedType(string(sName));
 }
 
-/**    \brief returns a reference to the interface
- *    \param sName the name of the interface to search for
- *    \return a reference to the interface, or 0 if not found
+/** \brief returns a reference to the interface
+ *  \param sName the name of the interface to search for
+ *  \return a reference to the interface, or 0 if not found
  *
  * If the name is a scoped name, we have to get the scope name and
  * use it to find the library for it. And then use the library to find
@@ -493,79 +309,62 @@ CFEInterface *CFEFile::FindInterface(string sName)
         }
     }
     // first search the interfaces in this file
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    CFEInterface *pInterface;
-    while ((pInterface = GetNextInterface(iterI)) != 0)
-    {
-        if (pInterface->GetName() == sName)
-            return pInterface;
-    }
-    // search libraries
+    CFEInterface *pInterface = m_Interfaces.Find(sName);
+    if (pInterface)
+	return pInterface;
 // do not search interfaces in libs (breaks scope)
-//     vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-//     CFELibrary *pLibrary;
-//     while ((pLibrary = GetNextLibrary(iterL)) != 0)
-//     {
-//         if ((pInterface = pLibrary->FindInterface(sName)))
-//             return pInterface;
-//     }
     // the search the included files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pInterface = pFile->FindInterface(sName)))
+        if ((pInterface = (*iterF)->FindInterface(sName)))
             return pInterface;
     }
     // none found
     return 0;
 }
 
-/**    \brief returns a reference to the interface
- *    \param sName the name of the interface to search for
- *    \return a reference to the interface, or 0 if not found
+/** \brief returns a reference to the interface
+ *  \param sName the name of the interface to search for
+ *  \return a reference to the interface, or 0 if not found
  */
 CFEInterface* CFEFile::FindInterface(const char* sName)
 {
     return FindInterface(string(sName));
 }
 
-/**    \brief searches for a library
- *    \param sName the name to search for
- *    \return a reference to the found lib or 0 if not found
+/** \brief searches for a library
+ *  \param sName the name to search for
+ *  \return a reference to the found lib or 0 if not found
  */
 CFELibrary *CFEFile::FindLibrary(string sName)
 {
     if (sName.empty())
         return 0;
 
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pLib;
-    while ((pLib = GetNextLibrary(iterL)) != 0)
-    {
-        if (pLib->GetName() == sName)
-            return pLib;
-         // no matter if the name if 0, test nested libs
+    CFELibrary *pLib = m_Libraries.Find(sName);
+    if (pLib)
+	return pLib;
 // Do not test libs if they contain this lib (breaks scopes)
-//          if ((pLib2 = pLib->FindLibrary(sName)) != 0)
-//              return pLib2;
-    }
 
     // search included/imported files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFEFile;
-    while ((pFEFile = GetNextChildFile(iterF)) != 0)
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pLib = pFEFile->FindLibrary(sName)) != 0)
+        if ((pLib = (*iterF)->FindLibrary(sName)) != 0)
             return pLib;
     }
 
     return 0;
 }
 
-/**    \brief searches for a library
- *    \param sName the name to search for
- *    \return a reference to the found lib or 0 if not found
+/** \brief searches for a library
+ *  \param sName the name to search for
+ *  \return a reference to the found lib or 0 if not found
  */
 CFELibrary* CFEFile::FindLibrary(const char* sName)
 {
@@ -573,43 +372,42 @@ CFELibrary* CFEFile::FindLibrary(const char* sName)
 }
 
 /** returns a reference to the found constant declarator
- *    \param sName the name of the constant declarator to search for
- *    \return a reference to the found constant declarator, or 0 if not found
+ *  \param sName the name of the constant declarator to search for
+ *  \return a reference to the found constant declarator, or 0 if not found
  */
 CFEConstDeclarator *CFEFile::FindConstDeclarator(string sName)
 {
     if (sName.empty())
         return 0;
     // first search this file's constants
-    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-    CFEConstDeclarator *pConst;
-    while ((pConst = GetNextConstant(iterC)) != 0)
-    {
-        if (pConst->GetName() == sName)
-            return pConst;
-    }
+    CFEConstDeclarator *pConst = m_Constants.Find(sName);
+    if (pConst)
+	return pConst;
     // then search included files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pConst = pFile->FindConstDeclarator(sName)))
+        if ((pConst = (*iterF)->FindConstDeclarator(sName)))
             return pConst;
     }
     // then search the interfaces
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    CFEInterface *pInterface;
-    while ((pInterface = GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = m_Interfaces.begin();
+	 iterI != m_Interfaces.end();
+	 iterI++)
     {
-        if ((pConst = pInterface->FindConstant(sName)))
+        if ((pConst = (*iterI)->m_Constants.Find(sName)))
             return pConst;
     }
     // then search the libraries
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pLibrary;
-    while ((pLibrary = GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = m_Libraries.begin();
+	 iterL != m_Libraries.end();
+	 iterL++)
     {
-        if ((pConst = pLibrary->FindConstant(sName)))
+        if ((pConst = (*iterL)->FindConstant(sName)))
             return pConst;
     }
     // if none found, return 0
@@ -617,24 +415,24 @@ CFEConstDeclarator *CFEFile::FindConstDeclarator(string sName)
 }
 
 /** checks the file-name for a given extension (has to be last)
- *    \param sExtension the extension to search for
- *    \return true if found, false if not
+ *  \param sExtension the extension to search for
+ *  \return true if found, false if not
  *
  * This function is case insensitive.
  */
 bool CFEFile::HasExtension(string sExtension)
 {
     // make sExtension lower case
-    transform(sExtension.begin(), sExtension.end(), sExtension.begin(), tolower);
+    transform(sExtension.begin(), sExtension.end(), sExtension.begin(), _tolower);
     // if no extension, this file cannot be of this extension
     return m_sFileExtension == sExtension;
 }
 
-/**    \brief checks if this file is an IDL file
- *    \return true if this file is an IDL file
+/** \brief checks if this file is an IDL file
+ *  \return true if this file is an IDL file
  *
  * The check is done using the extension of the input file. This should be
- * "idl" (case-insensitive) or it also might be &lt;stdin&gt; if read from
+ * "idl" (case-insensitive) or it also might be \<stdin\> if read from
  * the standard input. Or empty if this is the top level file.
  */
 bool CFEFile::IsIDLFile()
@@ -651,232 +449,142 @@ bool CFEFile::IsIDLFile()
 }
 
 /** returns the filename without the extension
- *    \return the filename without the extension
+ *  \return the filename without the extension
  */
 string CFEFile::GetFileNameWithoutExtension()
 {
     return m_sFilenameWithoutExtension;
 }
 
-/** \brief checks the consitency of this file
- *  \return true if everything is fine, false otherwise
- *
- * A file is ok, when all it's included files are ok in the first place. Then it
- * checks if the defined types do already exists. Then the constants are checked
- * and finally all contained interfaces and libraries are checked by starting a
- * self-test.
+/** \brief iterate the elements to call the visitor with them
+ *  \param v the visitor
  */
-bool CFEFile::CheckConsistency()
+void CFEFile::Accept(CVisitor &v)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for file %s\n", 
+	__func__, GetFileName().c_str());
+    // only check consistency if this is an IDL file!
+    if (!IsIDLFile())
+	return;
+    // call visitor
+    v.Visit(*this);
     // included files
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+//     for_each(m_ChildFiles.begin(), m_ChildFiles.end(), 
+// 	mem_fun(&CFEFile::Accept));
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        // only check consistency of IDL files
-        if (!(pFile->HasExtension("idl")))
-            continue;
-        if (!(pFile->CheckConsistency()))
-            return false;
-    }
-    // check types
-    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypedef();
-    CFETypedDeclarator *pTypedef;
-    while ((pTypedef = GetNextTypedef(iterT)) != 0)
-    {
-        if (!(pTypedef->CheckConsistency()))
-            return false;
+	(*iterF)->Accept(v);
     }
     // check constants
-    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-    CFEConstDeclarator *pConst;
-    while ((pConst = GetNextConstant(iterC)) != 0)
+    vector<CFEConstDeclarator*>::iterator iterC;
+    for (iterC = m_Constants.begin();
+	 iterC != m_Constants.end();
+	 iterC++)
     {
-        if (!(pConst->CheckConsistency()))
-            return false;
+	(*iterC)->Accept(v);
+    }
+    // check types
+    vector<CFETypedDeclarator*>::iterator iterT;
+    for (iterT = m_Typedefs.begin();
+	 iterT != m_Typedefs.end();
+	 iterT++)
+    {
+	(*iterT)->Accept(v);
+    }
+    // check type declarations
+    vector<CFEConstructedType*>::iterator iterCT;
+    for (iterCT = m_TaggedDeclarators.begin();
+	 iterCT != m_TaggedDeclarators.end();
+	 iterCT++)
+    {
+	(*iterCT)->Accept(v);
     }
     // check interfaces
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    CFEInterface *pInterface;
-    while ((pInterface = GetNextInterface(iterI)) != 0)
+    vector<CFEInterface*>::iterator iterI;
+    for (iterI = m_Interfaces.begin();
+	 iterI != m_Interfaces.end();
+	 iterI++)
     {
-        if (!(pInterface->CheckConsistency()))
-            return false;
+	(*iterI)->Accept(v);
     }
     // check libraries
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pLib;
-    while ((pLib = GetNextLibrary(iterL)) != 0)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = m_Libraries.begin();
+	 iterL != m_Libraries.end();
+	 iterL++)
     {
-        if (!(pLib->CheckConsistency()))
-            return false;
-    }
-    // everything ran through, so we might consider this file clean
-    return true;
-}
-
-/** for debugging purposes only */
-void CFEFile::Dump()
-{
-    printf("Dump: CFEFile (%s)\n", GetFileName().c_str());
-    printf("Dump: CFEFile (%s): included files:\n", GetFileName().c_str());
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEBase *pElement;
-    while ((pElement = GetNextChildFile(iterF)) != 0)
-    {
-        pElement->Dump();
-    }
-    printf("Dump: CFEFile (%s): typedefs:\n", GetFileName().c_str());
-    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypedef();
-    while ((pElement = GetNextTypedef(iterT)) != 0)
-    {
-        pElement->Dump();
-    }
-    printf("Dump: CFEFile (%s): constants:\n", GetFileName().c_str());
-    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-    while ((pElement = GetNextConstant(iterC)) != 0)
-    {
-        pElement->Dump();
-    }
-    printf("Dump: CFEFile (%s): interfaces:\n", GetFileName().c_str());
-    vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-    while ((pElement = GetNextInterface(iterI)) != 0)
-    {
-        pElement->Dump();
-    }
-    printf("Dump: CFEFile (%s): libraries:\n", GetFileName().c_str());
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    while ((pElement = GetNextLibrary(iterL)) != 0)
-    {
-        pElement->Dump();
+	(*iterL)->Accept(v);
     }
 }
 
-/** write this object to a file
- *    \param pFile the file to serialize from/to
- */
-void CFEFile::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<idl>\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", GetFileName().c_str());
-        // write included files
-        vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-        CFEBase *pElement;
-        while ((pElement = GetNextChildFile(iterF)) != 0)
-        {
-            pFile->PrintIndent("<include>%s</include>\n", (*iterF)->GetFileName().c_str());
-        }
-        // write constants
-        vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-        while ((pElement = GetNextConstant(iterC)) != 0)
-        {
-            pElement->Serialize(pFile);
-        }
-        // write typedefs
-        vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypedef();
-        while ((pElement = GetNextTypedef(iterT)) != 0)
-        {
-            pElement->Serialize(pFile);
-        }
-        // write tagged decls
-        vector<CFEConstructedType*>::iterator iterTD = GetFirstTaggedDecl();
-        while ((pElement = GetNextTaggedDecl(iterTD)) != 0)
-        {
-            pElement->Serialize(pFile);
-        }
-        // write libraries
-        vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-        while ((pElement = GetNextLibrary(iterL)) != 0)
-        {
-            pElement->Serialize(pFile);
-        }
-        // write interfaces
-        vector<CFEInterface*>::iterator iterI = GetFirstInterface();
-        while ((pElement = GetNextInterface(iterI)) != 0)
-        {
-            pElement->Serialize(pFile);
-        }
-        pFile->DecIndent();
-        pFile->PrintIndent("</idl>\n");
-    }
-}
-
-/**    \brief counts the constants of the file
- *    \param bCountIncludes true if included files should be countedt as well
- *    \return number of constants in this file
+/** \brief counts the constants of the file
+ *  \param bCountIncludes true if included files should be countedt as well
+ *  \return number of constants in this file
  */
 int CFEFile::GetConstantCount(bool bCountIncludes)
 {
      if (!IsIDLFile())
          return 0;
 
-     int nCount = 0;
-     vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-     CFEConstDeclarator *pDecl;
-     while ((pDecl = GetNextConstant(iterC)) != 0)
-     {
-         nCount++;
-     }
+     int nCount = m_Constants.size();
 
      if (!bCountIncludes)
          return nCount;
 
-     vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-     CFEFile *pFile;
-     while ((pFile = GetNextChildFile(iterF)) != 0)
+     vector<CFEFile*>::iterator iterF;
+     for (iterF = m_ChildFiles.begin();
+	  iterF != m_ChildFiles.end();
+	  iterF++)
      {
-         nCount += pFile->GetConstantCount();
+         nCount += (*iterF)->GetConstantCount();
      }
 
      return nCount;
 }
 
-/**    \brief count the typedefs of the file
- *    \param bCountIncludes true if included files should be counted as well
- *    \return number of typedefs in file
+/** \brief count the typedefs of the file
+ *  \param bCountIncludes true if included files should be counted as well
+ *  \return number of typedefs in file
  */
 int CFEFile::GetTypedefCount(bool bCountIncludes)
 {
      if (!IsIDLFile())
          return 0;
 
-     int nCount = 0;
-     vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypedef();
-     CFETypedDeclarator *pDecl;
-     while ((pDecl = GetNextTypedef(iterT)) != 0)
-     {
-         nCount++;
-     }
+     int nCount = m_Typedefs.size();
 
      if (!bCountIncludes)
          return nCount;
 
-     vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-     CFEFile *pFile;
-     while ((pFile = GetNextChildFile(iterF)) != 0)
+     vector<CFEFile*>::iterator iterF;
+     for (iterF = m_ChildFiles.begin();
+	  iterF != m_ChildFiles.end();
+	  iterF++)
      {
-         nCount += pFile->GetTypedefCount();
+         nCount += (*iterF)->GetTypedefCount();
      }
 
      return nCount;
 }
 
-/**    \brief checks if this file is a standard include file
- *    \return true if this is a standard include file
+/** \brief checks if this file is a standard include file
+ *  \return true if this is a standard include file
  */
 bool CFEFile::IsStdIncludeFile()
 {
     return (m_nStdInclude == 1);
 }
 
-/**    \brief returns the filename including the path
- *    \return a reference to m_sFileWithPath
+/** \brief returns the filename including the path
+ *  \return a reference to m_sFileWithPath
  */
 string CFEFile::GetFullFileName()
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called, return %s\n", __func__,
+	m_sFileWithPath.c_str());
     return m_sFileWithPath;
 }
 
@@ -888,49 +596,21 @@ int CFEFile::GetIncludedOnLine()
     return m_nIncludedOnLine;
 }
 
-/** \brief retrieves a pointer to the first include statement
- *  \return a iterator
- */
-vector<CIncludeStatement*>::iterator CFEFile::GetFirstInclude()
-{
-    return m_vIncludes.begin();
-}
-
-/** \brief get the next include statement
- *  \param iter the pointer to the next include statement
- *  \return the next include statement
- */
-CIncludeStatement* CFEFile::GetNextInclude(vector<CIncludeStatement*>::iterator &iter)
-{
-    if (iter == m_vIncludes.end())
-        return 0;
-    return *iter++;
-}
-
-/** \brief adds a new include statement
- *  \param pNewInclude the new include statement
- */
-void CFEFile::AddInclude(CIncludeStatement *pNewInclude)
-{
-    if (!pNewInclude)
-        return;
-    m_vIncludes.push_back(pNewInclude);
-    pNewInclude->SetParent(this);
-}
-
 /** \brief tries to find a file with the given filename
  *  \param sFileName the name of the file to find
  *  \return a reference to the found file
  */
 CFEFile* CFEFile::FindFile(string sFileName)
 {
-    if (m_sFileName == sFileName)
+    if (m_sFilename == sFileName)
         return this;
-    vector<CFEFile*>::iterator iterF = GetFirstChildFile();
-    CFEFile *pFile, *pFoundFile;
-    while ((pFile = GetNextChildFile(iterF)) != 0)
+    CFEFile *pFoundFile;
+    vector<CFEFile*>::iterator iterF;
+    for (iterF = m_ChildFiles.begin();
+	 iterF != m_ChildFiles.end();
+	 iterF++)
     {
-        if ((pFoundFile = pFile->FindFile(sFileName)) != 0)
+        if ((pFoundFile = (*iterF)->FindFile(sFileName)) != 0)
             return pFoundFile;
     }
     return 0;
@@ -947,61 +627,69 @@ int
 CFEFile::GetSourceLineEnd()
 {
     if (m_nSourceLineNbEnd != 0)
-	return m_nSourceLineNbEnd;
+       return m_nSourceLineNbEnd;
 
     // Includes
-    vector<CIncludeStatement*>::iterator iterI = m_vIncludes.begin();
-    for (; iterI != m_vIncludes.end(); iterI++)
+    vector<CIncludeStatement*>::iterator iterI;
+    for (iterI = m_Includes.begin();
+	 iterI != m_Includes.end();
+	 iterI++)
     {
-	int sLine = (*iterI)->GetSourceLine();
-	int eLine = (*iterI)->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterI)->GetSourceLine();
+       int eLine = (*iterI)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // libraries
-    vector<CFELibrary*>::iterator iterL = GetFirstLibrary();
-    CFELibrary *pL;
-    while ((pL = GetNextLibrary(iterL)) != NULL)
+    vector<CFELibrary*>::iterator iterL;
+    for (iterL = m_Libraries.begin();
+	 iterL != m_Libraries.end();
+	 iterL++)
     {
-	int sLine = pL->GetSourceLine();
-	int eLine = pL->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterL)->GetSourceLine();
+       int eLine = (*iterL)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // interfaces
-    vector<CFEInterface*>::iterator iterIF = GetFirstInterface();
-    CFEInterface *pI;
-    while ((pI = GetNextInterface(iterIF)) != NULL)
+    vector<CFEInterface*>::iterator iterIF;
+    for (iterIF = m_Interfaces.begin();
+	 iterIF != m_Interfaces.end();
+	 iterIF++)
     {
-	int sLine = pI->GetSourceLine();
-	int eLine = pI->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterIF)->GetSourceLine();
+       int eLine = (*iterIF)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // typedefs
-    vector<CFETypedDeclarator*>::iterator iterTD = GetFirstTypedef();
-    CFETypedDeclarator *pTD;
-    while ((pTD = GetNextTypedef(iterTD)) != NULL)
+    vector<CFETypedDeclarator*>::iterator iterTD;
+    for (iterTD = m_Typedefs.begin();
+	 iterTD != m_Typedefs.end();
+	 iterTD++)
     {
-	int sLine = pTD->GetSourceLine();
-	int eLine = pTD->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterTD)->GetSourceLine();
+       int eLine = (*iterTD)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // tagged types
-    vector<CFEConstructedType*>::iterator iterCT = GetFirstTaggedDecl();
-    CFEConstructedType *pCT;
-    while ((pCT = GetNextTaggedDecl(iterCT)) != NULL)
+    vector<CFEConstructedType*>::iterator iterCT;
+    for (iterCT = m_TaggedDeclarators.begin();
+	 iterCT != m_TaggedDeclarators.end();
+	 iterCT++)
     {
-	int sLine = pCT->GetSourceLine();
-	int eLine = pCT->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterCT)->GetSourceLine();
+       int eLine = (*iterCT)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // tagged types
-    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
-    CFEConstDeclarator *pC;
-    while ((pC = GetNextConstant(iterC)) != NULL)
+    vector<CFEConstDeclarator*>::iterator iterC;
+    for (iterC = m_Constants.begin();
+	 iterC != m_Constants.end();
+	 iterC++)
     {
-	int sLine = pC->GetSourceLine();
-	int eLine = pC->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterC)->GetSourceLine();
+       int eLine = (*iterC)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
 
     return m_nSourceLineNbEnd;
 }
+

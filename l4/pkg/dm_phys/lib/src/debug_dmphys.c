@@ -31,11 +31,11 @@
 /*****************************************************************************/
 /**
  * \brief  Call dataspace manager
- * 
+ *
  * \param  key           Debug key
  * \param  data          Debug data
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __debug(l4_uint32_t key, l4_uint32_t data)
 {
@@ -49,8 +49,9 @@ __debug(l4_uint32_t key, l4_uint32_t data)
 
   /* call DMphys */
   if_l4dm_memphys_dmphys_debug_call(&(dsm_id), key, data, &_env);
-  if (_env.major != CORBA_NO_EXCEPTION)
-    LOG_Error("libdm_phys: IPC erroc calling DMphys (exc %d)!", _env.major);
+  if (DICE_HAS_EXCEPTION(&_env))
+    LOG_Error("libdm_phys: IPC erroc calling DMphys (exc %d)!",
+	DICE_EXCEPTION_MAJOR(&_env));
 }
 
 /*****************************************************************************
@@ -59,9 +60,9 @@ __debug(l4_uint32_t key, l4_uint32_t data)
 
 /*****************************************************************************/
 /**
- * \brief  DEBUG: show DMphys memory map 
+ * \brief  DEBUG: show DMphys memory map
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4dm_memphys_show_memmap(void)
 {
@@ -73,7 +74,7 @@ l4dm_memphys_show_memmap(void)
 /**
  * \brief  DEBUG: show DMphys memory pools
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4dm_memphys_show_pools(void)
 {
@@ -84,10 +85,10 @@ l4dm_memphys_show_pools(void)
 /*****************************************************************************/
 /**
  * \brief  DEBUG: show memory areas of a memory pool
- * 
+ *
  * \param  pool          Memory pool number
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4dm_memphys_show_pool_areas(int pool)
 {
@@ -98,10 +99,10 @@ l4dm_memphys_show_pool_areas(int pool)
 /*****************************************************************************/
 /**
  * \brief  DEBUG: show free lists of a memory pool
- * 
+ *
  * \param  pool          Memory pool number
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4dm_memphys_show_pool_free(int pool)
 {
@@ -115,7 +116,7 @@ l4dm_memphys_show_pool_free(int pool)
  *
  * \param  show_free     Show slab cache free lists
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4dm_memphys_show_slabs(int show_free)
 {

@@ -1,0 +1,4 @@
+- L4Linux semms to handle pagefaults during alien IPC incorrectly. This
+  resulted in some strange aborts.
+- l4lx_flips session threads never exit because l4vfs and libc backends never
+  call close_connection().

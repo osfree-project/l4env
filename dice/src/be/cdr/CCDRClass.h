@@ -32,6 +32,9 @@
 
 #include <be/BEClass.h>
 
+class CFEOperation;
+class CFEInterface;
+
 /** \class CCDRClass
  *  \ingroup backend
  *  \brief specialized Class behaviour for CDR
@@ -44,8 +47,8 @@ public:
     virtual ~CCDRClass();
 
 public:
-    virtual bool CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext);
-    virtual bool AddInterfaceFunctions(CFEInterface* pFEInterface,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEOperation* pFEOperation);
+    virtual void AddInterfaceFunctions(CFEInterface* pFEInterface);
 };
 
 #endif

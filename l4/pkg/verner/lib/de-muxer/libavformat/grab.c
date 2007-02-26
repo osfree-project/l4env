@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
 #include <unistd.h>
@@ -66,18 +66,31 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
     struct video_tuner tuner;
     struct video_audio audio;
     const char *video_device;
+    int j;
 
-    if (!ap || ap->width <= 0 || ap->height <= 0 || ap->frame_rate <= 0)
+    if (ap->width <= 0 || ap->height <= 0 || ap->time_base.den <= 0) {
+        av_log(s1, AV_LOG_ERROR, "Bad capture size (%dx%d) or wrong time base (%d)\n",
+            ap->width, ap->height, ap->time_base.den);
+
         return -1;
-    
+    }
+
     width = ap->width;
     height = ap->height;
-    frame_rate      = ap->frame_rate;
-    frame_rate_base = ap->frame_rate_base;
+    frame_rate      = ap->time_base.den;
+    frame_rate_base = ap->time_base.num;
+
+    if((unsigned)width > 32767 || (unsigned)height > 32767) {
+        av_log(s1, AV_LOG_ERROR, "Capture size is out of range: %dx%d\n",
+            width, height);
+
+        return -1;
+    }
 
     st = av_new_stream(s1, 0);
     if (!st)
         return -ENOMEM;
+    av_set_pts_info(st, 64, 1, 1000000); /* 64 bits pts in us */
 
     s->width = width;
     s->height = height;
@@ -92,37 +105,37 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
         perror(video_device);
         goto fail;
     }
-    
+
     if (ioctl(video_fd,VIDIOCGCAP, &s->video_cap) < 0) {
         perror("VIDIOCGCAP");
         goto fail;
     }
 
     if (!(s->video_cap.type & VID_TYPE_CAPTURE)) {
-        printf( "Fatal: grab device does not handle capture\n");
+        av_log(s1, AV_LOG_ERROR, "Fatal: grab device does not handle capture\n");
         goto fail;
     }
 
     desired_palette = -1;
-    if (st->codec.pix_fmt == PIX_FMT_YUV420P) {
+    if (st->codec->pix_fmt == PIX_FMT_YUV420P) {
         desired_palette = VIDEO_PALETTE_YUV420P;
-    } else if (st->codec.pix_fmt == PIX_FMT_YUV422) {
+    } else if (st->codec->pix_fmt == PIX_FMT_YUV422) {
         desired_palette = VIDEO_PALETTE_YUV422;
-    } else if (st->codec.pix_fmt == PIX_FMT_BGR24) {
+    } else if (st->codec->pix_fmt == PIX_FMT_BGR24) {
         desired_palette = VIDEO_PALETTE_RGB24;
-    }    
+    }
 
     /* set tv standard */
     if (ap->standard && !ioctl(video_fd, VIDIOCGTUNER, &tuner)) {
-	if (!strcasecmp(ap->standard, "pal"))
-	    tuner.mode = VIDEO_MODE_PAL;
-	else if (!strcasecmp(ap->standard, "secam"))
-	    tuner.mode = VIDEO_MODE_SECAM;
-	else
-	    tuner.mode = VIDEO_MODE_NTSC;
-	ioctl(video_fd, VIDIOCSTUNER, &tuner);
+        if (!strcasecmp(ap->standard, "pal"))
+            tuner.mode = VIDEO_MODE_PAL;
+        else if (!strcasecmp(ap->standard, "secam"))
+            tuner.mode = VIDEO_MODE_SECAM;
+        else
+            tuner.mode = VIDEO_MODE_NTSC;
+        ioctl(video_fd, VIDIOCSTUNER, &tuner);
     }
-    
+
     /* unmute audio */
     audio.audio = 0;
     ioctl(video_fd, VIDIOCGAUDIO, &audio);
@@ -154,7 +167,7 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
                pict.brightness,
                pict.contrast,
                pict.whiteness);
-#endif        
+#endif
         /* try to choose a suitable video format */
         pict.palette = desired_palette;
         if (desired_palette == -1 || (ret = ioctl(video_fd, VIDIOCSPICT, &pict)) < 0) {
@@ -166,7 +179,7 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
                 if (ret < 0) {
                     pict.palette=VIDEO_PALETTE_RGB24;
                     ret = ioctl(video_fd, VIDIOCSPICT, &pict);
-                    if (ret < 0) 
+                    if (ret < 0)
                         goto fail1;
                 }
             }
@@ -177,9 +190,9 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
         val = 1;
         ioctl(video_fd, VIDIOCCAPTURE, &val);
 
-        s->time_frame = av_gettime();
+        s->time_frame = av_gettime() * s->frame_rate / s->frame_rate_base;
         s->use_mmap = 0;
-        
+
         /* ATI All In Wonder automatic activation */
         if (!strcmp(s->video_cap.name, "Km")) {
             if (aiw_init(s) < 0)
@@ -196,8 +209,8 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
             goto fail;
         }
         s->gb_frame = 0;
-        s->time_frame = av_gettime();
-        
+        s->time_frame = av_gettime() * s->frame_rate / s->frame_rate_base;
+
         /* start to grab the first frame */
         s->gb_buf.frame = s->gb_frame % s->gb_buffers.frames;
         s->gb_buf.height = height;
@@ -206,12 +219,12 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
 
         if (desired_palette == -1 || (ret = ioctl(video_fd, VIDIOCMCAPTURE, &s->gb_buf)) < 0) {
             s->gb_buf.format = VIDEO_PALETTE_YUV420P;
-            
+
             ret = ioctl(video_fd, VIDIOCMCAPTURE, &s->gb_buf);
             if (ret < 0 && errno != EAGAIN) {
                 /* try YUV422 */
                 s->gb_buf.format = VIDEO_PALETTE_YUV422;
-                
+
                 ret = ioctl(video_fd, VIDIOCMCAPTURE, &s->gb_buf);
                 if (ret < 0 && errno != EAGAIN) {
                     /* try RGB24 */
@@ -223,11 +236,15 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
         if (ret < 0) {
             if (errno != EAGAIN) {
             fail1:
-                printf( "Fatal: grab device does not support suitable format\n");
+                av_log(s1, AV_LOG_ERROR, "Fatal: grab device does not support suitable format\n");
             } else {
-                printf("Fatal: grab device does not receive any video signal\n");
+                av_log(s1, AV_LOG_ERROR,"Fatal: grab device does not receive any video signal\n");
             }
             goto fail;
+        }
+        for (j = 1; j < s->gb_buffers.frames; j++) {
+          s->gb_buf.frame = j;
+          ioctl(video_fd, VIDIOCMCAPTURE, &s->gb_buf);
         }
         s->frame_format = s->gb_buf.format;
         s->use_mmap = 1;
@@ -236,52 +253,41 @@ static int grab_read_header(AVFormatContext *s1, AVFormatParameters *ap)
     switch(s->frame_format) {
     case VIDEO_PALETTE_YUV420P:
         frame_size = (width * height * 3) / 2;
-        st->codec.pix_fmt = PIX_FMT_YUV420P;
+        st->codec->pix_fmt = PIX_FMT_YUV420P;
         break;
     case VIDEO_PALETTE_YUV422:
         frame_size = width * height * 2;
-        st->codec.pix_fmt = PIX_FMT_YUV422;
+        st->codec->pix_fmt = PIX_FMT_YUV422;
         break;
     case VIDEO_PALETTE_RGB24:
         frame_size = width * height * 3;
-        st->codec.pix_fmt = PIX_FMT_BGR24; /* NOTE: v4l uses BGR24, not RGB24 ! */
+        st->codec->pix_fmt = PIX_FMT_BGR24; /* NOTE: v4l uses BGR24, not RGB24 ! */
         break;
     default:
         goto fail;
     }
     s->fd = video_fd;
     s->frame_size = frame_size;
-    
-    st->codec.codec_type = CODEC_TYPE_VIDEO;
-    st->codec.codec_id = CODEC_ID_RAWVIDEO;
-    st->codec.width = width;
-    st->codec.height = height;
-    st->codec.frame_rate      = frame_rate;
-    st->codec.frame_rate_base = frame_rate_base;
-    
-    av_set_pts_info(s1, 48, 1, 1000000); /* 48 bits pts in us */
+
+    st->codec->codec_type = CODEC_TYPE_VIDEO;
+    st->codec->codec_id = CODEC_ID_RAWVIDEO;
+    st->codec->width = width;
+    st->codec->height = height;
+    st->codec->time_base.den      = frame_rate;
+    st->codec->time_base.num = frame_rate_base;
+    st->codec->bit_rate = frame_size * 1/av_q2d(st->codec->time_base) * 8;
 
     return 0;
  fail:
     if (video_fd >= 0)
         close(video_fd);
     av_free(st);
-    return -EIO;
+    return AVERROR_IO;
 }
 
 static int v4l_mm_read_picture(VideoData *s, uint8_t *buf)
 {
     uint8_t *ptr;
-
-    /* Setup to capture the next frame */
-    s->gb_buf.frame = (s->gb_frame + 1) % s->gb_buffers.frames;
-    if (ioctl(s->fd, VIDIOCMCAPTURE, &s->gb_buf) < 0) {
-        if (errno == EAGAIN)
-            printf("Cannot Sync\n");
-        else
-            perror("VIDIOCMCAPTURE");
-        return -EIO;
-    }
 
     while (ioctl(s->fd, VIDIOCSYNC, &s->gb_frame) < 0 &&
            (errno == EAGAIN || errno == EINTR));
@@ -289,8 +295,18 @@ static int v4l_mm_read_picture(VideoData *s, uint8_t *buf)
     ptr = s->video_buf + s->gb_buffers.offsets[s->gb_frame];
     memcpy(buf, ptr, s->frame_size);
 
+    /* Setup to capture the next frame */
+    s->gb_buf.frame = s->gb_frame;
+    if (ioctl(s->fd, VIDIOCMCAPTURE, &s->gb_buf) < 0) {
+        if (errno == EAGAIN)
+            av_log(NULL, AV_LOG_ERROR, "Cannot Sync\n");
+        else
+            perror("VIDIOCMCAPTURE");
+        return AVERROR_IO;
+    }
+
     /* This is now the grabbing frame */
-    s->gb_frame = s->gb_buf.frame;
+    s->gb_frame = (s->gb_frame + 1) % s->gb_buffers.frames;
 
     return s->frame_size;
 }
@@ -300,31 +316,30 @@ static int grab_read_packet(AVFormatContext *s1, AVPacket *pkt)
     VideoData *s = s1->priv_data;
     int64_t curtime, delay;
     struct timespec ts;
-    int64_t per_frame = (int64_t_C(1000000) * s->frame_rate_base) / s->frame_rate;
 
     /* Calculate the time of the next frame */
-    s->time_frame += per_frame;
+    s->time_frame += int64_t_C(1000000);
 
     /* wait based on the frame rate */
     for(;;) {
         curtime = av_gettime();
-        delay = s->time_frame - curtime;
+        delay = s->time_frame  * s->frame_rate_base / s->frame_rate - curtime;
         if (delay <= 0) {
-            if (delay < -per_frame) {
+            if (delay < int64_t_C(-1000000) * s->frame_rate_base / s->frame_rate) {
                 /* printf("grabbing is %d frames late (dropping)\n", (int) -(delay / 16666)); */
-                s->time_frame += per_frame;
+                s->time_frame += int64_t_C(1000000);
             }
             break;
-        }    
+        }
         ts.tv_sec = delay / 1000000;
         ts.tv_nsec = (delay % 1000000) * 1000;
         nanosleep(&ts, NULL);
     }
 
     if (av_new_packet(pkt, s->frame_size) < 0)
-        return -EIO;
+        return AVERROR_IO;
 
-    pkt->pts = curtime & ((1LL << 48) - 1);
+    pkt->pts = curtime;
 
     /* read one frame */
     if (s->aiw_enabled) {
@@ -333,7 +348,7 @@ static int grab_read_packet(AVFormatContext *s1, AVPacket *pkt)
         return v4l_mm_read_picture(s, pkt->data);
     } else {
         if (read(s->fd, pkt->data, pkt->size) != pkt->size)
-            return -EIO;
+            return AVERROR_IO;
         return s->frame_size;
     }
 }
@@ -381,14 +396,14 @@ static int aiw_init(VideoData *s)
     if ((width == s->video_cap.maxwidth && height == s->video_cap.maxheight) ||
         (width == s->video_cap.maxwidth && height == s->video_cap.maxheight*2) ||
         (width == s->video_cap.maxwidth/2 && height == s->video_cap.maxheight)) {
-        
+
         s->deint=0;
         s->halfw=0;
         if (height == s->video_cap.maxheight*2) s->deint=1;
         if (width == s->video_cap.maxwidth/2) s->halfw=1;
     } else {
-        printf("\nIncorrect Grab Size Supplied - Supported Sizes Are:\n");
-        printf(" %dx%d  %dx%d %dx%d\n\n",
+        av_log(NULL, AV_LOG_ERROR, "\nIncorrect Grab Size Supplied - Supported Sizes Are:\n");
+        av_log(NULL, AV_LOG_ERROR, " %dx%d  %dx%d %dx%d\n\n",
                 s->video_cap.maxwidth,s->video_cap.maxheight,
                 s->video_cap.maxwidth,s->video_cap.maxheight*2,
                 s->video_cap.maxwidth/2,s->video_cap.maxheight);
@@ -413,7 +428,7 @@ static int aiw_init(VideoData *s)
 }
 
 #ifdef HAVE_MMX
-#include "../libavcodec/i386/mmx.h"
+#include "libavcodec/i386/mmx.h"
 
 #define LINE_WITH_UV \
                     movq_m2r(ptr[0],mm0); \
@@ -564,7 +579,7 @@ static int aiw_init(VideoData *s)
                     movd_r2m(mm1,lum_m2[(ptroff)]);
 
 #else
-#include "../libavcodec/dsputil.h"
+#include "libavcodec/dsputil.h"
 
 #define LINE_WITH_UV \
                     lum[0]=ptr[0];lum[1]=ptr[2];lum[2]=ptr[4];lum[3]=ptr[6];\
@@ -602,7 +617,7 @@ static int aiw_init(VideoData *s)
                     sum=(ptr[24]+ptr[26]+1) >> 1;lum[6]=sum; \
                     sum=(ptr[28]+ptr[30]+1) >> 1;lum[7]=sum; \
                     sum=(ptr[25]+ptr[29]+1) >> 1;cb[3]=sum; \
-                    sum=(ptr[27]+ptr[31]+1) >> 1;cr[3]=sum; 
+                    sum=(ptr[27]+ptr[31]+1) >> 1;cr[3]=sum;
 
 #define LINE_NOUV_AVG \
                     sum=(ptr[0]+ptr[2]+1) >> 1;lum[0]=sum; \
@@ -612,7 +627,7 @@ static int aiw_init(VideoData *s)
                     sum=(ptr[16]+ptr[18]+1) >> 1;lum[4]=sum; \
                     sum=(ptr[20]+ptr[22]+1) >> 1;lum[5]=sum; \
                     sum=(ptr[24]+ptr[26]+1) >> 1;lum[6]=sum; \
-                    sum=(ptr[28]+ptr[30]+1) >> 1;lum[7]=sum; 
+                    sum=(ptr[28]+ptr[30]+1) >> 1;lum[7]=sum;
 
 #define DEINT_LINE_LUM(ptroff) \
                     sum=(-lum_m4[(ptroff)]+(lum_m3[(ptroff)]<<2)+(lum_m2[(ptroff)]<<1)+(lum_m1[(ptroff)]<<2)-lum[(ptroff)]); \

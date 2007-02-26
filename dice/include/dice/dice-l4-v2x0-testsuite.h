@@ -80,7 +80,7 @@ static void pager_thread(void *parameters)
     }
 }
 
-unsigned long pager_stack[1024];
+extern unsigned long pager_stack[1024];
 
 L4_INLINE
 l4_threadid_t start_pager_thread(void) __attribute__((unused));

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEEndPointAttribute.h
- *    \brief   contains the declaration of the class CFEEndPointAttribute
+ *  \brief   contains the declaration of the class CFEEndPointAttribute
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -33,13 +33,13 @@
 #include "fe/FEAttribute.h"
 #include <string>
 #include <vector>
-using namespace std;
+using std::vector;
 
 /** \struct PortSpec
  *  \ingroup frontend
  *  \brief a helper class for the end point attribute
  */
-typedef struct PortSpec
+struct PortSpec
 {
     /** \var string sFamily
      *  \brief the family of the port (udp, tcp, ...)
@@ -49,15 +49,11 @@ typedef struct PortSpec
      *  \brief the port of endpoint
      */
     string sPort;
-} PortSpec;
-
-/** \typedef struct PortSpec PortSpec
- *  \brief alias for struct PortSpec
- */
+};
 
 /** \class CFEEndPointAttribute
  *    \ingroup frontend
- *    \brief represents the end-point attribute
+ *  \brief represents the end-point attribute
  *
  * This class represents the attribute end point.
  */
@@ -73,24 +69,25 @@ public:
     virtual ~CFEEndPointAttribute();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEEndPointAttribute(CFEEndPointAttribute &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual PortSpec GetNextPortSpec(vector<PortSpec>::iterator &iter);
-    virtual vector<PortSpec>::iterator GetFirstPortSpec();
-    virtual CObject* Clone();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEEndPointAttribute(*this); }
 
 // attributes
-protected:
-    /**    \var vector<PortSpec> m_vPortSpecs
-     *    \brief contains all port specifications
+public:
+    /** \var vector<PortSpec> m_PortSpecs
+     *  \brief contains all port specifications
      */
-    vector<PortSpec> m_vPortSpecs;
+    vector<PortSpec> m_PortSpecs;
 };
 
 #endif /* __DICE_FE_FEENDPOINTATTRIBUTE_H__ */

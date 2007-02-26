@@ -20,54 +20,52 @@
 #include <l4/l4con/stream-client.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sigma0/kip.h>
 #include <l4/thread/thread.h>
 #include <l4/util/parse_cmd.h>
-#include <l4/util/kip.h>
+#include <l4/util/macros.h>
 #include <l4/lock/lock.h>
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
+#ifdef ARCH_x86
+#include <l4/util/rdtsc.h>
+#endif
 
-/* OSKit includes */
+/* LibC includes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 /* local includes */
+#include "config.h"
+#include "ev.h"
+#include "events.h"
+#include "gmode.h"
 #include "l4con.h"
 #include "main.h"
 #include "vc.h"
-#include "ev.h"
-#include "ipc.h"
-#include "con_config.h"
-#include "con_macros.h"
-#include "events.h"
 
-char LOG_tag[9] = CONTAG;
+char LOG_tag[9] = "con";
 l4_ssize_t l4libc_heapsize = CONFIG_MALLOC_MAX_SIZE;
-
-l4_uint16_t VESA_XRES, VESA_YRES, VESA_BPL;
-l4_uint8_t  VESA_BITS, VESA_RES;
-l4_uint8_t  VESA_RED_OFFS, VESA_GREEN_OFFS, VESA_BLUE_OFFS;
-l4_uint8_t  VESA_RED_SIZE, VESA_GREEN_SIZE, VESA_BLUE_SIZE;
-l4_uint8_t  FONT_XRES, FONT_YRES;
-l4_uint32_t FONT_CHRS;
 
 int noaccel;				/* 1=disable pslim HW acceleration */
 int nolog;				/* 1=disable logging to logserver */
 int pan;				/* 1=pan display to 4MB boundary */
-int use_fastmemcpy;			/* 1=fast memcpy using SSE2 */
+int use_fastmemcpy = 1;			/* 1=fast memcpy using SSE2 */
 int cpu_load;
+int cpu_load_history;
 int vbemode;
 
 struct l4con_vc *vc[MAX_NR_L4CONS];	/* virtual consoles */
 int fg_vc = -1;				/* current foreground vc */
 int want_vc = 0;			/* the vc we want to switch to */
-					/* krishna: if we set want_vc = -1,
-					 * con_loop must look for an open vc in
-					 * list; don't switch to USED VCs, only
-					 * to that in OUT/INOUT mode */
+					/* if we set want_vc = -1, con_loop
+					 * must look for an open vc in list;
+					 * don't switch to USED VCs, only to
+					 * that in OUT/INOUT mode */
 int update_id;				/* 1=redraw vc id */
 int use_l4io = 0;			/* Use L4 IO server, dfl: no */
 l4lock_t want_vc_lock = L4LOCK_UNLOCKED;/* mutex for want_vc */
@@ -77,7 +75,7 @@ l4_uint8_t vc_mode = CON_CLOSED;		/* mode of current console */
 static void do_switch(int i_new, int i_old);
 
 static void
-fast_memcpy(char *dst, char *src, l4_size_t size)
+fast_memcpy(l4_uint8_t *dst, l4_uint8_t *src, l4_size_t size)
 {
 #ifdef ARCH_x86
   l4_umword_t dummy;
@@ -93,7 +91,7 @@ fast_memcpy(char *dst, char *src, l4_size_t size)
 /* fast memcpy using movntq (moving using non-temporal hint)
  * cache line size is 32 bytes */
 static void
-fast_memcpy_mmx2_32(char *dst, char *src, l4_size_t size)
+fast_memcpy_mmx2_32(l4_uint8_t *dst, l4_uint8_t *src, l4_size_t size)
 {
 #ifdef ARCH_x86
   l4_mword_t dummy;
@@ -178,17 +176,17 @@ redraw_vc(void)
        env.timeout = EVENT_TIMEOUT;
        stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
 
-	if (env.major == CORBA_SYSTEM_EXCEPTION &&
-	    env.repos_id == CORBA_DICE_EXCEPTION_IPC_ERROR)
+	if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
+	    DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
 	  {
-	    if (env._p.ipc_error == L4_IPC_ENOT_EXISTENT)
+	    if (DICE_IPC_ERROR(&env) == L4_IPC_ENOT_EXISTENT)
 	      {
 		printf("redraw_vc: Target thread "l4util_idfmt" dead?\n",
 		    l4util_idstr(ev_partner_l4id));
 		ret = -1;
 	      }
 	    else
-	      printf("redraw_vc: IPC error %02x\n", env._p.ipc_error);
+	      printf("redraw_vc: IPC error %02x\n", DICE_IPC_ERROR(&env));
 	  }
      }
    l4lock_unlock(&want_vc_lock);
@@ -233,6 +231,31 @@ request_vc(int nr)
   l4lock_unlock(&want_vc_lock);
 }
 
+/** Announce that we want to switch to another console.
+ *  This function should not block for a longer time. */
+void
+request_vc_delta(int delta)
+{
+  int new_vc;
+
+  if (delta == 0)
+    return;
+  l4lock_lock(&want_vc_lock);
+  new_vc = fg_vc + delta;
+  for (;;)
+    {
+      if (new_vc <= 0)
+	new_vc = MAX_NR_L4CONS-1;
+      else if (new_vc >= MAX_NR_L4CONS)
+	new_vc = 1;
+      if (new_vc == fg_vc || (vc[new_vc]->mode & CON_OUT))
+	break;
+      new_vc += delta < 0 ? -1 : +1;
+    }
+  want_vc = new_vc;
+  l4lock_unlock(&want_vc_lock);
+}
+
 /** Switch to other console (want_vc != fg_vc).
  * @pre have want_vc_lock */
 static void
@@ -253,14 +276,26 @@ retry:
 
   if (want_vc < 0)
     {
-      for (i=0; i < MAX_NR_L4CONS; i++)
-	{
-	  if (    vc[i]->mode & (CON_OUT | CON_OUT)
-	      && !(vc[i]->mode & CON_MASTER))
-	    {
+      struct l4con_vc *new;
 
-	      /* open next closed VC */
-	      LOG("switch to next vc %02d", i);
+      if ((new = vc[fg_vc]))
+	{
+	  for (; (new = new->prev); )
+	    {
+	      if ((new->mode & CON_OUT) && !(new->mode & CON_MASTER))
+		{
+		  i = new->vc_number;
+		  goto found;
+		}
+	    }
+	}
+
+      for (i=0; i<MAX_NR_L4CONS; i++)
+	{
+	  if ((vc[i]->mode & CON_OUT) && !(vc[i]->mode & CON_MASTER))
+	    {
+found:
+	      LOG("switch to vc %02d", i);
 
 	      /* need fb_lock for that */
 	      do_switch(i, 0);
@@ -270,12 +305,12 @@ retry:
 		  CORBA_Environment env = dice_default_environment;
 		  printf("Closing vc %d\n", i);
 		  l4lock_unlock(&want_vc_lock);
-		  con_vc_close_call(&(vc[i]->vc_l4id), &env);
+		  con_vc_close_call(&vc[i]->vc_l4id, &env);
 		  l4lock_lock(&want_vc_lock);
 		  continue;
 		}
 
-	      fg_vc = i;
+	      fg_vc   = i;
 	      want_vc = fg_vc;
 	      break;
 	    }
@@ -294,9 +329,9 @@ retry:
       if (want_vc >= MAX_NR_L4CONS)
 	{
 	  /* return to sane state */
-	  want_vc = fg_vc;
+	  want_vc         = fg_vc;
 	  ev_partner_l4id = vc[want_vc]->ev_partner_l4id;
-	  vc_mode = vc[want_vc]->mode;
+	  vc_mode         = vc[want_vc]->mode;
 	  return;
 	}
 
@@ -338,19 +373,22 @@ do_switch(int i_new, int i_old)
   if (old != 0)
     {
       l4lock_lock(&old->fb_lock);
-      if(old->vfb_used)
+      if (old->vfb_used)
 	{
 	  /* save screen */
 	  if (use_fastmemcpy && (new->vfb_size % 4096 == 0))
-	    /* superfast memcpy */
 	    fast_memcpy_mmx2_32(old->vfb, vis_vmem, old->vfb_size);
 	  else
 	    fast_memcpy        (old->vfb, vis_vmem, old->vfb_size);
 	}
-      old->fb      = old->vfb_used ? old->vfb : 0;
-      old->do_copy = bg_do_copy;
-      old->do_fill = bg_do_fill;
-      old->do_sync = bg_do_sync;
+      old->fb       = old->vfb_used ? old->vfb : 0;
+      old->pan_xofs = old->vfb_used ? 0        : pan_offs_x;
+      old->pan_yofs = old->vfb_used ? 0        : pan_offs_y;
+      old->do_copy  = bg_do_copy;
+      old->do_fill  = bg_do_fill;
+      old->do_sync  = bg_do_sync;
+      old->do_drty  = 0;
+      old->next     = new;
       l4lock_unlock(&old->fb_lock);
     }
 
@@ -358,19 +396,22 @@ do_switch(int i_new, int i_old)
   if (new != 0)
     {
       l4lock_lock(&new->fb_lock);
-      new->fb      = gr_vmem;
-      new->do_copy = fg_do_copy;
-      new->do_fill = fg_do_fill;
-      new->do_sync = fg_do_sync;
+      new->fb       = gr_vmem;
+      new->pan_xofs = pan_offs_x;
+      new->pan_yofs = pan_offs_y;
+      new->do_copy  = fg_do_copy;
+      new->do_fill  = fg_do_fill;
+      new->do_sync  = fg_do_sync;
+      new->do_drty  = fg_do_drty;
+      new->prev     = old;
 
       if (i_new == 0 || !new->vfb_used)
 	vc_clear(new);
 
-      if(new->vfb_used)
-	/* restore screen */
+      if (new->vfb_used)
 	{
+	  /* restore screen */
 	  if (use_fastmemcpy && (new->vfb_size % 4096 == 0))
-	    /* superfast memcpy */
 	    fast_memcpy_mmx2_32(vis_vmem, new->vfb, new->vfb_size);
 	  else
 	    fast_memcpy        (vis_vmem, new->vfb, new->vfb_size);
@@ -410,15 +451,15 @@ do_switch(int i_new, int i_old)
  *      _ev           ... Flick exception (unused)
  * ret: 0             ... success
  *      -???          ... if no VC unused */
-l4_int32_t
-con_if_openqry_component(CORBA_Object _dice_corba_obj,
-			 l4_uint32_t sbuf1_size,
-			 l4_uint32_t sbuf2_size,
-			 l4_uint32_t sbuf3_size,
-			 l4_uint8_t priority,
-			 l4_threadid_t *vcid,
-			 l4_int16_t vfbmode,
-			 CORBA_Server_Environment *_dice_corba_env)
+long
+con_if_openqry_component (CORBA_Object _dice_corba_obj,
+                          unsigned long sbuf1_size,
+                          unsigned long sbuf2_size,
+                          unsigned long sbuf3_size,
+                          unsigned char priority,
+                          l4_threadid_t *vcid,
+                          short vfbmode,
+                          CORBA_Server_Environment *_dice_corba_env)
 {
   l4thread_t vc_tid;
   l4_threadid_t vc_l4id, dummy;
@@ -499,12 +540,9 @@ con_if_openqry_component(CORBA_Object _dice_corba_obj,
 
   sprintf(name, ".vc-%.2d", vc_num);
   vc_tid = l4thread_create_long(L4THREAD_INVALID_ID,
-				(l4thread_fn_t) vc_loop,
-				name,
-				L4THREAD_INVALID_SP,
-				L4THREAD_DEFAULT_SIZE,
-				priority,
-				(void *) vc[vc_num],
+				(l4thread_fn_t) vc_loop, name,
+				L4THREAD_INVALID_SP, L4THREAD_DEFAULT_SIZE,
+				priority, (void *) vc[vc_num],
 				L4THREAD_CREATE_SYNC);
 
   vc_l4id = l4thread_l4_id(vc_tid);
@@ -529,14 +567,14 @@ con_if_openqry_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
-con_if_screenshot_component(CORBA_Object _dice_corba_obj,
-			    l4_int16_t vc_nr,
-			    l4dm_dataspace_t *ds,
-			    l4_uint32_t *xres,
-			    l4_uint32_t *yres,
-			    l4_uint32_t *bpp,
-			    CORBA_Server_Environment *_dice_corba_env)
+long
+con_if_screenshot_component (CORBA_Object _dice_corba_obj,
+                             short vc_nr,
+                             l4dm_dataspace_t *ds,
+                             l4_uint32_t *xres,
+                             l4_uint32_t *yres,
+                             l4_uint32_t *bpp,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   void *addr;
   struct l4con_vc *vc_shoot;
@@ -591,10 +629,10 @@ con_if_screenshot_component(CORBA_Object _dice_corba_obj,
  * out: _ev           ... Flick exception (unused)
  * ret: 0             ... success
  *      -???          ... if some error occured on closing a vc */
-l4_int32_t
-con_if_close_all_component(CORBA_Object _dice_corba_obj,
-			   const l4_threadid_t *client,
-			   CORBA_Server_Environment *_dice_corba_env)
+long
+con_if_close_all_component (CORBA_Object _dice_corba_obj,
+                            const l4_threadid_t *client,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
   int i;
 
@@ -608,10 +646,10 @@ con_if_close_all_component(CORBA_Object _dice_corba_obj,
 	      /* found console bound to client -- close it */
 	      CORBA_Environment env = dice_default_environment;
 	      int ret = con_vc_close_call(&(vc[i]->vc_l4id), &env);
-	      if (ret || env.major != CORBA_NO_EXCEPTION)
+	      if (ret || DICE_HAS_EXCEPTION(&env))
 		printf("Error %d (env=%02x) closing app "l4util_idfmt
 		       " service thread "l4util_idfmt,
-		    ret, env._p.ipc_error, l4util_idstr(*client),
+		    ret, DICE_IPC_ERROR(&env), l4util_idstr(*client),
 		    l4util_idstr(vc[i]->vc_l4id));
 	    }
 	}
@@ -625,7 +663,7 @@ test_periodic(void)
 {
   static l4_umword_t last_active_fast;
   static l4_umword_t last_active_slow;
-  l4_umword_t clock = l4util_kip()->clock;
+  l4_umword_t clock = l4sigma0_kip()->clock;
 
   if (clock - last_active_fast >= 25000)
     {
@@ -685,7 +723,7 @@ switch_vc_on_timer(l4_msgdope_t result, CORBA_Server_Environment* env)
 
   else
     /* Ooops, we got an IPC error -> do something */
-    PANIC("IDL IPC error (%#x, %s)",
+    Panic("IDL IPC error (%#lx, %s)",
 	  L4_IPC_ERROR(result), l4env_strerror(L4_IPC_ERROR(result)));
 }
 
@@ -698,8 +736,8 @@ server_loop(void)
   l4_int16_t reply;
   l4_int32_t opcode;
 
-  corba_env.timeout          = REQUEST_TIMEOUT;
-  msg_buffer._dice_size_dope = L4_IPC_DOPE(8, 0);
+  corba_env.timeout           = REQUEST_TIMEOUT;
+  DICE_SIZE_DOPE(&msg_buffer) = L4_IPC_DOPE(8, 0);
 
   for (;;)
     {
@@ -712,8 +750,9 @@ server_loop(void)
 	  test_periodic();
 	  if (reply != DICE_REPLY)
 	    break;
-	  if (corba_env.major    == CORBA_SYSTEM_EXCEPTION &&
-	      corba_env.repos_id == CORBA_DICE_EXCEPTION_WRONG_OPCODE)
+	  if (DICE_EXCEPTION_MAJOR(&corba_env) == CORBA_SYSTEM_EXCEPTION &&
+	      DICE_EXCEPTION_MINOR(&corba_env) ==
+	          CORBA_DICE_EXCEPTION_WRONG_OPCODE)
 	    {
 	      /* XXX Most probably a stream_io_push_call() failed and now we
 	       * got the answer. Ignore it. */
@@ -724,6 +763,96 @@ server_loop(void)
 	  opcode = con_if_reply_and_wait(&corba_obj, &msg_buffer, &corba_env);
 	}
     }
+}
+
+#ifdef ARCH_x86
+#include <l4/util/idt.h>
+static jmp_buf check_jmp_buf;
+
+void check_exception6_handler(void);
+void check_exception6_c_handler(void);
+
+void
+check_exception6_c_handler(void)
+{
+  longjmp(check_jmp_buf, 1);
+}
+
+asm ("check_exception6_handler:         \n\t"
+     "pusha                             \n\t"
+     "call   check_exception6_c_handler \n\t"
+     "popa                              \n\t"
+     "iret                              \n\t");
+#endif
+
+static void
+check_fast_memcpy(void)
+{
+#ifdef ARCH_x86
+  if (use_fastmemcpy)
+    {
+      static struct
+	{
+	  l4util_idt_header_t header;
+	  l4util_idt_desc_t   desc[0x20];
+	} __attribute__((packed)) idt;
+      l4_uint64_t src, dst;
+
+      l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
+      l4util_idt_entry(&idt.header, 6, check_exception6_handler);
+      l4util_idt_load (&idt.header);
+
+      if (!setjmp(check_jmp_buf))
+	{
+	  asm volatile("emms; movq (%0),%%mm0; movntq %%mm0,(%1); sfence; emms"
+                       : : "r"(&src), "r"(&dst) , "m"(src) : "memory");
+	  printf("Using fast memcpy.\n");
+	  return;
+	}
+      else
+	{
+	  printf("Fast memcpy not supported by this CPU.\n");
+	  use_fastmemcpy = 0;
+	  return;
+	}
+    }
+#else
+  use_fastmemcpy = 0;
+#endif
+  printf("Not using fast memcpy\n");
+}
+
+static void
+check_cpuload(void)
+{
+#ifdef ARCH_x86
+  if (cpu_load)
+    {
+      static struct
+	{
+	  l4util_idt_header_t header;
+	  l4util_idt_desc_t   desc[0x20];
+	} __attribute__((packed)) idt;
+
+      l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
+      l4util_idt_entry(&idt.header, 6, check_exception6_handler);
+      l4util_idt_load (&idt.header);
+
+      if (!setjmp(check_jmp_buf))
+	{
+	  l4_rdpmc_32(0);
+	  printf("Enabling CPU load indicator\n"
+	         "\033[32mALTGR+PAUSE switches CPU load indicator!\033[m\n");
+	}
+      else
+	{
+	  printf("Disabling CPU load indicator since rdpmc unsupported\n");
+	  cpu_load = 0;
+	}
+    }
+#else
+  cpu_load = 0;
+#endif
 }
 
 extern int console_puts(const char *s);
@@ -749,7 +878,7 @@ main(int argc, const char *argv[])
   noaccel = 1;
 #endif
 
-  l4util_kip_map();
+  l4sigma0_kip_map(L4_INVALID_ID);
 
   if ((error = parse_cmdline(&argc, &argv,
 		    'a', "noaccel", "disable hardware acceleration",
@@ -761,15 +890,15 @@ main(int argc, const char *argv[])
 		    'e', "events", "use event server to free resources",
 		    PARSE_CMD_SWITCH, 1, &use_events,
 #ifdef ARCH_x86
-		    'f', "fastmemcpy", "use fast memcpy with SSE2",
-		    PARSE_CMD_SWITCH, 1, &use_fastmemcpy,
-#endif
 		    'i', "l4io", "use L4 I/O server for PCI management",
 		    PARSE_CMD_SWITCH, 1, &use_l4io,
+#endif
 		    'l', "nolog", "don't connect to logserver",
 		    PARSE_CMD_SWITCH, 1, &nolog,
 		    'm', "nomouse", "don't transmit mouse events to clients",
 		    PARSE_CMD_SWITCH, 1, &nomouse,
+		    'n', "nofastmemcpy", "force to not use fast memcpy",
+		    PARSE_CMD_SWITCH, 0, &use_fastmemcpy,
 		    'o', "omega0", "use omega0 for IRQ management",
 		    PARSE_CMD_SWITCH, 1, &use_omega0,
 		    'p', "pan", "use panning to restrict client window",
@@ -787,9 +916,15 @@ main(int argc, const char *argv[])
 	}
     }
 
+  cpu_load_history = 1;
+
   /* do not use logserver (in case the log goes to a console) */
   if (nolog)
     LOG_outstring = my_LOG_outstring;
+
+  /* check if CPU supports fast memcpy */
+  check_fast_memcpy();
+  check_cpuload();
 
   vc_init();
 
@@ -807,10 +942,7 @@ main(int argc, const char *argv[])
 
   /* we are up -> register at names */
   if (!names_register(CON_NAMES_STR))
-    {
-      PANIC("can't register at names");
-      exit(-1);
-    }
+    Panic("can't register at names");
 
   printf("Running as "l4util_idfmt". Video mode is %dx%d@%d.\n",
 	 l4util_idstr(me), VESA_XRES, VESA_YRES, VESA_BITS);

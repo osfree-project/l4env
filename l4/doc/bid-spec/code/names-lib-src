@@ -2,8 +2,10 @@ PKGDIR  = ../..
 L4DIR   ?= $(PKGDIR)/../..
 
 TARGET  = lib$(PKGNAME).a
+MODE	= sigma0
+CLIENTIDL = names.idl
 
-INCS    = -I../../server/include
+PRIVATE_INCDIR += ..
 
 SRC_C   = $(wildcard *.c)
 

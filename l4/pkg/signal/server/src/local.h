@@ -44,7 +44,7 @@ typedef struct task_signal_struct
  */
 
 // the head of the task list
-task_signal_struct_t *task_list_head;
+extern task_signal_struct_t *task_list_head;
 // enqueue signal handler into task list
 int enqueue_handler( l4_threadid_t *sigthread );
 // dequeue signal handler from task list
@@ -71,6 +71,6 @@ void dump_signal_list( signal_struct_t *first );
 void alarm_scheduler(void *);
 
 // the main thread
-l4_threadid_t main_thread;
+extern l4_threadid_t main_thread;
 
 #endif

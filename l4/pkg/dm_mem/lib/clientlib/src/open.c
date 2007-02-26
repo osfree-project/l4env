@@ -72,11 +72,12 @@ l4dm_mem_open(l4_threadid_t dsm_id, l4_size_t size, l4_addr_t align,
     ret = if_l4dm_mem_open_call(&dsm_id, size, align, flags, name, ds, &_env);
   else
     ret = if_l4dm_mem_open_call(&dsm_id, size, align, flags, "", ds, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_mem: open dataspace at "l4util_idfmt" failed " \
-            "(ret %d, exc %d)", l4util_idstr(dsm_id), ret, _env.major);
+            "(ret %d, exc %d)", l4util_idstr(dsm_id), ret,
+	    DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

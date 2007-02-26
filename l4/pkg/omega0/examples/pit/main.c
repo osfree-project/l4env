@@ -139,7 +139,7 @@ static void pit(int freq, int time){
     
     if( l4_rdtsc() >= until) break;
   }
-  LOG("in %d secs I got %u/%u irqs (%d%%), freq was %u",
+  LOG("in %d secs I got %lu/%u irqs (%ld%%), freq was %u",
       time, count, freq*time, count*100/(freq*time), freq);
   detach(0);
 }

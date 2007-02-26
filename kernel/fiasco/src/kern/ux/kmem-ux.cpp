@@ -1,9 +1,13 @@
 INTERFACE [ux]:
 
+class Kernel_task;
+
 EXTENSION class Kmem
 {
 protected:
   static Pdir *kdir;	///< Kernel page directory
+
+  friend class Kernel_task;
 };
 
 IMPLEMENTATION [ux]:
@@ -13,6 +17,11 @@ IMPLEMENTATION [ux]:
 #include <sys/mman.h>
 
 #include "emulation.h"
+
+PUBLIC static inline
+void
+Kmem::dir_init(Pdir *)
+{}
 
 // 
 // ACCESSORS
@@ -51,6 +60,10 @@ Kmem::virt_to_phys (const void *addr)
 
   return kdir->virt_to_phys(a);
 }
+
+PUBLIC static inline 
+Address Kmem::kernel_image_start()
+{ return Mem_layout::Kernel_start_frame; }
 
 IMPLEMENT inline Address Kmem::kcode_start()
 { return Mem_layout::Kernel_start_frame; }
@@ -159,11 +172,12 @@ Kmem::init()
   Cpu::init_tss (alloc_from_page(&cpu_page_vm, sizeof(Tss)));
 
   // CPU initialization done
-
+#if 0
   // allocate the kernel info page
   Kip *kinfo = static_cast<Kip*>(phys_to_virt (himem_alloc()));
 
   // initialize global pointer to the KIP
   Kip::init_global_kip (kinfo);
+#endif
 }
 

@@ -291,6 +291,13 @@ static void rt_remove_widget(WIDGET *w) {
 }
 
 
+/*** UNREGISTER ALL REAL-TIME WIDGETS OF AN APPLICATION ***/
+static void rt_remove_app(int app_id) {
+
+	printf("DonScheduler(rt_remove_app): not implemented\n");
+}
+
+
 /*** SET MUTEX THAT SHOULD BE UNLOCKED AFTER DRAWING OPERATIONS ***/
 static void rt_set_sync_mutex(WIDGET *w, MUTEX *m) {
 	struct job *job = find_job_slot(w);
@@ -367,6 +374,7 @@ static void process_mainloop(void) {
 static struct scheduler_services services = {
 	rt_add_widget,
 	rt_remove_widget,
+	rt_remove_app,
 	rt_set_sync_mutex,
 	process_mainloop,
 };

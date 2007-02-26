@@ -28,17 +28,6 @@ BUILD_SYSTEMS_x86_l4v2
   Most users will say Y here.
 
 
-Build code using L4X0 API
-BUILD_SYSTEMS_x86_l4x0
-  If you want to build L4 programs using the L4 version X0 API (L4 X0),
-  specify Y here.
-  
-  You can build for multiple L4 API versions, the code will be stored
-  in different directories.
-
-  Most users will say Y here.
-
-
 Build code using L4V4 API
 BUILD_SYSTEMS_x86_l4v4
   If you want to build L4 programs using the L4 version V4 API (L4 V4)
@@ -49,6 +38,16 @@ BUILD_SYSTEMS_x86_l4v4
 
   Note that this is work-in-progress. You will find few applications
   that build for this API.
+
+  Most users will say N here.
+
+Build code using V2-Emulation on L4.Sec
+BUILD_SYSTEMS_x86_l4secv2emu
+  If you want to build old L4 programs using the new
+  L4.Sec version API via V2.Emu, specify Y here.
+  
+  You can build for multiple L4 API versions, the code will be stored
+  in different directories.
 
   Most users will say N here.
 
@@ -96,6 +95,23 @@ CPU_amd64
 
   You can build for multiple CPU types, the code will be stored in
   different directories.
+  
+Build for ppc32 architecture
+BUILD_SYSTEMS_ppc32_s
+  If you want to build code for the ppc32 architecture, say Y here.
+
+  You can build for multiple architectures, the code will be stored in
+  different directories.
+
+  Most users will say N here.
+
+CPU-Types for ppc32 architecture
+CPU_ppc32
+  Specify for which ppc32 architecture CPU types you want to build code.
+  Specify at least one CPU type.
+
+  You can build for multiple CPU types, the code will be stored in
+  different directories.
 
 
 
@@ -129,62 +145,7 @@ DROPS_INSTDIR
   DROPS_INSTDIR is merely used by the daily consitency-check of DROPS.
 
 
-Base directory of the L4Linux 2.2 sources
-L4LINUX22_DIR
-  This is the directory where L4Linux v. 2.2 resides. L4Linux is used by
-  some packages as they get include files from there.
-  
-  Typically, L4Linux 2.2 resides next to "l4/" in "linux22/", and hence
-  "$(L4DIR)/../linux22" is a good choice.
-
-
-Linux 2.4 kernel sources available
-LINUX24_AVAIL
-
-  Some packages need the sources of a Linux version 2.4 kernel. If you
-  have the sources available somewhere in your filesystem, enable this
-  option. You will be asked for the location of the sources then.
-  
-  Some packages only need the header files of a Linux version 2.4
-  kernel.  For those packages, there is a separate DROPS package that
-  provides just the headers. However, if you enable this option, those
-  packages will get their includes from the Linux kernel sources as
-  well.
-  
-  Most users will say N here.
-
-
-Path to Linux 2.4 sources
-LINUX24_DIR
-  The path to the sources of a Linux version 2.4 kernel. If you do not
-  have the sources, disable the LINUX24_AVAIL option. However, you may
-  be unable to compile some packages then.
-
-
-Linux 2.6 kernel sources available
-LINUX26_AVAIL
-
-  Some packages need the sources of a Linux version 2.6 kernel. If you
-  have the sources available somewhere in your filesystem, enable this
-  option. You will be asked for the location of the sources then.
-  
-  Some packages only need the header files of a Linux version 2.6
-  kernel.  For those packages, there is a separate DROPS package that
-  provides just the headers. However, if you enable this option, those
-  packages will get their includes from the Linux kernel sources as
-  well.
-  
-  Most users will say N here.
-
-
-Path to Linux 2.6 sources
-LINUX26_DIR
-  The path to the sources of a Linux version 2.6 kernel. If you do not
-  have the sources, disable the LINUX26_AVAIL option. However, you may
-  be unable to compile some packages then.
-
-
-DDE include path
+DDE-2.4 include path
 DDE_INCDIR
   This is a space-separated list of paths where the DDE-Linux includes
   can be found.
@@ -195,7 +156,6 @@ DDE_INCDIR
   subdirectories.
   
   Normally, you do not have to change this value.
-
 
 DDE-2.6 include path
 DDE26_INCDIR
@@ -421,13 +381,18 @@ BID_GENERATE_MAPFILE
   If unsure, say 'N'.
 
 Build system using dietlibc
-USE_DIETLIBC_X86
-  Uses the dietlibc as the main libc instead of the oskit.
-  This is work in progress and not everything will work.
-  Use with caution.
+USE_DIETLIBC
+  Uses the dietlibc as the main libc.
 
-Build system using roottask
-USE_ROOTTASK_X86
-  Use roottask/bootstrap instead of rmgr. This step involves another
-  librmgr.a which is now libroot.o, so nearly everything needs to be
-  relinked.
+Build system using uClibc
+USE_UCLIBC
+  Uses the uClibc as the main libc.
+
+Use ldso for dynamic linking
+USE_LDSO
+  Use ldso for linking shared libraries.
+
+Enable Release flag
+RELEASE_FLAG
+  This option enables the RELEASE flag possible omitting
+  debugging/development code.

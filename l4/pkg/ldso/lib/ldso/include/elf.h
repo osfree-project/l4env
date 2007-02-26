@@ -26,16 +26,10 @@ __BEGIN_DECLS
 
 /* Standard ELF types.  */
 
-#ifdef USE_OSKIT
-#include "stdint_oskit.h"
-typedef unsigned short __kernel_uid_t;
-typedef unsigned short __kernel_gid_t;
-#else
 #include <stdint.h>
 #ifndef USE_UCLIBC
 typedef unsigned short __kernel_uid_t;
 typedef unsigned short __kernel_gid_t;
-#endif
 #endif
 
 /* Type for a 16-bit quantity.  */

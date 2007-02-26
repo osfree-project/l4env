@@ -27,6 +27,10 @@
 /* timeout for nameserver to return id of logserver */
 #define LOG_TIMEOUT_NAMESERVER 3000
 
+extern int check_server(void);
+extern l4_threadid_t log_server;
+extern int initialized;
+
 #else
 /* Linux part*/
 
@@ -35,6 +39,7 @@
 #define LOG_BUFFERSIZE 81
 #define lock_printf
 #define unlock_printf
+
 #endif
 /* Both use this */
 
@@ -57,14 +62,14 @@ extern void (*LOG_outstring)(const char *log_message);
     } else if(buffer[printedlen-1]!='\n') strcat(buffer, "\n");	\
   } while(0)
 
-extern void LOG_printf_flush(void);
-extern void LOG_doprnt(register const char *, va_list, int,
-                       void(*)(char *, char), char *);
+void LOG_printf_flush(void);
+void LOG_doprnt(register const char *, va_list, int,
+                void(*)(char *, char), char *);
 
-extern int LOG_vprintf_buffer(buffer_t *b, const char *format,
+int LOG_vprintf_buffer(buffer_t *b, const char *format,
                               LOG_va_list list);
-extern int LOG_printf_buffer(buffer_t *b, const char *format, ...);
-extern int LOG_putchar_buffer(buffer_t *b, int c);
+int LOG_printf_buffer(buffer_t *b, const char *format, ...);
+int LOG_putchar_buffer(buffer_t *b, int c);
 
 /* extract filename */
 extern inline const char* LOG_filename(const char *name);
@@ -82,11 +87,11 @@ extern inline void init_buffer(buffer_t *b)
   b->buffer[b->bindex++] = b->log_cont ? ':' : '|';
   b->buffer[b->bindex++] = ' ';
 }
+
 extern inline const char* LOG_filename(const char *name)
 {
   char *f = strstr(name, "pkg/");
   return (f != NULL) ? f + 4 : name;
 }
-
 
 #endif /* __INTERNAL_H_ */

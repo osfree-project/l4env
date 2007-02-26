@@ -22,6 +22,7 @@
 #include <l4/thread/thread.h>
 #include <l4/sys/types.h>
 #include <l4/names/libnames.h>
+#include <l4/util/util.h>
 #include <l4/nitpicker/nitpicker-client.h>
 #include <l4/nitpicker/nitevent-server.h>
 #include <l4/nitpicker/event.h>
@@ -68,10 +69,11 @@ nitevent_event_component(CORBA_Object _dice_corba_obj,
 		omx = ax;
 		omy = ay;
 		curr_win = token;
-		if (keycode == 272)
-			nitpicker_stack_view_call(&nit, token, -1, 0, &env);
-		else if (keycode == 273)
-			nitpicker_stack_view_call(&nit, token, -1, 1, &env);
+		printf("curr_win=%d\n", curr_win);
+//		if (keycode == 272)
+			nitpicker_stack_view_call(&nit, token, -1, 1, 1, &env);
+//		else if (keycode == 273)
+//			nitpicker_stack_view_call(&nit, token, -1, 1, &env);
 		
 //		nitpicker_stack_view_call(&nit, vid1, vid2, 0, &env);
 		userstate = USERSTATE_MOVE;
@@ -108,6 +110,8 @@ int main(int argc, char **argv) {
 		printf("Nitpicker is not registered at names!\n");
 		return 1;
 	}
+
+	l4_sleep(5);
 
 	/* donate memory */
 	addr = l4dm_mem_ds_allocate(1000*100,
@@ -153,15 +157,15 @@ int main(int argc, char **argv) {
 
 	nitpicker_set_view_title_call(&nit, vid2, "Trusted Colour Haze 2", &env);
 
-	vid3 = nitpicker_new_view_call(&nit, buf_id, &myself, &env);
-	printf("nitpicker_new_view_call returned vid3=%d\n", vid3);
+//	vid3 = nitpicker_new_view_call(&nit, buf_id, &myself, &env);
+//	printf("nitpicker_new_view_call returned vid3=%d\n", vid3);
+//
+//	views[vid3].x = 450; views[vid3].y = 250; views[vid3].w = 250; views[vid3].h = 180;
+//	ret = nitpicker_set_view_port_call(&nit, vid3, 0, 0, views[vid3].x, views[vid3].y,
+//	                                   views[vid3].w, views[vid3].h, 1, &env);
+//	nitpicker_set_view_title_call(&nit, vid3, "Trusted Colour Haze 3", &env);
 
-	views[vid3].x = 450; views[vid3].y = 250; views[vid3].w = 250; views[vid3].h = 180;
-	ret = nitpicker_set_view_port_call(&nit, vid3, 0, 0, views[vid3].x, views[vid3].y,
-	                                   views[vid3].w, views[vid3].h, 1, &env);
-	nitpicker_set_view_title_call(&nit, vid3, "Trusted Colour Haze 3", &env);
-
-	nitpicker_set_background_call(&nit, vid1, &env);
+//	nitpicker_set_background_call(&nit, vid1, &env);
 
 	for (j = 0; j < BUF_W*BUF_H; j++) addr[j] = j + i;
 	i++;

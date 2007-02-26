@@ -1,4 +1,3 @@
-/* -*- Makefile -*- */
 ENTRY(_start)
 
 SECTIONS

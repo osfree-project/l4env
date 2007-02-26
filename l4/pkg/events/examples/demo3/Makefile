@@ -4,7 +4,7 @@
 # Makefile for the demo2 of the events server
 #
 
-SYSTEMS := x86-l4v2 x86-l4x0
+SYSTEMS := x86-l4v2
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 

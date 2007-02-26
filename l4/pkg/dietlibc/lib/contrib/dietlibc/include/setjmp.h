@@ -7,7 +7,7 @@ __BEGIN_DECLS
 
 #ifdef __i386__
 #ifndef __ASSEMBLER__
-typedef int __jmp_buf[6];
+typedef long __jmp_buf[6];
 #endif
 # define JB_BX	0
 # define JB_SI	1
@@ -170,16 +170,24 @@ typedef int __jmp_buf[24];
 #endif
 #endif
 
-#if defined(powerpc) || defined(__powerpc64__)
-# define JB_GPR1   0  /* Also known as the stack pointer */
-# define JB_GPR2   1
-# define JB_LR     2  /* The address we will return to */
-# define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18 in total */
-# define JB_CR     21 /* Condition code registers. */
-# define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total */
-# define JB_SIZE   (58*4)
+#if defined(__powerpc__) || defined(__powerpc64__)
+/* 40 registers: 22 GPRs (4 or 8 bytes) + 18 FPRs (8 bytes) */
+#define JB_GPR1   0  /* Also known as the stack pointer */
+#define JB_GPR2   1
+#define JB_LR     2  /* The address we will return to */
+#define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18 in total */
+#define JB_CR     21 /* Condition code registers. */
+#define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total */
+#if defined(__powerpc64__)
+#define JB_SIZE   (40*8)
 #ifndef __ASSEMBLER__
-typedef long int __jmp_buf[58];
+typedef long __jmp_buf[40];
+#endif
+#else
+#define JB_SIZE   (58*4)	/* == 22*4 + 18*8 */
+#ifndef __ASSEMBLER__
+typedef long __jmp_buf[58] __attribute__ ((__aligned__(8)));
+#endif
 #endif
 #endif
 
@@ -191,7 +199,7 @@ typedef double __jmp_buf[21];
 
 #ifdef __ia64__
 #ifndef __ASSEMBLER__
-typedef long __jmp_buf[70] __attribute__ ((aligned(16)));
+typedef long __jmp_buf[70] __attribute__ ((__aligned__(16)));
 #endif
 #endif
 

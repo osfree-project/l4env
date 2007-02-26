@@ -50,12 +50,12 @@ l4dm_mem_resize(const l4dm_dataspace_t * ds, l4_size_t new_size)
   
   /* call dataspace manager */
   ret = if_l4dm_mem_resize_call(&(ds->manager), ds->id, new_size, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_mem: resize dataspace %u at "l4util_idfmt" failed " \
             "(ret %d, exc %d)!", ds->id, l4util_idstr(ds->manager),
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

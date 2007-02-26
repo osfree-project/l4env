@@ -166,7 +166,7 @@ static void __irq_handler(struct irq_desc *irq_desc)
 	unsigned int irq = irq_desc->num; /* save irq number */
 	void *cookie = irq_desc->cookie;  /* save cookie/dev_id pointer */
 
-	int ret, error = L4_IPC_RETIMEOUT, irq_handle;
+	int ret, error = L4_IPC_RETIMEOUT, irq_handle = -1;
 	l4_threadid_t irq_id;
 	l4_umword_t dw0, dw1;
 	l4_msgdope_t result;

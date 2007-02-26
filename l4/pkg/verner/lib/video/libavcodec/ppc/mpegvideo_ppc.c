@@ -13,9 +13,9 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
- 
+
 #include "../dsputil.h"
 #include "../mpegvideo.h"
 #include <time.h>
@@ -24,7 +24,7 @@
 #include "dsputil_altivec.h"
 #endif
 
-extern int dct_quantize_altivec(MpegEncContext *s,  
+extern int dct_quantize_altivec(MpegEncContext *s,
         DCTELEM *block, int n,
         int qscale, int *overflow);
 extern void dct_unquantize_h263_altivec(MpegEncContext *s,
@@ -36,9 +36,11 @@ extern void idct_add_altivec(uint8_t *dest, int line_size, int16_t *block);
 
 void MPV_common_init_ppc(MpegEncContext *s)
 {
-#if HAVE_ALTIVEC
+#ifdef HAVE_ALTIVEC
     if (has_altivec())
     {
+      if (s->avctx->lowres==0)
+      {
         if ((s->avctx->idct_algo == FF_IDCT_AUTO) ||
                 (s->avctx->idct_algo == FF_IDCT_ALTIVEC))
         {
@@ -50,19 +52,20 @@ void MPV_common_init_ppc(MpegEncContext *s)
             s->dsp.idct_permutation_type = FF_NO_IDCT_PERM;
 #endif /* ALTIVEC_USE_REFERENCE_C_CODE */
         }
+      }
 
         // Test to make sure that the dct required alignments are met.
         if ((((long)(s->q_intra_matrix) & 0x0f) != 0) ||
                 (((long)(s->q_inter_matrix) & 0x0f) != 0))
         {
-            printf( "Internal Error: q-matrix blocks must be 16-byte aligned "
+            av_log(s->avctx, AV_LOG_INFO, "Internal Error: q-matrix blocks must be 16-byte aligned "
                     "to use Altivec DCT. Reverting to non-altivec version.\n");
             return;
         }
 
         if (((long)(s->intra_scantable.inverse) & 0x0f) != 0)
         {
-            printf( "Internal Error: scan table blocks must be 16-byte aligned "
+            av_log(s->avctx, AV_LOG_INFO, "Internal Error: scan table blocks must be 16-byte aligned "
                     "to use Altivec DCT. Reverting to non-altivec version.\n");
             return;
         }
@@ -71,8 +74,11 @@ void MPV_common_init_ppc(MpegEncContext *s)
         if ((s->avctx->dct_algo == FF_DCT_AUTO) ||
                 (s->avctx->dct_algo == FF_DCT_ALTIVEC))
         {
+#if 0 /* seems to cause trouble under some circumstances */
             s->dct_quantize = dct_quantize_altivec;
-            s->dct_unquantize_h263 = dct_unquantize_h263_altivec;
+#endif
+            s->dct_unquantize_h263_intra = dct_unquantize_h263_altivec;
+            s->dct_unquantize_h263_inter = dct_unquantize_h263_altivec;
         }
     } else
 #endif

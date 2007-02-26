@@ -15,15 +15,31 @@ EXTENSION class Cpu
 {
 public:
   enum Lbr
-    {
-      LBR_UNINITIALIZED = 0,
-      LBR_NONE,
-      LBR_P6,
-      LBR_P4,
-    };
+  {
+    Lbr_uninitialized = 0,
+    Lbr_unsupported,
+    Lbr_pentium_6,
+    Lbr_pentium_4,
+    Lbr_pentium_4_ext,
+  };
+
+  enum Bts
+  {
+    Bts_uninitialized = 0,
+    Bts_unsupported,
+    Bts_pentium_m,
+    Bts_pentium_4,
+  };
 
 private:
-  static Lbr		lbr			asm ("CPU_LBR");
+  static Unsigned32     debugctl_busy           asm ("CPU_DEBUGCTL_BUSY");
+  static Unsigned32     debugctl_set            asm ("CPU_DEBUGCTL_SET");
+  static Unsigned32     debugctl_reset		asm ("CPU_DEBUGCTL_RESET");
+  static Lbr		lbr;
+  static Bts            bts;
+  static char           lbr_active;
+  static char           btf_active;
+  static char           bts_active;
   typedef void		(Sysenter)(void);
   static Sysenter	*current_sysenter	asm ("CURRENT_SYSENTER");
   static Gdt		*gdt			asm ("CPU_GDT");
@@ -44,14 +60,21 @@ IMPLEMENTATION[ia32]:
 #include "regdefs.h"
 #include "tss.h"
 
+Unsigned32     Cpu::debugctl_busy;
+Unsigned32     Cpu::debugctl_set;
+Unsigned32     Cpu::debugctl_reset;
 Cpu::Lbr       Cpu::lbr;
+Cpu::Bts       Cpu::bts;
+char           Cpu::lbr_active;
+char           Cpu::btf_active;
+char           Cpu::bts_active;
 Cpu::Sysenter *Cpu::current_sysenter;
 Gdt           *Cpu::gdt;
 Tss           *Cpu::tss;
 Tss           *Cpu::tss_dbf;
 
-extern "C" void entry_sysenter (void);
-extern "C" void entry_sysenter_c (void);
+extern "C" void entry_sys_fast_ipc (void);
+extern "C" void entry_sys_fast_ipc_c (void);
 
 
 PUBLIC static inline
@@ -158,27 +181,27 @@ Cpu::enable_rdpmc()
 { set_cr4(get_cr4() | CR4_PCE); }
 
 PUBLIC static
-Cpu::Lbr const
+Cpu::Lbr
 Cpu::lbr_type()
 {
-  if (lbr == LBR_UNINITIALIZED)
+  if (lbr == Lbr_uninitialized)
     {
-      lbr = LBR_NONE;
+      lbr = Lbr_unsupported;
 
-      if (features() & FEAT_MSR)
+      if (can_wrmsr())
 	{
 	  // Intel
 	  if (vendor() == Vendor_intel)
 	    {
 	      if (family() == 15)
-		lbr = LBR_P4; // P4
+		lbr = model() < 3 ? Lbr_pentium_4 : Lbr_pentium_4_ext; // P4
 	      else if (family() >= 6)
-		lbr = LBR_P6; // PPro, PIII
+		lbr = Lbr_pentium_6; // PPro, PIII
 	    }
 	  else if (vendor() == Vendor_amd)
 	    {
 	      if ((family() == 6) || (family() == 15))
-		lbr = LBR_P6; // K7/K8
+		lbr = Lbr_pentium_6; // K7/K8
 	    }
 	}
     }
@@ -187,30 +210,138 @@ Cpu::lbr_type()
 }
 
 PUBLIC static inline
+bool
+Cpu::lbr_status ()
+{ return lbr_active; }
+
+PUBLIC static inline
 void
-Cpu::enable_lbr (void)
+Cpu::lbr_enable (bool on)
 {
-  if (lbr_type() != LBR_NONE)
+  if (lbr_type() != Lbr_unsupported)
     {
-      Unsigned64 lbr_ctrl = rdmsr (0x1d9);
-      wrmsr (lbr_ctrl | 1, 0x1d9);
+      if (on)
+	{
+	  lbr_active    = true;
+	  debugctl_set |= 1;
+	  debugctl_busy = true;
+	}
+      else
+	{
+	  lbr_active    = false;
+	  debugctl_set &= ~1;
+	  debugctl_busy = lbr_active || bts_active;
+	  wrmsr(debugctl_reset, MSR_DEBUGCTLA);
+	}
+    }
+}
+
+PUBLIC static inline
+bool
+Cpu::btf_status ()
+{ return btf_active; }
+
+PUBLIC static inline
+void
+Cpu::btf_enable (bool on)
+{
+  if (lbr_type() != Lbr_unsupported)
+    {
+      if (on)
+	{
+	  btf_active      = true;
+	  debugctl_set   |= 2;
+	  debugctl_reset |= 2; /* don't disable bit in kernel */
+	  wrmsr(2, MSR_DEBUGCTLA);     /* activate _now_ */
+	}
+      else
+	{
+	  btf_active    = false;
+	  debugctl_set &= ~2;
+	  debugctl_busy = lbr_active || bts_active;
+	  wrmsr(debugctl_reset, MSR_DEBUGCTLA);
+	}
+    }
+}
+
+PUBLIC static
+Cpu::Bts
+Cpu::bts_type ()
+{
+  if (bts == Bts_uninitialized)
+    {
+      bts = Bts_unsupported;
+
+      if (can_wrmsr() && vendor() == Vendor_intel)
+	{
+	  if (family() == 15 && (rdmsr(0x1A0) & (1<<11)) == 0)
+	    bts = Bts_pentium_4;
+	  if (family() == 6  && (model() == 9 || (model() >= 13 &&
+						  model() <= 15)))
+	    bts = Bts_pentium_m;
+	  if (!(features() & FEAT_DS))
+	    bts = Bts_unsupported;
+	}
+    }
+
+  return bts;
+}
+
+PUBLIC static inline
+bool
+Cpu::bts_status ()
+{ return bts_active; }
+
+PUBLIC static
+void
+Cpu::bts_enable (bool on)
+{
+  if (bts_type() != Bts_unsupported)
+    {
+      if (on)
+	{
+	  switch (bts_type())
+	    {
+	    case Bts_pentium_4: bts_active = true; debugctl_set |= 0x0c; break;
+	    case Bts_pentium_m: bts_active = true; debugctl_set |= 0xc0; break;
+	    default:;
+	    }
+	  debugctl_busy = lbr_active || bts_active;
+	}
+      else
+	{
+	  bts_active = false;
+	  switch (bts_type())
+	    {
+	    case Bts_pentium_4: debugctl_set &= ~0x0c; break;
+	    case Bts_pentium_m: debugctl_set &= ~0xc0; break;
+	    default:;
+	    }
+	  debugctl_busy = lbr_active || bts_active;
+	  wrmsr(debugctl_reset, MSR_DEBUGCTLA);
+	}
     }
 }
 
 PUBLIC static inline
 void
-Cpu::disable_lbr (void)
+Cpu::debugctl_enable ()
 {
-  if (lbr_type() != LBR_NONE)
-    {
-      Unsigned64 lbr_ctrl = rdmsr (0x1d9);
-      wrmsr (lbr_ctrl & ~1, 0x1d9);
-    }
+  if (debugctl_busy)
+    wrmsr(debugctl_set, MSR_DEBUGCTLA);
+}
+
+PUBLIC static inline
+void
+Cpu::debugctl_disable ()
+{
+  if (debugctl_busy)
+    wrmsr(debugctl_reset, MSR_DEBUGCTLA);
 }
 
 IMPLEMENT FIASCO_INIT
 void
-Cpu::init (void)
+Cpu::init ()
 {
   identify();
 
@@ -219,7 +350,7 @@ Cpu::init (void)
   if (scaler_tsc_to_ns)
     _frequency = ns_to_tsc(1000000000UL);
 
-  unsigned cr4 = get_cr4();
+  Unsigned32 cr4 = get_cr4();
 
   if (features() & FEAT_FXSR)
     cr4 |= CR4_OSFXSR;
@@ -230,7 +361,7 @@ Cpu::init (void)
   set_cr4 (cr4);
 
   // reset time stamp counter (better for debugging)
-  if (features() & FEAT_TSC)
+  if ((features() & FEAT_TSC) && can_wrmsr())
     wrmsr(0, 0, 0x10);
 }
 
@@ -241,12 +372,12 @@ Cpu::init_sysenter (Address kernel_esp)
   // Check for Sysenter/Sysexit Feature
   if (have_sysenter())
     {
-      wrmsr (Gdt::gdt_code_kernel, 0, SYSENTER_CS_MSR);
-      wrmsr ((Unsigned32) kernel_esp, 0, SYSENTER_ESP_MSR);
+      wrmsr (Gdt::gdt_code_kernel, 0, MSR_SYSENTER_CS);
+      wrmsr ((Unsigned32) kernel_esp, 0, MSR_SYSENTER_ESP);
       if (Config::Assembler_ipc_shortcut)
-	set_sysenter(entry_sysenter);
+	set_sysenter(entry_sys_fast_ipc);
       else
-	set_sysenter(entry_sysenter_c);
+	set_sysenter(entry_sys_fast_ipc_c);
     }
 }
 
@@ -257,7 +388,7 @@ Cpu::set_sysenter (void (*func)(void))
   // Check for Sysenter/Sysexit Feature
   if (have_sysenter())
     {
-      wrmsr ((Unsigned32) func, 0, SYSENTER_EIP_MSR);
+      wrmsr ((Unsigned32) func, 0, MSR_SYSENTER_EIP);
       current_sysenter = func;
     }
 }
@@ -267,6 +398,13 @@ void
 Cpu::get_sysenter (void (**func)(void))
 {
   *func = current_sysenter;
+}
+
+PUBLIC static
+void
+Cpu::set_fast_entry(void (*func)(void))
+{
+  set_sysenter(func);
 }
 
 // Return 2^32 / (tsc clocks per usec)
@@ -377,8 +515,8 @@ Cpu::init_tss (Address tss_mem, size_t tss_size)
   gdt->set_entry_byte (Gdt::gdt_tss/8, tss_mem, tss_size,
 		       Gdt_entry::Access_kernel | Gdt_entry::Access_tss, 0);
 
-  tss->ss0 = Gdt::gdt_data_kernel;
-  tss->io_bit_map_offset = Mem_layout::Io_bitmap - tss_mem;
+  tss->_ss0 = Gdt::gdt_data_kernel;
+  tss->_io_bit_map_offset = Mem_layout::Io_bitmap - tss_mem;
 }
 
 extern "C" void entry_vec08_dbf ();
@@ -394,18 +532,18 @@ Cpu::init_tss_dbf (Address tss_dbf_mem, Address kdir)
 		       Gdt_entry::Access_kernel | Gdt_entry::Access_tss |
 		       Gdt_entry::Accessed, 0);
 
-  tss_dbf->cs     = Gdt::gdt_code_kernel;
-  tss_dbf->ss     = Gdt::gdt_data_kernel;
-  tss_dbf->ds     = Gdt::gdt_data_kernel;
-  tss_dbf->es     = Gdt::gdt_data_kernel;
-  tss_dbf->fs     = Gdt::gdt_data_kernel;
-  tss_dbf->gs     = Gdt::gdt_data_kernel;
-  tss_dbf->eip    = (Address)entry_vec08_dbf;
-  tss_dbf->esp    = (Address)&dbf_stack_top;
-  tss_dbf->ldt    = 0;
-  tss_dbf->eflags = 0x00000082;
-  tss_dbf->cr3    = kdir;
-  tss_dbf->io_bit_map_offset = 0x8000;
+  tss_dbf->_cs     = Gdt::gdt_code_kernel;
+  tss_dbf->_ss     = Gdt::gdt_data_kernel;
+  tss_dbf->_ds     = Gdt::gdt_data_kernel;
+  tss_dbf->_es     = Gdt::gdt_data_kernel;
+  tss_dbf->_fs     = Gdt::gdt_data_kernel;
+  tss_dbf->_gs     = Gdt::gdt_data_kernel;
+  tss_dbf->_eip    = (Address)entry_vec08_dbf;
+  tss_dbf->_esp    = (Address)&dbf_stack_top;
+  tss_dbf->_ldt    = 0;
+  tss_dbf->_eflags = 0x00000082;
+  tss_dbf->_cr3    = kdir;
+  tss_dbf->_io_bit_map_offset = 0x8000;
 }
 
 PUBLIC static inline NEEDS["gdt.h"]
@@ -448,3 +586,15 @@ Cpu::enable_ldt(Address addr, int size)
       set_ldt(Gdt::gdt_ldt);
     }
 }
+
+
+PUBLIC static inline
+Unsigned32
+Cpu::get_gs()
+{ Unsigned32 val; asm volatile ("mov %%gs, %0" : "=rm" (val)); return val; }
+
+PUBLIC static inline
+void
+Cpu::set_gs (Unsigned32 val)
+{ asm volatile ("mov %0, %%gs" : : "rm" (val)); }
+

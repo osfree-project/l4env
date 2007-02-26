@@ -28,6 +28,8 @@
 #define PCI_DEVICE_ID_INTEL_845G	0x2562
 #define PCI_DEVICE_ID_INTEL_85XGM	0x3582
 #define PCI_DEVICE_ID_INTEL_865G	0x2572
+#define PCI_DEVICE_ID_INTEL_915G	0x2582
+#define PCI_DEVICE_ID_INTEL_915GM	0x2592
 
 #define INTEL_85X_CAPID		0x44
 #define INTEL_85X_VARIANT_MASK		0x7
@@ -36,10 +38,13 @@
 #define INTEL_VAR_855GM			0x4
 #define INTEL_VAR_852GME		0x2
 #define INTEL_VAR_852GM			0x5
+#define INTEL_GMCH_CTRL		0x52
 
-static l4_uint32_t mmio_base;
-static l4_uint32_t fb_base;
-static l4_uint32_t fb_offset;
+#define INTEL_REG_SIZE			0x80000
+
+static l4_addr_t   mmio_base;
+static l4_addr_t   fb_base;
+static l4_addr_t   fb_offset;
 static l4_uint32_t pitch;
 static int         blitter_may_be_busy;
 
@@ -55,6 +60,8 @@ static const struct pci_device_id intel_pci_tbl[] __init =
     { PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_845G,  0, 0, 0 },
     { PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_85XGM, 0, 0, 0 },
     { PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_865G,  0, 0, 0 },
+    { PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_915G,  0, 0, 0 },
+    { PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_915GM, 0, 0, 0 },
     { 0, 0, 0, 0, 0 }
 };
 
@@ -119,7 +126,6 @@ static const struct pci_device_id intel_pci_tbl[] __init =
 #define RING_REPORT_4K			(0x2 << 1)
 #define RING_REPORT_128K		(0x3 << 1)
 #define RING_ENABLE			0x1
-#define INSTPM			0x20c0
 
 #define RING_MIN_FREE		64
 #define GTT_PAGE_SIZE		4096
@@ -309,9 +315,6 @@ intel_2d_start(void)
   outreg32(PRI_RING_LENGTH, ((ring_size - GTT_PAGE_SIZE) & RING_LENGTH_MASK)
 			     | RING_NO_REPORT | RING_ENABLE);
   refresh_ring();
-
-  outreg32(INSTPM, 0x1f << 16);
-  outreg32(INSTPM, 0x1f << 16);
 }
 
 static int
@@ -322,13 +325,16 @@ intel_probe(unsigned int bus, unsigned int devfn,
   l4_addr_t addr;
   l4_size_t size;
   const char *name;
+  int aperture = 0, mmio = 1;
 
   switch (dev->device)
     {
-    case PCI_DEVICE_ID_INTEL_830M: name = "830M"; break;
-    case PCI_DEVICE_ID_INTEL_845G: name = "845G"; break;
-    case PCI_DEVICE_ID_INTEL_865G: name = "865G"; break;
+    case PCI_DEVICE_ID_INTEL_830M:  name = "830M"; break;
+    case PCI_DEVICE_ID_INTEL_845G:  name = "845G"; break;
+    case PCI_DEVICE_ID_INTEL_865G:  name = "865G"; break;
     case PCI_DEVICE_ID_INTEL_85XGM:
+    case PCI_DEVICE_ID_INTEL_915G:  name = "915G"; break;
+    case PCI_DEVICE_ID_INTEL_915GM: name = "915GM"; break;
     default:
       PCIBIOS_READ_CONFIG_DWORD(bus, devfn, INTEL_85X_CAPID, &tmp);
       switch ((tmp >> INTEL_85X_VARIANT_SHIFT)& INTEL_85X_VARIANT_MASK)
@@ -342,32 +348,44 @@ intel_probe(unsigned int bus, unsigned int devfn,
       break;
     }
 
-  pci_resource(bus, devfn, 0, &addr, &size);
+  if (dev->device == PCI_DEVICE_ID_INTEL_915G ||
+      dev->device == PCI_DEVICE_ID_INTEL_915GM)
+    {
+      aperture = 2;
+      mmio     = 0;
+    }
+
+  pci_resource(bus, devfn, aperture, &addr, &size);
   if (!addr)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(addr, size, "video", &fb_base) < 0)
-    return -L4_ENOTFOUND;
-
-  if (size < 8*1024*1024)
+  if (size < hw_vid_mem_size)
     {
-      printf("Size < 8MB\n");
+      printf("Aperture size = %dKB (< %ldKB)\n", 
+	    size/1024, hw_vid_mem_size/1024);
       return -L4_ENOTFOUND;
     }
 
+  if (size > hw_vid_mem_size)
+    size = hw_vid_mem_size;
+
+  if (map_io_mem(addr, size, 1, "video", &fb_base) < 0)
+    return -L4_ENOTFOUND;
+
   hw_map_vid_mem_addr = fb_base;
 
-  ring_base_phys = addr    + 8*1024*1024 - 128*1024;
-  ring_base      = fb_base + 8*1024*1024 - 128*1024;
+  ring_base_phys = addr    + size - (128<<10);
+  ring_base      = fb_base + size - (128<<10);
 
-  pci_resource(bus, devfn, 1, &addr, &size);
+  pci_resource(bus, devfn, mmio, &addr, &size);
   if (!addr)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(addr, size, "ctrl", &mmio_base) < 0)
+  if (map_io_mem(addr, INTEL_REG_SIZE, 0, "ctrl", &mmio_base) < 0)
     return -L4_ENOTFOUND;
 
-  printf("Found Intel (R) %s adapter at %08x\n", name, addr);
+
+  printf("Found Intel (R) %s adapter at %08lx\n", name, addr);
 
   switch (hw_bits)
     {

@@ -6,13 +6,13 @@ MODE             = host
 LIBS             = -llinuxdope -lpthread -lm -lvscreen -ldata
 SRC_C            = vscrtest.c startup.c thread.c \
                    voxel.c bump.c fountain.c feedback.c
-PRIVATE_INCDIR   = . \
+PRIVATE_INCDIR   = $(SRC_DIR) \
                    $(PKGDIR)/examples/vscrtest/include \
                    $(PKGDIR)/include \
                    $(PKGDIR)/server/include
-PRIVATE_LIBDIR   = $(PKGDIR)/lib/dope/linux/OBJ-$(SYSTEM) \
-                   $(PKGDIR)/lib/vscreen/linux/OBJ-$(SYSTEM) \
-                   $(PKGDIR)/examples/vscrtest/data/OBJ-$(SYSTEM)
+PRIVATE_LIBDIR   = $(PKGDIR_OBJ)/lib/dope/linux/OBJ-$(SYSTEM) \
+                   $(PKGDIR_OBJ)/lib/vscreen/linux/OBJ-$(SYSTEM) \
+                   $(PKGDIR_OBJ)/examples/vscrtest/data/OBJ-$(SYSTEM)
 
 vpath % $(PKGDIR)/examples/vscrtest/common 
 

@@ -6,7 +6,7 @@
 #
 
 SAMPLE_CONFIGS := ia32-short ia32-noshort ia32-ndebug \
-		  ux-short ux-noshort ux-v4 ia32-x0 ia32-smas ia32-v4 \
+		  ux-short ux-noshort ia32-smas\
 		  arm-x0
 
 srcdir = ../

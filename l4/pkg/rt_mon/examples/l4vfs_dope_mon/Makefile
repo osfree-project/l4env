@@ -2,11 +2,13 @@
 PKGDIR         ?= ../..
 L4DIR          ?= $(PKGDIR)/../..
 
-SYSTEMS         = x86-l4v2 x86-l4x0
+SYSTEMS         = x86-l4v2
 
 PRIVATE_INCDIR  =+ $(PKGDIR)/examples/common
 
 vpath %          $(PKGDIR)/examples/common
+
+DEPENDS_PKGS    = libvfb
 
 SRC_C           = main.c tree.c vis.c wins.c color.c
 

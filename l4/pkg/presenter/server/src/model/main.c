@@ -30,6 +30,7 @@ extern int init_slide(struct presenter_services *);
 extern int init_keygenerator(struct presenter_services *);
 extern int init_arraylist(struct presenter_services *);
 extern int init_presmanager(struct presenter_services *);
+extern int init_timer(struct presenter_services *);
 extern int init_dataprovider(struct presenter_services *);
 extern int init_presenter_server(struct presenter_services *);
 extern int init_presenter_view(struct presenter_services *);
@@ -64,6 +65,8 @@ int main(int argc, char **argv) {
 
     init_arraylist(&presenter_serv);
 
+    init_timer(&presenter_serv);
+    
     init_dataprovider(&presenter_serv);
 
     init_presenter(&presenter_serv);

@@ -1,10 +1,11 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BENameFactory.cpp
- *    \brief    contains the implementation of the class CL4V4BENameFactory
+ *  \brief   contains the implementation of the class CL4V4BENameFactory
  *
  *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -27,15 +28,12 @@
 
 #include "be/l4/v4/L4V4BENameFactory.h"
 #include "be/BEContext.h"
-#include "TypeSpec-Type.h"
+#include "TypeSpec-L4V4Types.h"
+#include "Compiler.h"
+#include <iostream>
 
-CL4V4BENameFactory::CL4V4BENameFactory(bool bVerbose)
- : CL4BENameFactory(bVerbose)
-{
-}
-
-CL4V4BENameFactory::CL4V4BENameFactory(CL4V4BENameFactory & src)
-: CL4BENameFactory(src)
+CL4V4BENameFactory::CL4V4BENameFactory()
+ : CL4BENameFactory()
 {
 }
 
@@ -46,97 +44,56 @@ CL4V4BENameFactory::~CL4V4BENameFactory()
 }
 
 
-/**    \brief general access function to generate strings
- *    \param nStringCode specifying the requested code
- *    \param pContext the context of the name generation
- *    \param pParam additional untyped parameter
- *    \return generated name
+/** \brief general access function to generate strings
+ *  \param nStringCode specifying the requested code
+ *  \param pParam additional untyped parameter
+ *  \return generated name
  *
  * This function multiplexes the request to the functions of this class' implementation.
  */
-string CL4V4BENameFactory::GetString(int nStringCode, CBEContext * pContext, void *pParam)
+string CL4V4BENameFactory::GetString(int nStringCode, void *pParam)
 {
     switch (nStringCode)
     {
     case STR_MSGTAG_VARIABLE:
-        return GetMsgTagVarName(pContext);
+        return GetMsgTagVariable();
         break;
+    case STR_INIT_RCVSTR_VARIABLE:
+	return GetInitRcvstrVariable();
+	break;
     default:
         break;
     }
-    return CL4BENameFactory::GetString(nStringCode, pContext, pParam);
+    return CL4BENameFactory::GetString(nStringCode, pParam);
 }
 
 /** \brief returns the variable name for the msgtag return variable of an IPC invocation
  *  \return the name of the variable
  */
-string CL4V4BENameFactory::GetMsgTagVarName(CBEContext *pContext)
+string CL4V4BENameFactory::GetMsgTagVariable()
 {
     return string("mr0");
 }
 
-/** \brief create specific L4 type names
- *  \param nType the type to create the name for
- *  \param bUnsigned true if the type is unsigned
- *  \param pContext the context of the creation process
- *  \param nSize the size of the type in bytes
- *  \return the L4 type name
+/** \brief return the variable name for a temporary string length variable
+ *  \return name of the variable
  */
-string CL4V4BENameFactory::GetL4TypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize)
+string CL4V4BENameFactory::GetInitRcvstrVariable()
 {
-    string sReturn;
-    switch (nType)
-    {
-    case TYPE_INTEGER:
-    case TYPE_LONG:
-        switch (nSize)
-        {
-        case 1:
-            if (bUnsigned)
-                sReturn = "L4_Word8_t";
-            break;
-        case 2:
-            if (bUnsigned)
-                sReturn = "L4_Word16_t";
-            break;
-        case 4:
-            if (bUnsigned)
-                sReturn = "L4_Word32_t";
-            break;
-        case 8:
-            if (bUnsigned)
-                sReturn = "L4_Word64_t";
-            break;
-        }
-        break;
-    case TYPE_CHAR:
-        if (bUnsigned)
-            sReturn = "L4_Word8_t";
-        break;
-    case TYPE_BYTE:
-        sReturn = "L4_Word8_t";
-        break;
-    }
-
-    if (m_bVerbose)
-        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
-               __FUNCTION__, sReturn.c_str(), nType);
-    return sReturn;
+    return string("_dice_str_len");
 }
 
 /** \brief create L4 specific type names
  *  \param nType the type number
  *  \param bUnsigned true if the type is unsigned
- *  \param pContext the context of the name generation
  *  \param nSize the size of the type
  */
-string CL4V4BENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize)
+string 
+CL4V4BENameFactory::GetTypeName(int nType, 
+    bool bUnsigned, 
+    int nSize)
 {
     string sReturn;
-    if (pContext->IsOptionSet(PROGRAM_USE_L4TYPES))
-        sReturn = GetL4TypeName(nType, bUnsigned, pContext, nSize);
-    if (!sReturn.empty())
-        return sReturn;
     switch (nType)
     {
     case TYPE_FLEXPAGE:
@@ -147,14 +104,21 @@ string CL4V4BENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * p
         break;
     case TYPE_MWORD:
         if (bUnsigned)
-            sReturn = "L4_Word32_t";
+            sReturn = "L4_Word_t";
+        break;
+    case TYPE_MSGTAG:
+        sReturn = "L4_MsgTag_t";
+        break;
+    case TYPE_REFSTRING:
+        sReturn = "L4_StringItem_t";
         break;
     default:
-        sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, pContext, nSize);
         break;
     }
-    if (m_bVerbose)
-        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
-               __FUNCTION__, sReturn.c_str(), nType);
+    if (sReturn.empty())
+        sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+	__func__, sReturn.c_str(), nType);
     return sReturn;
 }

@@ -33,10 +33,8 @@
  * a short or a long IPC.
  */
 int
-receive_event_reply(l4_threadid_t client, 
-    			l4events_ch_t event_ch,
-			l4events_nr_t event_nr,
-			l4events_event_t event)
+receive_event_reply(l4_threadid_t client, l4events_ch_t event_ch,
+		    l4events_nr_t event_nr, l4events_event_t event)
 {
   message_t	msg;
   l4_msgdope_t 	result;
@@ -44,24 +42,25 @@ receive_event_reply(l4_threadid_t client,
 
   init_message(&msg, &event);
 
-  msg.cr = create_control_word_for_reply(L4EVENTS_OK,event.len,event_ch, event_nr);
+  msg.cr = create_control_word_for_reply(L4EVENTS_OK,
+				         event.len, event_ch, event_nr);
 
   if (event.len <= SHORT_BUFFER_SIZE)
-  {
-    first_word = get_first_word(&event);
+    {
+      first_word = get_first_word(&event);
 
-    return l4_ipc_send(client, L4_IPC_SHORT_MSG,
-  			msg.cr, first_word,
-			L4_IPC_SEND_TIMEOUT_0,
-			&result);
-  }
+      return l4_ipc_send(client, L4_IPC_SHORT_MSG,
+  			 msg.cr, first_word,
+			 L4_IPC_SEND_TIMEOUT_0,
+			 &result);
+    }
   else
-  {
-    return l4_ipc_send(client, &msg,
-  			msg.cr, msg.str.w1,
-			L4_IPC_SEND_TIMEOUT_0,
-			&result);
-  }
+    {
+      return l4_ipc_send(client, &msg,
+  			 msg.cr, msg.str.w1,
+			 L4_IPC_SEND_TIMEOUT_0,
+			 &result);
+    }
 }
 
 /*!\brief replies to send_event call
@@ -93,10 +92,8 @@ send_event_reply(l4_uint16_t result, l4_threadid_t client,
  * to the sender.
  */
 int
-get_ack_reply(l4_threadid_t client,
-    		l4_uint8_t result,
-    		l4events_ch_t event_ch,
-		l4events_nr_t event_nr)
+get_ack_reply(l4_threadid_t client, l4_uint8_t result,
+	      l4events_ch_t event_ch, l4events_nr_t event_nr)
 {
   l4_umword_t	w1, w2;
   l4_msgdope_t	res;
@@ -148,8 +145,7 @@ server_loop(void* server_param)
     {
       /* Resume not later than 10ms if we have entries in the timeout queue.
        * Wait forever if there are no entries in the timeout queue */
-      error = l4_ipc_wait(&client, &message,
-			  &message.cr, &message.str.w1,
+      error = l4_ipc_wait(&client, &message, &message.cr, &message.str.w1,
 			  timeout_first_event ? SERVER_TIMEOUT : L4_IPC_NEVER,
 			  &result);
       for (;;)
@@ -194,47 +190,47 @@ server_loop(void* server_param)
 	  switch(event_cmd)
 	    {
 	    case REGISTER_EVENT:
-	      event_result = server_register(&client, event_ch, priority);
+	      event_result = server_register(client, event_ch, priority);
 	      break;
 
 	    case UNREGISTER_EVENT:
-	      event_result = server_unregister(&client, event_ch);
+	      event_result = server_unregister(client, event_ch);
 	      break;
 
 	    case UNREGISTER_ALL_EVENTS:
-	      event_result = server_unregister_all(&client);
+	      event_result = server_unregister_all(client);
 	      break;
 
 	    case SEND_EVENT:
 	    case ASYNC_SEND_EVENT:
 	    case ACK_SEND_EVENT:
 	    case ASYNC_ACK_SEND_EVENT:
-	      event_result = server_send_event(&client, event_ch, &event, 
-	      				        send_async, send_ack);
+	      event_result = server_send_event(client, event_ch, &event, 
+	      				       send_async, send_ack);
 	      do_reply = false;
 	      break;
 
 	    case RECEIVE_EVENT:
 	    case ACK_RECEIVE_EVENT:
-	      event_result = server_receive_event(&client, &event_ch, 
+	      event_result = server_receive_event(client, &event_ch, 
 	      					  &event, recv_ack);
 	      do_reply = false;
 	      break;
 
 	    case GIVE_ACK_AND_RECEIVE_EVENT:
 	    case GIVE_ACK_AND_ACK_RECEIVE_EVENT:
-	      event_result = server_give_ack(&client, event_nr);	
-	      event_result = server_receive_event(&client, &event_ch, 
+	      event_result = server_give_ack(client, event_nr);	
+	      event_result = server_receive_event(client, &event_ch, 
 	      					  &event, recv_ack);
 	      do_reply = false;
 	      break;
 	  
 	    case GIVE_ACK:
-	      event_result = server_give_ack(&client, event_nr);
+	      event_result = server_give_ack(client, event_nr);
 	      break;
 	  
 	    case GET_ACK:
-	      event_result = server_get_ack(&client, event_nr); 
+	      event_result = server_get_ack(client, event_nr); 
 	      do_reply = false;
 	      break;
 

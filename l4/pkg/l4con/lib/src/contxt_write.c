@@ -1,16 +1,14 @@
 #include "internal.h"
 
-/******************************************************************************
- * contxt_write                                                               *
- *                                                                            *
- * in:    s           ... output string                                       *
- *        len         ... string length                                       *
- * ret:                                                                       *
- *                                                                            *
- * print a string (low-level)                                                 *
- *****************************************************************************/
-void 
-contxt_write(const l4_uint8_t *s, int len)
+/** contxt_write
+ *
+ * \param s   output string
+ * \param len string length
+ *
+ * print a string (low-level)
+ */
+int
+contxt_write(const char *s, int len)
 {
   l4_uint8_t c, strbuf[vtc_cols];
   int sidx, bidx = 0, x = sb_x;
@@ -26,18 +24,19 @@ contxt_write(const l4_uint8_t *s, int len)
 	  x    = 0;
 	  continue;
 	}
-      if(  (bidx >= vtc_cols)   /* buffer overrun */
-	 ||(   x == vtc_cols))  /* wrap at right screen limit */
-      {
-	_flush(strbuf, bidx, 1);
-	bidx = 0;
-	x    = 0;
-      }
+      if(bidx >= vtc_cols || x == vtc_cols)
+	{
+	  _flush(strbuf, bidx, 1);
+	  bidx = 0;
+	  x    = 0;
+	}
       strbuf[bidx++] = c;
       x++;
     }
   
   if(bidx != 0)
     _flush(strbuf, bidx, 0);
+
+  return len;
 }
 

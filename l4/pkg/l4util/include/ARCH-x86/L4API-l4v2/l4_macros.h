@@ -24,8 +24,11 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
-#ifndef _L4UTIL_L4_MACROS_H
-#define _L4UTIL_L4_MACROS_H
+
+#include_next <l4/util/l4_macros.h>
+
+#ifndef _L4UTIL__ARCH_X86__L4V2__L4_MACROS_H
+#define _L4UTIL__ARCH_X86__L4V2__L4_MACROS_H
 
 /*****************************************************************************
  *** generic macros
@@ -44,4 +47,4 @@
 #  define l4util_idtskstr(tid) (tid).id.task
 #endif
 
-#endif /* !_L4UTIL_L4_MACROS_H */
+#endif /* !_L4UTIL__ARCH_X86__L4V2__L4_MACROS_H */

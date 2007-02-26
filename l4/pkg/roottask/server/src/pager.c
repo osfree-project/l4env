@@ -21,6 +21,8 @@
 #include <l4/util/mb_info.h>
 #include <l4/util/l4_macros.h>
 #include <l4/rmgr/proto.h>
+#include <l4/sigma0/sigma0.h>
+#include <l4/env_support/panic.h>
 
 #include "iomap.h"
 #include "memmap.h"
@@ -33,9 +35,12 @@
 
 l4_kernel_info_t *kip;
 last_pf_t        last_pf[RMGR_TASK_MAX];
-l4_uint32_t      memmap_lock = -1;
 int              have_io;
 int              no_pentium;
+
+static const l4_addr_t scratch_4K = 0xBF400000; /* XXX hardcoded */
+static const l4_addr_t scratch_4M = 0xBF800000; /* XXX hardcoded */
+
 
 /**
  * Displays the first 100 characters of an error message.
@@ -44,7 +49,7 @@ static void
 print_err(char *fmt,...)
 {
   va_list ap;
-  static char errmsg[100];
+  char errmsg[100];
   va_start(ap,fmt);
   vsnprintf(errmsg,sizeof(errmsg),fmt,ap);
   outstring(errmsg);
@@ -77,6 +82,14 @@ reset_pagefault(int task)
   last_pf[task].eip = -1;
 }
 
+static void
+warn_old(l4_threadid_t t, l4_umword_t d1, l4_umword_t d2)
+{
+  printf("ROOT: \033[33mClient "l4util_idfmt" sent old request "
+         "d1=%08lx d2=%08lx\033[m\n", l4util_idstr(t), d1, d2);
+  enter_kdebug("stop");
+}
+
 /**
  * Checks whether a double pagefault occured or not,
  * but only if no_checkdpf is not set. XXX
@@ -91,11 +104,11 @@ check_double_pagefault(l4_threadid_t t,l4_umword_t pfa,
 
   /* note that requests for a specific superpage have set the eip
    * to L4_LOG2_SUPERPAGESIZE << 2! */
-  if (EXPECT_FALSE( (*d1==last_pfp->pfa) && (*d2==last_pfp->eip)) )
+  if (EXPECT_FALSE((*d1==last_pfp->pfa) && (*d2==last_pfp->eip)))
     {
       *d1 &= L4_PAGEMASK;
       print_err("\r\n"
-		"RMGR: task "l4util_idfmt" at %08x is trying to get page %08x",
+		"ROOT: task "l4util_idfmt" at %08x is trying to get page %08x",
 		l4util_idstr(t), *d2, *d1);
 
       if (*d1 < mem_high + ram_base)
@@ -110,7 +123,7 @@ check_double_pagefault(l4_threadid_t t,l4_umword_t pfa,
 	    print_err("\r\n      (Cause: quota exceeded)");
 	}
       else
-	print_err(" (memhigh=%08x)", mem_high);
+	print_err(" (mem_high=%08x)", mem_high);
 
       print_err("\r\n");
 
@@ -126,9 +139,8 @@ check_double_pagefault(l4_threadid_t t,l4_umword_t pfa,
 /**
  * Find a free page.
  */
-static inline int
-find_free(l4_threadid_t t,l4_umword_t pfa,
-	  l4_umword_t *d1,l4_umword_t *d2)
+static int
+find_free(l4_threadid_t t, l4_umword_t *d1, l4_umword_t *d2, int super)
 {
   /* XXX this routine should be in the memmap_*() interface because we
      don't know about quotas here.  we can easily select a free page
@@ -136,28 +148,180 @@ find_free(l4_threadid_t t,l4_umword_t pfa,
 
   l4_addr_t address;
 
-  for (address = ram_base; address - ram_base < mem_high;
+  for (address = ram_base; address-ram_base < mem_high;
        address += L4_SUPERPAGESIZE)
     {
-      if (memmap_nrfree_superpage(address) == 0)
-	continue;
-
-      for (;address - ram_base < mem_high; address += L4_PAGESIZE)
+      unsigned f = memmap_nrfree_superpage(address);
+      if (super)
 	{
-	  if (! quota_check_mem(t.id.task, address, L4_PAGESIZE))
-	    continue;
-	  if (memmap_owner_page(address) != O_FREE)
+	  if (f == L4_SUPERPAGESIZE/L4_PAGESIZE)
+	    {
+	      *d1 = address;
+	      *d2 = l4_fpage(address, L4_LOG2_SUPERPAGESIZE,
+			     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+	      return 1;
+	    }
+	}
+      else
+	{
+	  if (f == 0)
 	    continue;
 
-	  /* found! */
-	  *d1 = address;
-	  *d2 = l4_fpage(address, L4_LOG2_PAGESIZE,
-	                 L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+	  for (;address-ram_base < mem_high; address+=L4_PAGESIZE)
+	    {
+	      if (! quota_check_mem(t.id.task, address, L4_PAGESIZE))
+		continue;
+	      if (memmap_owner_page(address) != O_FREE)
+		continue;
 
-	  return 1;
+	      /* found! */
+	      *d1 = address;
+	      *d2 = l4_fpage(address, L4_LOG2_PAGESIZE,
+			     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+	      return 1;
+	    }
 	}
     }
   return 0;
+}
+
+/**
+ * Extended Sigma0 protocol.
+ */
+static inline int
+handle_extended_sigma0(l4_threadid_t t, l4_umword_t *d1, l4_umword_t *d2)
+{
+  l4_fpage_t fp = { .raw = *d2 };
+  l4_addr_t addr = fp.fp.page << L4_PAGESHIFT;
+  int super = fp.fp.size >= L4_LOG2_SUPERPAGESIZE;
+  int fn = *d1 & SIGMA0_REQ_ID_MASK;
+
+  switch (fn)
+    {
+    case SIGMA0_REQ_ID_FPAGE_RAM: // dedicated fpage RAM cached
+	{
+	  unsigned  shift = super ? L4_SUPERPAGESHIFT : L4_PAGESHIFT;
+	  unsigned  num   = (1U << fp.fp.size) >> shift;
+	  l4_addr_t page  = addr >> shift, p, a;
+	  l4_addr_t psize = super ? L4_SUPERPAGESIZE : L4_PAGESIZE;
+
+	  for (p=page, a=addr; p<page+num; p++, a+=psize)
+	    {
+	      owner_t o = super ? memmap_owner_superpage(a)
+			        : memmap_owner_page(a);
+	      if ((o != O_FREE && o != t.id.task) ||
+    		  !quota_check_mem(t.id.task, a, psize))
+		{
+		  /* rollback */
+		  while (p>page)
+		    {
+	    	      p--;
+		      a-=psize;
+		    }
+		  return 0;
+		}
+	    }
+	  for (p=page, a=addr; p<page+num; p++, a+=psize)
+	    {
+	      /* quota already allocated, neutralize following memmap_alloc */
+	      quota_free_mem(t.id.task, a, psize);
+	      if (( super && !memmap_alloc_superpage(a, t.id.task)) ||
+		  (!super && !memmap_alloc_page     (a, t.id.task)))
+		{
+		  /* a race -- this cannot happen since we have the memlock! */
+		  printf("ROOT: Error at " l4_addr_fmt " for " l4util_idfmt
+                         " (super: %d)\n", a, l4util_idstr(t), super);
+		  panic("Something evil happend!");
+		}
+	    }
+
+	  *d1 = addr;
+     	  *d2 = l4_fpage(addr, fp.fp.size, L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+	  if (super)
+	    /* flush the superpage first so that contained 4K pages which
+	     * already have been mapped to the task don't disturb the 4MB
+	     * mapping */
+	    l4_fpage_unmap(l4_fpage(addr, L4_LOG2_SUPERPAGESIZE, 0, 0),
+			   L4_FP_FLUSH_PAGE|L4_FP_OTHER_SPACES);
+	}
+      return 1;
+
+    case SIGMA0_REQ_ID_FPAGE_IOMEM:        // dedicated fpage I/O mem uncached
+    case SIGMA0_REQ_ID_FPAGE_IOMEM_CACHED: // dedicated fpage I/O mem cached
+      if (fp.fp.size != L4_LOG2_PAGESIZE &&
+	  fp.fp.size != L4_LOG2_SUPERPAGESIZE)
+	{
+     	  /* because we don't have uncached fpages mapped */
+	  printf("ROOT: Mapping of uncached multi-fpages not implemented "
+	                "(log2_size=%d)!\n", fp.fp.size);
+	  return 0;
+	}
+      /* XXX: Mapping of 4k pages beyond highmem will fail in any case because
+       *      our __memmap[] array is stripped to highmem! */
+      if (( super && memmap_alloc_superpage(addr, t.id.task)) ||
+	  (!super && memmap_alloc_page     (addr, t.id.task)))
+	{
+	  l4_umword_t res1, res2;
+	  l4_msgdope_t result;
+	  l4_addr_t scratch = super ? scratch_4M : scratch_4K;
+
+	  l4_fpage_unmap(l4_fpage(scratch, fp.fp.size, 0, 0),
+				  L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+	  l4_ipc_call(my_pager, L4_IPC_SHORT_MSG, *d1, *d2,
+		      L4_IPC_MAPMSG(scratch, fp.fp.size),
+	    	      &res1, &res2, L4_IPC_NEVER, &result);
+	  *d1 = addr;
+    	  *d2 = l4_fpage(scratch, fp.fp.size,
+			 L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
+
+	  return 1;
+	}
+      /* Permission denied */
+      printf("ROOT: Cannot map page at "l4_addr_fmt" log2_size=%d failed\n",
+	      addr, fp.fp.size);
+      return 0;
+
+    case SIGMA0_REQ_ID_FPAGE_ANY: // any fpage
+      if (fp.fp.size == L4_LOG2_PAGESIZE)
+	return find_free(t, d1, d2, 0) &&
+	       memmap_alloc_page(*d1, t.id.task);
+      else if (fp.fp.size == L4_LOG2_SUPERPAGESIZE)
+	return find_free(t, d1, d2, 1) &&
+	       memmap_alloc_superpage(*d1, t.id.task);
+      printf("ROOT: Mapping of any multi-fpages not implemented\n");
+      return 0;
+
+    case SIGMA0_REQ_ID_KIP: // kernel info page
+      *d1 = 0;
+      *d2 = l4_fpage((l4_umword_t) kip, L4_LOG2_PAGESIZE,
+		     L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
+      return 1;
+
+    case SIGMA0_REQ_ID_TBUF:
+	{
+	  l4_umword_t res1, res2;
+	  int ret;
+	  l4_msgdope_t result;
+
+	  l4_fpage_unmap(l4_fpage(scratch_4K, L4_LOG2_PAGESIZE, 0, 0),
+	                          L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+	  ret = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG, *d1, *d2,
+                            L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
+                            &res1, &res2, L4_IPC_NEVER, &result);
+	  if ((res1 == 0 && res2 == 0) || ret)
+	    /* no tbuf status from sigma0 */
+	    return 0;
+
+	  /* grant the tbuf status to the subtask */
+	  *d1 = scratch_4K;
+	  *d2 = l4_fpage(scratch_4K, L4_LOG2_PAGESIZE,
+			 L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
+	  return 1;
+	}
+
+    default:
+      return 0;
+    }
 }
 
 /**
@@ -168,17 +332,13 @@ static inline int
 handle_anypage(l4_threadid_t t,l4_umword_t pfa,
 	       l4_umword_t *d1,l4_umword_t *d2)
 {
-  int v;
+  warn_old(t, *d1, *d2);
 
-  if ((v = vm_find(t.id.task, pfa) > -1))
-      pfa += vm_get_offset(v);
-
-  if (find_free(t, pfa, d1, d2) && memmap_alloc_page(*d1, t.id.task))
+  if (find_free(t, d1, d2, 0) && memmap_alloc_page(*d1, t.id.task))
     return 1;
 
   return 0;
 }
-
 
 /**
  * A request of a kernel info page. This works always...
@@ -187,6 +347,8 @@ static inline int
 handle_kip(l4_threadid_t t,l4_umword_t pfa,
 	   l4_umword_t *d1,l4_umword_t *d2)
 {
+  warn_old(t, *d1, *d2);
+
   *d1 = 0;
   *d2 = l4_fpage((l4_umword_t) kip, L4_LOG2_PAGESIZE,
 		L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
@@ -198,13 +360,14 @@ handle_tbuf_status(l4_threadid_t t,l4_umword_t pfa,
 		   l4_umword_t *d1, l4_umword_t *d2)
 {
   l4_msgdope_t result;
-  static l4_addr_t scratch = 0x40400000; /* XXX hardcoded */
 
-  l4_fpage_unmap(l4_fpage(scratch, L4_LOG2_SUPERPAGESIZE, 0, 0),
+  warn_old(t, *d1, *d2);
+
+  l4_fpage_unmap(l4_fpage(scratch_4K, L4_LOG2_SUPERPAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
   l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
 	      1, 0xff,
-	      L4_IPC_MAPMSG(scratch, L4_LOG2_PAGESIZE),
+	      L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
 	      d1, d2, L4_IPC_NEVER, &result);
 
   if (*d1 == 0 && *d2 == 0)
@@ -213,7 +376,7 @@ handle_tbuf_status(l4_threadid_t t,l4_umword_t pfa,
 
   /* grant the tbuf status to the subtask */
   *d1 = pfa;
-  *d2 = l4_fpage(scratch, L4_LOG2_PAGESIZE,
+  *d2 = l4_fpage(scratch_4K, L4_LOG2_PAGESIZE,
 		 L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
   return 1;
 }
@@ -273,8 +436,7 @@ handle_physicalpage(l4_threadid_t t,l4_umword_t pfa,
   if (try_superpage_maping(t,pfa,d1,d2))
     return 1;
 
-  /* failing a superpage allocation, try a single page
-     allocation */
+  /* failing a superpage allocation, try a single page allocation */
   if (memmap_alloc_page(*d1, t.id.task))
     {
       (*d1) &= L4_PAGEMASK;
@@ -312,7 +474,7 @@ handle_adapterpage(l4_threadid_t t,l4_umword_t pfa,
   /* XXX UGLY HACK! */
   l4_msgdope_t result;
 
-  static l4_addr_t scratch = 0x40000000; /* XXX hardcoded */
+  warn_old(t, *d1, *d2);
 
   pfa &= L4_SUPERPAGEMASK;
 
@@ -320,16 +482,16 @@ handle_adapterpage(l4_threadid_t t,l4_umword_t pfa,
   if (memmap_alloc_superpage(pfa + 0x40000000, t.id.task))
     {
       /* map the superpage into a scratch area */
-      l4_fpage_unmap(l4_fpage(scratch, L4_LOG2_SUPERPAGESIZE, 0,0),
+      l4_fpage_unmap(l4_fpage(scratch_4M, L4_LOG2_SUPERPAGESIZE, 0,0),
 		     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
       l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
 		  pfa, 0,
-		  L4_IPC_MAPMSG(scratch, L4_LOG2_SUPERPAGESIZE),
+		  L4_IPC_MAPMSG(scratch_4M, L4_LOG2_SUPERPAGESIZE),
 		  d1, d2, L4_IPC_NEVER, &result);
 
       /* grant the superpage to the subtask */
       *d1 = pfa;
-      *d2 = l4_fpage(scratch, L4_LOG2_SUPERPAGESIZE,
+      *d2 = l4_fpage(scratch_4M, L4_LOG2_SUPERPAGESIZE,
 		     L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
       return 1;
     }
@@ -351,7 +513,7 @@ static inline int
 handle_io(l4_threadid_t t,l4_umword_t pfa,
 	  l4_umword_t *d1,l4_umword_t *d2)
 {
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
   unsigned i;
   unsigned port = ((l4_fpage_t)(*d1)).iofp.iopage;
   unsigned size = ((l4_fpage_t)(*d1)).iofp.iosize;
@@ -363,7 +525,7 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
    * cli or sti since there may be more than one task trying to do this */
   if (EXPECT_FALSE (!have_io))
     {
-      print_err("RMGR: Task #%02x asks for I/O ports %04x-%04x but we "
+      print_err("ROOT: Task #%02x asks for I/O ports %04x-%04x but we "
 		"don't own any\n", t.id.task, port, port+(1<<size)-1);
       last_pfp->pfa = *d1;
       last_pfp->eip = *d2;
@@ -374,7 +536,7 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
     {
       if (EXPECT_FALSE(!quota_check_allow_cli(t.id.task)))
 	{
-	  print_err("RMGR: Task #%02x is not allowed to execute cli/sti\n",
+	  print_err("ROOT: Task #%02x is not allowed to execute cli/sti\n",
 		    t.id.task);
 	  if (EXPECT_FALSE(last_pfp->pfa == *d1 && last_pfp->eip == *d2))
 	    enter_kdebug("double I/O fault");
@@ -384,7 +546,7 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
 	  return 0;
 	}
 
-      print_err("RMGR: Sending all ports (for cli/sti) to task #%02x\n",
+      print_err("ROOT: Sending all ports (for cli/sti) to task #%02x\n",
 	        t.id.task);
       *d2 = l4_iofpage(port, size, 0).fpage;
       *d1 = 0;
@@ -401,7 +563,7 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
 	  if (EXPECT_FALSE(*d1==last_pfp->pfa && *d2==last_pfp->eip))
 	    {
 	      print_err("\r\n"
-			"RMGR: task "l4util_idfmt" at %08x is trying to "
+			"ROOT: task "l4util_idfmt" at %08x is trying to "
 			"get I/O port %04x",
 			l4util_idstr(t), *d2, i);
 
@@ -414,7 +576,7 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
 	    }
 
 //	  owner_short_name(owner, n2, sizeof(n2));
-	  print_err("RMGR: Cannot send port %04x to task #%02x, "
+	  print_err("ROOT: Cannot send port %04x to task #%02x, "
 		    "owner is #%02x \n",
 		    i, t.id.task, owner);
 	  last_pfp->pfa = *d1;
@@ -423,11 +585,11 @@ handle_io(l4_threadid_t t,l4_umword_t pfa,
 	}
     }
 
-  print_err("RMGR: Sending ports %04x-%04x to task #%02x\n",
+  print_err("ROOT: Sending ports %04x-%04x to task #%02x\n",
       port, port+(1<<size)-1, t.id.task);
   *d2 = l4_iofpage(port, size, 0).fpage;
   *d1 = 0;
-#endif /* ARCH_x86 */
+#endif /* ARCH_x86 | ARCH_amd64 */
   return 1;
 }
 
@@ -452,7 +614,8 @@ pager(void)
 
       while (!err)
 	{
-	  //printf("Root: Received PF from " l4util_idfmt ": pfa: %08x ip: %08x ret = %d\n", l4util_idstr(t), d1, d2, err);
+	  //printf("ROOT: Received PF from "l4util_idfmt": pfa: "l4_addr_fmt
+	  //" ip: "l4_addr_fmt" ret = %d\n", l4util_idstr(t), d1, d2, err);
 	  /* we must synchronise the access to memmap functions */
 	  enter_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
 
@@ -465,39 +628,40 @@ pager(void)
 	    {
 	      pfa = d1 & 0xfffffffc;
 
-	      if (d1 == 0xfffffffc)
-		handled=handle_anypage(t,pfa,&d1,&d2);
+	      if (SIGMA0_IS_MAGIC_REQ(d1))
+		handled = handle_extended_sigma0(t, &d1, &d2);
+	      else if (d1 == 0xfffffffc)
+		handled = handle_anypage(t, pfa, &d1, &d2);
 	      else if (d1 == 1 && (d2 & 0xff) == 1)
 		handled=handle_kip(t,pfa,&d1,&d2);
 	      else if (d1 == 1 && (d2 & 0xff) == 0xff)
-		handled=handle_tbuf_status(t,pfa,&d1,&d2);
-#ifdef ARCH_x86
+		handled = handle_tbuf_status(t, pfa, &d1, &d2);
+#if defined ARCH_x86 | ARCH_amd64
 	      else if (pfa < 0x40000000)
-		handled=handle_physicalpage(t,pfa,&d1,&d2);
+		handled = handle_physicalpage(t, pfa, &d1, &d2);
 #else
-	      else if (pfa > ram_base && (pfa - ram_base) < (64 << 20))
-		handled=handle_physicalpage(t,pfa,&d1,&d2);
+	      else if (pfa > ram_base && (pfa - ram_base) < (mem_upper << 10))
+		handled = handle_physicalpage(t, pfa, &d1, &d2);
 #endif
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
 	      else if (pfa >= 0x40000000 && pfa < 0xC0000000 && !(d1 & 1))
-		handled=handle_adapterpage(t,pfa,&d1,&d2);
+		handled = handle_adapterpage(t, pfa, &d1, &d2);
 	      else if ((l4_version == VERSION_FIASCO)
 		       && l4_is_io_page_fault(d1))
-		handled=handle_io(t,pfa,&d1,&d2);
+		handled = handle_io(t, pfa, &d1, &d2);
 #endif
 	      else
-	        print_err("\r\nRMGR: can't handle d1=0x%08x, d2=0x%08x "
-			  "from thread="l4util_idfmt"\n",
-			  d1, d2, l4util_idstr(t));
+                print_err("\r\nROOT: can't handle d1=0x%08x, d2=0x%08x "
+                          "from thread="l4util_idfmt"\n",
+                          d1, d2, l4util_idstr(t));
 	    }
 	  else
 	    /* OOPS.. can't map to this sender. */
 	    ;
 
 	  if (handled)
-	    {
-	      desc = L4_IPC_SHORT_FPAGE;
-	    }
+	    desc = L4_IPC_SHORT_FPAGE;
+
 	  else
 	    {
 	      // something goes wrong
@@ -508,7 +672,8 @@ pager(void)
 	  leave_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
 
 	  /* send reply and wait for next message */
-	  //printf("Root: reply to " l4util_idfmt " d1=%08x d2=%08x\n", l4util_idstr(t), d1, d2);
+	  //printf("ROOT: reply to "l4util_idfmt" d1="l4_addr_fmt" d2="
+	  //l4_addr_fmt"\n", l4util_idstr(t), d1, d2);
 	  err = l4_ipc_reply_and_wait(t, desc, d1, d2,
 				      &t, 0, &d1, &d2,
 				      L4_IPC_SEND_TIMEOUT_0,

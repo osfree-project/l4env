@@ -99,7 +99,7 @@ typedef struct
   unsigned long rt_reservation_sync_video;
 #endif
 
-#ifdef PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   int silent;
 #endif
 } gui_state_t;
@@ -159,6 +159,7 @@ extern long app_id;
 #define   CMD_RT_VERBOSE_PIPC_TOGGLE_CORE_AUDIO	24
 #define   CMD_RT_VERBOSE_PIPC_TOGGLE_CORE_VIDEO	25
 #define   CMD_RT_VERBOSE_PIPC_TOGGLE_SYNC	26
+#define   CMD_SPEED_CHANGE	27
 
 static void setInfo (const char *format, ...);
 void setPlaymode (int playmode);
@@ -191,7 +192,7 @@ extern inline void
 setPlaymode (int playmode)
 {
   if (playmode == PLAYMODE_PLAY 
-#ifdef PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
       && gui_state.silent
 #endif
       )
@@ -201,11 +202,11 @@ setPlaymode (int playmode)
   if (gui_state.text_only)
     return;
   vdope_cmdf (app_id, "main_btn_play.set(-state %i)",
-	      (gui_state.playmode & PLAYMODE_PLAY));
+	      (gui_state.playmode & PLAYMODE_PLAY) > 0);
   vdope_cmdf (app_id, "main_btn_pause.set(-state %i)",
-	      (gui_state.playmode & PLAYMODE_PAUSE));
+	      (gui_state.playmode & PLAYMODE_PAUSE) > 0);
   vdope_cmdf (app_id, "main_btn_stop.set(-state %i)",
-	      (gui_state.playmode & PLAYMODE_STOP));
+	      (gui_state.playmode & PLAYMODE_STOP) > 0);
 }
 
 #if 0				/* dump event received by eventmanager */

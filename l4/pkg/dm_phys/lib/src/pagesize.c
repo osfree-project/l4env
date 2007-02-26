@@ -66,13 +66,14 @@ __check_pagesize(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
 
   /* call dataspace manager */
   ret = if_l4dm_memphys_dmphys_pagesize_call(&dsm_id, ds->id, offs, size, 
-                                             pagesize, (l4_uint32_t*)ok, 
+                                             pagesize, ok,
                                              &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_phys: check pagesize at DMphys ("l4util_idfmt") failed "
-	    "(ret %d, exc %d)", l4util_idstr(dsm_id), ret, _env.major);
+	    "(ret %d, exc %d)", l4util_idstr(dsm_id), ret,
+	    DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
@@ -178,7 +179,7 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize)
   int align_start,align_end,ok;
   l4_threadid_t dummy;
 
-  LOGdL(DEBUG_PAGESIZE,"area 0x%08x-0x%08x, pagesize %d",
+  LOGdL(DEBUG_PAGESIZE,"area 0x%08lx-0x%08lx, pagesize %d",
         addr, addr + size, pagesize);
   
   /* on ia32, only 4KB pages (pagesize 12) and 4MB pages (pagesize 22) are
@@ -192,9 +193,7 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize)
   end = addr + size;
   while (addr < end)
     {
-#if DEBUG_PAGESIZE
-      printf(" addr 0x%08x\n", addr);
-#endif
+      LOGdL(DEBUG_PAGESIZE, " addr 0x%08lx", addr);
 
       /* lookup dataspace attached to address */
       ret = l4rm_lookup((void *)addr, &ds_map_addr, &ds_map_size, 
@@ -202,35 +201,32 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize)
       if (ret < 0)
 	{
 	  LOGdL(DEBUG_ERRORS, 
-                "libdm_phys: lookup address 0x%08x failed: %d!", addr, ret);
+                "libdm_phys: lookup address 0x%08lx failed: %d!", addr, ret);
 	  return 0;
 	}
 
       if (ret != L4RM_REGION_DATASPACE)
         {
           LOGdL(DEBUG_ERRORS, "trying to check pagesize of non-dataspace " \
-                "region at addr 0x%08x (type %d)", addr, ret);
+                "region at addr 0x%08lx (type %d)", addr, ret);
           return 0;
         }
 
       ds_map_end = ds_map_addr + ds_map_size;
 
-#if DEBUG_PAGESIZE
-      printf(" dataspace %u at "l4util_idfmt"\n", 
-             ds.id, l4util_idstr(ds.manager));
-      printf(" attached to 0x%08x-0x%08x, offs 0x%08x\n",
-             ds_map_addr, ds_map_end, ds_map_offs);
-#endif
+      LOGdL(DEBUG_PAGESIZE, " dataspace %u at "l4util_idfmt"\n", 
+                            ds.id, l4util_idstr(ds.manager));
+      LOGdL(DEBUG_PAGESIZE, " attached to 0x%08lx-0x%08lx, offs 0x%08lx\n",
+                            ds_map_addr, ds_map_end, ds_map_offs);
 
       /* first, check if the alignment of the attached region allows a 
        * receive window with the requested pagesize, see map.c for further 
        * explanations */
       align_start = __max_addr_align(ds_map_addr, addr);
       align_end = __max_addr_align(addr + L4_PAGESIZE, ds_map_end);
-      
-#if DEBUG_PAGESIZE
-      printf(" align start %d, align end %d\n", align_start, align_end);
-#endif
+
+      LOGdL(DEBUG_PAGESIZE, " align start %d, align end %d\n",
+	                    align_start, align_end);
 
       if ((align_start < pagesize) || (align_end < pagesize))
 	/* receive window to small */
@@ -248,24 +244,20 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize)
 	     ((addr + ((page_addr + page_size + ps) - addr)) <= end))
 	page_size += ps;
 
-#if DEBUG_PAGESIZE
-      printf(" page at 0x%08x, offs 0x%08x, size 0x%08x\n",
-             page_addr, page_offs, page_size);
-#endif
-      
+      LOGdL(DEBUG_PAGESIZE, " page at 0x%08lx, offs 0x%08lx, size 0x%08x\n",
+                            page_addr, page_offs, page_size);
+
       ret = __check_pagesize(&ds, page_offs, page_size, pagesize, &ok);
       if ((ret < 0) || !ok)
 	{
-#if DEBUG_PAGESIZE
-	  printf("  ok = %d, ret = %d\n", ok, ret);
-#endif	    
+	  LOGdL(DEBUG_PAGESIZE, "  ok = %d, ret = %d\n", ok, ret);
 	  /* check failed */
 	  return 0;
 	}
 
       addr += ((page_addr + page_size) - addr);
     }
-  
+
   /* test succeeded */
   return 1;
 }

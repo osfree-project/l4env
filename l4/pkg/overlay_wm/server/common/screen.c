@@ -35,7 +35,6 @@ extern int ovl_num_windows;   /* from window.c */
 int ovl_scr_w, ovl_scr_h, ovl_scr_depth;
 
 static int ovl_scr_initialized;
-static void *vscr_server_id;
 
 
 /*** EVENT CALLBACK: SET NATIVE SIZE OF OVERLAY SCREEN WINDOW ***/
@@ -106,7 +105,6 @@ int overlay_open_screen_component(CORBA_Object _dice_corba_obj,
 	dope_cmdf(app_id, "info.set(-text \"%dx%d (%s)\")", width, height, pixelformat);
 	dope_cmd(app_id,  "a.open()");
 
-	vscr_server_id = vscr_get_server_id(app_id,"vscr");
 	ovl_scr_w = width;
 	ovl_scr_h = height;
 	ovl_scr_depth = depth;
@@ -150,10 +148,7 @@ void overlay_refresh_screen_component(CORBA_Object _dice_corba_obj,
                                     int w,
                                     int h,
                                     CORBA_Server_Environment *_dice_corba_env) {
-	if (!vscr_server_id) {
-		printf("OvlServer(refresh_screen_component): vscr_server_id undefined\n");
-		return;
-	}
-	vscr_server_refresh(vscr_server_id, x, y, w, h);
+
+	dope_cmdf(app_id, "vscr.refresh(-x %d -y %d -w %d -h %d)", x, y, w, h);
 }
 

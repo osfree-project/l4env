@@ -31,6 +31,7 @@
 
 
 #include "ldso.h"
+#include "debug_info.h"
 
 #ifdef __LDSO_CACHE_SUPPORT__
 
@@ -433,7 +434,7 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	/* If we are in secure mode (i.e. a setu/gid binary using LD_PRELOAD),
 	   we don't load the library if it isn't setuid. */
 
-#if 0 // fm3
+#if 0 /* fm3 */
 	if (secure) {
 		struct stat st;
 
@@ -619,7 +620,9 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		};
 		ppnt++;
 	};
-	_dl_close(infile);
+
+	// fm3: Do this later since _dl_debug_info_add() needs this file open
+	// _dl_close(infile);
 
 	/* For a non-PIC library, the addresses are all absolute */
 	if (piclib) {
@@ -684,6 +687,12 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	}
 	tpnt->usage_count++;
 	tpnt->libtype = elf_lib;
+
+#ifdef ARCH_x86
+	/* fm3: extract symbols/lines from this object */
+	_dl_debug_info_add(tpnt, infile, header, piclib ? libaddr : 0);
+#endif
+	_dl_close(infile);
 
 	/*
 	 * OK, the next thing we need to do is to insert the dynamic linker into

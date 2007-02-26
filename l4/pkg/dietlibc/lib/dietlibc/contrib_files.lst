@@ -81,6 +81,8 @@ ia64/start.S
 ia64/unified.S
 ia64/utime.S
 ia64/vfork.S
+x86_64/__longjmp.S
+x86_64/setjmp.S
 include/alloca.h
 include/ar.h
 include/arpa/inet.h
@@ -99,6 +101,7 @@ include/asm/x86_64-sigcontext.h
 include/assert.h
 include/ctype.h
 include/dirent.h
+include/elf.h
 include/endian.h
 include/err.h
 include/errno.h
@@ -125,6 +128,7 @@ include/netinet/in.h
 include/netinet/in_systm.h
 include/netinet/ip.h
 include/netinet/udp.h
+include/netinet/tcp.h
 include/paths.h
 include/pwd.h
 include/resolv.h
@@ -172,7 +176,6 @@ lib/__ltostr.c
 lib/__v_printf.c
 lib/__v_scanf.c
 lib/assert_fail.c
-lib/atexit.c
 lib/atof.c
 lib/atoi.c
 lib/atol.c
@@ -202,6 +205,7 @@ lib/memccpy.c
 lib/memchr.c
 lib/memcmp.c
 lib/memcpy.c
+lib/memmem.c
 lib/memmove.c
 lib/memrchr.c
 lib/memset.c

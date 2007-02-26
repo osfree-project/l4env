@@ -38,7 +38,7 @@
 
 #include <typeinfo>
 #include <string>
-using namespace std;
+#include <cassert>
 
 void dceerror(char *);
 void dceerror2(const char *fmt, ...);
@@ -63,9 +63,9 @@ class CFEPortSpec;
 #include "fe/FEArrayDeclarator.h"
 #include "fe/FEAttributeDeclarator.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEIDLUnionType.h"
+#include "fe/FEEnumType.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEPipeType.h"
@@ -120,41 +120,41 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 %union {
   string*            _id;
   string*            _str;
-  long                _int;
-  unsigned char        _byte;
-  char                _char;
-  float                _float;
+  long               _int;
+  unsigned char      _byte;
+  char               _char;
+  float              _float;
   long double        _double;
   int                _bool;
 
-  version_t            _version;
+  version_t          _version;
 
-  CFEExpression*            _expr;
-  CFEIdentifier*            _identifier;
-  CFEDeclarator*            _decl;
-  CFEArrayDeclarator*        _array_decl;
-  CFEConstDeclarator*        _const_decl;
-  CFETypedDeclarator*        _typed_decl;
-  CFEFunctionDeclarator*    _func_decl;
-  CFEEnumDeclarator*        _enum_decl;
-  CFEAttributeDeclarator*    _attr_decl;
-  CFETypeSpec*                _type_spec;
-  CFESimpleType*            _simple_type;
-  CFEConstructedType*        _constructed_type;
-  CFETaggedStructType*        _tag_struct_type;
-  CFETaggedUnionType*        _tag_union_type;
-  CFEUnionType*                _union_type;
-  CFEUnionCase*                _union_case;
-  CFEEnumType*                _enum_type;
-  CFEAttribute*                _attr;
-  CFETypeAttribute*            _type_attr;
-  CFEVersionAttribute*        _version_attr;
-  CFEIsAttribute*            _is_attr;
-  CFEInterface*                _interface;
-  CFEInterfaceComponent*    _i_component;
-  CFEOperation*                _operation;
-  CFELibrary*                _library;
-  CFEFileComponent*            _f_component;
+  CFEExpression*     _expr;
+  CFEIdentifier*     _identifier;
+  CFEDeclarator*     _decl;
+  CFEArrayDeclarator*    _array_decl;
+  CFEConstDeclarator*    _const_decl;
+  CFETypedDeclarator*    _typed_decl;
+  CFEFunctionDeclarator* _func_decl;
+  CFEEnumDeclarator* _enum_decl;
+  CFEAttributeDeclarator*_attr_decl;
+  CFETypeSpec*       _type_spec;
+  CFESimpleType*     _simple_type;
+  CFEConstructedType*    _constructed_type;
+  CFEStructType*     _tag_struct_type;
+  CFEUnionType*      _tag_union_type;
+  CFEUnionType*      _union_type;
+  CFEUnionCase*      _union_case;
+  CFEEnumType*       _enum_type;
+  CFEAttribute*      _attr;
+  CFETypeAttribute*  _type_attr;
+  CFEVersionAttribute*   _version_attr;
+  CFEIsAttribute*    _is_attr;
+  CFEInterface*      _interface;
+  CFEInterfaceComponent* _i_component;
+  CFEOperation*      _operation;
+  CFELibrary*        _library;
+  CFEFileComponent*  _f_component;
 
   vector<PortSpec>*            _vec_PortSpec;
   vector<CFEIdentifier*>*      _vec_Identifier;
@@ -166,7 +166,7 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
   vector<CFEFileComponent*>*   _vec_FileComponent;
   vector<CFEInterfaceComponent*>* _vec_InterfaceComponent;
 
-  enum EXPT_OPERATOR        _expr_operator;
+  enum EXPT_OPERATOR _expr_operator;
 }
 
 %token LBRACE     RBRACE     LBRACKET    RBRACKET  COLON     COMMA
@@ -200,21 +200,21 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 %token DEFAULT_FUNCTION  ERROR_FUNCTION  ERROR_FUNCTION_CLIENT     ERROR_FUNCTION_SERVER
 %token INIT_RCVSTRING    INIT_RCVSTRING_CLIENT       INIT_RCVSTRING_SERVER    INIT_WITH_IN
 %token PREALLOC          ABSTRACT        INOUT       MODULE      READONLY     ALLOW_REPLY_ONLY
-%token ONEWAY            CALLBACK
+%token ONEWAY            CALLBACK	PREALLOC_CLIENT	PREALLOC_SERVER
 
 /* dice specific token */
 %token EOF_TOKEN    NOOPCODE    NOEXCEPTIONS
-%token L4_SCHED_DECEIT
+%token SCHED_DONATE DEDICATED_PARTNER
 
-%token    <_id>        ID
-%token    <_id>        TYPENAME
-%token    <_int>        LIT_INT
-%token    <_char>        LIT_CHAR
-%token    <_str>        LIT_STR
-%token    <_str>        UUID_STR
-%token    <_double>    LIT_FLOAT
-%token    <_str>        PORTSPEC
-%token  <_str>      VERSION_STR
+%token <_id>     ID
+%token <_id>     TYPENAME
+%token <_int>    LIT_INT
+%token <_char>   LIT_CHAR
+%token <_str>    LIT_STR
+%token <_str>    UUID_STR
+%token <_double> LIT_FLOAT
+%token <_str>    PORTSPEC
+%token <_str>    VERSION_STR
 
 %type <_expr>                 additive_expr
 %type <_expr>                 and_expr
@@ -230,7 +230,7 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 %type <_expr>                 cast_expr
 %type <_simple_type>          char_type
 %type <_expr>                 conditional_expr
-%type <_constructed_type >    constructed_type_spec
+%type <_constructed_type>     constructed_type_spec
 %type <_const_decl>           const_declarator
 %type <_expr>                 const_expr
 %type <_vec_Expression>       const_expr_list
@@ -264,8 +264,6 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 %type <_attr>                 interface_attribute
 %type <_vec_Attribute>        interface_attributes
 %type <_vec_Attribute>        interface_attribute_list
-%type <_i_component>          interface_component
-%type <_vec_InterfaceComponent> interface_component_list
 %type <_attr>                 lib_attribute
 %type <_vec_Attribute>        lib_attribute_list
 %type <_f_component>          lib_definition
@@ -353,6 +351,7 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 
 file:
       file_component_list
+    | /* a totally empty file */
     ;
 
 file_component_list:
@@ -379,17 +378,19 @@ file_component:
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTypedef($1);
+                ((CFELibrary*)pCurFileComponent)->m_Typedefs.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTypedef($1);
+                ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		"current file component is unknown type: %s\n",
+		typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddTypedef($1);
+            CParser::GetCurrentFile()->m_Typedefs.Add($1);
     }
     | const_declarator semicolon
     {
@@ -399,7 +400,7 @@ file_component:
             YYABORT;
         }
         else
-            CParser::GetCurrentFile()->AddConstant($1);
+            CParser::GetCurrentFile()->m_Constants.Add($1);
     }
     | tagged_declarator semicolon
     {
@@ -409,7 +410,7 @@ file_component:
             YYABORT;
         }
         else
-            CParser::GetCurrentFile()->AddTaggedDecl($1);
+            CParser::GetCurrentFile()->m_TaggedDeclarators.Add($1);
     }
     | SEMICOLON
     | error SEMICOLON
@@ -432,12 +433,14 @@ interface:
             YYABORT;
         // create interface and set as file-component
         if (!pFEInterface)
-            pFEInterface = new CFEInterface($1, *$3, $5, NULL);
+            pFEInterface = new CFEInterface($1, *$3, $5, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
         {
             // add attributes, and base names
-            pFEInterface->AddAttributes($1);
-            pFEInterface->AddBaseInterfaceNames($5);
+            pFEInterface->m_Attributes.Add($1);
+            pFEInterface->m_BaseInterfaceNames.Add($5);
         }
         delete $1;
         pFEInterface->SetSourceLine(gLineNumber);
@@ -453,10 +456,8 @@ interface:
         if (pCurFileComponent &&
             pCurFileComponent->GetParent())
         {
-            if (dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent()))
-                pCurFileComponent = (CFEFileComponent*)pCurFileComponent->GetParent();
-            else
-                pCurFileComponent = NULL;
+	    pCurFileComponent = 
+	        dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
         }
         delete $3;
         $$ = NULL;
@@ -469,12 +470,14 @@ interface:
             YYABORT;
         // create interface and set as file-component
         if (!pFEInterface)
-            pFEInterface = new CFEInterface($1, *$3, $5, NULL);
+            pFEInterface = new CFEInterface($1, *$3, $5, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
         {
             // add attributes, and base names
-            pFEInterface->AddAttributes($1);
-            pFEInterface->AddBaseInterfaceNames($5);
+            pFEInterface->m_Attributes.Add($1);
+            pFEInterface->m_BaseInterfaceNames.Add($5);
         }
         delete $1;
         pFEInterface->SetSourceLine(gLineNumber);
@@ -495,11 +498,13 @@ interface:
             YYABORT;
         // create interface and set as file-component
         if (!pFEInterface)
-            pFEInterface = new CFEInterface($1, *$3, NULL, NULL);
+            pFEInterface = new CFEInterface($1, *$3, NULL, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
         {
             // add attributes
-            pFEInterface->AddAttributes($1);
+            pFEInterface->m_Attributes.Add($1);
         }
         delete $1;
         pFEInterface->SetSourceLine(gLineNumber);
@@ -530,11 +535,13 @@ interface:
             YYABORT;
         // create interface and set as file-component
         if (!pFEInterface)
-            pFEInterface = new CFEInterface($1, *$3, NULL, NULL);
+            pFEInterface = new CFEInterface($1, *$3, NULL, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
         {
             // add attributes
-            pFEInterface->AddAttributes($1);
+            pFEInterface->m_Attributes.Add($1);
         }
         delete $1;
         pFEInterface->SetSourceLine(gLineNumber);
@@ -579,7 +586,9 @@ interface:
         }
         if (pFEInterface)
             delete pFEInterface;
-        pFEInterface = new CFEInterface(NULL, sRest, NULL, NULL);
+        pFEInterface = new CFEInterface(NULL, sRest, NULL, 
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
         pFEInterface->SetSourceLine(gLineNumber);
         pFEInterface->SetSourceLineEnd(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, pFELibrary))
@@ -594,26 +603,17 @@ interface:
         if (!DoInterfaceCheck($2, $4, &pFEInterface))
             YYABORT;
         // create interface and set as file-component
-        CFEVersionAttribute *tmp = new CFEVersionAttribute(0,0);
-        tmp->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *vec = new vector<CFEAttribute*>();
-        vec->push_back(tmp);
         if (!pFEInterface)
-        {
-            pFEInterface = new CFEInterface(vec, *$2, $4, NULL);
-        }
+            pFEInterface = new CFEInterface(NULL, *$2, $4, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
-        {
-            // add attributes, and base names
-            pFEInterface->AddAttributes(vec);
-            pFEInterface->AddBaseInterfaceNames($4);
-        }
-        tmp->SetParent(pFEInterface);
+            // add base names
+            pFEInterface->m_BaseInterfaceNames.Add($4);
         pFEInterface->SetSourceLine(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, NULL))
             YYABORT;
         pCurFileComponent = pFEInterface;
-        delete vec;
     } interface_component_list RBRACE
     {
         if (dynamic_cast<CFEInterface*>(pCurFileComponent))
@@ -637,25 +637,14 @@ interface:
         if (!DoInterfaceCheck($2, NULL, &pFEInterface))
             YYABORT;
         // create interface and set as file-component
-        CFEAttribute *tmp = new CFEVersionAttribute(0,0);
-        tmp->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *vec = new vector<CFEAttribute*>();
-        vec->push_back(tmp);
         if (!pFEInterface)
-        {
-            pFEInterface = new CFEInterface(vec, *$2, NULL, NULL);
-        }
-        else
-        {
-            // add attributes
-            pFEInterface->AddAttributes(vec);
-        }
-        tmp->SetParent(pFEInterface);
+            pFEInterface = new CFEInterface(NULL, *$2, NULL, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         pFEInterface->SetSourceLine(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, NULL))
             YYABORT;
         pCurFileComponent = pFEInterface;
-        delete vec;
     } interface_component_list RBRACE
     {
         if (dynamic_cast<CFEInterface*>(pCurFileComponent))
@@ -681,11 +670,13 @@ interface:
             YYABORT;
         // create interface and set as file-component
         if (!pFEInterface)
-            pFEInterface = new CFEInterface(NULL, *$2, $4, NULL);
+            pFEInterface = new CFEInterface(NULL, *$2, $4, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         else
         {
             // add attributes, and base names
-            pFEInterface->AddBaseInterfaceNames($4);
+            pFEInterface->m_BaseInterfaceNames.Add($4);
         }
         pFEInterface->SetSourceLine(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, NULL))
@@ -703,18 +694,10 @@ interface:
         if (!DoInterfaceCheck($2, NULL, &pFEInterface))
             YYABORT;
         // create interface and set as file-component
-        CFEAttribute *tmp = new CFEVersionAttribute(0,0);
-        tmp->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *vec = new vector<CFEAttribute*>();
-        vec->push_back(tmp);
         if (!pFEInterface)
-            pFEInterface = new CFEInterface(vec, *$2, NULL, NULL);
-        else
-        {
-            // add attributes
-            pFEInterface->AddAttributes(vec);
-        }
-        tmp->SetParent(pFEInterface);
+            pFEInterface = new CFEInterface(NULL, *$2, NULL, 
+	        pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+		CParser::GetCurrentFile());
         pFEInterface->SetSourceLine(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, NULL))
             YYABORT;
@@ -757,7 +740,9 @@ interface:
         }
         if (pFEInterface)
             delete pFEInterface;
-        pFEInterface = new CFEInterface(NULL, sRest, NULL, NULL);
+        pFEInterface = new CFEInterface(NULL, sRest, NULL, 
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
         pFEInterface->SetSourceLine(gLineNumber);
         pFEInterface->SetSourceLineEnd(gLineNumber);
         if (!AddInterfaceToFileComponent(pFEInterface, pFELibrary))
@@ -792,6 +777,7 @@ base_interface_name:
     | error
     {
         dceerror2("expected interface name");
+	YYABORT;
     }
     ;
 
@@ -799,10 +785,7 @@ interface_attributes :
       { if (c_inc == 0) c_inc = 2; } LBRACKET interface_attribute_list { if (c_inc == 2) c_inc = 0; } RBRACKET { $$ = $3; }
     | { if (c_inc == 0) c_inc = 2; } LBRACKET { if (c_inc == 2) c_inc = 0; } RBRACKET
     {
-        CFEVersionAttribute *tmp = new CFEVersionAttribute(0,0);
-        tmp->SetSourceLine(gLineNumber);
         $$ = new vector<CFEAttribute*>();
-        $$->push_back(tmp);
     }
     ;
 
@@ -872,9 +855,9 @@ interface_attribute :
     }
     | EXCEPTIONS LPAREN excep_name_list rparen
     {
-        $$ = new CFEExceptionAttribute($3);
-        $$->SetSourceLine(gLineNumber);
-    delete $3;
+	$$ = new CFEExceptionAttribute($3);
+	$$->SetSourceLine(gLineNumber);
+	delete $3;
     }
     | EXCEPTIONS LPAREN error RPAREN
     {
@@ -890,8 +873,8 @@ interface_attribute :
     }
     | SERVER_PARAMETER
     {
-        $$ = new CFEAttribute(ATTR_SERVER_PARAMETER);
-        $$->SetSourceLine(gLineNumber);
+        dcewarning("Attribute [server_parameter] is deprecated.");
+        $$ = NULL;
     }
     | INIT_RCVSTRING
     {
@@ -964,13 +947,23 @@ interface_attribute :
         $$ = new CFEAttribute(ATTR_ABSTRACT);
         $$->SetSourceLine(gLineNumber);
     }
+    | DEDICATED_PARTNER
+    {
+        $$ = new CFEAttribute(ATTR_DEDICATED_PARTNER);
+        $$->SetSourceLine(gLineNumber);
+    }
     ;
 
-version_rep
-    : LIT_INT DOT LIT_INT
+version_rep :
+      LIT_INT DOT LIT_INT
     {
         $$.nMajor = $1;
         $$.nMinor = $3;
+    }
+    | LIT_INT COMMA LIT_INT
+    {
+        $$.nMajor = $1;
+	$$.nMinor = $3;
     }
     | LIT_INT
     {
@@ -1016,102 +1009,109 @@ excep_name_list :
     {
         CFEIdentifier *tmp = new CFEIdentifier(*$1);
         tmp->SetSourceLine(gLineNumber);
-    $$ = new vector<CFEIdentifier*>();
-    $$->push_back(tmp);
+    	$$ = new vector<CFEIdentifier*>();
+    	$$->push_back(tmp);
         delete $1;
     }
     ;
 
 interface_component_list :
-      interface_component_list interface_component
-    {
-        if ($2)
-            $1->push_back($2);
-        $$ = $1;
-    }
+      interface_component interface_component_list
     | interface_component
-    {
-        $$ = new vector<CFEInterfaceComponent*>();
-        if ($1)
-            $$->push_back($1);
-    }
     ;
 
 interface_component :
       export semicolon
     {
-        $$ = $1;
+        // ignore argument:
+	// typedef, const decl, tagged decl has been added
+	// ignore excpetions for now
+	if ($1)
+	    delete $1;
     }
     | op_declarator semicolon
     {
-        $$ = $1;
+        // should not return anything: already added
+	if ($1)
+	    delete $1;
     }
     | attribute_decl semicolon
     {
-        $$ = $1;
+        // should not return anything: already added
+	if ($1)
+	    delete $1;
     }
     ;
 
-export
-    : type_declarator
+export :
+      type_declarator
     {
-        $$ = $1;
+    	$$ = NULL;
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTypedef($1);
+                ((CFELibrary*)pCurFileComponent)->m_Typedefs.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTypedef($1);
+                ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		"current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddTypedef($1);
+            CParser::GetCurrentFile()->m_Typedefs.Add($1);
     }
     | const_declarator
     {
-        $$ = $1;
+        $$ = NULL;
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddConstant($1);
+                ((CFELibrary*)pCurFileComponent)->m_Constants.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddConstant($1);
+                ((CFEInterface*)pCurFileComponent)->m_Constants.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+                    "current file component is unknown type: %s\n", 
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddConstant($1);
+            CParser::GetCurrentFile()->m_Constants.Add($1);
     }
     | tagged_declarator
     {
-        $$ = $1;
+        $$ = NULL;
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTaggedDecl($1);
+                ((CFELibrary*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTaggedDecl($1);
+                ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddTaggedDecl($1);
+            CParser::GetCurrentFile()->m_TaggedDeclarators.Add($1);
     }
-    | exception_declarator { $$ = $1; }
+    | exception_declarator 
+    { 
+    	$$ = $1; 
+    }
     ;
 
-const_declarator
-    : CONST const_type_spec id_or_typename IS const_expr
+const_declarator :
+      CONST const_type_spec id_or_typename IS const_expr
     {
         CFETypeSpec *pType = $2;
             while (pType && (pType->GetType() == TYPE_USER_DEFINED))
@@ -1136,8 +1136,8 @@ const_declarator
     }
     ;
 
-const_type_spec
-    : integer_type { $$ = $1; }
+const_type_spec :
+      integer_type { $$ = $1; }
     | CHAR
     {
         $$ = new CFESimpleType(TYPE_CHAR);
@@ -1175,8 +1175,8 @@ const_expr_list :
     }
     ;
 
-const_expr
-    : conditional_expr
+const_expr :
+      conditional_expr
     | string
     {
         $$ = new CFEExpression(EXPR_STRING, *$1);
@@ -1222,8 +1222,8 @@ assignment_operator:
     | OR_ASSIGN
     ;
 
-conditional_expr
-    : logical_or_expr
+conditional_expr :
+      logical_or_expr
     /* gcc specifics */
     | logical_or_expr QUESTION const_expr_list COLON conditional_expr
     {
@@ -1256,8 +1256,8 @@ conditional_expr
     }
     ;
 
-logical_or_expr
-    : logical_and_expr
+logical_or_expr :
+      logical_and_expr
     | logical_or_expr LOGICALOR logical_and_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGOR, $3);
@@ -1268,8 +1268,8 @@ logical_or_expr
     }
     ;
 
-logical_and_expr
-    : inclusive_or_expr
+logical_and_expr :
+      inclusive_or_expr
     | logical_and_expr LOGICALAND inclusive_or_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGAND, $3);
@@ -1280,8 +1280,8 @@ logical_and_expr
     }
     ;
 
-inclusive_or_expr
-    : exclusive_or_expr
+inclusive_or_expr :
+      exclusive_or_expr
     | inclusive_or_expr BITOR exclusive_or_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITOR, $3);
@@ -1292,8 +1292,8 @@ inclusive_or_expr
     }
     ;
 
-exclusive_or_expr
-    : and_expr
+exclusive_or_expr :
+      and_expr
     | exclusive_or_expr BITXOR and_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITXOR, $3);
@@ -1304,8 +1304,8 @@ exclusive_or_expr
     }
     ;
 
-and_expr
-    : equality_expr
+and_expr :
+      equality_expr
     | and_expr BITAND equality_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITAND, $3);
@@ -1316,8 +1316,8 @@ and_expr
     }
     ;
 
-equality_expr
-    : relational_expr
+equality_expr :
+      relational_expr
     | equality_expr EQUAL relational_expr
     {
         if (($1 != NULL) && ($3 != NULL)) {
@@ -1378,8 +1378,8 @@ relational_expr:
     }
     ;
 
-shift_expr
-    : additive_expr
+shift_expr :
+      additive_expr
     | shift_expr LSHIFT additive_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LSHIFT, $3);
@@ -1398,8 +1398,8 @@ shift_expr
     }
     ;
 
-additive_expr
-    : multiplicative_expr
+additive_expr :
+      multiplicative_expr
     | additive_expr PLUS multiplicative_expr
     {
         $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_PLUS, $3);
@@ -1489,8 +1489,8 @@ unary_expr :
     }
     ;
 
-unary_operator
-    : PLUS
+unary_operator :
+      PLUS
     { $$ = EXPR_SPLUS; }
     | MINUS
     { $$ = EXPR_SMINUS; }
@@ -1531,8 +1531,8 @@ postfix_expr :
     { $$ = NULL; }
     ;
 
-primary_expr
-    : LIT_INT
+primary_expr :
+      LIT_INT
     {
         $$ = new CFEPrimaryExpression(EXPR_INT, $1);
         $$->SetSourceLine(gLineNumber);
@@ -1618,8 +1618,8 @@ cast_expr:
     }
     ;
 
-type_declarator
-    : TYPEDEF type_attribute_list type_spec declarator_list
+type_declarator :
+      TYPEDEF type_attribute_list type_spec declarator_list
     {
         // check if type_names already exist
         CParser *pCurParser = CParser::GetCurrentParser();
@@ -1635,7 +1635,8 @@ type_declarator
                 {
                     if (pRoot->FindUserDefinedType((*iter)->GetName()) != NULL)
                     {
-                        dceerror2("\"%s\" has already been defined as type.",(*iter)->GetName().c_str());
+                        dceerror2("\"%s\" has already been defined as type.",
+			    (*iter)->GetName().c_str());
                         YYABORT;
                     }
                 }
@@ -1681,13 +1682,13 @@ type_attribute_list :
       { if (c_inc == 0) c_inc = 2; } LBRACKET type_attributes { if (c_inc == 2) c_inc = 0; } rbracket { $$ = $3; }
     ;
 
-type_spec
-    : simple_type_spec
+type_spec :
+      simple_type_spec
     | constructed_type_spec { $$ = $1; }
     ;
 
-simple_type_spec
-    : base_type_spec { $$ = $1; }
+simple_type_spec :
+      base_type_spec { $$ = $1; }
     | predefined_type_spec { $$ = $1; }
     | TYPENAME
     {
@@ -1721,8 +1722,8 @@ declarator_list :
     }
     ;
 
-declarator
-    : pointer attribute_list direct_declarator
+declarator :
+      pointer attribute_list direct_declarator
     {
         $3->SetStars($1);
         $$ = $3;
@@ -1749,8 +1750,8 @@ declarator
     }
     ;
 
-direct_declarator
-    : ID
+direct_declarator :
+      ID
     {
         $$ = new CFEDeclarator(DECL_IDENTIFIER, *$1);
         delete $1;
@@ -1762,14 +1763,14 @@ direct_declarator
     | function_declarator { $$ = $1; }
     ;
 
-tagged_declarator
-    : tagged_struct_declarator { $$ = $1; }
+tagged_declarator :
+      tagged_struct_declarator { $$ = $1; }
     | tagged_union_declarator { $$ = $1; }
     | tagged_enumeration_type { $$ = $1; }
     ;
 
-base_type_spec
-    : floating_pt_type
+base_type_spec :
+      floating_pt_type
     | integer_type
     | char_type
     | boolean_type
@@ -1808,8 +1809,8 @@ base_type_spec
     }
     ;
 
-floating_pt_type
-    : FLOAT
+floating_pt_type :
+      FLOAT
     {
         $$ = new CFESimpleType(TYPE_FLOAT);
         $$->SetSourceLine(gLineNumber);
@@ -1902,16 +1903,16 @@ integer_type :
     }
     ;
 
-integer_size
-    : LONG { $$ = 4; }
+integer_size :
+      LONG { $$ = 4; }
     | LONGLONG { $$ = 8; }
     | SHORT { $$ = 2; }
     | SMALL { $$ = 1; }
     | HYPER { $$ = 8; }
     ;
 
-char_type
-    : UNSIGNED CHAR
+char_type :
+      UNSIGNED CHAR
     {
         $$ = new CFESimpleType(TYPE_CHAR, true);
         $$->SetSourceLine(gLineNumber);
@@ -1938,19 +1939,19 @@ char_type
     }
     ;
 
-boolean_type
-    : BOOLEAN
+boolean_type :
+      BOOLEAN
     {
         $$ = new CFESimpleType(TYPE_BOOLEAN);
         $$->SetSourceLine(gLineNumber);
     }
     ;
 
-constructed_type_spec
-    : attribute_list STRUCT LBRACE member_list RBRACE
+constructed_type_spec :
+      attribute_list STRUCT LBRACE member_list RBRACE
     {
         // the attribute list is GCC specific
-        $$ = new CFEStructType($4);
+        $$ = new CFEStructType(string(), $4);
         $$->SetSourceLine(gLineNumber);
         if ($4)
             delete $4;
@@ -1967,10 +1968,10 @@ constructed_type_spec
     }
     ;
 
-tagged_struct_declarator
-    : attribute_list STRUCT tag LBRACE member_list RBRACE
+tagged_struct_declarator :
+      attribute_list STRUCT tag LBRACE member_list RBRACE
     {
-        $$ = new CFETaggedStructType(*$3, $5);
+        $$ = new CFEStructType(*$3, $5);
         delete $3;
         if ($5)
             delete $5;
@@ -1978,14 +1979,14 @@ tagged_struct_declarator
     }
     | attribute_list STRUCT tag
     {
-        $$ = new CFETaggedStructType(*$3);
+        $$ = new CFEStructType(*$3, 0);
         delete $3;
         $$->SetSourceLine(gLineNumber);
     }
     ;
 
-tag
-    : id_or_typename { $$ = $1; }
+tag :
+      id_or_typename { $$ = $1; }
     ;
 
 member_list :
@@ -2014,12 +2015,12 @@ member_list_1 :
     }
     ;
 
-member
-    : field_declarator
+member :
+      field_declarator
     ;
 
-field_declarator
-    : field_attribute_list type_spec declarator_list
+field_declarator :
+      field_attribute_list type_spec declarator_list
     {
         $$ = new CFETypedDeclarator(TYPEDECL_FIELD, $2, $3, $1);
         delete $1;
@@ -2041,31 +2042,30 @@ field_attribute_list :
       { if (c_inc == 0) c_inc = 2; } LBRACKET field_attributes { if (c_inc == 2) c_inc = 0; } rbracket { $$ = $3; }
     ;
 
-tagged_union_declarator
-    : UNION tag
+tagged_union_declarator :
+      UNION tag
     {
-        $$ = new CFETaggedUnionType(*$2);
+        $$ = new CFEUnionType(*$2, 0);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
     | UNION tag union_type_header
     {
-        $$ = new CFETaggedUnionType(*$2, $3);
-        // set parent relationship
-        $3->SetParent($$);
-        delete $2;
+        $$ = $3;
+	$$->SetTag(*$2);
+	delete $2;
         $$->SetSourceLine(gLineNumber);
     }
     ;
 
-union_type
-    : UNION union_type_header { $$ = $2; }
+union_type :
+      UNION union_type_header { $$ = $2; }
     ;
 
-union_type_header
-    : SWITCH LPAREN switch_type_spec id_or_typename rparen id_or_typename LBRACE union_body RBRACE
+union_type_header :
+     SWITCH LPAREN switch_type_spec id_or_typename rparen id_or_typename LBRACE union_body RBRACE
     {
-        $$ = new CFEUnionType($3, *$4, $8, *$6);
+        $$ = new CFEIDLUnionType(string(), $8, $3, *$4, *$6);
         // set parent relationship
         $3->SetParent($$);
         delete $4;
@@ -2076,7 +2076,7 @@ union_type_header
     }
     | SWITCH LPAREN switch_type_spec id_or_typename rparen LBRACE union_body RBRACE
     {
-        $$ = new CFEUnionType($3, *$4, $7);
+        $$ = new CFEIDLUnionType(string(), $7, $3, *$4, string());
         // set parent relationship
         $3->SetParent($$);
         delete $4;
@@ -2086,7 +2086,7 @@ union_type_header
     }
     | LBRACE union_body_n_e RBRACE
     {
-        $$ = new CFEUnionType($2);
+        $$ = new CFEUnionType(string(), $2);
         $$->SetSourceLine(gLineNumber);
         if ($2)
             delete $2;
@@ -2094,8 +2094,8 @@ union_type_header
     ;
 
 
-switch_type_spec
-    : integer_type { $$ = $1; }
+switch_type_spec :
+      integer_type { $$ = $1; }
     | char_type { $$ = $1; }
     | boolean_type { $$ = $1; }
     | ID
@@ -2137,8 +2137,8 @@ union_body_n_e :
     ;
 
 
-union_case
-    : union_case_label_list union_arm
+union_case :
+      union_case_label_list union_arm
     {
         $$ = new CFEUnionCase($2, $1);
         // set parent relationship
@@ -2155,8 +2155,8 @@ union_case
     }
     ;
 
-union_case_n_e
-    : LBRACKET CASE LPAREN const_expr_list rparen rbracket union_arm
+union_case_n_e :
+      LBRACKET CASE LPAREN const_expr_list rparen rbracket union_arm
     {
         $$ = new CFEUnionCase($7, $4);
         // set parent relationship
@@ -2195,12 +2195,12 @@ union_case_label_list :
     }
     ;
 
-union_case_label
-    : CASE const_expr colon { $$ = $2; }
+union_case_label :
+      CASE const_expr colon { $$ = $2; }
     ;
 
-union_arm
-    : field_declarator semicolon { $$ = $1; }
+union_arm :
+      field_declarator semicolon { $$ = $1; }
     | SEMICOLON
     {
         $$ = new CFETypedDeclarator(TYPEDECL_VOID, 0, 0);
@@ -2208,8 +2208,8 @@ union_arm
     }
     ;
 
-union_type_switch_attr
-    : SWITCH_TYPE LPAREN switch_type_spec rparen
+union_type_switch_attr :
+      SWITCH_TYPE LPAREN switch_type_spec rparen
     {
         $$ = new CFETypeAttribute(ATTR_SWITCH_TYPE, $3);
         // set parent relationship
@@ -2218,8 +2218,8 @@ union_type_switch_attr
     }
     ;
 
-union_instance_switch_attr
-    : SWITCH_IS LPAREN attr_var rparen
+union_instance_switch_attr :
+      SWITCH_IS LPAREN attr_var rparen
     {
         vector<CFEDeclarator*> *tmp = new vector<CFEDeclarator*>();
         tmp->push_back($3);
@@ -2274,7 +2274,7 @@ scoped_name :
 enumeration_type :
       ENUM LBRACE enumeration_declarator_list RBRACE
     {
-        $$ = new CFEEnumType($3);
+        $$ = new CFEEnumType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         delete $3;
     }
@@ -2283,14 +2283,14 @@ enumeration_type :
 tagged_enumeration_type :
       ENUM id_or_typename LBRACE enumeration_declarator_list RBRACE
     {
-        $$ = new CFETaggedEnumType(*$2, $4);
+        $$ = new CFEEnumType(*$2, $4);
         delete $2;
         $$->SetSourceLine(gLineNumber);
         delete $4;
     }
     | ENUM id_or_typename
     {
-        $$ = new CFETaggedEnumType(*$2, NULL);
+        $$ = new CFEEnumType(*$2, NULL);
         delete $2;
         $$->SetSourceLine(gLineNumber);
     }
@@ -2325,8 +2325,8 @@ enumeration_declarator :
     }
     ;
 
-array_declarator
-    : direct_declarator LBRACKET RBRACKET
+array_declarator :
+      direct_declarator LBRACKET RBRACKET
     {
         if ($1->GetType() == DECL_ARRAY)
             $$ = (CFEArrayDeclarator*)$1;
@@ -2379,8 +2379,8 @@ array_declarator
     }
     ;
 
-array_bound
-    : ASTERISK
+array_bound :
+      ASTERISK
     {
         $$ = new CFEExpression(EXPR_CHAR, '*');
         $$->SetSourceLine(gLineNumber);
@@ -2388,8 +2388,8 @@ array_bound
     | const_expr
     ;
 
-type_attributes
-    : type_attributes COMMA type_attribute
+type_attributes :
+      type_attributes COMMA type_attribute
     {
             if ($3)
                 $1->push_back($3);
@@ -2407,8 +2407,8 @@ type_attributes
     }
     ;
 
-type_attribute
-    : TRANSMIT_AS LPAREN simple_type_spec RPAREN
+type_attribute :
+      TRANSMIT_AS LPAREN simple_type_spec RPAREN
     {
         $$ = new CFETypeAttribute(ATTR_TRANSMIT_AS, $3);
         // set parent relationship
@@ -2425,8 +2425,8 @@ type_attribute
     | ptr_attr
     ;
 
-usage_attribute
-    : STRING
+usage_attribute :
+      STRING
     {
         $$ = new CFEAttribute(ATTR_STRING);
         $$->SetSourceLine(gLineNumber);
@@ -2453,8 +2453,8 @@ field_attributes :
     }
     ;
 
-field_attribute
-    : FIRST_IS LPAREN attr_var_list RPAREN
+field_attribute :
+      FIRST_IS LPAREN attr_var_list RPAREN
     {
         $$ = new CFEIsAttribute(ATTR_FIRST_IS, $3);
         $$->SetSourceLine(gLineNumber);
@@ -2587,8 +2587,8 @@ attr_var_list :
     }
     ;
 
-attr_var
-    : ASTERISK id_or_typename
+attr_var :
+      ASTERISK id_or_typename
     {
         $$ = new CFEDeclarator(DECL_ATTR_VAR, *$2, 1);
         delete $2;
@@ -2607,8 +2607,8 @@ attr_var
     }
     ;
 
-ptr_attr
-    : REF
+ptr_attr :
+      REF
     {
         $$ = new CFEAttribute(ATTR_REF);
         $$->SetSourceLine(gLineNumber);
@@ -2638,25 +2638,28 @@ pointer :
     { $$ = 1; }
     ;
 
-op_declarator
-    : operation_attributes simple_type_spec id_or_typename LPAREN param_declarators RPAREN raises_declarator
+op_declarator :
+      operation_attributes simple_type_spec id_or_typename LPAREN param_declarators RPAREN raises_declarator
     {
-        $$ = new CFEOperation($2, *$3, $5, $1, $7);
+        $$ = NULL;
+	CFEOperation *pOp = new CFEOperation($2, *$3, $5, $1, $7);
         // set parent relationship
-        $2->SetParent($$);
+        $2->SetParent(pOp);
         if ($5)
             delete $5;
         delete $3;
         delete $1;
         delete $7;
-        $$->SetSourceLine(gLineNumber);
+        pOp->SetSourceLine(gLineNumber);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddOperation($$);
+                ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0,
+                    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -2668,21 +2671,24 @@ op_declarator
     }
     | operation_attributes simple_type_spec id_or_typename LPAREN param_declarators RPAREN
     {
-        $$ = new CFEOperation($2, *$3, $5, $1);
+        $$ = NULL;
+	CFEOperation *pOp = new CFEOperation($2, *$3, $5, $1);
         // set parent relationship
-        $2->SetParent($$);
+        $2->SetParent(pOp);
         if ($5)
             delete $5;
         delete $3;
         delete $1;
-        $$->SetSourceLine(gLineNumber);
+        pOp->SetSourceLine(gLineNumber);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddOperation($$);
+                ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+	    	CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -2694,21 +2700,24 @@ op_declarator
     }
     | simple_type_spec id_or_typename LPAREN param_declarators RPAREN raises_declarator
     {
-        $$ = new CFEOperation($1, *$2, $4, 0, $6);
+        $$ = NULL;
+	CFEOperation *pOp = new CFEOperation($1, *$2, $4, 0, $6);
         // set parent relationship
-        $1->SetParent($$);
+        $1->SetParent(pOp);
         if ($4)
             delete $4;
         delete $2;
         delete $6;
-        $$->SetSourceLine(gLineNumber);
+        pOp->SetSourceLine(gLineNumber);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddOperation($$);
+                ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -2720,20 +2729,23 @@ op_declarator
     }
     | simple_type_spec id_or_typename LPAREN param_declarators RPAREN
     {
-        $$ = new CFEOperation($1, *$2, $4);
+        $$ = NULL;
+	CFEOperation *pOp = new CFEOperation($1, *$2, $4);
         // set parent relationship
-        $1->SetParent($$);
+        $1->SetParent(pOp);
         if ($4)
             delete $4;
         delete $2;
-        $$->SetSourceLine(gLineNumber);
+        pOp->SetSourceLine(gLineNumber);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddOperation($$);
+                ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0,
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -2750,12 +2762,12 @@ id_or_typename:
     | TYPENAME
     ;
 
-raises_declarator
-    : RAISES LPAREN identifier_list rparen { $$ = $3; }
+raises_declarator :
+      RAISES LPAREN identifier_list rparen { $$ = $3; }
     ;
 
-operation_attributes
-    : { if (c_inc == 0) c_inc = 2; } LBRACKET operation_attribute_list { if (c_inc == 2) c_inc = 0; } rbracket { $$ = $3; }
+operation_attributes :
+      { if (c_inc == 0) c_inc = 2; } LBRACKET operation_attribute_list { if (c_inc == 2) c_inc = 0; } rbracket { $$ = $3; }
     ;
 
 operation_attribute_list :
@@ -2772,8 +2784,8 @@ operation_attribute_list :
     }
     ;
 
-operation_attribute
-    : IDEMPOTENT
+operation_attribute :
+      IDEMPOTENT
     {
         $$ = new CFEAttribute(ATTR_IDEMPOTENT);
         $$->SetSourceLine(gLineNumber);
@@ -2827,9 +2839,9 @@ operation_attribute
         $$->SetSourceLine(gLineNumber);
     }
     /* L4 scheduling attributes */
-    | L4_SCHED_DECEIT
+    | SCHED_DONATE
     {
-        $$ = new CFEAttribute(ATTR_L4_SCHED_DECEIT);
+        $$ = new CFEAttribute(ATTR_SCHED_DONATE);
         $$->SetSourceLine(gLineNumber);
     }
     ;
@@ -2849,16 +2861,16 @@ param_declarators :
 param_declarator_list :
       param_declarator
     {
-        if ($1)
-    {
-        $$ = new vector<CFETypedDeclarator*>();
-        $$->push_back($1);
-    }
-        else
-        {
-            dcewarning("invalid parameter (probably C style parameter)");
-            $$ = new vector<CFETypedDeclarator*>();
-        }
+	if ($1)
+	{
+	    $$ = new vector<CFETypedDeclarator*>();
+	    $$->push_back($1);
+	}
+	else
+	{
+	    dcewarning("invalid parameter (probably C style parameter)");
+	    $$ = new vector<CFETypedDeclarator*>();
+	}
     }
     | param_declarator_list COMMA param_declarator
     {
@@ -2873,19 +2885,19 @@ param_declarator_list :
 param_declarator :
       param_attributes type_spec declarator
     {
-        if ($2 != 0)
-        {
-        vector<CFEDeclarator*> *tmp = new vector<CFEDeclarator*>();
-        tmp->push_back($3);
-            $$ = new CFETypedDeclarator(TYPEDECL_PARAM, $2, tmp, $1);
-            delete $1;
-            $2->SetParent($$);
-            $3->SetParent($$);
-        delete tmp;
-            $$->SetSourceLine(gLineNumber);
-        }
-        else
-            $$ = 0;
+	if ($2 != 0)
+	{
+	    vector<CFEDeclarator*> *tmp = new vector<CFEDeclarator*>();
+	    tmp->push_back($3);
+	    $$ = new CFETypedDeclarator(TYPEDECL_PARAM, $2, tmp, $1);
+	    delete $1;
+	    $2->SetParent($$);
+	    $3->SetParent($$);
+	    delete tmp;
+	    $$->SetSourceLine(gLineNumber);
+	}
+	else
+	    $$ = 0;
     }
     | type_spec declarator
     {
@@ -2921,8 +2933,8 @@ param_attributes :
     }
     ;
 
-param_attribute_list
-    : param_attribute_list COMMA param_attribute
+param_attribute_list :
+      param_attribute_list COMMA param_attribute
     {
         if ($3)
             $1->push_back($3);
@@ -2972,19 +2984,28 @@ param_attribute_list
     }
     ;
 
-param_attribute
-    : directional_attribute
+param_attribute :
+      directional_attribute
     | field_attribute
     | INIT_WITH_IN
     {
-        $$ = new CFEAttribute(ATTR_PREALLOC);
-        $$->SetSourceLine(gLineNumber);
+    	dceerror2("[init_with_in] is deprecated. Use [prealloc_client] and/or [prealloc_server].");
+	YYABORT;
     }
     | PREALLOC
     {
-        // is the IDL4 version of "init_with_in"
-        $$ = new CFEAttribute(ATTR_PREALLOC);
-        $$->SetSourceLine(gLineNumber);
+    	dceerror2("[prealloc] is deprecated. Use [prealloc_client] and/or [prealloc_server].");
+	YYABORT;
+    }
+    | PREALLOC_CLIENT
+    {
+    	$$ = new CFEAttribute(ATTR_PREALLOC_CLIENT);
+	$$->SetSourceLine(gLineNumber);
+    }
+    | PREALLOC_SERVER
+    {
+    	$$ = new CFEAttribute(ATTR_PREALLOC_SERVER);
+	$$->SetSourceLine(gLineNumber);
     }
     | TRANSMIT_AS LPAREN simple_type_spec RPAREN
     {
@@ -2995,8 +3016,8 @@ param_attribute
     }
     ;
 
-directional_attribute
-    : IN
+directional_attribute :
+      IN
     {
         $$ = new CFEAttribute(ATTR_IN);
         $$->SetSourceLine(gLineNumber);
@@ -3008,20 +3029,20 @@ directional_attribute
     }
     ;
 
-function_declarator
-    : direct_declarator LPAREN param_declarators RPAREN
+function_declarator :
+      direct_declarator LPAREN param_declarators RPAREN
     {
-        $$ = new CFEFunctionDeclarator($1, $3);
-        // set parent relationship
-        $1->SetParent($$);
-    if ($3)
-        delete $3;
-        $$->SetSourceLine(gLineNumber);
+	$$ = new CFEFunctionDeclarator($1, $3);
+	// set parent relationship
+	$1->SetParent($$);
+	if ($3)
+	    delete $3;
+	$$->SetSourceLine(gLineNumber);
     }
     ;
 
-predefined_type_spec
-    : ERROR_STATUS_T
+predefined_type_spec :
+      ERROR_STATUS_T
     {
         $$ = new CFESimpleType(TYPE_ERROR_STATUS_T);
         $$->SetSourceLine(gLineNumber);
@@ -3053,8 +3074,8 @@ predefined_type_spec
     }
     ;
 
-exception_declarator
-    : EXCEPTION type_attribute_list type_spec declarator_list
+exception_declarator :
+      EXCEPTION type_attribute_list type_spec declarator_list
     {
         $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $3, $4, $2);
         // set parent relationship
@@ -3084,34 +3105,36 @@ library:
         // check if we can find a library with this name
         // if name is scoped, start at root, if not, start at current file
         // component
-        $<_library>$ = 0;
+	CFELibrary *pFEPrevLib = 0;
         if (($7->find("::") != string::npos) || (!pCurFileComponent))
         {
             CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
             assert(pRoot);
-            $<_library>$ = pRoot->FindLibrary(*$7);
+            pFEPrevLib = pRoot->FindLibrary(*$7);
         }
         else if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                $<_library>$ = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$7);
+                pFEPrevLib = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$7);
         }
         // create library and set as current file-component
         CFELibrary *pFELibrary = new CFELibrary(*$7, $3, 0);
         pFELibrary->SetSourceLine(gLineNumber);
-        if ($<_library>$ != 0)
-            $<_library>$->AddSameLibrary(pFELibrary);
+        if (pFEPrevLib != 0)
+            pFEPrevLib->AddSameLibrary(pFELibrary);
         delete $3;
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
             {
-                ((CFELibrary*)pCurFileComponent)->AddLibrary(pFELibrary);
+                ((CFELibrary*)pCurFileComponent)->m_Libraries.Add(pFELibrary);
                 pCurFileComponent = pFELibrary;
             }
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
             {
-                dceerror2("Cannot nest library %s into interface %s.", $7->c_str(), ((CFEInterface*)pCurFileComponent)->GetName().c_str());
+                dceerror2("Cannot nest library %s into interface %s.", 
+		    $7->c_str(),
+		    ((CFEInterface*)pCurFileComponent)->GetName().c_str());
                 delete $7;
                 YYABORT;
             }
@@ -3119,7 +3142,7 @@ library:
         else
         {
             pCurFileComponent = pFELibrary;
-            CParser::GetCurrentFile()->AddLibrary(pFELibrary);
+            CParser::GetCurrentFile()->m_Libraries.Add(pFELibrary);
         }
     } LBRACE lib_definitions RBRACE
     {
@@ -3140,33 +3163,37 @@ library:
         // check if we already have lib with this name
         // if name is scoped, start at root, if not, start at current file
         // component
-        $<_library>$ = 0;
+        CFELibrary *pFEPrevLib  = 0;
         if (($2->find("::") != string::npos) || (!pCurFileComponent))
         {
             CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
             assert(pRoot);
-            $<_library>$ = pRoot->FindLibrary(*$2);
+            pFEPrevLib = pRoot->FindLibrary(*$2);
         }
         else if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                $<_library>$ = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$2);
+                pFEPrevLib = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$2);
         }
         // create library and set as current file-component
-        CFELibrary *pFELibrary = new CFELibrary(*$2, 0, 0);
+        CFELibrary *pFELibrary = new CFELibrary(*$2, 0, 
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
         pFELibrary->SetSourceLine(gLineNumber);
-        if ($<_library>$ != 0)
-            $<_library>$->AddSameLibrary(pFELibrary);
+        if (pFEPrevLib != 0)
+            pFEPrevLib->AddSameLibrary(pFELibrary);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
             {
-                ((CFELibrary*)pCurFileComponent)->AddLibrary(pFELibrary);
+                ((CFELibrary*)pCurFileComponent)->m_Libraries.Add(pFELibrary);
                 pCurFileComponent = pFELibrary;
             }
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
             {
-                dceerror2("Cannot nest library %s into interface %s.", $2->c_str(), ((CFEInterface*)pCurFileComponent)->GetName().c_str());
+                dceerror2("Cannot nest library %s into interface %s.",
+		    $2->c_str(),
+		    ((CFEInterface*)pCurFileComponent)->GetName().c_str());
                 delete $2;
                 YYABORT;
             }
@@ -3174,7 +3201,7 @@ library:
         else
         {
             pCurFileComponent = pFELibrary;
-            CParser::GetCurrentFile()->AddLibrary(pFELibrary);
+            CParser::GetCurrentFile()->m_Libraries.Add(pFELibrary);
         }
     } LBRACE lib_definitions RBRACE
     {
@@ -3200,15 +3227,15 @@ library:
         // component
         CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
         assert(pRoot);
-        $<_library>$ = 0;
+        CFELibrary *pFEPrevLib = 0;
         if (($2->find("::") != string::npos) || (!pCurFileComponent))
         {
-            $<_library>$ = pRoot->FindLibrary(*$2);
+            pFEPrevLib = pRoot->FindLibrary(*$2);
         }
         else if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                $<_library>$ = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$2);
+                pFEPrevLib = ((CFELibrary*)pCurFileComponent)->FindLibrary(*$2);
         }
         // create library but do net set as current, simply add it
         // if scoped name: find libraries first
@@ -3233,18 +3260,20 @@ library:
                 }
             }
         }
-        CFELibrary *pFELibrary = new CFELibrary(sRest, 0, 0);
+        CFELibrary *pFELibrary = new CFELibrary(sRest, 0, 
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
         pFELibrary->SetSourceLine(gLineNumber);
-        if ($<_library>$ != 0)
-            $<_library>$->AddSameLibrary(pFELibrary);
+        if (pFEPrevLib != 0)
+            pFEPrevLib->AddSameLibrary(pFELibrary);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
             {
                 if (pFEScopeLibrary)
-                    pFEScopeLibrary->AddLibrary(pFELibrary);
+                    pFEScopeLibrary->m_Libraries.Add(pFELibrary);
                 else
-                    ((CFELibrary*)pCurFileComponent)->AddLibrary(pFELibrary);
+                    ((CFELibrary*)pCurFileComponent)->m_Libraries.Add(pFELibrary);
             }
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
             {
@@ -3256,9 +3285,9 @@ library:
         else
         {
             if (pFEScopeLibrary)
-                pFEScopeLibrary->AddLibrary(pFELibrary);
+                pFEScopeLibrary->m_Libraries.Add(pFELibrary);
             else
-                CParser::GetCurrentFile()->AddLibrary(pFELibrary);
+                CParser::GetCurrentFile()->m_Libraries.Add(pFELibrary);
         }
         delete $2;
         $$ = NULL;
@@ -3276,14 +3305,14 @@ library_or_module :
 lib_attribute_list :
       lib_attribute_list COMMA lib_attribute
     {
-            if ($3)
-                $1->push_back($3);
-        $$ = $1;
+	if ($3)
+	    $1->push_back($3);
+	$$ = $1;
     }
     | lib_attribute
     {
-        $$ = new vector<CFEAttribute*>();
-    $$->push_back($1);
+	$$ = new vector<CFEAttribute*>();
+	$$->push_back($1);
     }
     | error
     {
@@ -3350,17 +3379,18 @@ lib_attribute :
     ;
 
 lib_definitions :
-      lib_definitions lib_definition
-    {
-        if ($2)
-            $1->push_back($2);
-        $$ = $1;
+      /* empty */
+    {	
+        $$ = NULL;
     }
-    | lib_definition
+    | lib_definitions lib_definition
     {
-        $$ = new vector<CFEFileComponent*>();
-        if ($1)
-            $$->push_back($1);
+    	if ($1)
+	    $$ = $1;
+	else
+	    $$ = new vector<CFEFileComponent*>();
+        if ($2)
+            $$->push_back($2);
     }
     ;
 
@@ -3376,17 +3406,20 @@ lib_definition :
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTypedef($1);
+                ((CFELibrary*)pCurFileComponent)->m_Typedefs.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTypedef($1);
+                ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0,
+                    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
         else
-            CParser::GetCurrentFile()->AddTypedef($1); // should be error, since current-file component should exist
+	    // should be error, since current-file component should exist
+            CParser::GetCurrentFile()->m_Typedefs.Add($1);
     }
     | const_declarator semicolon
     {
@@ -3394,12 +3427,14 @@ lib_definition :
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddConstant($1);
+                ((CFELibrary*)pCurFileComponent)->m_Constants.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddConstant($1);
+                ((CFEInterface*)pCurFileComponent)->m_Constants.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0,
+                    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -3410,12 +3445,14 @@ lib_definition :
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFELibrary*>(pCurFileComponent))
-                ((CFELibrary*)pCurFileComponent)->AddTaggedDecl($1);
+                ((CFELibrary*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddTaggedDecl($1);
+                ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -3430,25 +3467,28 @@ lib_definition :
 attribute_decl :
       READONLY ATTRIBUTE type_spec declarator
     {
+    	$$ = NULL;
         CFEAttribute *tmp = new CFEAttribute(ATTR_READONLY);
         vector<CFEDeclarator*> *tmpVD = new vector<CFEDeclarator*>();
         tmpVD->push_back($4);
         vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
         tmpVA->push_back(tmp);
-        $$ = new CFEAttributeDeclarator($3, tmpVD, tmpVA);
-        $3->SetParent($$);
-        $4->SetParent($$);
-        tmp->SetParent($$);
+        CFEAttributeDeclarator *pAttr = new CFEAttributeDeclarator($3, tmpVD, tmpVA);
+        $3->SetParent(pAttr);
+        $4->SetParent(pAttr);
+        tmp->SetParent(pAttr);
         delete tmpVD;
         delete tmpVA;
-        $$->SetSourceLine(gLineNumber);
+        pAttr->SetSourceLine(gLineNumber);
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddAttributeDeclarator($$);
+                ((CFEInterface*)pCurFileComponent)->m_AttributeDeclarators.Add(pAttr);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -3460,20 +3500,23 @@ attribute_decl :
     }
     | ATTRIBUTE type_spec declarator
     {
+    	$$ = NULL;
         vector<CFEDeclarator*> *tmpVD = new vector<CFEDeclarator*>();
         tmpVD->push_back($3);
-        $$ = new CFEAttributeDeclarator($2, tmpVD);
-        $2->SetParent($$);
-        $3->SetParent($$);
-        $$->SetSourceLine(gLineNumber);
+        CFEAttributeDeclarator *pAttr = new CFEAttributeDeclarator($2, tmpVD);
+        $2->SetParent(pAttr);
+        $3->SetParent(pAttr);
+        pAttr->SetSourceLine(gLineNumber);
         delete tmpVD;
         if (pCurFileComponent)
         {
             if (dynamic_cast<CFEInterface*>(pCurFileComponent))
-                ((CFEInterface*)pCurFileComponent)->AddAttributeDeclarator($$);
+                ((CFEInterface*)pCurFileComponent)->m_AttributeDeclarators.Add(pAttr);
             else
             {
-                TRACE("current file component is unknown type: %s\n", typeid(*pCurFileComponent).name());
+		CCompiler::GccError(NULL, 0, 
+		    "current file component is unknown type: %s\n",
+		    typeid(*pCurFileComponent).name());
                 assert(false);
             }
         }
@@ -3500,8 +3543,8 @@ attribute_decl :
     ;
 */
 
-semicolon
-    : SEMICOLON
+semicolon :
+      SEMICOLON
     | error
     {
         dceerror2("expecting ';'");
@@ -3512,8 +3555,8 @@ semicolon
     }
     ;
 
-rbracket
-    : RBRACKET
+rbracket :
+      RBRACKET
     | error
     {
         dceerror2("expecting ']'");
@@ -3521,8 +3564,8 @@ rbracket
     }
     ;
 
-rparen
-    : RPAREN
+rparen :
+      RPAREN
     | error
     {
         dceerror2("expecting ')'");
@@ -3530,8 +3573,8 @@ rparen
     }
     ;
 
-colon
-    : COLON
+colon :
+      COLON
     | error
     {
         dceerror2("expecting ':'");
@@ -3639,7 +3682,8 @@ DoInterfaceCheck(string *pIName, vector<CFEIdentifier*> *pBaseInterfaces, CFEInt
             }
             if (pInterface == NULL)
             {
-                dceerror2("Couldn't find base interface name \"%s\".", (*iter)->GetName().c_str());
+                dceerror2("Couldn't find base interface name \"%s\".", 
+		    (*iter)->GetName().c_str());
                 return false;
             }
         }
@@ -3666,9 +3710,9 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary)
         if (dynamic_cast<CFELibrary*>(pCurFileComponent))
         {
             if (pFELibrary)
-                pFELibrary->AddInterface(pFEInterface);
+                pFELibrary->m_Interfaces.Add(pFEInterface);
             else
-                ((CFELibrary*)pCurFileComponent)->AddInterface(pFEInterface);
+                ((CFELibrary*)pCurFileComponent)->m_Interfaces.Add(pFEInterface);
         }
         else if (dynamic_cast<CFEInterface*>(pCurFileComponent))
         {
@@ -3681,9 +3725,9 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary)
     else
     {
         if (pFELibrary)
-            pFELibrary->AddInterface(pFEInterface);
+            pFELibrary->m_Interfaces.Add(pFEInterface);
         else
-            CParser::GetCurrentFile()->AddInterface(pFEInterface);
+            CParser::GetCurrentFile()->m_Interfaces.Add(pFEInterface);
     }
     return true;
 }

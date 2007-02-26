@@ -4,6 +4,7 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/kernel.h>
 #include <l4/util/mb_info.h>
+#include <l4/rmgr/proto.h>
 
 extern l4_threadid_t     myself;	/* the rmgr threadid */
 extern l4_threadid_t     my_pager;	/* the pager threadid */
@@ -30,7 +31,7 @@ void rmgr_main(int memdump) L4_NORETURN;
 #else
 #  define RMGR_TASK_MAX (1L << 11)
 #endif
-#define RMGR_IRQ_MAX	16		/* max number of IRQs */
+
 #define RMGR_IO_MAX	L4_IOPORT_MAX	/* max number of IO ports */
 #define RMGR_SMALL_MAX	128		/* max number of small spaces */
 #define RMGR_CFG_MAX	128		/* max number of configurations */

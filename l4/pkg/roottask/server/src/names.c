@@ -4,14 +4,21 @@
 
 /* rmgr name resolution service for started tasks  */
 
-static mb_mod_name_t module_names[MODS_MAX] = { {0} };
-static l4_threadid_t module_ids[MODS_MAX]   = { L4_INVALID_ID, };
+static mb_mod_name_t module_names[MODS_MAX];
+static l4_threadid_t module_ids[MODS_MAX];
 static unsigned      max_modules_names;
 
 void
 names_set(l4_threadid_t task, const char *name)
 {
+  if (max_modules_names >= MODS_MAX)
+    {
+      printf("ROOTTASK: ERROR: too many names to register:"
+             " '%s' not registered\n", name);
+      return;
+    }
   module_ids[max_modules_names] = task;
+
   snprintf(module_names[max_modules_names],
 	   sizeof(module_names[0]), "%s", name);
   max_modules_names++;

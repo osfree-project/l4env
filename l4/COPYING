@@ -1,3 +1,13 @@
+
+  NOTE! This License shall not affect user programs that use the micro-kernel
+API to invoke kernel-operations or services provided in other address
+spaces - this is merely considered normal use of the kernel or
+accompanying user-level services, and does not fall under the heading of
+"derivative work".
+
+-----------------------------------------------------------------------
+
+
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991
 

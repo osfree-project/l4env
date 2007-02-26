@@ -1,6 +1,6 @@
 INTERFACE:
 
-#include <stddef.h>		// size_t
+#include <cstddef>		// size_t
 
 #include "slab_cache_anon.h"		// slab_cache_anon
 

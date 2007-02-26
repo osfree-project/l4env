@@ -1,0 +1,28 @@
+The L4 port of Qt3 is currently unmaintained. It may or may not work for you.
+We provide it as is and do _NOT_ provide any support.
+
+
+Nevertheless, this is what should work if you built Qt3/L4 with _dietlibc_:
+
+* The GUI framework is supposed to work with the l4con I/O back end (you may
+  also use 'proxygon', if you want to run Qt3 with DOpE). There is also
+  Makefile support for Qt Designer (*.ui files, images).
+* File I/O works partially, largely depending on the L4VFS file servers you
+  use. Listing directory contents will be broken, if you built with ucLibc
+  instead of dietlibc.
+* Network support is broken.
+* Process control, shared libraries, and sound are not supported by the
+  library. Other functionality not listed here is untested and may not work.
+
+The following packages/modules from the remote CVS of the TU Dresden Operating
+system group are required:
+
+ - dietlibc (Qt3 also compiles with uclibc, but file I/O will be broken then)
+ - L4VFS
+ - local_socks
+ - l4con or proxygon
+ - rtc
+ - semaphore
+ - dm_phys
+ - cxx*
+ - ...

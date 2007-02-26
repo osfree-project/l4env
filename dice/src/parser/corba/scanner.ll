@@ -27,11 +27,10 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
-using namespace std;
+#include <cassert>
 
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -39,9 +38,9 @@ using namespace std;
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEEnumType.h"
+#include "fe/FEIDLUnionType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FEArrayType.h"
@@ -88,7 +87,7 @@ static int HexToChar(char*);
 static int EscapeToChar(char*);
 %}
 
-%option noyywrap
+%option noyywrap nounput
 
 /* some rules */
 Id                [a-zA-Z_][a-zA-Z0-9_]*
@@ -156,86 +155,105 @@ Filename        ("\""|"<")("<")?[a-zA-Z0-9_\./\\:\- ]*(">")?("\""|">")
                         sNewFileNameCORBA = sTopLevelInFileName;
                 }
 <line2>[1-4]    {
-                    // find path file file
-                    int nFlags = atoi(yytext);
-                    CParser *pParser = CParser::GetCurrentParser();
-                    if (corbadebug)
-                        fprintf(stderr, "CORBA: # %d \"%s\" %d found\n", nNewLineNumberCORBA,
-                            sNewFileNameCORBA.c_str(), nFlags);
-                    switch(nFlags)
-                    {
-                    case 1:
-                    case 3:
-                        {
-                            // get path for file
-                            CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
-                            unsigned char nRet = 2;
-                            // comment the following line to allow recursive self-inclusion
-                            if (sNewFileNameCORBA != sInFileName)
-                                // import this file
-                                nRet = pParser->Import(sNewFileNameCORBA);
-                            switch (nRet)
-                            {
-                            case 0:
-                                // error
-                                yyterminate();
-                                break;
-                            case 1:
-                                // ok, but create file
-                                {
-                                    string sPath = pPreProcess->FindPathToFile(sNewFileNameCORBA, gLineNumber);
-                                    string sOrigName = pPreProcess->GetOriginalIncludeForFile(sNewFileNameCORBA, gLineNumber);
-                                    bool bStdInc = pPreProcess->IsStandardInclude(sNewFileNameCORBA, gLineNumber);
-                                    // IDL files should be included in the search list of the preprocessor.
-                                    // nonetheless, we do this additional check, just to make sure...
+    // find path file file
+    int nFlags = atoi(yytext);
+    CParser *pParser = CParser::GetCurrentParser();
+    if (corbadebug)
+	fprintf(stderr, "CORBA: # %d \"%s\" %d found\n", nNewLineNumberCORBA,
+	    sNewFileNameCORBA.c_str(), nFlags);
+    switch(nFlags)
+    {
+    case 1:
+	{
+	    // get path for file
+	    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+	    unsigned char nRet = 2;
+	    // comment the following line to allow recursive self-inclusion
+	    if (sNewFileNameCORBA != sInFileName)
+		// import this file
+		nRet = pParser->Import(sNewFileNameCORBA);
+	    switch (nRet)
+	    {
+	    case 0:
+		// error
+		yyterminate();
+		break;
+	    case 1:
+		// ok, but create file
+		{
+		    string sPath = pPreProcess->FindPathToFile(
+		    	sNewFileNameCORBA, gLineNumber);
+		    string sOrigName = pPreProcess->GetOriginalIncludeForFile(
+		    	sNewFileNameCORBA, gLineNumber);
+		    bool bStdInc = pPreProcess->IsStandardInclude(
+		    	sNewFileNameCORBA, gLineNumber);
+		    // The returned path should never be empty. If it
+		    // is, then the file name sNewFileNameDCE did not
+		    // contain it. The preprocessor, however, stored
+		    // it in an additional vector, so go check there.
+		    if (sPath.empty())
+		        sPath =
+			    pPreProcess->GetIncludePath(sNewFileNameCORBA);
+		    // IDL files should be included in the search list of the
+		    // preprocessor.  nonetheless, we do this additional
+		    // check, just to make sure...
 
-                                    // if path is set and origname is empty, then sNewFileNameGccC is with full path
-                                    // and FindPathToFile returned an include path that matches the beginning of the
-                                    // string. Now we get the original name by cutting off the beginning of the string,
-                                    // which is the path
-                                    // ITS DEACTIVATED BUT THERE
-                                    //if (!sPath.empty() && sOrigName.empty())
-                                    //    sOrigName = sNewFileNameCORBA.substr(sPath.length());
-                                    if (sOrigName.empty())
-                                        sOrigName = sNewFileNameCORBA;
-                                    // simply create new CFEFile and set it as current
-                                    CFEFile *pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bStdInc);
-                                    CParser::SetCurrentFile(pFEFile);
-                                    sInFileName = sNewFileNameCORBA;
-                                    gLineNumber = nNewLineNumberCORBA;
-                                    if (corbadebug)
-                                        fprintf(stderr, " gLineNumber: %d (%s)\n", gLineNumber, sInFileName.c_str());
-                                }
-                                // fall through
-                            case 2:
-                                // ok do nothing
-                                break;
-                            }
-                        }
-                        bNeedToSetFileCORBA = false;
-                        break;
-                    case 2:
-                        // check if we have to switch the parsers back
-                        // e.g. by sending an EOF (yyterminate)
-                        if (pParser->DoEndImport())
-                        {
-                            // update state info for parent, so its has new line number
-                            // Gcc might have eliminated some lines, so old line number can be incorrect
-                            pParser->UpdateState(sNewFileNameCORBA, nNewLineNumberCORBA);
-                            if (corbadebug)
-                                fprintf(stderr, "CORBA: Update line info for %s to %d\n", sNewFileNameCORBA.c_str(), nNewLineNumberCORBA);
-                            bNeedToSetFileCORBA = false;
-                            return EOF_TOKEN;
-                        }
-                        else
-                            CParser::SetCurrentFileParent();
-                        fprintf(stderr, "CORBA: End of file %s, new file: %s at line %d (update? %s)\n",
-                            sInFileName.c_str(), sNewFileNameCORBA.c_str(), nNewLineNumberCORBA,
-                            bNeedToSetFileCORBA ? "yes" : "no");
-                        break;
-                    case 4:
-                        break;
-                    }
+		    // if path is set and origname is empty, then
+		    // sNewFileNameGccC is with full path and FindPathToFile
+		    // returned an include path that matches the beginning of
+		    // the string. Now we get the original name by cutting off
+		    // the beginning of the string, which is the path
+		    // ITS DEACTIVATED BUT THERE
+		    //if (!sPath.empty() && sOrigName.empty())
+		    //    sOrigName = sNewFileNameCORBA.substr(sPath.length());
+		    if (sOrigName.empty())
+			sOrigName = sNewFileNameCORBA;
+		    // simply create new CFEFile and set it as current
+		    CFEFile *pFEFile = new CFEFile(sOrigName, sPath, 
+		    	gLineNumber, bStdInc);
+		    CParser::SetCurrentFile(pFEFile);
+		    sInFileName = sNewFileNameCORBA;
+		    gLineNumber = nNewLineNumberCORBA;
+		    if (corbadebug)
+			fprintf(stderr, " gLineNumber: %d (%s)\n", 
+			    gLineNumber, sInFileName.c_str());
+		}
+		// fall through
+	    case 2:
+		// ok do nothing
+		break;
+	    }
+	}
+	bNeedToSetFileCORBA = false;
+	break;
+    case 2:
+	// check if we have to switch the parsers back
+	// e.g. by sending an EOF (yyterminate)
+	if (pParser->DoEndImport())
+	{
+	    // update state info for parent, so its has new line number
+	    // Gcc might have eliminated some lines, so old line number can be
+	    // incorrect
+	    pParser->UpdateState(sNewFileNameCORBA, nNewLineNumberCORBA);
+	    if (corbadebug)
+		fprintf(stderr, "CORBA: Update line info for %s to %d\n", 
+		    sNewFileNameCORBA.c_str(), nNewLineNumberCORBA);
+	    bNeedToSetFileCORBA = false;
+	    return EOF_TOKEN;
+	}
+	else
+	    CParser::SetCurrentFileParent();
+	fprintf(stderr, "CORBA: End of file %s, new file: %s at line %d (update? %s)\n",
+	    sInFileName.c_str(), sNewFileNameCORBA.c_str(), nNewLineNumberCORBA,
+	    bNeedToSetFileCORBA ? "yes" : "no");
+	break;
+    case 3:
+    case 4:
+	/* ignore 3 and 4, because they only provide
+	 * additional meaning to the line statement
+	 */
+	break;
+    }
                 }
 <line,line2>("\r")?"\n" {
                     BEGIN(INITIAL);

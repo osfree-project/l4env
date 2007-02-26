@@ -39,6 +39,9 @@ void add_client(CORBA_Object tid, char *addr, int max_views, int max_buffers) {
 	new_client->max_views   = max_views;
 	new_client->max_buffers = max_buffers;
 
+	bzero(new_client->buffers, sizeof(buffer) * max_buffers);
+	bzero(new_client->views,   sizeof(view)   * max_views);
+
 	if (tid) {
 		new_client->tid = *tid;
 		names_query_id(new_client->tid, &new_client->label[0], CLIENT_LABEL_LEN - 1);

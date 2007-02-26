@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEFile.h
- *    \brief   contains the declaration of the class CFEFile
+ *  \file    dice/src/fe/FEFile.h
+ *  \brief   contains the declaration of the class CFEFile
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,9 +31,9 @@
 #define __DICE_FE_FEFILE_H__
 
 #include "FEBase.h"
+#include "template.h"
 #include <string>
 #include <vector>
-using namespace std;
 
 class CFETypedDeclarator;
 class CFEConstDeclarator;
@@ -52,130 +52,63 @@ class CFEFile : public CFEBase
 // constructor/desctructor
 public:
     /** constructs a idl file representation */
-    CFEFile(string sFileName, string sPath, int nIncludedOnLine = 1, 
-	int nStdInclude = 0);
+    CFEFile(string sFileName, string sPath, int nIncludedOnLine = 1, int nStdInclude = 0);
     virtual ~CFEFile();
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEFile(CFEFile &src);
 
 // Operations
 public:
-    virtual string GetFullFileName();
-    virtual bool IsStdIncludeFile();
-    virtual int GetTypedefCount(bool bCountIncludes = true);
-    virtual int GetConstantCount(bool bCountIncludes = true);
-    virtual bool IsIDLFile();
-    virtual void Serialize(CFile *pFile);
-    virtual void Dump();
-    virtual bool CheckConsistency();
-    virtual string GetFileNameWithoutExtension();
-    virtual bool HasExtension(string sExtension);
-    virtual string GetFileName();
-
-    virtual CFEConstructedType* FindTaggedDecl(string sName);
-    virtual CFEConstructedType* GetNextTaggedDecl(
-	vector<CFEConstructedType*>::iterator &iter);
-    virtual vector<CFEConstructedType*>::iterator GetFirstTaggedDecl();
-    virtual void AddTaggedDecl(CFEConstructedType *pTaggedDecl);
-
-    virtual CFEConstDeclarator* FindConstDeclarator(string sName);
-    virtual CFEConstDeclarator* GetNextConstant(
-	vector<CFEConstDeclarator*>::iterator &iter);
-    virtual vector<CFEConstDeclarator*>::iterator GetFirstConstant();
-    virtual void AddConstant(CFEConstDeclarator* pConstant);
-
-    virtual CFETypedDeclarator* FindUserDefinedType(string sName);
-    virtual CFETypedDeclarator* FindUserDefinedType(const char* sName);
-    virtual CFETypedDeclarator* GetNextTypedef(
-	vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstTypedef();
-    virtual void AddTypedef(CFETypedDeclarator* pTypedef);
-
-    virtual CFELibrary* FindLibrary(string sName);
-    virtual CFELibrary* FindLibrary(const char* sName);
-    virtual CFELibrary* GetNextLibrary(vector<CFELibrary*>::iterator &iter);
-    virtual vector<CFELibrary*>::iterator GetFirstLibrary();
-    virtual void AddLibrary(CFELibrary *pLibrary);
-
-    virtual CFEInterface* FindInterface(string sName);
-    virtual CFEInterface* FindInterface(const char* sName);
-    virtual CFEInterface* GetNextInterface(
-	vector<CFEInterface*>::iterator &iter);
-    virtual vector<CFEInterface*>::iterator GetFirstInterface();
-    virtual void AddInterface(CFEInterface *pInterface);
-
-    virtual CFEFile* GetNextChildFile(vector<CFEFile*>::iterator &iter);
-    virtual vector<CFEFile*>::iterator GetFirstChildFile();
-    virtual void AddChild(CFEFile *pNewChild);
-
-    virtual vector<CIncludeStatement*>::iterator GetFirstInclude();
-    virtual CIncludeStatement* GetNextInclude(
-	vector<CIncludeStatement*>::iterator &iter);
-    virtual void AddInclude(CIncludeStatement *pNewInclude);
+    string GetFullFileName();
+    bool IsStdIncludeFile();
+    int GetTypedefCount(bool bCountIncludes = true);
+    int GetConstantCount(bool bCountIncludes = true);
+    bool IsIDLFile();
+    virtual void Accept(CVisitor&);
+    string GetFileNameWithoutExtension();
+    bool HasExtension(string sExtension);
+    string GetFileName();
+    
+    CFEConstDeclarator* FindConstDeclarator(string sName);
+    CFEConstructedType* FindTaggedDecl(string sName);
+    CFETypedDeclarator* FindUserDefinedType(string sName);
+    CFETypedDeclarator* FindUserDefinedType(const char* sName);
+    CFELibrary* FindLibrary(string sName);
+    CFELibrary* FindLibrary(const char* sName);
+    CFEInterface* FindInterface(string sName);
+    CFEInterface* FindInterface(const char* sName);
 
     virtual CObject* Clone();
 
-    virtual int GetIncludedOnLine();
-    virtual int GetSourceLineEnd();
+    int GetIncludedOnLine();
+    int GetSourceLineEnd();
 
     virtual CFEFile* FindFile(string sFileName);
 
 // Attributes
 protected:
-    /**    \var vector<CFEConstructedType*> m_vTaggedDecls
-     *    \brief the tagged struct and union declarations
+    /** \var string m_sFilename
+     *  \brief contains the file name of the component
      */
-    vector<CFEConstructedType*> m_vTaggedDecls;
-    /**    \var vector<CFEConstDeclarator*> m_vConstants
-     *    \brief the constants of this file
-     */
-    vector<CFEConstDeclarator*> m_vConstants;
-    /**    \var vector<CFETypedDeclarator*> m_vTypedefs
-     *    \brief the type definitions in this file
-     */
-    vector<CFETypedDeclarator*> m_vTypedefs;
-    /**    \var vector<CFELibrary*> m_vLibraries
-     *    \brief the libraries in this file
-     */
-    vector<CFELibrary*> m_vLibraries;
-    /**    \var vector<CFEInterface*> m_vInterfaces
-     *    \brief the interfaces in this file
-     */
-    vector<CFEInterface*> m_vInterfaces;
-    /**    \var vector<CFEFile*> m_vChildFiles
-     *    \brief the child files (included files)
-     */
-    vector<CFEFile*> m_vChildFiles;
-    /** \var vector<CIncludeStatement*> m_vIncludes
-     *  \brief contains the include statements
-     *
-     * The preprocessor might swallow some included files,
-     * because they have been included elsewhere already.
-     * Therefore we keep an extra list of include statements.
-     */
-    vector<CIncludeStatement*> m_vIncludes;
-    /** \var string m_sFileName
-     *    \brief contains the file name of the component
-     */
-    string m_sFileName;
-    /**    \var string m_sFilenameWithoutExtension
-     *    \brief the file name without the extension
+    string m_sFilename;
+    /** \var string m_sFilenameWithoutExtension
+     *  \brief the file name without the extension
      */
     string m_sFilenameWithoutExtension;
-    /**    \var string m_sFileExtension
-     *    \brief the extension of the file name
+    /** \var string m_sFileExtension
+     *  \brief the extension of the file name
      */
     string m_sFileExtension;
-    /**    \var string m_sFileWithPath
-     *    \brief the file-name with the complete path
+    /** \var string m_sFileWithPath
+     *  \brief the file-name with the complete path
      */
     string m_sFileWithPath;
-    /**    \var int m_nStdInclude
-     *    \brief set to 1 if this file is a standard include file (#include <...>)
+    /** \var int m_nStdInclude
+     *  \brief set to 1 if this file is a standard include file (\#include <...>)
      *
      * A standard include file is a file included by using "<" ">" instead of '"'.
      * This option is used with the notstdinc option.
@@ -185,6 +118,40 @@ protected:
      *  \brief the line number this file has been included from
      */
     int m_nIncludedOnLine;
+
+public:
+    /** \var CSearchableCollection<CFEConstDeclarator, string> m_Constants
+     *  \brief the constants of this file
+     */
+    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
+    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Typedefs
+     *  \brief the type definitions in this file
+     */
+    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
+    /** \var CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators
+     *  \brief the tagged struct and union declarations
+     */
+    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
+    /** \var CSearchableCollection<CFELibrary, string> m_Libraries
+     *  \brief the libraries in this file
+     */
+    CSearchableCollection<CFELibrary, string> m_Libraries;
+    /** \var CSearchableCollection<CFEInterface, string> m_Interfaces
+     *  \brief the interfaces in this file
+     */
+    CSearchableCollection<CFEInterface, string> m_Interfaces;
+    /** \var CCollection<CFEFile> m_ChildFiles
+     *  \brief the child files (included files)
+     */
+    CCollection<CFEFile> m_ChildFiles;
+    /** \var CCollection<CIncludeStatement> m_Includes
+     *  \brief contains the include statements
+     *
+     * The preprocessor might swallow some included files,
+     * because they have been included elsewhere already.
+     * Therefore we keep an extra list of include statements.
+     */
+    CCollection<CIncludeStatement> m_Includes;
 };
 
 #endif // __DICE_FE_FEFILE_H__

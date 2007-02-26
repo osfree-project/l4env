@@ -65,7 +65,10 @@ static int init_malloc(size_t size){
 	goto e_free;
     }
 
+    /* dm_phys now delivers zero'ed memory */
+    /*
     memset(baseaddr, 0, size);
+    */
 
     /* allocate the small/big-map at the end. We have 1 bit per page. */
     size_owner_map = (size+L4_PAGESIZE*8-1) >>(L4_PAGESHIFT+3);
@@ -75,7 +78,7 @@ static int init_malloc(size_t size){
 
     /* initialize the buddy system */
     if((buddy = l4buddy_create(baseaddr, size))==0){
-	LOG_Error("l4buddy_create(%p, %d) failed", baseaddr, size);
+	LOG_Error("l4buddy_create(%p, %ld) failed", baseaddr, (l4_addr_t)size);
 	goto e_free;
     }
 
@@ -169,7 +172,7 @@ static void  slab_release(l4slab_cache_t *slab, void*addr, void*data){
 }
 
 void* malloc(size_t size){
-    LOGd_Enter(LOG_MALLOC_MALLOC, "size=%d", size);
+    LOGd_Enter(LOG_MALLOC_MALLOC, "size=%ld", (l4_addr_t)size);
 
     if(size>=L4BUDDY_BUDDY_SIZE-sizeof(l4slab_cache_t*)){
 	void *addr;
@@ -183,7 +186,7 @@ void* malloc(size_t size){
 
 	slab = get_slab(size+sizeof(l4slab_cache_t*));
 	if(!slab){
-	    LOG_Error("Could not get a slab for size %d", size);
+	    LOG_Error("Could not get a slab for size %ld", (l4_addr_t)size);
 	    return 0;
 	}
 	l4semaphore_down(&slab_lock);

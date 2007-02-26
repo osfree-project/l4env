@@ -1,8 +1,10 @@
 INTERFACE[ia32,ux]:
 
+#include <cassert>
 #include "types.h"
 #include "config.h"
-#include "assert.h"
+
+class Paging {};
 
 class Ptab;
 class Pdir;
@@ -95,15 +97,35 @@ namespace Page
     USER_XO       = 0x00000004, ///< User Execute only
     USER_RWX      = 0x00000006, ///< User Read/Write/Execute
     MAX_ATTRIBS   = 0x00000006,
+    Cache_mask    = 0x00000018, ///< Cache attrbute mask
+    CACHEABLE     = 0x00000000,
+    NONCACHEABLE  = 0x00000018,
   };
 };
 
 
 IMPLEMENTATION[ia32,ux]:
 
-#include <cstring>
+#include "cpu.h"
 #include "mem_layout.h"
 #include "regdefs.h"
+
+/* this functions do nothing on IA32 architecture */
+PUBLIC static inline
+Address
+Paging::canonize(Address addr)
+{
+  return addr;
+}
+
+PUBLIC static inline
+Address
+Paging::decanonize(Address addr)
+{
+  return addr;
+}
+
+//---------------------------------------------------------------------------
 
 IMPLEMENT inline NEEDS["regdefs.h"]
 Mword PF::is_translation_error(Mword error)
@@ -117,11 +139,22 @@ Mword PF::is_usermode_error(Mword error)
   return (error & PF_ERR_USERMODE);
 }
 
-
 IMPLEMENT inline NEEDS["regdefs.h"]
 Mword PF::is_read_error(Mword error)
 {
   return !(error & PF_ERR_WRITE);
+}
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::usermode_error()
+{
+  return PF_ERR_USERMODE;
+}
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::write_error()
+{
+  return PF_ERR_WRITE;
 }
 
 IMPLEMENT inline NEEDS["regdefs.h"]
@@ -136,7 +169,6 @@ Mword PF::pc_to_msgword1(Address pc, Mword error)
 {
   return is_usermode_error(error) ? pc : (Mword)-1;
 }
-
 
 //---------------------------------------------------------------------------
 
@@ -412,11 +444,11 @@ Pdir::operator[](unsigned idx) const
   return _entries[idx].raw();
 }
 
-PUBLIC inline NEEDS[<cstring>]
+PUBLIC inline NEEDS["cpu.h"]
 void
 Pdir::clear()
 {
-  memset(_entries, 0, Config::PAGE_SIZE);
+  Cpu::memset_mwords(_entries, 0, Config::PAGE_SIZE/sizeof(Mword));
 }
 
 PUBLIC
@@ -497,10 +529,10 @@ Ptab::operator[](unsigned idx) const
   return _entries[idx].raw();
 }
 
-PUBLIC inline NEEDS[<cstring>]
+PUBLIC inline NEEDS["cpu.h"]
 void
 Ptab::clear()
 {
-  memset(_entries, 0, Config::PAGE_SIZE);
+  Cpu::memset_mwords(_entries, 0, Config::PAGE_SIZE/sizeof(Mword));
 }
 

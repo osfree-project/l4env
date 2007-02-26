@@ -110,15 +110,15 @@ __command_thread(void * data)
  * \brief  Create real-time strean, not supported
  */
 /*****************************************************************************/ 
-l4_int32_t 
+int
 l4blk_cmd_create_stream_component(CORBA_Object _dice_corba_obj,
                                   l4blk_driver_id_t drv,
-                                  l4_uint32_t device,
-                                  l4_uint32_t bandwidth,
-                                  l4_uint32_t period,
-                                  l4_uint32_t blk_size,
+                                  unsigned long device,
+                                  unsigned long bandwidth,
+                                  unsigned long period,
+                                  unsigned long blk_size,
                                   float q,
-                                  l4_uint32_t meta_int,
+                                  unsigned long meta_int,
                                   l4blk_stream_t * stream,
                                   CORBA_Server_Environment * _dice_corba_env)
 {
@@ -131,7 +131,7 @@ l4blk_cmd_create_stream_component(CORBA_Object _dice_corba_obj,
  * \brief  Close real-time strean, not supported
  */
 /*****************************************************************************/ 
-l4_int32_t 
+int
 l4blk_cmd_close_stream_component(CORBA_Object _dice_corba_obj,
                                  l4blk_driver_id_t drv,
                                  l4blk_stream_t stream,
@@ -146,12 +146,12 @@ l4blk_cmd_close_stream_component(CORBA_Object _dice_corba_obj,
  * \brief  Start real-time strean, not supported
  */
 /*****************************************************************************/ 
-l4_int32_t 
+int
 l4blk_cmd_start_stream_component(CORBA_Object _dice_corba_obj,
                                  l4blk_driver_id_t drv,
                                  l4blk_stream_t stream,
-                                 l4_uint32_t time,
-                                 l4_uint32_t request_no,
+                                 unsigned long time,
+                                 unsigned long request_no,
                                  CORBA_Server_Environment * _dice_corba_env)
 {
   /* not supported */
@@ -176,14 +176,14 @@ l4blk_cmd_start_stream_component(CORBA_Object _dice_corba_obj,
  * \return 0 on success, error code otherwise
  */
 /*****************************************************************************/ 
-l4_int32_t
+int
 l4blk_cmd_put_request_component(CORBA_Object _dice_corba_obj,
                                 l4blk_driver_id_t drv,
                                 const l4blk_blk_request_t *request,
                                 const void *sg_list,
-                                l4_int32_t sg_size,
-                                l4_int32_t sg_num,
-                                l4_int32_t sg_type,
+                                int sg_size,
+                                int sg_num,
+                                int sg_type,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int i, ret;
@@ -303,7 +303,7 @@ l4blk_cmd_put_request_component(CORBA_Object _dice_corba_obj,
  * \return 0 on success, error code otherwise
  */
 /*****************************************************************************/ 
-l4_int32_t 
+int
 l4blk_cmd_ctrl_component(CORBA_Object _dice_corba_obj,
                          l4blk_driver_id_t drv,
                          l4_uint32_t command,

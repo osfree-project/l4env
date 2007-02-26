@@ -76,14 +76,14 @@ free_map_area(void)
  * \retval _ev		Flick exception structure (unused)
  * \return		0 on success
  *			-L4_ENOMEM if allocation failed */
-l4_int32_t
-l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
-                            const char* fname,
-                            const l4_threadid_t *dm,
-                            l4_uint32_t flags,
-                            l4dm_dataspace_t *ds,
-                            l4_uint32_t *size,
-                            CORBA_Server_Environment *_dice_corba_env)
+long
+l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
+                             const char* fname,
+                             const l4_threadid_t *dm,
+                             unsigned long flags,
+                             l4dm_dataspace_t *ds,
+                             l4_size_t *size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   gzFile fd;
@@ -142,7 +142,7 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
     {
       if ((fread = gzread(fd, buf, sizeof(buf))) == -1)
 	{
-	  printf("Error decoding file %s: -%d\n", fname, lx_errno);
+	  printf("Error reading (or decoding) file %s: -%d\n", fname, lx_errno);
 	  return -L4_EIO;
 	}
       if (fread == 0)

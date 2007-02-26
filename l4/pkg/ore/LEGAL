@@ -1,0 +1,28 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".	
+
+idl : TUD
+doc : TUD
+include : TUD
+lib/uip/contrib : Adam Dunkels : Swedish Institute of Computer Science
+lib/uip/uip-ore : GPL	# because of using list.h from Linux source
+lib/client : GPL		# because of using list.h from Linux source
+lib/server : GPL		# because of using list.h from Linux source
+examples/arping : TUD
+examples/debug : TUD
+examples/healing_http : TUD
+examples/log_ore : TUD
+examples/mini_http_uip : TUD
+examples/ore_test : TUD
+examples/uip_ore : TUD
+server/idl : TUD
+server/include/linuxemul.h : TUD
+server/include/config.h : TUD
+server/include/linux_headers : GPL
+server/lib/linuxemul : GPL	# Linux sources inside
+server/lib/net : GPL		# Linux sources inside
+server/src : GPL			# using list.h from Linux source

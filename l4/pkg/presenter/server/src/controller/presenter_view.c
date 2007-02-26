@@ -16,6 +16,8 @@ struct private_view;
 
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/errno.h>
+#include <l4/thread/thread.h>
+#include <l4/util/util.h>
 
 #include <l4/dope/vscreen.h>        /* DOpE VScreen lib */
 #include <l4/dope/keycodes.h>
@@ -26,6 +28,7 @@ struct private_view;
 #include "model/presenter.h"
 #include "util/module_names.h"
 #include "util/dataprovider.h"
+#include "util/timer.h"
 #include "model/slide.h"
 #include "model/presentation.h"
 #include "model/presmanager.h"
@@ -84,6 +87,7 @@ static struct arraylist_services *arraylist;
 static struct pres_display_services *display;
 static struct dataprovider_services *dataprovider;
 static struct presenter_general_services *presenter;
+static struct timer_services *timer;
 
 static struct presenter_methods gen_methods;
 
@@ -138,6 +142,12 @@ static void full_vscr_press_callback(dope_event *e,void *arg)
         showSlide(pv, arraylist->get_current_index(pv->slide_list)+1);
         break;
 
+        case DOPE_KEY_P:
+
+        timer->timer_pause();
+
+        break;
+          
         default:
             break;
         }
@@ -158,6 +168,8 @@ static void go_entry_commit_callback(dope_event *e,void *arg) {
     /* reset input field and close go window */
     dope_cmd(pv->app_id,"go_entry.set(-text \"\")");
     dope_cmd(pv->app_id,"go_window.close()");
+
+    timer->timer_pause();
 
     showSlide(pv, slide_nr);
 }
@@ -188,6 +200,10 @@ static void appw_press_callback(dope_event *e,void *arg) {
 
 	    button_fullscreen_callback(NULL, pv);
             break;
+
+            case DOPE_KEY_P:
+
+            timer->timer_pause();
 
             default:
             break;
@@ -229,6 +245,9 @@ static void button_reload_callback(dope_event *e,void *arg) {
     PRESENTER_VIEW *pv = (PRESENTER_VIEW *) caps->capsuled_pv;
     key = caps->current_index;
 
+    /* clear vscreen window */
+    memset(pv->scradr,0,sizeof(u16)*fullscr_w*fullscr_h);
+    
     p =  pm->pmm->get_presentation(pm,key);
 
     if (! p)
@@ -275,6 +294,9 @@ static void button_reload_callback(dope_event *e,void *arg) {
         pv->pvm->show_presentation(pv,pres_key);
     }
 
+    timer->timer_stop();
+    timer->timer_start();
+
    return;
 }
 
@@ -285,6 +307,10 @@ static void button_goto_callback(dope_event *e,void *arg) {
 
     dope_cmd(pv->app_id,"go_window.open()");
     dope_cmd(pv->app_id,"go_window.top()");
+
+    /* if timer running, pause it */
+    if (timer->timer_pause())
+      timer->timer_pause();
 }
 
 static void button_next_callback(dope_event *e,void *arg) {
@@ -324,6 +350,7 @@ static void button_open_presentation(dope_event *e,void *arg) {
     if (pv->curr_pres != key) {
         pv->pvm->show_presentation(pv,key);
     }
+    timer->timer_start();
 }
 
 static void button_close_presentation(dope_event *e,void *arg) {
@@ -344,6 +371,8 @@ static void button_close_presentation(dope_event *e,void *arg) {
 
     pv->pvm->update_open_pres(pv);
 
+    timer->timer_stop();
+    timer->timer_setabstime(0);
     LOGd(_DEBUG,"finished button_close event");
 }
 
@@ -449,7 +478,7 @@ static void show_presentation(PRESENTER_VIEW *pv, int curr_key) {
 
         dope_bind(pv->app_id,slide_name,"press", &prev_vscreen_callback, (void *)caps);
 
-        dope_cmdf(pv->app_id, "%s.refresh()",slide_name);
+        /* dope_cmdf(pv->app_id, "%s.refresh()",slide_name); */
 
         pv->pvm->update_load_display(pv,i+1);
     }
@@ -647,7 +676,7 @@ static void update_load_display(PRESENTER_VIEW *pv, int value) {
 
     if (value == CLOSE_LOAD_DISPLAY)
     {
-         dope_cmd(pv->app_id,"progress.close()");
+        dope_cmd(pv->app_id,"progress.close()");
     }
 
     /* update LoadDisplay window */
@@ -659,11 +688,52 @@ static void update_load_display(PRESENTER_VIEW *pv, int value) {
     }
 }
 
+static void draw_durationline(PRESENTER_VIEW *pv,double percent){
+    u16 color = 0;
+    if (percent == -1) return;
+    /* draw durationbar on the bottom of the presentation window */
+    if (*(pv->scradr + (fullscr_h-1)*fullscr_w) < (u16)30) 
+      /* nearly black, so we have to be lighter */
+      color = 0x010;
+    else if (*(pv->scradr + (fullscr_h-1)*fullscr_w) == 4112)
+      /* already chose another color */
+      color = 0x010;
+    memset(pv->scradr + (fullscr_h-1)*fullscr_w, color, (int)sizeof(u16)*fullscr_w*percent);
+    dope_cmd(pv->app_id,"vscr.refresh()");
+}
+
+static void event_source_thread(void *arg){
+    int app_id = (int)arg;
+
+    while(1) {
+        dope_event ev;
+        ev.type = EVENT_TYPE_UNDEFINED;
+        dope_inject_event(app_id,&ev,0,0);
+        l4_sleep(1000);
+    }
+}
+  
 static void eventloop(PRESENTER_VIEW *pv) {
     if (!pv) return;
 
-    /* enter mainloop */
-    dope_eventloop(pv->app_id);
+    /* historic:
+     *  enter mainloop 
+     *  dope_eventloop(pv->app_id); */
+    
+    /* create event_source_thread, which generates an empty event
+     * every second */
+    l4thread_create(&event_source_thread,NULL,L4THREAD_CREATE_ASYNC);
+      
+    /* enter custom mainloop which reacts on timer events and reacts
+     * on timer_tick */
+    while(1) {
+        dope_process_event(pv->app_id); /* this function blocks */
+
+        if (!dope_events_pending(pv->app_id)) {
+            timer->timer_tick();
+            draw_durationline(pv, timer->timer_getpercent());
+        }
+    }
 } 
 
 static void update_open_pres(PRESENTER_VIEW *pv) {
@@ -882,7 +952,8 @@ void create_help_window(PRESENTER_VIEW *pv) {
     sprintf(cbuf_adr+PRES_HELP_W*6,"%s",PRES_HELP_RIGHT_MOUSE);
     sprintf(cbuf_adr+PRES_HELP_W*7,"%s",PRES_HELP_PAGE_UP);
     sprintf(cbuf_adr+PRES_HELP_W*8,"%s",PRES_HELP_LEFT_AR);
-    sprintf(cbuf_adr+PRES_HELP_W*9,"%s",PRES_HELP_ESCAPE);
+    sprintf(cbuf_adr+PRES_HELP_W*9,"%s",PRES_HELP_PAUSE);
+    sprintf(cbuf_adr+PRES_HELP_W*10,"%s",PRES_HELP_ESCAPE);
 
     memset(abuf_adr,0x38,sizeof(u8)*PRES_HELP_W*PRES_HELP_H);
 
@@ -927,6 +998,9 @@ void showSlide(PRESENTER_VIEW *pv, int slide_nr)
     dope_cmdf(pv->app_id, "info.set(-text %c %d %c %d %c)",'\"',
               arraylist->get_current_index(pv->slide_list)+1,'/',
               arraylist->size(pv->slide_list),'\"');
+
+    /* update durationline */
+    draw_durationline(pv, timer->timer_getpercent());
 }
 
 /****************************************/
@@ -977,6 +1051,7 @@ int init_presenter_view(struct presenter_services *p) {
     display   = p->get_module(DISPLAY_MODULE);
     dataprovider = p->get_module(DATAPROVIDER_MODULE);
     presenter = p->get_module(PRESENTER_MODULE);
+    timer = p->get_module(TIMER_MODULE);
 
     /* get default methods */
     presenter->default_presenter_methods(&gen_methods);

@@ -5,9 +5,9 @@
  * is typed ``@nobits''. */
 
 	.section .bss_memmap, "aw", %nobits
-	.size	__memmap, (MEM_MAX/4096)
+	.size	__memmap, PAGE_MAX
 	.type	__memmap, %object
 	.globl	__memmap
 __memmap:
-	.space	MEM_MAX/4096
+	.space	PAGE_MAX
 

@@ -31,7 +31,7 @@
 
 /** \class CL4V4BEMarshalFunction
  *    \ingroup backend
- *    \brief specializes some members for V4 backend
+ *  \brief specializes some members for V4 backend
  */
 class CL4V4BEMarshalFunction : public CL4BEMarshalFunction
 {
@@ -40,13 +40,8 @@ public:
     CL4V4BEMarshalFunction();
     virtual ~CL4V4BEMarshalFunction();
 
-public:
-    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
-
 protected:
-    virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
-    virtual int WriteMarshalException(CBEFile* pFile, int nStartOffset, bool& bUseConstOffset, CBEContext* pContext);
+    virtual void WriteMarshalling(CBEFile* pFile);
 };
 
 #endif

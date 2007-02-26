@@ -8,7 +8,7 @@ MODE             = host
 DEFINES         += -DSOCKETAPI -DDICE_DEFAULT_PORT=htons\(\(int\)dice_server_param\)
 PRIVATE_INCDIR   = $(PKGDIR)/lib/dope/include \
                    $(PKGDIR)/include \
-                   $(L4DIR)/tool/dice/include
+                   $(DICE_INCDIR)
 
 SRC_C            = vscreen.c util.c
 CLIENTIDL        = vscr.idl

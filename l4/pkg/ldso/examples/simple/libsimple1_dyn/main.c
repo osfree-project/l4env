@@ -1,15 +1,23 @@
 #include <stdio.h>
 #include <l4/crtx/ctor.h>
+#include <l4/sys/syscalls.h>
 
 extern void bar_in_binary(void);
 
-void foo_in_library_1(void);
+void          foo_in_library_1(void);
+l4_threadid_t l4_myself_in_library_1(void);
 
 void
 foo_in_library_1(void)
 {
   printf("This is output from foo_in_library_1()\n");
   bar_in_binary();
+}
+
+l4_threadid_t
+l4_myself_in_library_1(void)
+{
+  return l4_myself();
 }
 
 static void __attribute__((constructor))

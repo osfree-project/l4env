@@ -10,7 +10,7 @@ filedate = $(shell if date --version 2>&1 | grep -q "Free Software F"; then  \
 $(GBLCFG): globalconfig.out
 	$(VERBOSE)grep "CONFIG_.*=[^n].*$$" globalconfig.out | cut -f2- -d'_' > $@.txt
 	$(VERBOSE)echo $(call filedate,globalconfig.out) >> $@.txt
-	$(VERBOSE)ld -r --oformat default -b binary -o $@ $@.txt
+	$(VERBOSE)$(LD) -r --oformat $(OFORMAT) -b binary -o $@ $@.txt
 	$(VERBOSE)$(RM) $@.txt
 
 clean-GBLCFG:

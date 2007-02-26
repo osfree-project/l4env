@@ -16,6 +16,7 @@ IMPLEMENTATION[ux]:
 #include "boot_info.h"
 #include "fb.h"
 #include "kdb_ke.h"
+#include "net.h"
 #include "mem_layout.h"
 #include "trap_state.h"
 #include "usermode.h"
@@ -38,7 +39,7 @@ Kernel_thread::free_initcall_section()
   free_initcall_section_done = 1;
 }
 
-IMPLEMENT inline NEEDS ["boot_info.h", "fb.h", "kdb_ke.h", "usermode.h"]
+IMPLEMENT inline NEEDS ["boot_info.h", "fb.h", "kdb_ke.h", "net.h", "usermode.h"]
 void
 Kernel_thread::bootstrap_arch()
 {
@@ -53,4 +54,5 @@ Kernel_thread::bootstrap_arch()
     kdb_ke ("Wait");
 
   Fb::enable();
+  Net::enable();
 }

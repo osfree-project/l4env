@@ -55,7 +55,7 @@ static int config_force_top;
  * generates the desired event.
  */
 static Window topwin;
-static int init_done;
+static struct window *tw;
 
 
 /*** ERROR HANDLER THAT IS CALLED ON XLIB ERRORS ***/
@@ -65,8 +65,25 @@ static int x_error_handler(Display *dpy, XErrorEvent *r) {
 }
 
 
-/*** CREATE NEW WINDOW ***/
-static struct window *new_window(Window xwin, Display *dpy, Window root) {
+static int window_left_of_screen(Display *dpy, Window xwin) {
+	XWindowAttributes attr;
+
+	XGetWindowAttributes(dpy, xwin, &attr);
+
+	if (attr.x + attr.width <= 0) return 1;
+	return 0;
+}
+
+
+/*** CREATE NEW WINDOW ***
+ *
+ * \param bg_flag   Use window as background if set to 1
+ * \param position  -1 .. at top,
+ *                  -2 .. background,
+ *                  otherwise window id of the neighbor behind the new
+ *                  window
+ */
+static struct window *new_window(Window xwin, Display *dpy, int position) {
 	struct window *new = malloc(sizeof(struct window));
 	XWindowAttributes attr;
 
@@ -86,9 +103,17 @@ static struct window *new_window(Window xwin, Display *dpy, Window root) {
 
 	/* create, position and open overlay window */
 	new->id = ovl_window_create();
+
+	if (position == -2)
+		ovl_set_background(new->id);
+
 	ovl_window_place(new->id, new->x, new->y, new->w + new->border*2,
 	                                          new->h + new->border*2);
 	ovl_window_open(new->id);
+
+	if (position >= 0)
+		ovl_window_stack(new->id, position, 1, 1);
+
 	return new;
 }
 
@@ -125,14 +150,6 @@ static void place_window(struct window *win, int x, int y, int w, int h) {
 }
 
 
-/*** CALLED WHEN WINDOW IS TOPPED ***/
-static void top_window(Display *dpy, struct window *win) {
-	ovl_window_top(win->id);
-	if (topwin && init_done)
-		XRaiseWindow(dpy, topwin);
-}
-
-
 /*** UTILITY: FIND WINDOW STRUCTURE FOR A GIVEN X WINDOW ID ***/
 static struct window *find_window(Window xwin) {
 	struct window *w = first_win;
@@ -157,7 +174,7 @@ static void scan_windows(Display *dpy, Window root) {
 
 		XGetWindowAttributes(dpy, win_list[i], &attr);
 		if (attr.map_state == IsViewable)
-			new_window(win_list[i], dpy, root);
+			new_window(win_list[i], dpy, -1);
 	}
 	XFree(win_list);
 
@@ -166,25 +183,100 @@ static void scan_windows(Display *dpy, Window root) {
 }
 
 
+static void dump_window_stack(Display *dpy, Window root) {
+	Window dummy_w1, dummy_w2, *win_list;
+	unsigned int num_wins;
+	int i;
+
+	XQueryTree(dpy, root, &dummy_w1, &dummy_w2, &win_list, &num_wins);
+	printf("window stack: ");
+	for (i = 0; i < num_wins; i++) {
+		printf("%d, ", (int)win_list[i]);
+	}
+	printf("\n");
+}
+
+
+static struct window *find_window_behind(Display *dpy, Window root, Window win) {
+	Window dummy_w1, dummy_w2, *win_list;
+	struct window *prev = NULL, *curr;
+	unsigned int num_wins;
+	int i;
+
+	XQueryTree(dpy, root, &dummy_w1, &dummy_w2, &win_list, &num_wins);
+	for (i = 0; i < num_wins; i++) {
+
+		if (win_list[i] == win)
+			return prev;
+
+		if ((curr = find_window(win_list[i])))
+			prev = curr;
+	}
+	return NULL;
+}
+
+
+static struct window *find_window_above(Display *dpy, Window root, Window win) {
+	Window dummy_w1, dummy_w2, *win_list;
+	struct window *curr;
+	unsigned int num_wins;
+	int i;
+
+	XQueryTree(dpy, root, &dummy_w1, &dummy_w2, &win_list, &num_wins);
+
+	/* find window in X window stack */
+	for (i = 0; i < num_wins; i++)
+		if (win_list[i] == win)
+			break;
+
+	/* skip current window */
+	i++;
+
+	/* find and return next overlay window */
+	for (; i < num_wins; i++)
+		if ((curr = find_window(win_list[i])))
+			return curr;
+
+	return NULL;
+}
+
+
 /*** CREATE MAGIC WINDOW THAT STAYS ALWAYS ON TOP ***/
 static void create_magic_topwin(Display *dpy, Window root) {
 	XWindowChanges wincfg;
-	struct window *tw;
 
 	/* create magic window that stays always on top */
 	topwin = XCreateWindow(dpy, root,
-	                       0, 0,             /* position */
-	                       100, 1,           /* size     */
+	                       -200, -200,       /* position */
+	                       100, 100,         /* size     */
 	                       0,                /* border   */
 	                       CopyFromParent,   /* depth    */
 	                       InputOutput,      /* class    */
 	                       CopyFromParent,   /* visual   */
 	                       0,0);
+
+	wincfg.x = -200;
+	wincfg.y = -200;
+	XConfigureWindow(dpy, topwin,  CWX | CWY , &wincfg);
 	XMapWindow(dpy, topwin);
 	wincfg.x = -200;
-	wincfg.y = 0;
+	wincfg.y = -200;
 	XConfigureWindow(dpy, topwin,  CWX | CWY , &wincfg);
 	tw = new_window(topwin, dpy, root);
+}
+
+
+/*** DESTROY MAGIC TOP WINDOW ***/
+static void destroy_magic_topwin(Display *dpy) {
+	if (topwin)
+		XDestroyWindow(dpy, topwin);
+	topwin = 0;
+}
+
+
+/*** BRING MAGIC WINDOW IN FRONT OF ALL OTHERS ***/
+static void raise_magic_window(Display *dpy) {
+	XRaiseWindow(dpy, topwin);
 }
 
 
@@ -192,7 +284,6 @@ static void create_magic_topwin(Display *dpy, Window root) {
 static void eventloop(Display *dpy, Window root) {
 	XEvent ev;
 	while (1) {
-		static int last_topped;
 		struct window *win;
 		XNextEvent(dpy, &ev);
 
@@ -206,33 +297,30 @@ static void eventloop(Display *dpy, Window root) {
 				int w = ev.xconfigure.width;
 				int h = ev.xconfigure.height;
 
-				struct window *above = find_window(ev.xconfigure.above);
-				if (above)
-					printf("window %d is above %d\n", win->id, above->id);
-				else
-					printf("window %d has weird above\n", win->id);
-
 				/*
 				 * If window position and size keeps the same,
 				 * we assume, the window has been topped.
 				 */
 				if (x == win->x && y == win->y && w == win->w && h == win->h) {
 
+					struct window *behind = find_window_above(dpy, root, ev.xconfigure.window);
 
-					if (win->id != last_topped) {
-						top_window(dpy, win);
-						last_topped = win->id;
-					}
-				} else {
+					ovl_window_stack(win->id, behind ? behind->id : -1, 1, 1);
+
+					if (!window_left_of_screen(dpy, ev.xconfigure.window) && config_force_top)
+						raise_magic_window(dpy);
+
+				} else
 					place_window(win, x, y, w, h);
-					last_topped = -1;
-				}
 			}
 			break;
 
 		case Expose:
 			if ((win = find_window(ev.xconfigure.window)))
-				top_window(dpy, win);
+
+				/* top overlay window */
+				ovl_window_stack(win->id, -1, 1, 1);
+
 			break;
 
 		case UnmapNotify:
@@ -245,19 +333,20 @@ static void eventloop(Display *dpy, Window root) {
 				printf("MapRequest: window already present - Open Window %d\n", win->id);
 			else {
 
+				struct window *behind = find_window_above(dpy, root, ev.xconfigure.window);
 				/*
 				 * Idea: Call XQueryTree to obtain the position where the new
 				 *       window is located in the window stack.
 				 *
 				 */
 
-				new_window(ev.xconfigure.window, dpy, root);
-				if (topwin && init_done)
-					XRaiseWindow(dpy, topwin);
+				new_window(ev.xconfigure.window, dpy, behind ? behind->id : -1);
+
+				if (!window_left_of_screen(dpy, ev.xconfigure.window) && config_force_top)
+					raise_magic_window(dpy);
 			}
 			break;
 		}
-		if (ev.type != ConfigureNotify) last_topped = -1;
 	}
 }
 
@@ -312,9 +401,11 @@ int main(int argc, char **argv) {
 	if (config_force_top)
 		create_magic_topwin(dpy, root);
 
+	/* create background overlay window */
+	new_window(root, dpy, -2);
+
 	/* retrieve information about currently present windows */
 	scan_windows(dpy, root);
-	init_done = 1;
 
 	/* start sniffing */
 	eventloop(dpy, root);

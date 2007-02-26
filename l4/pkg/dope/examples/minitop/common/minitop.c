@@ -75,7 +75,9 @@ int main(int argc,char **argv) {
 	int i;
 
 	native_startup(argc,argv);
-	dope_init();
+
+	if (dope_init()) return -1;
+
 	app_id = dope_init_app("MiniTop");
 
 	#include "minitop.dpi"

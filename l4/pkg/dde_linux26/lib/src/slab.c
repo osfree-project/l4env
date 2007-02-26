@@ -52,7 +52,7 @@ static void * alloc_grow (l4slab_cache_t * cache, void **data)
 
   LOGd_Enter(DEBUG_SLAB);
 
-  if (!(memp = l4dm_mem_allocate (L4_PAGESIZE, L4DM_PINNED | L4RM_MAP)))
+  if (!(memp = l4dm_mem_allocate_named (L4_PAGESIZE, L4DM_PINNED | L4RM_MAP, "dde_linux slab page")))
     {
       Panic ("dde: kmem_caches can't grow");
     }

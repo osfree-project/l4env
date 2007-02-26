@@ -69,12 +69,12 @@ l4_int32_t l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
 }
 
 l4vfs_ssize_t
-l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
-                               object_handle_t fd,
-                               l4_int8_t **buf,
-                               l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
-                               CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_read_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t fd,
+                                char **buf,
+                                l4vfs_size_t *count,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
     int ret;
 
@@ -85,12 +85,12 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 }
 
 l4vfs_ssize_t
-l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
-                                object_handle_t fd,
-                                const l4_int8_t *buf,
-                                l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
-                                CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_write_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t handle,
+                                 const char *buf,
+                                 l4vfs_size_t *count,
+                                 short *_dice_reply,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
     return -EROFS;
 }

@@ -23,19 +23,15 @@ ifeq ("$(CONFIG_IO_PROT)","y")
   PREPROCESS_PARTS      += io
 endif
 
+ifeq ("$(CONFIG_TASK_CAPS)","y")
+  PREPROCESS_PARTS      += caps
+endif
+
 ifeq ("$(CONFIG_SMALL_SPACES)","y")
   PREPROCESS_PARTS      += smas
 endif
 
-ifeq ("$(CONFIG_KIP_SYSCALLS)","y")
-  ifeq ("$(CONFIG_KIP_SYSCALLS_ABS)","y")
-    PREPROCESS_PARTS	+= abs_syscalls
-  endif
-  ifeq ("$(CONFIG_KIP_SYSCALLS_REL)","y")
-    PREPROCESS_PARTS	+= rel_syscalls
-  endif
-  PREPROCESS_PARTS	+= auto_map_kip
-endif
+PREPROCESS_PARTS	+= abs_syscalls auto_map_kip
 
 ifeq ("$(CONFIG_PROFILE)","y")
   PREPROCESS_PARTS	+= profile
@@ -66,16 +62,9 @@ endif
 ifeq ("$(CONFIG_EXCEPTION_IPC)","y")
   PREPROCESS_PARTS	+= utcb exc_ipc
 endif
-ifeq ("$(CONFIG_SYSCALL_ITER)","y")
-  PREPROCESS_PARTS	+= syscall_iter
-endif
 
 ifeq ("$(CONFIG_HANDLE_SEGMENTS)","y")
   PREPROCESS_PARTS	+= segments
-endif
-
-ifeq ("$(CONFIG_LOCAL_IPC)","y")
-  PREPROCESS_PARTS	+= utcb lipc
 endif
 
 ifeq ("$(CONFIG_PL0_HACK)","y")
@@ -94,8 +83,9 @@ ABI			:= libabi.a
 VPATH			+= abi/$(CONFIG_XARCH) abi
 INTERFACES_ABI		:= kip l4_types utcb
 
-kip_IMPL		:= kip kip-ia32 kip-ia32-debug
-l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit l4_types-debug
+kip_IMPL		:= kip kip-ia32 kip-debug kip-ia32-debug
+l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit \
+			   l4_types-debug l4_types-caps
 utcb_IMPL		:= utcb-ia32-ux
 
 #
@@ -111,7 +101,8 @@ INTERFACES_JABI		:= jdb_ktrace
 DRIVERS			:= libdrivers.a libgluedriverslibc.a
 VPATH			+= drivers/$(CONFIG_XARCH) drivers
 PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
-INTERFACES_DRIVERS	:= mux_console console keyb io pci vga_console reset
+INTERFACES_DRIVERS	:= mux_console console keyb io pci vga_console reset \
+			   processor delayloop
 ifeq ("$(CONFIG_SERIAL)","y")
 INTERFACES_DRIVERS	+= filter_console uart
 endif
@@ -122,10 +113,7 @@ NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
 
 keyb_IMPL		:= keyb keyb-pc 
 io_IMPL			:= io io-ia32
-
-ifeq ("$(CONFIG_ACTIVATION_IPC)","y")
-  PREPROCESS_PARTS	+= act_ipc
-endif
+processor_IMPL		:= processor processor-ia32
 
 #
 # KERNEL subsystem
@@ -135,7 +123,8 @@ VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
 INTERFACES_KERNEL	:= startup boot_info cmdline __main mapdb region pic \
-			   space space_index space_index_util  \
+			   cap_space cap_space_alloc io_space		     \
+			   mem_space space space_index space_index_util	     \
 			   kmem kmem_alloc slab_cache_anon mem_layout        \
 			   kmem_slab_simple kmem_slab switch_lock kip_init   \
 			   thread_lock helping_lock cpu_lock timer timeout   \
@@ -146,51 +135,60 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapdb region pic \
 			   checksum main config kern_types mapped_alloc      \
 			   vmem_alloc paging fpu fpu_state fpu_alloc cpu     \
 			   entry_frame kernel_console boot_console profile   \
-			   long_msg task irq_alloc terminate preemption      \
-			   activation					     \
+			   long_msg task kernel_task 			     \
+			   irq_alloc terminate preemption		     \
 			   sched_context allocators utcb_init sys_call_page  \
 			   smas perf_cnt x86desc gdt idt tss trap_state      \
-			   list_alloc vkey
+			   list_alloc vkey kdb_ke
 
-apic_IMPL		:= apic-ia32
-boot_info_IMPL		:= boot_info boot_info-ia32-ux boot_info-ia32
-config_IMPL		:= config config-ia32-ux config-ia32
-context_IMPL		:= context context-ia32-ux context-ia32 
-cpu_IMPL		:= cpu-ia32-common cpu-ia32
+__main_IMPL		:= __main-ia32-amd64
+apic_IMPL		:= apic-ia32-amd64
+boot_console_IMPL	:= boot_console-ia32-amd64
+boot_info_IMPL		:= boot_info boot_info-ia32-amd64-ux \
+			   boot_info-ia32-amd64
+config_IMPL		:= config config-ia32-ux config-ia32-amd64
+context_IMPL		:= context context-ia32-ux context-ia32-amd64 
+cpu_IMPL		:= cpu-common cpu-ia32-ux cpu-ia32
 dirq_IMPL		:= dirq dirq-ia32-ux
 entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux \
 			   entry_frame-abs-timeout-hack
 fpu_IMPL		:= fpu fpu-ia32-ux fpu-ia32
 globals_IMPL		:= globals globals-ia32-ux
 irq_IMPL		:= irq irq-ipc irq-generic
-kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-ia32
+ioapic_IMPL		:= ioapic-ia32
+kernel_thread_IMPL	:= kernel_thread kernel_thread-std \
+			   kernel_thread-ia32-amd64
 kernel_uart_IMPL	:= kernel_uart kernel_uart-16550
-kip_init_IMPL		:= kip_init-ia32-ux kip_init-ia32
+kip_init_IMPL		:= kip_init-ia32-amd64-ux kip_init-ia32-amd64
 kmem_IMPL		:= kmem-ia32-ux kmem-ia32
-kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-ux
-main_IMPL		:= main-ia32-ux main-ia32
+kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-amd64-ux
+main_IMPL		:= main-ia32-ux main-ia32-amd64
 mapdb_IMPL		:= mapdb-ia32-ux mapdb
-map_util_IMPL		:= map_util map_util-io
+map_util_IMPL		:= map_util map_util-mem map_util-io map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-ia32
+mem_space_IMPL		:= mem_space mem_space-user mem_space-ia32-ux \
+			   mem_space-ia32
 mem_unit_IMPL		:= mem_unit-ia32
 paging_IMPL		:= paging paging-ia32-ux
 perf_cnt_IMPL		:= perf_cnt perf_cnt-ia32-ux
 pic_IMPL		:= pic pic-i8259
 pit_IMPL		:= pit-i8254
 pmem_alloc_IMPL		:= pmem_alloc pmem_alloc-ia32-ux
-space_IMPL		:= space space-user space-ia32-ux space-ia32
-startup_IMPL		:= startup startup-ia32
-sys_call_page_IMPL	:= sys_call_page sys_call_page-abs-ia32		     \
-			   sys_call_page-rel-ia32-ux
-task_IMPL		:= task task-ia32
+rtc_IMPL		:= rtc-ia32-amd64
+space_IMPL		:= space space-caps
+startup_IMPL		:= startup startup-ia32-amd64
+sys_call_page_IMPL	:= sys_call_page sys_call_page-abs-ia32		     
+task_IMPL		:= task task-ia32-amd64
 tb_entry_IMPL		:= tb_entry tb_entry-ia32-ux
-timer_IMPL		:= timer timer-ia32-ux
-thread_IMPL		:= thread thread-ia32-ux thread-ia32 thread-syscall  \
-			   thread-ipc thread-msg thread-msg-ia32 thread-list \
+timer_IMPL		:= timer timer-ia32-amd64-ux
+thread_IMPL		:= thread thread-ia32-ux thread-ia32-amd64           \
+			   thread-syscall thread-syscall-ia32-ux thread-ipc  \
+			   thread-msg thread-msg-ia32-amd64 thread-list      \
 			   thread-pagefault thread-ia32-smas thread-log      \
-			   thread-debug thread-dbf thread-ia32-ux-lipc
+			   thread-debug thread-dbf thread-lookup
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
-vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-ux vmem_alloc-ia32
+vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-amd64-ux \
+			   vmem_alloc-ia32-ux vmem_alloc-ia32-amd64
 watchdog_IMPL		:= watchdog watchdog-ia32
 
 ifeq ("$(CONFIG_KDB)","y")
@@ -238,20 +236,25 @@ INTERFACES_KERNEL	+= jdb jdb_prompt_ext jdb_symbol jdb_lines \
 			   jdb_handler_queue jdb_halt_thread jdb_tbuf_events \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region \
 			   jdb_kern_info_kip jdb_kern_info_config \
-			   jdb_thread_names loadcnt jdb_utcb
+			   jdb_thread_names loadcnt jdb_utcb jdb_bts \
+			   jdb_entry_frame
 
 apic_IMPL		+= apic-debug
-jdb_IMPL		:= jdb-ia32 jdb-ansi jdb-ia32-ux jdb-thread \
-			   jdb-int3 jdb-int3-ia32-ux
-jdb_bp_IMPL		:= jdb_bp-ia32-ux jdb_bp-ia32
+jdb_IMPL		:= jdb-ia32-amd64 jdb-ansi jdb-ia32-ux jdb-thread \
+			   jdb-int3-ia32-amd64 jdb-int3-ia32-ux
+jdb_bp_IMPL		:= jdb_bp-ia32-ux jdb_bp-ia32-amd64 jdb_bp-ia32
 jdb_bt_IMPL		:= jdb_bt-ia32-ux
-jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-ia32 \
+jdb_entry_frame_IMPL	:= jdb_entry_frame-ia32-ux
+jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-ia32-amd64 \
 			   jdb_kern_info-ia32-ux jdb_kern_info-apic \
 			   jdb_kern_info-pci jdb_kern_info-smas \
-			   jdb_kern_info-bench jdb_kern_info-dr
-jdb_misc_IMPL		:= jdb_misc-ia32 jdb_misc-ia32-ux
-jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux
+			   jdb_kern_info-bench jdb_kern_info-dr \
+			   jdb_kern_info-mtrr
+jdb_misc_IMPL		:= jdb_misc-ia32-amd64 jdb_misc-ia32-ux
+jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux-arm
+jdb_screen_IMPL		:= jdb_screen jdb_screen-ia32-ux-arm
 jdb_tcb_IMPL		:= jdb_tcb-ia32-ux
+jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-ia32-ux
 jdb_utcb_IMPL		:= jdb_utcb-ia32-ux
 
   ifeq ("$(CONFIG_JDB_MISC)","y")
@@ -266,15 +269,8 @@ endif
 
 
 CXXSRC_KERNEL		:= kernel_panic.cc 
-ASSRC_KERNEL		:= entry-ia32-ux.S entry-ia32.S shortcut-ia32-ux.S
-ifeq ($(CONFIG_KIP_SYSCALLS_ABS),y)
-  ASSRC_KERNEL		+= sys_call_page-asm.S
-endif
-
-ifeq ($(CONFIG_LOCAL_IPC),y)
-  ASSRC_KERNEL		+= local_ipc-ia32-ux.S
-endif
-
+ASSRC_KERNEL		:= entry-ia32-ux.S entry-ia32.S shortcut-ia32-ux.S \
+                           sys_call_page-asm.S
 
 
 NOOPT			+= $(filter jdb%,\
@@ -318,7 +314,7 @@ BOOT			:= main
 VPATH			+= boot/$(CONFIG_XARCH) boot
 PRIVATE_INCDIR 		+= boot
 CXXSRC_BOOT		:= boot_libc_glue.cc bootstrap.cc boot_cpu.cc \
-			   direct_cons_getchar.cc direct_cons_putchar.cc
+			   direct_cons_putchar.cc
 ASSRC_BOOT		:= boot.S boot_idt.S
 NOOPT			+= $(patsubst %.o, %, $(OBJ_BOOT))
 
@@ -448,14 +444,12 @@ PRIVATE_INCDIR	+= lib/minilibc/$(CONFIG_XARCH)/include lib/minilibc/include
 CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
 		   memchr.c strchr.c strcmp.c strcpy.c strlen.c strncmp.c \
 		   strncpy.c strstr.c __assert_fail.c printf.c __v_printf.c \
-		   vprintf.c strtol.c strtoul.c lltostr.c \
-		   __ltostr.c putchar.c puts.c getchar.c gets.c __v_scanf.c \
-		   vsscanf.c sscanf.c construction.c sprintf.c snprintf.c \
-		   vsnprintf.c vsprintf.c longjmp.c \
-		   isalnum.c isalpha.c isascii.c isblank.c \
-		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
-		   ispunct.c isspace.c isupper.c isxdigit.c \
-		   tolower.c strcspn.c strspn.c
+		   vprintf.c strtol.c strtoul.c lltostr.c __ltostr.c \
+		   putchar.c puts.c getchar.c gets.c construction.c sprintf.c \
+		   snprintf.c vsnprintf.c vsprintf.c longjmp.c isalnum.c \
+		   isalpha.c isascii.c isblank.c iscntrl.c isdigit.c \
+		   isgraph.c islower.c isprint.c ispunct.c isspace.c \
+		   isupper.c isxdigit.c tolower.c strcspn.c strspn.c panic.c
 ASSRC_MINILIBC	:= setjmp.S
 
 # do not profile all of MINILIBC, because it is used in the BOOT subsystem

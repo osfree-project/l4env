@@ -24,7 +24,6 @@
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
-#include <l4/util/kip.h>
 #include <l4/util/util.h>
 #include <l4/util/thread.h>
 

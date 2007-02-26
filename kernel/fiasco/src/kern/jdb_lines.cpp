@@ -5,9 +5,9 @@ INTERFACE:
 class Jdb_lines_line
 {
 public:
-  unsigned int   addr __attribute__ ((packed));
-  unsigned short line __attribute__ ((packed));
-};
+  unsigned int   addr;
+  unsigned short line;
+} __attribute__((packed));
 
 class Jdb_lines_info
 {

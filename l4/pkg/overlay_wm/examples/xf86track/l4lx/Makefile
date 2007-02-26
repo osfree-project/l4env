@@ -3,17 +3,18 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = ovltrack
 MODE             = l4linux
-SYSTEMS          = x86-l4v2 x86-l4x0
+SYSTEMS          = x86-l4v2
 
 LIBCINCDIR       = $(addprefix -I,$(L4INCDIR))
-LIBS             = -ll4ovlwindow -lthread_linux -lsemaphore -lthread_linux \
-                   -lX11 -lXext -pthread
+LIBS             = -ll4lxovlwindow -lsemaphore -lsigma0 \
+                   -Wl,-dynamic -lXext -Wl,-dynamic -lX11 -pthread
 
-XROOT            = /usr/X11R6
 PRIVATE_INCDIR   = $(PKGDIR)/include \
-                   $(XROOT)/include \
+                   $(XF86TREE)/include \
+                   $(XF86TREE)/lib \
                    $(PKGDIR)/examples/xf86track/include
-PRIVATE_LIBDIR   = $(XROOT)/lib
+
+PRIVATE_LIBDIR   = $(XF86TREE)/lib /usr/X11R6/lib /usr/lib/gcc-lib/i486-linux/3.3.5
 
 SRC_C            = main.c logfake.c
 

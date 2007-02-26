@@ -1,70 +1,68 @@
+/* $Id$ */
+/**
+ * \file	bootstrap/server/src/exec.c
+ * \brief	ELF loader
+ * 
+ * \date	2004
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>,
+ *		Torsten Frenzel <frenzel@os.inf.tu-dresden.de> */
+
+/* (c) 2005 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <alloca.h>
 
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 
 #include "exec.h"
 
 int
-exec_load_elf(exec_read_func_t *read, exec_read_exec_func_t *read_exec,
-	      void *handle, exec_info_t *out_info)
+exec_load_elf(exec_handler_func_t *handler,
+	      void *handle, const char **error_msg, l4_addr_t *entry)
 {
-  l4_size_t actual;
-  Elf32_Ehdr x;
-  Elf32_Phdr *phdr, *ph;
-  l4_size_t phsize;
+  exec_task_t *t = handle;
+  MY_EHDR *x = t->mod_start;
+  MY_PHDR *phdr, *ph;
   int i;
   int result;
 
   /* Read the ELF header.  */
-  if ((result = (*read)(handle, 0, &x, sizeof(x), &actual)) != 0)
-    return result;
 
-  if (actual < sizeof(x))
-    return EX_NOT_EXECUTABLE;
-
-  if ((x.e_ident[EI_MAG0] != ELFMAG0) ||
-      (x.e_ident[EI_MAG1] != ELFMAG1) ||
-      (x.e_ident[EI_MAG2] != ELFMAG2) ||
-      (x.e_ident[EI_MAG3] != ELFMAG3))
-    return EX_NOT_EXECUTABLE;
+  if ((x->e_ident[EI_MAG0] != ELFMAG0) ||
+      (x->e_ident[EI_MAG1] != ELFMAG1) ||
+      (x->e_ident[EI_MAG2] != ELFMAG2) ||
+      (x->e_ident[EI_MAG3] != ELFMAG3))
+    return *error_msg="no ELF executable", -1;
 
   /* Make sure the file is of the right architecture.  */
-  if ((x.e_ident[EI_CLASS] != ELFCLASS32) ||
-      (x.e_ident[EI_DATA] != MY_EI_DATA) ||
-      (x.e_machine != MY_E_MACHINE))
-    return EX_WRONG_ARCH;
+  if ((x->e_ident[EI_CLASS] != MY_EI_CLASS) ||
+      (x->e_ident[EI_DATA] != MY_EI_DATA) ||
+      (x->e_machine != MY_E_MACHINE))
+    return *error_msg="wrong ELF architecture", -1;
 
-  /* XXX others */
-  out_info->entry = (l4_addr_t) x.e_entry;
+  *entry = (l4_addr_t) x->e_entry;
 
-  phsize = x.e_phnum * x.e_phentsize;
-  phdr = (Elf32_Phdr *)alloca(phsize);
+  phdr   = (MY_PHDR*)(((char*)x) + x->e_phoff);
 
-  result = (*read)(handle, x.e_phoff, phdr, phsize, &actual);
-  if (result)
-    return result;
-
-  if (actual < phsize)
-    return EX_CORRUPT;
-
-  for (i = 0; i < x.e_phnum; i++)
+  for (i = 0; i < x->e_phnum; i++)
     {
-      ph = (Elf32_Phdr *)((l4_addr_t)phdr + i * x.e_phentsize);
+      ph = (MY_PHDR *)((l4_addr_t)phdr + i * x->e_phentsize);
       if (ph->p_type == PT_LOAD)
 	{
 	  exec_sectype_t type = EXEC_SECTYPE_ALLOC |
-				EXEC_SECTYPE_LOAD;
+	    EXEC_SECTYPE_LOAD;
 	  if (ph->p_flags & PF_R) type |= EXEC_SECTYPE_READ;
 	  if (ph->p_flags & PF_W) type |= EXEC_SECTYPE_WRITE;
 	  if (ph->p_flags & PF_X) type |= EXEC_SECTYPE_EXECUTE;
-	  result = (*read_exec)(handle,
+	  result = (*handler)(handle,
 	            ph->p_offset, ph->p_filesz,
 		    ph->p_paddr, ph->p_memsz, type);
 	}
     }
 
-  return 0;
+  return *error_msg="", 0;
 }

@@ -16,8 +16,22 @@
 #ifndef _DOPELIB_LISTENER_H_
 #define _DOPELIB_LISTENER_H_
 
+#include "dopeapp-server.h"
 
-/*** START UP LISTENER SERVER THREAD ***/
-extern char *dopelib_start_listener(long app_id);
+/*** CREATE IDENTIFIER FOR CORBA_OBJECT ***/
+extern void CORBA_Object_to_ident(CORBA_Object obj, char *dst, int dst_len);
+
+/*** START UP LISTENER SERVER THREAD ***
+ *
+ * This function fills out the listener field of the
+ * app_struct of the application with the specified
+ * app_id.
+ */
+extern int dopelib_start_listener(long app_id);
+
+
+/*** STOP LISTENER THREAD ***/
+extern void dopelib_stop_listener(long app_id);
+
 
 #endif /* _DOPELIB_LISTENER_H_ */

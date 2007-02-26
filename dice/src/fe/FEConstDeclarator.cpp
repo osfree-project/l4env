@@ -26,13 +26,16 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FEConstDeclarator.h"
-#include "fe/FEUserDefinedType.h"
-#include "fe/FETypedDeclarator.h"
-#include "fe/FEExpression.h"
-#include "fe/FEFile.h"
+#include "FEConstDeclarator.h"
+#include "FEUserDefinedType.h"
+#include "FETypedDeclarator.h"
+#include "FEExpression.h"
+#include "FEFile.h"
+#include "File.h"
 #include "Compiler.h"
-
+#include "Visitor.h"
+#include <iostream>
+#include <cassert>
 
 CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType, string sConstName, CFEExpression * pConstValue)
 {
@@ -71,7 +74,7 @@ CFEConstDeclarator::~CFEConstDeclarator()
 }
 
 /** returns the type of the constant
- *    \return the type of the constant
+ *  \return the type of the constant
  */
 CFETypeSpec *CFEConstDeclarator::GetType()
 {
@@ -79,94 +82,42 @@ CFETypeSpec *CFEConstDeclarator::GetType()
 }
 
 /** returns the name of the constant
- *    \return the name of the constant
+ *  \return the name of the constant
  */
 string CFEConstDeclarator::GetName()
 {
     return m_sConstName;
 }
 
+/** \brief tries to match the internal name with the given argument
+ *  \param sName the name to match
+ *  \return true if matches, false otherwise
+ */
+bool CFEConstDeclarator::Match(string sName)
+{
+    return GetName() == sName;
+}
+
 /** returns the value (the expression) of the constant
- *    \return the value (the expression) of the constant
+ *  \return the value (the expression) of the constant
  */
 CFEExpression *CFEConstDeclarator::GetValue()
 {
     return m_pConstValue;
 }
 
-/**    \brief creates a copy of this object
- *    \return a copy of this object
+/** \brief creates a copy of this object
+ *  \return a copy of this object
  */
 CObject *CFEConstDeclarator::Clone()
 {
     return new CFEConstDeclarator(*this);
 }
 
-/** \brief checks the consistnec of a const declaration
- *  \return true if everything is fine, false otherwise
- *
- * A const declarator if ok if the expression has the specified type. It's name
- * must be globally unique.
+/** \brief accepts the iteration of the visitors
+ *  \param v reference to the visitor
  */
-bool CFEConstDeclarator::CheckConsistency()
+void CFEConstDeclarator::Accept(CVisitor& v)
 {
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(GetRoot());
-    assert(pRoot);
-    // try to find me
-    if (GetName().empty())
-    {
-      CCompiler::GccError(this, 0, "A constant without a name has been defined.");
-      return false;
-      }
-    // see if this constant exists somewhere
-    if (!(pRoot->FindConstDeclarator(GetName())))
-      {
-      CCompiler::GccError(this, 0,
-                  "The chaining of the front-end classes is wrong - please contact\ndice@os.inf.tu-dresden.de with a description of this error.");
-      return false;
-      }
-    // check if it is really me
-    if (pRoot->FindConstDeclarator(GetName()) != this)
-      {
-      CCompiler::GccError(this, 0, "The constant %s is defined twice.",
-                  GetName().c_str());
-      return false;
-      }
-    // found me     - now check the type
-    CFETypeSpec* pType = GetType();
-    while (pType && (pType->GetType() == TYPE_USER_DEFINED))
-    {
-        string sTypeName = ((CFEUserDefinedType*)pType)->GetName();
-    CFETypedDeclarator *pTypedef = pRoot->FindUserDefinedType(sTypeName);
-    if (!pTypedef)
-    {
-        CCompiler::GccError(this, 0, "The type (%s) of expression \"%s\" is not defined.\n", sTypeName.c_str(), GetName().c_str());
-        return false;
-    }
-    pType = pTypedef->GetType();
-    }
-    if (!(GetValue()->IsOfType(pType->GetType())))
-    {
-    CCompiler::GccError(this, 0, "The expression of %s does not match its type.", GetName().c_str());
-    return false;
-    }
-    // all checks done
-    return true;
-}
-
-/** serialize this object
- *    \param pFile the file to serialize to/from
- */
-void CFEConstDeclarator::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<constant>\n");
-      pFile->IncIndent();
-      pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
-      GetType()->Serialize(pFile);
-      GetValue()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</constant>\n");
-      }
+    v.Visit(*this);
 }

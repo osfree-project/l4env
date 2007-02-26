@@ -108,7 +108,7 @@ VideoDemuxerComponent_dice_thread (void)
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoDemuxerComponentIntern_connect_CompressedVideoOut_component
   (CORBA_Object _dice_corba_obj, const l4dm_dataspace_t * ctrl_ds,
    const l4dm_dataspace_t * data_ds, dsi_socket_ref_t * socketref,
@@ -145,7 +145,7 @@ l4_int32_t
 * unlocks a mutex and let the work_thread run.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoDemuxerComponentIntern_start_CompressedVideoOut_component (CORBA_Object
 								_dice_corba_obj,
 								const
@@ -181,7 +181,7 @@ VideoDemuxerComponentIntern_start_CompressedVideoOut_component (CORBA_Object
  * dsi_stream_close.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoDemuxerComponentIntern_disconnect_CompressedVideoOut_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -222,7 +222,7 @@ l4_int32_t
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoDemuxerComponentIntern_connect_CompressedAudioOut_component
   (CORBA_Object _dice_corba_obj, const l4dm_dataspace_t * ctrl_ds,
    const l4dm_dataspace_t * data_ds, dsi_socket_ref_t * socketref,
@@ -259,7 +259,7 @@ l4_int32_t
 * unlocks a mutex and let the work_thread run.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoDemuxerComponentIntern_start_CompressedAudioOut_component (CORBA_Object
 								_dice_corba_obj,
 								const
@@ -295,7 +295,7 @@ VideoDemuxerComponentIntern_start_CompressedAudioOut_component (CORBA_Object
 	 * dsi_stream_close.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoDemuxerComponentIntern_disconnect_CompressedAudioOut_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -336,18 +336,13 @@ l4_int32_t
  *
  */
 /*****************************************************************************/
-l4_int32_t
-VideoDemuxerComponentIntern_setRTparams_component (CORBA_Object
-						   _dice_corba_obj,
-						   l4_uint32_t period,
-						   l4_uint32_t
-						   reservation_audio,
-						   l4_uint32_t
-						   reservation_video,
-						   l4_int32_t
-						   verbose_preemption_ipc,
-						   CORBA_Server_Environment *
-						   _dice_corba_env)
+long
+VideoDemuxerComponentIntern_setRTparams_component (CORBA_Object _dice_corba_obj,
+                                                   unsigned long period,
+                                                   unsigned long reservation_audio,
+                                                   unsigned long reservation_video,
+                                                   int verbose_preemption_ipc,
+                                                   CORBA_Server_Environment *_dice_corba_env)
 {
 #if BUILD_RT_SUPPORT
   audio_control.rt_verbose_pipc = video_control.rt_verbose_pipc =
@@ -373,20 +368,15 @@ VideoDemuxerComponentIntern_setRTparams_component (CORBA_Object
  *
  */
 /*****************************************************************************/
-l4_int32_t
-VideoDemuxerComponentIntern_probeVideoFile_component (CORBA_Object
-						      _dice_corba_obj,
-						      const char *filename,
-						      l4_int32_t videoTrackNo,
-						      l4_int32_t audioTrackNo,
-						      l4_int32_t *
-						      videoTracks,
-						      l4_int32_t *
-						      audioTracks,
-						      frame_ctrl_t *
-						      streaminfo,
-						      CORBA_Server_Environment
-						      * _dice_corba_env)
+long
+VideoDemuxerComponentIntern_probeVideoFile_component (CORBA_Object _dice_corba_obj,
+                                                      const char* filename,
+                                                      long videoTrackNo,
+                                                      long audioTrackNo,
+                                                      l4_int32_t *videoTracks,
+                                                      l4_int32_t *audioTracks,
+                                                      frame_ctrl_t *streaminfo,
+                                                      CORBA_Server_Environment *_dice_corba_env)
 {
   containerProbeVideoFile (filename, videoTrackNo, audioTrackNo, videoTracks,
 			   audioTracks, streaminfo);
@@ -403,7 +393,7 @@ VideoDemuxerComponentIntern_probeVideoFile_component (CORBA_Object
  *
  */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoDemuxerComponentIntern_setVideoFileParam_component (CORBA_Object
 							 _dice_corba_obj,
 							 const char
@@ -492,16 +482,14 @@ VideoDemuxerComponentIntern_setVideoFileParam_component (CORBA_Object
  *               SEEK_ABSOLUTE seek to (start_of_file + position)
  */
 /*****************************************************************************/
-l4_int32_t
-VideoDemuxerComponentIntern_setSeekPosition_component (CORBA_Object
-						       _dice_corba_obj,
-						       l4_int32_t seekVideo,
-						       l4_int32_t seekAudio,
-						       double position,
-						       l4_int32_t fileoffset,
-						       l4_int32_t whence,
-						       CORBA_Server_Environment
-						       * _dice_corba_env)
+long
+VideoDemuxerComponentIntern_setSeekPosition_component (CORBA_Object _dice_corba_obj,
+                                                       int seekVideo,
+                                                       int seekAudio,
+                                                       double position,
+                                                       long fileoffset,
+                                                       int whence,
+                                                       CORBA_Server_Environment *_dice_corba_env)
 {
   /* we want to seek ?! */
   audio_control.seek = seekAudio;

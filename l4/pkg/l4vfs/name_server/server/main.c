@@ -124,7 +124,7 @@ l4vfs_extendable_attach_namespace_component(
     {
         return EBUSY;
     }
-        
+
     // 3.
     /* this may fail, e.g. if we have this volume mounted
      * somewhere already.
@@ -266,12 +266,12 @@ l4vfs_container_io_mkdir_component(CORBA_Object _dice_corba_obj,
 }
 
 l4vfs_ssize_t
-l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
-                               object_handle_t fd,
-                               l4_int8_t **buf,
-                               l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
-                               CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_read_component (CORBA_Object _dice_corba_obj,
+                                object_handle_t handle,
+                                char **buf,
+                                l4vfs_size_t *count,
+                                short *_dice_reply,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
     // we dont like reading from our dirs
     *_dice_reply = DICE_REPLY;
@@ -279,12 +279,12 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 }
 
 l4vfs_ssize_t
-l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
-                                object_handle_t fd,
-                                const l4_int8_t *buf,
-                                l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
-                                CORBA_Server_Environment *_dice_corba_env)
+l4vfs_common_io_write_component (CORBA_Object _dice_corba_obj,
+                                 object_handle_t handle,
+                                 const char *buf,
+                                 l4vfs_size_t *count,
+                                 short *_dice_reply,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
     // we dont like writing to our dirs
     return -EBADF;
@@ -316,16 +316,16 @@ l4vfs_basic_io_fsync_component(CORBA_Object _dice_corba_obj,
 l4_int32_t
 l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                                   object_handle_t fd,
-                                  l4vfs_dirent_t *dirp,
+                                  l4vfs_dirent_t **dirp,
                                   l4_uint32_t *count,
                                   CORBA_Server_Environment *_dice_corba_env)
 {
     int ret;
 
     LOGd(_DEBUG, "Before: getdents(%d, %p, %d)",
-         fd, dirp, *count);
+         fd, *dirp, *count);
     LOG_flush();
-    ret = clientstate_getdents(fd, dirp, *count, *_dice_corba_obj);
+    ret = clientstate_getdents(fd, *dirp, *count, *_dice_corba_obj);
     LOGd(_DEBUG, "After: ret = %d)", ret);
     LOG_flush();
 
@@ -438,10 +438,10 @@ int main(int argc, char *argv[])
             switch (option)
             {
             case 'e':
-                create_examples = 1;   
+                create_examples = 1;
                 break;
             case 'p':
-                do_print_tree = 1;   
+                do_print_tree = 1;
                 break;
             case -1:  // exit case
                 break;

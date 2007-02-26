@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/x0/L4X0BESizes.cpp
- *    \brief   contains the implementation of the class CL4X0BESizes
+ *  \brief   contains the implementation of the class CL4X0BESizes
  *
  *    \date    06/01/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -26,6 +26,8 @@
  */
 
 #include "be/l4/x0/L4X0BESizes.h"
+#include "be/l4/TypeSpec-L4Types.h"
+#include <cassert>
 
 CL4X0BESizes::CL4X0BESizes()
  : CL4BESizes()
@@ -38,39 +40,55 @@ CL4X0BESizes::~CL4X0BESizes()
 }
 
 /** \brief determines maximum number
- *  \param nDirection the direction to get max short IPC size for
  *  \return the number of bytes until which the short IPC is allowed
  *
  * method, which shall determine the maximum number of bytes of
  * a message for a short IPC
 */
-int CL4X0BESizes::GetMaxShortIPCSize(int nDirection)
+int CL4X0BESizes::GetMaxShortIPCSize()
 {
     return 12;
 }
 
-/** \brief
- *determine maximum size of an environment type
-*/
-int CL4X0BESizes::GetSizeOfEnvType(string sName)
+/** \brief gets the size of a type
+ *  \param nFEType the type to look up
+ *  \param nFESize the size in the front-end
+ *  \return the size of the type in bytes
+ */
+int CL4X0BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    if (sName == "l4_fpage_t")
-        return 4; // l4_umword_t
-    if (sName == "l4_msgdope_t")
-        return 4; // l4_umword_t
-    if (sName == "l4_strdope_t")
-        return 16; // 4*l4_umword_t
-    if (sName == "l4_timeout_t")
-        return 4; // l4_umword_t
-    if (sName == "l4_threadid_t")
-        return 4;
-    if (sName == "CORBA_Object")
-        return 4; // sizeof(l4_threadid_t*)
-    if (sName == "CORBA_Object_base")
-        return 4; // sizeof(l4_threadid_t)
-    if (sName == "CORBA_Environment")
-        return 24; // 4(major+repos_id) + 4(param+ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(malloc ptr) + 4(free ptr)
-    if (sName == "CORBA_Server_Environment")
-        return 72; // + 4(user_data) + 4(ptrs_count) + 4*DICE_PTRS_MAX(dice_ptrs)
-    return CBESizes::GetSizeOfEnvType(sName);
+    int nSize = 0;
+    switch (nFEType)
+    {
+    case TYPE_RCV_FLEXPAGE:
+    case TYPE_MSGDOPE_SEND:
+    case TYPE_MSGDOPE_SIZE:
+        nSize = 4;
+        break;
+    case TYPE_REFSTRING:
+        nSize = 16;
+        break;
+    default:
+        nSize = CL4BESizes::GetSizeOfType(nFEType, nFESize);
+        break;
+    }
+    return nSize;
+}
+
+/** \brief returns a value for the maximum  size of a specific type
+ *  \param nFEType the type to get the max size for
+ *  \return the maximum size of an array of that type
+ */
+int CL4X0BESizes::GetMaxSizeOfType(int nFEType)
+{
+    int nSize = CBESizes::GetMaxSizeOfType(nFEType);
+    switch (nFEType)
+    {
+    case TYPE_MESSAGE:
+	nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
+	break;
+    default:
+        break;
+    }
+    return nSize;
 }

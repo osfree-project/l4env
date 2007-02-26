@@ -85,8 +85,8 @@ main(int argc, const char *argv[])
   if (!names_waitfor_name(fprov_name, &fserv_id, 3000))
     {
       fprintf(stderr,
-	      "FPROV-L4 not found.\n"
-	      "Please start the fprov-l4 server first!\n");
+	      "%s not found.\n"
+	      "Please start a file provider server first!\n", fprov_name);
       return -2;
     }
 

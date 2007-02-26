@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/cdr/CCDRClient.h
- *    \brief   contains the declaration of the class CCDRClient
+ *  \brief   contains the declaration of the class CCDRClient
  *
  *    \date    10/28/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -39,12 +39,12 @@
 class CCDRClient : public CBEClient
 {
 public:
-    /**    \brief constructor */
+    /** \brief constructor */
     CCDRClient();
-    virtual ~CCDRClient();
+    ~CCDRClient();
 
 public:
-    virtual bool CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* pContext);
+    virtual void CreateBackEndFunction(CFEOperation* pFEOperation);
 };
 
 #endif

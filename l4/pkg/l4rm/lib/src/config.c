@@ -19,7 +19,6 @@
 #include <l4/sys/kernel.h>
 #include <l4/env/env.h>
 #include <l4/util/macros.h>
-#include <l4/util/kip.h>
 #include <l4/util/memdesc.h>
 #include <l4/names/libnames.h>
 
@@ -41,10 +40,10 @@ const l4_addr_t l4rm_heap_start_addr __attribute__ ((weak)) = -1;
 /*****************************************************************************/
 /**
  * \brief  Get VM start address
- *	
+ *
  * \return VM start address
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4_addr_t
 l4rm_get_vm_start(void)
 {
@@ -60,10 +59,10 @@ l4rm_get_vm_start(void)
 /*****************************************************************************/
 /**
  * \brief Get VM end address
- *	
+ *
  * \return VM end address
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4_addr_t
 l4rm_get_vm_end(void)
 {
@@ -73,7 +72,7 @@ l4rm_get_vm_end(void)
   if (l4env_request_config_u32(L4ENV_VM_HIGH, &vm_end) == 0)
     return vm_end;
   else
-#ifdef ARCH_x86
+#if defined ARCH_x86 || ARCH_amd64
     return L4RM_VM_END - 1;
 #else
     {
@@ -88,11 +87,11 @@ l4rm_get_vm_end(void)
 /*****************************************************************************/
 /**
  * \brief Get dataspace manager.
- * 
+ *
  * \return Dataspace manager id, L4_INVALID_ID if not found.
  */
-/*****************************************************************************/ 
-l4_threadid_t 
+/*****************************************************************************/
+l4_threadid_t
 l4rm_get_dsm(void)
 {
   l4_threadid_t dsm_id;
@@ -112,10 +111,10 @@ l4rm_get_dsm(void)
 /*****************************************************************************/
 /**
  * \brief Get Sigma0.
- *	
+ *
  * \return Sigma0 id, L4_INVALID_ID if not found.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4_threadid_t
 l4rm_get_sigma0(void)
 {

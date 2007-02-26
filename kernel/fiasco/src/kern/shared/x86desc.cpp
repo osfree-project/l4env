@@ -23,40 +23,40 @@ protected:
   struct Idt_entry_desc
     {
       Unsigned16   _offset_low;
-      Unsigned16   _selector    __attribute__((packed));
-      Unsigned8    _zero        __attribute__((packed));
-      Unsigned8    _access      __attribute__((packed));
-      Unsigned16   _offset_high __attribute__((packed));
-    };
+      Unsigned16   _selector;
+      Unsigned8    _zero;
+      Unsigned8    _access;
+      Unsigned16   _offset_high;
+    } __attribute__((packed));
 
   // segment descriptor
   struct Gdt_entry_desc
     {
       Unsigned16   _limit_low;
-      Unsigned16   _base_low   __attribute__((packed));
-      Unsigned8    _base_med   __attribute__((packed));
-      Unsigned8    _access     __attribute__((packed));
-      Unsigned8    _limit_high __attribute__((packed));
-      Unsigned8    _base_high  __attribute__((packed));
-    };
+      Unsigned16   _base_low;
+      Unsigned8    _base_med;
+      Unsigned8    _access;
+      Unsigned8    _limit_high;
+      Unsigned8    _base_high;
+    } __attribute__((packed));
 
   struct Task_gate_desc
     {
       Unsigned16   _avail1;
-      Unsigned16   _selector   __attribute__((packed));
-      Unsigned8    _avail2     __attribute__((packed));
-      Unsigned8    _access     __attribute__((packed));
-      Unsigned16   _avail3     __attribute__((packed));
-    };
+      Unsigned16   _selector;
+      Unsigned8    _avail2;
+      Unsigned8    _access;
+      Unsigned16   _avail3;
+    } __attribute__((packed));
 
   // segment descriptor not present
   struct Not_present_desc
     {
       Unsigned32   _avail1;
-      Unsigned8    _avail2     __attribute__((packed));
-      Unsigned8    _access     __attribute__((packed));
-      Unsigned16   _avail3     __attribute__((packed));
-    };
+      Unsigned8    _avail2;
+      Unsigned8    _access;
+      Unsigned16   _avail3;
+    } __attribute__((packed));
 
   union
     {
@@ -71,9 +71,9 @@ protected:
 class Pseudo_descriptor
 {
   Unsigned16 _limit;
-  Unsigned32 _base  __attribute__((packed));
-  Unsigned16 _pad   __attribute__((packed));
-};
+  Unsigned32 _base;
+  Unsigned16 _pad;
+} __attribute__((packed));
 
 
 IMPLEMENTATION[debug]:

@@ -84,7 +84,7 @@ l4th_stack_init(void)
   area_size = l4thread_max_threads * l4thread_max_stack;
 
   LOGdL(DEBUG_STACK_INIT, "stack setup:\n" \
-        " %d threads, stack max. %u bytes, stack area size 0x%08x",
+        " %d threads, stack max. %zu bytes, stack area size 0x%08zx",
         l4thread_max_threads, l4thread_max_stack, area_size);
 
   if (l4thread_stack_area_addr == -1)
@@ -112,7 +112,7 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  LOG_printf(" using stack area <0x%08x-0x%08x>\n",
+	  LOG_printf(" using stack area <0x%08lx-0x%08lx>\n",
                  l4th_stack_area_start, l4th_stack_area_end);
 #endif
 	}
@@ -120,7 +120,7 @@ l4th_stack_init(void)
   else
     {
 #if DEBUG_STACK_INIT
-      LOG_printf(" trying area at 0x%08x\n", l4thread_stack_area_addr);
+      LOG_printf(" trying area at 0x%08lx\n", l4thread_stack_area_addr);
 #endif
 
       /* reserve given stack map area */
@@ -130,7 +130,7 @@ l4th_stack_init(void)
       if (ret < 0)
 	{
 	  Panic("l4thread: specified stack area not available "\
-		"(0x%08x-0x%08x)!", l4thread_stack_area_addr,
+		"(0x%08lx-0x%08lx)!", l4thread_stack_area_addr,
 		l4thread_stack_area_addr + area_size);
 	  return -1;
 	}
@@ -142,7 +142,7 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = l4thread_stack_area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  LOG_printf(" using stack area <0x%08x-0x%08x>\n",
+	  LOG_printf(" using stack area <0x%08lx-0x%08lx>\n",
                  l4th_stack_area_start, l4th_stack_area_end);
 #endif
 	}
@@ -185,7 +185,7 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
 	index * l4thread_max_stack + (l4thread_max_stack - size);
 
       LOGdL(DEBUG_STACK_ALLOC, 
-            "allocating in stack area, index %d, addr 0x%08x, size %u",
+            "allocating in stack area, index %d, addr 0x%08lx, size %zu",
             index, map_addr, size);
 
       ret = l4th_pages_allocate(size, map_addr, l4th_stack_area_id, owner,
@@ -195,7 +195,7 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
     {
       /* allocating stack somewhere */
       LOGdL(DEBUG_STACK_ALLOC,
-            "allocating stack somewhere, size %u", size);
+            "allocating stack somewhere, size %zu", size);
       
       ret = l4th_pages_allocate(size, VM_FIND_REGION, VM_DEFAULT_AREA,
                                 owner, "L4thread stack", flags, desc);
@@ -205,7 +205,7 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
   if (ret < 0)
     LOGL("error allocating stack (%d)!", ret);
   else
-    LOGL("stack at 0x%08x", desc->map_addr);
+    LOGL("stack at 0x%08lx", desc->map_addr);
 #endif
 
   /* done */

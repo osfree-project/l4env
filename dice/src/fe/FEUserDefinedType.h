@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEUserDefinedType.h
- *    \brief   contains the declaration of the class CFEUserDefinedType
+ *  \file    dice/src/fe/FEUserDefinedType.h
+ *  \brief   contains the declaration of the class CFEUserDefinedType
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,11 +32,10 @@
 
 #include "fe/FETypeSpec.h"
 #include <string>
-using namespace std;
 
 /**    \class CFEUserDefinedType
  *    \ingroup frontend
- *    \brief contains the alias name of a type
+ *  \brief contains the alias name of a type
  *
  * The alias name of a type is set by a typedef declaration.
  */
@@ -52,24 +51,23 @@ public:
     virtual ~CFEUserDefinedType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the sorce to copy from
+    /** \brief copy constructor
+     *  \param src the sorce to copy from
      */
     CFEUserDefinedType(CFEUserDefinedType &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
+    virtual void Accept(CVisitor&);
     virtual CObject* Clone();
     virtual string GetName();
     virtual bool Ignore();
-    virtual TYPESPEC_TYPE GetOriginalType();
+    virtual unsigned int GetOriginalType();
 
 // attributes
 protected:
-    /**    \var string m_sName
-     *    \brief the alias name
+    /** \var string m_sName
+     *  \brief the alias name
      */
     string m_sName;
 };

@@ -17,6 +17,8 @@
 #endif
 
 const char *me = "sig_serv";
+task_signal_struct_t *task_list_head = NULL;
+l4_threadid_t main_thread            = L4_INVALID_ID;
 
 int main(int argc, char**argv){
 

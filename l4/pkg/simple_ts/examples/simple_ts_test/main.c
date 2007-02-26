@@ -87,7 +87,7 @@ app_pager(void *unused)
 
 	  if (l4util_idtskstr(src_thread) > MAX_TASK_ID)
 	    {
-	      printf("pagefault at %08x (eip %08x) from unknown task "
+	      printf("pagefault at %08lx (eip %08lx) from unknown task "
 		     l4util_idfmt"\n", dw1, dw2, l4util_idstr(src_thread));
 	      enter_kdebug("stop");
 	      continue;
@@ -109,7 +109,7 @@ app_pager(void *unused)
 	  else if ((dw1 & 0xfffffffc) == 0)
 	    {
 	      printf("null pointer exception thread "l4util_idfmt
-		     ", (%08x at %08x)\n", l4util_idstr(src_thread), dw1, dw2);
+		     ", (%08lx at %08lx)\n", l4util_idstr(src_thread), dw1, dw2);
 	      enter_kdebug("stop");
 	    }
 	  else if ((dw1 >= (l4_umword_t)&app) &&
@@ -138,10 +138,10 @@ app_pager(void *unused)
 	    }
 	  else
 	    {
-	      printf("unknown pagefault at %08x (eip %08x) from "l4util_idfmt
-		     "\neip = %08x..%08x  stack = %08x..%08x\n",
+	      printf("unknown pagefault at %08lx (eip %08lx) from "l4util_idfmt
+		     "\neip = %08lx..%08lx  stack = %08lx..%08lx\n",
 		      dw1, dw2, l4util_idstr(src_thread),
-		      (unsigned)&app, (unsigned)&task2app,
+		      (unsigned long)&app, (unsigned long)&task2app,
 		      app_stack[appidx].start, app_stack[appidx].end);
 	      enter_kdebug("stop");
 	    }

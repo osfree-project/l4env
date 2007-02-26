@@ -9,10 +9,6 @@
 #include "regdefs.h"
 #include "asm.h"
 
-#ifdef CONFIG_LOCAL_IPC
-#include "fixup_code.S"
-#endif
-
 #define L4_IPC_RECANCELED		0x40
 #define L4_IPC_RETIMEOUT		0x20
 
@@ -184,20 +180,13 @@ entry_sys_ipc:
 
 	ESP_TO_TCB_AT %ebx
 #define THIS_ebx %ebx
-	testl	$Thread_alien, KSEG OFS__THREAD__STATE (THIS_ebx)
-	jnz	sys_ipc_i30_alien
-sys_ipc_i30_alien_ret:	
-	
+
+	testl   $Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
+	jnz     alien_sys_ipc_c
+
 	RESET_THREAD_CANCEL_AT THIS_ebx
 #ifdef CONFIG_SMALL_SPACES
 	RESET_KERNEL_SEGMENTS_FORCE_DS_ES		// scratches ecx
-#endif
-
-#ifdef CONFIG_LOCAL_IPC
-// lazy thread state update if lipc happened
-// the shortcut needs %eax, %esi and %ebp untouched
-// and ebx pointing to the current thread
-    COPY_KERNEL_STACK_ASM_IPC_FRAME
 #endif
 
 	// test if long send or no send at all
@@ -270,15 +259,8 @@ sys_ipc_i30_alien_ret:
 i30_shortcut_failed:
 	// shortcut failed, execute normal ipc C++ - pass
 	CNT_SHORTCUT_FAILED
-#ifdef CONFIG_LOCAL_IPC
-	STORE_EIP_ESP_IN_UTCB %ebx
-#endif
 	call	sys_ipc_wrapper
 in_slow_ipc1:
-#ifdef CONFIG_LOCAL_IPC
-        ESP_TO_TCB_AT %ebx
-        RELOAD_EIP_ESP_FROM_UTCB %ebx           // update user eip/esp
-#endif
         CHECK_SANITY $3                         // scratches ecx
         RESET_USER_SEGMENTS $3,in_cli           // scratches ecx
 	RESTORE_STATE_AFTER_IPC
@@ -309,10 +291,27 @@ i30_test_tcb_mapped:
 	andl	$0xffffffff, %ss:(%ecx)		// can raise pagefault
 	jc	i30_shortcut_failed_1		// tcb is not paged
 
-	testl	$(Thread_delayed_deadline | Thread_delayed_ipc), (%ecx)
-	jnz	i30_shortcut_failed_1
-
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH
+        // This is necessary to make sure the TCB is not zero,
+        // Context::_sched is valid too, and 
+        // CAN_PREEMPT_CURRENT dont raise an pagefault.
+        // Scenario: We first touch thread 7.00 and the TCB
+        // gets mapped and filled. The TCB for 7.01 is than
+        // mapped AND zero, because it resides in the same page
+        // as 7.00. So the assumption, that mapped TCB are always valid, is wrong.
+        //
+        // Normaly replacing 
+        //    andl    $0xffffffff, %ss:(%ecx)         // can raise pagefault
+        //    jc      i30_shortcut_failed_1           // tcb is not paged
+        // with 
+        //    andl    $0xffffffff, %ss:(%ecx)         // can raise pagefault
+        //    jna      i30_shortcut_failed_1           // tcb is not paged and not zero
+        // should be sufficient, if fiasco gurantees, that initalized Threads
+        // (and deleted threads too) have always an valid Context::_sched pointer.
+                        
+	testl	$(Thread_receiving), KSEG (%ecx)        // TCB not zero.
+	jz	i30_shortcut_failed_1
+
 	testb	$1, %al				// eax still contains the
 						// send descriptor -- no recv!
 	jz	1f
@@ -325,6 +324,7 @@ i30_test_tcb_mapped:
 #endif
 
 	andl	$(Thread_receiving | Thread_send_in_progress | \
+                | Thread_delayed_deadline | Thread_delayed_ipc | \
 		Thread_ipc_in_progress), %eax
 
 	movl	OFS__THREAD__PARTNER (DEST_esi), %edx
@@ -336,10 +336,9 @@ i30_test_tcb_mapped:
 	leal	CAST__Thread_TO_Sender (THIS_ebx), %ecx // (Sender*)this
 
 	//    (ipc_state == (Thread_receiving | Thread_ipc_in_progress)
-	cmpb	$(Thread_ipc_in_progress | Thread_receiving), %al
+	cmpl	$(Thread_ipc_in_progress | Thread_receiving), %eax
 	jne	i30_shortcut_failed_1
 
-#ifndef CONFIG_LOCAL_IPC
 	// see Receiver::sender_ok
 //	movl    OFS__THREAD__SENDER_FIRST (DEST_esi), %eax
 
@@ -356,10 +355,6 @@ i30_test_tcb_mapped:
 	cmpl	%ecx, %edx
 	jne	i30_shortcut_failed_1
 	jmp	i30_sender_ok
-#else
-	UTCB_SENDER_OK THIS_ebx, DEST_esi, %ecx, i30_sender_ok
-	// touches edx, eax and ecx
-#endif
 
 i30_shortcut_failed_1:
 	// shortcut failed, execute normal ipc C++ - pass
@@ -384,14 +379,6 @@ i30_sender_ok:
 	movl	%edx, REG_ESI (%eax)		// dst_regs->esi = id.low
 	movl	%ecx, REG_EDI (%eax)		// dst_regs->edi = id.high
 
-#ifdef CONFIG_LOCAL_IPC
-	SET_SRC_LOCAL_ID THIS_ebx, DEST_esi, %eax        //scratch %ecx, %edx
-
-	// disable the ALLOW_LIPC flag in the receiver UTCB
-	movl    OFS__THREAD__UTCB_PTR(DEST_esi), %edx
-	movl    $VAL__UTCB_STATE_NO_LIPC, OFS__UTCB__STATUSWORD(%edx)
-#endif
-
 	// wake up receiver
 	andl	$~(Thread_ipc_receiving_mask | \
 		   Thread_ipc_in_progress | Thread_lipc_ready),\
@@ -411,7 +398,6 @@ i30_sender_ok:
         orb	$(Thread_receiving | Thread_ipc_in_progress),\
 		OFS__THREAD__STATE (THIS_ebx)
 
-#ifndef CONFIG_LOCAL_IPC
         // default: open wait
 	xorl	%ecx, %ecx
 	
@@ -432,72 +418,6 @@ i30_sender_ok:
 	movb	$L4_IPC_RECANCELED, %al
 	andb	$~Thread_ready, OFS__THREAD__STATE (THIS_ebx)
 
-#else // #ifndef CONFIG_LOCAL_IPC
-
-        // default: open wait
-        xorl    %ecx, %ecx
-
-        // timeout = 0
-        movb    $L4_IPC_RETIMEOUT, %al
-        testl   %edi, %edi                      // edi==0: timout==inf
-        jne     4f                              // timeout==inf? no
-
-        // timeout = infinite ==> need wakeup
-        movb    $L4_IPC_RECANCELED, %al
-        andb    $~Thread_ready, OFS__THREAD__STATE (THIS_ebx)
-
-// timeout==inf
-        // preload utcb ptr
-        movl    OFS__THREAD__UTCB_PTR(THIS_ebx), %edi
-
-        testl   RECV_DESC_ebp, RECV_DESC_ebp      // open wait?
-        // default open wait
-        movl    $(VAL__UTCB_STATE_OPENWAIT), %ebp
-        jnz     1f                              // openwait cmp yes
-
-        // preload adress space
-        movl    OFS__THREAD__SPACE_CONTEXT(DEST_esi), %edx
-
-// timeout==inf, closed wait
-        // set dst's partner
-        leal    CAST__Thread_TO_Sender (DEST_esi), %ecx // (Sender*)dst
-        movl    OFS__THREAD__LOCAL_ID (DEST_esi), %ebp
-
-        // same address space?
-        cmpl    OFS__THREAD__SPACE_CONTEXT(THIS_ebx),%edx
-        jne     5f
-
-1:      movl    %ecx, OFS__THREAD__PARTNER (THIS_ebx)
-
-        // store the IPC-Partner in the UTCB
-        movl    %ebp, OFS__UTCB__STATUSWORD(%edi)
-	andl	$~VAL__UTCB_SENDSTATE_SENDERQUEUED, OFS__UTCB__SND_STATUS(%edi)
-	
-        // store eip and esp in utcb
-        movl    REG_EIP(REGS_esp), %edx
-        movl    REG_ESP(REGS_esp), %ecx
-
-        orb     $(Thread_lipc_ready |\
-                  Thread_utcb_ip_sp), OFS__THREAD__STATE (THIS_ebx)
-
-        // store eip and esp in utcb
-        movl    %edx, OFS__UTCB__EIP(%edi)
-        movl    %ecx, OFS__UTCB__ESP(%edi)
-
-        jmp     i30_do_switch_exec
-
-// timeout==0
-4:
-
-        testl   RECV_DESC_ebp, RECV_DESC_ebp      // open wait?
-        jnz     5f                              // openwait cmp yes
-
-        // set dst's partner
-        leal    CAST__Thread_TO_Sender (DEST_esi), %ecx // (Sender*)dst
-5:      movl    %ecx, OFS__THREAD__PARTNER (THIS_ebx)
-
-#endif
-
 	.align	8
 i30_do_switch_exec:
 
@@ -510,6 +430,13 @@ i30_do_switch_exec:
 #endif
 
 	CNT_CONTEXT_SWITCH
+
+#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
+	movl THIS_ebx, %eax
+	movl DEST_esi, %edx
+	movl $1, %ecx
+	call switch_exception_context_wrapper
+#endif
 
 	movl	OFS__THREAD__STATE (THIS_ebx), %eax
 
@@ -566,14 +493,7 @@ i30_no_enqueue:
 
 	// eax = this->space()
 	movl	OFS__THREAD__SPACE_CONTEXT (THIS_ebx), %eax
-
-
-#ifdef CONFIG_LOCAL_IPC
-        // Context::update_utcb_ptr()
-        movl    OFS__THREAD__LOCAL_ID(THIS_ebx), %ecx
-        movl    global_utcb_ptr, %edx
-        movl    %ecx, (%edx)
-#endif
+	movl	OFS__SPACE__PGTABLE (%eax), %eax
 
 #ifdef CONFIG_SMALL_SPACES
 	// current_user_gdt != this->smas_area()?
@@ -640,19 +560,6 @@ i30_flush_iobitmap:
 
 
 i30_flush_pdir:
-#ifdef CONFIG_LOCAL_IPC
-        // switch ptr to the  mapped lipc-kip
-        addl    PHYSMEM_OFFS, %eax              // phys_to_virt(%eax)
-
-        // load new ptr
-	movl	PDIR_IDX(VAL__KIP_INDEX) << 2 (%eax), %ecx
-
-        subl    PHYSMEM_OFFS, %eax              // restore old eax
-
-        // store the new kip location
-        movl    %ecx, user_kip_location
-
-#endif
 	CNT_ADDR_SPACE_SWITCH
 	movl	%eax, PAGE_DIR_ADDR
 	popl	%eax
@@ -660,9 +567,6 @@ i30_flush_pdir:
 
 i30_ret_switch:
 	ESP_TO_TCB_AT %ebx
-#ifdef CONFIG_LOCAL_IPC
-        RELOAD_EIP_ESP_FROM_UTCB %ebx           // update user eip/esp
-#endif
 	RESET_THREAD_IPC_MASK_AT %ebx
 	CHECK_SANITY $3				// scratches ecx
 	RESET_USER_SEGMENTS $3,in_cli		// scratches ecx
@@ -692,6 +596,14 @@ i30_enqueue_this:
 i30_handle_deceit:
 #define THIS_ebx %ebx
 #define DEST_esi %esi
+
+#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
+	movl THIS_ebx, %eax
+	movl DEST_esi, %edx
+	movl $0, %ecx
+	call switch_exception_context_wrapper
+#endif
+	
 	//   dst->ready_enqueue();
 	xorl	%edx, %edx
 
@@ -783,25 +695,12 @@ i30_smas_setup_space:
 	jmp	i30_smas_setup_space_done
 #endif
 
-sys_ipc_i30_alien:
-	testl	$Thread_dis_alien, KSEG OFS__THREAD__STATE (%ebx)
-	jnz	sys_ipc_i30_alien_ret
-	pushl	$(0x30 << 3 | 2)
-	pushl	$(0xd)
-	RESTORE_STATE
-	sub	$2, 4(%esp)               /* Correct EIP to point to insn */
-	popl	%eax
-	pusha
-	jmp	slowtraps
-
 #ifndef CONFIG_PF_UX
 
 // IPC entry point for sysenter. 
 
 	.align	16
-	.globl	entry_sysenter
 	.globl	entry_sys_fast_ipc
-entry_sysenter:
 entry_sys_fast_ipc:
 	pop	%esp
 	subl	$48, %esp
@@ -851,13 +750,12 @@ entry_sys_fast_ipc:
 
 	leal	16(%ecx), %ecx			// adapt user esp
 
-	testl	$Thread_alien, KSEG OFS__THREAD__STATE (THIS_ebx)
-	jnz	sys_ipc_se_alien
-sys_ipc_se_alien_ret:
-
 	RESET_THREAD_CANCEL_AT THIS_ebx
 
 	movl	%ecx, REG_ESP (%esp)		// set user esp
+
+	testl   $Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
+	jnz     alien_sys_fast_ipc_c
 
 	// test if long send or no send at all
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH
@@ -891,6 +789,9 @@ sys_ipc_se_alien_ret:
 #endif
 
 	leal	(%esi, %esi), %esi
+#ifdef CONFIG_CONTEXT_4K
+	addl	%esi, %esi
+#endif
 	andl	$TCB_ADDRESS_MASK, %esi
 	orl	$VAL__MEM_LAYOUT__TCBS, %esi	// dst = dst_id.lookup
 #define DEST_esi %esi
@@ -951,10 +852,18 @@ se_test_tcb_mapped:
 	andl	$0xffffffff, %ss:(%ecx)		// can raise pagefault
 	jc	se_shortcut_failed_1		// tcb is not paged
 
-	testl	$(Thread_delayed_deadline | Thread_delayed_ipc), KSEG (%ecx)
-	jnz	se_shortcut_failed_1
-
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH
+        // This is necessary to make sure the TCB is not zero,
+        // Context::_sched is valid too, and 
+        // CAN_PREEMPT_CURRENT dont raise an pagefault.
+        // Scenario: We first touch thread 7.00 and the TCB
+        // gets mapped and filled. The TCB for 7.01 is than
+        // mapped AND zero, because it resides in the same page
+        // as 7.00. So the assumption, that mapped TCB are always valid, is wrong.
+        
+	testl	$(Thread_receiving), KSEG (%ecx)
+	jz	se_shortcut_failed_1            // TC not zero
+
 	testb	$1, %al				// eax still contains the
 						// send descriptor -- no recv!
 	jz	1f
@@ -1060,6 +969,13 @@ se_do_switch_exec:
 
 	CNT_CONTEXT_SWITCH
 
+#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
+	movl THIS_ebx, %eax
+	movl DEST_esi, %edx
+	movl $1, %ecx
+	call switch_exception_context_wrapper
+#endif
+	
         movl    KSEG OFS__THREAD__STATE (THIS_ebx), %eax
 	testl	$Thread_fpu_owner, %eax
 	jz	1f
@@ -1108,6 +1024,7 @@ se_no_enqueue:
 	movl	%ecx, KSEG 4 (%eax)	// x86_tss.esp0
 
 	movl	KSEG OFS__THREAD__SPACE_CONTEXT (DEST_esi), %eax
+	movl    OFS__SPACE__PGTABLE (%eax), %eax           
 
 #ifdef CONFIG_SMALL_SPACES
 	// current_user_gdt != this->smas_area()?
@@ -1288,6 +1205,14 @@ se_slow_switch:
 se_handle_deceit:
 #define DEST_esi %esi
 #define REGS_esp %esp
+
+#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
+	movl THIS_ebx, %eax
+	movl DEST_esi, %edx
+	movl $0, %ecx
+	call switch_exception_context_wrapper
+#endif
+
 	//   dst->ready_enqueue();
 	xorl	%edx, %edx
 
@@ -1430,18 +1355,6 @@ se_smas_setup_space:
 	jmp	se_smas_setup_space_done
 #endif
 
-#ifndef CONFIG_PF_UX
-sys_ipc_se_alien:
-	testl	$Thread_dis_alien, KSEG OFS__THREAD__STATE (%ebx)
-	jnz	sys_ipc_se_alien_ret
-	pushl	$(0)
-	pushl	$(0xd)
-	RESTORE_STATE
-	sub	$2, 4(%esp)               /* Correct EIP to point to insn */
-	popl	%eax
-	pusha
-	jmp	slowtraps
-#endif
 
 	.globl	in_slow_ipc1
 	.globl	i30_ret_switch

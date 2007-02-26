@@ -1960,6 +1960,9 @@ print_insn (bfd_vma pc, disassemble_info *info)
 {
   const struct dis386 *dp;
   int i;
+#if 0
+  int l;
+#endif
   char *first, *second, *third;
   int needcomma;
   unsigned char uses_SSE_prefix, uses_LOCK_prefix;
@@ -2398,6 +2401,26 @@ print_insn (bfd_vma pc, disassemble_info *info)
 	name = INTERNAL_DISASSEMBLER_ERROR;
       (*info->fprintf_func) (info->stream, "%s ", name);
     }
+
+#if 0
+  for (l = 0, i = 0;; ++i,++l)
+    {
+      if (l == info->bytes_per_line)
+	{
+	  l = 0;
+	  if (priv.the_buffer + i < codep)
+	    (*info->fprintf_func)(info->stream, "\n");
+	  else
+	    break;
+	}
+
+      if (priv.the_buffer + i < codep)
+        (*info->fprintf_func) (info->stream, "%02x ", priv.the_buffer[i]);
+      else
+	(*info->fprintf_func) (info->stream, "   ");
+    }
+#endif
+
 
   obufp = obuf + strlen (obuf);
   for (i = strlen (obuf); i < 6; i++)
@@ -3198,20 +3221,17 @@ OP_indirE (int bytemode, int sizeflag)
 static void
 print_operand_value (char *buf, int hex, bfd_vma disp)
 {
-  if (mode_64bit) // fm3
-    {
-      if (hex)
-	sprintf (buf, "0x%llx", disp);
-      else
-	sprintf (buf, "%lld", disp);
-    }
+#ifdef CONFIG_AMD64 // fm3
+  if (hex)
+    sprintf (buf, "0x%lx", disp);
   else
-    {
-      if (hex)
-	sprintf (buf, "0x%x", (unsigned int) disp);
-      else
-	sprintf (buf, "%d", (int) disp);
-    }
+    sprintf (buf, "%ld", disp);
+#else
+  if (hex)
+    sprintf (buf, "0x%x", (unsigned int) disp);
+  else
+    sprintf (buf, "%d", (int) disp);
+#endif
 }
 
 static void

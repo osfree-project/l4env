@@ -97,7 +97,10 @@ static void *get_buf_adr    (void) {return buf_adr;}
 
 /*** PROPAGATE BUFFER UPDATE TO NITPICKER ***/
 static void update_area(long x1,long y1,long x2,long y2) {
-	if ((x1 > x2) || (y1 > y2)) return;
+
+	if ((x1 > x2) || (y1 > y2) || (x1 > scr_width)  || (x2 < 0)
+	                           || (y1 > scr_height) || (y2 < 0)) return;
+//	printf("nitscrdrv: refresh %d, %d, %d, %d\n", x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	nitpicker_refresh_call(&nit, nit_buf_id, x1, y1, x2 - x1 + 1, y2 - y1 + 1, &env);
 }
 

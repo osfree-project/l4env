@@ -1,0 +1,19 @@
+/*!\defgroup send_receive           Send/Receive functions
+ *
+ *\brief Functions for sending and receiving packets.
+ */
+
+/*!\defgroup management             Connection management functions
+ *
+ *\brief Functions for managing a connection.
+ */
+
+/*!\defgroup debug                  Debugging functions.
+ *
+ *\brief Functions to support debugging.
+ */
+
+/*!\defgroup sharedmem              Shared-memory helper functions.
+ *
+ *\brief Helper functions for shared-memory connections.
+ */

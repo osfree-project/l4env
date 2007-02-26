@@ -16,12 +16,17 @@ IMPLEMENTATION:
 
 class Jdb_ptab_m : public Jdb_module
 {
+public:
+  Jdb_ptab_m() FIASCO_INIT;
+private:
   Task_num task;
   static char first_char;
+  Address get_base(Space *s);
 };
 
 class Jdb_ptab : public Jdb_table
 {
+private:
   Address base;
   Address virt_base;
   int level;
@@ -29,7 +34,7 @@ class Jdb_ptab : public Jdb_table
   unsigned entries;
   unsigned char cur_pt_level;
   char dump_raw;
-  
+
   static unsigned max_pt_level;
 
   static unsigned entry_valid(Mword entry, unsigned level);
@@ -39,20 +44,17 @@ class Jdb_ptab : public Jdb_table
   static unsigned first_level_entries();
   
   void print_entry(Mword entry, unsigned level);
-
+  void print_head(Mword entry);
 };
 
 char Jdb_ptab_m::first_char;
-//Task_num Jdb_ptab::task;
 
 typedef Mword My_pte;			// shoud be replaced by
 					// arch-dependent type
 					
-PUBLIC 
-Jdb_ptab::Jdb_ptab(void *pt_base, Task_num task,
-                   unsigned char pt_level = 0, 
-                   unsigned entries = 0, Address virt_base = 0,
-		   int level = 0)
+PUBLIC
+Jdb_ptab::Jdb_ptab(void *pt_base, Task_num task, unsigned char pt_level = 0,
+                   unsigned entries = 0, Address virt_base = 0, int level = 0)
 : base((Address)pt_base), virt_base(virt_base), level(level), task(task),
   entries(entries), cur_pt_level(pt_level), dump_raw(0)
 {
@@ -62,13 +64,20 @@ Jdb_ptab::Jdb_ptab(void *pt_base, Task_num task,
 
 PUBLIC
 unsigned 
-Jdb_ptab::col_width(unsigned) const 
-{ return 8; }
+Jdb_ptab::col_width(unsigned column) const
+{
+  if (column == 0)
+    return Jdb_screen::Col_head_size;
+  else
+    return Jdb_screen::Mword_size_bmode; 
+}
 
 PUBLIC
 unsigned
 Jdb_ptab::cols() const
-{ return 9; }
+{
+  return Jdb_screen::Columns;
+}
 
 
 // available from the jdb_dump module
@@ -81,71 +90,17 @@ void
 Jdb_ptab::draw_entry(unsigned row, unsigned col)
 {
   if (col==0)
-    {
-      printf(""L4_PTR_FMT"", virt(row, 1));
-      return;
-    }
-
-  print_entry(*(My_pte*)(virt(row,col)), cur_pt_level);
-}
-
-PRIVATE
-unsigned 
-Jdb_ptab::disp_virt_to_r(Address v)
-{
-  if (cur_pt_level == 0)
-    v >>= Config::SUPERPAGE_SHIFT;
+    print_head(virt(row, 1));
   else
-    v >>= Config::PAGE_SHIFT;
-
-  return v / (cols()-1);
-}
-
-PRIVATE
-unsigned 
-Jdb_ptab::disp_virt_to_c(Address v)
-{
-  if (cur_pt_level == 0)
-    v >>= Config::SUPERPAGE_SHIFT;
-  else
-    v >>= Config::PAGE_SHIFT;
-
-  return (v % (cols()-1)) + 1;
-}
-
-PRIVATE
-Address 
-Jdb_ptab::disp_virt(unsigned row, unsigned col)
-{
-  unsigned e = (col-1) + (row * (cols()-1));
-  if (cur_pt_level == 0)
-    return e * Config::SUPERPAGE_SIZE;
-  else
-    return e * Config::PAGE_SIZE + virt_base;
+    print_entry(*(My_pte*)(virt(row,col)), cur_pt_level);
 }
 
 PRIVATE
 Address
 Jdb_ptab::virt(unsigned row, unsigned col)
 {
-  unsigned e = (col-1) + (row * (cols()-1));
+  Mword e = (col-1) + (row * (cols()-1));
   return base + e * sizeof(Mword);
-}
-
-PUBLIC
-void
-Jdb_ptab::print_statline(unsigned row, unsigned col)
-{
-  if (cur_pt_level<max_pt_level)
-    {
-      Jdb::printf_statline("ptab", "<Space>=mode <CR>=goto ptab/superpage",
-	  "<"L4_PTR_FMT"> task %-3x", disp_virt(row,col), task);
-    }
-  else // PT_MODE
-    {
-      Jdb::printf_statline("ptab", "<Space>=mode <CR>=goto page",
-	  "<"L4_PTR_FMT"> task %-3x", disp_virt(row,col), task);
-    }
 }
 
 PUBLIC
@@ -236,7 +191,7 @@ Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	return Jdb_module::NOTHING;
 
       void *ptab_base;
-      if (!(ptab_base = (void*)((Address)s->dir())))
+      if (!(ptab_base = ((void*)get_base(s))))
 	return Jdb_module::NOTHING;
 
       Jdb::clear_screen();
@@ -249,7 +204,7 @@ Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_ptab_m::cmds() const
 {
   static Cmd cs[] =
@@ -262,13 +217,13 @@ Jdb_ptab_m::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_ptab_m::num_cmds() const
 {
   return 1;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_ptab_m::Jdb_ptab_m()
   : Jdb_module("INFO")
 {}

@@ -5,40 +5,53 @@ IMPLEMENTATION:
 #include "l4_types.h"
 #include "receiver.h"
 #include "thread_state.h"
-
+#include "thread_lock.h"
+#include "lock_guard.h"
 
 /** Sender-activation function called when receiver gets ready.
     Irq::hit() actually ensures that this method is always called
     when an interrupt occurs, even when the receiver was already
     waiting. 
  */
-PUBLIC 
-virtual void 
-Irq::ipc_receiver_ready()
+PUBLIC
+virtual bool
+Irq::ipc_receiver_ready(Receiver *)
 {
+  // we are running with ints off
   assert(current() == _irq_thread);
+  assert(_queued);
+  assert(current()->state() & Thread_ready);
 
-  if (_queued &&
-      _irq_thread->ipc_try_lock(nonull_static_cast<Sender*>(this)) == 0)
-    {
-      _irq_thread->ipc_init (nonull_static_cast<Sender*>(this));
-      _irq_thread->rcv_regs()->msg_dope(0);	// state = OK
-      _irq_thread->state_change(~(Thread_receiving | Thread_busy  
-				  | Thread_ipc_in_progress),
-				Thread_ready);
-      _irq_thread->deny_lipc();
+  Lock_guard <Thread_lock> guard(_irq_thread->thread_lock());
+  // possible preemption point
 
+  if(!_irq_thread->sender_ok(this))
+    return true;
+
+  _irq_thread->ipc_init(this);
+
+#ifndef CONFIG_ABI_V4
+  _irq_thread->rcv_regs()->msg_dope(0); // state = OK
+#endif
+
+  assert(_irq_thread->state() & Thread_ready);
+
+  _irq_thread->state_change(~(Thread_receiving | Thread_busy
+                              | Thread_transfer_in_progress
+                              | Thread_ipc_in_progress),
+                            Thread_ready);
+
+  // here we can optimize coz we are running with ints off
       // XXX receiver should also get a fresh timeslice
-      if (consume() < 1)	// last interrupt in queue?
-	{
-	  sender_dequeue(_irq_thread->sender_list());
+  if (consume() < 1)    // last interrupt in queue?
+    {
+      sender_dequeue(_irq_thread->sender_list());
 
-	  // Now that the interrupt has been delivered, it is OK for it to
-	  // occur again.
-	  maybe_enable();
-	}
-      // else remain queued if more interrupts are left
-
-      _irq_thread->ipc_unlock();
+      // Now that the interrupt has been delivered, it is OK for it to
+      // occur again.
+      maybe_enable();
     }
+
+  // else remain queued if more interrupts are left
+  return true;
 }

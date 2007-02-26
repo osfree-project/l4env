@@ -1,6 +1,8 @@
 POSIX mmap-Abbildung auf Dataspaces
 -----------------------------------
 
+Autor: Jens Syckor
+
 Im Folgenden soll erläutert werden,
 wie die mmap POSIX Schnittstelle auf Dataspaces abgebildet werden soll.
 

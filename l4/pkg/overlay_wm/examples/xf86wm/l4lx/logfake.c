@@ -1,6 +1,10 @@
 
 char LOG_tag[] = "ovlwm";                  /* tag that is used for log output */
 
+void LOG_printf(void);
+void LOG_printf(void) {
+}
+
 void LOG_flush(void);
 void LOG_flush(void) {
 }

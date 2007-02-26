@@ -30,8 +30,8 @@
  */
 typedef struct avlt_key
 {
-  l4_uint32_t start;               ///< start address of map region
-  l4_uint32_t end;                 ///< end address od map region */
+  l4_addr_t start;               ///< start address of map region
+  l4_addr_t end;                 ///< end address od map region */
 } avlt_key_t;
 
 /* macros to test keys */
@@ -104,12 +104,12 @@ void
 avlt_show_tree(void);
 
 int
-AVLT_insert(l4_uint32_t start, l4_uint32_t end, l4_uint32_t data);
+AVLT_insert(l4_addr_t start, l4_addr_t end, l4_addr_t data);
 
 int
-AVLT_remove(l4_uint32_t start, l4_uint32_t end);
+AVLT_remove(l4_addr_t start, l4_addr_t end);
 
 int 
-AVLT_find(l4_uint32_t start, l4_uint32_t end);
+AVLT_find(l4_addr_t start, l4_addr_t end);
 
 #endif /* !_L4RM___AVL_TREE_H */ 

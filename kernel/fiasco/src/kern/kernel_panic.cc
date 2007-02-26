@@ -1,7 +1,7 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cassert>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include <panic.h>
 
 #include "kernel_console.h"

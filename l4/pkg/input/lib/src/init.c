@@ -62,7 +62,8 @@ int l4input_init(int omega0, int prio, void (*handler)(struct l4input *))
 	    (error=l4input_internal_i8042_init()) ||
 	    (error=l4input_internal_psmouse_init()) ||
 	    (error=l4input_internal_atkbd_init()) ||
-	    (error=l4input_internal_pcspkr_init()))
+	    (error=l4input_internal_pcspkr_init()) ||
+	    (error=l4input_internal_proxy_init(prio)))
 		return error;
 
 	if ((error=l4input_internal_l4evdev_init(handler))) {

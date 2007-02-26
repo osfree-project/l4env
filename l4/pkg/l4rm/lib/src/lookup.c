@@ -65,7 +65,7 @@ l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
   /* lock region list */
   l4rm_lock_region_list();
 
-  LOGdL(DEBUG_LOOKUP, "lookup addr 0x%08x", a);
+  LOGdL(DEBUG_LOOKUP, "lookup addr 0x"l4_addr_fmt, a);
 
   /* lookup address */
   r = l4rm_find_used_region(a);
@@ -76,8 +76,8 @@ l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
       return -L4_ENOTFOUND;
     }
   
-  LOGdL(DEBUG_LOOKUP, "found region 0x%08x-0x%08x, type 0x%08x", 
-        r->start, r->end, REGION_TYPE(r));
+  LOGdL(DEBUG_LOOKUP, "found region 0x"l4_addr_fmt"-0x"l4_addr_fmt
+        ", type 0x%08x", r->start, r->end, REGION_TYPE(r));
 
   *map_addr = r->start;
   *map_size = r->end - r->start + 1;	
@@ -87,8 +87,9 @@ l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
   switch (REGION_TYPE(r))
     {
     case REGION_DATASPACE: 
-      LOGd(DEBUG_LOOKUP, "ds %u at "l4util_idfmt", offs 0x%08x", 
-           r->data.ds.ds.id, l4util_idstr(r->data.ds.ds.manager), r->data.ds.offs);
+      LOGd(DEBUG_LOOKUP, "ds %u at "l4util_idfmt", offs 0x"l4_addr_fmt, 
+           r->data.ds.ds.id, l4util_idstr(r->data.ds.ds.manager),
+	   r->data.ds.offs);
 
       type = L4RM_REGION_DATASPACE;
       *ds = r->data.ds.ds;
@@ -163,13 +164,13 @@ l4rm_lookup_region(const void * addr, l4_addr_t * map_addr,
   /* lock region list */
   l4rm_lock_region_list();
 
-  LOGdL(DEBUG_LOOKUP, "lookup region for addr 0x%08x", a);
+  LOGdL(DEBUG_LOOKUP, "lookup region for addr 0x"l4_addr_fmt, a);
 
   r = l4rm_find_region(a);
   if (r == NULL)
     {
       /* This should never happen! */
-      LOG_Error("region at address 0x%08x not found!", a);
+      LOG_Error("region at address 0x"l4_addr_fmt" not found!", a);
       l4rm_unlock_region_list();
       return -L4_ENOTFOUND;
     }

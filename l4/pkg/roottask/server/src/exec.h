@@ -23,12 +23,32 @@
 #ifdef ARCH_x86
 #define MY_EI_DATA	ELFDATA2LSB
 #define MY_E_MACHINE	EM_386
+#define MY_EI_CLASS	ELFCLASS32
+#define MY_EHDR		Elf32_Ehdr
+#define MY_PHDR		Elf32_Phdr
+#define MY_SHDR		Elf32_Shdr
+#define MY_SYM		Elf32_Sym
+#else
+#ifdef ARCH_amd64
+#define MY_EI_DATA	ELFDATA2LSB
+#define MY_E_MACHINE	EM_AMD64
+#define MY_EI_CLASS	ELFCLASS64
+#define MY_EHDR		Elf64_Ehdr
+#define MY_PHDR		Elf64_Phdr
+#define MY_SHDR		Elf64_Shdr
+#define MY_SYM		Elf64_Sym
 #else
 #ifdef ARCH_arm
 #define MY_EI_DATA	ELFDATA2LSB
 #define MY_E_MACHINE	EM_ARM
+#define MY_EI_CLASS	ELFCLASS32
+#define MY_EHDR		Elf32_Ehdr
+#define MY_PHDR		Elf32_Phdr
+#define MY_SHDR		Elf32_Shdr
+#define MY_SYM		Elf32_Sym
 #else
 #error Unsupported architecture!
+#endif
 #endif
 #endif
 

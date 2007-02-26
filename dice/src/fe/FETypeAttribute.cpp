@@ -69,29 +69,3 @@ CObject *CFETypeAttribute::Clone()
 {
     return new CFETypeAttribute(*this);
 }
-
-/** serializes this object
- *  \param pFile the file to serialize to/from
- */
-void CFETypeAttribute::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      switch (m_nType)
-        {
-        case ATTR_SWITCH_TYPE:
-        pFile->PrintIndent("<attribute>switch_type(\n");
-        GetType()->Serialize(pFile);
-        pFile->PrintIndent(")</attribute>\n");
-        break;
-        case ATTR_TRANSMIT_AS:
-        pFile->PrintIndent("<attribute>transmit_as(\n");
-        GetType()->Serialize(pFile);
-        pFile->PrintIndent(")</attribute>\n");
-        break;
-        default:
-        CFEAttribute::Serialize(pFile);
-        break;
-        }
-      }
-}

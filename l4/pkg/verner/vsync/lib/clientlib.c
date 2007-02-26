@@ -63,9 +63,9 @@ __callback_video_connect (dsi_component_t * comp, dsi_socket_ref_t * remote)
   /* call server to connect */
   ret = VideoSyncComponentIntern_start_UncompressedVideoIn_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
-    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, env.major);
+    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -150,11 +150,11 @@ VideoSyncComponentIntern_connect_UncompressedVideoIn (l4_threadid_t thread_id,
   /* call server to connect */
   ret = VideoSyncComponentIntern_connect_UncompressedVideoIn_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_connect_UncompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -196,11 +196,11 @@ VideoSyncComponentIntern_disconnect_UncompressedVideoIn (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_disconnect_UncompressedVideoIn_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_disconnect_UncompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -237,10 +237,10 @@ __callback_audio_connect (dsi_component_t * comp, dsi_socket_ref_t * remote)
   /* call server to connect */
   ret = VideoSyncComponentIntern_start_UncompressedAudioIn_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error ("__callback_audio_connect failed (ret %d, exc %d)", ret,
-	       env.major);
+	       DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -325,11 +325,11 @@ VideoSyncComponentIntern_connect_UncompressedAudioIn (l4_threadid_t thread_id,
   /* call server to connect */
   ret = VideoSyncComponentIntern_connect_UncompressedAudioIn_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_connect_UncompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -371,11 +371,11 @@ VideoSyncComponentIntern_disconnect_UncompressedAudioIn (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_disconnect_UncompressedAudioIn_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_disconnect_UncompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -404,11 +404,11 @@ VideoSyncComponentIntern_setRTparams (l4_threadid_t thread_id,
   int ret = VideoSyncComponentIntern_setRTparams_call
     (&thread_id, period, reservation_audio, reservation_video,
      verbose_preemption_ipc, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_setRTparams failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -430,11 +430,11 @@ VideoSyncComponentIntern_getPosition (l4_threadid_t thread_id,
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_getPosition_call
     (&thread_id, position, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoSyncComponentIntern_getPosition_call failed (ret %d, exc %d.%d)",
-       ret, env.major, env.repos_id);
+       ret, DICE_EXCEPTION_MAJOR(&env), DICE_EXCEPTION_MINOR(&env));
     return -1;
   }
   return 0;
@@ -457,7 +457,7 @@ VideoSyncComponentIntern_setVolume (l4_threadid_t thread_id, int left,
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_setVolume_call
     (&thread_id, left, right, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     return -1;
   return 0;
 }
@@ -477,7 +477,7 @@ VideoSyncComponentIntern_setPlaybackMode (l4_threadid_t thread_id, int mode)
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_setPlaybackMode_call
     (&thread_id, mode, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     return -1;
   return 0;
 }
@@ -496,7 +496,7 @@ VideoSyncComponentIntern_setFxPlugin (l4_threadid_t thread_id,
   CORBA_Environment env = dice_default_environment;
   int ret = VideoSyncComponentIntern_setFxPlugin_call
     (&thread_id, fx_plugin_id, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     return -1;
   return 0;
 }

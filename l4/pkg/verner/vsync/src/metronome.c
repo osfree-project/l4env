@@ -266,13 +266,13 @@ metronome_wait_sync (frame_ctrl_t * frameattr, control_struct_t * control)
       /* if we have sl_usec_av_async>0 in means we're too slow, so we speed it up */
       if (sl_usec_av_async > 0)
       {
-	LOGdL (DEBUG_SYNC_HEAVY, "async=%ldµsec (too slow)", sl_usec_av_async);
+	LOGdL (DEBUG_SYNC_HEAVY, "async=%ldusec (too slow)", sl_usec_av_async);
 	sl_usec_av_async = sl_usec_av_async - sl_usec_wait_time;
 	sl_usec_wait_time = -sl_usec_av_async;
       }
       else if (sl_usec_av_async < 0)
       {
-	LOGdL (DEBUG_SYNC_HEAVY, "async=%ldµsec (too fast)", sl_usec_av_async);
+	LOGdL (DEBUG_SYNC_HEAVY, "async=%ldusec (too fast)", sl_usec_av_async);
 	sl_usec_wait_time += -sl_usec_av_async;
 	sl_usec_av_async = 0;
 /*	sl_usec_av_async = sl_usec_av_async - sl_usec_wait_time;

@@ -14,12 +14,12 @@
 #include <l4/sys/types.h>
 #include <l4/cpu_reserve/sched.h>
 #include <l4/sys/rt_sched.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/log/l4log.h>
 #include <l4/util/macros.h>
 #include <l4/util/util.h>
 #include <l4/util/irq.h>
-#include <l4/util/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/env/errno.h>
 #include <l4/thread/thread.h>
@@ -82,7 +82,7 @@ int main(int argc, const char**argv){
     l4thread_t thread;
 
     rmgr_init();
-    kip = l4util_kip_map();
+    kip = l4sigma0_kip_map(L4_INVALID_ID);
 
     printf("Starting thread in periodic mode ASAP. This must not fail.\n");
     LOGk("periodic, ASAP");

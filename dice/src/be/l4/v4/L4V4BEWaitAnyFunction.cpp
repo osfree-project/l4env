@@ -26,18 +26,22 @@
  */
 #include "L4V4BEWaitAnyFunction.h"
 #include "L4V4BENameFactory.h"
-#include "be/l4/L4BEMsgBufferType.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEDeclarator.h"
+#include "be/BETypedDeclarator.h"
 #include "be/BEMarshaller.h"
 #include "be/BEUserDefinedType.h"
 #include "be/BECommunication.h"
+#include "be/BEMsgBuffer.h"
+#include "be/l4/L4BETrace.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4V4BEWaitAnyFunction::CL4V4BEWaitAnyFunction(bool bOpenWait, bool bReply)
- : CL4BEWaitAnyFunction(bOpenWait, bReply)
+: CL4BEWaitAnyFunction(bOpenWait, bReply)
 {
 }
 
@@ -46,175 +50,172 @@ CL4V4BEWaitAnyFunction::~CL4V4BEWaitAnyFunction()
 {
 }
 
-/** \brief writes the variable declarations of this function
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * The variable declarations of the wait-any function only contains so-called
- * helper variables. This is the result variable.
- */
-void
-CL4V4BEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile,
-    CBEContext * pContext)
-{
-    // first call base class (skip base class)
-    CBEWaitAnyFunction::WriteVariableDeclaration(pFile, pContext);
-    // need message tag
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    *pFile << "\tL4_MsgTag_t " << sMsgTag << ";\n";
-
-    // write loop variable for msg buffer dump
-    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-        pFile->PrintIndent("int _i;\n");
-}
-
 /** \brief writes the invocation call to thetarget file
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * The wait any function simply waits for any message and unmarshals the
  * opcode. Since the message buffer is a referenced parameter, we know for sure,
  * that the "buffer" is a pointer.
  */
 void
-CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile,
-    CBEContext * pContext)
+CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 {
     // load message
     bool bVarSized = false;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pMsgBuffer->GetAlias() &&
-        ((pMsgBuffer->GetAlias()->GetStars() > 0) ||
-         pMsgBuffer->IsVariableSized(GetReceiveDirection())))
-         bVarSized = true;
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    if (pMsgBuffer->m_Declarators.First() &&
+	((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
+	 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
+	bVarSized = true;
 
     if (m_bReply)
     {
-        // load the message into the UTCB
-        *pFile << "\tL4_MsgLoad ( " << ((bVarSized) ? "" : "&") <<
-            pMsgBuffer->GetAlias()->GetName() << " );\n";
+	// load the message into the UTCB
+	*pFile << "\tL4_MsgLoad ( (L4_Msg_t*) " << ((bVarSized) ? "" : "&") <<
+	    pMsgBuffer->m_Declarators.First()->GetName() << " );\n";
     }
 
     // invocate
-    WriteIPC(pFile, pContext);
+    WriteIPC(pFile);
 
     // store message
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
-    *pFile << "\tL4_MsgStore (" << sMsgTag << ", " <<
-        ((bVarSized) ? "" : "&") << pMsgBuffer->GetAlias()->GetName() <<
-        ");\n";
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    *pFile << "\tL4_MsgStore (" << sMsgTag << ", (L4_Msg_t*) " <<
+	((bVarSized) ? "" : "&") << pMsgBuffer->m_Declarators.First()->GetName() <<
+	");\n";
 
-    WriteExceptionCheck(pFile, pContext); // reset exception
-    WriteIPCErrorCheck(pFile, pContext); // set IPC exception
+    WriteIPCErrorCheck(pFile); // set IPC exception
     if (m_bReply)
-        WriteReleaseMemory(pFile, pContext);
-
-    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-    {
-        string sResult =
-            pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-        pMsgBuffer->WriteDump(pFile, sResult, pContext);
-    }
+	WriteReleaseMemory(pFile);
 }
 
 /** \brief writes the ipc code
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
 void
-CL4V4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile,
-    CBEContext *pContext)
+CL4V4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
 {
-    assert(m_pComm);
-    m_pComm->WriteReplyAndWait(pFile, this, pContext);
+    assert(m_pTrace);
+    m_pTrace->BeforeReplyWait(pFile, this);
+
+    CBECommunication *pComm = GetCommunication();
+    assert(pComm);
+    pComm->WriteReplyAndWait(pFile, this);
+
+    // print trace code before IPC error check to have unmodified values in
+    // message buffer
+    assert(m_pTrace);
+    m_pTrace->AfterReplyWait(pFile, this);
 }
 
 /** \brief writes the unmarshalling code for this function
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it \
- *           to false if not possible
- *  \param pContext the context of the write operation
  *
  * The wait-any function does only unmarshal the opcode. We can print this code
  * by hand. We should use a marshaller anyways.
  */
-void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext * pContext)
+void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    /* If the option noopcode is set, we do not unmarshal anything at all. */
-    if (FindAttribute(ATTR_NOOPCODE))
-        return;
+    /* If the option noopcode is set, we do not unmarshal anything at all.
+     */
+    if (m_Attributes.Find(ATTR_NOOPCODE))
+	return;
+
+    assert(m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
+    {
+	m_pTrace->BeforeUnmarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+
     /* the opcode is the label in the msgtag */
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     /* get name of opcode (return variable) */
-    vector<CBEDeclarator*>::iterator iterRet = m_pReturnVar->GetFirstDeclarator();
-    CBEDeclarator *pD = *iterRet;
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    CBEDeclarator *pD = (pReturn) ? pReturn->m_Declarators.First() : 0;
 
     *pFile << "\t// 'unmarshal' the opcode\n";
     *pFile << "\t" << pD->GetName() << " = L4_Label (" << sMsgTag << ");\n";
+
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterUnmarshalling(pFile, this);
+	m_bTraceOn = false;
+    }
 }
 
 /** \brief write the error checking code for the IPC
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
 void
-CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile,
-    CBEContext * pContext)
+CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile)
 {
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE,
-                        pContext, 0);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     *pFile << "\t/* test for IPC errors */\n";
     *pFile << "\tif ( L4_IpcFailed ( " << sMsgTag << " ))\n";
     *pFile << "\t{\n";
     pFile->IncIndent();
+
     // set opcode to zero value
-    if (m_pReturnVar)
-        m_pReturnVar->WriteSetZero(pFile, pContext);
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    if (pReturn)
+	pReturn->WriteSetZero(pFile);
     if (!m_sErrorFunction.empty())
     {
-        *pFile << "\t" << m_sErrorFunction << "(" << sMsgTag << ", ";
-        WriteCallParameter(pFile, m_pCorbaEnv, pContext);
-        *pFile << ");\n";
+	*pFile << "\t" << m_sErrorFunction << "(" << sMsgTag << ", ";
+	WriteCallParameter(pFile, pEnv, true);
+	*pFile << ");\n";
     }
     // set label to zero and store in msgbuf
     bool bVarSized = false;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pMsgBuffer->GetAlias() &&
-        ((pMsgBuffer->GetAlias()->GetStars() > 0) ||
-         pMsgBuffer->IsVariableSized(GetReceiveDirection())))
-         bVarSized = true;
-    *pFile << "\tL4_Set_MsgLabel ( " << ((bVarSized) ? "" : "&") <<
-        pMsgBuffer->GetAlias()->GetName() << ", 0);\n";
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    if (pMsgBuffer->m_Declarators.First() &&
+	((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
+	 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
+	bVarSized = true;
+    *pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) " << ((bVarSized) ? "" : "&") <<
+	pMsgBuffer->m_Declarators.First()->GetName() << ", 0);\n";
     // set exception
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
+    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
     string sSetFunc;
-    if (((CBEUserDefinedType*)m_pCorbaEnv->GetType())->GetName() ==
-        "CORBA_Server_Environment")
-        sSetFunc = "CORBA_server_exception_set";
+    if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
+	"CORBA_Server_Environment")
+	sSetFunc = "CORBA_server_exception_set";
     else
-        sSetFunc = "CORBA_exception_set";
+	sSetFunc = "CORBA_exception_set";
     *pFile << "\t" << sSetFunc << "(";
     if (pDecl->GetStars() == 0)
-        pFile->Print("&");
-    pDecl->WriteName(pFile, pContext);
-    pFile->Print(",\n");
+	*pFile << "&";
+    pDecl->WriteName(pFile);
+    *pFile << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("CORBA_SYSTEM_EXCEPTION,\n");
-    pFile->PrintIndent("CORBA_DICE_INTERNAL_IPC_ERROR,\n");
-    pFile->PrintIndent("0);\n");
+    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    *pFile << "\tCORBA_DICE_INTERNAL_IPC_ERROR,\n";
+    *pFile << "\t0);\n";
     pFile->DecIndent();
     // returns 0 -> falls into default branch of server loop
-    WriteReturn(pFile, pContext);
+    WriteReturn(pFile);
     pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    *pFile << "\t}\n";
 }
+
+/** \brief initialize instance of class
+ *  \param pFEInterface the front-end interface to use as reference
+ *  \return true if successful
+ */
+void
+CL4V4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
+{
+    CBEWaitAnyFunction::CreateBackEnd(pFEInterface);
+
+    // need message tag
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    AddLocalVariable(string("L4_MsgTag_t"), sMsgTag, 0);
+}
+

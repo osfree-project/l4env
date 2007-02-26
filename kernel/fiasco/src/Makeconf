@@ -2,7 +2,6 @@
 # Fiasco make configuration file
 #
 # created 1996/04/20 by hohmuth
-# $Id$
 #
 
 CHECKCC         = $(shell if $(CC)  $(1) -S -o /dev/null -xc   /dev/null \
@@ -13,29 +12,28 @@ CHECKCXX        = $(shell if $(CXX) $(1) -S -o /dev/null -xc++ /dev/null \
 
 eval_impl	= $(if $($(1)_IMPL),$($(1)_IMPL),$(1))
 
-include globalconfig.out
+include $(objbase)/globalconfig.out
 # use patsubst here to prevent confusion of syntax highlighting editors :-)
 CONFIG_XARCH	:= $(patsubst "%",%,$(CONFIG_XARCH))
 CONFIG_ABI	:= $(patsubst "%",%,$(CONFIG_ABI))
 
-ifeq ($(CONFIG_MULTI_IRQ_ATTACH),y)
-  PREPROCESS_PARTS += multi_irq_attach
-endif
-
 SYSTEM		:= $(shell uname)
 CC		:= $(patsubst "%",%,$(CONFIG_CC))
 CXX		:= $(patsubst "%",%,$(CONFIG_CXX))
+HOST_CXX	:= $(patsubst "%",%,$(CONFIG_HOST_CXX))
 RM		:= rm -f
 RM_R		:= rm -rf
 CP		:= cp
 AWKP		?= gawk --posix
+CFLAGS		:=
+CXXFLAGS	:=
 OPT_CFLAGS	:= -O2
 OPT_CXXFLAGS	:= -O2
 NOOPT_CFLAGS	:= -Os
 NOOPT_CXXFLAGS	:= -Os
 ARFLAGS		:= crs
 srcdir		?= .
-L4DIR		?= $(srcdir)/../../..
+L4DIR		?= $(srcdir)/../../../l4
 tooldir		:= $(srcdir)/../tool
 MOVE_IF_CHANGE	:= $(srcdir)/../tool/move-if-change
 SHOWDEPS	:= $(srcdir)/../tool/showdeps
@@ -58,9 +56,9 @@ PREPROCESS = \
 		       $(DROPS_STDDIR)/tool/bin/preprocess) preprocess)
 
 ifeq ($(CONFIG_INLINE),y)
-  PREPROCESS_FLAGS = -i -L -t
+  PREPROCESS_FLAGS = -i -t
 else
-  PREPROCESS_FLAGS = -L -t
+  PREPROCESS_FLAGS = -t
 endif
 
 
@@ -69,7 +67,7 @@ include $(srcdir)/Makeconf.$(CONFIG_XARCH)
 
 # Include user-specific rules. These may overwrite anything above
 -include $(srcdir)/Makeconf.local
--include Makeconf.local
+-include $(objbase)/Makeconf.local
 
 
 ifneq ($(CCXX_VERSION),)
@@ -99,9 +97,11 @@ L4STD_INCDIR_LAST	?= -I$(wildcard $(dir $(LIBGCC))/include \
 KERNEL_LDFLAGS		+= -gc-sections
 SHARED_FLAGS		+= -fno-defer-pop -freg-struct-return -g -Wall -W
 SHARED_FLAGS		+= $(call CHECKCC,-Wformat=2,)
+SHARED_FLAGS		+= $(call CHECKCC,-fno-stack-protector,)
 OPT_CXXFLAGS		+= $(call CHECKCXX,-fweb,)
 OPT_CFLAGS		+= $(call CHECKCC,-fweb,)
 OPT_SHARED_FLAGS	+= $(call CHECKCC,-frename-registers,)
+OPT_SHARED_FLAGS	+= $(call CHECKCC,-fgcse-after-reload,)
 CXXFLAGS		+= -fno-implement-inlines
 
 # Configuration dependent compile flags
@@ -128,6 +128,7 @@ endif
 SHARED_FLAGS	:= $(SHARED_FLAGS)
 
 # Standard compile flags
+ASFLAGS		+= -DASSEMBLER
 CFLAGS		+= $(SHARED_FLAGS)
 CXXFLAGS	+= $(SHARED_FLAGS) -fno-rtti -fno-exceptions
 OPT_CFLAGS	+= $(OPT_SHARED_FLAGS)
@@ -143,8 +144,14 @@ VERBOSE		= @
 PREP_MESSAGE	?= @echo -e "  ... Preprocessing $*"
 endif
 
-# Output formatting, set VERBOSE := @ to prevent command lines 
+# Output formatting, set V=1 to see command line, V=0 to prevent printing them
 VERBOSE		?=
+ifeq ($(V),1)
+  VERBOSE :=
+endif
+ifeq ($(V),0)
+  VERBOSE := @
+endif
 AR_MESSAGE	?= @echo -e "  ==> Archiving into $@"
 COMP_MESSAGE	?= @echo -e "  ... Making $@"
 LINK_MESSAGE	?= @echo -e "  ==> Linking $@"
@@ -163,35 +170,6 @@ COMP_MESSAGE_NOOPT ?= $(COMP_MESSAGE)
 ifneq ($(VERBOSE),)
 MOVE_IF_CHANGE += -q
 endif
-
-DEPEND_IGNORE_ERRORS= false
-DEPEND_VERBOSE= @
-DEPEND_EXTEND_CMD = $(AWKP) '			\
-/^[^:]*: ..*/{					\
-	while(sub("\\\\$$","")){		\
-		getline nextline ;		\
-		$$0=$$0 " " nextline		\
-	}					\
-	split($$0,field,": ");			\
-	sub("^$(*F).o","$*.s $*.i $@",field[1]);\
-	nr=split(field[2],deps) ;		\
-	printf("%s: Makefile\n",		\
-	  	field[1],field[1]);		\
-	for(i=1;i<=nr;){			\
-	  printf("%s: ",			\
-	  	field[1],field[1]);		\
-	  for(j=0; j<100 && i+j<=nr; j++){	\
-	    printf("%s ",deps[i+j]);		\
-	  }					\
-	  printf("\n");			        \
-	  i+=j;					\
-	}					\
-}'
-
-DEPEND_EXTEND_FUNC = ( $(DEPEND_EXTEND_CMD) < $(1) > $(2).new &&	\
-		       $(RM) $(1) && mv $(2).new $(2) )	||		\
-		     ( $(RM) $(1) $(2).new $(2);			\
-		       $(DEPEND_IGNORE_ERRORS) )
 
 SRC_ALL = $(SRC_S) $(SRC_CPP) $(SRC_C) $(SRC_CC)
 ifeq ($(filter clean cleanall mrproper,$(MAKECMDGOALS)),)

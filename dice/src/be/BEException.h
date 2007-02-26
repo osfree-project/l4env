@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEException.h
- *    \brief   contains the declaration of the class CBEException
+ *  \brief   contains the declaration of the class CBEException
  *
  *    \date    01/15/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -33,33 +33,32 @@
 #include "be/BEObject.h"
 
 class CFEIdentifier;
-class CBEContext;
 
-/**    \class CBEException
- *    \ingroup backend
- *    \brief the back-end attribute
+/** \class CBEException
+ *  \ingroup backend
+ *  \brief the back-end attribute
  */
 class CBEException : public CBEObject
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEException();
     virtual ~CBEException();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEException(CBEException &src);
 
 public:
-    virtual bool CreateBackEnd(CFEIdentifier *pFEException, CBEContext *pContext);
+    virtual void CreateBackEnd(CFEIdentifier *pFEException);
 
 protected:
-    /**    \var string m_sName
-     *    \brief the name of the exception
+    /** \var string m_sName
+     *  \brief the name of the exception
      */
     string m_sName;
 };

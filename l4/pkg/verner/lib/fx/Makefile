@@ -2,7 +2,8 @@
 PKGDIR		= ../..
 L4DIR		?= $(PKGDIR)/../..
 
--include $(PKGDIR)/Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/Makeconf.bid.local
 
 # build goom ? 
 ifeq ($(BUILD_goom),y)

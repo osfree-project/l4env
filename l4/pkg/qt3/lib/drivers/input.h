@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/drivers/input.h
+ * \brief  Header for input driver backends for Qt/Embedded.
+ *
+ * \date   10/24/2004
+ * \author Josef Spillner <js177634@inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2005 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 #ifndef DROPS_QWS_INPUT_H
 #define DROPS_QWS_INPUT_H
 

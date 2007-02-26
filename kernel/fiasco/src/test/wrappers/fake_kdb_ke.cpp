@@ -1,6 +1,6 @@
 INTERFACE:
 
-#include <assert.h>
+#include <cassert>
 
 #define kdb_ke(x) assert(! x)
 

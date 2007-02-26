@@ -34,12 +34,9 @@ long
 l4events_register(const l4events_ch_t event_ch,
     		  const l4events_pr_t priority)
 {
-  l4_umword_t w1;
-  l4_umword_t w2;
-
-  w1 = create_control_word_for_call(REGISTER_EVENT, 0, event_ch, 
-      					L4EVENTS_NO_NR);
-  w2 = priority; /* only lowest 4 bits are important */
+  l4_umword_t w1 = create_control_word_for_call(REGISTER_EVENT, 0, event_ch, 
+      						L4EVENTS_NO_NR);
+  l4_umword_t w2 = priority; /* lowest 4 bits */
 
   return l4events_send_short_message(&w1, &w2, L4_IPC_NEVER);
 };
@@ -52,12 +49,9 @@ l4events_register(const l4events_ch_t event_ch,
 long
 l4events_unregister(const l4events_ch_t event_ch)
 {
-  l4_umword_t w1;
-  l4_umword_t w2;
-
-  w1 = create_control_word_for_call(UNREGISTER_EVENT, 0, event_ch, 
-      					L4EVENTS_NO_NR);
-  w2 = 0;
+  l4_umword_t w1 = create_control_word_for_call(UNREGISTER_EVENT, 0, event_ch, 
+						L4EVENTS_NO_NR);
+  l4_umword_t w2 = 0;
 
   return l4events_send_short_message(&w1, &w2, L4_IPC_NEVER);
 };
@@ -70,12 +64,10 @@ l4events_unregister(const l4events_ch_t event_ch)
 long
 l4events_unregister_all(void)
 {
-  l4_umword_t w1;
-  l4_umword_t w2;
-
-  w1 = create_control_word_for_call(UNREGISTER_ALL_EVENTS, 0, 
-      				L4EVENTS_NO_CHANNEL, L4EVENTS_NO_NR);
-  w2 = 0;
+  l4_umword_t w1 = create_control_word_for_call(UNREGISTER_ALL_EVENTS, 0, 
+      						L4EVENTS_NO_CHANNEL, 
+						L4EVENTS_NO_NR);
+  l4_umword_t w2 = 0;
 
   return l4events_send_short_message(&w1, &w2, L4_IPC_NEVER);
 };
@@ -148,20 +140,13 @@ l4events_receive(l4events_ch_t *id,
   long        res;
   l4_uint8_t  cmd;
   l4_uint8_t  copt;
-  l4_uint8_t  shrt = 0;
 
   init_message(&msg, evt);
 
-  /* short receive */
-  if (opt & L4EVENTS_RECV_SHORT)
-  {
-    shrt = 1;
-  }
-  
   copt = opt & (L4EVENTS_RECV_ACK | L4EVENTS_GIVE_ACK);
     
   switch (copt)
-  {
+    {
     case L4EVENTS_RECV_ACK:
       cmd = ACK_RECEIVE_EVENT;
       break;
@@ -174,45 +159,34 @@ l4events_receive(l4events_ch_t *id,
     default:
       cmd = RECEIVE_EVENT;
       break;
-  };
-  
- 
-  if (shrt)
-  {
-    w1 = create_control_word_for_call(cmd, 
-					SHORT_BUFFER_SIZE, 
-      					*id, 
-					*nr);
-    w2 = *(l4_umword_t*)evt->str;
-  
-    res = l4events_send_short_message(&w1, &w2, timeout);
-
-    *id = get_event_ch(w1);
-    *nr = get_event_nr(w1);
-    evt->len = get_len(w1);
-    set_first_word(w2, evt);
-  }
-  else
-  {
-    w1 = create_control_word_for_call(cmd,
-  				    L4EVENTS_MAX_BUFFER_SIZE, 
-				    *id,
-				    *nr);
-
-    res = l4events_send_recv_message(w1, &msg, timeout);
-
-    *id = get_event_ch(msg.cr);
-    *nr = get_event_nr(msg.cr);
-    evt->len = get_len(msg.cr);
-
-    if (evt->len <= SHORT_BUFFER_SIZE)
-    {
-      set_first_word(msg.str.w1, evt);
     }
-  }
+  
+  if (opt & L4EVENTS_RECV_SHORT)
+    {
+      w1  = create_control_word_for_call(cmd, SHORT_BUFFER_SIZE, *id, *nr);
+      w2  = *(l4_umword_t*)evt->str;
+      res = l4events_send_short_message(&w1, &w2, timeout);
+      *id = get_event_ch(w1);
+      *nr = get_event_nr(w1);
+      evt->len = get_len(w1);
+      set_first_word(w2, evt);
+    }
+  else
+    {
+      w1  = create_control_word_for_call(cmd, L4EVENTS_MAX_BUFFER_SIZE, 
+	                                 *id, *nr);
+
+      res = l4events_send_recv_message(w1, &msg, timeout);
+      *id = get_event_ch(msg.cr);
+      *nr = get_event_nr(msg.cr);
+      evt->len = get_len(msg.cr);
+
+      if (evt->len <= SHORT_BUFFER_SIZE)
+    	set_first_word(msg.str.w1, evt);
+    }
 
   return res;
-};
+}
 
 
 /*!\brief wraps the l4events_give_ack_and_receive call
@@ -239,11 +213,10 @@ l4events_give_ack_and_receive(
 long
 l4events_get_ack(l4events_nr_t *event_nr, l4_timeout_t timeout)
 {
-  l4_umword_t w1, w2;
+  l4_umword_t w1 = create_control_word_for_call(GET_ACK, SHORT_BUFFER_SIZE, 
+						0, *event_nr);
+  l4_umword_t w2 = 0;
   long        res;
-
-  w1 = create_control_word_for_call(GET_ACK, SHORT_BUFFER_SIZE, 0, *event_nr);
-  w2 = 0;
 
   res = l4events_send_short_message(&w1, &w2, timeout);
 
@@ -275,7 +248,7 @@ l4events_get_ack_open(l4events_nr_t *event_nr, l4_threadid_t *id,
       *w2 = 0;
     }
   else
-      *event_nr = L4EVENTS_NO_NR;
+    *event_nr = L4EVENTS_NO_NR;
 
   return res;
 }
@@ -283,11 +256,10 @@ l4events_get_ack_open(l4events_nr_t *event_nr, l4_threadid_t *id,
 long
 l4events_give_ack(l4events_nr_t event_nr)
 {
-  l4_umword_t w1, w2;
+  l4_umword_t w1 = create_control_word_for_call(GIVE_ACK, SHORT_BUFFER_SIZE, 
+						0, event_nr);
+  l4_umword_t w2 = 0;
   long        res;
-
-  w1 = create_control_word_for_call(GIVE_ACK, SHORT_BUFFER_SIZE, 0, event_nr);
-  w2 = 0;
 
   res = l4events_send_short_message(&w1, &w2, L4_IPC_NEVER);
 

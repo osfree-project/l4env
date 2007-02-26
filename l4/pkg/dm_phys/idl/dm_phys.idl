@@ -111,7 +111,7 @@ library if_l4dm
 			   [in] unsigned long offs,
 			   [in] unsigned long size, 
 			   [in] unsigned long pagesize, 
-			   [out] unsigned long *ok);
+			   [out] int *ok);
 
        /***********************************************************************/
        /**
@@ -127,8 +127,8 @@ library if_l4dm
         */
       /***********************************************************************/
       long dmphys_poolsize([in] unsigned long pool,
-                           [out] unsigned long *size,
-			   [out] unsigned long *free);
+                           [out] l4_size_t *size,
+			   [out] l4_size_t *free);
       
       /***********************************************************************/
       /**

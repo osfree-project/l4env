@@ -8,7 +8,8 @@ LIBS_l4vfs  = -ll4vfs_network_server-server -ll4vfs_select -ll4vfs_select_notify
 # FLIPS with loopback only
 TARGET = flips
 SRC_C_flips = server.c main.c notify.c
-LIBS_flips  = -lsocket_linux.o -llinux.o -ldde_linux -lio -lomega0 -llist_alloc  $(LIBS_l4vfs)
+LIBS_flips  = -lsocket_linux.o -llinux.o -ldde_linux -lio -lomega0 \
+              -llist_alloc  $(LIBS_l4vfs) -lparsecmdline
 
 # FLIPS debug version with loopback only
 TARGET += flips-standalone
@@ -20,6 +21,15 @@ TARGET += flips-lxdrv
 SRC_C_flips-lxdrv = server.c main_lxdrv.c notify.c
 LIBS_flips-lxdrv  = -llxdrv.o $(LIBS_flips)
 
+# FLIPS with ORe backend
+TARGET += flips-ore
+SRC_C_flips-ore = $(SRC_C_flips)
+ifeq ($(USE_DSI),y)
+LIBS_flips-ore  = -lore.o -lore -ldsi $(LIBS_flips)
+else
+LIBS_flips-ore  = -lore.o -lore $(LIBS_flips)
+endif
+
 ifeq ($(L4_TUN),y)
   LIBS_flips-lxdrv += -ll4tundrv.o -lnethub -lcxx_io -lcxx_log_io -lcxx_base
 endif
@@ -29,14 +39,16 @@ SYSTEMS        = x86-l4v2
 
 SERVERIDL_flips       = flips.idl
 SERVERIDL_flips-lxdrv = flips.idl
+SERVERIDL_flips-ore   = flips.idl
 
 PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include \
                  $(PKGDIR)/server/lib-lxdrv/include \
                  $(PKGDIR)/server/include           \
                  $(DDE_INCDIR) $(LINUX24_INCDIR)
 
-PRIVATE_LIBDIR = $(PKGDIR)/server/lib-linux/src/OBJ-$(SYSTEM) \
-                 $(PKGDIR)/server/lib-lxdrv/src/OBJ-$(SYSTEM)
+PRIVATE_LIBDIR = $(PKGDIR_OBJ)/server/lib-linux/src/OBJ-$(SYSTEM) \
+                 $(PKGDIR_OBJ)/server/lib-ore/src/OBJ-$(SYSTEM)   \
+                 $(PKGDIR_OBJ)/server/lib-lxdrv/src/OBJ-$(SYSTEM)
 
 DEFINES        = -D__KERNEL__ -DDDE_LINUX
 WARNINGS       = -Wall -Wstrict-prototypes

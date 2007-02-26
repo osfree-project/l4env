@@ -1,14 +1,14 @@
 
 IMPLEMENTATION[ux]:
 
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 #include <unistd.h>
 #include <sys/mman.h>
 #include "boot_info.h"
 #include "panic.h"
 
-IMPLEMENT inline NEEDS [<errno.h>, <string.h>, <unistd.h>, <sys/mman.h>,
+IMPLEMENT inline NEEDS [<cerrno>, <cstring>, <unistd.h>, <sys/mman.h>,
                         "boot_info.h", "config.h", "panic.h"]
 void
 Vmem_alloc::page_map (void *address, int order, Zero_fill zf, Address phys)
@@ -20,7 +20,7 @@ Vmem_alloc::page_map (void *address, int order, Zero_fill zf, Address phys)
     panic ("mmap error: %s", strerror (errno));
 }
 
-IMPLEMENT inline NEEDS [<errno.h>, <string.h>, <unistd.h>, <sys/mman.h>,
+IMPLEMENT inline NEEDS [<cerrno>, <cstring>, <unistd.h>, <sys/mman.h>,
                         "boot_info.h", "config.h", "panic.h"]
 void
 Vmem_alloc::page_unmap (void *address, int order)

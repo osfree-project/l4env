@@ -10,8 +10,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
+#include <l4/sigma0/kip.h>
 #include <l4/util/util.h>
-#include <l4/util/kip.h>
 #include <l4/env/errno.h>
 #include "granularity.h"
 
@@ -25,7 +25,7 @@ static int granularity_init(void){
     l4_kernel_info_t *kip;
     if(kernel_granularity) return 0;
 
-    kip = l4util_kip_map();
+    kip = l4sigma0_kip_map(L4_INVALID_ID);
     if(kip==0) return -L4_EINVAL;
     kernel_granularity = kip->scheduler_granularity;
     return 0;

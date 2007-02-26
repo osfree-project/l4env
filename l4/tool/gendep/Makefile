@@ -15,7 +15,7 @@ CC	= $(HOST_CC)
 all:: $(LIB)
 
 $(LIB): $(OBJS)
-	gcc -shared -Wl,-soname,$@ -ldl -o $@ $^
+	$(HOST_CC) -shared -Wl,-soname,$@ -ldl -o $@ $^
 
 doc: $(MAN)
 
@@ -34,16 +34,16 @@ test:
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='+\.h$$ -^/usr' \
 		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		gcc -o simple-cat simple-cat.c
+		$(HOST_CC) -o simple-cat simple-cat.c
 	GENDEP_TARGET='blabla' \
 		GENDEP_BINARY=cpp\
 		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		gcc -o simple-cat simple-cat.c
+		$(HOST_CC) -o simple-cat simple-cat.c
 	GENDEP_TARGET='badexp' \
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='\)foo'\
 		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		gcc -o simple-cat simple-cat.c
+		$(HOST_CC) -o simple-cat simple-cat.c
 	@echo ==========
 	cat simple-cat.dep
 	cat blabla.dep

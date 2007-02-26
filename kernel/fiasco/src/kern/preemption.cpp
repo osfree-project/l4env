@@ -69,7 +69,7 @@ Preemption::preempter_enqueue()
     return;
 
   // Enqueue in preempter's sender list
-  sender_enqueue (_receiver->sender_list());
+  sender_enqueue (_receiver->sender_list(), _receiver->sched()->prio());
 
   // If the preempter is already waiting, make it ready; this will cause
   // it to run Preemption::ipc_receiver_ready(), which handles the rest
@@ -105,11 +105,14 @@ Preemption::set_pending (Sched_context *const sched)
  * becomes ready to receive. Send the IPC and submit the next one.
  */
 PRIVATE
-void
-Preemption::ipc_receiver_ready()
+bool
+Preemption::ipc_receiver_ready(Receiver *recv)
 {
-  assert (receiver());
 
+  assert (receiver());
+  assert (receiver() == recv); 
+  (void) recv;
+  
   Sched_context::Preemption_type type;
   Cpu_time time;
   unsigned short id;
@@ -119,9 +122,11 @@ Preemption::ipc_receiver_ready()
     // Lock down sender's list of scheduling contexts
     Lock_guard <Thread_lock> guard ((context_of (this))->thread_lock());
 
-    // Check if Sched_contexts have been deallocated before we got the lock
-    if (EXPECT_FALSE (!pending()))
-      return;
+    // Dequeue even if more preemption IPCs are pending to ensure fairness
+    sender_dequeue (receiver()->sender_list());
+
+    if(!pending())
+        return false;
 
     // Extract preemption info
     id   = pending()->id();
@@ -130,39 +135,41 @@ Preemption::ipc_receiver_ready()
     lost = pending()->preemption_count() > 1;
   }
 
-  // Try locking down the receiver for IPC handshake. Remain in the sender
-  // list if the lockdown fails because another thread was faster. 
-  if (EXPECT_FALSE (_receiver->ipc_try_lock (this)))
-    return;
-  
-  _receiver->ipc_init (this);
+  {
 
-  // Send message
-  setup_msg (L4_pipc (type, lost, id, time));
-  _receiver->deny_lipc();
-  _receiver->state_change (~(Thread_receiving | Thread_busy |
-                             Thread_ipc_in_progress),
+    Lock_guard <Thread_lock> guard(receiver()->thread_lock());
+
+
+    // canceled
+    if(!receiver()->sender_ok(this))
+      return false;
+
+    receiver()->ipc_init (this);
+
+    // Send message
+    setup_msg (L4_pipc (type, lost, id, time));
+
+    receiver()->state_change(~(Thread_receiving | Thread_busy
+                               | Thread_transfer_in_progress
+                               | Thread_ipc_in_progress),
                              Thread_ready);
-  
-  // Dequeue even if more preemption IPCs are pending to ensure fairness
-  sender_dequeue (_receiver->sender_list());
-
-  // Unlock causes receiver to be activated or ready-enqueued
-  _receiver->ipc_unlock();  
+  }
 
   // Lock down sender's list of scheduling contexts again
   Lock_guard <Thread_lock> guard ((context_of (this))->thread_lock());
 
   // Check if Sched_contexts have been deallocated before we got the lock
   if (EXPECT_FALSE (!pending()))
-    return;
+    return true;
 
   // Find the next Sched_context with a pending preemption event, if any
   set_pending (pending()->find_next_preemption());
 
   // Enqueue again in sender list if there are more preemption IPCs pending
   if (pending())
-    sender_enqueue (_receiver->sender_list());
+    sender_enqueue (receiver()->sender_list(), 255);
+
+  return true;
 }
 
 /**

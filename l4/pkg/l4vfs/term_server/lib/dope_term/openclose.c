@@ -13,6 +13,7 @@
 #include <l4/dope/vscreen.h>
 #include <l4/thread/thread.h>
 #include <l4/util/l4_macros.h>
+#include <l4/env/errno.h>
 
 #include <l4/term_server/vt100.h>
 #include <l4/term_server/dope_term.h>
@@ -29,7 +30,7 @@ termstate_t * dope_term_open(long app, char *widgetname,
 {
     // allocate memory for termstate and termstate_spec
     termstate_t *term = (termstate_t *)malloc( sizeof(termstate_t));
-    termstate_spec_s *termspec = 
+    termstate_spec_s *termspec =
         (termstate_spec_s *)malloc(sizeof(termstate_spec_s));
 
     // make sure the user does not use a name we are going to use
@@ -48,17 +49,17 @@ termstate_t * dope_term_open(long app, char *widgetname,
     dope_cmdf(app, "%s = new Grid()", widgetname);
     dope_cmdf(app, "%s.place(v, -column 1 -row 1)", widgetname);
     dope_cmdf(app, "%s.place(s, -column 2 -row 1)", widgetname);
-    
+
 //    dope_cmdf( app, "win.set( -background off -content vts)");
 
     // init vt100 termstate, set up termsem before
 
     term->termsem = L4SEMAPHORE_UNLOCKED;
     l4semaphore_down( &term->termsem );
-    
+
     term->text = NULL;
     term->attrib = NULL;
-    init_termstate( term, width, height, hist );
+    init_termstate( term, width, height, hist);
 
     l4semaphore_up( &term->termsem );
 
@@ -87,7 +88,7 @@ termstate_t * dope_term_open(long app, char *widgetname,
 
     // create new thread running the dope event loop
     if ((term->spec->evh_tid = l4thread_create( dope_term_eventloop,
-                                                (void *)&app, 
+                                                (void *)&app,
                                                 L4THREAD_CREATE_SYNC )) > 0 )
     {
         term->spec->evh_l4id = l4thread_l4_id(term->spec->evh_tid);
@@ -96,8 +97,11 @@ termstate_t * dope_term_open(long app, char *widgetname,
 //        term->__key_init = 1;
     }
     else
-        LOG("FAILED CREATING EVENT THREAD!");
-    
+    {
+        LOG("FAILED CREATING EVENT THREAD: %s, %d!",
+            l4env_strerror(-(term->spec->evh_tid)), -(term->spec->evh_tid));
+    }
+
     // return terminal state
     return term;
 }
@@ -105,8 +109,9 @@ termstate_t * dope_term_open(long app, char *widgetname,
 int dope_term_close( termstate_t *term )
 {
     // free termstate memory
+    l4thread_shutdown(term->spec->evh_tid);
     free(term->spec->widget_name);
     free(term);
-    
+
     return 0;
 }

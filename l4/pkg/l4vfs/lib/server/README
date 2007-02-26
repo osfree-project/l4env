@@ -4,5 +4,5 @@ functions, if you do not want to reinvent the (dummy) wheel, just link
 one of these libs.
 
 Please note, that all functions in these libs are 'weak', that is, you
-can replace functionality from this lib peace by peace in your own
+can replace functionality from this lib piece by piece in your own
 server.

@@ -28,6 +28,7 @@
 
 #include "be/BESizes.h"
 #include "TypeSpec-Type.h"
+#include <sstream>
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -35,7 +36,7 @@
 
 CBESizes::CBESizes()
 {
-    m_nOpcodeSize = sizeof(long);
+    m_nOpcodeSize = -1;
 }
 
 /** \brief destroys the object of class CBESizes
@@ -119,7 +120,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
         nSize = 8;    // a flexpage needs 2 dwords to be transmitted
         break;
     case TYPE_RCV_FLEXPAGE:
-        nSize = 0;    // is not send, simple helper type
+        nSize = 4;    // is not send, simple helper type
         break;
     case TYPE_STRING:
         nSize = sizeof(char);
@@ -133,27 +134,12 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
     case TYPE_ISO_LATIN_1:
     case TYPE_ISO_MULTILINGUAL:
     case TYPE_ISO_UCS:
-        nSize = 1;    // I don't know how big this should be -> use only one byte
+        nSize = 1;  // I don't know how big this should be -> use only one byte
         break;
     default:
         break;
     }
     return nSize;
-}
-
-/** \brief retrieves the size of an environment type
- *  \param sName the name of the type
- *  \return the size of this type in bytes
- *
- * The code sometimes uses types, which are defined by the environment. The compiler
- * may use them as user defined types. If the environment type is used it cannot be found
- * in the back-end types and thus has to be queried for size explicetly.
- *
- * This implementation does not know any specific environment types.
- */
-int CBESizes::GetSizeOfEnvType(string sName)
-{
-    return 0;
 }
 
 /** \brief returns a value for the maximum  size of a specific type
@@ -163,7 +149,7 @@ int CBESizes::GetSizeOfEnvType(string sName)
  * This function is used to determine a maximum size of an array of a specifc
  * type if the parameter has no maximum size attribute.
  */
-int CBESizes::GetMaxSizeOfType(int nFEType)
+int CBESizes::GetMaxSizeOfType(int /*nFEType*/)
 {
     return 512;
 }
@@ -173,6 +159,8 @@ int CBESizes::GetMaxSizeOfType(int nFEType)
  */
 int CBESizes::GetOpcodeSize()
 {
+    if (m_nOpcodeSize < 0)
+	m_nOpcodeSize = GetSizeOfType(TYPE_LONG, 4);
     return m_nOpcodeSize;
 }
 
@@ -194,3 +182,49 @@ int CBESizes::GetExceptionSize()
     // currently only the first word of the exception is transmitted
     return 4;
 }
+
+/** \brief round the number of bytes to word size
+ *  \param nSize the size in bytes
+ *  \return the size rounded to word size
+ */
+int CBESizes::WordRoundUp(int nSize)
+{
+    int nWordSize = GetSizeOfType(TYPE_MWORD);
+    return (nSize + nWordSize - 1) & ~(nWordSize - 1);
+}
+
+/** \brief round the string given to the size of words
+ *  \param value the string to round
+ *  \return the string rounding the value
+ */
+string CBESizes::WordRoundUpStr(string const &value)
+{
+    std::ostringstream os;
+    int nWordSize = GetSizeOfType(TYPE_MWORD);
+    os << "((" << value << '+' << nWordSize-1 << ')' << "& ~" << 
+      nWordSize-1 << ')';
+    return os.str();
+}
+
+/** \brief make dword count from number of bytes
+ *  \param nSize the size in bytes
+ *  \return the number of words
+ */
+int CBESizes::WordsFromBytes(int nSize)
+{
+    int nWordSize = GetSizeOfType(TYPE_MWORD);
+    return (nSize + nWordSize - 1) / nWordSize;
+}
+
+/** \brief make dword count from number of bytes as string
+ *  \param value the value string to make a dwords from
+ *  \return the string with the conversion
+ */
+string CBESizes::WordsFromBytesStr(string const &value)
+{
+    std::ostringstream os;
+    int nWordSize = GetSizeOfType(TYPE_MWORD);
+    os << "((" << value << '+' << nWordSize-1 << ')' << "/" << nWordSize << ')';
+    return os.str();
+}
+

@@ -14,7 +14,7 @@
 interface Nh_client
 {
   int open([in] unsigned niface, 
-           [in, out, ref, prealloc] struct Nh_iface *iface);
+           [in, out, ref, prealloc_client] struct Nh_iface *iface);
 
   int close([in] unsigned niface);
 

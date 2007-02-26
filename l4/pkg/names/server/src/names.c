@@ -25,14 +25,14 @@
 #include <l4/util/util.h>
 #include <l4/util/getopt.h>
 #include <l4/util/l4_macros.h>
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 
 #include <l4/log/l4log.h>
 
-#include <names.h>
 #include <l4/rmgr/librmgr.h>
 
 #include "config.h"
+#include "names.h"
 
 #include "names-server.h"
 
@@ -149,24 +149,24 @@ server_names_register(l4_threadid_t *client,
   return 1;
 }
 
-l4_int32_t
-names_register_component(CORBA_Object _dice_corba_obj,
-                         const char* name,
-                         CORBA_Server_Environment *_dice_corba_env)
+long
+names_register_component (CORBA_Object _dice_corba_obj,
+                          const char* name,
+                          CORBA_Server_Environment *_dice_corba_env)
 {
   return server_names_register(_dice_corba_obj, name, _dice_corba_obj, 0);
 }
 
-l4_int32_t
-names_register_thread_component(CORBA_Object _dice_corba_obj,
-                                const char *name,
-                                const l4_threadid_t *id,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+names_register_thread_component (CORBA_Object _dice_corba_obj,
+                                 const char* name,
+                                 const l4_threadid_t *id,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   return server_names_register(_dice_corba_obj, name, id, 1);
 }
 
-l4_int32_t
+long
 names_unregister_thread_component(CORBA_Object _dice_corba_obj,
                                   const char* name,
                                   const l4_threadid_t *id,
@@ -199,7 +199,7 @@ names_unregister_thread_component(CORBA_Object _dice_corba_obj,
   return ret;
 }
 
-l4_int32_t
+long
 names_query_name_component(CORBA_Object _dice_corba_obj,
                            const char* name,
                            l4_threadid_t *id,
@@ -212,6 +212,9 @@ names_query_name_component(CORBA_Object _dice_corba_obj,
            l4util_idstr(*_dice_corba_obj),
            __func__, NAMES_MAX_NAME_LEN, name);
 
+  if (!name)
+    return 0;
+
   for (i = 0; i < NAMES_MAX_ENTRIES; i++) {
     if (!strcmp(entries[i].name, name)) {
       /* remember weak entry, but look further */
@@ -223,18 +226,25 @@ names_query_name_component(CORBA_Object _dice_corba_obj,
     }
   }
   if (i == NAMES_MAX_ENTRIES) {
-    if (w == -1)
+    if (w == -1) {
+      DEBUGMSG(2)
+	printf("%s: name \"%.*s\" not found\n", __func__,
+	    NAMES_MAX_NAME_LEN, name);
       return 0;
+    }
     /* fall back to first matching weak */
     i = w;
   }
 
   *id = entries[i].id;
 
+  DEBUGMSG(2)
+    printf("%s: found entry at %d with id "l4util_idfmt".\n", __func__,
+        i, l4util_idstr(*id));
   return 1;
 }
 
-l4_int32_t
+long
 names_query_id_component(CORBA_Object _dice_corba_obj,
                          const l4_threadid_t *id,
                          char **name,
@@ -274,12 +284,12 @@ names_query_id_component(CORBA_Object _dice_corba_obj,
  *
  * \return	cmd==1 -> entry valid, cmd==0->entry invalid
  */
-l4_int32_t
-names_query_nr_component(CORBA_Object _dice_corba_obj,
-                         l4_int32_t nr,
-                         char* *name,
-                         l4_threadid_t *id,
-                         CORBA_Server_Environment *_dice_corba_env)
+long
+names_query_nr_component (CORBA_Object _dice_corba_obj,
+                          int nr,
+                          char* *name,
+                          l4_threadid_t *id,
+                          CORBA_Server_Environment *_dice_corba_env)
 {
   DEBUGMSG(2)
     printf(l4util_idfmt ": %s(%d)\n",
@@ -295,10 +305,10 @@ names_query_nr_component(CORBA_Object _dice_corba_obj,
   return 1;
 }
 
-l4_int32_t
-names_unregister_task_component(CORBA_Object _dice_corba_obj,
-                                const l4_threadid_t *id,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+names_unregister_task_component (CORBA_Object _dice_corba_obj,
+                                 const l4_threadid_t *id,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int i;
 
@@ -330,7 +340,7 @@ names_dump_component(CORBA_Object _dice_corba_obj,
 
   for (i = 0; i < NAMES_MAX_ENTRIES; i++) {
     if (!l4_is_invalid_id(entries[i].id)) {
-      printf("taskid:" l4util_idfmt " name:%s\n", 
+      printf("taskid:" l4util_idfmt " name:%s\n",
              l4util_idstr(entries[i].id), entries[i].name);
     }
   }
@@ -433,11 +443,11 @@ main(int argc, char* argv[])
   logsrv_outfunc = LOG_outstring;
   LOG_outstring	= own_output_function;
 
-  l4util_kip_map();
-  if (l4util_kip_version() == 0x01004444)
+  l4sigma0_kip_map(L4_INVALID_ID);
+  if (l4sigma0_kip_version() == L4SIGMA0_KIP_VERSION_FIASCO)
     {
       fiasco_running = 1;
-      register_thread_names = l4util_kip_kernel_has_feature("thread_names");
+      register_thread_names = l4sigma0_kip_kernel_has_feature("thread_names");
     }
 
   parse_args(argc, argv);

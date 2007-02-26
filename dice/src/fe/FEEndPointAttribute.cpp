@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEEndPointAttribute.cpp
- *    \brief   contains the implementation of the class CFEEndPointAttribute
+ *  \file    dice/src/fe/FEEndPointAttribute.cpp
+ *  \brief   contains the implementation of the class CFEEndPointAttribute
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,74 +30,17 @@
 #include "File.h"
 
 CFEEndPointAttribute::CFEEndPointAttribute(vector<PortSpec> *pPortSpecs)
-: CFEAttribute(ATTR_ENDPOINT)
+: CFEAttribute(ATTR_ENDPOINT),
+    m_PortSpecs(*pPortSpecs)
 {
-    m_vPortSpecs.swap(*pPortSpecs);
 }
 
 CFEEndPointAttribute::CFEEndPointAttribute(CFEEndPointAttribute & src)
-: CFEAttribute(src)
-{
-    vector<PortSpec>::iterator iter = src.m_vPortSpecs.begin();
-    for (; iter != src.m_vPortSpecs.end(); iter++)
-    {
-        m_vPortSpecs.push_back(*iter);
-    }
-}
+: CFEAttribute(src),
+    m_PortSpecs(src.m_PortSpecs)
+{ }
 
 /** cleans up the end-point attribute (delete all port-specs) */
 CFEEndPointAttribute::~CFEEndPointAttribute()
 {
-    m_vPortSpecs.clear();
-}
-
-/**    creates a copy of this object
- *    \return a copy of this object
- */
-CObject *CFEEndPointAttribute::Clone()
-{
-    return new CFEEndPointAttribute(*this);
-}
-
-/** retrieves a pointer to the first port spec
- *    \return a pointer to the first port spec
- */
-vector<PortSpec>::iterator CFEEndPointAttribute::GetFirstPortSpec()
-{
-    return m_vPortSpecs.begin();
-}
-
-/** retrieves the next port spec
- *    \param iter the pointer to the next port spec
- *    \return a reference to the next port specification
- */
-PortSpec CFEEndPointAttribute::GetNextPortSpec(vector<PortSpec>::iterator &iter)
-{
-    PortSpec ret;
-    ret.sFamily.erase(ret.sFamily.begin(), ret.sFamily.end());
-    ret.sPort.erase(ret.sPort.begin(), ret.sPort.end());
-    if (iter == m_vPortSpecs.end())
-        return ret;
-    return *iter++;
-}
-
-/** serializes this object to/from a file
- *    \param pFile the file to serialize from/to
- */
-void CFEEndPointAttribute::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<attribute>endpoint(");
-        vector<PortSpec>::iterator iter = m_vPortSpecs.begin();
-        for (; iter != m_vPortSpecs.end(); iter++)
-        {
-            *pFile << (*iter).sFamily;
-            if (!(*iter).sPort.empty())
-                *pFile << ":" << (*iter).sPort;
-            if (iter != m_vPortSpecs.end() - 1)
-                *pFile << ", ";
-        }
-        pFile->Print(")</attribute>\n");
-    }
 }

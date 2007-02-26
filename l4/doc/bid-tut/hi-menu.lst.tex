@@ -1,8 +1,9 @@
 title Hi world
-  kernel (nd)/tftpboot/yourname/bin/x86_586/l4v2/rmgr -sigma0
-  module (nd)/tftpboot/yourname/bin/fiasco -comport 2 -nokdb -nowait
-  module (nd)/tftpboot/yourname/bin/x86_586/l4v2/sigma0
+  kernel (nd)/tftpboot/yourname/bin/x86_586/l4v2/bootstrap
   modaddr 0x02000000
+  module (nd)/tftpboot/yourname/bin/fiasco -nokdb -nowait
+  module (nd)/tftpboot/yourname/bin/x86_586/l4v2/sigma0
+  module (nd)/tftpboot/yourname/bin/x86_586/l4vs/roottask
   module (nd)/tftpboot/yourname/bin/x86_586/l4v2/log
   module (nd)/tftpboot/yourname/bin/x86_586/l4v2/names
   module (nd)/tftpboot/yourname/bin/x86_586/l4v2/dm_phys

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEInterfaceFunction.cpp
- *    \brief   contains the implementation of the class CBEInterfaceFunction
+ *  \file    dice/src/be/BEInterfaceFunction.cpp
+ *  \brief   contains the implementation of the class CBEInterfaceFunction
  *
- *    \date    01/14/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/14/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,17 +30,21 @@
 #include "BEContext.h"
 #include "BEType.h"
 #include "BETypedDeclarator.h"
+#include "BEMsgBuffer.h"
 #include "BERoot.h"
-
 #include "fe/FEInterface.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEStringAttribute.h"
+#include "Compiler.h"
+#include <cassert>
 
-CBEInterfaceFunction::CBEInterfaceFunction()
+CBEInterfaceFunction::CBEInterfaceFunction(FUNCTION_TYPE nFunctionType)
+    : CBEFunction (nFunctionType)
 {
 }
 
-CBEInterfaceFunction::CBEInterfaceFunction(CBEInterfaceFunction & src):CBEFunction(src)
+CBEInterfaceFunction::CBEInterfaceFunction(CBEInterfaceFunction & src)
+ : CBEFunction(src)
 {
 }
 
@@ -51,16 +55,19 @@ CBEInterfaceFunction::~CBEInterfaceFunction()
 
 /** \brief creates the back-end function for the interface
  *  \param pFEInterface the respective front-end interface
- *  \param pContext the context of the code generation
  *  \return true if successful
  *
  * Create empty return variable.
  */
-bool CBEInterfaceFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
+void
+CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface)
 {
     assert(pFEInterface);
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     // basic init
-    CBEFunction::CreateBackEnd(pFEInterface, pContext);
+    CBEFunction::CreateBackEnd(pFEInterface);
+    
     // search for our interface
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
@@ -69,30 +76,57 @@ bool CBEInterfaceFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext
     // should be parent
     assert(m_pClass == m_pParent);
     // set return type
-    if (!SetReturnVar(false, 0, TYPE_VOID, string(), pContext))
+    if (!SetReturnVar(false, 0, TYPE_VOID, string()))
     {
-        VERBOSE("CBEInterfaceFunction::CreateBE failed because return var could not be set\n");
-        return false;
+	string exc = string(__func__);
+	exc += " failed because return var could not be set.";
+        throw new CBECreateException(exc);
     }
 
     // check if interface has error function and add its name if available
-    if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION))
+    if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION))
     {
-        CFEStringAttribute *pErrorFunc = (CFEStringAttribute*)(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION));
+        CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+	    (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION));
+	assert(pErrorFunc);
         m_sErrorFunction = pErrorFunc->GetString();
     }
-    if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_CLIENT) &&
+    if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT) &&
         !IsComponentSide())
     {
-        CFEStringAttribute *pErrorFunc = (CFEStringAttribute*)(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_CLIENT));
+        CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+	    (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT));
+	assert(pErrorFunc);
         m_sErrorFunction = pErrorFunc->GetString();
     }
-    if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_SERVER) &&
+    if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER) &&
         IsComponentSide())
     {
-        CFEStringAttribute *pErrorFunc = (CFEStringAttribute*)(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_SERVER));
+        CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+	    (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER));
+	assert(pErrorFunc);
         m_sErrorFunction = pErrorFunc->GetString();
     }
-
-    return true;
 }
+
+/** \brief add the typical parameters of an interface function
+ */
+void
+CBEInterfaceFunction::AddParameters()
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+
+    // this adds the CORBA_Object
+    AddBeforeParameters();
+
+    // add message buffer
+    CBETypedDeclarator *pMsgBuf = GetMessageBuffer();
+    if (pMsgBuf)
+	m_Parameters.Add(pMsgBuf);
+    
+    // this adds the environment
+    AddAfterParameters();
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+}
+

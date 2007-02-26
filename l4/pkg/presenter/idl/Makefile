@@ -12,6 +12,6 @@ IDL	= presenter.idl presenter_fprov.idl presenter_exec.idl
 
 IDL_FLAGS = -t
 
-SYSTEMS = x86-l4v2 x86-l4x0
+SYSTEMS = x86-l4v2
 
 include $(L4DIR)/mk/idl.mk

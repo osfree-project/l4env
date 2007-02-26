@@ -8,15 +8,6 @@
 #include "thread.h"
 #include "types.h"
 
-#ifdef CONFIG_LOCAL_IPC
-#include "l4_types.h"
-#include "config_tcbsize.h" /* for THREAD_BLOCK_SIZE */
-#include "config.h"
-#include "mem_layout.h"
-#include "paging.h"
-#include "utcb.h"
-#endif
-
 bool dumpzero;
 
 #define NAME_LEN 58
@@ -60,7 +51,7 @@ int log2(int value)
 }
 
 
-void offsets_func() 
+void offsets_func(char **a, unsigned long **b) 
 {
 static char length[32] __attribute__((unused, section(".e_length"))) = 
   { sizeof(unsigned long), };
@@ -68,5 +59,7 @@ static unsigned long offsets[] __attribute__((unused, section(".offsets"))) =
 {
 #include "tcboffset_in.h"
 };
+  *a = length;
+  *b = offsets;
 
 }

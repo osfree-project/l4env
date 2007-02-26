@@ -6,7 +6,7 @@ INTERFACE [smas]:
 #include "paging.h"
 #include "types.h"
 
-class Space;
+class Mem_space;
 
 /** Small address space managment class.
  */
@@ -30,7 +30,7 @@ private:
    * This table restricts the space usable for small spaces to 512 MB. 
    * Make it bigger if needed.
    */
-  Space* _spaces[_available_size];
+  Mem_space* _spaces[_available_size];
 };
 
 extern Smas smas;
@@ -47,11 +47,10 @@ IMPLEMENTATION [smas]:
 #include "lock_guard.h"
 #include "kmem.h"
 #include "mem_layout.h"
+#include "mem_space.h"
 #include "mem_unit.h"
 #include "paging.h"
 #include "panic.h"
-#include "space.h"
-#include "space.h"
 #include "std_macros.h"
 #include "vmem_alloc.h"
 
@@ -92,7 +91,7 @@ Smas::Smas()
  */
 PUBLIC inline NEEDS ["config.h", "mem_layout.h"]
 bool
-Smas::linear_to_small(Address linearaddr, Space** space,
+Smas::linear_to_small(Address linearaddr, Mem_space** space,
                       Address* smalladdr)
 {
   // bounds checking
@@ -118,7 +117,7 @@ Smas::linear_to_small(Address linearaddr, Space** space,
  */ 
 PRIVATE inline NEEDS ["mem_layout.h"]
 int
-Smas::lookup(Space *space) const
+Smas::lookup(Mem_space *space) const
 {
   //calculate expected position from spaces data segment
   unsigned sbase = space->small_space_base();
@@ -143,7 +142,7 @@ Smas::lookup(Space *space) const
  */
 PUBLIC
 void
-Smas::move(Space *space, int index)
+Smas::move(Mem_space *space, int index)
 {
   // silently ignore requests out of bounds
   if (index > _space_count) 
@@ -196,7 +195,7 @@ Smas::move(Space *space, int index)
     {
       space->set_small_space(0, Kmem::mem_user_max);
       //If we try to change the current, reset the context.
-      if (current()->space() == space)
+      if (current()->mem_space() == space)
 	space->switchin_context();
     }
 
@@ -222,7 +221,7 @@ Smas::set_space_size(size_t size)
   Lock_guard <Cpu_lock> guard (&cpu_lock);
 
   // throw out all the spaces that still reside up there
-  Space *last_space = 0;
+  Mem_space *last_space = 0;
   for (unsigned i = 0; i < _available_size; i++) 
     {
       if (_spaces[i]) 
@@ -231,7 +230,7 @@ Smas::set_space_size(size_t size)
 	    {
 	      _spaces[i]->set_small_space(0, Kmem::mem_user_max);
 	      // if we try to change the current, reset the context
-	      if (current()->space() == _spaces[i])
+	      if (current()->mem_space() == _spaces[i])
       		_spaces[i]->switchin_context();
 	      last_space = _spaces[i];
 	    }
@@ -257,7 +256,7 @@ Smas::set_space_size(size_t size)
  */
 PUBLIC
 int
-Smas::space_nr(Space* space) 
+Smas::space_nr(Mem_space* space) 
 {
   unsigned sbase = space->small_space_base();
   unsigned spage;

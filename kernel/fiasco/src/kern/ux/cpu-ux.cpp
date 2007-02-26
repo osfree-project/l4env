@@ -3,7 +3,7 @@
  * Architecture specific cpu init code
  */
 
-INTERFACE:
+INTERFACE[ux]:
 
 class Tss;
 
@@ -12,14 +12,15 @@ EXTENSION class Cpu
 private:
   static Tss *tss asm ("CPU_TSS");
   static int msr_dev;
+  static unsigned long _gs asm ("CPU_GS");
 };
 
 
 IMPLEMENTATION[ux]:
 
+#include <cerrno>
 #include <cstdio>
 #include <unistd.h>
-#include <errno.h>
 #include <fcntl.h>
 #include "gdt.h"
 #include "initcalls.h"
@@ -30,6 +31,7 @@ IMPLEMENTATION[ux]:
 Proc::Status volatile Proc::virtual_processor_state = 0;
 Tss *Cpu::tss;
 int Cpu::msr_dev;
+unsigned long Cpu::_gs;
 
 IMPLEMENT FIASCO_INIT
 void
@@ -68,7 +70,7 @@ Cpu::init (void)
 
 PUBLIC static inline
 void
-Cpu::set_sysenter (void (*)(void))
+Cpu::set_fast_entry (void (*)(void))
 {}
 
 PUBLIC static FIASCO_INIT
@@ -76,7 +78,7 @@ void
 Cpu::init_tss (Address tss_mem)
 {
   tss = reinterpret_cast<Tss*>(tss_mem);
-  tss->ss0 = Gdt::gdt_data_kernel;
+  tss->_ss0 = Gdt::gdt_data_kernel;
 }
 
 PUBLIC static inline
@@ -131,3 +133,24 @@ Cpu::wrmsr (Unsigned32 low, Unsigned32 high, Unsigned32 reg)
   Unsigned64 msr = ((Unsigned64)high << 32) | low;
   wrmsr(msr, reg);
 }
+
+PUBLIC static inline
+void
+Cpu::debugctl_enable()
+{}
+
+PUBLIC static inline
+void
+Cpu::debugctl_disable()
+{}
+
+PUBLIC static inline
+void
+Cpu::set_gs(Unsigned32 val)
+{ _gs = val; }
+
+PUBLIC static inline
+Unsigned32
+Cpu::get_gs()
+{ return _gs; }
+

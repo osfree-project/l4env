@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/Object.cpp
- *    \brief   contains the implementation of the class CObject
+ *  \file    dice/src/Object.cpp
+ *  \brief   contains the implementation of the class CObject
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -29,29 +29,43 @@
 #include "Object.h"
 
 CObject::CObject(CObject * pParent)
+: m_pParent(pParent),
+  m_nSourceLineNb(0),
+  m_nSourceLineNbEnd(0),
+  m_sSourceFileName()
 {
-    m_pParent = pParent;
-    m_nSourceLineNb = 0;
-    m_nSourceLineNbEnd = 0;
 }
 
-CObject::CObject(CObject & src)
+CObject::CObject(const CObject & src)
+: m_pParent(src.m_pParent),
+  m_nSourceLineNb(src.m_nSourceLineNb),
+  m_nSourceLineNbEnd(src.m_nSourceLineNbEnd),
+  m_sSourceFileName(src.m_sSourceFileName)
 {
-    m_pParent = src.m_pParent;
-    m_nSourceLineNb = src.m_nSourceLineNb;
-    m_nSourceLineNbEnd = src.m_nSourceLineNbEnd;
-    m_sSourceFileName = src.m_sSourceFileName;
 }
 
 /** cleans up the object */
 CObject::~CObject()
-{
-}
+{}
 
-/**    creates a copy of this object
- *    \return a copy of this object
+/** \brief creates a copy of this object
+ *  \return a copy of this object
  */
 CObject *CObject::Clone()
 {
     return new CObject(*this);
+}
+
+/** \brief test if an object is parent of this object
+ *  \param pParent the alleged parent
+ *  \return true if pParent really is my parent
+ */
+bool CObject::IsParent(CObject * pParent)
+{
+    if (!pParent)
+	return false;
+    CObject *pP = m_pParent;
+    while (pP && pP != pParent)
+	pP = pP->GetParent();
+    return pP == pParent;
 }

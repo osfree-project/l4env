@@ -1,12 +1,12 @@
 /**
  *    \file    dice/src/be/l4/L4BEMarshaller.h
- *    \brief   contains the declaration of the class CL4BEMarshaller
+ *  \brief   contains the declaration of the class CL4BEMarshaller
  *
- *    \date    05/17/2002
+ *    \date    01/26/2005
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2005
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,43 +27,124 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef L4BEO1MARSHALLER_H
-#define L4BEO1MARSHALLER_H
+#ifndef L4BEMARSHALLER_H
+#define L4BEMARSHALLER_H
 
 #include <be/BEMarshaller.h>
 
+class CBEMsgBufferType;
+
 /** \class CL4BEMarshaller
- *  \brief the class contains the marshalling code
+ *  \ingroup backend
+ *  \brief contains the marshalling code
+ *
+ * Requirements:
+ * # add local variables, which are needed for marshalling, to function
+ * # marshal all parameters of a function
+ * # write access to single words in the message buffer (or from function as \
+ *   if marshalled)
+ * # test if certain number of parameters fits into registers
+ * # set certain members of message buffer (e.g. opcode, zero fpage, \
+ *   exception) to zero
+ * # marshal certain members of message buffer seperately (e.g. opcode, ...)
  */
 class CL4BEMarshaller : public CBEMarshaller
 {
 public:
-    /** \brief constructor of marshaller */
+    /** constructor */
     CL4BEMarshaller();
     virtual ~CL4BEMarshaller();
 
-public: // Public methods
-    virtual int Marshal(CBEFile * pFile, CBETypedDeclarator * pParameter, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
-    virtual int Marshal(CBEFile * pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
+    virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
+	int nDirection);
+    virtual bool MarshalWordMember(CBEFile *pFile, CBEFunction *pFunction,
+	int nDirection, int nPosition, bool bReference, bool bLValue);
+    virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction,
+	CBETypedDeclarator *pParameter, bool bMarshal, int nPosition);
 
-protected: // Protected methods
-    virtual int MarshalDeclarator(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bIncOffsetVariable, bool bLastParameter, CBEContext * pContext);
-    virtual int MarshalFlexpage(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
-    virtual int MarshalIndirectString(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
+protected:
+    virtual bool MarshalSpecialMember(CBETypedDeclarator *pMember);
+    virtual bool MarshalRcvFpage(CBETypedDeclarator *pMember);
+    virtual bool MarshalSendDope(CBETypedDeclarator *pMember);
+    virtual bool MarshalSizeDope(CBETypedDeclarator *pMember);
+    virtual bool MarshalZeroFlexpage(CBETypedDeclarator *pMember);
+    
+    virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
+	vector<CDeclaratorStackLocation*> *pStack);
+    virtual void WriteMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, vector<CDeclaratorStackLocation*> *pStack);
+    virtual void WriteRefstringCastMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember);
 
-protected: // Protected attributes
-    /** \var int m_nTotalFlexpages
-     *  \brief the total number of flexpages in a function
+    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+	CBETypedDeclarator *pParameter, int nDirection);
+    
+protected:
+    /** \var int m_nSkipSize
+     *  \brief internal counter to know if the parameter should be skipped
      */
-    unsigned int m_nTotalFlexpages;
-    /** \var int m_nCurrentFlexpages
-     *  \brief the current count of the marshalled flexpages
+    int m_nSkipSize;
+
+private:
+    /** \class PositionMarshaller
+     *  \ingroup backend
+     *  \brief class to marshal members to specific positions
+     *
+     * This class wraps the methods required to marshal a specific member of a
+     * specific position to a word sized location. The methods only write the
+     * access to the member. What is done to the member is not of concern to
+     * this class.
      */
-    unsigned int m_nCurrentFlexpages;
-    /** \var int m_nCurrentString
-     *  \brief is the index into the indirect string array
-     */
-    unsigned int m_nCurrentString;
+    class PositionMarshaller
+    {
+	/** default constructor */
+	PositionMarshaller(CL4BEMarshaller *pParent);
+	~PositionMarshaller();
+
+    public:
+	bool Marshal(CBEFile *pFile, CBEFunction *pFunction, int nDirection, 
+    	    int nPosition, bool bReference, bool bLValue);
+    private:
+	CBEMsgBufferType* GetMessageBufferType(CBEFunction *pFunction);
+	CBETypedDeclarator* GetMemberAt(CBEMsgBufferType *pType,
+	    CBEStructType *pStruct, int nPosition);
+	int GetMemberSize(CBETypedDeclarator *pMember);
+	void WriteParameter(CBEFile *pFile, CBETypedDeclarator *pParameter,
+	    bool bReference, bool bLValue);
+	void WriteSpecialMember(CBEFile *pFile, CBEFunction *pFunction,
+	    CBETypedDeclarator *pMember, int nDirection, bool bReference, 
+	    bool bLValue);
+
+    protected:
+	/** \var CBEMarshaller *m_pParent
+	 *  \brief reference to calling marshaller
+	 */
+	CL4BEMarshaller* m_pParent;
+	/** \var int m_nPosSize 
+	 *  \brief the size of the position to marshal to
+	 *
+	 * This is the size of a word type, but to spare the permanent lookup
+	 * of the size or the passing as parameter on the stack, we store it
+	 * here.
+	 */
+	int m_nPosSize;
+	/** \var bool m_bReference
+	 *  \brief true if a reference to the member is needed
+	 * 
+	 * Stored here to avoid passing as parameter (value does not change). 
+	 */
+	bool m_bReference;
+	/** \var CBEFile *m_pFile
+	 *  \brief the file to write to
+	 */
+	CBEFile *m_pFile;
+
+	friend class CL4BEMarshaller;
+    };
+
+    friend class CL4BEMarshaller::PositionMarshaller;
 };
 
 #endif

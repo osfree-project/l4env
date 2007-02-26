@@ -15,6 +15,9 @@
 #include <l4/sys/types.h>
 #include <l4/l4vfs/types.h>
 
+// terminal options
+extern int __opt_history;
+
 int term_write(local_object_id_t object, l4_int8_t *buf, int count);
 void term_read(void *argp);
 

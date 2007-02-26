@@ -6,17 +6,18 @@
 
 use strict;
 
-my $cross_compile_prefix = $ENV{CROSS_COMPILE};
-my $arch         = $ENV{ARCH}       || "x86";
+my $cross_compile_prefix = $ENV{CROSS_COMPILE} || '';
+my $arch         = $ENV{OPT_ARCH}     || "x86";
 
-my $module_path  = $ENV{SEARCHPATH} || ".";
-my $prog_objcopy = $ENV{OBJCOPY}    || "${cross_compile_prefix}objcopy";
-my $prog_cc      = $ENV{CC}         || "${cross_compile_prefix}gcc";
-my $prog_ld      = $ENV{LD}         || "${cross_compile_prefix}ld";
-my $prog_cp      = $ENV{CP}         || "cp";
-my $prog_gzip    = $ENV{GZIP}       || "gzip";
-my $compress     = $ENV{COMPRESS}   || 0;
-my $strip        = $ENV{STRIP}      || 1;
+my $module_path  = $ENV{SEARCHPATH}   || ".";
+my $prog_objcopy = $ENV{OBJCOPY}      || "${cross_compile_prefix}objcopy";
+my $prog_cc      = $ENV{CC}           || "${cross_compile_prefix}gcc";
+my $prog_ld      = $ENV{LD}           || "${cross_compile_prefix}ld";
+my $prog_cp      = $ENV{PROG_CP}      || "cp";
+my $prog_gzip    = $ENV{PROG_GZIP}    || "gzip";
+my $compress     = $ENV{OPT_COMPRESS} || 0;
+my $strip        = $ENV{OPT_STRIP}    || 1;
+my $flags_cc     = ($arch eq 'amd64' ? "-m64" : "");
 
 my $make_inc_file = $ENV{MAKE_INC_FILE} || "mod.make.inc";
 
@@ -27,6 +28,8 @@ sub usage()
 {
   print STDERR "$0 modulefile entry\n";
 }
+
+
 
 # extract list of modules from an entry in the module.list file
 sub get_module_list($$)
@@ -74,6 +77,7 @@ sub get_module_list($$)
     next unless $do_entry;
 
     if ($type ne 'bin' and $type ne 'data'
+        and $type ne 'bin-nostrip' and $type ne 'data-nostrip'
 	and $type ne 'roottask' and $type ne 'kernel' and $type ne 'sigma0') {
       die "$line: Invalid type \"$type\"";
     }
@@ -114,15 +118,15 @@ sub get_module_list($$)
 
   close M;
 
-  die "Unknown entry \"$title\"!" unless $found_entry;
+  die "Unknown entry \"$title\" in $modulesfile!" unless $found_entry;
 
   # construct roottask cmdline, just for convenience
   my $mod_bin;
   my $roottask_cmdline;
   for my $r (@mods) {
-    if ($r->{type} eq 'bin') {
+    if ($r->{type} =~ /^bin(-nostrip)?$/) {
       $mod_bin = $r->{command};
-    } elsif ($r->{type} eq 'data') {
+    } elsif ($r->{type} =~ /^data(-nostrip)?$/) {
       if ($mod_bin) {
 	$roottask_cmdline .= " task modname \\\"$mod_bin\\\"";
 	undef $mod_bin;
@@ -173,16 +177,21 @@ sub first_word($)
 }
 
 # build object files from the modules
-sub build_obj($$)
+sub build_obj($$$)
 {
-  my ($cmdline, $modname) = @_;
+  my ($cmdline, $modname, $no_strip) = @_;
   my $_file = first_word($cmdline);
 
   my $file = search_module($_file) || die "Cannot find file $_file!";
 
   printf STDERR "Merging image %s to %s\n", $file, $modname;
-  system("$prog_objcopy -S $file $modname.obj 2> /dev/null") if $strip;
-  system("$prog_cp         $file $modname.obj") if $? || !$strip;
+  # make sure that the file isn't already compressed
+  system("$prog_gzip -dc $file > $modname.ugz 2> /dev/null");
+  $file = "$modname.ugz" if !$?;
+  system("$prog_objcopy -S $file $modname.obj 2> /dev/null")
+    if $strip && !$no_strip;
+  system("$prog_cp         $file $modname.obj")
+    if $? || !$strip || $no_strip;
   my $uncompressed_size = -s "$modname.obj";
   system("$prog_gzip -9f $modname.obj && mv $modname.obj.gz $modname.obj")
     if $compress;
@@ -197,7 +206,7 @@ sub build_obj($$)
       ".long ", (-s "$modname.obj"), "            \n",
       ".long $uncompressed_size                   \n",
       ".long _bin_${modname}_name                 \n",
-      ($arch eq 'x86'
+      ($arch eq 'x86' || $arch eq 'amd64'
        ? #".section .module_data, \"a\", \@progbits   \n" # Not Xen
          ".section .module_data, \"awx\", \@progbits   \n" # Xen
        : ".section .module_data, #alloc           \n"),
@@ -208,9 +217,8 @@ sub build_obj($$)
       ".incbin \"$modname.obj\"                   \n",
       "_binary_${modname}_end:                    \n",
       );
-  system("$prog_cc -c -o $modname.bin $modname.extra.s");
-  unlink("$modname.extra.s", "$modname.obj");
-
+  system("$prog_cc $flags_cc -c -o $modname.bin $modname.extra.s");
+  unlink("$modname.extra.s", "$modname.obj", "$modname.ugz");
 }
 
 sub build_mbi_modules_obj
@@ -243,7 +251,7 @@ sub build_mbi_modules_obj
   }
 
   write_to_file("mbi_modules.s", $asm_string);
-  system("$prog_cc -c -o mbi_modules.bin mbi_modules.s");
+  system("$prog_cc $flags_cc -c -o mbi_modules.bin mbi_modules.s");
   unlink("mbi_modules.s");
 
 }
@@ -264,7 +272,8 @@ sub build_objects(@)
   build_mbi_modules_obj(@mods);
 
   for (my $i = 0; $i < @mods; $i++) {
-    build_obj($mods[$i]->{cmdline}, $mods[$i]->{modname});
+    build_obj($mods[$i]->{cmdline}, $mods[$i]->{modname},
+	      $mods[$i]->{type} =~ /.+-nostrip$/);
     $objs .= " $mods[$i]->{modname}.bin";
   }
 

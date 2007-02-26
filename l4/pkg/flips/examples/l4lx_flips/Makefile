@@ -1,17 +1,17 @@
-SYSTEMS        = x86-l4v2
-PKGDIR        ?=  ../..
-L4DIR         ?= $(PKGDIR)/../..
+SYSTEMS = x86-l4v2
+PKGDIR ?=  ../..
+L4DIR  ?= $(PKGDIR)/../..
 
-TARGET	       = l4lx_flips
+TARGET = l4lx_flips
 
-MODE           = l4linux
+MODE = l4linux
 
-SRC_C	       = server.c thread_table.c notify.c
+SRC_C = server.c net_io.c notify.c events.c
 
-SERVERIDL      = flips.idl
+SERVERIDL = flips.idl
 
-LIBS           = -lthread_linux -lsemaphore -lthread_linux -ll4env_err -lloglinux \
-                 -ll4vfs_network_server-server -ll4vfs_select -ll4vfs_select_notify-server \
-                 -lflips_l4vfs_server
+LIBS = -levents -ll4vfs_connection -ll4vfs_network_server-server -ll4vfs_select \
+       -ll4vfs_select_notify-server \
+       -lloglinux -lpthread
 
 include $(L4DIR)/mk/prog.mk

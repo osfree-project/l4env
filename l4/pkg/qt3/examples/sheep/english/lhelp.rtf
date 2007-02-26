@@ -1,0 +1,67 @@
+<h2>Leveleditor ujas LittleSheep</h2>
+<p>With this program you may create your own levels. 
+You may play them from LittleSheep V1.5 on. Switch between supplied levels and your own
+in the menu &quot;Levelfile&quot;.</p>
+
+<h3>Menu Level:</h3>
+<ul>
+<li>Load level: opens level list, load level by doubleclicking its entry.</li>
+<li>Save level: opens level list, save level by doubleclicking its entry, 
+    the old level is overwritten.</li>
+<li>Insert before: opens level list, save by doubleclicking the entry,
+    the new level will be written before this entry.</li>
+<li>Append level: the new level goes to the bottom of the level list.</li>
+<li>Delete level: opens level list, delete level by doubleclicking its entry.</li>
+<li>Quit/Ende: ends leveleditor</li>
+</ul>
+<p>The levels are stored in the file userlevels.csv (CSV-table, separated by ;).<br>
+After any manipulation of this file you find the old data in userlevels.csv_backup.</p>
+
+<h3>Tools:</h3>
+<ul>
+<li>Clear meadow: just what it says. Moskito- and sheepdata are not affected.</li>
+<li>Fill top row with leftmost field: fills this row with its leftmost field.</li>
+<li>Fill right column with topmost field</li>
+<li>Fill bottom row with leftmost field</li>
+<li>Fill left column with topmost field</li>
+</ul>
+<p>With this tools you may quickly set frames.</p>
+<ul>
+<li>Move fields to the top: all fields move up 1 unit, the bottom row is filled with empty fields.</li>
+<li>Move fields to the right: all fields move to the right by 1 unit, the leftmost column is filled with empty fields.</li>
+<li>Move fields to the bottom: all fields move down 1 unit, thetop row is filled with empty fields.</li>
+<li>Move fields to the tlft: all fields move to the left by 1 unit, the rightmost column is filled with empty fields.</li>
+</ul>
+
+<h3>Tool-Blocks to the Right:</h3>
+
+<h4>Block 1: Levelname, Time, Number Signs</h4>
+<p>Enter levelname (1-31 characters, alphanumeric and blank), the time for this level in s (10 - 999), 
+and the number of signs (1-99.)</p>
+
+<h4>Block 2:Meadow Types, Sheep Start and Moskito Start</h4>
+<p>Choose the desired elements for the meadow, set them by clicking (once) into the meadow to the left.<br>
+   Extras: sheep ans moskito must only occur once. 
+    <ul>
+    <li>The 1st click sets their start field.</li>
+    <li>The 2nd click with the same icons their positions are updated.</li>
+    <li>To clear the moskito, click on it with the moskito icon chosen.</li>
+    </ul>
+</p>
+
+
+<h4>Block 3: Start Direction Sheep</h4>
+<p>Here you choose the direction the sheep will move after levelstart.</p>
+
+<h4>Block 4: Moskito Flight</h4>
+<p>There are 3 flight pattern:<br>
+    <ul>
+    <li>horizontal back and forth</li>
+    <li>30&deg; rise, changing directions at the end of the meadow</li>
+    <li>45&deg; rise, changing directions at the end of the meadow </li>
+    </ul>
+    <p>If nothing was chosen, the moskito takes flight pattern 1.</p>
+ </p>
+    
+
+<p align=center>--/--</p>

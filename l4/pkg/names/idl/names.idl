@@ -60,7 +60,8 @@ interface names
     * \return 0 on error, != 0 on success
     */
    long query_id([in] l4_threadid_t id,
-                 [out, string, prealloc, max_is(NAMES_MAX_NAME_LEN)] char **name);
+                 [out, string, prealloc_client, max_is(NAMES_MAX_NAME_LEN)]
+		 char **name);
 
    /** Query names for a name and ID by number.
     *
@@ -71,7 +72,8 @@ interface names
     * \return 0 on error, != 0 on success
     */
    long query_nr([in] int nr,
-                 [out, string, prealloc, max_is(NAMES_MAX_NAME_LEN)] char **name,
+                 [out, string, prealloc_client, max_is(NAMES_MAX_NAME_LEN)]
+		 char **name,
                  [out] l4_threadid_t *id);
                  
    /** Requests names to dump its internal database.

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEWaitFunction.cpp
- *    \brief   contains the implementation of the class CBEWaitFunction
+ *  \file    dice/src/be/BEWaitFunction.cpp
+ *  \brief   contains the implementation of the class CBEWaitFunction
  *
- *    \date    01/14/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/14/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,25 +26,28 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEWaitFunction.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEUserDefinedType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEDeclarator.h"
-#include "be/BEAttribute.h"
-#include "be/BEClient.h"
-#include "be/BEComponent.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEMsgBufferType.h"
-
+#include "BEWaitFunction.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEUserDefinedType.h"
+#include "BEDeclarator.h"
+#include "BEAttribute.h"
+#include "BEClient.h"
+#include "BEComponent.h"
+#include "BEImplementationFile.h"
+#include "BEHeaderFile.h"
+#include "BEMsgBuffer.h"
+#include "BEMarshaller.h"
+#include "BESizes.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
+#include <cassert>
 
 CBEWaitFunction::CBEWaitFunction(bool bOpenWait)
+    : CBEOperationFunction(bOpenWait ? FUNCTION_WAIT : FUNCTION_RECV)
 {
     m_bOpenWait = bOpenWait;
 }
@@ -55,138 +58,136 @@ CBEWaitFunction::CBEWaitFunction(CBEWaitFunction & src)
     m_bOpenWait = src.m_bOpenWait;
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CBEWaitFunction::~CBEWaitFunction()
 {
 }
 
-/**    \brief writes the variable declarations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the variable initializations of this function
+ *  \param pFile the file to write to
  *
- * The variable declarations includes the definition of the message buffer.
+ * This implementation should initialize the message buffer and the pointers 
+ * of the out variables.
  */
-void CBEWaitFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+void 
+CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    // define message buffer
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteDefinition(pFile, false, pContext);
-    // check for temp
-    if (HasVariableSizedParameters(GetReceiveDirection()) ||
-        HasArrayParameters(GetReceiveDirection()))
-    {
-        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sTmpVar.c_str());
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sOffsetVar.c_str());
-    }
+    // initialize message buffer
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    pMsgBuffer->WriteInitialization(pFile, this, 0, 0);
 }
 
-/**    \brief writes the variable initializations of this function
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * This implementation should initialize the message buffer and the pointers of the out variables.
- */
-void CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
-{
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, pContext);
-}
-
-/**    \brief writes the invocation of the message transfer
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief writes the invocation of the message transfer
+ *  \param pFile the file to write to
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBEWaitFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+void CBEWaitFunction::WriteInvocation(CBEFile * pFile)
 {
-    pFile->PrintIndent("/* invoke */\n");
+    *pFile << "\t/* invoke */\n";
+
+    WriteOpcodeCheck(pFile);
 }
 
-/**    \brief clean up the mess
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * This implementation cleans up allocated memory inside this function
+/** \brief creates the back-end wait function
+ *  \param pFEOperation the corresponding front-end operation
+ *  \return true if successful
  */
-void CBEWaitFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
+void 
+CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
-}
-
-/**    \brief creates the back-end wait function
- *    \param pFEOperation the corresponding front-end operation
- *    \param pContext the context of the code generation
- *    \return true if successful
- */
-bool CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
-{
+    FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
     if (m_bOpenWait)
-        pContext->SetFunctionType(FUNCTION_WAIT);
+	nFunctionType = FUNCTION_WAIT;
     else
-        pContext->SetFunctionType(FUNCTION_RECV);
+	nFunctionType = FUNCTION_RECV;
+    SetFunctionName(pFEOperation, nFunctionType);
+    
     // set target file name
-    SetTargetFileName(pFEOperation, pContext);
-    // set name
-    m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+    SetTargetFileName(pFEOperation);
 
-    if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-        return false;
+    CBEOperationFunction::CreateBackEnd(pFEOperation);
 
-    // set return type
-    CBEType *pReturnType = pContext->GetClassFactory()->GetNewType(TYPE_VOID);
-    pReturnType->SetParent(this);
-    if (!pReturnType->CreateBackEnd(false, 0, TYPE_VOID, pContext))
+    // add message buffer as local variable
+    AddMessageBuffer(pFEOperation);
+    // then add as local variable
+    AddLocalVariable(GetMessageBuffer());
+    // add opcode as local variable
+    CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
+    AddLocalVariable(pOpcode);
+    // opcode var might not be used
+    pOpcode->AddLanguageProperty(string("attribute"),
+	string("__attribute__ ((unused))"));
+    // add marshaller and communication class
+    CreateMarshaller();
+    CreateCommunication();
+    CreateTrace();
+
+    // set initializer of return variable to zero
+    CBETypedDeclarator *pVariable = GetReturnVariable();
+    if (pVariable)
+        pVariable->SetDefaultInitString(string("0"));
+}
+
+/** \brief adds the OUT attribute to open wait CORBA_Object variable
+ *  \return true if successful
+ */
+void
+CBEWaitFunction::CreateObject()
+{
+    // call base
+    CBEOperationFunction::CreateObject();
+
+    if (!m_bOpenWait)
+	return;
+
+    // get object
+    CBETypedDeclarator *pObj = GetObject();
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEAttribute *pAttr = pCF->GetNewAttribute();
+    try
     {
-        VERBOSE("%s failed because return type could not be created\n", __PRETTY_FUNCTION__);
-        delete pReturnType;
-        return false;
+	pAttr->CreateBackEnd(ATTR_OUT);
     }
-    CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
-    delete pOldType;
-
-    // add message buffer
-    if (!AddMessageBuffer(pFEOperation, pContext))
+    catch (CBECreateException *e)
     {
-        VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
-        return false;
-    }
+        delete pAttr;
+	e->Print();
+	delete e;
 
-    return true;
+	string exc = string(__func__);
+	exc += " failed, because IN attribute for CORBA Object could not be" \
+	    " created.";
+        throw new CBECreateException(exc);
+    }
+    pObj->m_Attributes.Add(pAttr);
 }
 
 /** \brief checks if this parameter should be marshalled
  *  \param pParameter the parameter to be marshalled
- *  \param pContext the context of this marshalling
+ *  \param bMarshal true if marshaling, false if unmarshaling
  *  \return true if this parameter should be marshalled
  *
- * Always return false, because this function does only receive data.
+ * Return false if marshalling, because this function does only receive data.
  */
-bool CBEWaitFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext)
+bool
+CBEWaitFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
+	bool bMarshal)
 {
-    return false;
-}
+    if (bMarshal)
+	return false;
+    
+    if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+	return false;
 
-/** \brief checks if this parameter should be unmarshalled
- *  \param pParameter the parameter to be unmarshalled
- *  \param pContext the context of this unmarshalling
- *  \return true if this parameter should be unmarshalled
- *
- * This implementation should unpack the in parameters from the message structure
- */
-bool CBEWaitFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext)
-{
     if (IsComponentSide())
     {
-        if (pParameter->FindAttribute(ATTR_IN))
+        if (pParameter->m_Attributes.Find(ATTR_IN))
             return true;
     }
     else
     {
-        if (pParameter->FindAttribute(ATTR_OUT))
+        if (pParameter->m_Attributes.Find(ATTR_OUT))
             return true;
     }
     return false;
@@ -194,79 +195,91 @@ bool CBEWaitFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEC
 
 /** \brief writes opcode check code
  *  \param pFile the file to write to
- *  \param pContext the context of the write
  */
-void CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile, CBEContext *pContext)
+void
+CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
 {
     /* if the noopcode option is set, we cannot check for the correct opcode */
-    if (FindAttribute(ATTR_NOOPCODE))
+    if (m_Attributes.Find(ATTR_NOOPCODE))
         return;
+
+    // unmarshal opcode variable
+    WriteMarshalOpcode(pFile, false);
+   
+    // now check if opcode in variable is our opcode
     string sSetFunc;
-    if (((CBEUserDefinedType*)m_pCorbaEnv->GetType())->GetName() ==
+    if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
         "CORBA_Server_Environment")
         sSetFunc = "CORBA_server_exception_set";
     else
         sSetFunc = "CORBA_exception_set";
 
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
     /* now check for correct opcode and set exception */
-    string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-    pFile->PrintIndent("if (*(%s*)(&(", sMWord.c_str());
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-    pFile->Print("[0])) != %s)\n", m_sOpcodeConstName.c_str());
-    pFile->PrintIndent("{\n");
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sOpcode = pNF->GetOpcodeVariable();
+    CBETypedDeclarator *pOpcode = m_LocalVariables.Find(sOpcode);
+    vector<CDeclaratorStackLocation*> vStack;
+    CDeclaratorStackLocation *pLoc =
+	new CDeclaratorStackLocation(pOpcode->m_Declarators.First());
+    vStack.push_back(pLoc);
+    
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    *pFile << "\tif (";
+    pMsgBuffer->WriteAccess(pFile, this, GetReceiveDirection(), &vStack);
+    *pFile << " != " << m_sOpcodeConstName << ")\n";
+    *pFile << "\t{\n";
     pFile->IncIndent();
-    string sException = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
+    string sException = pNF->GetCorbaEnvironmentVariable();
     *pFile << "\t" << sSetFunc << "(" << sException << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("CORBA_SYSTEM_EXCEPTION,\n");
-    pFile->PrintIndent("CORBA_DICE_EXCEPTION_WRONG_OPCODE,\n");
-    pFile->PrintIndent("0);\n");
+    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    *pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
+    *pFile << "\t0);\n";
     pFile->DecIndent();
-    WriteReturn(pFile, pContext);
+    WriteReturn(pFile);
     pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    *pFile << "\t}\n";
+
+    delete pLoc;
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A wait function should be written at client's side if OUT attribute or
  * at component's side if IN attribute.
  */
-bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
+bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile * pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (FindAttribute(ATTR_OUT)))
+        (m_Attributes.Find(ATTR_OUT)))
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-        (FindAttribute(ATTR_IN)))
+        (m_Attributes.Find(ATTR_IN)))
         return true;
     return false;
 }
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *  \return true if should be written
  *
  * A wait function should be written at client's side if OUT attribute or
  * at component's side if IN attribute.
  */
-bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile * pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-        (FindAttribute(ATTR_OUT)))
+        (m_Attributes.Find(ATTR_OUT)))
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-        (FindAttribute(ATTR_IN)))
+        (m_Attributes.Find(ATTR_IN)))
         return true;
     return false;
 }
@@ -274,7 +287,10 @@ bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext 
 /** \brief gets the direction for the sending data
  *  \return if at client's side DIRECTION_IN, else DIRECTION_OUT
  *
- * Since this function ignores the send part, this value should be not interesting
+ * The wait function is used to receive a simple message (not RPC), so the
+ * send direction depends on the position of the function:
+ * At the server side, a wait function receives IN parameters, thus its send
+ * direction is OUT. At the client side its vice versa.
  */
 int CBEWaitFunction::GetSendDirection()
 {
@@ -291,114 +307,158 @@ int CBEWaitFunction::GetReceiveDirection()
 
 /** \brief checks whether a given parameter needs an additional reference pointer
  *  \param pDeclarator the decl to check
- *  \param pContext the context of the operation
  *  \param bCall true if the parameter is a call parameter
  *  \return true if we need a reference
  *
- * This implementation checks for the special condition to give an extra reference.
- * Since the declarator may also belong to an attribute, we have to check this as well.
- * (The size_is declarator belongs to a parameter, but has to be checked as well).
+ * This implementation checks for the special condition to give an extra
+ * reference.  Since the declarator may also belong to an attribute, we have
+ * to check this as well.  (The size_is declarator belongs to a parameter, but
+ * has to be checked as well).
  *
- * Another possibility is, that members of structures or union are checked. To avoid
- * giving them unwanted references, we search for the parameter.
+ * Another possibility is, that members of structures or union are checked. To
+ * avoid giving them unwanted references, we search for the parameter.
  *
  * An additional reference is also given to the [in, string] parameters.
  *
- * (The message buffer parameter needs no additional reference, it is itself a pointer.)
+ * (The message buffer parameter needs no additional reference, it is itself a
+ * pointer. So is the CORBA_Object.)
  *
  *
- * Because every parameter is set inside this functions, all parameters should be referenced.
- * Since OUT parameters are already referenced, we only need to add an asterisk to IN parameters.
- * This function is only called when iterating over the declarators of a typed declarator. Thus the
- * direction of a parameter can be found out by checking the attributes of the declarator's parent.
- * To be sure, whether this parameter needs an additional star, we check the existing number of stars.
+ * Because every parameter is set inside this functions, all parameters should
+ * be referenced.  Since OUT parameters are already referenced, we only need
+ * to add an asterisk to IN parameters.  This function is only called when
+ * iterating over the declarators of a typed declarator. Thus the direction of
+ * a parameter can be found out by checking the attributes of the declarator's
+ * parent.  To be sure, whether this parameter needs an additional star, we
+ * check the existing number of stars.
  *
  * We also need to add an asterisk to the message buffer parameter.
  */
-bool CBEWaitFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall)
+bool
+CBEWaitFunction::HasAdditionalReference(CBEDeclarator * pDeclarator,
+    bool bCall)
 {
     CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
     if (!pParameter)
         return false;
-    assert(dynamic_cast<CBETypedDeclarator*>(pParameter));
-    if (pParameter->FindAttribute(ATTR_IN))
+    if (pParameter == GetObject())
+	return false;
+    if (pParameter->m_Attributes.Find(ATTR_IN))
     {
         CBEType *pType = pParameter->GetType();
         CBEAttribute *pAttr;
-        if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+        if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
             pType = pAttr->GetAttrType();
-        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - pType->GetArrayDimensionCount();
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
+	    pType->GetArrayDimensionCount();
         if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
             return true;
-        if ((pParameter->FindAttribute(ATTR_STRING)) &&
+        if ((pParameter->m_Attributes.Find(ATTR_STRING)) &&
              pType->IsOfType(TYPE_CHAR) &&
             (pDeclarator->GetStars() < 2))
             return true;
-        if ((pParameter->FindAttribute(ATTR_SIZE_IS) ||
-            pParameter->FindAttribute(ATTR_LENGTH_IS) ||
-            pParameter->FindAttribute(ATTR_MAX_IS)) &&
+        if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
+            pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
+            pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
             (nArrayDimensions <= 0))
             return true;
     }
-    return CBEOperationFunction::HasAdditionalReference(pDeclarator, pContext, bCall);
+    return CBEOperationFunction::HasAdditionalReference(pDeclarator, bCall);
 }
 
-/**    \brief adds a single parameter to this function
- *    \param pFEParameter the parameter to add
- *    \param pContext the context of the code generation
- *    \return true if successful
+/** \brief adds a single parameter to this function
+ *  \param pFEParameter the parameter to add
+ *  \return true if successful
  *
- * This function decides, which parameters to add and which don't. The parameters to unmarshal are
- * for client-to-component transfer the IN parameters and for component-to-client transfer the OUT
- * and return parameters. We depend on the information set in m_bComponentSide.
+ * This function decides, which parameters to add and which don't. The
+ * parameters to unmarshal are for client-to-component transfer the IN
+ * parameters and for component-to-client transfer the OUT and return
+ * parameters. We depend on the information set in m_bComponentSide.
  */
-bool CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext)
+void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
     if (IsComponentSide())
     {
-        if (!(pFEParameter->FindAttribute(ATTR_IN)))
-            return true;
+        if (!(pFEParameter->m_Attributes.Find(ATTR_IN)))
+            return;
     }
     else
     {
-        if (!(pFEParameter->FindAttribute(ATTR_OUT)))
-            return true;
+        if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
+            return;
     }
-    return CBEOperationFunction::AddParameter(pFEParameter, pContext);
+    CBEOperationFunction::AddParameter(pFEParameter);
 }
 
 /** \brief calculates the size of the fixed sized params of this function
  *  \param nDirection the direction to calc
- *  \param pContext the context of this counting
  *  \return the size of the params in bytes
  */
-int CBEWaitFunction::GetSize(int nDirection, CBEContext *pContext)
+int CBEWaitFunction::GetSize(int nDirection)
 {
     // get base class' size
-    int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_IN) &&
-        !FindAttribute(ATTR_NOOPCODE))
-        nSize += pContext->GetSizes()->GetOpcodeSize();
+        !m_Attributes.Find(ATTR_NOOPCODE))
+        nSize += CCompiler::GetSizes()->GetOpcodeSize();
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
 
 /** \brief calculates the size of the fixed sized params of this function
  *  \param nDirection the direction to calc
- *  \param pContext the context of this counting
  *  \return the size of the params in bytes
  */
-int CBEWaitFunction::GetFixedSize(int nDirection, CBEContext *pContext)
+int CBEWaitFunction::GetFixedSize(int nDirection)
 {
     // get base class' size
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
+    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_IN) &&
-        !FindAttribute(ATTR_NOOPCODE))
-        nSize += pContext->GetSizes()->GetOpcodeSize();
+        !m_Attributes.Find(ATTR_NOOPCODE))
+        nSize += CCompiler::GetSizes()->GetOpcodeSize();
     if ((nDirection & DIRECTION_OUT) &&
-        !FindAttribute(ATTR_NOEXCEPTIONS))
-        nSize += pContext->GetSizes()->GetExceptionSize();
+        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
+        nSize += CCompiler::GetSizes()->GetExceptionSize();
     return nSize;
 }
+
+/** \brief manipulates the  message buffer
+ *  \param pMsgBuffer the message buffer to initialize
+ *  \return true on success
+ *
+ * This method is called twice: first during creation:
+ * * Class::CreateBackEnd
+ * * Class::CreateFunctionsNoClassDependency
+ * * WaitFunction::CreateBackEnd
+ * * Function::AddMessageBuffer
+ * * WaitFunction::MsgBufferInitialization
+ *
+ * second during class initialization:
+ * * Class::CreateBackEnd
+ * * Class::AddMessageBuffer
+ * * Class::MsgBufferInitialization
+ * * WaitFunction::MsgBufferInitialization
+ */
+bool
+CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+{
+    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
+        return false;
+    // check return type (do test here because sometimes we like to call
+    // AddReturnVariable depending on other constraint--return is parameter)
+    CBEType *pType = GetReturnType();
+    assert(pType);
+    if (pType->IsVoid())
+	return true; // having a void return type is not an error
+    // add return variable
+    if (!pMsgBuffer->AddReturnVariable(this))
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because return var could not be added to msgbuf\n",
+	    __func__);
+	return false;
+    }
+    return true;
+}
+

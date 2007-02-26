@@ -4,7 +4,6 @@
 
 INTERFACE:
 
-#include "idt_init.h"
 #include "initcalls.h"
 #include "kmem.h"
 #include "mem_layout.h"
@@ -14,6 +13,8 @@ INTERFACE:
 class Idt_entry : public X86desc
 {
 };
+
+class Idt_init_entry;
 
 class Idt
 {
@@ -208,13 +209,16 @@ Idt::get (Pseudo_descriptor *desc)
 extern "C" void entry_int_timer(void);
 extern "C" void entry_int_timer_slow(void);
 extern "C" void entry_int_timer_stop(void);
+extern "C" void entry_int7(void);
+extern "C" void entry_intf(void);
+extern "C" void entry_int_pic_ignore(void);
 
 /**
  * Set IDT vector to the normal timer interrupt handler.
  */
 PUBLIC static
 void
-Idt::set_timer_vector_run(void)
+Idt::set_vectors_run(void)
 {
   Address func = (Config::esc_hack || Config::watchdog ||
 		  Config::serial_esc==Config::SERIAL_ESC_NOIRQ)
@@ -222,6 +226,8 @@ Idt::set_timer_vector_run(void)
 		    : (Address)entry_int_timer;     // non-debugging
 
   set_entry (Config::scheduler_irq_vector, func, false);
+  set_entry (0x27, (Address) entry_int7, false);
+  set_entry (0x2f, (Address) entry_intf, false);
 }
 
 /**
@@ -229,7 +235,7 @@ Idt::set_timer_vector_run(void)
  */
 PUBLIC static
 void
-Idt::set_timer_vector_stop(void)
+Idt::set_vectors_stop(void)
 {
   // acknowledge timer interrupt once to keep timer interrupt alive because
   // we could be called from thread_timer_interrupt_slow() before ack
@@ -238,6 +244,14 @@ Idt::set_timer_vector_stop(void)
   // set timer interrupt to dummy doing nothing
   set_entry (Config::scheduler_irq_vector, 
 	     (Address) entry_int_timer_stop, false);
+
+  // From ``8259A PROGRAMMABLE INTERRUPT CONTROLLER (8259A 8259A-2)'': If no
+  // interrupt request is present at step 4 of either sequence (i. e. the
+  // request was too short in duration) the 8259A will issue an interrupt
+  // level 7. Both the vectoring bytes and the CAS lines will look like an
+  // interrupt level 7 was requested.
+  set_entry (0x27, (Address) entry_int_pic_ignore, false);
+  set_entry (0x2f, (Address) entry_int_pic_ignore, false);
 }
 
 

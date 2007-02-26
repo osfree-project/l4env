@@ -132,7 +132,7 @@ extern int dope_reqf(long app_id, char *dst, int dst_size, const char *cmdf, ...
  * \param arg         additional argument for the callback function
  */
 extern void dope_bind(long app_id,const char *var, const char *event_type,
-                      void (*callback)(dope_event *,void *),void *arg);
+                      void (*callback)(dope_event *,void *), void *arg);
 
 
 /*** BIND AN EVENT TO A DOpE WIDGET SPECIFIED AS FORMAT STRING ***
@@ -172,6 +172,15 @@ int dope_events_pending(int app_id);
  * \param app_id  DOpE application id
  */
 extern void dope_process_event(long app_id);
+
+
+/*** INJECT ARTIFICIAL EVENT INTO EVENT QUEUE ***
+ *
+ * This function can be used to serialize events streams from multiple
+ * threads into one DOpE event queue.
+ */
+extern void dope_inject_event(long app_id, dope_event *ev,
+                              void (*callback)(dope_event *,void *), void *arg);
 
 
 /*** REQUEST KEY OR BUTTON STATE ***

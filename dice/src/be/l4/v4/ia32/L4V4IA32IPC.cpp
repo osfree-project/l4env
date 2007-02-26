@@ -1,10 +1,11 @@
 /**
- *    \file    dice/src/be/l4/v4/ia32/L4V4IA32IPC.cpp
- *    \brief    contains the implementation of the class CL4V4IA32IPC
+ *  \file    dice/src/be/l4/v4/ia32/L4V4IA32IPC.cpp
+ *  \brief   contains the implementation of the class CL4V4IA32IPC
  *
- *    \date    02/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date    02/08/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -32,6 +33,7 @@
 #include "be/BEFunction.h"
 #include "be/BETypedDeclarator.h"
 #include "be/l4/v4/L4V4BENameFactory.h"
+#include "Compiler.h"
 
 CL4V4IA32IPC::CL4V4IA32IPC()
  : CL4V4BEIPC()
@@ -46,23 +48,23 @@ CL4V4IA32IPC::~CL4V4IA32IPC()
 /** \brief writes the IPC call
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
  */
-void CL4V4IA32IPC::WriteCall(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void 
+CL4V4IA32IPC::WriteCall(CBEFile* pFile,
+	CBEFunction* pFunction)
 {
-    if (pContext->IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
+    if (CCompiler::IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
     {
-        CL4V4BEIPC::WriteCall(pFile, pFunction, pContext);
+        CL4V4BEIPC::WriteCall(pFile, pFunction);
         return;
     }
 
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sMsgTag = pContext->GetNameFactory()->GetString(STR_MSGTAG_VARIABLE, pContext, 0);
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    string sResult = pNF->GetResultName();
+    string sTimeout = pNF->GetTimeoutClientVariable();
+    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
-    vector<CBEDeclarator*>::iterator iterO = pFunction->GetObject()->GetFirstDeclarator();
-    CBEDeclarator *pObjName = *iterO;
+    CBEDeclarator *pObjName = pFunction->GetObject()->m_Declarators.First();;
     // Call(to, sndtimeout, rcvtimeout)
     //  = Ipc(to, to, timeouts(sndtimeout, rcvtimeout), -)
     //
@@ -103,3 +105,4 @@ void CL4V4IA32IPC::WriteCall(CBEFile* pFile,  CBEFunction* pFunction,  CBEContex
     pFile->DecIndent();
     *pFile << "\t);\n";
 }
+

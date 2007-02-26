@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/cdr/CCDRClient.cpp
- *    \brief   contains the implementation of the class CCDRClient
+ *  \brief   contains the implementation of the class CCDRClient
  *
  *    \date    10/28/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,9 +31,11 @@
 #include "be/BEFunction.h"
 #include "be/BEImplementationFile.h"
 #include "be/BERoot.h"
-
+#include "be/BEClassFactory.h"
+#include "Compiler.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
+#include <cassert>
 
 CCDRClient::CCDRClient()
  : CBEClient()
@@ -47,92 +49,96 @@ CCDRClient::~CCDRClient()
 
 /** \brief creates the back-end files for a function
  *  \param pFEOperation the front-end function to use as reference
- *  \param pContext the context of the create process
  *  \return true if successful
+ *
+ * This implementation only generates the marshal and unmarshal
+ * functions.
  */
-bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* pContext)
+void
+CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation)
 {
     // get root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
+
+    string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, pContext);
+    CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, FILETYPE_CLIENTHEADER);
     if (!pHeader)
-        return false;
-    // create the file
-    CBEImplementationFile *pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-    AddFile(pImpl);
-    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
-    pImpl->SetHeaderFile(pHeader);
-    if (!pImpl->CreateBackEnd(pFEOperation, pContext))
     {
-        RemoveFile(pImpl);
+	exc += " failed, because the header file could not be found";
+	throw new CBECreateException(exc);
+    }
+
+    // create the file
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    m_ImplementationFiles.Add(pImpl);
+    pImpl->SetHeaderFile(pHeader);
+    try
+    {
+	pImpl->CreateBackEnd(pFEOperation, FILETYPE_CLIENTIMPLEMENTATION);
+    }
+    catch (CBECreateException *e)
+    {
+	m_ImplementationFiles.Remove(pImpl);
         delete pImpl;
-        VERBOSE("%s failed because file could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
+	throw;
     }
     // add the functions to the file
     // search the functions
     // if attribute == IN, we need marshal
     // if attribute == OUT, we need unmarshal
     // if attribute == empty, we need marshal and unmarshal
-    int nOldType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sFuncName;
     CBEFunction *pFunction;
-    if (pFEOperation->FindAttribute(ATTR_IN))
+    if (pFEOperation->m_Attributes.Find(ATTR_IN))
     {
-        nOldType = pContext->SetFunctionType(FUNCTION_MARSHAL);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_MARSHAL);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found\n";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
     }
-    else if (pFEOperation->FindAttribute(ATTR_OUT))
+    else if (pFEOperation->m_Attributes.Find(ATTR_OUT))
     {
         // wait function
-        nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_UNMARSHAL);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found\n";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
     }
     else
     {
-        nOldType = pContext->SetFunctionType(FUNCTION_MARSHAL);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_MARSHAL);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found\n";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
 
-        nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-        pContext->SetFunctionType(nOldType);
-        pFunction = pRoot->FindFunction(sFuncName);
+        sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
+        pFunction = pRoot->FindFunction(sFuncName, FUNCTION_UNMARSHAL);
         if (!pFunction)
         {
-            VERBOSE("%s failed because function %s could not be found\n",
-                    __PRETTY_FUNCTION__, sFuncName.c_str());
-            return false;
+	    exc += " failed because function " + sFuncName + 
+		" could not be found\n";
+	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl, pContext);
+        pFunction->AddToFile(pImpl);
     }
-    return true;
 }
+

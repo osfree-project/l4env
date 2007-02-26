@@ -8,7 +8,7 @@ DEFINES   = -D_GNU_SOURCE
 
 MODE      = l4env_minimal
 
-SYSTEMS   = x86-l4v2 x86-l4x0
+SYSTEMS   = x86-l4v2
 
 TARGET    = librt_mon_client.a
 

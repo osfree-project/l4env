@@ -552,13 +552,15 @@ static void erase_overlapping_cells(GRID *g, struct cell *new) {
 
 	/* remove widgets that occupy the same grid position */
 	while (cc) {
+		struct cell *nc = cc->next;
+
 		if ((cc->row) && (cc->row->index == new->row->index)
 		 && (cc->col) && (cc->col->index == new->col->index)
 		 && (cc->wid) && (cc->wid != new->wid)) {
 			g->grid->remove(g, cc->wid);
 			g->gd->update |= GRID_UPDATE_CELLMAP;
 		}
-		cc = cc->next;
+		cc = nc;
 	}
 }
 
@@ -923,12 +925,13 @@ static int grid_do_layout(GRID *g, WIDGET *child) {
 
 /*** FREE GRID DATA ***/
 static void grid_free_data(GRID *g) {
-	struct cell *cc = g->gd->cells;
+	struct cell *cc = g->gd->cells, *nc;
 
 	/* decrement ref counters of all children */
 	while (cc) {
+		nc = cc->next;
 		if (cc->wid) cc->wid->gen->release(cc->wid);
-		cc = cc->next;
+		cc = nc;
 	}
 	
 	/* free cell list and section lists */

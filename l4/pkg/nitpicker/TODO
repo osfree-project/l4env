@@ -1,6 +1,20 @@
 :Drag-and-drop:
+
   Implement drag-and-drop as described in the Nitpicker paper.
 
 :Donation:
+
   Transfer the ownership of client memory to Nitpicker.
   Nitpicker needs to revoke the access rights from the client.
+
+:Bug in view stacking when a new view is created:
+
+  Under some conditions (still need to figure this out), new views
+  may lead to inconsistent view layouts. For example:
+
+  There are two clients, Scout and X11. An X-Term window is
+  partly covered by the Scout window but still has the keyboard
+  focus. We start X-Eyes by using the X-Term window and
+  the new X-Eyes window appeard on top of both (Scout and X-Term)
+  windows. Now, the stacking order of the X-Term window is
+  somehow wrong.

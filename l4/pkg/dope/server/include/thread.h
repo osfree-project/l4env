@@ -32,6 +32,7 @@ struct thread_services {
 	void    (*free_thread)   (THREAD *);
 	void    (*copy_thread)   (THREAD *src, THREAD *dst);
 	int     (*start_thread)  (THREAD *dst_tid, void (*entry)(void *), void *arg);
+	void    (*kill_thread)   (THREAD *tid);
 	MUTEX  *(*create_mutex)  (int init_locked);
 	void    (*destroy_mutex) (MUTEX *);
 	void    (*mutex_down)    (MUTEX *);

@@ -1,6 +1,6 @@
 /*!
  * \file	elf64.h
- * \brief	
+ * \brief
  *
  * \date	2000
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -13,7 +13,7 @@
 #ifndef __ELF64_H_
 #define __ELF64_H_
 
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 
 #include "exc.h"
 #include "exc_obj.h"

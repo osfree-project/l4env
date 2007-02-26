@@ -8,6 +8,5 @@ fiasco \
 	-l dm_phys \
 	-l simple_ts \
 	-l fuxfprov \
-	-l l4exec \
 	-l loader" $L4PATH/loader_test" \
 	-n9 "$@"

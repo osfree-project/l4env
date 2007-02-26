@@ -2,7 +2,7 @@
 PKGDIR		= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-TARGET = libc x86cpucaps aclib libm
+TARGET = x86cpucaps aclib libavutil
 
 # include subdir role
 include $(L4DIR)/mk/subdir.mk

@@ -12,11 +12,11 @@
 #ifndef __L4VFS_INCLUDE_VOLUME_IDS_H_
 #define __L4VFS_INCLUDE_VOLUME_IDS_H_
 
-/*******************************************
- *                                         *
- *  Please do only use the lower 15 Bits.  *
- *                                         *
- *******************************************/
+/*********************************************************************
+ *
+ *  Please do only use the lower 15 Bits, i.e. 0 .. 32767 are valid.
+ *
+ *********************************************************************/
 
 #define L4VFS_NAME_SERVER_VOLUME_ID  0
 
@@ -24,6 +24,7 @@
 #define SIMPLE_FILE_SERVER_VOLUME_ID 14
 #define STATIC_FILE_SERVER_VOLUME_ID 56
 #define RT_MON_L4VFS_COORD_VOLUME_ID 100
+#define FERRET_L4VFS_VOLUME_ID       101
 #define TMPFS_VOLUME_ID              111
 #define TERM_CON_VOLUME_ID           132
 #define L4EXT2_VOLUME_BASE           500

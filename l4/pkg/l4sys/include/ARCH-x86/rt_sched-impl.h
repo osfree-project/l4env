@@ -180,7 +180,7 @@ l4_rt_next_reservation(unsigned id, l4_kernel_clock_t*clock)
 L4_INLINE int
 l4_rt_next_period(void)
 {
-  unsigned dummy;
+  l4_umword_t dummy;
   l4_msgdope_t result;
   return l4_ipc_receive(l4_next_period_id(L4_NIL_ID),
 			L4_IPC_SHORT_MSG,

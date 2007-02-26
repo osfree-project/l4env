@@ -61,6 +61,8 @@ typedef struct l4rm_region_desc
     } pager;
   } data;
 
+  void *                    userptr;  ///< user pointer for area
+
   struct l4rm_region_desc * next;     ///< next region
   struct l4rm_region_desc * prev;     ///< previous region
 } l4rm_region_desc_t;

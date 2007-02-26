@@ -59,7 +59,7 @@
 #include "dclock.h"
 
 
-#define MOVIEFILENAME "/qt3/lib/fonts/trolltech.gif"
+#define MOVIEFILENAME "/data/trolltech.gif"
 
 #include "../application/fileopen.xpm"
 #include "../application/filesave.xpm"
@@ -238,7 +238,7 @@ WidgetView::WidgetView( QWidget *parent, const char *name )
 
 
     QPixmap pm;
-    bool pix = pm.load("/qt3/lib/fonts/qt.png");
+    bool pix = pm.load("/data/qt.png");
     if ( !pix ) {
 	QMessageBox::information( 0, "Qt Widgets Example",
 				  "Could not load the file \"qt.png\", which\n"

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 #include <limits.h>
@@ -25,7 +25,7 @@
 #include "mpegvideo.h"
 
 #undef NDEBUG
-//#include <assert.h>
+#include <assert.h>
 
 #ifdef USE_FASTMEMCPY
 #include "fastmemcpy.h"
@@ -41,18 +41,34 @@
 
 //#include "xvmc_debug.h"
 
-static int calc_cbp(MpegEncContext *s, int blocknum){
-/* compute cbp */
-// for I420 bit_offset=5
-int  i,cbp = 0;
-    for(i=0; i<blocknum; i++) {
-        if(s->block_last_index[i] >= 0)
-            cbp |= 1 << (5 - i);
+//set s->block
+inline void XVMC_init_block(MpegEncContext *s){
+xvmc_render_state_t * render;
+    render = (xvmc_render_state_t*)s->current_picture.data[2];
+    assert(render != NULL);
+    if( (render == NULL) || (render->magic != MP_XVMC_RENDER_MAGIC) ){
+        assert(0);
+        return;//make sure that this is render packet
     }
-    return cbp;
+    s->block =(DCTELEM *)(render->data_blocks+(render->next_free_data_block_num)*64);
 }
 
+void XVMC_pack_pblocks(MpegEncContext *s, int cbp){
+int i,j;
+const int mb_block_count = 4+(1<<s->chroma_format);
 
+    j=0;
+    cbp<<= 12-mb_block_count;
+    for(i=0; i<mb_block_count; i++){
+        if(cbp & (1<<11)) {
+           s->pblocks[i] = (short *)(&s->block[(j++)]);
+        }else{
+           s->pblocks[i] = NULL;
+        }
+        cbp+=cbp;
+//        printf("s->pblocks[%d]=%p ,s->block=%p cbp=%d\n",i,s->pblocks[i],s->block,cbp);
+    }
+}
 
 //these functions should be called on every new field or/and frame
 //They should be safe if they are called few times for same field!
@@ -94,7 +110,7 @@ xvmc_render_state_t * render,* last, * next;
             assert(last->state & MP_XVMC_STATE_PREDICTION);
             render->p_past_surface = last->p_surface;
             return 0;
-     }
+    }
 
 return -1;
 }
@@ -110,7 +126,7 @@ xvmc_render_state_t * render;
     }
 }
 
-void XVMC_decode_mb(MpegEncContext *s, DCTELEM block[6][64]){
+void XVMC_decode_mb(MpegEncContext *s){
 XvMCMacroBlock * mv_block;
 xvmc_render_state_t * render;
 int i,cbp,blocks_per_mb;
@@ -119,9 +135,8 @@ const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
 
 
     if(s->encoding){
-        printf("XVMC doesn't support encoding!!!\n");
-        assert(0);
-        return;
+        av_log(s->avctx, AV_LOG_ERROR, "XVMC doesn't support encoding!!!\n");
+        return -1;
     }
 
    //from MPV_decode_mb(),
@@ -133,7 +148,7 @@ const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
     }
 
    //MC doesn't skip blocks
-    s->mb_skiped = 0;
+    s->mb_skipped = 0;
 
 
    // do I need to export quant when I could not perform postprocessing?
@@ -147,7 +162,7 @@ const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
     assert(render->mv_blocks);
 
     //take the next free macroblock
-    mv_block = &render->mv_blocks[render->start_mv_blocks_num + 
+    mv_block = &render->mv_blocks[render->start_mv_blocks_num +
                                    render->filled_mv_blocks_num ];
 
 // memset(mv_block,0,sizeof(XvMCMacroBlock));
@@ -230,28 +245,32 @@ const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
     }//!intra
 //time to handle data blocks;
     mv_block->index = render->next_free_data_block_num;
+
     blocks_per_mb = 6;
-/*
-    switch( s->chroma_format){
-        case CHROMA_422:
-            blocks_per_mb = 8;
-            break;
-        case CHROMA_444:
-            blocks_per_mb = 12;
-            break;
+    if( s->chroma_format >= 2){
+        blocks_per_mb = 4 + (1 << (s->chroma_format));
     }
-*/
+
+//  calculate cbp
+    cbp = 0;
+    for(i=0; i<blocks_per_mb; i++) {
+        cbp+= cbp;
+        if(s->block_last_index[i] >= 0)
+            cbp++;
+    }
+
     if(s->flags & CODEC_FLAG_GRAY){
         if(s->mb_intra){//intra frames are alwasy full chroma block
-            memset(block[4],0,sizeof(short)*8*8);//so we need to clear them
-            memset(block[5],0,sizeof(short)*8*8);
-            if(!render->unsigned_intra)
-                block[4][0] = block[5][0] = 1<<10;
-        }
-        else
+            for(i=4; i<blocks_per_mb; i++){
+                memset(s->pblocks[i],0,sizeof(short)*8*8);//so we need to clear them
+                if(!render->unsigned_intra)
+                    s->pblocks[i][0] = 1<<10;
+            }
+        }else{
+            cbp&= 0xf << (blocks_per_mb - 4);
             blocks_per_mb = 4;//Luminance blocks only
-    };
-    cbp = calc_cbp(s,blocks_per_mb);
+        }
+    }
     mv_block->coded_block_pattern = cbp;
     if(cbp == 0)
         mv_block->macroblock_type &= ~XVMC_MB_TYPE_PATTERN;
@@ -260,14 +279,24 @@ const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
         if(s->block_last_index[i] >= 0){
             // i do not have unsigned_intra MOCO to test, hope it is OK
             if( (s->mb_intra) && ( render->idct || (!render->idct && !render->unsigned_intra)) )
-                block[i][0]-=1<<10;
+                s->pblocks[i][0]-=1<<10;
             if(!render->idct){
-                s->dsp.idct(block[i]);
+                s->dsp.idct(s->pblocks[i]);
                 //!!TODO!clip!!!
             }
-//TODO:avoid block copy by modifying s->block pointer
-            memcpy(&render->data_blocks[(render->next_free_data_block_num++)*64],
-                    block[i],sizeof(short)*8*8);
+//copy blocks only if the codec doesn't support pblocks reordering
+            if(s->avctx->xvmc_acceleration == 1){
+                memcpy(&render->data_blocks[(render->next_free_data_block_num)*64],
+                        s->pblocks[i],sizeof(short)*8*8);
+            }else{
+/*              if(s->pblocks[i] != &render->data_blocks[
+                        (render->next_free_data_block_num)*64]){
+                   printf("ERROR mb(%d,%d) s->pblocks[i]=%p data_block[]=%p\n",
+                   s->mb_x,s->mb_y, s->pblocks[i],
+                   &render->data_blocks[(render->next_free_data_block_num)*64]);
+                }*/
+            }
+            render->next_free_data_block_num++;
         }
     }
     render->filled_mv_blocks_num++;

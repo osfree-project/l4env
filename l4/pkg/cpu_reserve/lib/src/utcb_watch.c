@@ -23,7 +23,6 @@
 #include <l4/util/macros.h>
 #include <l4/util/util.h>
 #include <l4/thread/thread.h>
-#include <l4/util/kip.h>
 
 static void watch_thread(void*arg);
 
@@ -84,14 +83,13 @@ int l4cpu_reserve_utcb_watch_add(l4_threadid_t thread,
     arg.name[L4CPU_RESERVE_UTCB_NAME_LEN-1]=0;
     arg.maxtime = maxtime;
     arg.ts_count = ts_count;
-		 
+
     if((err=l4_ipc_call(watch_thread_id, L4_IPC_SHORT_MSG,
 			WATCH_CMD_ADD,
 			(l4_umword_t)&arg,
-			L4_IPC_SHORT_MSG, &ans, &dummy,
+			L4_IPC_SHORT_MSG, (l4_umword_t *)&ans, &dummy,
 			L4_IPC_NEVER, &result))!=0) return err;
     return ans;
-		
 }
 
 int l4cpu_reserve_utcb_watch_del(const l4cpu_reserve_utcb_t *utcb){
@@ -102,7 +100,7 @@ int l4cpu_reserve_utcb_watch_del(const l4cpu_reserve_utcb_t *utcb){
     if((err=l4_ipc_call(watch_thread_id, L4_IPC_SHORT_MSG,
 			WATCH_CMD_DEL,
 			(l4_umword_t)utcb,
-			L4_IPC_SHORT_MSG, &ans, &dummy,
+			L4_IPC_SHORT_MSG, (l4_umword_t *)&ans, &dummy,
 			L4_IPC_NEVER, &result))!=0) return err;
     return ans;
 }

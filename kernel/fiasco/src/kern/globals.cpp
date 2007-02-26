@@ -1,18 +1,19 @@
 INTERFACE:
 
-#include <cassert>		// panic()
+#include <cassert>
 
 #include "mem_layout.h"
+#include "panic.h"
 #include "types.h"
 
 class Context;
-class Space;
+class Mem_space;
 class Task;
 class Thread;
 class Timeout;
 
 extern Task *sigma0_task;
-extern Space *sigma0_space;
+extern Mem_space *sigma0_space;
 extern Thread *sigma0_thread;
 extern Timeout *timeslice_timeout;
 extern bool running;
@@ -24,10 +25,14 @@ extern unsigned boot_stack;
 #ifdef NDEBUG
 # define check(expression) ((void)(expression))
 #else /* ! NDEBUG */
-# define check(expression) \
-         ((void)((expression) ? 0 : \
-                (panic(__FILE__":%u: failed check `"#expression"'", \
-                        __LINE__), 0)))
+# ifdef ASSERT_KDB_KE
+#  define check(expression) assert(expression)
+# else
+#  define check(expression) \
+          ((void)((expression) ? 0 : \
+                 (panic(__FILE__":%u: failed check `"#expression"'", \
+                         __LINE__), 0)))
+# endif
 #endif /* ! NDEBUG */
 #endif /* check */
 
@@ -43,27 +48,12 @@ INTERFACE[utcb]:
 extern Address *global_utcb_ptr;
 
 //---------------------------------------------------------------------------
-INTERFACE [lipc]:
-
-#include "utcb.h"
-
-/*
-  Every task has an LIPC KIP mapped on different addresses.
-  So we need to store this address for each task in a special
-  Pdir slot.
-  For easy access, we will use a global variable, which is updated
-  right LIPC KIP location on every task switch.
-*/
-extern Address user_kip_location;
-
-
-//---------------------------------------------------------------------------
 IMPLEMENTATION:
 
 #include "config.h"
 
 Task  *sigma0_task;
-Space *sigma0_space;
+Mem_space *sigma0_space;
 Thread *sigma0_thread;
 Timeout *timeslice_timeout;
 bool running = true;
@@ -81,8 +71,3 @@ IMPLEMENTATION[utcb]:
 
 Address *global_utcb_ptr;
 
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [lipc]:
-
-Address user_kip_location;

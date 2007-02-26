@@ -1,0 +1,8 @@
+verbose 0
+
+sleep 3s
+
+modpath "(nd)/tftpboot/cw183155/bin-qt"
+
+task "qt3_qrun" "-qws --bin-prefix (nd)/tftpboot/cw183155/bin-qt"
+

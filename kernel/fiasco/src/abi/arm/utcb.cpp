@@ -1,4 +1,4 @@
-INTERFACE [arm-x0]:
+INTERFACE [arm-x0-utcb]:
 
 #include "types.h"
 

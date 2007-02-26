@@ -109,7 +109,7 @@ ssize_t readv(int fd, const struct iovec *vector, int count)
     file_desc_t file_desc;
     ssize_t ret = 0;
     size_t len;
-    l4_int8_t *buf;
+    char *buf;
 
     if (! ft_is_open(fd))
     {
@@ -140,7 +140,7 @@ ssize_t readv(int fd, const struct iovec *vector, int count)
     for (i=0; i < count; i++)
     {
         len = vector[i].iov_len;
-        buf = (l4_int8_t *) vector[i].iov_base;
+        buf = vector[i].iov_base;
 
         if (! buf || len < 0)
         {

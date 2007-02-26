@@ -190,7 +190,7 @@ QString qws_dataDir()
 {
 #if defined(Q_OS_DROPS)
     return "/qt3/";
-#endif
+#else
 
     QString username = "unknown";
     const char *logname = getenv("LOGNAME");
@@ -224,6 +224,7 @@ QString qws_dataDir()
     dataDir += "/";
 
     return dataDir;
+#endif
 }
 
 // Get the filename of the pipe Qt/Embedded uses for server/client comms
@@ -835,7 +836,6 @@ void QWSDisplay::Data::waitForRegionAck()
 
 void QWSDisplay::Data::waitForCreation()
 {
-//return; // DROPS XXX because we have no event management yet
     fillQueue();
     while ( unused_identifiers.count() == 0 ) {
 #ifndef QT_NO_QWS_MULTIPROCESS
@@ -1942,7 +1942,7 @@ void QApplication::restoreOverrideCursor()
 
 void QApplication::setGlobalMouseTracking( bool enable )
 {
-return; // XXX it crashed?
+    //return; // XXX it crashed? [what's that, josef? (carsten)]
     bool tellAllWidgets;
     if ( enable ) {
 	tellAllWidgets = (++app_tracking == 1);

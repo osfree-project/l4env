@@ -25,6 +25,8 @@
 #include "receive-server.h"
 #include "__config.h"
 
+#include <stdio.h>
+
 char LOG_tag[9]="receive";
 
 /*****************************************************************************
@@ -173,12 +175,12 @@ receive_thread(void * data)
  * \return 0 on success, -1 if creation failed.
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 dsi_example_receive_open_component(CORBA_Object _dice_corba_obj,
-    const dsi_example_receive_dataspace_t *ctrl_ds,
-    const dsi_example_receive_dataspace_t *data_ds,
-    dsi_example_receive_socket_t *s,
-    CORBA_Server_Environment *_dice_corba_env)
+                                   const dsi_example_receive_dataspace_t *ctrl_ds,
+                                   const dsi_example_receive_dataspace_t *data_ds,
+                                   dsi_example_receive_socket_t *s,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, sync_id;
@@ -269,11 +271,11 @@ dsi_example_receive_open_component(CORBA_Object _dice_corba_obj,
  * \return 0 on success, -1 if connect failed.
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 dsi_example_receive_connect_component(CORBA_Object _dice_corba_obj,
-    const dsi_example_receive_socket_t *local,
-    const dsi_example_receive_socket_t *remote,
-    CORBA_Server_Environment *_dice_corba_env)
+                                      const dsi_example_receive_socket_t *local,
+                                      const dsi_example_receive_socket_t *remote,
+                                      CORBA_Server_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;

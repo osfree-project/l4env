@@ -5,7 +5,7 @@ exists(qt_drops.pri):include(qt_drops.pri)
 
 TEMPLATE		= lib
 TARGET			= qt
-embedded:drops:TARGET	= qt3_embedded
+embedded:drops:TARGET	= qt3_embedded_drops
 VERSION			= 3.3.4
 DESTDIR			= $$QMAKE_LIBDIR_QT
 DLLDESTDIR		= ../bin
@@ -125,7 +125,7 @@ thread {
 	!win32-borland:TARGET = qt-mt
 	win32-borland:TARGET = qtmt
 	embedded:TARGET = qte-mt
-	embedded:drops:TARGET = qt3_embedded
+	embedded:drops:TARGET = qt3_embedded_drops
 	DEFINES += QT_THREAD_SUPPORT
 }
 

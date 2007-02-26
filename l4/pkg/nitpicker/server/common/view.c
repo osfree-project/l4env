@@ -17,8 +17,10 @@
 #include "nitpicker.h"
 
 
-view *first_view;  /* topmost view of view stack */
-view *curr_view;   /* currently activated view   */
+view              *first_view;   /* topmost view of view stack */
+view              *curr_view;    /* currently focused view     */
+unsigned long      curr_token;   /* token of focused view      */
+CORBA_Object_base  curr_evrec;   /* current event receiver     */
 
 
 /**********************************
@@ -27,10 +29,10 @@ view *curr_view;   /* currently activated view   */
 
 /*** UTILITY: DRAW RECTANGLE ***/
 static inline void draw_rect(void *dst, int x, int y, int w, int h, u32 color) {
-	gfx->draw_box(dst, x, y, w, 1, color);
-	gfx->draw_box(dst, x, y, 1, h, color);
-	gfx->draw_box(dst, x + w - 1, y, 1, h, color);
-	gfx->draw_box(dst, x, y + h - 1, w, 1, color);
+	gfx->draw_box(dst, scr_llen, x, y, w, 1, color);
+	gfx->draw_box(dst, scr_llen, x, y, 1, h, color);
+	gfx->draw_box(dst, scr_llen, x + w - 1, y, 1, h, color);
+	gfx->draw_box(dst, scr_llen, x, y + h - 1, w, 1, color);
 }
 
 
@@ -71,15 +73,16 @@ static inline void draw_view(view *cv) {
 		op = GFX_OP_ALPHA;
 	}
 
+	if ((mode & MODE_KILL) && !(cv->flags & VIEW_FLAGS_TRANSPARENT))
+		op = GFX_OP_TINT;
+
 	/* draw buffer */
 	if (cv->buf && cv->buf->data)
-		gfx->draw_img(scr_adr, cv->x - cv->buf_x, cv->y - cv->buf_y,
-		              cv->buf->w, cv->buf->h, cv->buf->data, op);
+		gfx->draw_img(scr_adr, scr_llen, cv->x - cv->buf_x, cv->y - cv->buf_y,
+		              cv->buf->w, cv->buf->h, cv->buf->data, op, GFX_RGB(255,0,0));
 	else
-		gfx->draw_box(scr_adr, cv->x, cv->y, cv->w, cv->h, GFX_RGB(50,60,70));
-
-	if ((mode & MODE_KILL) && !(cv->flags & VIEW_FLAGS_TRANSPARENT))
-		gfx->draw_box(scr_adr, cv->x, cv->y, cv->w, cv->h, GFX_RGBA(255,0,0,127));
+		gfx->draw_box(scr_adr, scr_llen, cv->x, cv->y, cv->w, cv->h,
+		              GFX_RGB(50,60,70));
 
 	pop_clipping();
 
@@ -89,9 +92,11 @@ static inline void draw_view(view *cv) {
 	if (mode && (cv->flags & VIEW_FLAGS_LABEL) && cv->label) {
 		u32 fgcol = (cv == curr_view) ? GFX_RGB(255,255,127) : GFX_RGB(216,216,216);
 		push_clipping(cv->x, cv->y, cv->w, cv->h);
-		DRAW_LABEL(scr_adr, cv->lx+2, cv->ly+2, GFX_RGB(0, 0, 0), fgcol, cv->client_name);
-		DRAW_LABEL(scr_adr, cv->lx + font_string_width(default_font, cv->client_name) + 7,
-		           cv->ly+2, GFX_RGB(0,0,0), fgcol - GFX_RGBA(24,24,0,0), cv->label);
+		DRAW_LABEL(scr_adr, scr_llen, cv->lx + 2, cv->ly+2, GFX_RGB(0, 0, 0),
+		           fgcol, cv->client_name);
+		DRAW_LABEL(scr_adr, scr_llen, cv->lx + font_string_width(default_font,
+		           cv->client_name) + 7, cv->ly+2, GFX_RGB(0,0,0),
+		           fgcol - GFX_RGBA(24,24,0,0), cv->label);
 		pop_clipping();
 	}
 }
@@ -204,6 +209,9 @@ static void place_label(view *v) {
 	place_label_rec(first_view->next, v, MAX(0, x1), MAX(0, y1),
 	                MIN(scr_width - 1, x2), MIN(scr_height - 1, y2));
 
+	/* do not update labels when they are not visible */
+	if (mode != MODE_SECURE) return;
+
 	refresh_view(v, v, old_lx - v->x, old_ly - v->y, v->lw, v->lh);
 	refresh_view(v, v, v->lx  - v->x, v->ly  - v->y, v->lw, v->lh);
 }
@@ -269,6 +277,16 @@ static void activate_background(view *v) {
 }
 
 
+///*** DEBUG: DUMP CURRENT VIEW STACK ***/
+//static void dump_viewstack(void) {
+//	view *v = first_view;
+//
+//	printf("Dump view stack:\n");
+//	for (; v; v = v->next)
+//		printf("  view %d: xywh=%d,%d,%d,%d\n", v->token, v->x, v->y, v->w, v->h);
+//}
+
+
 /***************************
  *** NITPICKER FUNCTIONS ***
  ***************************/
@@ -278,28 +296,33 @@ void draw_rec(view *cv, view *dst, buffer *exc,
               int cx1, int cy1, int cx2, int cy2) {
 
 	int sx1, sy1, sx2, sy2;
+	view *next = cv ? cv->next : NULL;
 
 	if (!cv) return;
 
 	/* if there is an intersection - subdivide area */
-	if (intersect(cv, cx1, cy1, cx2, cy2, &sx1, &sy1, &sx2, &sy2)) {
+	if (!intersect(cv, cx1, cy1, cx2, cy2, &sx1, &sy1, &sx2, &sy2)) {
+		draw_rec(cv->next, dst, exc, cx1, cy1, cx2, cy2);
+		return;
+	}
 
-		/* draw current view */
-		if ((!dst || (dst == cv) || (cv->flags & VIEW_FLAGS_TRANSPARENT))) {
-			push_clipping(sx1, sy1, sx2 - sx1 + 1, sy2 - sy1 + 1);
-			if (!cv->buf || cv->buf != exc) draw_view(cv);
-			else if (mode) draw_frame(cv);
-			pop_clipping();
-		}
+	if (next && (sy1 > cy1))
+		draw_rec(next, dst, exc, cx1, cy1, cx2, sy1 - 1);
+	if (next && (sx1 > cx1))
+		draw_rec(next, dst, exc, cx1, MAX(cy1, sy1), sx1 - 1, MIN(cy2, sy2));
 
-		/* take care about the rest */
-		if (!(cv = cv->next)) return;
-		if (sx1 > cx1) draw_rec(cv, dst, exc, cx1, MAX(cy1, sy1), sx1 - 1, MIN(cy2, sy2));
-		if (sy1 > cy1) draw_rec(cv, dst, exc, cx1, cy1, cx2, sy1 - 1);
-		if (sx2 < cx2) draw_rec(cv, dst, exc, sx2 + 1, MAX(cy1, sy1), cx2, MIN(cy2, sy2));
-		if (sy2 < cy2) draw_rec(cv, dst, exc, cx1, sy2 + 1, cx2, cy2);
+	/* draw current view */
+	if ((!dst || (dst == cv) || (cv->flags & VIEW_FLAGS_TRANSPARENT))) {
+		push_clipping(sx1, sy1, sx2 - sx1 + 1, sy2 - sy1 + 1);
+		if (!cv->buf || cv->buf != exc) draw_view(cv);
+		else if (mode) draw_frame(cv);
+		pop_clipping();
+	}
 
-	} else draw_rec(cv->next, dst, exc, cx1, cy1, cx2, cy2);
+	if (next && (sx2 < cx2))
+		draw_rec(next, dst, exc, sx2 + 1, MAX(cy1, sy1), cx2, MIN(cy2, sy2));
+	if (next && (sy2 < cy2))
+		draw_rec(next, dst, exc, cx1, sy2 + 1, cx2, cy2);
 }
 
 
@@ -307,17 +330,18 @@ void draw_rec(view *cv, view *dst, buffer *exc,
 view *lookup_view(CORBA_Object tid, int view_id) {
 	client *c;
 	
-	if ((c = find_client(tid)) && (VALID_ID(tid, view_id, c->views, c->max_views)))
+	if ((c = find_client(tid)) && (VALID_ID(tid, view_id, c->views, c->max_views))
+	 && (c->views[view_id].state == STATE_ALLOCATED))
 		return &c->views[view_id];
 
 	return NULL;
 }
 
 
-
 /*** UPDATE VIEW AREA ON SCREEN ***/
 void refresh_view(view *v, view *dst, int x, int y, int w, int h) {
 	int x1, y1, x2, y2;
+
 	if (!v) return;
 
 	/* clip argument agains view boundaries */
@@ -355,7 +379,12 @@ void activate_view(view *nv) {
 	client *c = nv ? find_client(&nv->owner) : NULL;
 
 	if (nv == curr_view) return;
-	curr_view = nv;
+	curr_view  = nv;
+
+	if (curr_view) {
+		curr_evrec = curr_view->listener;
+		curr_token = curr_view->token;
+	}
 
 	/* set background for the focused client */
 	if (c && c->bg) activate_background(c->bg);
@@ -363,8 +392,8 @@ void activate_view(view *nv) {
 	/* refresh screen */
 	draw_rec(first_view, NULL, NULL, 0, 0, scr_width - 1, scr_height - 1);
 
-	if (nv && nv->client_name) menubar_set_text(nv->client_name);
-	else menubar_set_text("");
+	if (nv && nv->client_name) menubar_set_text(nv->client_name, nv->label);
+	else menubar_set_text("", "");
 }
 
 
@@ -491,9 +520,11 @@ int nitpicker_set_view_port_component(CORBA_Object _dice_corba_obj,
 
 /*** INTERFACE: POSITION VIEW IN VIEW STACK ***/
 int nitpicker_stack_view_component(CORBA_Object _dice_corba_obj, int view_id,
-                                   int neighbor_id, int behind,
+                                   int neighbor_id, int behind, int do_redraw,
                                    CORBA_Server_Environment *env) {
-	view *v, *nv;
+
+	view *v, *nv, *lv;
+	int done = 0;
 
 	if (!(v = lookup_view(_dice_corba_obj, view_id))) return NITPICKER_ERR_ILLEGAL_ID;
 
@@ -505,8 +536,45 @@ int nitpicker_stack_view_component(CORBA_Object _dice_corba_obj, int view_id,
 	/* insert view at new stack position */
 	CHAIN_LISTELEMENT(&first_view, next, find_predecessor(nv, behind), v);
 
+	/*
+	 * When restacking a view, we move all views of the other clients
+	 * behind the restacked view. This way, we can pull client
+	 * windows in front even if they are locally covered by always-
+	 * on-top windows. To maintain the local order of views in this
+	 * case, we need to move all these views above the new stacking
+	 * position.
+	 */
+	lv = v;
+	while (1) {
+		view *cv, *sv = get_last_staytop_view()->next;
+
+		/* find first view with another owner */
+		for (cv = sv; cv; cv = cv->next) {
+
+			/* if we reached the original view, we are done */
+			if (!cv || (cv == v)) {
+				done = 1;
+				break;
+			}
+
+			/* check if we have a view to move back */
+			if (!dice_obj_eq(&cv->owner, &v->owner))
+				break;
+		}
+
+		if (done) break;
+
+		/* move view back */
+		UNCHAIN_LISTELEMENT(view, &first_view, next, cv);
+		CHAIN_LISTELEMENT(&first_view, next, lv, cv);
+
+		lv = cv;
+	}
+
 	/* refresh affected screen area */
-	refresh_view(v, 0, 0, 0, v->w, v->h);
+	if (do_redraw)
+		refresh_view(v, 0, 0, 0, v->w, v->h);
+
 	label_area(v->x, v->y, v->x + v->w - 1, v->y + v->h - 1);
 
 	return NITPICKER_OK;
@@ -542,8 +610,13 @@ int nitpicker_set_background_component(CORBA_Object _dice_corba_obj, int view_id
 	/* define new background for the client (invalid view_id -> no background) */
 	if ((c->bg = lookup_view(_dice_corba_obj, view_id))) {
 
+//		view *cv;
+
 		/* remove background attribute from old background */
 		c->bg->flags |= VIEW_FLAGS_BACKGROUND;
+
+		/* move view in front of the nitpicker background */
+		UNCHAIN_LISTELEMENT(view, &first_view, next, c->bg);
 
 		if (curr_view && dice_obj_eq(&c->bg->owner, &curr_view->owner))
 			activate_background(c->bg);

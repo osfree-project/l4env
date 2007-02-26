@@ -24,12 +24,16 @@
 #ifndef _L4UTIL_REBOOT_H
 #define _L4UTIL_REBOOT_H
 
+#include <l4/sys/compiler.h>
+
 /** \defgroup reboot Machine Restarting Function */
 
 /**
  * \brief Machine reboot
  * \ingroup reboot
  */
+EXTERN_C_BEGIN
 void l4util_reboot(void) __attribute__ ((__noreturn__));
+EXTERN_C_END
 
 #endif /* ! _L4UTIL_REBOOT_H */

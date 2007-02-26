@@ -61,7 +61,7 @@ public:
   /**
    * (abstract) Get the IRQ assigned to the port.
    */
-  int const irq() const;
+  int irq() const;
 
   /**
    * (abstract) Enable rcv IRQ in UART.
@@ -103,7 +103,6 @@ public:
   Mword get_attributes() const;
 };
 
-
 IMPLEMENTATION:
 
 IMPLEMENT
@@ -111,6 +110,89 @@ Mword
 Uart::get_attributes() const
 {
   return UART | IN | OUT;
+}
+
+//---------------------------------------------------------------------------
+INTERFACE [libuart]:
+
+#include "uart_base.h"
+
+EXTENSION class Uart
+{
+public:
+  enum 
+  {
+    MODE_8N1 = 1,
+  };
+protected:
+  static L4::Uart *uart();
+};
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [libuart]:
+
+IMPLEMENT Uart::Uart()
+{
+}
+
+IMPLEMENT Uart::~Uart()
+{
+}
+
+
+PUBLIC bool Uart::startup( Address _address, unsigned /*irq*/ ) 
+{
+  return uart()->startup(_address);
+}
+
+IMPLEMENT inline void Uart::shutdown()
+{
+  uart()->shutdown();
+}
+
+
+IMPLEMENT inline bool Uart::change_mode(TransferMode m, BaudRate baud)
+{
+  return uart()->change_mode(m, baud);
+}
+
+IMPLEMENT inline
+int Uart::write( const char *s, unsigned count )
+{
+  return uart()->write(s, count);
+}
+
+IMPLEMENT inline
+int Uart::getchar( bool blocking )
+{
+  return uart()->get_char(blocking);
+}
+
+
+IMPLEMENT inline
+int Uart::char_avail() const
+{
+  return uart()->char_avail();
+}
+
+
+IMPLEMENT inline
+int Uart::irq() const
+{
+  return uart()->rx_irq();
+}
+
+IMPLEMENT 
+void Uart::enable_rcv_irq()
+{
+  uart()->enable_rx_irq(true);
+}
+
+IMPLEMENT
+void Uart::disable_rcv_irq()
+{
+  uart()->enable_rx_irq(false);
 }
 
 

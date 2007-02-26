@@ -23,7 +23,7 @@ show_psecs(l4env_infopage_t *env)
 
   for (i=0; i<env->section_num; i++)
     {
-      printf("  #%02x: %08x-%08x  flags %04x\n",
+      printf("  #%02x: %08lx-%08lx  flags %04x\n",
 	     i,
 	     env->section[i].addr,
 	     env->section[i].addr+env->section[i].size,
@@ -76,10 +76,10 @@ main(int argc, const char *argv[])
     }
   if ((error = l4loader_app_lib_open_call(&loader_id, "libfoo_dyn_c++.s.so",
 					  &fprov_id, 0, &envpage, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Loading lib failed (error %d, exc=%d.%d)\n",
-	  error, _env.major, _env.repos_id);
+	  error, DICE_EXCEPTION_MAJOR(&_env), DICE_EXCEPTION_MINOR(&_env));
       return -3;
     }
 
@@ -101,23 +101,23 @@ main(int argc, const char *argv[])
 
   // Now go back to the loader and ask him to link the library.
   if ((error = l4loader_app_lib_link_call(&loader_id, &envpage, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Linking lib failed (error %d, exc=%d.%d)\n",
-	  error, _env.major, _env.repos_id);
+	  error, DICE_EXCEPTION_MAJOR(&_env), DICE_EXCEPTION_MINOR(&_env));
       return -4;
     }
 
   // try to call foo_add
   if ((error = l4loader_app_lib_dsym_call(&loader_id, "foo_add",
 					  &envpage, &addr, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Error searching \"foo_add\" (error %d, exc=%d.%d)\n",
-	  error, _env.major, _env.repos_id);
+	  error, DICE_EXCEPTION_MAJOR(&_env), DICE_EXCEPTION_MINOR(&_env));
       return -5;
     }
-  printf("Found symbol \"foo_add\" at address %08x\n", addr);
+  printf("Found symbol \"foo_add\" at address %08lx\n", addr);
 
   dyn_add = (unsigned (*)(unsigned a, unsigned b))addr;
   printf("==> foo_add(%d, %d) => %d\n", 4, 5, dyn_add(4, 5));
@@ -125,13 +125,13 @@ main(int argc, const char *argv[])
   // try to call foo_show
   if ((error = l4loader_app_lib_dsym_call(&loader_id, "foo_show",
 					  &envpage, &addr, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Error searching \"foo_show\" (error %d, exc=%d.%d)\n",
-	  error, _env.major, _env.repos_id);
+	  error, DICE_EXCEPTION_MAJOR(&_env), DICE_EXCEPTION_MINOR(&_env));
       return -5;
     }
-  printf("Found symbol \"foo_show\" at address %08x\n", addr);
+  printf("Found symbol \"foo_show\" at address %08lx\n", addr);
 
   dyn_show = (void (*)(void))addr;
   printf("==> foo_show()\n");

@@ -1,5 +1,5 @@
 PKGDIR	= ..
-L4DIR	= $(PKGDIR)/../..
+L4DIR	?= $(PKGDIR)/../..
 
 TARGET	= src emul
 

@@ -1,5 +1,5 @@
-#ifndef __L4UTIL_QUEUE_H__ 
-#define __L4UTIL_QUEUE_H__ 
+#ifndef __L4UTIL_QUEUE_H__
+#define __L4UTIL_QUEUE_H__
 
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
@@ -15,6 +15,6 @@ int l4util_queue_dequeue(struct l4util_buffer_head **buffer);
 
 int l4util_queue_init(int queue_threadno,
 		      void *(*malloc_func)(l4_uint32_t size),
-		      l4_umword_t max_rcv);
+		      l4_uint32_t max_rcv);
 
 #endif /* !__L4UTIL_QUEUE_H__ */

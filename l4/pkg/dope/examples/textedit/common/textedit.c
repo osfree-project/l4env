@@ -461,7 +461,8 @@ static void resize_callback(dope_event *e, void *arg) {
 
 int main(int argc, char **argv) {
 
-	dope_init();
+	if (dope_init()) return -1;
+
 	app_id = dope_init_app("Editor");
 
 	#include "textedit.dpi"

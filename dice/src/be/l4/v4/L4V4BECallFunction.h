@@ -1,10 +1,11 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BECallFunction.h
- *    \brief    contains the declaration of the class CL4V4BECallFunction
+ *  \brief   contains the declaration of the class CL4V4BECallFunction
  *
  *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -44,16 +45,16 @@ public:
     virtual ~CL4V4BECallFunction();
 
 public:
-    virtual int GetFixedSize(int nDirection, CBEContext *pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
 protected:
-    virtual void WriteVariableDeclaration(CBEFile* pFile,  CBEContext* pContext);
-    virtual void WriteMsgTagDeclaration(CBEFile *pFile, CBEContext* pContext);
-    virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
-    virtual int WriteUnmarshalException(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteMarshalling(CBEFile * pFile);
+    virtual void WriteUnmarshalling(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteIPCErrorCheck(CBEFile * pFile);
+    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal);
 };
 
 #endif

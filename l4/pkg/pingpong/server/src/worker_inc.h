@@ -66,7 +66,7 @@
   "push %%ebp        \n\t" \
   IPC_SYSENTER             \
   "pop  %%ebp        \n\t" \
-  "add  $16384,%%ebp \n\t"
+  "add  $(" L4_stringify(NR_BYTES) "),%%ebp \n\t"
 
 /* IPC operation to use in pong thread - reply long, send timeout 0 */
 #define WHATTODO_LONG_PONG \
@@ -75,7 +75,7 @@
   "push %%eax        \n\t" \
   IPC_SYSENTER             \
   "pop  %%eax        \n\t" \
-  "add  $16384,%%eax \n\t"
+  "add  $(" L4_stringify(NR_BYTES) "),%%eax \n\t"
 
 /* IPC operation to use in ping thread - short send, receive long */
 #define WHATTODO_INDIRECT_PING \
@@ -241,8 +241,9 @@ PREFIX(ping_short_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 dont_do_cold ? "" : "/warm",
 	 (l4_uint32_t)tsc, 8*global_rounds, 
 	 (l4_uint32_t)(tsc/(8*global_rounds)));
@@ -298,8 +299,9 @@ PREFIX(ping_short_cold_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s/cold: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
   /* tell main that we are finished */
@@ -409,8 +411,9 @@ PREFIX(ping_short_to_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 dont_do_cold ? "" : "/warm",
 	 (l4_uint32_t)tsc, 8*global_rounds, 
 	 (l4_uint32_t)(tsc/(8*global_rounds)));
@@ -466,8 +469,9 @@ PREFIX(ping_short_to_cold_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s/cold: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
   /* tell main that we are finished */
@@ -573,7 +577,8 @@ PREFIX(ping_short_dc_thread)(void)
   tsc = l4_rdtsc() - tsc;
 
   printf("  %s/nosw: %8u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, 200, 
 	 (l4_uint32_t)(tsc/200));
 
@@ -666,7 +671,8 @@ PREFIX(ping_short_ndc_thread)(void)
   tsc = l4_rdtsc() - tsc;
 
   printf("  %s/call: %8u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, 200, 
 	 (l4_uint32_t)(tsc/200));
 
@@ -698,7 +704,7 @@ PREFIX(pong_short_c_thread)(void)
 
   while (1)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
       l4_threadid_t src;
 
@@ -733,7 +739,7 @@ PREFIX(ping_short_c_thread)(void)
   tsc = l4_rdtsc();
   for (i = global_rounds*2; i; i--)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
 
       l4_ipc_call(pong_id,
@@ -755,8 +761,9 @@ PREFIX(ping_short_c_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 dont_do_cold ? "" : "/warm",
 	 (l4_uint32_t)tsc, 8*global_rounds,
 	 (l4_uint32_t)(tsc/(8*global_rounds)));
@@ -785,7 +792,7 @@ PREFIX(ping_short_c_cold_thread)(void)
   tsc = l4_rdtsc();
   for (i = rounds; i; i--)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
 
       tsc -= l4_rdtsc();
@@ -798,8 +805,9 @@ PREFIX(ping_short_c_cold_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s/cold: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
   /* tell main that we are finished */
@@ -831,7 +839,7 @@ PREFIX(pong_short_asm_thread)(void)
 
   while (1)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
       l4_threadid_t src;
 
@@ -866,7 +874,7 @@ PREFIX(ping_short_asm_thread)(void)
   tsc = l4_rdtsc();
   for (i = global_rounds*2; i; i--)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
 
       PREFIX(l4_ipc_call_asm)(pong_id,
@@ -888,8 +896,9 @@ PREFIX(ping_short_asm_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 dont_do_cold ? "" : "/warm",
 	 (l4_uint32_t)tsc, 8*global_rounds, 
 	 (l4_uint32_t)(tsc/(8*global_rounds)));
@@ -918,7 +927,7 @@ PREFIX(ping_short_asm_cold_thread)(void)
   tsc = l4_rdtsc();
   for (i = rounds; i; i--)
     {
-      unsigned dummy1, dummy2;
+      l4_umword_t dummy1, dummy2;
       l4_msgdope_t result;
 
       tsc -= l4_rdtsc();
@@ -931,8 +940,9 @@ PREFIX(ping_short_asm_cold_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
-         sysenter ? "sysenter" : "   int30",
+  printf("  %s/cold: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" : 
+	 (callmode == 2) ? "kipcalls" : "   int30",
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
   /* tell main that we are finished */
@@ -1065,16 +1075,16 @@ PREFIX(ping_long_thread)(void)
       if (memchr(&long_recv_msg[i].dw[REGISTER_DWORDS], 
 		 0x66, 4*(strsize-REGISTER_DWORDS)))
 	{
-	  printf("Test failed (found 0x66 in %08x-%08x)!\n",
-	      (unsigned)&long_recv_msg[i].dw[REGISTER_DWORDS],
-	      (unsigned)&long_recv_msg[i].dw[REGISTER_DWORDS]
+	  printf("Test failed (found 0x66 in %08lx-%08lx)!\n",
+	      (unsigned long)&long_recv_msg[i].dw[REGISTER_DWORDS],
+	      (unsigned long)&long_recv_msg[i].dw[REGISTER_DWORDS]
 			+4*(strsize-REGISTER_DWORDS));
 	  enter_kdebug("stop");
 	  break;
 	}
     }
 
-  printf("  %s %4d dwords (%5dB): %10u cycles / %6u rounds >> %5u <<\n",
+  printf("  %s %4ld dwords (%5ldB): %10u cycles / %6lu rounds >> %5u <<\n",
 	 dont_do_cold ? "" : "warm",
          strsize, strsize*4,
 	 (l4_uint32_t)tsc, 8*rounds, (l4_uint32_t)(tsc/(8*rounds)));
@@ -1141,7 +1151,7 @@ PREFIX(ping_long_cold_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  cold %4d dwords (%5dB): %10u cycles / %6u rounds >> %5u <<\n",
+  printf("  cold %4ld dwords (%5ldB): %10u cycles / %6lu rounds >> %5u <<\n",
          strsize, strsize*4,
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
@@ -1299,7 +1309,7 @@ PREFIX(ping_indirect_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  %s %dx%5d dwords (%5dB): %10u cycles / %6u rounds >> %7u <<\n",
+  printf("  %s %ldx%5ld dwords (%5ldB): %10u cycles / %6lu rounds >> %7u <<\n",
 	 dont_do_cold ? "" : "warm",
          strnum, strsize, strnum*strsize*4,
 	 (l4_uint32_t)tsc, rounds*8, (l4_uint32_t)(tsc/(rounds*8)));
@@ -1381,7 +1391,7 @@ PREFIX(ping_indirect_cold_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  cold %dx%5d dwords (%5dB): %10u cycles / %6u rounds >> %7u <<\n",
+  printf("  cold %ldx%5ld dwords (%5ldB): %10u cycles / %6lu rounds >> %7u <<\n",
          strnum, strsize, strnum*strsize*4,
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
@@ -1496,7 +1506,7 @@ PREFIX(ping_fpage_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
   
-  printf("  %4dkB: %9u cycles / %5u rounds >> %8u <<\n",
+  printf("  %4ldkB: %10u cycles / %5lu rounds >> %8u <<\n",
          fpagesize/1024,
 	 (l4_uint32_t)tsc, rounds*8, (l4_uint32_t)(tsc/(rounds*8)));
 
@@ -1638,7 +1648,7 @@ PREFIX(ping_long_fpage_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  %s %d fps (%d MB): %u cycles / %u rounds a 1024 fpages "
+  printf("  %s %d fps (%d MB): %u cycles / %lu rounds a 1024 fpages "
          ">> %u/fp <<\n",
 	 dont_do_cold ? "" : "warm",
          SCRATCH_MEM_SIZE/L4_PAGESIZE, SCRATCH_MEM_SIZE/(1024*1024),
@@ -1710,7 +1720,7 @@ PREFIX(ping_long_fpage_cold_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  cold %d fps (%d MB): %u cycles / %u rounds a 1024 fpages "
+  printf("  cold %d fps (%d MB): %u cycles / %lu rounds a 1024 fpages "
          ">> %u/fp <<\n",
          SCRATCH_MEM_SIZE/L4_PAGESIZE, SCRATCH_MEM_SIZE/(1024*1024),
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/(rounds*1024)));
@@ -1848,7 +1858,7 @@ PREFIX(ping_pagefault_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
   
-  printf("  %d%cB => %d%cB: %9u cycles / %5u rounds >> %6u <<\n",
+  printf("  %d%cB => %ld%cB: %10u cycles / %5lu rounds >> %6u <<\n",
          use_superpages ? L4_SUPERPAGESIZE/(1024*1024) : L4_PAGESIZE / 1024,
 	 use_superpages ? 'M' : 'k',
          fpagesize > 1024*1024 ? fpagesize/(1024*1024) : fpagesize / 1024,

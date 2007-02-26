@@ -144,7 +144,7 @@ l4_thread_switch(l4_threadid_t dest)
      );
 }
 
-static inline void
+L4_INLINE void
 __do_l4_thread_ex_regs(l4_umword_t val0,
                        l4_umword_t ip,
                        l4_umword_t sp,
@@ -241,6 +241,20 @@ l4_inter_task_ex_regs(l4_threadid_t destination,
                          ip, sp, preempter, pager,
                          old_cpsr, old_ip, old_sp);
 }
+
+L4_INLINE l4_threadid_t
+l4_thread_ex_regs_pager(l4_threadid_t destination)
+{
+  l4_umword_t dummy;
+  l4_threadid_t preempter = L4_INVALID_ID;
+  l4_threadid_t pager     = L4_INVALID_ID;
+
+  l4_thread_ex_regs_flags(destination, (l4_umword_t)-1, (l4_umword_t)-1,
+                          &preempter, &pager, &dummy, &dummy, &dummy,
+                          L4_THREAD_EX_REGS_NO_CANCEL);
+  return pager;
+}
+
 
 L4_INLINE l4_taskid_t
 l4_task_new(l4_threadid_t dest,

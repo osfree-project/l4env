@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEUserDefinedType.cpp
- *    \brief   contains the implementation of the class CFEUserDefinedType
+ *  \brief   contains the implementation of the class CFEUserDefinedType
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,9 +31,12 @@
 #include "FEConstructedType.h"
 #include "FEFile.h"
 #include "FELibrary.h"
-
+#include "File.h"
 // needed for Error function
 #include "Compiler.h"
+#include "Visitor.h"
+#include <iostream>
+#include <cassert>
 
 CFEUserDefinedType::CFEUserDefinedType(string sName)
 : CFETypeSpec(TYPE_USER_DEFINED)
@@ -54,8 +57,8 @@ CFEUserDefinedType::~CFEUserDefinedType()
 }
 
 /**
- *    \brief creates a copy of this class
- *    \return the copy of this class
+ *  \brief creates a copy of this class
+ *  \return the copy of this class
  */
 CObject *CFEUserDefinedType::Clone()
 {
@@ -63,87 +66,46 @@ CObject *CFEUserDefinedType::Clone()
 }
 
 /**
- *    \brief returns the name of the type
- *    \return the name of the type
+ *  \brief returns the name of the type
+ *  \return the name of the type
  */
 string CFEUserDefinedType::GetName()
 {
     return m_sName;
 }
 
-/** \brief check consistency
- *  \return false if error occured, true if everything is fine
- *
- * A user-defined type is consistent if it exists somewhere.
+/** \brief accept the iterations of the visitor
+ *  \param v reference to the current visitor
  */
-bool CFEUserDefinedType::CheckConsistency()
+void
+CFEUserDefinedType::Accept(CVisitor& v)
 {
-    CFEFile *pFile = dynamic_cast<CFEFile*>(GetRoot());
-    assert(pFile);
-    if (m_sName.empty())
-    {
-        CCompiler::GccError(this, 0, "A user defined type without a name.");
-        return false;
-    }
-    // the user defined type can also reference an interface
-    CFELibrary *pFELibrary = GetSpecificParent<CFELibrary>();
-    if ((m_sName.find("::") != string::npos) ||
-        (!pFELibrary))
-    {
-        if (pFile->FindInterface(m_sName))
-            return true;
-    }
-    else
-    {
-        if (pFELibrary->FindInterface(m_sName))
-            return true;
-    }
-
-    // test if type has really been defined
-    if (!(pFile->FindUserDefinedType(m_sName)))
-    {
-        CCompiler::GccError(this, 0,
-                    "User defined type \"%s\" not defined.",
-                    m_sName.c_str());
-        return false;
-    }
-    return true;
+    v.Visit(*this);
 }
 
-/** serialize this object
- *    \param pFile the file to serialize from/to
- */
-void CFEUserDefinedType::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<type>%s</type>\n", m_sName.c_str());
-    }
-}
-
-/**    \brief should we ignore to resolve this user defined type
- *    \return true if this user type should be ignored
+/** \brief should we ignore to resolve this user defined type
+ *  \return true if this user type should be ignored
  *
- * We check the parent typed decl for the ignore attribute. If we have no parent type
- * decl or no attribute is found return false.
+ * We check the parent typed decl for the ignore attribute. If we have no
+ * parent type decl or no attribute is found return false.
  */
 bool CFEUserDefinedType::Ignore()
 {
     CFEConstructedType *pStruct = GetSpecificParent<CFEConstructedType>();
     if (!pStruct)
-    return false;
+	return false;
     CFEBase *pTypedDecl = (CFEBase *) (pStruct->GetParent());
     if (!(dynamic_cast<CFETypedDeclarator*>(pTypedDecl)))
-    return false;
-    if (((CFETypedDeclarator *) pTypedDecl)->FindAttribute(ATTR_IGNORE))
-    return true;
+	return false;
+    if (((CFETypedDeclarator *) pTypedDecl)->m_Attributes.Find(ATTR_IGNORE))
+	return true;
     return false;
 }
 
 /** \brief get the type of the original type
  *  \return the type of the type this type is an alias for
  */
-TYPESPEC_TYPE CFEUserDefinedType::GetOriginalType()
+unsigned int CFEUserDefinedType::GetOriginalType()
 {
     CFEFile *pFile = dynamic_cast<CFEFile*>(GetRoot());
     assert(pFile);

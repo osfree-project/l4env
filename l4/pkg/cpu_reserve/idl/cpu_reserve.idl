@@ -8,7 +8,7 @@ interface l4cpu_reserve{
 	    [in] int period,
 	    [in,out] int *wcet,
 	    [in] int deadline,
-	    [out] int*id);
+	    [out] int *id);
     /* New delayed preemption
      *
      * \param thread	thread that can do delayed preemption

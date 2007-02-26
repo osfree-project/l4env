@@ -32,8 +32,8 @@ genchecksum: $(OBJ_CHECKSUM)
 
 $(OBJ_CHECKSUM): %.o: %.cc
 	$(COMP_MESSAGE)
-	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -c -MD -O2 $< -o $@
-	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $*.d, .$*.cc.d)
+	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -c -MD -MP -MF .$*.cc.d.new -O2 $< -o $@
+	@mv .$*.cc.d.new .$*.cc.d
 
 clean-CHECKSUM:
 	rm -f genchecksum setchecksum checksum.ro checksum.rw

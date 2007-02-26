@@ -14,7 +14,7 @@ public:
     Whole_io_space = 16, ///< The order used to cover the whole I/O space.
     Io_port_max    = 1L << Whole_io_space, ///< Number of available I/O ports.
   };
-  
+
   /**
    * Create the given I/O flex page.
    * @param port the port address.
@@ -54,8 +54,30 @@ private:
   enum {
     Iopage_mask  = 0x0ffff000,
     Iopage_shift = 12,
-    Ioid_mask    = 0xf0000000,
+  };
+};
+
+INTERFACE [32bit]:
+  
+EXTENSION class L4_fpage
+{
+private:
+  enum 
+  {
+    Ioid_mask    = 0xf0000f02,
     Io_id        = 0xf0000000,
+  };
+};
+
+INTERFACE [64bit]:
+  
+EXTENSION class L4_fpage
+{
+private:
+  enum 
+  {
+    Ioid_mask    = 0xfffffffff0000f02UL,
+    Io_id        = 0xfffffffff0000000UL,
   };
 };
 
@@ -96,7 +118,7 @@ Mword L4_fpage::iopage() const
 IMPLEMENT inline
 L4_fpage L4_fpage::io( Mword port, Mword size, Mword grant )
 {
-  return L4_fpage( (grant ? 1 : 0) 
+  return L4_fpage( (grant ? 1 : 0)
 		   | ((port << Iopage_shift) & Iopage_mask)
 		   | ((size << Size_shift) & Size_mask)
 		   | Io_id);

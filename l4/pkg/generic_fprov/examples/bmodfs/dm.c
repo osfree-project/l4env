@@ -16,6 +16,7 @@
 #include <l4/util/bitops.h>
 #include <l4/dm_generic/dm_generic-server.h>
 #include <l4/dm_mem/dm_mem-server.h>
+#include <l4/dm_mem/dm_mem.h>
 
 #include "dm.h"
 
@@ -30,6 +31,17 @@ typedef struct
 
 static ds_desc_t dataspaces[MAX_DS];
 static l4_threadid_t dm_id;
+
+void * /* TAG:preallocfix */
+CORBA_alloc(unsigned long size)
+{
+  return 0;
+}
+
+void
+CORBA_free(void *b)
+{
+}
 
 /**
  * Allocate dataspace descriptor
@@ -91,8 +103,8 @@ get_desc(int id)
  *         - \c -L4_EINVAL     invalid file
  */
 l4_int32_t
-dm_open(const char* fname, l4_uint32_t flags,
-        l4dm_dataspace_t *ds, l4_uint32_t *size)
+dm_open(const char* fname, l4_uint32_t flags, l4_threadid_t mem_dm_id,
+        l4_threadid_t client, l4dm_dataspace_t *ds, l4_uint32_t *ds_size)
 {
   l4util_mb_info_t *mbi = (l4util_mb_info_t*)crt0_multiboot_info;
   l4util_mb_mod_t  *mod = (l4util_mb_mod_t*)mbi->mods_addr;
@@ -115,20 +127,62 @@ dm_open(const char* fname, l4_uint32_t flags,
 
       if (found)
         {
-          int id;
-          ds_desc_t *dd;
+	  l4_addr_t addr = mod[i].mod_start;
+	  l4_addr_t size = mod[i].mod_end-mod[i].mod_start;
+	  void      *ds_addr;
+	  int rc;
 
-          id = desc_alloc();
-          if (id < 0)
-            return -L4_ENOHANDLE;
+	  *ds_size = size;
 
-          dd          = dataspaces + id;
-          dd->addr    = mod[i].mod_start;
-          dd->size    = mod[i].mod_end-mod[i].mod_start;
-          ds->id      = id;
-          ds->manager = dm_id;
-          *size       = dd->size;
-          return 0;
+	  if (flags & L4DM_PINNED)
+	    {
+	      /* We cannot guarantee pinned memory for dataspaces we will
+	       * potentially share (no selective unmap operation). So just
+	       * the content to a dataspace of pinned memory */
+	      if ((rc = l4dm_mem_open(mem_dm_id, size, 0, flags,
+		                      "bmodfs ds", ds)) < 0)
+		{
+		  LOG("Cannot create dataspace for pinned memory");
+		  return rc;
+		}
+
+	      if ((rc = l4rm_attach(ds, size, 0, L4DM_RW | L4RM_MAP,
+		                    &ds_addr)))
+		{
+		  LOG("Cannot attach dataspace");
+		  l4dm_close(ds);
+		  return rc;
+		}
+
+	      memcpy(ds_addr, (void*)addr, size);
+
+	      l4rm_detach(ds_addr);
+
+	      if ((rc = l4dm_transfer(ds, client)))
+		{
+		  LOG("Cannot transfer ownership of dataspace to client");
+		  l4dm_close(ds);
+		  return rc;
+		}
+
+	      return 0;
+	    }
+	  else
+	    {
+	      int id;
+	      ds_desc_t *dd;
+
+	      id = desc_alloc();
+	      if (id < 0)
+		return -L4_ENOHANDLE;
+
+	      dd          = dataspaces + id;
+	      dd->addr    = addr;
+	      dd->size    = size;
+	      ds->id      = id;
+	      ds->manager = dm_id;
+	      return 0;
+	    }
         }
     }
 
@@ -156,16 +210,16 @@ dm_open(const char* fname, l4_uint32_t flags,
  *         - \c -L4_EINVAL_OFFS  offset points beyobnd end of dataspace
  *         - \c -L4_EPERM        write access denied
  */
-l4_int32_t
-if_l4dm_generic_map_component(CORBA_Object _dice_corba_obj,
-                              l4_uint32_t ds_id,
-                              l4_uint32_t offset,
-                              l4_uint32_t size,
-                              l4_uint32_t rcv_size2,
-                              l4_uint32_t rcv_offs,
-                              l4_uint32_t flags,
-                              l4_snd_fpage_t *page,
-                              CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_map_component (CORBA_Object _dice_corba_obj,
+                               unsigned long ds_id,
+                               unsigned long offset,
+                               unsigned long size,
+                               unsigned long rcv_size2,
+                               unsigned long rcv_offs,
+                               unsigned long flags,
+                               l4_snd_fpage_t *page,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t *dd = get_desc(ds_id);
 
@@ -174,14 +228,14 @@ if_l4dm_generic_map_component(CORBA_Object _dice_corba_obj,
 
   if (flags & L4DM_WRITE)
     {
-      LOG_Error("write map request, client "l4util_idfmt" at 0x%08x",
+      LOG_Error("write map request, client "l4util_idfmt" at 0x%08lx",
 	      l4util_idstr(*_dice_corba_obj), offset);
       return -L4_EPERM;
     }
 
   if (offset > dd->size)
     {
-      LOG_Error("invalid offset 0x%08x", offset);
+      LOG_Error("invalid offset 0x%08lx", offset);
       return -L4_EINVAL_OFFS;
     }
 
@@ -209,12 +263,12 @@ if_l4dm_generic_map_component(CORBA_Object _dice_corba_obj,
  *         - \c -L4_EINVAL       invalid dataspace id
  *         - \c -L4_EINVAL_OFFS  offset points beyond end of file
  */
-l4_int32_t
-if_l4dm_generic_fault_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                l4_uint32_t offset,
-                                l4_snd_fpage_t *page,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_fault_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 unsigned long offset,
+                                 l4_snd_fpage_t *page,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int rw = offset & 2;
   ds_desc_t * dd = get_desc(ds_id);
@@ -224,14 +278,14 @@ if_l4dm_generic_fault_component(CORBA_Object _dice_corba_obj,
 
   if (rw)
     {
-      LOG_Error("write pagefault "l4util_idfmt" at 0x%08x",
+      LOG_Error("write pagefault "l4util_idfmt" at 0x%08lx",
 		l4util_idstr(*_dice_corba_obj), offset & ~2);
       return -L4_EINVAL;
     }
 
   if (offset > dd->size)
     {
-      LOG_Error("invalid offset 0x%08x", offset);
+      LOG_Error("invalid offset 0x%08lx", offset);
       return -L4_EINVAL_OFFS;
     }
 
@@ -251,10 +305,10 @@ if_l4dm_generic_fault_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on succes, \c -L4_EINVAL if invalid dataspace id
  */
-l4_int32_t
-if_l4dm_generic_close_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_close_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
   int addr_align, log2_size, fpage_size;
@@ -289,11 +343,11 @@ if_l4dm_generic_close_component(CORBA_Object _dice_corba_obj,
 /**
  * Close all dataspace of a client, not supported.
  */
-l4_int32_t
-if_l4dm_generic_close_all_component(CORBA_Object _dice_corba_obj,
-                                    const l4_threadid_t *client,
-                                    l4_uint32_t flags,
-                                    CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_close_all_component (CORBA_Object _dice_corba_obj,
+                                     const l4_threadid_t *client,
+                                     unsigned long flags,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
@@ -309,12 +363,12 @@ if_l4dm_generic_close_all_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, \c -L4_EINVAL if invalid dataspace id
  */
-l4_int32_t
-if_l4dm_generic_share_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                const l4_threadid_t *client,
-                                l4_uint32_t flags,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_share_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 const l4_threadid_t *client,
+                                 unsigned long flags,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -336,12 +390,12 @@ if_l4dm_generic_share_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, \c -L4_EINVAL if invalid dataspace id
  */
-l4_int32_t
-if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
-                                 l4_uint32_t ds_id,
-                                 const l4_threadid_t *client,
-                                 l4_uint32_t flags,
-                                 CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_revoke_component (CORBA_Object _dice_corba_obj,
+                                  unsigned long ds_id,
+                                  const l4_threadid_t *client,
+                                  unsigned long flags,
+                                  CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -362,11 +416,11 @@ if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, \c -L4_EINVAL if invalid dataspace id
  */
-l4_int32_t
-if_l4dm_generic_check_rights_component(CORBA_Object _dice_corba_obj,
-                                       l4_uint32_t ds_id,
-                                       l4_uint32_t flags,
-                                       CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_check_rights_component (CORBA_Object _dice_corba_obj,
+                                        unsigned long ds_id,
+                                        unsigned long flags,
+                                        CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -390,11 +444,11 @@ if_l4dm_generic_check_rights_component(CORBA_Object _dice_corba_obj,
  *
  * \return 0 on success, \c -L4_EINVAL if invalid dataspace id
  */
-l4_int32_t
-if_l4dm_generic_transfer_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id,
-                                   const l4_threadid_t *new_owner,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_transfer_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    const l4_threadid_t *new_owner,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -408,16 +462,16 @@ if_l4dm_generic_transfer_component(CORBA_Object _dice_corba_obj,
 /**
  * Create dataspace copy, not supported
  */
-l4_int32_t
-if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
-                               l4_uint32_t ds_id,
-                               l4_uint32_t src_offs,
-                               l4_uint32_t dst_offs,
-                               l4_uint32_t num,
-                               l4_uint32_t flags,
-                               const char* name,
-                               l4dm_dataspace_t *copy,
-                               CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_copy_component (CORBA_Object _dice_corba_obj,
+                                unsigned long ds_id,
+                                unsigned long src_offs,
+                                unsigned long dst_offs,
+                                unsigned long num,
+                                unsigned long flags,
+                                const char* name,
+                                l4dm_dataspace_t *copy,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
@@ -425,11 +479,11 @@ if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
 /**
  * Set dataspace name, not supported
  */
-l4_int32_t
-if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id,
-                                   const char* name,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_set_name_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    const char* name,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
@@ -437,11 +491,11 @@ if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
 /**
  * Get dataspace name, not supported
  */
-l4_int32_t
-if_l4dm_generic_get_name_component(CORBA_Object _dice_corba_obj,
-                                   l4_uint32_t ds_id,
-                                   char* *name,
-                                   CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_get_name_component (CORBA_Object _dice_corba_obj,
+                                    unsigned long ds_id,
+                                    char* *name,
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
@@ -449,10 +503,10 @@ if_l4dm_generic_get_name_component(CORBA_Object _dice_corba_obj,
 /**
  * Show dataspace info, not supported
  */
-l4_int32_t
-if_l4dm_generic_show_ds_component(CORBA_Object _dice_corba_obj,
-                                  l4_uint32_t ds_id,
-                                  CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_show_ds_component (CORBA_Object _dice_corba_obj,
+                                   unsigned long ds_id,
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
@@ -460,10 +514,10 @@ if_l4dm_generic_show_ds_component(CORBA_Object _dice_corba_obj,
 /*
  * Request info about specific dataspace, not supported
  */
-l4_int32_t
+long
 if_l4dm_mem_info_component (CORBA_Object _dice_corba_obj,
-                            l4_uint32_t ds_id,
-                            l4_uint32_t *size,
+                            unsigned long ds_id,
+                            l4_size_t *size,
                             l4_threadid_t *owner,
                             char* *name,
                             l4_uint32_t *next_id,
@@ -476,33 +530,33 @@ if_l4dm_mem_info_component (CORBA_Object _dice_corba_obj,
  * List dataspaces, not supported
  */
 void
-if_l4dm_generic_list_component(CORBA_Object _dice_corba_obj,
-                               const l4_threadid_t *owner,
-                               l4_uint32_t flags,
-                               CORBA_Server_Environment *_dice_corba_env)
+if_l4dm_generic_list_component (CORBA_Object _dice_corba_obj,
+                                const l4_threadid_t *owner,
+                                unsigned long flags,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   printf("not implemented\n");
   return;
 }
 
 
-l4_int32_t
-if_l4dm_mem_open_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t size,
-                           l4_uint32_t align,
-                           l4_uint32_t flags,
-                           const char* name,
-                           l4dm_dataspace_t *ds,
-                           CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_open_component (CORBA_Object _dice_corba_obj,
+                            unsigned long size,
+                            unsigned long align,
+                            unsigned long flags,
+                            const char* name,
+                            l4dm_dataspace_t *ds,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
 
-l4_int32_t
-if_l4dm_mem_size_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t ds_id,
-                           l4_uint32_t *size,
-                           CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_size_component (CORBA_Object _dice_corba_obj,
+                            unsigned long ds_id,
+                            l4_size_t *size,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -514,23 +568,23 @@ if_l4dm_mem_size_component(CORBA_Object _dice_corba_obj,
 }
 
 
-l4_int32_t
-if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
-                             l4_uint32_t ds_id,
-                             l4_uint32_t new_size,
-                             CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_resize_component (CORBA_Object _dice_corba_obj,
+                              unsigned long ds_id,
+                              unsigned long new_size,
+                              CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
 
-l4_int32_t
-if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                l4_uint32_t offset,
-                                l4_uint32_t size,
-                                l4_uint32_t *paddr,
-                                l4_uint32_t *psize,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_phys_addr_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 unsigned long offset,
+                                 l4_size_t size,
+                                 unsigned long *paddr,
+                                 l4_size_t *psize,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   ds_desc_t * dd = get_desc(ds_id);
 
@@ -547,31 +601,31 @@ if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-l4_int32_t
-if_l4dm_mem_is_contiguous_component(CORBA_Object _dice_corba_obj,
-                                    l4_uint32_t ds_id,
-                                    l4_int32_t *is_cont,
-                                    CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_is_contiguous_component (CORBA_Object _dice_corba_obj,
+                                     unsigned long ds_id,
+                                     long *is_cont,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
 
-l4_int32_t
-if_l4dm_mem_lock_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t ds_id,
-                           l4_uint32_t offset,
-                           l4_uint32_t size,
-                           CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_lock_component (CORBA_Object _dice_corba_obj,
+                            unsigned long ds_id,
+                            unsigned long offset,
+                            unsigned long size,
+                            CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }
 
-l4_int32_t
-if_l4dm_mem_unlock_component(CORBA_Object _dice_corba_obj,
-                             l4_uint32_t ds_id,
-                             l4_uint32_t offset,
-                             l4_uint32_t size,
-                             CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_unlock_component (CORBA_Object _dice_corba_obj,
+                              unsigned long ds_id,
+                              unsigned long offset,
+                              unsigned long size,
+                              CORBA_Server_Environment *_dice_corba_env)
 {
   return -L4_ENOTSUPP;
 }

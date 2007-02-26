@@ -27,6 +27,8 @@
       Common types and defines\htmlonly</a>\endhtmlonly
     - \htmlonly<a href="group__api__types__compiler.html">\endhtmlonly
       Compiler related defines\htmlonly</a>\endhtmlonly  
+    - \htmlonly<a href="group__api__utcb.html">\endhtmlonly
+      UTCB related functionality\htmlonly</a>\endhtmlonly  
   - \htmlonly<a href="group__api__calls.html">\endhtmlonly
     System calls\htmlonly</a>\endhtmlonly
     - \htmlonly<a href="group__api__calls__ipc.html">\endhtmlonly

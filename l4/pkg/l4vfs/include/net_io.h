@@ -52,7 +52,7 @@ int             l4vfs_listen(l4_threadid_t server,
 
 int             l4vfs_recvfrom(l4_threadid_t server,
                                object_handle_t fd,
-                               l4_int8_t **buf,
+                               char **buf,
                                size_t len,
                                int flags,
                                struct sockaddr *from,
@@ -60,7 +60,7 @@ int             l4vfs_recvfrom(l4_threadid_t server,
 
 int             l4vfs_recv(l4_threadid_t server,
                            object_handle_t fd,
-                           l4_int8_t **buf,
+                           char **buf,
                            size_t len,
                            int flags);
 
@@ -105,6 +105,18 @@ int             l4vfs_setsockopt(l4_threadid_t server,
                                  int optname,
                                  const void *optval,
                                  socklen_t optlen);
+
+int             l4vfs_getsockopt(l4_threadid_t server,
+                                 object_handle_t fd,
+                                 int level,
+                                 int optname,
+                                 const void *optval,
+                                 socklen_t *optlen);
+
+int             l4vfs_getpeername(l4_threadid_t server,
+                             object_handle_t fd,
+                             struct sockaddr *addr,
+                             socklen_t *addrlen);
 
 EXTERN_C_END
 

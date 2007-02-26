@@ -1,10 +1,11 @@
 /**
- *	\file	dice/src/be/l4/v4/ia32/L4V4IA32IPC.h
- *	\brief	contains the declaration of the class CL4V4IA32IPC
+ *  \file   dice/src/be/l4/v4/ia32/L4V4IA32IPC.h
+ *  \brief  contains the declaration of the class CL4V4IA32IPC
  *
- *	\date	02/08/2004
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date   02/08/2004
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -44,7 +45,7 @@ public:
     virtual ~CL4V4IA32IPC();
 
 public:
-    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
+    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction);
 };
 
 #endif

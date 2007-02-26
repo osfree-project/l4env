@@ -57,7 +57,7 @@ library l4loader
 	     	[in] l4_threadid_t fprov,
      		[in] unsigned long flags,
 		[out, max_is(MAX_TASK_ID)] l4_taskid_t task_ids[],
-		[out, string, prealloc] char** error_msg);
+		[out, string, prealloc_client] char** error_msg);
 
       /** Continue task which was not completely started.
        *
@@ -95,7 +95,7 @@ library l4loader
        * \retval l4env_page	l4env_infopage of process
        * \return		0 on success */
       long info([in] unsigned long task_id, [in] unsigned long flags,
-	        [out, string, init_with_in] char** fname, 
+	        [out, string, prealloc_client] char** fname, 
 		[out] l4dm_dataspace_t *l4env_page);
 
       /** Open a library.

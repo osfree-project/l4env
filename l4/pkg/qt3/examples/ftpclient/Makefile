@@ -4,9 +4,8 @@ L4DIR		?= $(PKGDIR)/../..
 SYSTEMS		= x86-l4v2
 DEFAULT_RELOC	= 0x2800000
 
-TARGET		= qttest_ftpclient
+TARGET		= qt3_ftpclient
 MODE		= l4env_base
-QT3_IO_BACKEND	= con # one of con, dope, sdl
 
 SRC_CC		= main.cc ftpviewitem.cc
 SRC_MOC		= 

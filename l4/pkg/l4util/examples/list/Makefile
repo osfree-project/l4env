@@ -9,7 +9,7 @@ MODE =		sigma0
 # target
 TARGET =	llist
 DEFAULT_RELOC	= 0x9a0000
-SYSTEMS = 	x86-l4v2 x86-l4x0
+SYSTEMS = 	x86-l4v2
 
 include $(L4DIR)/mk/prog.mk
 

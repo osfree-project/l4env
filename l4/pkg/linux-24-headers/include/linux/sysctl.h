@@ -128,6 +128,7 @@ enum
 	KERN_PPC_L3CR=57,       /* l3cr register on PPC */
 	KERN_EXCEPTION_TRACE=58, /* boolean: exception trace */
  	KERN_CORE_SETUID=59,	/* int: set to allow core dumps of setuid apps */
+	KERN_SPARC_SCONS_PWROFF=64, /* int: serial console power-off halt */
 };
 
 
@@ -153,9 +154,10 @@ enum
 	VM_PAGEBUF=17,		/* struct: Control pagebuf parameters */
 	VM_GFP_DEBUG=18,        /* debug GFP failures */
 	VM_CACHE_SCAN_RATIO=19, /* part of the inactive cache list to scan */
-	VM_MAPPED_RATIO=20,     /* amount of unfreeable pages that triggers swapout */
+	VM_MAPPED_RATIO=20,	/* amount of unfreeable pages that triggers swapout */
 	VM_LAPTOP_MODE=21,	/* kernel in laptop flush mode */
 	VM_BLOCK_DUMP=22,	/* dump fs activity to log */
+	VM_ANON_LRU=23,		/* immediatly insert anon pages in the vm page lru */
 };
 
 
@@ -312,6 +314,19 @@ enum
 	NET_TCP_FRTO=92,
 	NET_TCP_LOW_LATENCY=93,
 	NET_IPV4_IPFRAG_SECRET_INTERVAL=94,
+	NET_TCP_WESTWOOD=95,
+	NET_IPV4_IGMP_MAX_MSF=96,
+	NET_TCP_NO_METRICS_SAVE=97,
+	NET_TCP_VEGAS=98,
+	NET_TCP_VEGAS_ALPHA=99,
+	NET_TCP_VEGAS_BETA=100,
+	NET_TCP_VEGAS_GAMMA=101,
+ 	NET_TCP_BIC=102,
+ 	NET_TCP_BIC_FAST_CONVERGENCE=103,
+	NET_TCP_BIC_LOW_WINDOW=104,
+	NET_TCP_DEFAULT_WIN_SCALE=105,
+	NET_TCP_MODERATE_RCVBUF=106,
+	NET_TCP_BIC_BETA=108,
 };
 
 enum {
@@ -360,6 +375,8 @@ enum
 	NET_IPV4_CONF_ARPFILTER=13,
 	NET_IPV4_CONF_MEDIUM_ID=14,
 	NET_IPV4_CONF_FORCE_IGMP_VERSION=17,
+	NET_IPV4_CONF_ARP_ANNOUNCE=18,
+	NET_IPV4_CONF_ARP_IGNORE=19,
 };
 
 /* /proc/sys/net/ipv4/netfilter */
@@ -387,7 +404,8 @@ enum {
 	NET_IPV6_NEIGH=17,
 	NET_IPV6_ROUTE=18,
 	NET_IPV6_ICMP=19,
-	NET_IPV6_BINDV6ONLY=20
+	NET_IPV6_BINDV6ONLY=20,
+	NET_IPV6_MLD_MAX_MSF=25,
 };
 
 enum {
@@ -548,6 +566,8 @@ enum {
 	NET_SCTP_HB_INTERVAL             = 10,
 	NET_SCTP_PRESERVE_ENABLE         = 11,
 	NET_SCTP_MAX_BURST               = 12,
+	NET_SCTP_ADDIP_ENABLE            = 13,
+	NET_SCTP_PRSCTP_ENABLE           = 14,
 };
 /* /proc/sys/net/khttpd/ */
 enum {
@@ -609,7 +629,7 @@ enum
 	FS_LEASES=13,	/* int: leases enabled */
 	FS_DIR_NOTIFY=14,	/* int: directory notification enabled */
 	FS_LEASE_TIME=15,	/* int: maximum time to wait for a lease break */
-	FS_DQSTATS=16,	/* dir: disc quota usage statistics */
+	FS_DQSTATS=16,	/* dir: disc quota usage statistics and settings */
 	FS_XFS=17,	/* struct: control xfs parameters */
 };
 
@@ -623,6 +643,7 @@ enum {
 	FS_DQ_ALLOCATED = 6,
 	FS_DQ_FREE = 7,
 	FS_DQ_SYNCS = 8,
+	FS_DQ_WARNINGS = 9,
 };
 
 /* CTL_DEBUG names: */

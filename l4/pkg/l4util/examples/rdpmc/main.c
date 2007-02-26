@@ -19,18 +19,21 @@ int
 main(int argc, const char *argv[])
 {
   int error, show_tsc = 0, do_log = 0;
-  const char *diffstr = 0;
+  const char *pmcdiffstr = 0, *tscdiffstr = 0;
   unsigned pmc;
+  unsigned long long ll, ll_pmc = 0, ll_tsc = 0;
 
   if ((error = parse_cmdline(&argc, &argv,
-		'd', "diff", "show difference to previous perfctr value",
-		PARSE_CMD_STRING, "", &diffstr,
 		'f', "fiasco_log", "create an Fiasco tracebuffer entry",
 		PARSE_CMD_SWITCH, 1, &do_log,
 		'p', "pmc", "show perfctr with specified number",
 		PARSE_CMD_INT, 0xffffffff, &pmc,
 		't', "tsc", "show time stamp counter",
 		PARSE_CMD_SWITCH, 1, &show_tsc,
+		'P', "pmcdiff", "show difference to previous perfctr value",
+		PARSE_CMD_STRING, "", &pmcdiffstr,
+		'T', "tscdiff", "show difference to previous tsc value",
+		PARSE_CMD_STRING, "", &tscdiffstr,
 		0)))
     {
       switch (error)
@@ -45,27 +48,33 @@ main(int argc, const char *argv[])
 
   if (pmc != 0xffffffff)
     {
-      unsigned long long ll;
-
       asm volatile ("rdpmc" : "=A" (ll) : "c" (pmc));
       ll &= perfctr_mask;
-      printf("%llu ", ll);
-      if (diffstr && *diffstr)
+      if (pmcdiffstr && *pmcdiffstr)
 	{
-	  unsigned long long lllast = strtoll(diffstr, NULL, 0);
-	  
-	  ll -= lllast;
-	  ll &= perfctr_mask;
-	  printf("%llu ", ll);
+	  ll_pmc = (ll - strtoll(pmcdiffstr, NULL, 0)) & perfctr_mask;
+	  printf("%llu ", ll_pmc);
 	}
+      else
+	printf("%llu ", ll);
     }
 
   if (show_tsc)
     {
-      unsigned long long ll;
-
       asm volatile ("rdtsc" : "=A" (ll));
-      printf("%llu ", ll);
+      if (tscdiffstr && *tscdiffstr)
+	{
+	  ll_tsc = ll - strtoll(tscdiffstr, NULL, 0);
+	  printf("%llu ", ll_tsc);
+	}
+      else
+	printf("%llu ", ll);
+    }
+
+  if (ll_tsc && ll_pmc)
+    {
+      ll = ll_pmc * 1000 / ll_tsc;
+      printf("%llu.%llu", ll/10, ll-(ll/10)*10);
     }
 
   if (do_log)

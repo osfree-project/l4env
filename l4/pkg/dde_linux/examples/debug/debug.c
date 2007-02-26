@@ -20,6 +20,8 @@
 #include <linux/pci.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
+#include <linux/sched.h>
+#include <linux/tqueue.h>
 
 /* LibC */
 #include <stdlib.h>
@@ -516,6 +518,40 @@ static void debug_softirq(void)
 }
 
 /*****************************************************************************/
+/** keventd */
+/*****************************************************************************/
+static int keventd_flag = 0;
+
+static void keventd_func(void *p)
+{
+  LOGL("p=%p", p);
+}
+
+static void debug_keventd(void)
+{
+  int err;
+
+  if ((err=l4dde_keventd_init()))
+    {
+      LOG_Error("initializing keventd (%d)", err);
+      return;
+    }
+
+  struct tq_struct tq_test;
+
+  INIT_TQUEUE(&tq_test, keventd_func, (void *)0x4711);
+
+  schedule_task(&tq_test);
+  l4thread_sleep(1000);
+
+  schedule_task(&tq_test);
+  l4thread_sleep(1000);
+
+  schedule_task(&tq_test);
+  l4thread_sleep(1000);
+}
+
+/*****************************************************************************/
 /**    main    */
 /*****************************************************************************/
 static void usage(void)
@@ -533,6 +569,7 @@ static void usage(void)
 "  --pcidevs            show all PCI devices\n"
 "  --pcimod             debug PCI module handling\n"
 "  --softirq            debug softirq handling\n"
+"  --keventd            debug keventd\n"
 "  --timer              debug timers\n"
 "\n"
 "  --help               display this help (Doesn't exit immediately!)"
@@ -554,6 +591,7 @@ static void do_args(int argc, char *argv[])
     {"timer", no_argument, &long_check, 6},
     {"softirq", no_argument, &long_check, 7},
     {"malloc", no_argument, &long_check, 8},
+    {"keventd", no_argument, &long_check, 9},
     {"help", no_argument, &long_check, 99},
     {0, 0, 0, 0}
   };
@@ -605,6 +643,9 @@ static void do_args(int argc, char *argv[])
             case 8: /* debug memory allocations */
               malloc_flag = 1;
               break;
+            case 9: /* debug keventd */
+              keventd_flag = 1;
+              break;
             case 99: /* print usage */
               usage();
               break;
@@ -644,13 +685,13 @@ int main(int argc, char *argv[])
 
   LOG("DEBUG: \n"
       "irq=%c (%d)  jiffies=%c (%d)  lock=%c (%d)  pcidevs=%c  pcimod=%c\n"
-      "malloc=%c  timers=%c  softirqs=%c\n",
+      "malloc=%c  timers=%c  softirqs=%c keventd=%c\n",
       irq_flag ? 'y' : 'n', irq_num,
       jiffies_flag ? 'y' : 'n', jiffies_num,
       lock_flag ? 'y' : 'n', lock_num,
       pci_devs_flag ? 'y' : 'n', pci_mod_flag ? 'y' : 'n',
       malloc_flag ? 'y' : 'n', timer_flag ? 'y' : 'n',
-      softirq_flag ? 'y' : 'n');
+      softirq_flag ? 'y' : 'n', keventd_flag ? 'y' : 'n');
 
   if (malloc_flag) debug_malloc();
   if (pci_devs_flag) debug_all_pci_devs();
@@ -660,6 +701,7 @@ int main(int argc, char *argv[])
   if (lock_flag) debug_spinlock();
   if (timer_flag) debug_timers();
   if (softirq_flag) debug_softirq();
+  if (keventd_flag) debug_keventd();
 
   if (err) exit(-1);
 

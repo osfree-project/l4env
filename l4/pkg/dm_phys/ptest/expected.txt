@@ -1,0 +1,1484 @@
+DMphysTE| main(): DMphys at: 7.00
+DMphysTE| region list:
+DMphysTE|   area 0x00000: 0x00001000 - 0x00001fff [      4KiB]: ds 2 at 7.00
+DMphysTE|   area 0x00000: 0x00002000 - 0x0000ffff [     56KiB]: free
+DMphysTE|   area 0x00000: 0x00010000 - 0x00010fff [      4KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x00011000 - 0x00090fff [    512KiB]: ds 1 at 7.00
+DMphysTE|   area 0x00000: 0x00091000 - 0x0009ffff [     60KiB]: free
+DMphysTE|   area 0x00000: 0x000a0000 - 0x000fffff [    384KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x00100000 - 0x015fffff [  21504KiB]: free
+DMphysTE|   area 0x00000: 0x01600000 - 0x01646fff [    284KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x01647000 - 0x01ffffff [   9956KiB]: free
+DMphysTE|   area 0x02000: 0x02000000 - 0x021fefff [   2044KiB]: reserved
+DMphysTE|   area 0x02000: 0x021ff000 - 0x021fffff [      4KiB]: ds 3 at 7.00
+DMphysTE|   area 0x02000: 0x02200000 - 0x022effff [    960KiB]: reserved
+DMphysTE|   area 0x02000: 0x022f0000 - 0x022fffff [     64KiB]: ds 4 at 7.00
+DMphysTE|   area 0x02000: 0x02300000 - 0x02ffffff [  13312KiB]: reserved
+DMphysTE|   area 0x00000: 0x03000000 - 0xbfffffff [3096576KiB]: free
+DMphysTE| 
+DMphys  | DMphys dataspace list:
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 00014000 (80kB, 0MB)
+DMphysTE| test_is_contiguous(): TEST_IS_CONTIGOUS
+DMphysTE| test_is_contiguous(): start...
+DMphysTE| test_is_contiguous(): show not contiguous:
+DMphys  | DMphys dataspace 37:
+DMphys  |   name "not contiguous"
+DMphys  |   owner 9.02, size 0x00010000 (64KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x01532000 - 0x01533000 (4KB)
+DMphys  |     0x01534000 - 0x01535000 (4KB)
+DMphys  |     0x01536000 - 0x01537000 (4KB)
+DMphys  |     0x01538000 - 0x01539000 (4KB)
+DMphys  |     0x0153a000 - 0x0153b000 (4KB)
+DMphys  |     0x0153c000 - 0x0153d000 (4KB)
+DMphys  |     0x0153e000 - 0x0153f000 (4KB)
+DMphys  |     0x00139000 - 0x0013a000 (4KB)
+DMphys  |     0x00137000 - 0x00138000 (4KB)
+DMphys  |     0x00135000 - 0x00136000 (4KB)
+DMphys  |     0x00133000 - 0x00134000 (4KB)
+DMphys  |     0x00131000 - 0x00132000 (4KB)
+DMphys  |     0x0012f000 - 0x00130000 (4KB)
+DMphys  |     0x0012d000 - 0x0012e000 (4KB)
+DMphys  |     0x0012b000 - 0x0012c000 (4KB)
+DMphys  |     0x01530000 - 0x01531000 (4KB)
+DMphysTE| [9.2] dm_phys/examples/test/main.c:919:test_is_contiguous():
+DMphysTE|  ds is not contiguous.
+DMphysTE| test_is_contiguous(): show contiguous:
+DMphys  | DMphys dataspace 38:
+DMphys  |   name "contiguous"
+DMphys  |   owner 9.02, size 0x00030000 (192KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x0154d000 - 0x0157d000 (192KB)
+DMphysTE| [9.2] dm_phys/examples/test/main.c:931:test_is_contiguous():
+DMphysTE|  ds is contiguous.
+DMphysTE| region list:
+DMphysTE|   area 0x00000: 0x00001000 - 0x00001fff [      4KiB]: ds 2 at 7.00
+DMphysTE|   area 0x00000: 0x00002000 - 0x0000ffff [     56KiB]: free
+DMphysTE|   area 0x00000: 0x00010000 - 0x00010fff [      4KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x00011000 - 0x00090fff [    512KiB]: ds 1 at 7.00
+DMphysTE|   area 0x00000: 0x00091000 - 0x0009ffff [     60KiB]: free
+DMphysTE|   area 0x00000: 0x000a0000 - 0x000fffff [    384KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x00100000 - 0x015fffff [  21504KiB]: free
+DMphysTE|   area 0x00000: 0x01600000 - 0x01646fff [    284KiB]: pager 4.00
+DMphysTE|   area 0x00000: 0x01647000 - 0x01ffffff [   9956KiB]: free
+DMphysTE|   area 0x02000: 0x02000000 - 0x021fefff [   2044KiB]: reserved
+DMphysTE|   area 0x02000: 0x021ff000 - 0x021fffff [      4KiB]: ds 3 at 7.00
+DMphysTE|   area 0x02000: 0x02200000 - 0x022effff [    960KiB]: reserved
+DMphysTE|   area 0x02000: 0x022f0000 - 0x022fffff [     64KiB]: ds 4 at 7.00
+DMphysTE|   area 0x02000: 0x02300000 - 0x02ffffff [  13312KiB]: reserved
+DMphysTE|   area 0x00000: 0x03000000 - 0xbfffffff [3096576KiB]: free
+DMphysTE| 
+DMphys  | DMphys dataspace list:
+DMphys  |   38: size=00030000  owner=9.02  name="contiguous"
+DMphys  |   37: size=00010000  owner=9.02  name="not contiguous"
+DMphys  |   36: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   34: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   32: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   30: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   28: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   26: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   24: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   22: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   20: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   18: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   16: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   14: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   12: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   10: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    8: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    6: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 00064000 (400kB, 0MB)
+DMphys  | DMphys dataspace list:
+DMphys  |   36: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   34: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   32: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   30: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   28: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   26: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   24: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   22: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   20: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   18: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   16: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   14: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   12: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   10: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    8: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    6: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 00024000 (144kB, 0MB)
+DMphysTE| test_is_contiguous(): done
+DMphysTE| [9.2] dm_phys/examples/test/main.c:863:test_open():
+DMphysTE|  dataspace 39 at 7.00
+DMphysTE| test_open(): opened.
+DMphysTE| test_open(): mapped.
+DMphysTE| test_open(): done
+DMphysTE| test_map(): TEST_MAP
+DMphysTE| test_map(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:785:test_map():
+DMphysTE|  dataspace 72 at 7.00
+DMphysTE| test_map(): opened.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:794:test_map():
+DMphysTE|  attached to address 0x00100000
+DMphysTE| test_map(): mapped.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:810:test_map():
+DMphysTE|  mapped to 0x20003000
+DMphysTE| test_map(): next...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:819:test_map():
+DMphysTE|  stack at 0x022fff30
+DMphysTE|   ds 4 at 7.00, offset 0x0000ff30, map area 0x022f0000-0x02300000
+DMphysTE| [9.2] dm_phys/examples/test/main.c:839:test_map():
+DMphysTE|  mapped to 0x10000000
+DMphysTE| test_map(): done
+DMphysTE| test_copy(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:729:test_copy():
+DMphysTE|  dataspace 105 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:735:test_copy():
+DMphysTE|  attached to address 0x00110000
+DMphysTE| test_copy(): opened.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:744:test_copy():
+DMphysTE|  copy: 106 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:750:test_copy():
+DMphysTE|  copy size: 0x00008000
+DMphysTE| test_copy(): copied.
+DMphysTE| test_paddr(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:660:test_paddr():
+DMphysTE|  dataspace 139 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:666:test_paddr():
+DMphysTE|  phys. addr 0x01561800,  size 0x00000800
+DMphysTE| [9.2] dm_phys/examples/test/main.c:672:test_paddr():
+DMphysTE|  attached to address 0x00002000
+DMphysTE| [9.2] dm_phys/examples/test/main.c:683:test_paddr():
+DMphysTE|  attached to address 0x00008000
+DMphysTE| test_paddr(): attached.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:694:test_paddr():
+DMphysTE|  got 3 region(s) (size 0x00002345):
+DMphysTE|   0x01561abc-0x01562000,  size 0x00000544
+DMphysTE|   0x01563000-0x01564000,  size 0x00001000
+DMphysTE|   0x01565000-0x01565e01,  size 0x00000e01
+DMphysTE| test_paddr(): done.
+DMphysTE| test_resize(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:523:test_resize():
+DMphysTE|  dataspace 172 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:529:test_resize():
+DMphysTE|  attached to address 0x00091000
+DMphysTE| test_resize(): mapped.
+DMphysTE| test_resize(): resized.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:547:test_resize():
+DMphysTE|  attached to address 0x0000e000
+DMphysTE| [9.2] dm_phys/examples/test/main.c:558:test_resize():
+DMphysTE|  got 2 region(s) (size 0x00002000):
+DMphysTE|   0x01573000-0x01574000, size 0x00001000
+DMphysTE|   0x01575000-0x01576000, size 0x00001000
+DMphysTE| test_resize(): paddr
+DMphysTE| test_debug(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:462:test_debug():
+DMphysTE|  dataspace 173 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:472:test_debug():
+DMphysTE|  name 'blub'
+DMphys  | DMphys dataspace list for client 9.02:
+DMphys  |  173: size=00008000  owner=9.02  name="blub"
+DMphys  |  172: size=00002000  owner=9.02  name="test"
+DMphys  |  171: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  169: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  167: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  165: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  163: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  161: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  159: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  157: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  155: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  153: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  151: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  149: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  147: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  145: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  143: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  141: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  139: size=00006000  owner=9.02  name="test"
+DMphys  |  138: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  136: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  134: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  132: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  130: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  128: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  126: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  124: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  122: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  120: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  118: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  116: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  114: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  112: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  110: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  108: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  106: size=00008000  owner=9.02  name="test copy"
+DMphys  |  105: size=00010000  owner=9.02  name="test"
+DMphys  |  104: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  102: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  100: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   98: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   96: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   94: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   92: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   90: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   88: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   86: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   84: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   82: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   80: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   78: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   76: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   74: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   71: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   69: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   67: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   65: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   63: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   61: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   59: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   57: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   55: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   53: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   51: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   49: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   47: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   45: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   43: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   41: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   36: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   34: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   32: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   30: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   28: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   26: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   24: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   22: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   20: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   18: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   16: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   14: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   12: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   10: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    8: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    6: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 0008c000 (560kB, 1MB)
+DMphysTE| test_debug(): opened.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:487:test_debug():
+DMphysTE|  attached to address 0x00120000
+DMphysTE| test_debug(): attached.
+DMphysTE| test_debug(): done.
+DMphysTE| test_transfer(): TEST_TRANSFER
+DMphysTE| test_transfer(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:395:test_transfer():
+DMphysTE|  dataspace 174 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:405:test_transfer():
+DMphysTE|  dataspace 175 at 7.00
+DMphysTE| [9.2] dm_phys/examples/test/main.c:417:test_transfer():
+DMphysTE|  dataspace 176 at 7.00
+DMphys  | DMphys dataspace list:
+DMphys  |  176: size=00008000  owner=9.05  name="test"
+DMphys  |  175: size=00008000  owner=9.02  name="test"
+DMphys  |  174: size=00008000  owner=9.05  name="test"
+DMphys  |  173: size=00008000  owner=9.02  name="blub"
+DMphys  |  172: size=00002000  owner=9.02  name="test"
+DMphys  |  171: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  169: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  167: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  165: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  163: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  161: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  159: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  157: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  155: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  153: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  151: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  149: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  147: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  145: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  143: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  141: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  139: size=00006000  owner=9.02  name="test"
+DMphys  |  138: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  136: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  134: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  132: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  130: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  128: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  126: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  124: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  122: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  120: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  118: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  116: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  114: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  112: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  110: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  108: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  106: size=00008000  owner=9.02  name="test copy"
+DMphys  |  105: size=00010000  owner=9.02  name="test"
+DMphys  |  104: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  102: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  100: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   98: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   96: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   94: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   92: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   90: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   88: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   86: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   84: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   82: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   80: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   78: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   76: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   74: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   71: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   69: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   67: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   65: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   63: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   61: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   59: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   57: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   55: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   53: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   51: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   49: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   47: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   45: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   43: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   41: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   36: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   34: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   32: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   30: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   28: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   26: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   24: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   22: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   20: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   18: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   16: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   14: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   12: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   10: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    8: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    6: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 000a4000 (656kB, 1MB)
+DMphysTE| test_transfer(): opened.
+DMphysTE| test_transfer(): closed.
+DMphysTE| test_allocate(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:360:test_allocate():
+DMphysTE|  got mem at 0x00128000
+DMphysTE| test_allocate(): allocated.
+DMphysTE| test_allocate(): released.
+DMphysTE| test_debug_DMphys(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:311:test_debug_DMphys():
+DMphysTE|  stack at 0x022fff48
+DMphysTE|   ds 4 at 7.00, offset 0x0000ff48, map area 0x022f0000-0x02300000
+DMphys  | DMphys dataspace 4:
+DMphys  |   name "L4thread stack"
+DMphys  |   owner 9.02, size 0x00010000 (64KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x01520000 - 0x01530000 (64KB)
+DMphysTE| test_debug_DMphys(): next...
+DMphys  | DMphys memory pools:
+DMphys  |   pool 0 (Default memory pool):
+DMphys  |   size: 237572KB total, 236916KB free,  32KB reserved
+DMphys  |     0x00100000-0x00101000 (     4KB,    0MB)
+DMphys  |     0x00101000-0x00102000 (     4KB,    0MB)
+DMphys  |     0x00102000-0x00103000 (     4KB,    0MB)
+DMphys  |     0x00103000-0x00104000 (     4KB,    0MB)
+DMphys  |     0x00104000-0x00105000 (     4KB,    0MB)
+DMphys  |     0x00105000-0x00106000 (     4KB,    0MB)
+DMphys  |     0x00106000-0x00107000 (     4KB,    0MB)
+DMphys  |     0x00107000-0x00108000 (     4KB,    0MB)
+DMphys  |     0x00108000-0x00109000 (     4KB,    0MB)
+DMphys  |     0x00109000-0x0010a000 (     4KB,    0MB)
+DMphys  |     0x0010a000-0x0010b000 (     4KB,    0MB)
+DMphys  |     0x0010b000-0x0010c000 (     4KB,    0MB)
+DMphys  |     0x0010c000-0x0010d000 (     4KB,    0MB)
+DMphys  |     0x0010d000-0x0010e000 (     4KB,    0MB)
+DMphys  |     0x0010e000-0x0010f000 (     4KB,    0MB)
+DMphys  |     0x0010f000-0x00110000 (     4KB,    0MB)
+DMphys  |     0x00110000-0x00111000 (     4KB,    0MB)
+DMphys  |     0x00111000-0x00112000 (     4KB,    0MB)
+DMphys  |     0x00112000-0x00113000 (     4KB,    0MB)
+DMphys  |     0x00113000-0x00114000 (     4KB,    0MB)
+DMphys  |     0x00114000-0x00115000 (     4KB,    0MB)
+DMphys  |     0x00115000-0x00116000 (     4KB,    0MB)
+DMphys  |     0x00116000-0x0011e000 (    32KB,    0MB)
+DMphys  |     0x0011e000-0x0011f000 (     4KB,    0MB)
+DMphys  |     0x0011f000-0x00120000 (     4KB,    0MB)
+DMphys  |     0x00120000-0x00121000 (     4KB,    0MB)
+DMphys  |     0x00121000-0x00122000 (     4KB,    0MB)
+DMphys  |     0x00122000-0x00123000 (     4KB,    0MB)
+DMphys  |     0x00123000-0x00124000 (     4KB,    0MB)
+DMphys  |     0x00124000-0x00125000 (     4KB,    0MB)
+DMphys  |     0x00125000-0x00126000 (     4KB,    0MB)
+DMphys  |     0x00126000-0x00127000 (     4KB,    0MB)
+DMphys  |     0x00127000-0x00128000 (     4KB,    0MB)
+DMphys  |     0x00128000-0x00129000 (     4KB,    0MB)
+DMphys  |     0x00129000-0x0012a000 (     4KB,    0MB)
+DMphys  |     0x0012a000-0x0012b000 (     4KB,    0MB)
+DMphys  |     0x0012b000-0x0012c000 (     4KB,    0MB)
+DMphys  |     0x0012c000-0x0012d000 (     4KB,    0MB)
+DMphys  |     0x0012d000-0x0012e000 (     4KB,    0MB)
+DMphys  |     0x0012e000-0x0012f000 (     4KB,    0MB)
+DMphys  |     0x0012f000-0x00130000 (     4KB,    0MB)
+DMphys  |     0x00130000-0x00131000 (     4KB,    0MB)
+DMphys  |     0x00131000-0x00132000 (     4KB,    0MB)
+DMphys  |     0x00132000-0x00133000 (     4KB,    0MB)
+DMphys  |     0x00133000-0x00134000 (     4KB,    0MB)
+DMphys  |     0x00134000-0x00135000 (     4KB,    0MB)
+DMphys  |     0x00135000-0x00136000 (     4KB,    0MB)
+DMphys  |     0x00136000-0x00137000 (     4KB,    0MB)
+DMphys  |     0x00137000-0x00138000 (     4KB,    0MB)
+DMphys  |     0x00138000-0x00139000 (     4KB,    0MB)
+DMphys  |     0x00139000-0x0013a000 (     4KB,    0MB)
+DMphys  |     0x001c2000-0x002d0000 (  1080KB,    1MB)
+DMphys  |     0x002e3000-0x00400000 (  1140KB,    1MB)
+DMphys  |     0x0043b000-0x01500000 ( 17172KB,   17MB)
+DMphys  |     0x0151c000-0x0151e000 (     8KB,    0MB)
+DMphys  |     0x0151e000-0x0151f000 (     4KB,    0MB)
+DMphys  |     0x0151f000-0x01520000 (     4KB,    0MB)
+DMphys  |     0x01520000-0x01530000 (    64KB,    0MB)
+DMphys  |     0x01530000-0x01531000 (     4KB,    0MB)
+DMphys  |     0x01531000-0x01532000 (     4KB,    0MB)
+DMphys  |     0x01532000-0x01533000 (     4KB,    0MB)
+DMphys  |     0x01533000-0x01534000 (     4KB,    0MB)
+DMphys  |     0x01534000-0x01535000 (     4KB,    0MB)
+DMphys  |     0x01535000-0x01536000 (     4KB,    0MB)
+DMphys  |     0x01536000-0x01537000 (     4KB,    0MB)
+DMphys  |     0x01537000-0x01538000 (     4KB,    0MB)
+DMphys  |     0x01538000-0x01539000 (     4KB,    0MB)
+DMphys  |     0x01539000-0x0153a000 (     4KB,    0MB)
+DMphys  |     0x0153a000-0x0153b000 (     4KB,    0MB)
+DMphys  |     0x0153b000-0x0153c000 (     4KB,    0MB)
+DMphys  |     0x0153c000-0x0153d000 (     4KB,    0MB)
+DMphys  |     0x0153d000-0x0153e000 (     4KB,    0MB)
+DMphys  |     0x0153e000-0x0153f000 (     4KB,    0MB)
+DMphys  |     0x0153f000-0x01540000 (     4KB,    0MB)
+DMphys  |     0x0154d000-0x0154e000 (     4KB,    0MB)
+DMphys  |     0x0154e000-0x0154f000 (     4KB,    0MB)
+DMphys  |     0x0154f000-0x01550000 (     4KB,    0MB)
+DMphys  |     0x01550000-0x01551000 (     4KB,    0MB)
+DMphys  |     0x01551000-0x01552000 (     4KB,    0MB)
+DMphys  |     0x01552000-0x01553000 (     4KB,    0MB)
+DMphys  |     0x01553000-0x01554000 (     4KB,    0MB)
+DMphys  |     0x01554000-0x01555000 (     4KB,    0MB)
+DMphys  |     0x01555000-0x01556000 (     4KB,    0MB)
+DMphys  |     0x01556000-0x01557000 (     4KB,    0MB)
+DMphys  |     0x01557000-0x01558000 (     4KB,    0MB)
+DMphys  |     0x01558000-0x01559000 (     4KB,    0MB)
+DMphys  |     0x01559000-0x0155a000 (     4KB,    0MB)
+DMphys  |     0x0155a000-0x0155b000 (     4KB,    0MB)
+DMphys  |     0x0155b000-0x0155c000 (     4KB,    0MB)
+DMphys  |     0x0155c000-0x0155d000 (     4KB,    0MB)
+DMphys  |     0x0155d000-0x0155e000 (     4KB,    0MB)
+DMphys  |     0x0155e000-0x0155f000 (     4KB,    0MB)
+DMphys  |     0x0155f000-0x01560000 (     4KB,    0MB)
+DMphys  |     0x01560000-0x01561000 (     4KB,    0MB)
+DMphys  |     0x01561000-0x01562000 (     4KB,    0MB)
+DMphys  |     0x01562000-0x01563000 (     4KB,    0MB)
+DMphys  |     0x01563000-0x01564000 (     4KB,    0MB)
+DMphys  |     0x01564000-0x01565000 (     4KB,    0MB)
+DMphys  |     0x01565000-0x01566000 (     4KB,    0MB)
+DMphys  |     0x01566000-0x01567000 (     4KB,    0MB)
+DMphys  |     0x01567000-0x01568000 (     4KB,    0MB)
+DMphys  |     0x01568000-0x01569000 (     4KB,    0MB)
+DMphys  |     0x01569000-0x0156a000 (     4KB,    0MB)
+DMphys  |     0x0156a000-0x0156b000 (     4KB,    0MB)
+DMphys  |     0x0156b000-0x0156c000 (     4KB,    0MB)
+DMphys  |     0x0156c000-0x0156d000 (     4KB,    0MB)
+DMphys  |     0x0156d000-0x0156e000 (     4KB,    0MB)
+DMphys  |     0x0156e000-0x0156f000 (     4KB,    0MB)
+DMphys  |     0x0156f000-0x01570000 (     4KB,    0MB)
+DMphys  |     0x01570000-0x01571000 (     4KB,    0MB)
+DMphys  |     0x01571000-0x01572000 (     4KB,    0MB)
+DMphys  |     0x01572000-0x01573000 (     4KB,    0MB)
+DMphys  |     0x01573000-0x01574000 (     4KB,    0MB)
+DMphys  |     0x01574000-0x01575000 (     4KB,    0MB)
+DMphys  |     0x01575000-0x01576000 (     4KB,    0MB)
+DMphys  |     0x01576000-0x01577000 (     4KB,    0MB)
+DMphys  |     0x01577000-0x01578000 (     4KB,    0MB)
+DMphys  |     0x01578000-0x01579000 (     4KB,    0MB)
+DMphys  |     0x01579000-0x0157a000 (     4KB,    0MB)
+DMphys  |     0x0157a000-0x0157b000 (     4KB,    0MB)
+DMphys  |     0x0157b000-0x0157c000 (     4KB,    0MB)
+DMphys  |     0x0157c000-0x0157d000 (     4KB,    0MB)
+DMphys  |     0x0157d000-0x0157e000 (     4KB,    0MB)
+DMphys  |     0x0157e000-0x0157f000 (     4KB,    0MB)
+DMphys  |     0x0157f000-0x01580000 (     4KB,    0MB)
+DMphys  |     0x01580000-0x01581000 (     4KB,    0MB)
+DMphys  |     0x01581000-0x01583000 (     8KB,    0MB)
+DMphys  |     0x01583000-0x0158b000 (    32KB,    0MB)
+DMphys  |     0x0158b000-0x01593000 (    32KB,    0MB)
+DMphys  |     0x01593000-0x01600000 (   436KB,    0MB)
+DMphys  |     0x01647000-0x0e8dc000 (215636KB,  211MB)
+DMphys  |     0x0e8e3000-0x0ea4e000 (  1452KB,    1MB)
+DMphysTE| test_debug_DMphys(): pools
+DMphys  | DMphys memory pool areas:
+DMphys  |   pool 7 (ISA DMA memory pool)
+DMphys  |   size:      0KB total,      0KB free,   0KB reserved
+DMphysTE| test_debug_DMphys(): areas
+DMphys  | DMphys memory pool free lists:
+DMphys  |   pool 7 (ISA DMA memory pool)
+DMphys  |   size:      0KB total,      0KB free,   0KB reserved
+DMphys  |      0 (sizes      4KB -      8KB):
+DMphys  |      1 (sizes      8KB -     16KB):
+DMphys  |      2 (sizes     16KB -     32KB):
+DMphys  |      3 (sizes     32KB -     64KB):
+DMphys  |      4 (sizes     64KB -    128KB):
+DMphys  |      5 (sizes    128KB -    256KB):
+DMphys  |      6 (sizes    256KB -    512KB):
+DMphys  |      7 (sizes    512KB -   1024KB):
+DMphys  |      8 (sizes   1024KB -   2048KB):
+DMphys  |      9 (sizes   2048KB -   4096KB):
+DMphys  |     10 (sizes   4096KB -   8192KB):
+DMphys  |     11 (sizes   8192KB -  16384KB):
+DMphys  |     12 (sizes  16384KB -  32768KB):
+DMphys  |     13 (sizes  32768KB -  65536KB):
+DMphys  |     14 (sizes  65536KB - 131072KB):
+DMphys  |     15 (sizes 131072KB - 262144KB):
+DMphysTE| test_debug_DMphys(): free lists
+DMphysTE| test_check_pagesize(): start...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:151:test_check_pagesize():
+DMphysTE|  dataspace 178 at 7.00, mapped at 0x00400000
+DMphys  | DMphys dataspace 178:
+DMphys  |   owner 9.02, size 0x00400000 (4096KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x01000000 - 0x01400000 (4096KB)
+DMphysTE| [9.2] dm_phys/examples/test/main.c:156:test_check_pagesize():
+DMphysTE|  check_pagesize = 1
+DMphysTE| test_check_pagesize(): next...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:173:test_check_pagesize():
+DMphysTE|  dataspace 179 at 7.00
+DMphys  | DMphys dataspace 179:
+DMphys  |   name "test"
+DMphys  |   owner 9.02, size 0x00400000 (4096KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x02000000 - 0x02400000 (4096KB)
+DMphysTE| [9.2] dm_phys/examples/test/main.c:184:test_check_pagesize():
+DMphysTE|  attached to addr 0x10000000
+DMphysTE| [9.2] dm_phys/examples/test/main.c:197:test_check_pagesize():
+DMphysTE|  dataspace 180 at 7.00
+DMphys  | DMphys dataspace 180:
+DMphys  |   name "test"
+DMphys  |   owner 9.02, size 0x00400000 (4096KB)
+DMphys  |   clients: 
+DMphys  |   memory areas (pool 0, "Default memory pool"):
+DMphys  |     0x02400000 - 0x02800000 (4096KB)
+DMphysTE| [9.2] dm_phys/examples/test/main.c:208:test_check_pagesize():
+DMphysTE|  attached to addr 0x10400000
+DMphysTE| test_check_pagesize(): attached.
+DMphysTE| [9.2] dm_phys/examples/test/main.c:215:test_check_pagesize():
+DMphysTE|  check_pagesize = 1
+DMphysTE| test_check_pagesize(): next...
+DMphysTE| [9.2] dm_phys/examples/test/main.c:224:test_check_pagesize():
+DMphysTE|  ok = 1
+DMphysTE| test_check_pagesize(): done
+DMphys  | DMphys memory pool areas:
+DMphys  |   pool 0 (Default memory pool)
+DMphys  |   size: 237572KB total, 228724KB free,  32KB reserved
+DMphys  |     0x00100000-0x00101000 (     4KB,    0MB), used
+DMphys  |     0x00101000-0x00102000 (     4KB,    0MB), used
+DMphys  |     0x00102000-0x00103000 (     4KB,    0MB), used
+DMphys  |     0x00103000-0x00104000 (     4KB,    0MB), used
+DMphys  |     0x00104000-0x00105000 (     4KB,    0MB), used
+DMphys  |     0x00105000-0x00106000 (     4KB,    0MB), used
+DMphys  |     0x00106000-0x00107000 (     4KB,    0MB), used
+DMphys  |     0x00107000-0x00108000 (     4KB,    0MB), used
+DMphys  |     0x00108000-0x00109000 (     4KB,    0MB), used
+DMphys  |     0x00109000-0x0010a000 (     4KB,    0MB), used
+DMphys  |     0x0010a000-0x0010b000 (     4KB,    0MB), used
+DMphys  |     0x0010b000-0x0010c000 (     4KB,    0MB), used
+DMphys  |     0x0010c000-0x0010d000 (     4KB,    0MB), used
+DMphys  |     0x0010d000-0x0010e000 (     4KB,    0MB), used
+DMphys  |     0x0010e000-0x0010f000 (     4KB,    0MB), used
+DMphys  |     0x0010f000-0x00110000 (     4KB,    0MB), used
+DMphys  |     0x00110000-0x00111000 (     4KB,    0MB), used
+DMphys  |     0x00111000-0x00112000 (     4KB,    0MB), used
+DMphys  |     0x00112000-0x00113000 (     4KB,    0MB), used
+DMphys  |     0x00113000-0x00114000 (     4KB,    0MB), used
+DMphys  |     0x00114000-0x00115000 (     4KB,    0MB), used
+DMphys  |     0x00115000-0x00116000 (     4KB,    0MB), used
+DMphys  |     0x00116000-0x0011e000 (    32KB,    0MB), used
+DMphys  |     0x0011e000-0x0011f000 (     4KB,    0MB), used
+DMphys  |     0x0011f000-0x00120000 (     4KB,    0MB), used
+DMphys  |     0x00120000-0x00121000 (     4KB,    0MB), used
+DMphys  |     0x00121000-0x00122000 (     4KB,    0MB), used
+DMphys  |     0x00122000-0x00123000 (     4KB,    0MB), used
+DMphys  |     0x00123000-0x00124000 (     4KB,    0MB), used
+DMphys  |     0x00124000-0x00125000 (     4KB,    0MB), used
+DMphys  |     0x00125000-0x00126000 (     4KB,    0MB), used
+DMphys  |     0x00126000-0x00127000 (     4KB,    0MB), used
+DMphys  |     0x00127000-0x00128000 (     4KB,    0MB), used
+DMphys  |     0x00128000-0x00129000 (     4KB,    0MB), used
+DMphys  |     0x00129000-0x0012a000 (     4KB,    0MB), used
+DMphys  |     0x0012a000-0x0012b000 (     4KB,    0MB), used
+DMphys  |     0x0012b000-0x0012c000 (     4KB,    0MB), used
+DMphys  |     0x0012c000-0x0012d000 (     4KB,    0MB), used
+DMphys  |     0x0012d000-0x0012e000 (     4KB,    0MB), used
+DMphys  |     0x0012e000-0x0012f000 (     4KB,    0MB), used
+DMphys  |     0x0012f000-0x00130000 (     4KB,    0MB), used
+DMphys  |     0x00130000-0x00131000 (     4KB,    0MB), used
+DMphys  |     0x00131000-0x00132000 (     4KB,    0MB), used
+DMphys  |     0x00132000-0x00133000 (     4KB,    0MB), used
+DMphys  |     0x00133000-0x00134000 (     4KB,    0MB), used
+DMphys  |     0x00134000-0x00135000 (     4KB,    0MB), used
+DMphys  |     0x00135000-0x00136000 (     4KB,    0MB), used
+DMphys  |     0x00136000-0x00137000 (     4KB,    0MB), used
+DMphys  |     0x00137000-0x00138000 (     4KB,    0MB), used
+DMphys  |     0x00138000-0x00139000 (     4KB,    0MB), used
+DMphys  |     0x00139000-0x0013a000 (     4KB,    0MB), used
+DMphys  |     0x001c2000-0x002d0000 (  1080KB,    1MB), free
+DMphys  |     0x002e3000-0x00400000 (  1140KB,    1MB), free
+DMphys  |     0x0043b000-0x01500000 ( 17172KB,   17MB), free
+DMphys  |     0x0151c000-0x0151e000 (     8KB,    0MB), used
+DMphys  |     0x0151e000-0x0151f000 (     4KB,    0MB), used
+DMphys  |     0x0151f000-0x01520000 (     4KB,    0MB), used
+DMphys  |     0x01520000-0x01530000 (    64KB,    0MB), used
+DMphys  |     0x01530000-0x01531000 (     4KB,    0MB), used
+DMphys  |     0x01531000-0x01532000 (     4KB,    0MB), used
+DMphys  |     0x01532000-0x01533000 (     4KB,    0MB), used
+DMphys  |     0x01533000-0x01534000 (     4KB,    0MB), used
+DMphys  |     0x01534000-0x01535000 (     4KB,    0MB), used
+DMphys  |     0x01535000-0x01536000 (     4KB,    0MB), used
+DMphys  |     0x01536000-0x01537000 (     4KB,    0MB), used
+DMphys  |     0x01537000-0x01538000 (     4KB,    0MB), used
+DMphys  |     0x01538000-0x01539000 (     4KB,    0MB), used
+DMphys  |     0x01539000-0x0153a000 (     4KB,    0MB), used
+DMphys  |     0x0153a000-0x0153b000 (     4KB,    0MB), used
+DMphys  |     0x0153b000-0x0153c000 (     4KB,    0MB), used
+DMphys  |     0x0153c000-0x0153d000 (     4KB,    0MB), used
+DMphys  |     0x0153d000-0x0153e000 (     4KB,    0MB), used
+DMphys  |     0x0153e000-0x0153f000 (     4KB,    0MB), used
+DMphys  |     0x0153f000-0x01540000 (     4KB,    0MB), used
+DMphys  |     0x0154d000-0x0154e000 (     4KB,    0MB), used
+DMphys  |     0x0154e000-0x0154f000 (     4KB,    0MB), used
+DMphys  |     0x0154f000-0x01550000 (     4KB,    0MB), used
+DMphys  |     0x01550000-0x01551000 (     4KB,    0MB), used
+DMphys  |     0x01551000-0x01552000 (     4KB,    0MB), used
+DMphys  |     0x01552000-0x01553000 (     4KB,    0MB), used
+DMphys  |     0x01553000-0x01554000 (     4KB,    0MB), used
+DMphys  |     0x01554000-0x01555000 (     4KB,    0MB), used
+DMphys  |     0x01555000-0x01556000 (     4KB,    0MB), used
+DMphys  |     0x01556000-0x01557000 (     4KB,    0MB), used
+DMphys  |     0x01557000-0x01558000 (     4KB,    0MB), used
+DMphys  |     0x01558000-0x01559000 (     4KB,    0MB), used
+DMphys  |     0x01559000-0x0155a000 (     4KB,    0MB), used
+DMphys  |     0x0155a000-0x0155b000 (     4KB,    0MB), used
+DMphys  |     0x0155b000-0x0155c000 (     4KB,    0MB), used
+DMphys  |     0x0155c000-0x0155d000 (     4KB,    0MB), used
+DMphys  |     0x0155d000-0x0155e000 (     4KB,    0MB), used
+DMphys  |     0x0155e000-0x0155f000 (     4KB,    0MB), used
+DMphys  |     0x0155f000-0x01560000 (     4KB,    0MB), used
+DMphys  |     0x01560000-0x01561000 (     4KB,    0MB), used
+DMphys  |     0x01561000-0x01562000 (     4KB,    0MB), used
+DMphys  |     0x01562000-0x01563000 (     4KB,    0MB), used
+DMphys  |     0x01563000-0x01564000 (     4KB,    0MB), used
+DMphys  |     0x01564000-0x01565000 (     4KB,    0MB), used
+DMphys  |     0x01565000-0x01566000 (     4KB,    0MB), used
+DMphys  |     0x01566000-0x01567000 (     4KB,    0MB), used
+DMphys  |     0x01567000-0x01568000 (     4KB,    0MB), used
+DMphys  |     0x01568000-0x01569000 (     4KB,    0MB), used
+DMphys  |     0x01569000-0x0156a000 (     4KB,    0MB), used
+DMphys  |     0x0156a000-0x0156b000 (     4KB,    0MB), used
+DMphys  |     0x0156b000-0x0156c000 (     4KB,    0MB), used
+DMphys  |     0x0156c000-0x0156d000 (     4KB,    0MB), used
+DMphys  |     0x0156d000-0x0156e000 (     4KB,    0MB), used
+DMphys  |     0x0156e000-0x0156f000 (     4KB,    0MB), used
+DMphys  |     0x0156f000-0x01570000 (     4KB,    0MB), used
+DMphys  |     0x01570000-0x01571000 (     4KB,    0MB), used
+DMphys  |     0x01571000-0x01572000 (     4KB,    0MB), used
+DMphys  |     0x01572000-0x01573000 (     4KB,    0MB), used
+DMphys  |     0x01573000-0x01574000 (     4KB,    0MB), used
+DMphys  |     0x01574000-0x01575000 (     4KB,    0MB), used
+DMphys  |     0x01575000-0x01576000 (     4KB,    0MB), used
+DMphys  |     0x01576000-0x01577000 (     4KB,    0MB), used
+DMphys  |     0x01577000-0x01578000 (     4KB,    0MB), used
+DMphys  |     0x01578000-0x01579000 (     4KB,    0MB), used
+DMphys  |     0x01579000-0x0157a000 (     4KB,    0MB), used
+DMphys  |     0x0157a000-0x0157b000 (     4KB,    0MB), used
+DMphys  |     0x0157b000-0x0157c000 (     4KB,    0MB), used
+DMphys  |     0x0157c000-0x0157d000 (     4KB,    0MB), used
+DMphys  |     0x0157d000-0x0157e000 (     4KB,    0MB), used
+DMphys  |     0x0157e000-0x0157f000 (     4KB,    0MB), used
+DMphys  |     0x0157f000-0x01580000 (     4KB,    0MB), used
+DMphys  |     0x01580000-0x01581000 (     4KB,    0MB), used
+DMphys  |     0x01581000-0x01583000 (     8KB,    0MB), used
+DMphys  |     0x01583000-0x0158b000 (    32KB,    0MB), used
+DMphys  |     0x0158b000-0x01593000 (    32KB,    0MB), used
+DMphys  |     0x01593000-0x01600000 (   436KB,    0MB), free
+DMphys  |     0x01647000-0x02000000 (  9956KB,   10MB), free
+DMphys  |     0x02000000-0x02400000 (  4096KB,    4MB), used
+DMphys  |     0x02400000-0x02800000 (  4096KB,    4MB), used
+DMphys  |     0x02800000-0x0e8dc000 (197488KB,  193MB), free
+DMphys  |     0x0e8e3000-0x0ea4e000 (  1452KB,    1MB), free
+DMphysTE| stress_test(): start...
+DMphys  | Memmap descriptor slab cache:
+DMphys  |   L4slab cache free list, cache at 0x01516400
+DMphys  |   object size 20, 203 per slab, 1 slab(s), 0 free
+DMphys  |     slab at 0x00011fe0, 182 free object(s)
+DMphys  | 
+DMphys  | Page area slab cache:
+DMphys  |   L4slab cache free list, cache at 0x015165c0
+DMphys  |   object size 32, 127 per slab, 35 slab(s), 0 free
+DMphys  |     slab at 0x072d5fe0, 108 free object(s)
+DMphys  | 
+DMphys  | Dataspace descriptor slab cache:
+DMphys  |   L4slab cache free list, cache at 0x015168c0
+DMphys  |   object size 20, 203 per slab, 21 slab(s), 0 free
+DMphys  |     slab at 0x072d2fe0,  73 free object(s)
+DMphysTE| stress_test(): opened.
+DMphysTE| stress_test(): closed.
+DMphys  | Memmap descriptor slab cache:
+DMphys  |   L4slab cache free list, cache at 0x01516400
+DMphys  |   object size 20, 203 per slab, 1 slab(s), 0 free
+DMphys  |     slab at 0x00011fe0, 182 free object(s)
+DMphys  | 
+DMphys  | Page area slab cache:
+DMphys  |   L4slab cache free list, cache at 0x015165c0
+DMphys  |   object size 32, 127 per slab, 8 slab(s), 0 free
+DMphys  |     slab at 0x0595ffe0, 101 free object(s)
+DMphys  |     slab at 0x00029fe0, 118 free object(s)
+DMphys  |     slab at 0x00016fe0, 119 free object(s)
+DMphys  |     slab at 0x012c3fe0, 125 free object(s)
+DMphys  |     slab at 0x03fcffe0, 125 free object(s)
+DMphys  |     slab at 0x03fe5fe0, 125 free object(s)
+DMphys  |     slab at 0x00025fe0, 126 free object(s)
+DMphys  | 
+DMphys  | Dataspace descriptor slab cache:
+DMphys  |   L4slab cache free list, cache at 0x015168c0
+DMphys  |   object size 20, 203 per slab, 1 slab(s), 0 free
+DMphys  |     slab at 0x00013fe0, 109 free object(s)
+DMphysTE| stress_test(): slabs.
+DMphys  | DMphys memory pool areas:
+DMphys  |   pool 0 (Default memory pool)
+DMphys  |   size: 237572KB total, 228580KB free,  32KB reserved
+DMphys  |     0x00100000-0x00101000 (     4KB,    0MB), used
+DMphys  |     0x00101000-0x00102000 (     4KB,    0MB), used
+DMphys  |     0x00102000-0x00103000 (     4KB,    0MB), used
+DMphys  |     0x00103000-0x00104000 (     4KB,    0MB), used
+DMphys  |     0x00104000-0x00105000 (     4KB,    0MB), used
+DMphys  |     0x00105000-0x00106000 (     4KB,    0MB), used
+DMphys  |     0x00106000-0x00107000 (     4KB,    0MB), used
+DMphys  |     0x00107000-0x00108000 (     4KB,    0MB), used
+DMphys  |     0x00108000-0x00109000 (     4KB,    0MB), used
+DMphys  |     0x00109000-0x0010a000 (     4KB,    0MB), used
+DMphys  |     0x0010a000-0x0010b000 (     4KB,    0MB), used
+DMphys  |     0x0010b000-0x0010c000 (     4KB,    0MB), used
+DMphys  |     0x0010c000-0x0010d000 (     4KB,    0MB), used
+DMphys  |     0x0010d000-0x0010e000 (     4KB,    0MB), used
+DMphys  |     0x0010e000-0x0010f000 (     4KB,    0MB), used
+DMphys  |     0x0010f000-0x00110000 (     4KB,    0MB), used
+DMphys  |     0x00110000-0x00111000 (     4KB,    0MB), used
+DMphys  |     0x00111000-0x00112000 (     4KB,    0MB), used
+DMphys  |     0x00112000-0x00113000 (     4KB,    0MB), used
+DMphys  |     0x00113000-0x00114000 (     4KB,    0MB), used
+DMphys  |     0x00114000-0x00115000 (     4KB,    0MB), used
+DMphys  |     0x00115000-0x00116000 (     4KB,    0MB), used
+DMphys  |     0x00116000-0x0011e000 (    32KB,    0MB), used
+DMphys  |     0x0011e000-0x0011f000 (     4KB,    0MB), used
+DMphys  |     0x0011f000-0x00120000 (     4KB,    0MB), used
+DMphys  |     0x00120000-0x00121000 (     4KB,    0MB), used
+DMphys  |     0x00121000-0x00122000 (     4KB,    0MB), used
+DMphys  |     0x00122000-0x00123000 (     4KB,    0MB), used
+DMphys  |     0x00123000-0x00124000 (     4KB,    0MB), used
+DMphys  |     0x00124000-0x00125000 (     4KB,    0MB), used
+DMphys  |     0x00125000-0x00126000 (     4KB,    0MB), used
+DMphys  |     0x00126000-0x00127000 (     4KB,    0MB), used
+DMphys  |     0x00127000-0x00128000 (     4KB,    0MB), used
+DMphys  |     0x00128000-0x00129000 (     4KB,    0MB), used
+DMphys  |     0x00129000-0x0012a000 (     4KB,    0MB), used
+DMphys  |     0x0012a000-0x0012b000 (     4KB,    0MB), used
+DMphys  |     0x0012b000-0x0012c000 (     4KB,    0MB), used
+DMphys  |     0x0012c000-0x0012d000 (     4KB,    0MB), used
+DMphys  |     0x0012d000-0x0012e000 (     4KB,    0MB), used
+DMphys  |     0x0012e000-0x0012f000 (     4KB,    0MB), used
+DMphys  |     0x0012f000-0x00130000 (     4KB,    0MB), used
+DMphys  |     0x00130000-0x00131000 (     4KB,    0MB), used
+DMphys  |     0x00131000-0x00132000 (     4KB,    0MB), used
+DMphys  |     0x00132000-0x00133000 (     4KB,    0MB), used
+DMphys  |     0x00133000-0x00134000 (     4KB,    0MB), used
+DMphys  |     0x00134000-0x00135000 (     4KB,    0MB), used
+DMphys  |     0x00135000-0x00136000 (     4KB,    0MB), used
+DMphys  |     0x00136000-0x00137000 (     4KB,    0MB), used
+DMphys  |     0x00137000-0x00138000 (     4KB,    0MB), used
+DMphys  |     0x00138000-0x00139000 (     4KB,    0MB), used
+DMphys  |     0x00139000-0x0013a000 (     4KB,    0MB), used
+DMphys  |     0x001c2000-0x002d0000 (  1080KB,    1MB), free
+DMphys  |     0x002e3000-0x00400000 (  1140KB,    1MB), free
+DMphys  |     0x0043b000-0x012b9000 ( 14840KB,   14MB), free
+DMphys  |     0x012b9000-0x012ba000 (     4KB,    0MB), used
+DMphys  |     0x012ba000-0x012bb000 (     4KB,    0MB), used
+DMphys  |     0x012bb000-0x012bc000 (     4KB,    0MB), used
+DMphys  |     0x012bc000-0x012bd000 (     4KB,    0MB), used
+DMphys  |     0x012bd000-0x012be000 (     4KB,    0MB), used
+DMphys  |     0x012be000-0x012bf000 (     4KB,    0MB), used
+DMphys  |     0x012bf000-0x012c0000 (     4KB,    0MB), used
+DMphys  |     0x012c0000-0x012c3000 (    12KB,    0MB), free
+DMphys  |     0x012c3000-0x012c4000 (     4KB,    0MB), used
+DMphys  |     0x012c4000-0x01500000 (  2288KB,    2MB), free
+DMphys  |     0x0151c000-0x0151e000 (     8KB,    0MB), used
+DMphys  |     0x0151e000-0x0151f000 (     4KB,    0MB), used
+DMphys  |     0x0151f000-0x01520000 (     4KB,    0MB), used
+DMphys  |     0x01520000-0x01530000 (    64KB,    0MB), used
+DMphys  |     0x01530000-0x01531000 (     4KB,    0MB), used
+DMphys  |     0x01531000-0x01532000 (     4KB,    0MB), used
+DMphys  |     0x01532000-0x01533000 (     4KB,    0MB), used
+DMphys  |     0x01533000-0x01534000 (     4KB,    0MB), used
+DMphys  |     0x01534000-0x01535000 (     4KB,    0MB), used
+DMphys  |     0x01535000-0x01536000 (     4KB,    0MB), used
+DMphys  |     0x01536000-0x01537000 (     4KB,    0MB), used
+DMphys  |     0x01537000-0x01538000 (     4KB,    0MB), used
+DMphys  |     0x01538000-0x01539000 (     4KB,    0MB), used
+DMphys  |     0x01539000-0x0153a000 (     4KB,    0MB), used
+DMphys  |     0x0153a000-0x0153b000 (     4KB,    0MB), used
+DMphys  |     0x0153b000-0x0153c000 (     4KB,    0MB), used
+DMphys  |     0x0153c000-0x0153d000 (     4KB,    0MB), used
+DMphys  |     0x0153d000-0x0153e000 (     4KB,    0MB), used
+DMphys  |     0x0153e000-0x0153f000 (     4KB,    0MB), used
+DMphys  |     0x0153f000-0x01540000 (     4KB,    0MB), used
+DMphys  |     0x0154d000-0x0154e000 (     4KB,    0MB), used
+DMphys  |     0x0154e000-0x0154f000 (     4KB,    0MB), used
+DMphys  |     0x0154f000-0x01550000 (     4KB,    0MB), used
+DMphys  |     0x01550000-0x01551000 (     4KB,    0MB), used
+DMphys  |     0x01551000-0x01552000 (     4KB,    0MB), used
+DMphys  |     0x01552000-0x01553000 (     4KB,    0MB), used
+DMphys  |     0x01553000-0x01554000 (     4KB,    0MB), used
+DMphys  |     0x01554000-0x01555000 (     4KB,    0MB), used
+DMphys  |     0x01555000-0x01556000 (     4KB,    0MB), used
+DMphys  |     0x01556000-0x01557000 (     4KB,    0MB), used
+DMphys  |     0x01557000-0x01558000 (     4KB,    0MB), used
+DMphys  |     0x01558000-0x01559000 (     4KB,    0MB), used
+DMphys  |     0x01559000-0x0155a000 (     4KB,    0MB), used
+DMphys  |     0x0155a000-0x0155b000 (     4KB,    0MB), used
+DMphys  |     0x0155b000-0x0155c000 (     4KB,    0MB), used
+DMphys  |     0x0155c000-0x0155d000 (     4KB,    0MB), used
+DMphys  |     0x0155d000-0x0155e000 (     4KB,    0MB), used
+DMphys  |     0x0155e000-0x0155f000 (     4KB,    0MB), used
+DMphys  |     0x0155f000-0x01560000 (     4KB,    0MB), used
+DMphys  |     0x01560000-0x01561000 (     4KB,    0MB), used
+DMphys  |     0x01561000-0x01562000 (     4KB,    0MB), used
+DMphys  |     0x01562000-0x01563000 (     4KB,    0MB), used
+DMphys  |     0x01563000-0x01564000 (     4KB,    0MB), used
+DMphys  |     0x01564000-0x01565000 (     4KB,    0MB), used
+DMphys  |     0x01565000-0x01566000 (     4KB,    0MB), used
+DMphys  |     0x01566000-0x01567000 (     4KB,    0MB), used
+DMphys  |     0x01567000-0x01568000 (     4KB,    0MB), used
+DMphys  |     0x01568000-0x01569000 (     4KB,    0MB), used
+DMphys  |     0x01569000-0x0156a000 (     4KB,    0MB), used
+DMphys  |     0x0156a000-0x0156b000 (     4KB,    0MB), used
+DMphys  |     0x0156b000-0x0156c000 (     4KB,    0MB), used
+DMphys  |     0x0156c000-0x0156d000 (     4KB,    0MB), used
+DMphys  |     0x0156d000-0x0156e000 (     4KB,    0MB), used
+DMphys  |     0x0156e000-0x0156f000 (     4KB,    0MB), used
+DMphys  |     0x0156f000-0x01570000 (     4KB,    0MB), used
+DMphys  |     0x01570000-0x01571000 (     4KB,    0MB), used
+DMphys  |     0x01571000-0x01572000 (     4KB,    0MB), used
+DMphys  |     0x01572000-0x01573000 (     4KB,    0MB), used
+DMphys  |     0x01573000-0x01574000 (     4KB,    0MB), used
+DMphys  |     0x01574000-0x01575000 (     4KB,    0MB), used
+DMphys  |     0x01575000-0x01576000 (     4KB,    0MB), used
+DMphys  |     0x01576000-0x01577000 (     4KB,    0MB), used
+DMphys  |     0x01577000-0x01578000 (     4KB,    0MB), used
+DMphys  |     0x01578000-0x01579000 (     4KB,    0MB), used
+DMphys  |     0x01579000-0x0157a000 (     4KB,    0MB), used
+DMphys  |     0x0157a000-0x0157b000 (     4KB,    0MB), used
+DMphys  |     0x0157b000-0x0157c000 (     4KB,    0MB), used
+DMphys  |     0x0157c000-0x0157d000 (     4KB,    0MB), used
+DMphys  |     0x0157d000-0x0157e000 (     4KB,    0MB), used
+DMphys  |     0x0157e000-0x0157f000 (     4KB,    0MB), used
+DMphys  |     0x0157f000-0x01580000 (     4KB,    0MB), used
+DMphys  |     0x01580000-0x01581000 (     4KB,    0MB), used
+DMphys  |     0x01581000-0x01583000 (     8KB,    0MB), used
+DMphys  |     0x01583000-0x0158b000 (    32KB,    0MB), used
+DMphys  |     0x0158b000-0x01593000 (    32KB,    0MB), used
+DMphys  |     0x01593000-0x01600000 (   436KB,    0MB), free
+DMphys  |     0x01647000-0x02000000 (  9956KB,   10MB), free
+DMphys  |     0x02000000-0x02400000 (  4096KB,    4MB), used
+DMphys  |     0x02400000-0x02800000 (  4096KB,    4MB), used
+DMphys  |     0x02800000-0x03fcf000 ( 24380KB,   24MB), free
+DMphys  |     0x03fcf000-0x03fd0000 (     4KB,    0MB), used
+DMphys  |     0x03fd0000-0x03fe5000 (    84KB,    0MB), free
+DMphys  |     0x03fe5000-0x03fe6000 (     4KB,    0MB), used
+DMphys  |     0x03fe6000-0x0595f000 ( 26084KB,   25MB), free
+DMphys  |     0x0595f000-0x05960000 (     4KB,    0MB), used
+DMphys  |     0x05960000-0x072c1000 ( 25988KB,   25MB), free
+DMphys  |     0x072c1000-0x072c2000 (     4KB,    0MB), used
+DMphys  |     0x072c2000-0x072c3000 (     4KB,    0MB), used
+DMphys  |     0x072c3000-0x072c4000 (     4KB,    0MB), used
+DMphys  |     0x072c4000-0x072c5000 (     4KB,    0MB), used
+DMphys  |     0x072c5000-0x072c6000 (     4KB,    0MB), used
+DMphys  |     0x072c6000-0x072c7000 (     4KB,    0MB), used
+DMphys  |     0x072c7000-0x072c8000 (     4KB,    0MB), used
+DMphys  |     0x072c8000-0x072c9000 (     4KB,    0MB), used
+DMphys  |     0x072c9000-0x072ca000 (     4KB,    0MB), used
+DMphys  |     0x072ca000-0x072cb000 (     4KB,    0MB), used
+DMphys  |     0x072cb000-0x072cc000 (     4KB,    0MB), used
+DMphys  |     0x072cc000-0x072cd000 (     4KB,    0MB), used
+DMphys  |     0x072cd000-0x072ce000 (     4KB,    0MB), used
+DMphys  |     0x072ce000-0x072cf000 (     4KB,    0MB), used
+DMphys  |     0x072cf000-0x072d0000 (     4KB,    0MB), used
+DMphys  |     0x072d0000-0x072d1000 (     4KB,    0MB), used
+DMphys  |     0x072d1000-0x072d2000 (     4KB,    0MB), used
+DMphys  |     0x072d2000-0x072d3000 (     4KB,    0MB), used
+DMphys  |     0x072d3000-0x072d4000 (     4KB,    0MB), used
+DMphys  |     0x072d4000-0x072d5000 (     4KB,    0MB), used
+DMphys  |     0x072d5000-0x072d6000 (     4KB,    0MB), used
+DMphys  |     0x072d6000-0x072d7000 (     4KB,    0MB), used
+DMphys  |     0x072d7000-0x072d8000 (     4KB,    0MB), used
+DMphys  |     0x072d8000-0x072d9000 (     4KB,    0MB), used
+DMphys  |     0x072d9000-0x072da000 (     4KB,    0MB), used
+DMphys  |     0x072da000-0x0e8dc000 (120840KB,  118MB), free
+DMphys  |     0x0e8e3000-0x0ea4e000 (  1452KB,    1MB), free
+DMphys  | DMphys dataspace list:
+DMphys  |  180: size=00400000  owner=9.02  name="test"
+DMphys  |  179: size=00400000  owner=9.02  name="test"
+DMphys  |  176: size=00008000  owner=9.05  name="test"
+DMphys  |  175: size=00008000  owner=9.02  name="test"
+DMphys  |  174: size=00008000  owner=9.05  name="test"
+DMphys  |  173: size=00008000  owner=9.02  name="blub"
+DMphys  |  172: size=00002000  owner=9.02  name="test"
+DMphys  |  171: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  169: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  167: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  165: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  163: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  161: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  159: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  157: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  155: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  153: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  151: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  149: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  147: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  145: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  143: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  141: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  139: size=00006000  owner=9.02  name="test"
+DMphys  |  138: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  136: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  134: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  132: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  130: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  128: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  126: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  124: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  122: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  120: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  118: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  116: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  114: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  112: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  110: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  108: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  106: size=00008000  owner=9.02  name="test copy"
+DMphys  |  105: size=00010000  owner=9.02  name="test"
+DMphys  |  104: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  102: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |  100: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   98: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   96: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   94: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   92: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   90: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   88: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   86: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   84: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   82: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   80: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   78: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   76: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   74: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   71: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   69: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   67: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   65: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   63: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   61: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   59: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   57: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   55: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   53: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   51: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   49: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   47: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   45: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   43: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   41: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   36: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   34: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   32: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   30: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   28: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   26: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   24: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   22: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   20: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   18: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   16: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   14: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   12: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |   10: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    8: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    6: size=00001000  owner=9.02  name="dummy-dum"
+DMphys  |    4: size=00010000  owner=9.02  name="L4thread stack"
+DMphys  |    3: size=00001000  owner=9.01  name="L4thread stack"
+DMphys  |    2: size=00001000  owner=9.00  name="L4thread TCB table"
+DMphys  |    1: size=00002000  owner=9.00  name="L4RM heap"
+DMphys  | ===========================================================
+DMphys  | total size 008a4000 (8848kB, 9MB)
+DMphysTE| stress_test(): continue...
+DMphys  | DMphys memory pool areas:
+DMphys  |   pool 0 (Default memory pool)
+DMphys  |   size: 237572KB total, 228516KB free,  32KB reserved
+DMphys  |     0x00100000-0x00101000 (     4KB,    0MB), used
+DMphys  |     0x00101000-0x00102000 (     4KB,    0MB), used
+DMphys  |     0x00102000-0x00103000 (     4KB,    0MB), used
+DMphys  |     0x00103000-0x00104000 (     4KB,    0MB), used
+DMphys  |     0x00104000-0x00105000 (     4KB,    0MB), used
+DMphys  |     0x00105000-0x00106000 (     4KB,    0MB), used
+DMphys  |     0x00106000-0x00107000 (     4KB,    0MB), used
+DMphys  |     0x00107000-0x00108000 (     4KB,    0MB), used
+DMphys  |     0x00108000-0x00109000 (     4KB,    0MB), used
+DMphys  |     0x00109000-0x0010a000 (     4KB,    0MB), used
+DMphys  |     0x0010a000-0x0010b000 (     4KB,    0MB), used
+DMphys  |     0x0010b000-0x0010c000 (     4KB,    0MB), used
+DMphys  |     0x0010c000-0x0010d000 (     4KB,    0MB), used
+DMphys  |     0x0010d000-0x0010e000 (     4KB,    0MB), used
+DMphys  |     0x0010e000-0x0010f000 (     4KB,    0MB), used
+DMphys  |     0x0010f000-0x00110000 (     4KB,    0MB), used
+DMphys  |     0x00110000-0x00111000 (     4KB,    0MB), used
+DMphys  |     0x00111000-0x00112000 (     4KB,    0MB), used
+DMphys  |     0x00112000-0x00113000 (     4KB,    0MB), used
+DMphys  |     0x00113000-0x00114000 (     4KB,    0MB), used
+DMphys  |     0x00114000-0x00115000 (     4KB,    0MB), used
+DMphys  |     0x00115000-0x00116000 (     4KB,    0MB), used
+DMphys  |     0x00116000-0x0011e000 (    32KB,    0MB), used
+DMphys  |     0x0011e000-0x0011f000 (     4KB,    0MB), used
+DMphys  |     0x0011f000-0x00120000 (     4KB,    0MB), used
+DMphys  |     0x00120000-0x00121000 (     4KB,    0MB), used
+DMphys  |     0x00121000-0x00122000 (     4KB,    0MB), used
+DMphys  |     0x00122000-0x00123000 (     4KB,    0MB), used
+DMphys  |     0x00123000-0x00124000 (     4KB,    0MB), used
+DMphys  |     0x00124000-0x00125000 (     4KB,    0MB), used
+DMphys  |     0x00125000-0x00126000 (     4KB,    0MB), used
+DMphys  |     0x00126000-0x00127000 (     4KB,    0MB), used
+DMphys  |     0x00127000-0x00128000 (     4KB,    0MB), used
+DMphys  |     0x00128000-0x00129000 (     4KB,    0MB), used
+DMphys  |     0x00129000-0x0012a000 (     4KB,    0MB), used
+DMphys  |     0x0012a000-0x0012b000 (     4KB,    0MB), used
+DMphys  |     0x0012b000-0x0012c000 (     4KB,    0MB), used
+DMphys  |     0x0012c000-0x0012d000 (     4KB,    0MB), used
+DMphys  |     0x0012d000-0x0012e000 (     4KB,    0MB), used
+DMphys  |     0x0012e000-0x0012f000 (     4KB,    0MB), used
+DMphys  |     0x0012f000-0x00130000 (     4KB,    0MB), used
+DMphys  |     0x00130000-0x00131000 (     4KB,    0MB), used
+DMphys  |     0x00131000-0x00132000 (     4KB,    0MB), used
+DMphys  |     0x00132000-0x00133000 (     4KB,    0MB), used
+DMphys  |     0x00133000-0x00134000 (     4KB,    0MB), used
+DMphys  |     0x00134000-0x00135000 (     4KB,    0MB), used
+DMphys  |     0x00135000-0x00136000 (     4KB,    0MB), used
+DMphys  |     0x00136000-0x00137000 (     4KB,    0MB), used
+DMphys  |     0x00137000-0x00138000 (     4KB,    0MB), used
+DMphys  |     0x00138000-0x00139000 (     4KB,    0MB), used
+DMphys  |     0x00139000-0x0013a000 (     4KB,    0MB), used
+DMphys  |     0x001c2000-0x002d0000 (  1080KB,    1MB), free
+DMphys  |     0x002e3000-0x00400000 (  1140KB,    1MB), free
+DMphys  |     0x0043b000-0x012b9000 ( 14840KB,   14MB), free
+DMphys  |     0x012b9000-0x012ba000 (     4KB,    0MB), used
+DMphys  |     0x012ba000-0x012bb000 (     4KB,    0MB), used
+DMphys  |     0x012bb000-0x012bc000 (     4KB,    0MB), used
+DMphys  |     0x012bc000-0x012bd000 (     4KB,    0MB), used
+DMphys  |     0x012bd000-0x012be000 (     4KB,    0MB), used
+DMphys  |     0x012be000-0x012bf000 (     4KB,    0MB), used
+DMphys  |     0x012bf000-0x012c0000 (     4KB,    0MB), used
+DMphys  |     0x012c0000-0x012c1000 (     4KB,    0MB), used
+DMphys  |     0x012c1000-0x012c3000 (     8KB,    0MB), free
+DMphys  |     0x012c3000-0x012c4000 (     4KB,    0MB), used
+DMphys  |     0x012c4000-0x01500000 (  2288KB,    2MB), free
+DMphys  |     0x0151c000-0x0151e000 (     8KB,    0MB), used
+DMphys  |     0x0151e000-0x0151f000 (     4KB,    0MB), used
+DMphys  |     0x0151f000-0x01520000 (     4KB,    0MB), used
+DMphys  |     0x01520000-0x01530000 (    64KB,    0MB), used
+DMphys  |     0x01530000-0x01531000 (     4KB,    0MB), used
+DMphys  |     0x01531000-0x01532000 (     4KB,    0MB), used
+DMphys  |     0x01532000-0x01533000 (     4KB,    0MB), used
+DMphys  |     0x01533000-0x01534000 (     4KB,    0MB), used
+DMphys  |     0x01534000-0x01535000 (     4KB,    0MB), used
+DMphys  |     0x01535000-0x01536000 (     4KB,    0MB), used
+DMphys  |     0x01536000-0x01537000 (     4KB,    0MB), used
+DMphys  |     0x01537000-0x01538000 (     4KB,    0MB), used
+DMphys  |     0x01538000-0x01539000 (     4KB,    0MB), used
+DMphys  |     0x01539000-0x0153a000 (     4KB,    0MB), used
+DMphys  |     0x0153a000-0x0153b000 (     4KB,    0MB), used
+DMphys  |     0x0153b000-0x0153c000 (     4KB,    0MB), used
+DMphys  |     0x0153c000-0x0153d000 (     4KB,    0MB), used
+DMphys  |     0x0153d000-0x0153e000 (     4KB,    0MB), used
+DMphys  |     0x0153e000-0x0153f000 (     4KB,    0MB), used
+DMphys  |     0x0153f000-0x01540000 (     4KB,    0MB), used
+DMphys  |     0x0154d000-0x0154e000 (     4KB,    0MB), used
+DMphys  |     0x0154e000-0x0154f000 (     4KB,    0MB), used
+DMphys  |     0x0154f000-0x01550000 (     4KB,    0MB), used
+DMphys  |     0x01550000-0x01551000 (     4KB,    0MB), used
+DMphys  |     0x01551000-0x01552000 (     4KB,    0MB), used
+DMphys  |     0x01552000-0x01553000 (     4KB,    0MB), used
+DMphys  |     0x01553000-0x01554000 (     4KB,    0MB), used
+DMphys  |     0x01554000-0x01555000 (     4KB,    0MB), used
+DMphys  |     0x01555000-0x01556000 (     4KB,    0MB), used
+DMphys  |     0x01556000-0x01557000 (     4KB,    0MB), used
+DMphys  |     0x01557000-0x01558000 (     4KB,    0MB), used
+DMphys  |     0x01558000-0x01559000 (     4KB,    0MB), used
+DMphys  |     0x01559000-0x0155a000 (     4KB,    0MB), used
+DMphys  |     0x0155a000-0x0155b000 (     4KB,    0MB), used
+DMphys  |     0x0155b000-0x0155c000 (     4KB,    0MB), used
+DMphys  |     0x0155c000-0x0155d000 (     4KB,    0MB), used
+DMphys  |     0x0155d000-0x0155e000 (     4KB,    0MB), used
+DMphys  |     0x0155e000-0x0155f000 (     4KB,    0MB), used
+DMphys  |     0x0155f000-0x01560000 (     4KB,    0MB), used
+DMphys  |     0x01560000-0x01561000 (     4KB,    0MB), used
+DMphys  |     0x01561000-0x01562000 (     4KB,    0MB), used
+DMphys  |     0x01562000-0x01563000 (     4KB,    0MB), used
+DMphys  |     0x01563000-0x01564000 (     4KB,    0MB), used
+DMphys  |     0x01564000-0x01565000 (     4KB,    0MB), used
+DMphys  |     0x01565000-0x01566000 (     4KB,    0MB), used
+DMphys  |     0x01566000-0x01567000 (     4KB,    0MB), used
+DMphys  |     0x01567000-0x01568000 (     4KB,    0MB), used
+DMphys  |     0x01568000-0x01569000 (     4KB,    0MB), used
+DMphys  |     0x01569000-0x0156a000 (     4KB,    0MB), used
+DMphys  |     0x0156a000-0x0156b000 (     4KB,    0MB), used
+DMphys  |     0x0156b000-0x0156c000 (     4KB,    0MB), used
+DMphys  |     0x0156c000-0x0156d000 (     4KB,    0MB), used
+DMphys  |     0x0156d000-0x0156e000 (     4KB,    0MB), used
+DMphys  |     0x0156e000-0x0156f000 (     4KB,    0MB), used
+DMphys  |     0x0156f000-0x01570000 (     4KB,    0MB), used
+DMphys  |     0x01570000-0x01571000 (     4KB,    0MB), used
+DMphys  |     0x01571000-0x01572000 (     4KB,    0MB), used
+DMphys  |     0x01572000-0x01573000 (     4KB,    0MB), used
+DMphys  |     0x01573000-0x01574000 (     4KB,    0MB), used
+DMphys  |     0x01574000-0x01575000 (     4KB,    0MB), used
+DMphys  |     0x01575000-0x01576000 (     4KB,    0MB), used
+DMphys  |     0x01576000-0x01577000 (     4KB,    0MB), used
+DMphys  |     0x01577000-0x01578000 (     4KB,    0MB), used
+DMphys  |     0x01578000-0x01579000 (     4KB,    0MB), used
+DMphys  |     0x01579000-0x0157a000 (     4KB,    0MB), used
+DMphys  |     0x0157a000-0x0157b000 (     4KB,    0MB), used
+DMphys  |     0x0157b000-0x0157c000 (     4KB,    0MB), used
+DMphys  |     0x0157c000-0x0157d000 (     4KB,    0MB), used
+DMphys  |     0x0157d000-0x0157e000 (     4KB,    0MB), used
+DMphys  |     0x0157e000-0x0157f000 (     4KB,    0MB), used
+DMphys  |     0x0157f000-0x01580000 (     4KB,    0MB), used
+DMphys  |     0x01580000-0x01581000 (     4KB,    0MB), used
+DMphys  |     0x01581000-0x01583000 (     8KB,    0MB), used
+DMphys  |     0x01583000-0x0158b000 (    32KB,    0MB), used
+DMphys  |     0x0158b000-0x01593000 (    32KB,    0MB), used
+DMphys  |     0x01593000-0x01594000 (     4KB,    0MB), free
+DMphys  |     0x01594000-0x01595000 (     4KB,    0MB), used
+DMphys  |     0x01595000-0x01596000 (     4KB,    0MB), free
+DMphys  |     0x01596000-0x01597000 (     4KB,    0MB), used
+DMphys  |     0x01597000-0x01598000 (     4KB,    0MB), free
+DMphys  |     0x01598000-0x01599000 (     4KB,    0MB), used
+DMphys  |     0x01599000-0x0159a000 (     4KB,    0MB), free
+DMphys  |     0x0159a000-0x0159b000 (     4KB,    0MB), used
+DMphys  |     0x0159b000-0x01600000 (   404KB,    0MB), free
+DMphys  |     0x01647000-0x02000000 (  9956KB,   10MB), free
+DMphys  |     0x02000000-0x02400000 (  4096KB,    4MB), used
+DMphys  |     0x02400000-0x02800000 (  4096KB,    4MB), used
+DMphys  |     0x02800000-0x03fcf000 ( 24380KB,   24MB), free
+DMphys  |     0x03fcf000-0x03fd0000 (     4KB,    0MB), used
+DMphys  |     0x03fd0000-0x03fd1000 (     4KB,    0MB), free
+DMphys  |     0x03fd1000-0x03fd2000 (     4KB,    0MB), used
+DMphys  |     0x03fd2000-0x03fd3000 (     4KB,    0MB), free
+DMphys  |     0x03fd3000-0x03fd4000 (     4KB,    0MB), used
+DMphys  |     0x03fd4000-0x03fd5000 (     4KB,    0MB), free
+DMphys  |     0x03fd5000-0x03fd6000 (     4KB,    0MB), used
+DMphys  |     0x03fd6000-0x03fd7000 (     4KB,    0MB), free
+DMphys  |     0x03fd7000-0x03fd8000 (     4KB,    0MB), used
+DMphys  |     0x03fd8000-0x03fd9000 (     4KB,    0MB), free
+DMphys  |     0x03fd9000-0x03fda000 (     4KB,    0MB), used
+DMphys  |     0x03fda000-0x03fdb000 (     4KB,    0MB), free
+DMphys  |     0x03fdb000-0x03fdc000 (     4KB,    0MB), used
+DMphys  |     0x03fdc000-0x03fdd000 (     4KB,    0MB), free
+DMphys  |     0x03fdd000-0x03fde000 (     4KB,    0MB), used
+DMphys  |     0x03fde000-0x03fdf000 (     4KB,    0MB), free
+DMphys  |     0x03fdf000-0x03fe0000 (     4KB,    0MB), used
+DMphys  |     0x03fe0000-0x03fe1000 (     4KB,    0MB), used
+DMphys  |     0x03fe1000-0x03fe2000 (     4KB,    0MB), free
+DMphys  |     0x03fe2000-0x03fe3000 (     4KB,    0MB), used
+DMphys  |     0x03fe3000-0x03fe4000 (     4KB,    0MB), free
+DMphys  |     0x03fe4000-0x03fe5000 (     4KB,    0MB), used
+DMphys  |     0x03fe5000-0x03fe6000 (     4KB,    0MB), used
+DMphys  |     0x03fe6000-0x0595f000 ( 26084KB,   25MB), free
+DMphys  |     0x0595f000-0x05960000 (     4KB,    0MB), used
+DMphys  |     0x05960000-0x072c1000 ( 25988KB,   25MB), free
+DMphys  |     0x072c1000-0x072c2000 (     4KB,    0MB), used
+DMphys  |     0x072c2000-0x072c3000 (     4KB,    0MB), used
+DMphys  |     0x072c3000-0x072c4000 (     4KB,    0MB), used
+DMphys  |     0x072c4000-0x072c5000 (     4KB,    0MB), used
+DMphys  |     0x072c5000-0x072c6000 (     4KB,    0MB), used
+DMphys  |     0x072c6000-0x072c7000 (     4KB,    0MB), used
+DMphys  |     0x072c7000-0x072c8000 (     4KB,    0MB), used
+DMphys  |     0x072c8000-0x072c9000 (     4KB,    0MB), used
+DMphys  |     0x072c9000-0x072ca000 (     4KB,    0MB), used
+DMphys  |     0x072ca000-0x072cb000 (     4KB,    0MB), used
+DMphys  |     0x072cb000-0x072cc000 (     4KB,    0MB), used
+DMphys  |     0x072cc000-0x072cd000 (     4KB,    0MB), used
+DMphys  |     0x072cd000-0x072ce000 (     4KB,    0MB), used
+DMphys  |     0x072ce000-0x072cf000 (     4KB,    0MB), used
+DMphys  |     0x072cf000-0x072d0000 (     4KB,    0MB), used
+DMphys  |     0x072d0000-0x072d1000 (     4KB,    0MB), used
+DMphys  |     0x072d1000-0x072d2000 (     4KB,    0MB), used
+DMphys  |     0x072d2000-0x072d3000 (     4KB,    0MB), used
+DMphys  |     0x072d3000-0x072d4000 (     4KB,    0MB), used
+DMphys  |     0x072d4000-0x072d5000 (     4KB,    0MB), used
+DMphys  |     0x072d5000-0x072d6000 (     4KB,    0MB), used
+DMphys  |     0x072d6000-0x072d7000 (     4KB,    0MB), used
+DMphys  |     0x072d7000-0x072d8000 (     4KB,    0MB), used
+DMphys  |     0x072d8000-0x072d9000 (     4KB,    0MB), used
+DMphys  |     0x072d9000-0x072da000 (     4KB,    0MB), used
+DMphys  |     0x072da000-0x0e8dc000 (120840KB,  118MB), free
+DMphys  |     0x0e8e3000-0x0ea4e000 (  1452KB,    1MB), free
+DMphys  | DMphys memory pool areas:
+DMphys  |   pool 0 (Default memory pool)
+DMphys  |   size: 237572KB total, 228516KB free,  32KB reserved
+DMphys  |     0x00100000-0x00101000 (     4KB,    0MB), used
+DMphys  |     0x00101000-0x00102000 (     4KB,    0MB), used
+DMphys  |     0x00102000-0x00103000 (     4KB,    0MB), used
+DMphys  |     0x00103000-0x00104000 (     4KB,    0MB), used
+DMphys  |     0x00104000-0x00105000 (     4KB,    0MB), used
+DMphys  |     0x00105000-0x00106000 (     4KB,    0MB), used
+DMphys  |     0x00106000-0x00107000 (     4KB,    0MB), used
+DMphys  |     0x00107000-0x00108000 (     4KB,    0MB), used
+DMphys  |     0x00108000-0x00109000 (     4KB,    0MB), used
+DMphys  |     0x00109000-0x0010a000 (     4KB,    0MB), used
+DMphys  |     0x0010a000-0x0010b000 (     4KB,    0MB), used
+DMphys  |     0x0010b000-0x0010c000 (     4KB,    0MB), used
+DMphys  |     0x0010c000-0x0010d000 (     4KB,    0MB), used
+DMphys  |     0x0010d000-0x0010e000 (     4KB,    0MB), used
+DMphys  |     0x0010e000-0x0010f000 (     4KB,    0MB), used
+DMphys  |     0x0010f000-0x00110000 (     4KB,    0MB), used
+DMphys  |     0x00110000-0x00111000 (     4KB,    0MB), used
+DMphys  |     0x00111000-0x00112000 (     4KB,    0MB), used
+DMphys  |     0x00112000-0x00113000 (     4KB,    0MB), used
+DMphys  |     0x00113000-0x00114000 (     4KB,    0MB), used
+DMphys  |     0x00114000-0x00115000 (     4KB,    0MB), used
+DMphys  |     0x00115000-0x00116000 (     4KB,    0MB), used
+DMphys  |     0x00116000-0x0011e000 (    32KB,    0MB), used
+DMphys  |     0x0011e000-0x0011f000 (     4KB,    0MB), used
+DMphys  |     0x0011f000-0x00120000 (     4KB,    0MB), used
+DMphys  |     0x00120000-0x00121000 (     4KB,    0MB), used
+DMphys  |     0x00121000-0x00122000 (     4KB,    0MB), used
+DMphys  |     0x00122000-0x00123000 (     4KB,    0MB), used
+DMphys  |     0x00123000-0x00124000 (     4KB,    0MB), used
+DMphys  |     0x00124000-0x00125000 (     4KB,    0MB), used
+DMphys  |     0x00125000-0x00126000 (     4KB,    0MB), used
+DMphys  |     0x00126000-0x00127000 (     4KB,    0MB), used
+DMphys  |     0x00127000-0x00128000 (     4KB,    0MB), used
+DMphys  |     0x00128000-0x00129000 (     4KB,    0MB), used
+DMphys  |     0x00129000-0x0012a000 (     4KB,    0MB), used
+DMphys  |     0x0012a000-0x0012b000 (     4KB,    0MB), used
+DMphys  |     0x0012b000-0x0012c000 (     4KB,    0MB), used
+DMphys  |     0x0012c000-0x0012d000 (     4KB,    0MB), used
+DMphys  |     0x0012d000-0x0012e000 (     4KB,    0MB), used
+DMphys  |     0x0012e000-0x0012f000 (     4KB,    0MB), used
+DMphys  |     0x0012f000-0x00130000 (     4KB,    0MB), used
+DMphys  |     0x00130000-0x00131000 (     4KB,    0MB), used
+DMphys  |     0x00131000-0x00132000 (     4KB,    0MB), used
+DMphys  |     0x00132000-0x00133000 (     4KB,    0MB), used
+DMphys  |     0x00133000-0x00134000 (     4KB,    0MB), used
+DMphys  |     0x00134000-0x00135000 (     4KB,    0MB), used
+DMphys  |     0x00135000-0x00136000 (     4KB,    0MB), used
+DMphys  |     0x00136000-0x00137000 (     4KB,    0MB), used
+DMphys  |     0x00137000-0x00138000 (     4KB,    0MB), used
+DMphys  |     0x00138000-0x00139000 (     4KB,    0MB), used
+DMphys  |     0x00139000-0x0013a000 (     4KB,    0MB), used
+DMphys  |     0x001c2000-0x002d0000 (  1080KB,    1MB), free
+DMphys  |     0x002e3000-0x00400000 (  1140KB,    1MB), free
+DMphys  |     0x0043b000-0x012b9000 ( 14840KB,   14MB), free
+DMphys  |     0x012b9000-0x012ba000 (     4KB,    0MB), used
+DMphys  |     0x012ba000-0x012bb000 (     4KB,    0MB), used
+DMphys  |     0x012bb000-0x012bc000 (     4KB,    0MB), used
+DMphys  |     0x012bc000-0x012bd000 (     4KB,    0MB), used
+DMphys  |     0x012bd000-0x012be000 (     4KB,    0MB), used
+DMphys  |     0x012be000-0x012bf000 (     4KB,    0MB), used
+DMphys  |     0x012bf000-0x012c0000 (     4KB,    0MB), used
+DMphys  |     0x012c0000-0x012c1000 (     4KB,    0MB), used
+DMphys  |     0x012c1000-0x012c3000 (     8KB,    0MB), free
+DMphys  |     0x012c3000-0x012c4000 (     4KB,    0MB), used
+DMphys  |     0x012c4000-0x01500000 (  2288KB,    2MB), free
+DMphys  |     0x0151c000-0x0151e000 (     8KB,    0MB), used
+DMphys  |     0x0151e000-0x0151f000 (     4KB,    0MB), used
+DMphys  |     0x0151f000-0x01520000 (     4KB,    0MB), used
+DMphys  |     0x01520000-0x01530000 (    64KB,    0MB), used
+DMphys  |     0x01530000-0x01531000 (     4KB,    0MB), used
+DMphys  |     0x01531000-0x01532000 (     4KB,    0MB), used
+DMphys  |     0x01532000-0x01533000 (     4KB,    0MB), used
+DMphys  |     0x01533000-0x01534000 (     4KB,    0MB), used
+DMphys  |     0x01534000-0x01535000 (     4KB,    0MB), used
+DMphys  |     0x01535000-0x01536000 (     4KB,    0MB), used
+DMphys  |     0x01536000-0x01537000 (     4KB,    0MB), used
+DMphys  |     0x01537000-0x01538000 (     4KB,    0MB), used
+DMphys  |     0x01538000-0x01539000 (     4KB,    0MB), used
+DMphys  |     0x01539000-0x0153a000 (     4KB,    0MB), used
+DMphys  |     0x0153a000-0x0153b000 (     4KB,    0MB), used
+DMphys  |     0x0153b000-0x0153c000 (     4KB,    0MB), used
+DMphys  |     0x0153c000-0x0153d000 (     4KB,    0MB), used
+DMphys  |     0x0153d000-0x0153e000 (     4KB,    0MB), used
+DMphys  |     0x0153e000-0x0153f000 (     4KB,    0MB), used
+DMphys  |     0x0153f000-0x01540000 (     4KB,    0MB), used
+DMphys  |     0x0154d000-0x0154e000 (     4KB,    0MB), used
+DMphys  |     0x0154e000-0x0154f000 (     4KB,    0MB), used
+DMphys  |     0x0154f000-0x01550000 (     4KB,    0MB), used
+DMphys  |     0x01550000-0x01551000 (     4KB,    0MB), used
+DMphys  |     0x01551000-0x01552000 (     4KB,    0MB), used
+DMphys  |     0x01552000-0x01553000 (     4KB,    0MB), used
+DMphys  |     0x01553000-0x01554000 (     4KB,    0MB), used
+DMphys  |     0x01554000-0x01555000 (     4KB,    0MB), used
+DMphys  |     0x01555000-0x01556000 (     4KB,    0MB), used
+DMphys  |     0x01556000-0x01557000 (     4KB,    0MB), used
+DMphys  |     0x01557000-0x01558000 (     4KB,    0MB), used
+DMphys  |     0x01558000-0x01559000 (     4KB,    0MB), used
+DMphys  |     0x01559000-0x0155a000 (     4KB,    0MB), used
+DMphys  |     0x0155a000-0x0155b000 (     4KB,    0MB), used
+DMphys  |     0x0155b000-0x0155c000 (     4KB,    0MB), used
+DMphys  |     0x0155c000-0x0155d000 (     4KB,    0MB), used
+DMphys  |     0x0155d000-0x0155e000 (     4KB,    0MB), used
+DMphys  |     0x0155e000-0x0155f000 (     4KB,    0MB), used
+DMphys  |     0x0155f000-0x01560000 (     4KB,    0MB), used
+DMphys  |     0x01560000-0x01561000 (     4KB,    0MB), used
+DMphys  |     0x01561000-0x01562000 (     4KB,    0MB), used
+DMphys  |     0x01562000-0x01563000 (     4KB,    0MB), used
+DMphys  |     0x01563000-0x01564000 (     4KB,    0MB), used
+DMphys  |     0x01564000-0x01565000 (     4KB,    0MB), used
+DMphys  |     0x01565000-0x01566000 (     4KB,    0MB), used
+DMphys  |     0x01566000-0x01567000 (     4KB,    0MB), used
+DMphys  |     0x01567000-0x01568000 (     4KB,    0MB), used
+DMphys  |     0x01568000-0x01569000 (     4KB,    0MB), used
+DMphys  |     0x01569000-0x0156a000 (     4KB,    0MB), used
+DMphys  |     0x0156a000-0x0156b000 (     4KB,    0MB), used
+DMphys  |     0x0156b000-0x0156c000 (     4KB,    0MB), used
+DMphys  |     0x0156c000-0x0156d000 (     4KB,    0MB), used
+DMphys  |     0x0156d000-0x0156e000 (     4KB,    0MB), used
+DMphys  |     0x0156e000-0x0156f000 (     4KB,    0MB), used
+DMphys  |     0x0156f000-0x01570000 (     4KB,    0MB), used
+DMphys  |     0x01570000-0x01571000 (     4KB,    0MB), used
+DMphys  |     0x01571000-0x01572000 (     4KB,    0MB), used
+DMphys  |     0x01572000-0x01573000 (     4KB,    0MB), used
+DMphys  |     0x01573000-0x01574000 (     4KB,    0MB), used
+DMphys  |     0x01574000-0x01575000 (     4KB,    0MB), used
+DMphys  |     0x01575000-0x01576000 (     4KB,    0MB), used
+DMphys  |     0x01576000-0x01577000 (     4KB,    0MB), used
+DMphys  |     0x01577000-0x01578000 (     4KB,    0MB), used
+DMphys  |     0x01578000-0x01579000 (     4KB,    0MB), used
+DMphys  |     0x01579000-0x0157a000 (     4KB,    0MB), used
+DMphys  |     0x0157a000-0x0157b000 (     4KB,    0MB), used
+DMphys  |     0x0157b000-0x0157c000 (     4KB,    0MB), used
+DMphys  |     0x0157c000-0x0157d000 (     4KB,    0MB), used
+DMphys  |     0x0157d000-0x0157e000 (     4KB,    0MB), used
+DMphys  |     0x0157e000-0x0157f000 (     4KB,    0MB), used
+DMphys  |     0x0157f000-0x01580000 (     4KB,    0MB), used
+DMphys  |     0x01580000-0x01581000 (     4KB,    0MB), used
+DMphys  |     0x01581000-0x01583000 (     8KB,    0MB), used
+DMphys  |     0x01583000-0x0158b000 (    32KB,    0MB), used
+DMphys  |     0x0158b000-0x01593000 (    32KB,    0MB), used
+DMphys  |     0x01593000-0x01594000 (     4KB,    0MB), free
+DMphys  |     0x01594000-0x01595000 (     4KB,    0MB), used
+DMphys  |     0x01595000-0x01596000 (     4KB,    0MB), free
+DMphys  |     0x01596000-0x01597000 (     4KB,    0MB), used
+DMphys  |     0x01597000-0x01598000 (     4KB,    0MB), free
+DMphys  |     0x01598000-0x01599000 (     4KB,    0MB), used
+DMphys  |     0x01599000-0x0159a000 (     4KB,    0MB), free
+DMphys  |     0x0159a000-0x0159b000 (     4KB,    0MB), used
+DMphys  |     0x0159b000-0x01600000 (   404KB,    0MB), free
+DMphys  |     0x01647000-0x02000000 (  9956KB,   10MB), free
+DMphys  |     0x02000000-0x02400000 (  4096KB,    4MB), used
+DMphys  |     0x02400000-0x02800000 (  4096KB,    4MB), used
+DMphys  |     0x02800000-0x03fcf000 ( 24380KB,   24MB), free
+DMphys  |     0x03fcf000-0x03fd0000 (     4KB,    0MB), used
+DMphys  |     0x03fd0000-0x03fd1000 (     4KB,    0MB), free
+DMphys  |     0x03fd1000-0x03fd2000 (     4KB,    0MB), used
+DMphys  |     0x03fd2000-0x03fd3000 (     4KB,    0MB), free
+DMphys  |     0x03fd3000-0x03fd4000 (     4KB,    0MB), used
+DMphys  |     0x03fd4000-0x03fd5000 (     4KB,    0MB), free
+DMphys  |     0x03fd5000-0x03fd6000 (     4KB,    0MB), used
+DMphys  |     0x03fd6000-0x03fd7000 (     4KB,    0MB), free
+DMphys  |     0x03fd7000-0x03fd8000 (     4KB,    0MB), used
+DMphys  |     0x03fd8000-0x03fd9000 (     4KB,    0MB), free
+DMphys  |     0x03fd9000-0x03fda000 (     4KB,    0MB), used
+DMphys  |     0x03fda000-0x03fdb000 (     4KB,    0MB), free
+DMphys  |     0x03fdb000-0x03fdc000 (     4KB,    0MB), used
+DMphys  |     0x03fdc000-0x03fdd000 (     4KB,    0MB), free
+DMphys  |     0x03fdd000-0x03fde000 (     4KB,    0MB), used
+DMphys  |     0x03fde000-0x03fdf000 (     4KB,    0MB), free
+DMphys  |     0x03fdf000-0x03fe0000 (     4KB,    0MB), used
+DMphys  |     0x03fe0000-0x03fe1000 (     4KB,    0MB), used
+DMphys  |     0x03fe1000-0x03fe2000 (     4KB,    0MB), free
+DMphys  |     0x03fe2000-0x03fe3000 (     4KB,    0MB), used
+DMphys  |     0x03fe3000-0x03fe4000 (     4KB,    0MB), free
+DMphys  |     0x03fe4000-0x03fe5000 (     4KB,    0MB), used
+DMphys  |     0x03fe5000-0x03fe6000 (     4KB,    0MB), used
+DMphys  |     0x03fe6000-0x0595f000 ( 26084KB,   25MB), free
+DMphys  |     0x0595f000-0x05960000 (     4KB,    0MB), used
+DMphys  |     0x05960000-0x072c1000 ( 25988KB,   25MB), free
+DMphys  |     0x072c1000-0x072c2000 (     4KB,    0MB), used
+DMphys  |     0x072c2000-0x072c3000 (     4KB,    0MB), used
+DMphys  |     0x072c3000-0x072c4000 (     4KB,    0MB), used
+DMphys  |     0x072c4000-0x072c5000 (     4KB,    0MB), used
+DMphys  |     0x072c5000-0x072c6000 (     4KB,    0MB), used
+DMphys  |     0x072c6000-0x072c7000 (     4KB,    0MB), used
+DMphys  |     0x072c7000-0x072c8000 (     4KB,    0MB), used
+DMphys  |     0x072c8000-0x072c9000 (     4KB,    0MB), used
+DMphys  |     0x072c9000-0x072ca000 (     4KB,    0MB), used
+DMphys  |     0x072ca000-0x072cb000 (     4KB,    0MB), used
+DMphys  |     0x072cb000-0x072cc000 (     4KB,    0MB), used
+DMphys  |     0x072cc000-0x072cd000 (     4KB,    0MB), used
+DMphys  |     0x072cd000-0x072ce000 (     4KB,    0MB), used
+DMphys  |     0x072ce000-0x072cf000 (     4KB,    0MB), used
+DMphys  |     0x072cf000-0x072d0000 (     4KB,    0MB), used
+DMphys  |     0x072d0000-0x072d1000 (     4KB,    0MB), used
+DMphys  |     0x072d1000-0x072d2000 (     4KB,    0MB), used
+DMphys  |     0x072d2000-0x072d3000 (     4KB,    0MB), used
+DMphys  |     0x072d3000-0x072d4000 (     4KB,    0MB), used
+DMphys  |     0x072d4000-0x072d5000 (     4KB,    0MB), used
+DMphys  |     0x072d5000-0x072d6000 (     4KB,    0MB), used
+DMphys  |     0x072d6000-0x072d7000 (     4KB,    0MB), used
+DMphys  |     0x072d7000-0x072d8000 (     4KB,    0MB), used
+DMphys  |     0x072d8000-0x072d9000 (     4KB,    0MB), used
+DMphys  |     0x072d9000-0x072da000 (     4KB,    0MB), used
+DMphys  |     0x072da000-0x0e8dc000 (120840KB,  118MB), free
+DMphys  |     0x0e8e3000-0x0ea4e000 (  1452KB,    1MB), free
+DMphysTE| main(): really done.
+Exiting, wait...

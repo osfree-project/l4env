@@ -29,12 +29,12 @@ int l4vfs_register_volume(l4_threadid_t dest, l4_threadid_t server,
                                                          &root_id,
                                                          &_dice_corba_env);
 
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Registering failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_IS_EXCEPTION(&_dice_corba_env, CORBA_SYSTEM_EXCEPTION))
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
                 case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                     LOG("Server did not recognize the opcode");
@@ -44,7 +44,7 @@ int l4vfs_register_volume(l4_threadid_t dest, l4_threadid_t server,
                     return 2;
                 default:
                     LOG("some other error found: %d", 
-                            _dice_corba_env.repos_id );
+                            DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                     return 3;
             }
         }
@@ -65,12 +65,12 @@ int l4vfs_unregister_volume(l4_threadid_t dest, l4_threadid_t server,
                                                            volume_id,
                                                            &_dice_corba_env);
     
-    if ( _dice_corba_env.major != CORBA_NO_EXCEPTION )
+    if ( DICE_HAS_EXCEPTION(&_dice_corba_env) )
     {
         LOG("Registering failed due to an exception!");
-        if (_dice_corba_env.major == CORBA_SYSTEM_EXCEPTION)
+        if (DICE_IS_EXCEPTION(&_dice_corba_env, CORBA_SYSTEM_EXCEPTION))
         {
-            switch( _dice_corba_env.repos_id )
+            switch( DICE_EXCEPTION_MINOR(&_dice_corba_env) )
             {
                 case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
                     LOG("Server did not recognize the opcode");
@@ -80,7 +80,7 @@ int l4vfs_unregister_volume(l4_threadid_t dest, l4_threadid_t server,
                     return 2;
                 default:
                     LOG("some other error found: %d", 
-                            _dice_corba_env.repos_id );
+                            DICE_EXCEPTION_MINOR(&_dice_corba_env) );
                     return 3;
             }
         }

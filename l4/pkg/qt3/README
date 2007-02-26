@@ -2,7 +2,23 @@ What is this?
 -------------
 
 This is Qt/Embedded for DROPS. The port is still work in progress,
-basic functionality is already there, however. 
+basic functionality is already there, however.
+
+We do _NOT_ provide any support, as stated in the UNSUPPORTED file.
+
+
+Other README files with further information on this port:
+---------------------------------------------------------
+
+Make sure you read these!
+
+mk/README
+doc/README
+lib/contrib/README
+lib/README
+patches/README
+examples/data/README
+examples/qrun/README
 
 
 Requirements:
@@ -23,10 +39,6 @@ The following L4Env components are required:
 - thread
 - semaphore
 - zlib
-
-You might want to have a look at $L4DIR/tool/runux/qt3_app_{con|dope} and
-there are also application specific 'run.sh' scripts in pkg/qt3/examples/*.
-These scripts can be used to start the examples in Fiasco-UX.
 
 Additionally you may need some of the tools provides by Trolltech,
 namely 'moc' and 'uic'. If you want to use Qt-Designer for GUI modeling

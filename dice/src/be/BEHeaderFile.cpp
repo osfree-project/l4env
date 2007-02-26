@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEHeaderFile.cpp
- *    \brief   contains the implementation of the class CBEHeaderFile
+ *  \file    dice/src/be/BEHeaderFile.cpp
+ *  \brief   contains the implementation of the class CBEHeaderFile
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -38,258 +38,172 @@
 #include "BEStructType.h"
 #include "BEUnionType.h"
 #include "IncludeStatement.h"
-
+#include "BETrace.h"
+#include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
+#include <iostream>
+#include <cassert>
 
 CBEHeaderFile::CBEHeaderFile()
-{
-}
+: m_Constants(0, (CObject*)0),
+  m_Typedefs(0, (CObject*)0),
+  m_TaggedTypes(0, (CObject*)0)
+{ }
 
 CBEHeaderFile::CBEHeaderFile(CBEHeaderFile & src)
-: CBEFile(src)
+: CBEFile(src),
+  m_Constants(0, (CObject*)0),
+  m_Typedefs(0, (CObject*)0),
+  m_TaggedTypes(0, (CObject*)0)
 {
     m_sIncludeName = src.m_sIncludeName;
-    COPY_VECTOR(CBEConstant, m_vConstants, iterC);
-    COPY_VECTOR(CBETypedef, m_vTypedefs, iterT);
-    COPY_VECTOR(CBEType, m_vTaggedTypes, iterTa);
+    // only copy references
+    vector<CBEConstant*>::iterator iC;
+    for (iC = src.m_Constants.begin(); 
+	 iC != src.m_Constants.end(); 
+	 iC++)
+	m_Constants.Add(*iC);
+    vector<CBETypedef*>::iterator iT;
+    for (iT = src.m_Typedefs.begin(); 
+	 iT != src.m_Typedefs.end(); 
+	 iT++)
+	m_Typedefs.Add(*iT);
+    vector<CBEType*>::iterator iTa;
+    for (iTa = src.m_TaggedTypes.begin(); 
+	 iTa != src.m_TaggedTypes.end(); 
+	 iTa++)
+	m_TaggedTypes.Add(*iTa);
 }
 
-/**    \brief destructor
+/** \brief destructor
  */
 CBEHeaderFile::~CBEHeaderFile()
-{
-    DEL_VECTOR(m_vConstants);
-    DEL_VECTOR(m_vTypedefs);
-    DEL_VECTOR(m_vTaggedTypes);
-}
+{ }
 
-/**    \brief prepares the header file for the back-end
- *    \param pFEFile the corresponding front-end file
- *    \param pContext the context of the code generation
- *    \return true if the creation was successful
+/** \brief prepares the header file for the back-end
+ *  \param pFEFile the corresponding front-end file
+ *  \param nFileType the type of the file
+ *  \return true if the creation was successful
  *
  * This function should only add the file name and the names of the included
  * files to this instance.
  *
  * If the name of the front-end file included a relative path, this path
  * should be stripped of for the file name of this file. But it should be used
- * when writing include statements. E.g. a file included with #include
+ * when writing include statements. E.g. a file included with \#include
  * "l4/test.idl" should get the header file name "test-client.h" or
  * "test-server.h", but should be included using "l4/test-client.h" or
  * "l4/test-server.h".
  */
-bool CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
+void
+CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 {
     assert(pFEFile);
 
-    VERBOSE("%s for file %s called\n", __PRETTY_FUNCTION__, 
-	pFEFile->GetFileName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s(file: %s) called\n",
+	__func__, pFEFile->GetFileName().c_str());
 
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    m_sFileName = pNF->GetFileName(pFEFile, pContext);
-    m_sIncludeName = pNF->GetIncludeFileName(pFEFile, pContext);
-    m_nFileType = pContext->GetFileType();
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
+    m_sIncludeName = pNF->GetIncludeFileName(pFEFile, m_nFileType);
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s m_sFilename=%s, m_sIncludeName=%s\n", __func__,
+	m_sFilename.c_str(), m_sIncludeName.c_str());
 
     CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEFile->GetRoot());
     assert(pFERoot);
-    vector<CIncludeStatement*>::iterator iterI = pFEFile->GetFirstInclude();
-    CIncludeStatement *pInclude;
-    while ((pInclude = pFEFile->GetNextInclude(iterI)) != 0)
+    vector<CIncludeStatement*>::iterator iterI;
+    for (iterI = pFEFile->m_Includes.begin();
+	 iterI != pFEFile->m_Includes.end();
+	 iterI++)
     {
         // check if we shall add an include statement
-        if (pInclude->IsPrivate())
+        if ((*iterI)->m_bPrivate)
             continue;
         // find the corresponding file
-        CFEFile *pIncFile = pFERoot->FindFile(pInclude->GetIncludedFileName());
+        CFEFile *pIncFile = pFERoot->FindFile((*iterI)->m_sFilename);
         // get name for include (with prefix, etc.)
         string sIncName;
         if (pIncFile)
-            sIncName = pNF->GetIncludeFileName(pIncFile, pContext);
+            sIncName = pNF->GetIncludeFileName(pIncFile, m_nFileType);
         else
-            sIncName = pNF->GetIncludeFileName(pInclude->GetIncludedFileName(),
-		pContext);
+            sIncName = pNF->GetIncludeFileName((*iterI)->m_sFilename);
         // if the compiler option is FILE_ALL, then we only add non-IDL files
-        if (pContext->IsOptionSet(PROGRAM_FILE_ALL) && pInclude->IsIDLFile())
+        if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) &&
+	    (*iterI)->m_bIDLFile)
             continue;
 
-//         TRACE("Add include to file %s: %s (from %s:%d)\n",
-//             GetFileName().c_str(), sIncName.c_str(),
-//             pInclude->GetSourceFileName().c_str(),
-//             pInclude->GetSourceLine());
-        AddIncludedFileName(sIncName, pInclude->IsIDLFile(), 
-	    pInclude->IsStdInclude(), pInclude);
+        AddIncludedFileName(sIncName, (*iterI)->m_bIDLFile,
+	    (*iterI)->m_bStandard, *iterI);
     }
 
-    VERBOSE("%s for file %s returns true\n", __PRETTY_FUNCTION__, 
-	GetFileName().c_str());
-    return true;
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEHeaderFile::%s(file: %s) finished\n", __func__,
+	pFEFile->GetFileName().c_str());
 }
 
-/**    \brief prepares the header file for the back-end
- *    \param pFELibrary the corresponding front-end library
- *    \param pContext the context of the code generation
- *    \return true if creation was successful
+/** \brief prepares the header file for the back-end
+ *  \param pFELibrary the corresponding front-end library
+ *  \param nFileType the type of the file
+ *  \return true if creation was successful
  */
-bool 
-CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, 
-    CBEContext * pContext)
+void
+CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 {
-    VERBOSE("%s for library %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEHeaderFile::%s(library: %s) called\n", __func__,
         pFELibrary->GetName().c_str());
 
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    m_sFileName = pNF->GetFileName(pFELibrary, pContext);
-    m_sIncludeName = pNF->GetIncludeFileName(pFELibrary, pContext);
-    m_nFileType = pContext->GetFileType();
-    
-    VERBOSE("%s for library %s returns true\n", __PRETTY_FUNCTION__,
-        pFELibrary->GetName().c_str());
-    return true;
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFELibrary, m_nFileType);
+    m_sIncludeName = pNF->GetIncludeFileName(pFELibrary, m_nFileType);
 }
 
-/**    \brief prepares the back-end file for usage as per interface file
- *    \param pFEInterface the respective interface to prepare for
- *    \param pContext the context of the code generation
- *    \return true if code generation was successful
+/** \brief prepares the back-end file for usage as per interface file
+ *  \param pFEInterface the respective interface to prepare for
+ *  \param nFileType the type of the file
+ *  \return true if code generation was successful
  */
-bool 
+void
 CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface, 
-    CBEContext * pContext)
+    FILE_TYPE nFileType)
 {
-    VERBOSE("%s for interface %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEHeaderFile::%s(interface: %s) called\n", __func__,
         pFEInterface->GetName().c_str());
-
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    m_sFileName = pNF->GetFileName(pFEInterface, pContext);
-    m_sIncludeName = pNF->GetIncludeFileName(pFEInterface, pContext);
-    m_nFileType = pContext->GetFileType();
     
-    VERBOSE("%s for interface %s returns true\n", __PRETTY_FUNCTION__,
-        pFEInterface->GetName().c_str());
-    return true;
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
+    m_sIncludeName = pNF->GetIncludeFileName(pFEInterface, m_nFileType);
 }
 
-/**    \brief prepares the back-end file for usage as per operation file
- *    \param pFEOperation the respective front-end operation to prepare for
- *    \param pContext the context of the code generation
- *    \return true if back-end was created correctly
+/** \brief prepares the back-end file for usage as per operation file
+ *  \param pFEOperation the respective front-end operation to prepare for
+ *  \param nFileType the type of the file
+ *  \return true if back-end was created correctly
  */
-bool
-CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation,
-    CBEContext * pContext)
+void
+CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation, 
+    FILE_TYPE nFileType)
 {
-    VERBOSE("%s for operation %s called\n", __PRETTY_FUNCTION__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEHeaderFile::%s(operation: %s) called\n", __func__,
         pFEOperation->GetName().c_str());
-    
-    CBENameFactory *pNF = pContext->GetNameFactory();
-    m_sFileName = pNF->GetFileName(pFEOperation, pContext);
-    m_sIncludeName= pNF->GetIncludeFileName(pFEOperation, pContext);
-    m_nFileType = pContext->GetFileType();
 
-    VERBOSE("%s for operation %s returns true\n", __PRETTY_FUNCTION__,
-        pFEOperation->GetName().c_str());
-    return true;
+    m_nFileType = nFileType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    m_sFilename = pNF->GetFileName(pFEOperation, m_nFileType);
+    m_sIncludeName= pNF->GetIncludeFileName(pFEOperation, m_nFileType);
 }
 
-/**    \brief adds a new constant to the header file
- *    \param pConstant the constant to add
- */
-void CBEHeaderFile::AddConstant(CBEConstant * pConstant)
-{
-    if (!pConstant)
-        return;
-    m_vConstants.push_back(pConstant);
-}
-
-/**    \brief removes a constant from the header file
- *    \param pConstant the constant to remove
- */
-void CBEHeaderFile::RemoveConstant(CBEConstant * pConstant)
-{
-    if (!pConstant)
-        return;
-    vector<CBEConstant*>::iterator iter;
-    for (iter = m_vConstants.begin(); iter != m_vConstants.end(); iter++)
-    {
-        if (*iter == pConstant)
-        {
-            m_vConstants.erase(iter);
-            return;
-        }
-    }
-}
-
-/**    \brief retrieves a pointer to the first constant
- *    \return a pointer to the first constant
- */
-vector<CBEConstant*>::iterator CBEHeaderFile::GetFirstConstant()
-{
-    return m_vConstants.begin();
-}
-
-/**    \brief retrieves the next constant the iterator points to
- *    \param iter the iterator pointing to the next constant
- *    \return a reference to the next constant
- */
-CBEConstant *CBEHeaderFile::GetNextConstant(vector<CBEConstant*>::iterator &iter)
-{
-    if (iter == m_vConstants.end())
-        return 0;
-    return *iter++;
-}
-
-/**    \brief adds a new type definition to the header file
- *    \param pTypedef the type definition to add
- */
-void CBEHeaderFile::AddTypedef(CBETypedef * pTypedef)
-{
-    if (!pTypedef)
-        return;
-    m_vTypedefs.push_back(pTypedef);
-}
-
-/**    \brief removes a type definition from the file
- *    \param pTypedef the type definition to remove
- */
-void CBEHeaderFile::RemoveTypedef(CBETypedef * pTypedef)
-{
-    if (!pTypedef)
-        return;
-    vector<CBETypedef*>::iterator iter;
-    for (iter = m_vTypedefs.begin(); iter != m_vTypedefs.end(); iter++)
-    {
-        if (*iter == pTypedef)
-        {
-            m_vTypedefs.erase(iter);
-            return;
-        }
-    }
-}
-
-/**    \brief retrieves a pointer to the first type definition
- *    \return a pointer to the first type definition
- */
-vector<CBETypedef*>::iterator CBEHeaderFile::GetFirstTypedef()
-{
-    return m_vTypedefs.begin();
-}
-
-/**    \brief returns a reference to the next type definition
- *    \param iter the pointer to the next type definition
- *    \return a reference to the next type definition
- */
-CBETypedef *CBEHeaderFile::GetNextTypedef(vector<CBETypedef*>::iterator &iter)
-{
-    if (iter == m_vTypedefs.end())
-        return 0;
-    return *iter++;
-}
-
-/**    \brief writes the content of the header file
- *    \param pContext the context of the write operation
+/** \brief writes the content of the header file
  *
  * The content of the header file includes the functions, constants and type
  * definitions.
@@ -306,16 +220,17 @@ CBETypedef *CBEHeaderFile::GetNextTypedef(vector<CBETypedef*>::iterator &iter)
  * use the message buffer type of the derived server-loop for the functions of
  * the base interface.
  */
-void CBEHeaderFile::Write(CBEContext * pContext)
+void CBEHeaderFile::Write(void)
 {
-    string sOutputDir = pContext->GetOutputDir();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    string sOutputDir = CCompiler::GetOutputDir();
     string sFilename;
     if (!sOutputDir.empty())
         sFilename = sOutputDir;
     sFilename += GetFileName();
-    if (!Open(sFilename, CFile::Write))
+    if (!Open(sFilename))
     {
-        fprintf(stderr, "Could not open header file %s\n", sFilename.c_str());
+	std::cerr << "Could not open header file " << sFilename << "\n";
         return;
     }
     // sort our members/elements depending on source line number
@@ -323,20 +238,20 @@ void CBEHeaderFile::Write(CBEContext * pContext)
     CreateOrderedElementList();
 
     // write intro
-    WriteIntro(pContext);
+    WriteIntro();
     // write include define
-    string sDefine = pContext->GetNameFactory()->GetHeaderDefine(GetFileName(), pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sDefine = pNF->GetHeaderDefine(GetFileName());
     if (!sDefine.empty())
     {
-        Print("#if !defined(%s)\n", sDefine.c_str());
-        Print("#define %s\n", sDefine.c_str());
+	m_file << "#if !defined(" << sDefine << ")\n";
+	m_file << "#define " << sDefine << "\n";
     }
-    // pretty print: newline
-    Print("\n");
+    m_file << "\n";
 
     // default includes always come first, because they define standard headers
     // needed by other includes
-    WriteDefaultIncludes(pContext);
+    WriteDefaultIncludes();
 
     // write target file
     vector<CObject*>::iterator iter = m_vOrderedElements.begin();
@@ -370,48 +285,48 @@ void CBEHeaderFile::Write(CBEContext * pContext)
             // brace functions with extern C
             if (nLastType == 6)
             {
-                Print("#ifdef __cplusplus\n");
-                Print("}\n");
-                Print("#endif\n\n");
+		m_file << "#ifdef __cplusplus\n" <<
+		    "}\n" <<
+		    "#endif\n\n";
             }
-            Print("\n");
+	    m_file << "\n";
             nLastType = nCurrType;
             // brace functions with extern C
             if (nCurrType == 6)
             {
-                Print("#ifdef __cplusplus\n");
-                Print("extern \"C\" {\n");
-                Print("#endif\n\n");
+		m_file << "#ifdef __cplusplus\n" <<
+		    "extern \"C\" {\n" <<
+		    "#endif\n\n";
             }
         }
         // add pre-processor directive to denote source line
-        if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
+        if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-            Print("# %d \"%s\"\n", (*iter)->GetSourceLine(),
-                (*iter)->GetSourceFileName().c_str());
+	    m_file << "# " << (*iter)->GetSourceLine() << " \"" <<
+		(*iter)->GetSourceFileName() << "\"\n";
         }
         switch (nCurrType)
         {
         case 1:
-            WriteInclude((CIncludeStatement*)(*iter), pContext);
+            WriteInclude((CIncludeStatement*)(*iter));
             break;
         case 2:
-            WriteClass((CBEClass*)(*iter), pContext);
+            WriteClass((CBEClass*)(*iter));
             break;
         case 3:
-            WriteNameSpace((CBENameSpace*)(*iter), pContext);
+            WriteNameSpace((CBENameSpace*)(*iter));
             break;
         case 4:
-            WriteConstant((CBEConstant*)(*iter), pContext);
+            WriteConstant((CBEConstant*)(*iter));
             break;
         case 5:
-            WriteTypedef((CBETypedef*)(*iter), pContext);
+            WriteTypedef((CBETypedef*)(*iter));
             break;
         case 6:
-            WriteTaggedType((CBEType*)(*iter), pContext);
+            WriteTaggedType((CBEType*)(*iter));
             break;
         case 7:
-            WriteFunction((CBEFunction*)(*iter), pContext);
+            WriteFunction((CBEFunction*)(*iter));
             break;
         default:
             break;
@@ -420,9 +335,9 @@ void CBEHeaderFile::Write(CBEContext * pContext)
     // if last element was function, close braces
     if (nLastType == 6)
     {
-        Print("#ifdef __cplusplus\n");
-        Print("}\n");
-        Print("#endif\n\n");
+	m_file << "#ifdef __cplusplus\n" <<
+	    "}\n" <<
+	    "#endif\n\n";
     }
 
     // write helper functions, if any
@@ -430,133 +345,57 @@ void CBEHeaderFile::Write(CBEContext * pContext)
     if (IsOfFileType(FILETYPE_CLIENTHEADER) ||
         IsOfFileType(FILETYPE_COMPONENTHEADER))
     {
-        WriteHelperFunctions(pContext);
+        WriteHelperFunctions();
     }
 
     // write include define closing statement
     if (!sDefine.empty())
     {
-        Print("#endif /* %s */\n", sDefine.c_str());
+	m_file << "#endif /* " << sDefine << " */\n";
     }
-    // pretty print: newline
-    Print("\n");
+    m_file << "\n";
 
     // close file
     Close();
 }
 
-/**    \brief tries to find the typedef with a type of the given name
- *    \param sTypeName the name to search for
- *    \return a reference to the searched typedef or 0
- *
- * To find a typedef, we iterate over the typedefs and check the names.
- */
-CBETypedef *CBEHeaderFile::FindTypedef(string sTypeName)
-{
-    vector<CBETypedef*>::iterator iter = GetFirstTypedef();
-    CBETypedef *pTypedef;
-    while ((pTypedef = GetNextTypedef(iter)) != 0)
-    {
-        vector<CBEDeclarator*>::iterator iterD = pTypedef->GetFirstDeclarator();
-        CBEDeclarator *pDecl;
-        while ((pDecl = pTypedef->GetNextDeclarator(iterD)) != 0)
-        {
-            if (pDecl->GetName() == sTypeName)
-                return pTypedef;
-        }
-    }
-    return 0;
-}
-
 /** \brief writes includes, which have to appear before any type definition
- *  \param pContext the context of the write operation
  */
-void CBEHeaderFile::WriteDefaultIncludes(CBEContext * pContext)
+void CBEHeaderFile::WriteDefaultIncludes(void)
 {
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-        Print("#define DICE_TESTSUITE 1\n");
-    if (pContext->IsOptionSet(PROGRAM_TRACE_SERVER))
-        Print("#define DICE_TRACE_SERVER 1\n");
-    if (pContext->IsOptionSet(PROGRAM_TRACE_CLIENT))
-        Print("#define DICE_TRACE_CLIENT 1\n");
-    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-        Print("#define DICE_TRACE_MSGBUF 1\n");
-    Print("/* needed for CORBA types */\n");
-    Print("#include \"dice/dice.h\"\n");
-    Print("\n");
-}
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-/** \brief returns the file name used in include statements
- *  \return the file name used in include statements
- */
-string CBEHeaderFile::GetIncludeFileName()
-{
-    return m_sIncludeName;
-}
-
-/** \brief returns a pointer to the first tagged type
- *  \return a pointer to the first tagged type
- */
-vector<CBEType*>::iterator CBEHeaderFile::GetFirstTaggedType()
-{
-    return m_vTaggedTypes.begin();
-}
-
-/** \brief return reference to next tagged type
- *  \param iter the pointer to the next tagged type
- *  \return reference to next tagged type
- */
-CBEType* CBEHeaderFile::GetNextTaggedType(vector<CBEType*>::iterator &iter)
-{
-    if (iter == m_vTaggedTypes.end())
-        return 0;
-    return *iter++;
-}
-
-/** \brief adds a tagged type
- *  \param pTaggedType the tagged type to add
- */
-void CBEHeaderFile::AddTaggedType(CBEType *pTaggedType)
-{
-    if (!pTaggedType)
-        return;
-    m_vTaggedTypes.push_back(pTaggedType);
-}
-
-/** \brief removes a tagged type from the header file
- *  \param pTaggedType the tagged type to remove
- */
-void CBEHeaderFile::RemoveTaggedType(CBEType *pTaggedType)
-{
-    if (!pTaggedType)
-        return;
-    vector<CBEType*>::iterator iter;
-    for (iter = m_vTaggedTypes.begin(); iter != m_vTaggedTypes.end(); iter++)
+    char *major = strdup(VERSION);
+    char *minor = strchr(major, '.');
+    char *submin = NULL;
+    if (minor)
     {
-        if (*iter == pTaggedType)
-        {
-            m_vTaggedTypes.erase(iter);
-            return;
-        }
+	*minor = 0;
+	minor++;
+	submin = strchr(minor, '.');
+	if (submin)
+	{
+	    *submin = 0;
+	    submin++;
+	}
     }
-}
+    m_file << 
+	"#ifndef DICE_MAJOR_VERSION\n" <<
+	"#define DICE_MAJOR_VERSION " << major << "\n" <<
+	"#define DICE_MINOR_VERSION " << minor << "\n" <<
+	"#define DICE_SUBMINOR_VERSION " << submin << "\n" <<
+	"#endif\n\n";
+    free(major);
+    
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBETrace *pTrace = pCF->GetNewTrace();
+    pTrace->DefaultIncludes(this);
+    delete pTrace;
 
-/** \brief searches for a tagged type
- *  \param sTypeName the name of the type to search
- *  \return a reference to the tagged type if found
- *
- * A tagged type always has a tagged, which is used to compare names
- */
-CBEType *CBEHeaderFile::FindTaggedType(string sTypeName)
-{
-    vector<CBEType*>::iterator iter = GetFirstTaggedType();
-    CBEType *pTaggedType;
-    while ((pTaggedType = GetNextTaggedType(iter)) != 0)
-    {
-        if (pTaggedType->HasTag(sTypeName))
-            return pTaggedType;
-    }
-    return 0;
+    m_file << 
+	"/* needed for CORBA types */\n" <<
+	"#include \"dice/dice.h\"\n" <<
+	"\n";
 }
 
 /** \brief creates a list of ordered elements
@@ -572,84 +411,83 @@ void CBEHeaderFile::CreateOrderedElementList(void)
 
     // add own vectors
     // typedef
-    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
-    CBETypedef *pT;
-    while ((pT = GetNextTypedef(iterT)) != NULL)
+    vector<CBETypedef*>::iterator iterT;
+    for (iterT = m_Typedefs.begin();
+	 iterT != m_Typedefs.end();
+	 iterT++)
     {
-        InsertOrderedElement(pT);
+        InsertOrderedElement(*iterT);
     }
     // tagged types
-    vector<CBEType*>::iterator iterTa = GetFirstTaggedType();
-    CBEType* pTa;
-    while ((pTa = GetNextTaggedType(iterTa)) != NULL)
+    vector<CBEType*>::iterator iterTa;
+    for (iterTa = m_TaggedTypes.begin();
+	 iterTa != m_TaggedTypes.end();
+	 iterTa++)
     {
-        InsertOrderedElement(pTa);
+        InsertOrderedElement(*iterTa);
     }
     // consts
-    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
-    CBEConstant *pC;
-    while ((pC = GetNextConstant(iterC)) != NULL)
+    vector<CBEConstant*>::iterator iterC;
+    for (iterC = m_Constants.begin();
+	 iterC != m_Constants.end();
+	 iterC++)
     {
-        InsertOrderedElement(pC);
+        InsertOrderedElement(*iterC);
     }
 }
 
 /** \brief writes a class
  *  \param pClass the class to write
- *  \param pContext the context of the write operation
  */
-void CBEHeaderFile::WriteClass(CBEClass *pClass, CBEContext *pContext)
+void CBEHeaderFile::WriteClass(CBEClass *pClass)
 {
     assert(pClass);
-    pClass->Write(this, pContext);
+    pClass->Write(this);
 }
 
 /** \brief writes the namespace
  *  \param pNameSpace the namespace to write
- *  \param pContext the context of the write operation
  */
-void CBEHeaderFile::WriteNameSpace(CBENameSpace *pNameSpace, CBEContext *pContext)
+void CBEHeaderFile::WriteNameSpace(CBENameSpace *pNameSpace)
 {
     assert(pNameSpace);
-    pNameSpace->Write(this, pContext);
+    pNameSpace->Write(this);
 }
 
 /** \brief writes the function
  *  \param pFunction the function to write
- *  \param pContext the context of the write operation
  */
-void CBEHeaderFile::WriteFunction(CBEFunction *pFunction, CBEContext *pContext)
+void CBEHeaderFile::WriteFunction(CBEFunction *pFunction)
 {
     assert(pFunction);
-    if (pFunction->DoWriteFunction(this, pContext))
-        pFunction->Write(this, pContext);
+    if (pFunction->DoWriteFunction(this))
+        pFunction->Write(this);
 }
 
 /** \brief  writes a constant
  *  \param pConstant the constant to write
- *  \param pContext the conte of the write operation
  */
-void CBEHeaderFile::WriteConstant(CBEConstant *pConstant, CBEContext *pContext)
+void CBEHeaderFile::WriteConstant(CBEConstant *pConstant)
 {
     assert(pConstant);
-    pConstant->Write(this, pContext);
+    pConstant->Write(this);
 }
 
 /** \brief write a typedef
  *  \param pTypedef the typedef to write
- *  \param pContext the context of the write operation
  */
-void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef, CBEContext *pContext)
+void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef)
 {
     assert(pTypedef);
-    pTypedef->WriteDeclaration(this, pContext);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s.\n", __func__,
+        pTypedef->m_Declarators.First()->GetName().c_str());
+    pTypedef->WriteDeclaration(this);
 }
 
 /** \brief writes a tagged type
  *  \param pType the type to write
- *  \param pContext the context of the write operation
  */
- void CBEHeaderFile::WriteTaggedType(CBEType *pType, CBEContext *pContext)
+ void CBEHeaderFile::WriteTaggedType(CBEType *pType)
  {
     assert(pType);
     // get tag
@@ -658,13 +496,14 @@ void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef, CBEContext *pContext)
         sTag = ((CBEStructType*)pType)->GetTag();
     if (dynamic_cast<CBEUnionType*>(pType))
         sTag = ((CBEUnionType*)pType)->GetTag();
-    sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
-    Print("#ifndef %s\n", sTag.c_str());
-    Print("#define %s\n", sTag.c_str());
-    pType->Write(this, pContext);
-    Print(";\n");
-    Print("#endif /* !%s */\n", sTag.c_str());
-    Print("\n");
+    sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
+    m_file << 
+	"#ifndef " << sTag << "\n" <<
+	"#define " << sTag << "\n";
+    pType->Write(this);
+    m_file << ";\n" <<
+	"#endif /* !" << sTag << " */\n" <<
+	"\n";
 }
 
 /** \brief retrieves the maximum line number in the file
@@ -678,38 +517,42 @@ int
 CBEHeaderFile::GetSourceLineEnd()
 {
     if (m_nSourceLineNbEnd != 0)
-	return m_nSourceLineNbEnd;
+       return m_nSourceLineNbEnd;
 
     // get maximum of members in base class;
     CBEFile::GetSourceLineEnd();
     
     // constants
-    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
-    CBEConstant *pC;
-    while ((pC = GetNextConstant(iterC)) != 0)
+    vector<CBEConstant*>::iterator iterC;
+    for (iterC = m_Constants.begin();
+	 iterC != m_Constants.end();
+	 iterC++)
     {
-	int sLine = pC->GetSourceLine();
-	int eLine = pC->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterC)->GetSourceLine();
+       int eLine = (*iterC)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // typedef
-    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
-    CBETypedef *pT;
-    while ((pT = GetNextTypedef(iterT)) != NULL)
+    vector<CBETypedef*>::iterator iterT;
+    for (iterT = m_Typedefs.begin();
+	 iterT != m_Typedefs.end();
+	 iterT++)
     {
-	int sLine = pT->GetSourceLine();
-	int eLine = pT->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterT)->GetSourceLine();
+       int eLine = (*iterT)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
     // tagged types
-    vector<CBEType*>::iterator iterTa = GetFirstTaggedType();
-    CBEType *pTa;
-    while ((pTa = GetNextTaggedType(iterTa)) != NULL)
+    vector<CBEType*>::iterator iterTa;
+    for (iterTa = m_TaggedTypes.begin();
+	 iterTa != m_TaggedTypes.end();
+	 iterTa++)
     {
-	int sLine = pTa->GetSourceLine();
-	int eLine = pTa->GetSourceLineEnd();
-	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+       int sLine = (*iterTa)->GetSourceLine();
+       int eLine = (*iterTa)->GetSourceLineEnd();
+       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
     }
 
     return m_nSourceLineNbEnd;
 }
+

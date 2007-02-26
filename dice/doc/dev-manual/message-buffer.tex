@@ -122,7 +122,42 @@ At the server side, the message buffer is a union of all function's \verb|_in|
 and \verb|out| \verb|structs|.  Thus unmarshalling means identifying the
 correct struct and simply assigning members to parameters.
 
+\subsubsection{Initialization}
+
+The message buffer inserts copies of the parameters of each function,
+depending on the direction into the respective structures.  Then basic members
+for communication, such as opcode and exception are added.  To add members
+required by the communication mechanism, such as L4 V2's size and send dopes,
+the communication's \texttt{AddPlatformSpecifcMembers} method is called.  Then
+the marshaller's \texttt{Sort} method is called to arrange the parameters
+according to the marshallers strategy.  The communication class has to
+cooperate tightly with the marshaller class to arrange its message buffer
+members at the correct location.  (Maybe its even more useful if the
+communication class would do the sorting from the start.)
+
+The order of parameter adding is as follows:
+
+\begin{enumerate}
+\item function parameters
+
+\item message buffer parameters.  These include additional length parameters
+      (if not already existent).
+
+\item additional member, such as opcode and exception
+
+\item platform specific members are added by the communication class, because
+      it knows best the required communication members.
+\end{enumerate}
+
+Then, the communication class should sort the members, because it added the
+platform specific members.  This is not feasable, since a message buffer for a
+class also has to be sorted, but there is not communication class available.
+Therefore, the message buffer has to be partially platform dependent and add
+and sort platform specific members.  For details on sorting see the next
+Section.
+
 \subsubsection{Parameter order}
+
 Because the message buffer's \verb|struct| is then the ordered sequence of
 parameters, no extra list would be necessary in the function.  For L4 version
 2 it is reasonable to place  two (or three for X.0) parameters of word size at
@@ -133,22 +168,24 @@ specific elements at the correct location.  This includes placing the opcode
 at the first position, or, if on L4 version 2 transferring flexpages, just
 behind the flexpage descriptors.
 
-Besides that, fixed sized (simple) elements should come first, then
-inidirect parts. Flexpages (in V4 speak map and grant items) come last for
-V4 (X.2) and first for V2.  For V2 we also have to place a delimiter zero
-flexpage behind flexpages.
+Besides that, fixed sized (simple) elements should come first, then inidirect
+parts. Flexpages (in V4 speak map and grant items) come last for V4 (X.2) and
+first for V2.  For V2 we also have to place a delimiter zero flexpage behind
+flexpages.
 
 Some sidenote: Even though it is possible to transfer more than one flexpage
 with V2 this is normally not done.  So the special case of one flexpage should
 be optimized.
 
 \subsubsection{Marshaling}
-Marshaling could be done by simply calling a marshal function of the
-message buffer.  If it is marshaling it marshals---depending on the
-communication function---the \verb|_in| \verb|struct| or, if unmarshaling,
-the \verb|_out| \verb|struct|.
+
+Marshaling could be done by simply calling a marshal function of the message
+buffer.  If it is marshaling it marshals---depending on the communication
+function---the \verb|_in| \verb|struct| or, if unmarshaling, the \verb|_out|
+\verb|struct|.
 
 \subsubsection{Invocation}
+
 Upon message invocation, the third member of the union is used to load the
 message---for X.2---or use it a reference to the message buffer.  Thus,
 depending on the marshaling algorithm, the specific elements of the message
@@ -156,3 +193,180 @@ depending on the marshaling algorithm, the specific elements of the message
 \verb|struct|, but could be set in the \verb|_msg| \verb|struct|.  The
 \verb|_in| and \verb|_out| \verb|struct| could contain placeholders instead of
 these members.  However, this depends on the marshaling algorithm.
+
+\subsection{Notes}
+\insertFigure[caption={Class hierarchy for message buffer classes}]{msgbuf-classes}
+
+As depicted in Figure~\ref{figure:msgbuf-classes}, a possible union style 
+message buffer can be represented.
+
+Then for each function, \dice{} would do the following:
+
+\begin{description}
+\item[call] for each parameter: \verb|AddParameterToMsgBuffer|. If 
+  attribute \verb|[in]| $\rightarrow$ add to \verb|_in| structure.
+  If attribute \verb|[out]| $\rightarrow$ add to \verb|_out| structure.
+
+  Do we have to clone the parameters? Probably, because the elements
+  of the structure should be no pointers, only simple types or constructed
+  types consisting of simple types.  Elements of constructed types that 
+  are pointers reference into the byte buffer at the end of the structure
+  or to indirect parts.  {\textbf Therefore, pointers have to be more
+  complex classes, containing references to where the data is located.}
+
+  Determine size of \verb|_in| and \verb|_out| structure and create 
+  \verb|_msg| structure. Do we need \verb|_msg| structure? No, not 
+  necessarily.  We could also simply cast the message buffer to the
+  message structure required by the C bindings or asm code, which often
+  have to be pointers to word arrays anyway.
+
+  Elements of the structures have to be sorted.  To determine sort 
+  order they need something like ``stickiness'', order depenedencies.
+  \emph{Stickiness} determines, for instance, that a message tag cannot
+  be moved from the beginning of the message buffer (except flexpages
+  on L4 V2 and X0). \emph{Dependency} determine that the size of a 
+  variable sized field has to be marshalled before that field.
+
+\item[send] Similar to \textbf{call}, except only \verb|[in]| parameters
+  have to be taken into account and only a \verb|_in| structure needs
+  to be created.
+
+\item[recv, wait] Similar to \textbf{call}, except only \verb|[out]|
+  parameters have to be considered.
+
+\item[unmarshal] Similar to \textbf{send} in that only \verb|[in]| 
+  parameters have to be considered (or \verb|[out]| at client side)
+  and similar to \textbf{recv} in that we unmarshal them.  We can
+  cast the message buffer to the \verb|_in| structure and unmarshal
+  from it.  Thus, the invocation is the casting of the message buffer,
+  and then its unamrshalling as with \textbf{recv}, but from the
+  \verb|_in| buffer.
+
+\item[marshal] Similar to \textbf{unmarshal}, but we have to do
+  the casting (invocation) before starting to marshal.  Thus, the
+  casting is the variable initialisation here.  Maybe it (casting
+  message buffer parameter to structure) should be variable initialization
+  for \textbf{unmarshal} as well.
+  
+\item[wait any, dispatch, server loop] They all operate on a word
+  array and need no internal knowledge about the message buffer.
+  \emph{Oops!} Wrong! Dispatch has to unmarshal the opcode from the
+  word array. Reply and Wait has to find out if flexpages are 
+  transmitted to invoke the IPC correctly. 
+  
+\end{description}
+
+How do we manage the server's message buffer?  Is a simple word array
+sufficient?  It can be casted to the respective structure in the marshal or
+unmarshal functions.  But how to determine the size of this buffer?  This can
+only be achieved by iterating each of the functions' message buffers and
+checking their respective size.
+
+\subsubsection{Marshaling}
+Marshaling into a message buffer structure can be handled as follows:
+
+\begin{description}
+\item[simple types] assignment:
+
+  \begin{verbatim}
+  union {
+    struct {
+      char a;
+      short b;
+      int c;
+      long d;
+      float e;
+      double f;
+    } _in;
+  } _buffer;
+
+  _buffer._in.a = a;
+  _buffer._in.b = b;
+  ...
+  \end{verbatim}
+
+  Possible optimizations: resorting parameters, depending on their
+  size. (Suggested by Alex W.:) Largest elements (necessary at most:
+  word size) first, then short, then byte.  This order generated least
+  padding.  
+  
+  Example: one byte, two short, one word.  
+
+  \insertFigure[caption={Position of variables. Smallest first, without padding},targetwidth=.6\textwidth]{padding1}
+  
+  As seen in Figure~\ref{figure:padding1}: When marshaling smallest 
+  first without padding: byte assignment at byte address, short assignment
+  at byte address (penalty!), word assignment at byte address (penalty!).
+  Results in size of 9 bytes, which are 3 transmitted words. There are
+  penalties when performing unaligned access.
+  
+  \insertFigure[caption={Position of variables. Smallest first, with padding},targetwidth=.6\textwidth]{padding2}
+  
+  When marshaling smallest first with padding (Figure~\ref{figure:padding2}: 
+  byte assignment at byte address, short assignment at short address 
+  (padding: 1 byte), word assignment at word address (padding: 2 bytes).  
+  Results in size of 12 bytes (with holes in between).  We have to keep
+  padding information.
+  
+  \insertFigure[caption={Position of variables. Biggest first.},targetwidth=.6\textwidth]{padding3}
+
+  When marshaling largest first (Figure~\ref{figure:padding3}: word 
+  assignment at word address, short assignment at short address, byte 
+  assignment at byte address. Results in 9 bytes, which are 3 transmitted 
+  words, but no additional logic for padding is required and no penalty for
+  unaligned access.
+
+\item[constructed types] either assignment or flat, bytewise copy operation.
+  Constructed types, as well as arrays, should be word aligned in the message
+  buffer. This was, we can used word aligned copy operations.  Of course,
+  this may lead to additional padding after such elements. But I think, some
+  wasted bytes, which lead to a better performance are feasable.
+  
+  \textbf{Measure effects of word aligned access.}
+
+\item[constructed types with pointer elements] same treatment as ``normal''
+  \textbf{constructed types}, but after assignment of constructed type,
+  iterate over elements and check if they have pointers (or variable sized
+  array) elements.  Add members to variable sized part for them.
+
+\item[unions] C style unions (without decision (or switch) variable) have to
+  be treated as \textbf{constructed type}.  For unions with switch variable,
+  a decision statement is used in the marshaling code. Since it cannot be 
+  determined at compile time which element is marshaled, no constant offset
+  can be used after the union.  Therefore unions (with switch variable) should
+  come last in the message buffer.
+
+  \textbf{Measure costs of decision statement and probable size savings, also
+  considering use of consant offset into message buffer! $\rightarrow$ Refer
+  to DOpE for example union, which is used.  Consider frequency of each branch
+  in union.}
+
+\item[fixed sized arrays] Memory copy them into fixed sized element in 
+  structure.
+
+\item[variable sized arrays] Memory copy them into variable sized buffer or
+  assign pointer to indirect part.  Which is chosen depends on:
+  \begin{itemize}
+  \item Given attributes: \verb|[ref]| forces use of indirect part.
+  \item Size of fixed and variable elements: Has to fit into maximum message 
+    buffer size.
+  \item Known typical sizes: Do performance tradeoff.
+  \end{itemize}
+
+\item[pointers] are treated as \textbf{variable sized arrays}.
+
+\item[strings] are treated as \textbf{variable sized arrays}, but an local 
+  variable has to be used as size attribute.  This local variable is 
+  initialized with the string length and then used as if it is an attribute.  
+  This way, we determine the length of the string only once and can use the 
+  logic of the variable sized arrays whithout special cases.
+  
+\end{description}
+
+As a consequence from the above, we have to use local variables in the
+functions.  These local variables are managed in the functions.  Nonetheless
+do message buffer and marshaller classes have to have access to them.  When
+setting up the message buffer, the message buffer class ideally adds local
+variable for size, etc.  When setting up the marshaller class, it should add
+temporary variable used during marshaling, unmarshaling, or message transfer.
+

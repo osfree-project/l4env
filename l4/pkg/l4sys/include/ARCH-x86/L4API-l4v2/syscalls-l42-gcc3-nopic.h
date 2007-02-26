@@ -86,7 +86,7 @@ l4_nchief(l4_threadid_t destination,
 /*
  * L4 lthread_ex_regs
  */
-static inline void
+L4_INLINE void
 __do_l4_thread_ex_regs(l4_umword_t val0,
                        l4_umword_t eip,
                        l4_umword_t esp,
@@ -205,11 +205,11 @@ l4_thread_schedule(l4_threadid_t dest,
  * L4 task new
  */
 L4_INLINE l4_taskid_t
-l4_task_new(l4_taskid_t destination,
-	    l4_umword_t mcp_or_new_chief,
-	    l4_umword_t esp,
-	    l4_umword_t eip,
-	    l4_threadid_t pager)
+__do_l4_task_new(l4_taskid_t destination,
+	         l4_umword_t mcp_or_new_chief_and_flags,
+	         l4_umword_t esp,
+	         l4_umword_t eip,
+	         l4_threadid_t pager)
 {
   unsigned dummy1, dummy2, dummy3, dummy4;
   l4_taskid_t new_task;
@@ -231,13 +231,45 @@ l4_task_new(l4_taskid_t destination,
 	  "=D" (new_task.lh.high)
 	 :
 	  "b" (&pager),
-	  "a" (mcp_or_new_chief),
+	  "a" (mcp_or_new_chief_and_flags),
 	  "c" (esp),
 	  "d" (eip),
 	  "S" (destination.lh.low),
-	  "D" (destination.lh.high)
+	  "D" (destination.lh.high),
+	  "m" (pager) // make the compiler to know that we dereference the
+                      // &pager value
 	 );
   return new_task;
+}
+
+/*
+ * L4 task new
+ */
+L4_INLINE l4_taskid_t
+l4_task_new(l4_taskid_t destination,
+	    l4_umword_t mcp_or_new_chief,
+	    l4_umword_t esp,
+	    l4_umword_t eip,
+	    l4_threadid_t pager)
+{
+  return __do_l4_task_new(destination, mcp_or_new_chief, esp, eip, pager);
+}
+
+/*
+ * L4 task new with cap
+ */
+L4_INLINE l4_taskid_t
+l4_task_new_cap(l4_taskid_t destination,
+	        l4_umword_t mcp_or_new_chief,
+	        l4_umword_t esp,
+	        l4_umword_t eip,
+	        l4_threadid_t pager,
+	        l4_threadid_t cap_handler)
+{
+  l4_utcb_get()->ex_regs.caphandler = cap_handler;
+  return __do_l4_task_new(destination,
+                          mcp_or_new_chief | L4_TASK_NEW_IPC_MONITOR,
+                          esp, eip, pager);
 }
 
 L4_INLINE int
@@ -257,4 +289,3 @@ l4_privctrl(l4_umword_t cmd,
 }
 
 #endif
-

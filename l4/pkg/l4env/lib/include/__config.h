@@ -10,16 +10,16 @@
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
@@ -33,7 +33,7 @@
  *** default configuration
  *****************************************************************************/
 
-/// default dataspace manager 
+/// default dataspace manager
 #define L4ENV_DEFAULT_DSM_NAME     L4DM_MEMPHYS_NAME
 
 #endif /* !_L4ENV___CONFIG_H */

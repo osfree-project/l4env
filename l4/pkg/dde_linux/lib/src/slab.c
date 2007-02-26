@@ -69,10 +69,9 @@ static void * alloc_grow (l4slab_cache_t * cache, void **data)
 
   LOGd_Enter(DEBUG_SLAB, "(name=%s)", kcache->name);
 
-  if (!(memp = l4dm_mem_allocate (L4_PAGESIZE, L4DM_PINNED | L4RM_MAP)))
-    {
-      Panic ("dde: kmem_caches can't grow");
-    }
+  if (!(memp = l4dm_mem_allocate (cache->slab_size,
+                                  L4DM_PINNED | L4RM_MAP | L4RM_LOG2_ALIGNED)))
+      Panic("dde: kmem_caches can't grow");
 
   return memp;
 }

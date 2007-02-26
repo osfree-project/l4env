@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BETypedDeclarator.h
- *    \brief   contains the declaration of the class CL4BETypedDeclarator
+ *  \brief   contains the declaration of the class CL4BETypedDeclarator
  *
  *    \date    07/17/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -27,7 +27,6 @@
  */
 
 /** preprocessing symbol to check header file */
-
 #ifndef L4BETYPEDDECLARATOR_H
 #define L4BETYPEDDECLARATOR_H
 
@@ -41,13 +40,28 @@ class CL4BETypedDeclarator : public CBETypedDeclarator
 {
 public:
     /** creates a new object of a typed declarator */
-    CL4BETypedDeclarator();
-    ~CL4BETypedDeclarator();
+    CL4BETypedDeclarator() : CBETypedDeclarator()
+    {}
+    /** copy constructor
+     *  \param src the source to copy from
+     */
+    CL4BETypedDeclarator(CL4BETypedDeclarator &src)
+    : CBETypedDeclarator(src)
+    {}
+    /** destroys the typed declarator object */
+    virtual ~CL4BETypedDeclarator(void)
+    {}
+
+    /** \brief clones this object
+     *  \return reference to copy
+     */
+    virtual CObject* Clone()
+    { return new CL4BETypedDeclarator(*this); }
 
 public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
-    virtual int GetMaxSize(bool bGuessSize, CBEContext *pContext);
+    virtual bool GetMaxSize(bool bGuessSize, int & nSize);
 };
 
 #endif

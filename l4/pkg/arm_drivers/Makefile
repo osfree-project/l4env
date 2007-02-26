@@ -1,9 +1,8 @@
 PKGDIR	= .
 L4DIR	?= $(PKGDIR)/../..
 
-
 TARGET  = include lib
-SUBDIRS = uart
+SUBDIRS = uart drv lcd
 
 include $(L4DIR)/mk/subdir.mk
 
@@ -34,7 +33,6 @@ $(addsuffix .idl,$(SUBDIRS)): %.idl: %
 
 $(addsuffix .lib,$(SUBDIRS)): %.lib: %
 	$(MAKE) -C $(subst .lib,,$@) lib
-
 
 # these targets are phony
 .PHONY: include idl lib

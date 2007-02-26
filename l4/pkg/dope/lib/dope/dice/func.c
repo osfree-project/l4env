@@ -19,7 +19,7 @@
 
 /*** LOCAL INCLUDES ***/
 #include "dopelib.h"
-#include <dope-client.h>
+#include "dope-client.h"
 #include "dopestd.h"
 #include "app_struct.h"
 #include "sync.h"
@@ -38,8 +38,8 @@ static struct dopelib_app first_app;
 long dope_init_app(const char *app_name) {
 	int id;
 	struct dopelib_app *app;
-	char *listener_ident;
-	
+	char buf[128];
+
 	for (id=0; (id<MAX_DOPE_CLIENTS) && (dopelib_apps[id]); id++);
 	if (id >= MAX_DOPE_CLIENTS) {
 		ERROR(printf("DOpElib(init_app): error: no free id found\n"));
@@ -62,11 +62,10 @@ long dope_init_app(const char *app_name) {
 	/* init event queue that is shared between listener and main thread */
 	if (dopelib_init_eventqueue(id) < 0) return -1;
 
-	listener_ident = dopelib_start_listener(id);
-	INFO(printf("DOpElib(dope_init_app): app_name = %s, listener = %s\n",app_name,listener_ident);)
-	
-	app->app_id = dope_manager_init_app_call(dope_server,app_name,listener_ident,&app->env);
-	INFO(printf("DOpElib(dope_init_app): init_app_call finished. id = %d\n", (int)id));
+	dopelib_start_listener(id);
+
+	CORBA_Object_to_ident(&app->listener, buf, sizeof(buf));
+	app->app_id = dope_manager_init_app_call(dope_server, app_name, buf, &app->env);
 	return id;
 }
 
@@ -78,6 +77,8 @@ long dope_deinit_app(long id) {
 
 	/* notify DOpE to destroy the application's namespace */
 	dope_manager_deinit_app_call(dope_server, app->app_id, &app->env);
+
+	dopelib_stop_listener(id);
 
 	/* free local identifier */
 	dopelib_apps[id] = NULL;
@@ -108,7 +109,7 @@ int dope_reqf(long app_id, char *res, int res_max, const char *format, ...) {
 	int ret;
 	va_list list;
 	static char cmdstr[1024];
-	
+
 	dopelib_mutex_lock(dopelib_cmdf_mutex);
 	va_start(list, format);
 	vsnprintf(cmdstr, 1024, format, list);
@@ -155,11 +156,10 @@ int dope_cmdf(long app_id, const char *format, ...) {
 
 
 long dope_get_keystate(long id, long keycode) {
-	return dope_manager_get_keystate_call(dope_server,keycode,&dopelib_apps[id]->env);
+	return dope_manager_get_keystate_call(dope_server, keycode, &dopelib_apps[id]->env);
 }
 
 
 char dope_get_ascii(long id, long keycode) {
-	return dope_manager_get_ascii_call(dope_server,keycode,&dopelib_apps[id]->env);
+	return dope_manager_get_ascii_call(dope_server, keycode, &dopelib_apps[id]->env);
 }
-

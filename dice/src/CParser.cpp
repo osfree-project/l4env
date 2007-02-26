@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/CParser.cpp
- *    \brief   contains the implementation of the class CParser
+ *  \file    dice/src/CParser.cpp
+ *  \brief   contains the implementation of the class CParser
  *
- *    \date    Mon Jul 22 2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Mon Jul 22 2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -36,6 +36,7 @@
 #include "CCXXParser.h"
 #include "CDCEParser.h"
 #include "CCORBAParser.h"
+// #include "CCapIDLParser.h"
 #include "fe/FEFile.h"
 #include "fe/FEFileComponent.h"
 #include "Compiler.h"
@@ -49,14 +50,13 @@
 /////////////////////////////////////////////////////////////////////////////////
 // error handling
 //@{
-/** globale variables used by the parsers to count errors and warnings */
+/** references error count varianle */
 extern int errcount;
+/** references variable indicating if error occured */
 extern int erroccured;
+/** references warning count variable */
 extern int warningcount;
 //@}
-
-/**    debugging helper variable */
-extern int nGlobalDebug;
 
 /** the current line number (relative to the current file) */
 int gLineNumber = 1;
@@ -77,7 +77,7 @@ bool bExpectFileName = false;
 /////////////////////////////////////////////////////////////////////////////////
 // file elements
 /** a reference to the currently parsed file */
-CFEFileComponent *pCurFileComponent = NULL;
+CFEFileComponent *pCurFileComponent = 0;
 
 CParser* CParser::m_pCurrentParser = 0;
 CFEFile* CParser::m_pCurrentFile = 0;
@@ -87,7 +87,7 @@ CParser::CParser()
 {
     m_pBuffer = 0;
     m_pFEFile = 0;
-    m_nInputFileType = 0;
+    m_nInputFileType = USE_FE_NONE;
     m_nFiles = 0;
     m_pParent = 0;
 }
@@ -95,34 +95,6 @@ CParser::CParser()
 /** cleans up the parser object */
 CParser::~CParser()
 {
-}
-
-/** \brief parses an IDL file and inserts its elements into the pFEFile
- *  \param scan_buffer the buffer to use for scanning
- *  \param sFilename the name of the file to parse
- *  \param nIDL indicates the type of the IDL (DCE/CORBA)
- *  \param bVerbose true if verbose output should be written
- *  \param bPreProcessOnly true if parser should staop after preprocessing
- *  \return true if successful
- */
-bool CParser::Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbose, bool bPreProcessOnly)
-{
-    assert(false);
-    return false;
-}
-
-/** \brief prints a message if verbose mode is on
- *  \param sMsg the message
- */
-void CParser::Verbose(const char *sMsg, ...)
-{
-    // if verbose turned off: return
-    if (!m_bVerbose)
-        return;
-    va_list args;
-    va_start(args, sMsg);
-    vprintf(sMsg, args);
-    va_end(args);
 }
 
 /** \brief obtains a reference to the current parser
@@ -147,7 +119,7 @@ CParser *CParser::SetCurrentParser(CParser *pParser)
  *  \param nFileType the type of the file to parse
  *  \return a reference to an appropriate parser object
  */
-CParser* CParser::CreateParser(int nFileType)
+CParser* CParser::CreateParser(FrontEnd_Type nFileType)
 {
     CParser *pRet = 0;
     switch (nFileType)
@@ -164,21 +136,14 @@ CParser* CParser::CreateParser(int nFileType)
     case USE_FILE_CXX:
         pRet = new CCXXParser();
         break;
+//     case USE_FE_CAPIDL:
+// 	pRet = new CCapIDLParser();
+// 	break;
     default:
-        pRet = new CParser();
+        pRet = (CParser*)0;
         break;
     }
     return pRet;
-}
-
-/** \brief imports a file
- *  \param sFilename the name of the file
- *  \return 0 if something went wrong and the parser should terminate
- */
-unsigned char CParser::Import(string sFilename)
-{
-    assert(false);
-    return false;
 }
 
 /** \brief returns a reference to the root of the current scope
@@ -204,7 +169,7 @@ void CParser::SetCurrentFile(CFEFile *pFEFile)
     if (!pFEFile)
         return;
     if (m_pCurrentFile)
-        m_pCurrentFile->AddChild(pFEFile);
+        m_pCurrentFile->m_ChildFiles.Add(pFEFile);
     m_pCurrentFile = pFEFile;
 }
 
@@ -234,7 +199,7 @@ CFEFile *CParser::GetCurrentFile()
  * This function creates types, which should be known
  * when parsing IDL files, but cannot be imported.
  */
-bool CParser::PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& fOut)
+bool CParser::PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& /*fOut*/)
 {
     // if we run for the very first time, we import the
     // dice header file
@@ -247,8 +212,13 @@ bool CParser::PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& fOut)
         FILE *fTmp = tmpfile();
         if (!fTmp)
             return false;
+	// set line number before, so include statement will be detected of
+	// right line
+        fprintf(fTmp, "#line 1 \"%s\"\n", sFilename.c_str());
         fprintf(fTmp, "#include \"dice/dice-corba-types.h\"\n");
-        fprintf(fTmp, "#line 1 \"%s\"\n", sFilename.c_str()); // reset line number
+	// set line number afterwards so elements in IDL file will be detected
+	// at right line
+        fprintf(fTmp, "#line 1 \"%s\"\n", sFilename.c_str());
         if (!CopyFile(fIn, fTmp))
             return false;
         fclose(fIn);
@@ -266,12 +236,13 @@ bool CParser::PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& fOut)
 void CParser::FinishEnvironment()
 {
     CFEFile *pRoot = dynamic_cast<CFEFile*>(GetTopFileInScope()->GetRoot());
-    vector<CIncludeStatement*>::iterator iter = pRoot->GetFirstInclude();
-    CIncludeStatement *pInclude;
-    while ((pInclude = pRoot->GetNextInclude(iter)) != 0)
+    vector<CIncludeStatement*>::iterator iter;
+    for (iter = pRoot->m_Includes.begin();
+	 iter != pRoot->m_Includes.end();
+	 iter++)
     {
-        if (pInclude->GetIncludedFileName() == "dice/dice-corba-types.h")
-            pInclude->SetPrivate(true);
+        if ((*iter)->m_sFilename == "dice/dice-corba-types.h")
+            (*iter)->m_bPrivate = true;
     }
 }
 
@@ -294,7 +265,7 @@ bool CParser::DoEndImport()
  */
 bool CParser::CopyFile(FILE *fInput, FILE* fOutput)
 {
-    char buffer[1024];
+    char buffer[4096];
     size_t len;
     do
     {
@@ -323,10 +294,28 @@ void CParser::UpdateState(string sFileName, int nLineNumber)
             m_pParent->UpdateState(sFileName, nLineNumber);
         return;
     }
-//     TRACE("UpdateState for %s from %d to %d\n",
-//         sFileName.c_str(), m_nLineNumber, nLineNumber);
     // update line number
     if (nLineNumber > m_nLineNumber)
         m_nLineNumber = nLineNumber;
 }
 
+/** \brief helper function to determine the file type
+ *  \param sExt the extension of the file
+ *  \return the file type
+ */
+FrontEnd_Type CParser::DetermineFileType(string sExt)
+{
+    if ((sExt == "h") ||
+	(sExt == "c"))
+	return USE_FILE_C;
+    if ((sExt == "hh") ||
+	(sExt == "H") ||
+	(sExt == "hpp") ||
+	(sExt == "hxx") ||
+	(sExt == "cc") ||
+	(sExt == "cpp"))
+	return USE_FILE_CXX;
+    if (sExt == "capidl")
+	return USE_FE_CAPIDL;
+    return USE_FE_DCE;
+}

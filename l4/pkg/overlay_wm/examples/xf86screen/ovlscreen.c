@@ -271,10 +271,15 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
 	DisplayModePtr dispmode;
 	Gamma gzeros = { 0.0, 0.0, 0.0 };
 	rgb rzeros = { 0, 0, 0 };
+	int res;
 
 	if (flags & PROBE_DETECT) return (FALSE);
 
-	ovl_screen_init(NULL);
+	if ((res = ovl_screen_init(NULL)) < 0) {
+		xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
+		          "Error: ovl_screen_init() returned %d\n", res);
+		return (FALSE);
+	}
 
 	ovlscr = get_private_data(scrinfo);
 	ovlscr->width  = ovl_get_phys_width();  //1024;
@@ -324,7 +329,7 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
 	/* visual init */
 	if (!xf86SetDefaultVisual(scrinfo, -1)) {
 		xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "Overlay Screen: failed\n");
-		
+
 		return (FALSE);
 	}
 	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "Overlay Screen: passed default visual\n");

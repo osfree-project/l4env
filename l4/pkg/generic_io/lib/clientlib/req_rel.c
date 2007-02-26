@@ -36,7 +36,7 @@
  * \return virtual address of mapped region; 0 on error
  */
 /*****************************************************************************/
-l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
+l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags,
                                   l4_umword_t *offset)
 {
   int err;
@@ -63,7 +63,7 @@ l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
 
   /* request mem region */
   _env.rcv_fpage = l4_fpage(vaddr, area_len, L4_FPAGE_RW, 0);
-  err = l4_io_request_mem_region_call(&io_l4id, start, len, 
+  err = l4_io_request_mem_region_call(&io_l4id, start, len, flags,
 				      &region, offset, &_env);
   if (DICE_ERR(err, &_env))
     {

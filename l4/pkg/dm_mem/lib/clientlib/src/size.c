@@ -53,11 +53,11 @@ l4dm_mem_size(const l4dm_dataspace_t * ds, l4_size_t * size)
 
   /* call dataspace manager */
   ret = if_l4dm_mem_size_call(&(ds->manager), ds->id, size, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_mem: get size of dataspace %u at " \
             l4util_idfmt" failed (ret %d, exc %d)!", ds->id,
-            l4util_idstr(ds->manager), ret, _env.major);
+            l4util_idstr(ds->manager), ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

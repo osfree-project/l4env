@@ -1,5 +1,14 @@
-This is an application launcher. It uses 'loader' and 'l4exec' an is
-similar to 'launchpad' an 'run'. It currently uses BMODFS as file
-provider (hardcoded), but I will make this configurable in the
-future.
+This is an application launcher. It uses 'loader' and 'l4exec' and is
+similar to 'launchpad' an 'run'. It can use TFTP or any other file provider
+as a source for loader scripts and binaries.
+
+The following command line options are supported:
+
+--fprov FPROV_NAME
+    default: TFTP
+    e.g.:    qt3_qrun --fprov BMODFS
+
+--bin-prefix PREFIX
+    default: ""
+    e.g.:    qt3_qrun --bin-prefix (nd)/tftpboot/cw183155
 

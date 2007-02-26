@@ -14,7 +14,6 @@
 #include <fcntl.h>
 
 #include <l4/log/l4log.h>
-#include <l4/term_server/vt100.h>
 
 #include "lib.h"
 #include "keymap.h"
@@ -92,7 +91,7 @@ int vt100_read(termstate_t *term, l4_int8_t *buf, int count, int rw_mode)
             {
                 if (i == 0 && count != 0)
                     return -EAGAIN;
-                else                       
+                else
                     break;
             }
         }
@@ -103,7 +102,7 @@ int vt100_read(termstate_t *term, l4_int8_t *buf, int count, int rw_mode)
         }
 
         LOGd(_DEBUG, "char = %c (%d)", c, c);
-        
+
         if (c < 0)
         {
             LOGd(_DEBUG, "invalid char");
@@ -145,9 +144,9 @@ int vt100_write(termstate_t *term, const l4_int8_t * buf, int count)
     // 2. The history becomes filled up.
     // 3. As we have a ring buffer, the user sees the new text coming
     //    in from above.
-    
+
     term->vis_off = 0;
-    
+
     for(act = buf; act < buf + count; act++)
     {
         parse_character(term, (l4_uint8_t)*act);
@@ -170,16 +169,16 @@ int vt100_write(termstate_t *term, const l4_int8_t * buf, int count)
 void vt100_add_key(termstate_t *term, int code)
 {
     int new_top;
-    unsigned char *result, oldchar = 'a';
+    unsigned char * result, oldchar = 'a';
 
     // wrong keycode?
     if (code > 127)
         return;
 
     if (term->__shift)
-        result = keymap[code][1];
+        result = (*(vt100_keymap))[code][1];
     else
-        result = keymap[code][0];
+        result = (*(vt100_keymap))[code][0];
 
     LOGd(_DEBUG,"keycode: %d, char='%s'", code, result);
 

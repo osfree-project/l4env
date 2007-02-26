@@ -40,6 +40,9 @@ NET_C += net/netlink/af_netlink.c
 NET_C += net/sched/sch_generic.c
 NET_C += drivers/net/net_init.c drivers/net/setup.c
 
+# DHCP support
+NET_C += net/ipv4/ipconfig.c
+
 ### Now put it all together
 SRC_C += $(NET_C) $(LIB_C) $(FS_C)
 SRC_S += $(NET_S) $(FS_S)

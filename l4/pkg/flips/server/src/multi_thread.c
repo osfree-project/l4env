@@ -101,8 +101,9 @@ void multi_thread()
 
 	/* let's rock */
 	LOG("spawning server");
-	id = l4thread_create((l4thread_fn_t) server,
-	                      NULL, L4THREAD_CREATE_SYNC);
+	id = l4thread_create_named((l4thread_fn_t) server,
+	                           ".server",
+	                           NULL, L4THREAD_CREATE_SYNC);
 	if (id < 0)
 		ERR_EXIT("l4thread_create: %d", id);
 

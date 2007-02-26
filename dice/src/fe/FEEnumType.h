@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEEnumType.h
- *    \brief   contains the declaration of the class CFEEnumType
+ *  \brief   contains the declaration of the class CFEEnumType
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,14 +31,14 @@
 #define __DICE_FE_FEENUMTYPE_H__
 
 #include "fe/FEConstructedType.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFEIdentifier;
 
-/**    \class CFEEnumType
- *    \ingroup frontend
- *    \brief represents the enumeration type
+/** \class CFEEnumType
+ *  \ingroup frontend
+ *  \brief represents the enumeration type
  *
  * This class is used to represent an enumeration type in the IDL.
  */
@@ -46,33 +46,35 @@ class CFEEnumType : public CFEConstructedType
 {
 // standard constructor/destructor
 public:
-    /** constructs an enum type
-     *    \param pMembers the members of the enumeration
+    /** \brief constructs an enum type
+     *  \param sTag the tag of the enum
+     *  \param pMembers the members of the enumeration
      */
-    CFEEnumType(vector<CFEIdentifier*> *pMembers);
+    CFEEnumType(string sTag, vector<CFEIdentifier*> *pMembers);
     virtual ~CFEEnumType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEEnumType(CFEEnumType &src);
-    virtual void SerializeMembers(CFile *pFile);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
-    virtual CObject* Clone();
-    virtual CFEIdentifier* GetNextMember(vector<CFEIdentifier*>::iterator &iter);
-    virtual vector<CFEIdentifier*>::iterator GetFirstMember();
+    virtual void Accept(CVisitor&);
+
+    /** copies the object
+     *  \return a reference to a new enumeration type object
+     */
+    virtual CObject* Clone()
+    { return new CFEEnumType(*this); }
 
 // atributes
-protected:
-    /**    \var vector<CFEIdentifier*> m_vMembers
-     *    \brief contains the members (the enumeration names)
+public:
+    /** \var CCollection<CFEIdentifier> m_Members
+     *  \brief contains the members (the enumeration names)
      */
-    vector<CFEIdentifier*> m_vMembers;
+    CCollection<CFEIdentifier> m_Members;
 };
 
 #endif /* __DICE_FE_FEENUMTYPE_H__ */

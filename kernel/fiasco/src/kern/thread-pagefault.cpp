@@ -44,7 +44,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
 	 "  current space has mapping : %08x\n"
 	 "  Kernel space has mapping  : %08x\n",
 	 PF::is_translation_error(error_code),
-	 current_space()->lookup((void*)pfa),
+	 current_mem_space()->lookup((void*)pfa),
 	 Space::kernel_space()->lookup((void*)pfa));
 #endif
 
@@ -79,9 +79,9 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
     {
       // Make sure that we do not handle page faults that do not
       // belong to this thread.
-      assert (space() == current_space());
+      assert (mem_space() == current_mem_space());
 
-      if (EXPECT_FALSE (space()->is_sigma0()))
+      if (EXPECT_FALSE (mem_space()->is_sigma0()))
         {
           // special case: sigma0 can map in anything from the kernel
 	  if(handle_sigma0_page_fault(pfa))
@@ -92,7 +92,8 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
         }
 
       // user mode page fault -- send pager request
-      if (!(ipc_code = handle_page_fault_pager(pfa, error_code)).has_error())
+      if (!(ipc_code 
+	    = handle_page_fault_pager(_pager, pfa, error_code)).has_error())
         return true;
 
       goto error;
@@ -138,13 +139,13 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
   else 
 #ifdef CONFIG_ARM
   if (PF::is_translation_error(error_code) &&
-      Space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
+      Mem_space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
 #else
   if (PF::is_translation_error(error_code) &&
       Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != (Mword) -1)
 #endif
     {
-      current_space()->kmem_update((void*)pfa);
+      current_mem_space()->kmem_update((void*)pfa);
       return true;
     }
 
@@ -175,7 +176,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
               // error could mean: someone else was faster allocating
               // a page there, or we just don't have any pages left; verify
 #ifdef CONFIG_ARM
-	      if (Space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
+	      if (Mem_space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
 		panic("can't alloc kernel page");
 #else
               if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
@@ -187,7 +188,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
             }
         }
 
-      current_space()->kmem_update((void*)pfa);
+      current_mem_space()->kmem_update((void*)pfa);
       return true;
     }
 

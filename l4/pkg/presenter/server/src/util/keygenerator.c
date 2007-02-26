@@ -30,10 +30,14 @@ int init_keygenerator(struct presenter_services *p);
 /*** SERVICE FUNCTIONS ***/
 /*************************/
 
-static KEYGENERATOR *keygenerator_create (int number_of_keys) {
+static KEYGENERATOR *keygenerator_create (int number_of_keys)
+{
     struct keygenerator_struct *keygen;
 
-    keygen = (struct keygenerator_struct *) malloc(sizeof(struct keygenerator_struct));
+    keygen = malloc(sizeof(struct keygenerator_struct));
+    if (!keygen)
+      return NULL;
+
     keygen->key_intern=0;
     keygen->key_amount=number_of_keys;
     keygen->curr_rel_keys=0;

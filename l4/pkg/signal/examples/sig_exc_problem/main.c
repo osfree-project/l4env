@@ -59,8 +59,8 @@ extern void div_entry();
 void fpe_handler(exc_state_t *state)
 {
     LOG("Floating point exception occured");
-    LOG("Address: %x", state->addr);
-    LOG("EIP: %x", state->eip);
+    LOG("Address: %lx", state->addr);
+    LOG("EIP: %lx", state->eip);
 
     l4_sleep_forever();
 }
@@ -68,8 +68,8 @@ void fpe_handler(exc_state_t *state)
 void div_handler(exc_state_t *state)
 {
     LOG("Integer division by zero detected!");
-    LOG("Address: %x", state->addr);
-    LOG("EIP: %x", state->eip);
+    LOG("Address: %lx", state->addr);
+    LOG("EIP: %lx", state->eip);
 
     l4_sleep_forever();
 }

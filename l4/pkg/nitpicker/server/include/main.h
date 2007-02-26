@@ -32,7 +32,7 @@ extern int userstate;
 
 
 /*** SET TEXT IN MENUBAR ***/
-extern void menubar_set_text(char *text);
+extern void menubar_set_text(char *trusted_text, char *untrusted_text);
 
 
 /*** USER INPUT HANDLER ***/

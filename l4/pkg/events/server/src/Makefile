@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= events
-SYSTEMS 	= x86-l4v2 x86-l4x0
+SYSTEMS 	= x86-l4v2
 MODE		= sigma0
 DEFAULT_RELOC	= 0x01540000
 PRIVATE_INCDIR	= $(PKGDIR)/server/include .

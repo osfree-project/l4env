@@ -26,12 +26,12 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FESimpleType.h"
+#include "FESimpleType.h"
 #include "Compiler.h"
 #include "File.h"
+#include "Visitor.h"
 
-
-CFESimpleType::CFESimpleType(TYPESPEC_TYPE nType,
+CFESimpleType::CFESimpleType(unsigned int nType,
                  bool bUnSigned,
                  bool bUnsignedFirst,
                  int nSize,
@@ -73,24 +73,12 @@ bool CFESimpleType::IsUnsigned()
     return m_bUnSigned;
 }
 
-/** \brief checks consistency
- *  \return false if error occured, true otherwise
- *
- * A simple type is consistent if it is not TYPE_NONE and has a size >= 0.
+/** \brief accepts the iterations of the visitors
+ *  \param v reference to the visitor
  */
-bool CFESimpleType::CheckConsistency()
+void CFESimpleType::Accept(CVisitor& v)
 {
-    if (m_nType == TYPE_NONE)
-      {
-      CCompiler::GccError(this, 0, "The type has no type?!");
-      return false;
-      }
-    if (m_nSize < 0)
-      {
-      CCompiler::GccError(this, 0, "Type with negative size.");
-      return false;
-      }
-    return true;
+    v.Visit(*this);
 }
 
 /** sets the signed/unsigned variable
@@ -99,83 +87,6 @@ bool CFESimpleType::CheckConsistency()
 void CFESimpleType::SetUnsigned(bool bUnsigned)
 {
     m_bUnSigned = bUnsigned;
-}
-
-/** serialize this object
- *  \param pFile the file to serialize from/to
- */
-void CFESimpleType::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<type>");
-      switch (GetType())
-        {
-        case TYPE_INTEGER:
-        pFile->Print("int");
-        break;
-        case TYPE_LONG:
-        pFile->Print("long");
-        break;
-        case TYPE_VOID:
-        pFile->Print("void");
-        break;
-        case TYPE_FLOAT:
-        pFile->Print("float");
-        break;
-        case TYPE_DOUBLE:
-        pFile->Print("double");
-        break;
-        case TYPE_LONG_DOUBLE:
-        pFile->Print("long double");
-        break;
-        case TYPE_CHAR:
-        pFile->Print("char");
-        break;
-        case TYPE_WCHAR:
-        pFile->Print("wchar");
-        break;
-        case TYPE_BOOLEAN:
-        pFile->Print("boolean");
-        break;
-        case TYPE_BYTE:
-        pFile->Print("byte");
-        break;
-        case TYPE_VOID_ASTERISK:
-        pFile->Print("void*");
-        break;
-        case TYPE_CHAR_ASTERISK:
-        pFile->Print("char*");
-        break;
-        case TYPE_ERROR_STATUS_T:
-        pFile->Print("error_status_t");
-        break;
-        case TYPE_FLEXPAGE:
-        pFile->Print("flexpage");
-        break;
-        case TYPE_RCV_FLEXPAGE:
-        pFile->Print("rcv_flexpage");
-        break;
-        case TYPE_STRING:
-        pFile->Print("string");
-        break;
-        case TYPE_WSTRING:
-        pFile->Print("wstring");
-        break;
-        case TYPE_ISO_LATIN_1:
-        pFile->Print("iso_latin_1");
-        break;
-        case TYPE_ISO_MULTILINGUAL:
-        pFile->Print("iso_multilingual");
-        break;
-        case TYPE_ISO_UCS:
-        pFile->Print("iso_ucs");
-        break;
-        default:
-        break;
-        }
-      pFile->Print("</type>\n");
-      }
 }
 
 /** \brief resturns the size of the type

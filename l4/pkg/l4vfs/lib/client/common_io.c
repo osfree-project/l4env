@@ -17,7 +17,7 @@
 
 ssize_t l4vfs_read(l4_threadid_t server,
                    object_handle_t fd,
-                   l4_int8_t **buf,
+                   char **buf,
                    size_t *count)
 {
     CORBA_Environment _dice_corba_env = dice_default_environment;
@@ -39,11 +39,13 @@ ssize_t l4vfs_write(l4_threadid_t server,
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;
     _dice_corba_env.free = (dice_free_func)free;
+    l4vfs_size_t max_count = (*count < L4VFS_WRITE_RCVBUF_SIZE) ?
+        *count : L4VFS_WRITE_RCVBUF_SIZE;
 
     return l4vfs_common_io_write_call(&server,
                                       fd,
                                       buf,
-                                      count,
+                                      &max_count,
                                       &_dice_corba_env);
 }
 
@@ -71,15 +73,15 @@ int l4vfs_ioctl(l4_threadid_t server,
     return l4vfs_common_io_ioctl_call( &server,
                                        fd,
                                        cmd,
-                                       (l4_int8_t **) arg,
+                                       arg,
                                        count,
                                        &_dice_corba_env );
 }
 
 int l4vfs_fcntl(l4_threadid_t server,
                 object_handle_t fd,
-                l4_int32_t cmd,
-                l4_int32_t *arg)
+                int cmd,
+                long *arg)
 {
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;

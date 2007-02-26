@@ -6,24 +6,21 @@ TARGET		= $(TARGET_$(ARCH))
 DEFAULT_RELOC_x86 = 0x00b00000
 DEFAULT_RELOC_arm = 0x00320000
 
-PRIVATE_INCDIR	= ../../include
+PRIVATE_INCDIR	= $(SRC_DIR)
 LIBS_x86	= -lomega0
-LIBS_ALL	= -L../con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
+LIBS_ALL	= -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
 		  $(LIBS_$(ARCH)) -levents -lparsecmdline -ldm_phys
-LIBS_con_x86	= -lio -linput  $(LIBS_ALL) \
-		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw -lpci -lio -lx86emu
-LIBS_con_arm	= -linput-dummy $(LIBS_ALL) \
-		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw -larm_lcd
+LIBS_con_x86	= -lio -linput  $(LIBS_ALL) -L../con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw -lx86emu_int10 -lpci -lio -lx86emu
+LIBS_con_arm	= -linput-dummy $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw -larm_lcd.o
 LIBS_con	= $(LIBS_con_$(ARCH))
-LIBS_con-ux	= -lio -linput-ux $(LIBS_ALL) \
-		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw-ux -lio
-SRC_C		= main.c pslim.c ev.c vc.c events.c
-SRC_C_con_x86	= int10.c
-SRC_C_con-ux_x86= int10-ux.c
+LIBS_con-ux	= -lio -linput-ux $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw-ux -lx86emu_int10-ux -lio -lclxfux.o
+SRC_C		= main.c pslim.c ev.c vc.c events.c gmode.c gmode-arch.c
 SRC_C_con	= $(SRC_C_con_$(ARCH))
 SRC_C_con-ux	= $(SRC_C_con-ux_$(ARCH))
 CPPFLAGS	+= -DDEBUG
-CFLAGS_int10.c	= -fomit-frame-pointer
 
 LDFLAGS_arm	= -Wl,--no-warn-mismatch
 LDFLAGS		= $(LDFLAGS_$(ARCH))
@@ -35,7 +32,8 @@ SERVERIDL	= l4con.idl
 
 all::
 
-vpath %.psf $(PKGDIR)/server/src
+vpath %.c $(SRC_DIR)/ARCH-$(ARCH)
+vpath %.psf $(SRC_DIR)/
 
 %.o: %.psf
 	@$(COMP_MESSAGE)

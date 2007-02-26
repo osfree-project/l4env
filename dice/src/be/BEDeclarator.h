@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEDeclarator.h
- *    \brief   contains the declaration of the class CBEDeclarator
+ *  \file    dice/src/be/BEDeclarator.h
+ *  \brief   contains the declaration of the class CBEDeclarator
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/15/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,16 +31,15 @@
 #define __DICE_BEDECLARATOR_H__
 
 #include "be/BEObject.h"
+#include "template.h"
 #include <vector>
 #include <string>
-using namespace std;
 
 class CFEDeclarator;
 class CFEArrayDeclarator;
 class CFEEnumDeclarator;
 class CFEExpression;
 
-class CBEContext;
 class CBEExpression;
 class CBEFile;
 
@@ -50,15 +49,22 @@ class CBEDeclarator;
  * might have and thus how many indices may be available for
  * a declarators.
  */
-#define MAX_INDEX_NUMBER    10
+const int MAX_INDEX_NUMBER = 10;
 
 /** \class CDeclaratorStackLocation
  *  \brief class to represent a stack location for the declarator stack
  *
- * We use an extra class here, because we want to use vector for the Stack and it
- * only accepts classes derived from CObject.
+ * This is a helper class for writing access to members of constructed types.
+ * It is used to build a stack of declarators traversing down the hierarchy of
+ * the constructed type.
+ * So a struct variable 'a' with a member 'b', which is also a struct having a
+ * member 'c' will generate a stack of CDeclaratorStackLocations for 'a', 'b',
+ * and 'c'.
+ *
+ * The declarator stack location also contains information useful for arrays
+ * (even multidimensional ones). This is the purpose of the index members.
  */
-class CDeclaratorStackLocation : public CObject
+class CDeclaratorStackLocation 
 {
 public:
     /** \brief constructor of this class
@@ -78,7 +84,6 @@ public:
      *  \param src the source to copy from
      */
     CDeclaratorStackLocation(CDeclaratorStackLocation &src)
-    : pDeclarator(src.pDeclarator)
     {
         for (int i=0; i<MAX_INDEX_NUMBER; i++)
         {
@@ -86,13 +91,15 @@ public:
             sIndex[i] = src.sIndex[i];
         }
         bCheckFunctionForReference = src.bCheckFunctionForReference;
+	pDeclarator = src.pDeclarator;
     };
     /** \var CBEDeclarator *pDeclarator
      *  \brief a reference to the declarator at this location
      */
     CBEDeclarator *pDeclarator;
     /** \var int nIndex[MAX_INDEX_NUMBER]
-     *  \brief the index of this declarator in an array (or -1 if no array)
+     *  \brief the current index of this declarator in an array \
+     *         (or -1 if no array)
      */
     int nIndex[MAX_INDEX_NUMBER];
     /** \var string sIndex
@@ -100,7 +107,8 @@ public:
      */
     string sIndex[MAX_INDEX_NUMBER];
     /** \var bool bCheckFunctionForReference
-     *  \brief true if WriteDeclaratorStack has to check pFunction->HasAdditionalReference
+     *  \brief true if WriteDeclaratorStack has to check \
+     *         pFunction->HasAdditionalReference
      */
     bool bCheckFunctionForReference;
     /** \brief sets the index of the stack location
@@ -117,11 +125,12 @@ public:
         if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
             return;
         nIndex[nArrayDim] = nIdx;
-        sIndex[nArrayDim].erase(sIndex[nArrayDim].begin(), sIndex[nArrayDim].end());
+        sIndex[nArrayDim].erase(sIndex[nArrayDim].begin(), 
+	    sIndex[nArrayDim].end());
     }
     /** \brief sets the index variable of the stack location
      *  \param sIdx the new stack location variable
-     *    \param nArrayDim the index where to add the element
+     *  \param nArrayDim the index where to add the element
      */
     void SetIndex(string sIdx, int nArrayDim = 0)
     {
@@ -160,62 +169,124 @@ public:
         return nRet;
     }
 
-    static void Write(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, bool bUsePointer, bool bFirstIsGlobal, CBEContext *pContext);
+    static void WriteToString(string &sResult, 
+	vector<CDeclaratorStackLocation*> *pStack, bool bUsePointer);
+    static void Write(CBEFile *pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, bool bUsePointer);
 };
 
-/**    \class CBEDeclarator
- *    \ingroup backend
- *    \brief the back-end declarator
+/** \def DUMP_STACK(iter, stack, str)
+ *  \brief dumps the declarator stack
+ */
+#define DUMP_STACK(iter, stack, str) \
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s stack is:\n", str); \
+    vector<CDeclaratorStackLocation*>::iterator iter = stack->begin(); \
+    for (; iter != stack->end(); iter++) \
+        CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s\n", \
+	    (*iter)->pDeclarator->GetName().c_str()); \
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "--end--\n");
+
+/** \class CBEDeclarator
+ *  \ingroup backend
+ *  \brief the back-end declarator
  */
 class CBEDeclarator : public CBEObject
 {
 // Constructor
-  public:
-    /**    \brief constructor
+public:
+    /** \brief constructor
      */
     CBEDeclarator();
     virtual ~ CBEDeclarator();
 
-  protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+protected:
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEDeclarator(CBEDeclarator & src);
+    
+public:
+    /** \brief creates a copy of this object
+     *  \return a reference to the copy
+     */
+    virtual CObject * Clone()
+    { return new CBEDeclarator(*this); }
 
-  public:
+    virtual void WriteName(CBEFile * pFile);
+    virtual void WriteNameToStr(string &str);
+    virtual void WriteIndirectInitialization(CBEFile * pFile, 
+	bool bUsePointer);
+    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, 
+	bool bUsePointer);
+    virtual void WriteIndirect(CBEFile * pFile, bool bUsePointer, 
+	bool bHasPointerType);
+    virtual void WriteDeclaration(CBEFile * pFile);
+    virtual void CreateBackEnd(string sName, int nStars);
+    virtual void CreateBackEnd(CFEDeclarator * pFEDeclarator);
+
+    virtual int GetSize();
+    
     virtual int GetArrayDimensionCount();
     virtual bool IsArray();
-    virtual void WriteName(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIndirectInitialization(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
-    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
-    virtual void WriteIndirect(CBEFile * pFile, bool bUsePointer, bool bHasPointerType, CBEContext * pContext);
-    virtual void WriteGlobalName(CBEFile * pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext * pContext, bool bWriteArray = false);
-    virtual void WriteDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual bool CreateBackEnd(string sName, int nStars, CBEContext * pContext);
-    virtual bool CreateBackEnd(CFEDeclarator * pFEDeclarator, CBEContext * pContext);
-    virtual int GetStars();
-    virtual int GetSize();
-    virtual CBEExpression *GetNextArrayBound(vector<CBEExpression*>::iterator &iter);
-    virtual vector<CBEExpression*>::iterator GetFirstArrayBound();
+    virtual int GetRemainingNumberOfArrayBounds(
+	vector<CBEExpression*>::iterator iter);
     virtual void AddArrayBound(CBEExpression * pBound);
-    virtual string GetName();
-    virtual int GetBitfields();
-    virtual int IncStars(int nBy);
-    virtual int GetMaxSize(CBEContext *pContext);
-    virtual CObject * Clone();
     virtual void RemoveArrayBound(CBEExpression *pBound);
-    virtual int GetRemainingNumberOfArrayBounds(vector<CBEExpression*>::iterator iter);
-    virtual void WriteCleanup(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
-    virtual void WriteDeferredCleanup(CBEFile* pFile,  bool bUsePointer,  CBEContext* pContext);
+    
+    /** \brief only returns a reference to the internal name
+     *  \return the name of the declarator (without stars and such)
+     */
+    string GetName()
+    { return m_sName; }
+    /** \brief set the name of the declarator
+     *  \param sName the new name
+     */
+    void SetName(string sName)
+    { m_sName = sName; }
+    /** \brief matches the given nameto the internally stored name
+     *  \param sName the name to match against
+     *  \return true if names match
+     */
+    bool Match(string sName)
+    { return m_sName == sName; }
+
+    /** \brief returns the number of bitfields used by this declarator
+     *  \return the value of the member m_nBitfields
+     */
+    int GetBitfields()
+    { return m_nBitfields; }
+
+    /** \brief modifies the number of stars
+     *  \param nBy the number to add to m_nStars (if it is negative it dec)
+     *  \return the new number of stars
+     */
+    void IncStars(int nBy)
+    { m_nStars += nBy; }
+    /** \brief set the number of stars to a fixed value
+     *  \param nStars the new number of stars
+     *  \return the old number
+     */
+    void SetStars(int nStars)
+    { m_nStars = nStars; }
+    /** \brief returns the number of stars
+     *  \return the value of m_nStars
+     */
+    int GetStars()
+    { return m_nStars; }
+
+    virtual int GetMaxSize(void);
+    virtual void WriteCleanup(CBEFile * pFile, bool bUsePointer, 
+	bool bDeferred);
 
 protected:
-    virtual int GetFakeStars();
-    virtual bool CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator, CBEContext * pContext);
-    virtual bool CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator, CBEContext * pContext);
-    virtual CBEExpression *GetArrayDimension(CFEExpression * pLower, CFEExpression * pUpper, CBEContext * pContext);
-    virtual void WriteArray(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteArrayIndirect(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteEnum(CBEFile * pFile, CBEContext * pContext);
+    virtual int GetEmptyArrayDims();
+    virtual void CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator);
+    virtual void CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator);
+    virtual CBEExpression *GetArrayDimension(CFEExpression * pLower, 
+	CFEExpression * pUpper);
+    virtual void WriteArray(CBEFile * pFile);
+    virtual void WriteArrayIndirect(CBEFile * pFile);
+    virtual void WriteEnum(CBEFile * pFile);
 
 protected:
     /** \var string m_sName
@@ -235,17 +306,21 @@ protected:
      */
     int m_nType;
     /** \var int m_nOldType
-     *  \brief contains a backup of the type value if a temporary array is established
+     *  \brief contains a backup of the type value if a temporary array is \
+     *         established
      */
     int m_nOldType;
     /** \var CBEExpression *m_pInitialValue
      *  \brief contains a reference to the initail value of the enum declarator
      */
     CBEExpression *m_pInitialValue;
-    /** \var vector<CBEExpression*> m_vBounds
+
+public:
+    /** \var CCollection<CBEExpression> m_Bounds
      *  \brief contains the array bounds
      */
-    vector<CBEExpression*> m_vBounds;
+    CCollection<CBEExpression> m_Bounds;
 };
 
-#endif                //*/ !__DICE_BEDECLARATOR_H__
+#endif   // !__DICE_BEDECLARATOR_H__
+

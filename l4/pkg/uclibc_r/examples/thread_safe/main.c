@@ -9,7 +9,7 @@
 static void
 thread(void *id)
 {
-  printf("\033[31merrno_location[%d] = %08x\033[m\n", 
+  printf("\033[31merrno_location[%d] = %08lx\033[m\n", 
       (unsigned)id, (l4_addr_t)__errno_location());
   for (;;)
     {

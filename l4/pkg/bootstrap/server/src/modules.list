@@ -1,4 +1,6 @@
-# module configuration file
+#
+# Module configuration file for single image mode
+#
 # kernel, sigma0 and the roottask are always loaded automatically
 #
 # add kernel command line arguments with
@@ -20,8 +22,14 @@
 
 modaddr 0x02000000
 
+# this entry is for building a dummy package on ARM when no ENTRY variable
+# is given
+entry auto-build-entry
+kernel sigma0
+roottask sigma0
+
 entry hello
-kernel fiasco -serial_esc -comport 1 -nowait
+kernel fiasco -serial_esc -comport 1 -nowait -nokdb -jdb_cmd=JH
 bin hello
 
 entry names
@@ -69,3 +77,29 @@ data  vmlinuz26.arm
 data  rd
 data  l4linux.cfg
 bin loader --fprov=BMODFS l4linux.cfg
+
+entry l4vm
+kernel   v2/fiasco -noserial -nowait -nokdb -loadcnt
+sigma0   v2/sigma0
+roottask v2/roottask -configfile
+data     cfg/rmgr.cfg
+bin      v2/names --events
+bin      v2/events
+bin      v2/logcon
+bin      v2/dm_phys --events
+bin      v2/simple_ts --tasks 380 --events --anykill
+bin      v2/rtc
+bin      v2/l4io --nolist
+bin      v2/con --l4io --omega0 --events --cpuload --vbemode 0x117 --pan
+bin      v2/l4exec
+bin      v2/loader --events --fprov=BMODFS ldr_run.bmodfs ldr_l4linux26.cd
+bin      v2/name_server
+bin      v2/l4vfs_log
+bin      v2/fstab -c/log -v10 -b/ -m/log
+bin      v2/bmodfs
+data     v2/libloader.s.so
+data     cfg/ldr_run.bmodfs
+data     v2/run
+data     lx/vmlinuz26
+data     cfg/ldr_l4linux26.cd
+data     rd/initrd.gz

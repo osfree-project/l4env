@@ -196,10 +196,10 @@ __send_request(l4blk_request_t * request)
   ret = l4blk_cmd_put_request_call(&drv->cmd_id, drv->handle, &request->request,
                                    request->sg_list, sg_size, request->sg_num, 
                                    request->sg_type, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOG_Error("error sending request to driver (ret %d, exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -261,10 +261,10 @@ l4blk_create_stream(l4blk_driver_t driver, l4_uint32_t device,
   ret = l4blk_cmd_create_stream_call(&drv->cmd_id, drv->handle, device, 
                                      bandwidth, period, blk_size, q, meta_int, 
                                      stream, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOG_Error("create stream failed (ret %d, exc %d)\n", 
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -304,10 +304,10 @@ l4blk_close_stream(l4blk_driver_t driver, l4blk_stream_t stream)
 
   /* call driver to close stream */
   ret = l4blk_cmd_close_stream_call(&drv->cmd_id, drv->handle, stream, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOG_Error("close stream failed (ret %d, exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else
@@ -349,10 +349,10 @@ int l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream,
   /* call driver to start stream */
   ret = l4blk_cmd_start_stream_call(&drv->cmd_id, drv->handle, stream,
                                     time, request_no, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
     {
       LOG_Error("set start time failed (ret %d, exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret < 0)
 	return ret;
       else

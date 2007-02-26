@@ -1,5 +1,14 @@
 IMPLEMENTATION [arm]:
 
+#include "kmem_space.h"
+
+IMPLEMENT inline NEEDS["kmem_space.h"]
+bool
+Jdb_tcb::is_mapped(void const* addr)
+{
+  return !Kmem_space::kdir()->lookup(const_cast<void*>(addr),0,0).is_null();
+}
+
 IMPLEMENT
 void Jdb_tcb::print_entry_frame_regs()
 {

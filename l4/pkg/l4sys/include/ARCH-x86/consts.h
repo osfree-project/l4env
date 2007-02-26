@@ -107,9 +107,13 @@
 
 
 #ifndef NULL
+#ifndef __cplusplus
 # define NULL ((void *)0)  /**< \ingroup api_types_common
 			    **  \hideinitializer
 			    **/
+#else
+# define NULL 0
+#endif
 #endif
 
 #endif /* !_L4_SYS_CONSTS_H */

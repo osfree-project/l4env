@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BECallFunction.h
- *    \brief   contains the declaration of the class CBECallFunction
+ *  \brief   contains the declaration of the class CBECallFunction
  *
  *    \date    01/18/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,41 +32,51 @@
 
 #include "be/BEOperationFunction.h"
 
-/**    \class CBECallFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CBECallFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end operation
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
 class CBECallFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBECallFunction();
     virtual ~CBECallFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBECallFunction(CBECallFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext * pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext * pContext);
-    virtual int GetFixedSize(int nDirection, CBEContext *pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+	    bool bMarshal);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(int nDirection);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
 protected:
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteReturnVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteFunctionDeclaration(CBEFile* pFile);
+    virtual void WriteFunctionDefinition(CBEFile* pFile);
+    virtual void WriteBody(CBEFile * pFile);
+    virtual void WriteReturnType(CBEFile * pFile);
+    virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
+
+protected:
+    /** \var unsigned char m_nSkipParameter
+     *  \brief bitmap indication whether to skip CORBA Object or Env
+     */
+    unsigned char m_nSkipParameter;
 };
 
 #endif // !__DICE_BECALLFUNCTION_H__

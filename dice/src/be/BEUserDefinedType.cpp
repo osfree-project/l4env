@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEUserDefinedType.cpp
- *    \brief    contains the implementation of the class CBEUserDefinedType
+ *  \file    dice/src/be/BEUserDefinedType.cpp
+ *  \brief    contains the implementation of the class CBEUserDefinedType
  *
- *    \date    02/13/2002
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/13/2002
+ *  \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -28,14 +28,17 @@
 
 #include "be/BEUserDefinedType.h"
 #include "be/BEContext.h"
+#include "BEFile.h"
 #include "be/BERoot.h"
 #include "be/BETypedef.h"
 #include "be/BEDeclarator.h"
 #include "be/BEExpression.h"
-
+#include "be/BESizes.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FEFile.h"
+#include <cassert>
 
 CBEUserDefinedType::CBEUserDefinedType()
 {
@@ -47,157 +50,257 @@ CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
     m_sOriginalName = src.m_sOriginalName;
 }
 
-/**    \brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEUserDefinedType::~CBEUserDefinedType()
 {
-
 }
 
-/**    \brief creates a user defined type
- *    \param sName the name of the type
- *    \param pContext the context of the creation
- *    \return true if successful
+/** \brief creates a user defined type
+ *  \param sName the name of the type
  */
-bool CBEUserDefinedType::CreateBackEnd(string sName, CBEContext * pContext)
+void
+CBEUserDefinedType::CreateBackEnd(string sName)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s(%s) called\n", __func__, sName.c_str());
+    
+    string exc = string (__func__);
     if (sName.empty())
     {
-        VERBOSE("%s failed because user defined name is empty\n", __PRETTY_FUNCTION__);
-        return false;
+	exc += " failed because user defined name is empty";
+	throw new CBECreateException(exc);
     }
     m_sName = sName;
     m_sOriginalName = sName;
     // set size
     m_nSize = GetSizeOfTypedef(sName);
-    // check if size could be found; if not test environment types
-    if (m_nSize == 0)
-    {
-        CBESizes *pSizes = pContext->GetSizes();
-        m_nSize = pSizes->GetSizeOfEnvType(sName);
-    }
+    // determine max size later
+    m_nMaxSize = 0;
     // set type
     m_nFEType = TYPE_USER_DEFINED;
-    return true;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s(%s) set names, size %d\n", __func__,
+	sName.c_str(), m_nSize);
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s(%s) (this=%p) returns\n", __func__,
+	sName.c_str(), this);
 }
 
-/**    \brief creates a user defined type
- *    \param pFEType the front-end type
- *    \param pContext the context of the creation
- *    \return true if successful
+/** \brief creates a user defined type
+ *  \param pFEType the front-end type
  *
- * This overloads the CBEType::CreateBE function to implement user-defined type specific behaviour.
+ * This overloads the CBEType::CreateBE function to implement user-defined
+ * type specific behaviour.
  */
-bool CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
+void
+CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s(fe) called\n", __func__);
+    
     // call CBEObject's CreateBackEnd method
-    if (!CBEObject::CreateBackEnd(pFEType))
-        return false;
+    CBEObject::CreateBackEnd(pFEType);
 
+    string exc = string (__func__);
     if (!pFEType)
     {
-        VERBOSE("%s failed because FE Type is 0\n", __PRETTY_FUNCTION__);
-        return false;
+	exc += " failed, because FE Type is 0";
+        throw new CBECreateException(exc);
     }
 
-    if (!dynamic_cast<CFEUserDefinedType*>(pFEType))
+    CFEUserDefinedType *pUserType = dynamic_cast<CFEUserDefinedType*>(pFEType);
+    if (!pUserType)
     {
-        VERBOSE("%s failed because FE Type is not 'user defined'\n", __PRETTY_FUNCTION__);
-        return false;
+	exc += " failed because FE Type is not 'user defined'";
+	throw new CBECreateException(exc);
     }
 
-    CFEUserDefinedType *pUserType = (CFEUserDefinedType *) pFEType;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
     if (!pUserType->GetName().empty())
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEUserDefinedType::%s get orig type for %s\n", __func__,
+	    pUserType->GetName().c_str());
         // find original type
         CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEType->GetRoot());
         assert(pFERoot);
         string sName, sUserName = pUserType->GetName();
-        CFETypedDeclarator *pFETypedef = pFERoot->FindUserDefinedType(sUserName);
+        CFETypedDeclarator *pFETypedef = 
+	    pFERoot->FindUserDefinedType(sUserName);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEUserDefinedType::%s typedef found, use as ref\n",
+	    __func__);
         if (pFETypedef)
-            sName = pContext->GetNameFactory()->GetTypeName((CFEBase*)pFETypedef, sUserName, pContext);
+            sName = pNF->GetTypeName((CFEBase*)pFETypedef, sUserName);
         else
         {
             CFEInterface *pFEInterface = pFERoot->FindInterface(sUserName);
             if (pFEInterface)
-                sName = pContext->GetNameFactory()->GetTypeName((CFEBase*)pFEInterface, sUserName, pContext);
+                sName = pNF->GetTypeName((CFEBase*)pFEInterface, sUserName);
         }
         if (sName.empty())
             sName = sUserName;
-        if (!CreateBackEnd(sName, pContext))
-        {
-            VERBOSE("%s failed because no name set\n", __PRETTY_FUNCTION__);
-            return false;
-        }
+        CreateBackEnd(sName);
         // reset original name
         m_sOriginalName = sUserName;
     }
     m_nFEType = TYPE_USER_DEFINED;
-    return true;
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s(fe) (this=%p) returns\n", __func__, this);
 }
 
-/**    \brief finds the size of a user defined type
- *    \param sTypeName the name of the type, we are looking for
- *    \return the size of the type in bytes
+/** \brief finds the size of a user defined type
+ *  \param sTypeName the name of the type, we are looking for
+ *  \return the size of the type in bytes
  *
  * This implementation finds the root of the tree and then searches downward
  * for the type.
  */
 int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
+    
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
     if (!pTypedef)
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBEUserDefinedType::%s returns 0\n", __func__);
         return 0;
+    }
+    /* check for recursion: if type of typedef is ourselves, then try to get
+     * size of real type instead
+     */
+    if (pTypedef->GetType() == this)
+    {
+	CBEType *pReal = GetRealType();
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEUserDefinedType::%s(%s) calling GetSize of real type.\n",
+	    __func__, sTypeName.c_str());
+	return pReal ? pReal->GetSize() : 0;
+    }
     /* since the typedef is a CBETypedDeclarator, it would evaluate the size
        of it's base type and sum it for all it's declarators. We only want it
        for the declarator we are using. That's why we use a specific
        GetSize function instead of the generic one. */
     int nSize = pTypedef->GetSize(sTypeName);
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s(%s) returns %d\n", __func__, sTypeName.c_str(),
+	nSize);
     return nSize;
 }
 
-/**    \brief generates an exact copy of this class
- *    \return a reference to the new object
+/** \brief finds the maximum size of a user defined type
+ *  \param sTypeName the name of the type, we are looking for
+ *  \return the size of the type in bytes
+ *
+ * This implementation finds the root of the tree and then searches downward
+ * for the type.
  */
-CObject *CBEUserDefinedType::Clone()
+int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
 {
-    return new CBEUserDefinedType(*this);
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
+    
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
+    assert(pRoot);
+    CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
+    if (!pTypedef)
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBEUserDefinedType::%s returns 0\n", __func__);
+        return 0;
+    }
+    /* check for recursion: if type of typedef is ourselves, then try to get
+     * size of real type instead
+     */
+    if (pTypedef->GetType() == this)
+    {
+	CBEType *pReal = GetRealType();
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEUserDefinedType::%s(%s) calling GetSize of real type.\n",
+	    __func__, sTypeName.c_str());
+	return pReal ? pReal->GetMaxSize() : 0;
+    }
+    /* since the typedef is a CBETypedDeclarator, it would evaluate the size
+       of it's base type and sum it for all it's declarators. We only want it
+       for the declarator we are using. That's why we use a specific
+       GetSize function instead of the generic one. */
+    int nSize;
+    if (!pTypedef->GetMaxSize(true, nSize, sTypeName))
+	nSize = 0;
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s(%s) returns %d\n", __func__, sTypeName.c_str(),
+	nSize);
+    return nSize;
 }
 
-/**    \brief get the user defined name
- *    \return a reference to the name
+/** \brief get the user defined name
+ *  \return a reference to the name
  */
 string CBEUserDefinedType::GetName()
 {
     return m_sName;
 }
 
-/**    \brief calculate the size of thise type
- *    \return the size in bytes.
+/** \brief calculate the size of thise type
+ *  \return the size in bytes.
  *
  * The size of the user defined type can be calculated by searching for the
  * typedef with this name and calling its type GetSize() function.
  */
 int CBEUserDefinedType::GetSize()
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s called for %s (m_nSize is %d)\n",
+	__func__, m_sName.c_str(), m_nSize);
+    
     if (m_nSize == 0)
         m_nSize = GetSizeOfTypedef(m_sName);
     /* if it is still zero, use original name */
     if (m_nSize == 0)
         m_nSize = GetSizeOfTypedef(m_sOriginalName);
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s returns %d\n", __func__, m_nSize);
     return m_nSize;
 }
 
-
-/**    \brief writes cod eto initialize a variable of this type with a zero value
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
+/** \brief try to get the maximum size of the type
+ *  \return maximum size in bytes
  *
- * To initialize a user defined type with zero values, means to find the typedef and use its type
- * to write this initialization.
+ * Do not store max size in "normal" size member.
  */
-void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
+int CBEUserDefinedType::GetMaxSize()
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s called for %s (m_nMaxSize %d)\n",
+	__func__, m_sName.c_str(), m_nMaxSize);
+   
+    if (m_nMaxSize == 0)
+	m_nMaxSize = GetMaxSizeOfTypedef(m_sName);
+    if (m_nMaxSize == 0)
+	m_nMaxSize = GetMaxSizeOfTypedef(m_sOriginalName);
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEUserDefinedType::%s returns %d\n", __func__, m_nMaxSize);
+    return m_nMaxSize;
+}
+
+/** \brief writes cod eto initialize a variable of this type with a zero value
+ *  \param pFile the file to write to
+ *
+ * To initialize a user defined type with zero values, means to find the
+ * typedef and use its type to write this initialization.
+ */
+void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile)
 {
     CBEType *pType = GetRealType();
     if (pType)
@@ -206,14 +309,15 @@ void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
         CBEDeclarator *pAlias = GetRealName();
         if (pAlias && pAlias->IsArray())
         {
-            WriteZeroInitArray(pFile, pType, pAlias, pAlias->GetFirstArrayBound(), pContext);
+            WriteZeroInitArray(pFile, pType, pAlias, 
+		pAlias->m_Bounds.begin());
             return;
         }
         // no array
-        pType->WriteZeroInit(pFile, pContext);
+        pType->WriteZeroInit(pFile);
         return;
     }
-    CBEType::WriteZeroInit(pFile, pContext);
+    CBEType::WriteZeroInit(pFile);
 }
 
 /** \brief checks if this is a constructed type
@@ -242,12 +346,13 @@ bool CBEUserDefinedType::DoWriteZeroInit()
 
 /** \brief calls the WriteGetSize function of the original type
  *  \param pFile the file to write to
- *  \param pStack contains the declarator stack of constructed typed var-sized parameters
- *  \param pContext the context of the write operation
+ *  \param pStack contains the declarator stack of constructed typed var-sized
+ *         parameters 
+ *  \param pUsingFunc the function to use as reference for members
  */
 void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
     vector<CDeclaratorStackLocation*> *pStack,
-    CBEContext *pContext)
+    CBEFunction *pUsingFunc)
 {
     CBEType *pType = GetRealType();
     CBEDeclarator *pAlias = GetRealName();
@@ -257,13 +362,14 @@ void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
     if (pType && pType->IsSimpleType() &&
         pAlias && (pAlias->GetStars() > 0))
     {
-        int nMaxSize = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
-        pFile->Print("%d", nMaxSize);
+        int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(
+	    pType->GetFEType());
+	*pFile << nMaxSize;
     }
     else
     {
         if (pType)
-            pType->WriteGetSize(pFile, pStack, pContext);
+            pType->WriteGetSize(pFile, pStack, pUsingFunc);
     }
 }
 
@@ -272,6 +378,9 @@ void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
  */
 bool CBEUserDefinedType::IsSimpleType()
 {
+    CBEType *pType = GetRealType();
+    if (pType)
+        return pType->IsSimpleType();
     return false;
 }
 
@@ -304,7 +413,8 @@ int CBEUserDefinedType::GetArrayDimensionCount()
     // if the type is simple, but the alias is variable sized
     // then we have at least one array dimensions
     if (pType && pAlias)
-        return pType->GetArrayDimensionCount() + pAlias->GetArrayDimensionCount();
+        return pType->GetArrayDimensionCount() + 
+	    pAlias->GetArrayDimensionCount();
     return 0;
 }
 
@@ -333,10 +443,19 @@ bool CBEUserDefinedType::IsPointerType()
  */
 CBEType* CBEUserDefinedType::GetRealType()
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEUserDefinedType::%s called\n", __func__);
+    
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    if (pTypedef)
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s found typedef for %s at %p\n",
+	__func__, m_sName.c_str(), pTypedef);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUserDefinedType::%s type of typedef is %p, this %p\n",
+	__func__, pTypedef ? pTypedef->GetType() : 0, this);
+    if (pTypedef && 
+	pTypedef->GetType() != this)
         return pTypedef->GetType();
     return 0;
 }
@@ -350,26 +469,25 @@ CBEDeclarator* CBEUserDefinedType::GetRealName()
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
     if (pTypedef)
-        return pTypedef->GetAlias();
+        return pTypedef->m_Declarators.First();
     return 0;
 }
 
 /** \brief writes the type without indirections
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CBEUserDefinedType::WriteIndirect(CBEFile* pFile,  CBEContext* pContext)
+void CBEUserDefinedType::WriteIndirect(CBEFile* pFile)
 {
     if (IsPointerType())
     {
         CBEType *pType = GetRealType();
         if (pType)
         {
-            pType->WriteIndirect(pFile, pContext);
+            pType->WriteIndirect(pFile);
             return;
         }
     }
-    CBEType::WriteIndirect(pFile, pContext);
+    CBEType::WriteIndirect(pFile);
 }
 
 /** \brief returns the number of indirections

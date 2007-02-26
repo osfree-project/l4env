@@ -47,8 +47,10 @@ typedef struct view {
 	CORBA_Object_base owner;      /* associated client id                   */
 } view;
 
-extern view *curr_view;           /* currently active view    */
-extern view *first_view;          /* first view of view stack */
+extern CORBA_Object_base curr_evrec;    /* current event receiver   */
+extern unsigned long     curr_token;    /* token of focused view    */
+extern view             *curr_view;     /* currently focused view   */
+extern view             *first_view;    /* first view of view stack */
 
 
 /*** LOOK UP VIEW STRUCTURE ***/

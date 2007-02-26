@@ -8,7 +8,7 @@ LIBDIR=${prefix}/lib
 BINDIR=${prefix}/bin
 MAN1DIR=${prefix}/man/man1
 
-MYARCH:=$(shell uname -m | sed -e 's/i[4-9]86/i386/' -e 's/armv[3-6][lb]/arm/')
+MYARCH:=$(shell uname -m | sed -e 's/i[4-9]86/i386/' -e 's/armv[3-6]t\?e\?[lb]/arm/')
 
 # This extra-ugly cruft is here so make will not run uname and sed each
 # time it looks at $(OBJDIR).  This alone sped up running make when
@@ -89,7 +89,8 @@ WHAT=	$(OBJDIR) $(OBJDIR)/start.o $(OBJDIR)/dyn_start.o $(OBJDIR)/dyn_stop.o \
 	$(OBJDIR)/libcompat.a $(OBJDIR)/libm.a \
 	$(OBJDIR)/librpc.a $(OBJDIR)/libpthread.a \
 	$(OBJDIR)/libcrypt.a \
-	$(OBJDIR)/diet $(OBJDIR)/diet-i $(OBJDIR)/elftrunc
+	$(OBJDIR)/diet $(OBJDIR)/diet-i $(OBJDIR)/elftrunc \
+	$(OBJDIR)/dnsd
 
 all: $(WHAT)
 
@@ -99,6 +100,7 @@ CFLAGS=-pipe -nostdinc
 CROSS=
 
 CC=gcc
+INC=-I. -isystem include
 
 VPATH=lib:libstdio:libugly:libcruft:libcrypt:libshell:liblatin1:libcompat:libdl:librpc:libregex:libm:profiling
 
@@ -149,19 +151,39 @@ $(OBJDIR) $(PICODIR):
 
 % :: %,v
 
+ifeq ($(CC),tcc)
+$(OBJDIR)/%.o: %.S $(ARCH)/syscalls.h
+	$(CROSS)cpp $(INC) $< | $(CROSS)as -o $@
+
+$(OBJDIR)/%.o: %.c
+	tcc -I. -Iinclude -c $< -o $@
+	$(COMMENT) -$(CROSS)strip -x -R .comment -R .note $@
+else
 $(OBJDIR)/pstart.o: start.S
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -DPROFILING -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -DPROFILING -c $< -o $@
 
 $(OBJDIR)/%.o: %.S $(ARCH)/syscalls.h
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/pthread_%.o: libpthread/pthread_%.c
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -c $< -o $@
 	$(COMMENT) -$(CROSS)strip -x -R .comment -R .note $@
 
 $(OBJDIR)/%.o: %.c
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -c $< -o $@
 	$(COMMENT) -$(CROSS)strip -x -R .comment -R .note $@
+endif
+
+ifeq ($(shell $(CC) -v 2>&1 | grep "gcc version"),gcc version 4.0.0)
+SAFE_CFLAGS=$(shell echo $(CFLAGS)|sed 's/-Os/-O2/')
+SAFER_CFLAGS=$(shell echo $(CFLAGS)|sed 's/-Os/-O/')
+else
+SAFE_CFLAGS=$(CFLAGS)
+SAFER_CFLAGS=$(CFLAGS)
+endif
+
+$(OBJDIR)/crypt.o: libcrypt/crypt.c
+	$(CROSS)$(CC) $(INC) $(SAFER_CFLAGS) -c $< -o $@
 
 DIETLIBC_OBJ = $(OBJDIR)/unified.o \
 $(SYSCALLOBJ) $(LIBOBJ) $(LIBSTDIOOBJ) $(LIBUGLYOBJ) \
@@ -177,7 +199,7 @@ $(OBJDIR)/librpc.a: $(LIBRPCOBJ)
 
 $(OBJDIR)/libcrypt.a:
 	touch dummy.c
-	$(CROSS)gcc -c dummy.c
+	$(CROSS)$(CC) -c dummy.c
 	$(CROSS)ar cru $@ dummy.o
 	rm -f dummy.c dummy.o
 
@@ -199,8 +221,10 @@ $(OBJDIR)/libcompat.a: $(LIBCOMPATOBJ)
 $(OBJDIR)/libm.a: $(LIBMATHOBJ)
 	$(CROSS)ar cru $@ $(LIBMATHOBJ)
 
+LD_UNSET = env -u LD_RUN_PATH
+
 $(OBJDIR)/libdietc.so: $(OBJDIR)/dietlibc.a
-	$(CROSS)ld -whole-archive -shared -o $@ $^
+	$(LD_UNSET) $(CROSS)ld -whole-archive -shared -o $@ $^
 
 dyn: dyn_lib
 
@@ -211,24 +235,24 @@ $(OBJDIR)/libdl.a: $(LIBDLOBJ)
 dyn_lib: $(PICODIR) $(PICODIR)/libc.so $(PICODIR)/dstart.o \
 	$(PICODIR)/dyn_so_start.o $(PICODIR)/dyn_start.o $(PICODIR)/dyn_stop.o \
 	$(PICODIR)/libpthread.so $(PICODIR)/libdl.so $(PICODIR)/libcompat.so \
-	$(PICODIR)/diet-dyn $(PICODIR)/diet-dyn-i
+	$(PICODIR)/libm.so $(PICODIR)/diet-dyn $(PICODIR)/diet-dyn-i
 
 $(PICODIR)/%.o: %.S $(ARCH)/syscalls.h
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
 
 $(PICODIR)/pthread_%.o: libpthread/pthread_%.c
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
 	$(COMMENT) $(CROSS)strip -x -R .comment -R .note $@
 
 $(PICODIR)/%.o: %.c
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
 	$(COMMENT) $(CROSS)strip -x -R .comment -R .note $@
 
 $(PICODIR)/dstart.o: start.S
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -fPIC -D__DYN_LIB -c $< -o $@
 
 $(PICODIR)/dyn_so_start.o: dyn_start.c
-	$(CROSS)$(CC) -I. -isystem include $(CFLAGS) -fPIC -D__DYN_LIB -D__DYN_LIB_SHARED -c $< -o $@
+	$(CROSS)$(CC) $(INC) $(CFLAGS) -fPIC -D__DYN_LIB -D__DYN_LIB_SHARED -c $< -o $@
 	$(COMMENT) $(CROSS)strip -x -R .comment -R .note $@
 
 DYN_LIBC_PIC = $(LIBOBJ) $(LIBSTDIOOBJ) $(LIBUGLYOBJ) \
@@ -243,27 +267,35 @@ DYN_LIBDL_OBJS = $(patsubst $(OBJDIR)/%.o,$(PICODIR)/%.o,$(LIBDLOBJ))
 
 DYN_LIBCOMPAT_OBJS = $(patsubst $(OBJDIR)/%.o,$(PICODIR)/%.o,$(LIBCOMPATOBJ))
 
+DYN_LIBMATH_OBJS = $(patsubst $(OBJDIR)/%.o,$(PICODIR)/%.o,$(LIBMATHOBJ))
+
 $(PICODIR)/libc.so: $(PICODIR) $(DYN_LIBC_OBJ)
-	$(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBC_OBJ) -lgcc -Wl,-soname=libc.so
+	$(LD_UNSET) $(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBC_OBJ) -lgcc -Wl,-soname=libc.so
 
 $(PICODIR)/libpthread.so: $(DYN_PTHREAD_OBJS) dietfeatures.h
-	$(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_PTHREAD_OBJS) -L$(PICODIR) -lc -Wl,-soname=libpthread.so
+	$(LD_UNSET) $(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_PTHREAD_OBJS) -L$(PICODIR) -lc -Wl,-soname=libpthread.so
 
 $(PICODIR)/libdl.so: libdl/_dl_main.c dietfeatures.h
-	$(CROSS)$(CC) -D__OD_CLEAN_ROOM -DNODIETREF -fPIC -nostdlib -shared -o $@ $(CFLAGS) -I. -isystem include libdl/_dl_main.c -Wl,-soname=libdl.so
+	$(LD_UNSET) $(CROSS)$(CC) -D__OD_CLEAN_ROOM -DNODIETREF -fPIC -nostdlib -shared -Bsymbolic -Wl,-Bsymbolic \
+		-o $@ $(SAFE_CFLAGS) $(INC) libdl/_dl_main.c -Wl,-soname=libdl.so
 
 #$(PICODIR)/libdl.so: $(DYN_LIBDL_OBJS) dietfeatures.h
 #	$(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBDL_OBJS) -L$(PICODIR) -ldietc -Wl,-soname=libdl.so
 
 $(PICODIR)/libcompat.so: $(DYN_LIBCOMPAT_OBJS) dietfeatures.h
-	$(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBCOMPAT_OBJS) -L$(PICODIR) -lc -Wl,-soname=libcompat.so
+	$(LD_UNSET) $(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBCOMPAT_OBJS) -L$(PICODIR) -lc -Wl,-soname=libcompat.so
 
+$(PICODIR)/libm.so: $(DYN_LIBMATH_OBJS) dietfeatures.h
+	$(LD_UNSET) $(CROSS)$(CC) -nostdlib -shared -o $@ $(CFLAGS) -fPIC $(DYN_LIBMATH_OBJS) -L$(PICODIR) -lc -Wl,-soname=libm.so
 
 
 $(SYSCALLOBJ): syscalls.h
 
 $(OBJDIR)/elftrunc: $(OBJDIR)/diet contrib/elftrunc.c
 	bin-$(MYARCH)/diet $(CROSS)$(CC) $(CFLAGS) -o $@ contrib/elftrunc.c
+
+$(OBJDIR)/dnsd: $(OBJDIR)/diet contrib/dnsd.c
+	bin-$(MYARCH)/diet $(CROSS)$(CC) $(CFLAGS) -o $@ contrib/dnsd.c
 
 VERSION=dietlibc-$(shell head -n 1 CHANGES|sed 's/://')
 CURNAME=$(notdir $(shell pwd))
@@ -277,11 +309,11 @@ $(OBJDIR)/diet-i: $(OBJDIR)/start.o $(OBJDIR)/dyn_start.o diet.c $(OBJDIR)/dietl
 	$(CROSS)strip -R .comment -R .note $@
 
 $(PICODIR)/diet-dyn: $(PICODIR)/start.o $(PICODIR)/dyn_start.o diet.c
-	$(CROSS)$(CC) -isystem include $(CFLAGS) -fPIC -nostdlib -o $@ $^ -DDIETHOME=\"$(HOME)\" -D__DYN_LIB -DVERSION=\"$(VERSION)\" -L$(PICODIR) -lc -lgcc $(PICODIR)/dyn_stop.o -Wl,-dynamic-linker=$(HOME)/$(PICODIR)/libdl.so
+	$(LD_UNSET) $(CROSS)$(CC) -isystem include $(CFLAGS) -fPIC -nostdlib -o $@ $^ -DDIETHOME=\"$(HOME)\" -D__DYN_LIB -DVERSION=\"$(VERSION)\" -L$(PICODIR) -lc -lgcc $(PICODIR)/dyn_stop.o -Wl,-dynamic-linker=$(HOME)/$(PICODIR)/libdl.so
 	$(CROSS)strip -R .command -R .note $@
 
 $(PICODIR)/diet-dyn-i: $(PICODIR)/start.o $(PICODIR)/dyn_start.o diet.c
-	$(CROSS)$(CC) -isystem include $(CFLAGS) -fPIC -nostdlib -o $@ $^ -DDIETHOME=\"$(prefix)\" -D__DYN_LIB -DVERSION=\"$(VERSION)\" -L$(PICODIR) -lc -lgcc $(PICODIR)/dyn_stop.o -Wl,-dynamic-linker=$(ILIBDIR)/libdl.so -DINSTALLVERSION
+	$(LD_UNSET) $(CROSS)$(CC) -isystem include $(CFLAGS) -fPIC -nostdlib -o $@ $^ -DDIETHOME=\"$(prefix)\" -D__DYN_LIB -DVERSION=\"$(VERSION)\" -L$(PICODIR) -lc -lgcc $(PICODIR)/dyn_stop.o -Wl,-dynamic-linker=$(ILIBDIR)/libdl.so -DINSTALLVERSION
 	$(CROSS)strip -R .command -R .note $@
 
 $(OBJDIR)/djb: $(OBJDIR)/compile $(OBJDIR)/load
@@ -302,7 +334,7 @@ clean:
 	$(MAKE) -C libdl clean
 
 tar: clean rename
-	cd ..; tar cvvf $(VERSION).tar.bz2 $(VERSION) --use=bzip2 --exclude CVS
+	cd ..; tar cvvf $(VERSION).tar.bz2 --use=bzip2 --exclude CVS $(VERSION)
 
 rename:
 	if test $(CURNAME) != $(VERSION); then cd .. && mv $(CURNAME) $(VERSION); fi
@@ -327,11 +359,13 @@ ifeq ($(MYARCH),$(ARCH))
 	$(INSTALL) $(OBJDIR)/diet-i $(DESTDIR)$(BINDIR)/diet
 	-$(INSTALL) $(PICODIR)/diet-dyn-i $(DESTDIR)$(BINDIR)/diet-dyn
 endif
+	$(INSTALL) -m 755 $(OBJDIR)/elftrunc $(OBJDIR)/dnsd $(DESTDIR)$(BINDIR)
 	-$(INSTALL) $(OBJDIR)/pstart.o $(OBJDIR)/libgmon.a $(OBJDIR)/dyn_start.o $(OBJDIR)/dyn_stop.o $(DESTDIR)$(ILIBDIR)
 	-$(INSTALL) $(PICODIR)/libc.so $(DESTDIR)$(ILIBDIR)/libc.so
 	-$(INSTALL) $(PICODIR)/libpthread.so $(DESTDIR)$(ILIBDIR)/libpthread.so
 	-$(INSTALL) $(PICODIR)/libdl.so $(DESTDIR)$(ILIBDIR)/libdl.so
 	-$(INSTALL) $(PICODIR)/libcompat.so $(DESTDIR)$(ILIBDIR)/libcompat.so
+	-$(INSTALL) $(PICODIR)/libm.so $(DESTDIR)$(ILIBDIR)/libm.so
 	-$(INSTALL) $(PICODIR)/dyn_start.o $(DESTDIR)$(ILIBDIR)/dyn_dstart.o
 	-$(INSTALL) $(PICODIR)/dyn_stop.o  $(DESTDIR)$(ILIBDIR)/dyn_dstop.o
 	-$(INSTALL) $(PICODIR)/dstart.o $(PICODIR)/dyn_so_start.o $(DESTDIR)$(ILIBDIR)
@@ -348,10 +382,17 @@ uninstall:
 	-rmdir $(DESTDIR)$(ILIBDIR) $(DESTDIR)$(MAN1DIR) $(DESTDIR)$(BINDIR)
 
 .PHONY: sparc ppc mips arm alpha i386 parisc mipsel powerpc s390 sparc64
-.PHONY: x86_64 ia64
+.PHONY: x86_64 ia64 ppc64 s390x
 
-arm sparc ppc alpha i386 mips parisc s390 sparc64 x86_64 ia64:
+arm sparc ppc alpha mips parisc s390 sparc64 x86_64 ia64 ppc64 s390x:
 	$(MAKE) ARCH=$@ CROSS=$@-linux- all
+
+i386:
+ifeq ($(MYARCH),x86_64)
+	$(MAKE) ARCH=$@ CC="$(CC) -m32" all
+else
+	$(MAKE) ARCH=$@ CROSS=$@-linux- all
+endif
 
 # Cross compile for little endian MIPS
 mipsel:
@@ -374,7 +415,7 @@ cross:
 
 
 # these depend on dietfeatures.h for large file backward compatibility
-$(OBJDIR)/__fstat64.o $(OBJDIR)/__lstat64.o $(OBJDIR)/__stat64.o $(OBJDIR)/lseek64.o $(OBJDIR)/readdir64.o $(OBJDIR)/stat64.o $(OBJDIR)/lstat64.o $(OBJDIR)/fstat64.o $(OBJDIR)/truncate64.o $(OBJDIR)/__truncate64.o $(OBJDIR)/ftruncate64.o $(OBJDIR)/__ftruncate64.o $(OBJDIR)/sendfile64.o $(OBJDIR)/__sendfile64.o $(PICODIR)/dyn_syscalls.o $(PICODIR)/__truncate64.o $(PICODIR)/__ftruncate64.o $(PICODIR)/__stat64.o $(PICODIR)/__lstat64.o $(PICODIR)/__fstat64.o $(OBJDIR)/__sendfile64.o: dietfeatures.h
+$(OBJDIR)/__fstat64.o $(OBJDIR)/__lstat64.o $(OBJDIR)/__stat64.o $(OBJDIR)/lseek64.o $(OBJDIR)/readdir64.o $(OBJDIR)/stat64.o $(OBJDIR)/lstat64.o $(OBJDIR)/fstat64.o $(OBJDIR)/truncate64.o $(OBJDIR)/__truncate64.o $(OBJDIR)/ftruncate64.o $(OBJDIR)/__ftruncate64.o $(OBJDIR)/sendfile64.o $(OBJDIR)/__sendfile64.o $(PICODIR)/dyn_syscalls.o $(PICODIR)/__truncate64.o $(PICODIR)/__ftruncate64.o $(PICODIR)/__stat64.o $(PICODIR)/__lstat64.o $(PICODIR)/__fstat64.o $(OBJDIR)/__sendfile64.o $(OBJDIR)/fstatfs64.o $(OBJDIR)/statfs64.o: dietfeatures.h
 
 # these depend on dietfeatures.h for thread support
 $(OBJDIR)/alloc.o $(OBJDIR)/perror.o $(OBJDIR)/logging.o $(OBJDIR)/unified.o $(OBJDIR)/clone.o $(OBJDIR)/set_errno.o: dietfeatures.h
@@ -401,7 +442,7 @@ $(OBJDIR)/localtime_r.o $(OBJDIR)/strftime.o: dietfeatures.h
 $(LIBSTDIOOBJ): dietfeatures.h include/stdio.h dietstdio.h
 
 # these depend on dietfeatures.h for WANT_FULL_RESOLV_CONF
-$(OBJDIR)/dnscruft.o $(OBJDIR)/dnscruft2.o: dietfeatures.h
+$(OBJDIR)/dnscruft.o $(OBJDIR)/dnscruft2.o $(OBJDIR)/res_search.o $(OBJDIR)/res_query.o: dietfeatures.h
 
 # these depend on dietfeatures.h for WANT_THREAD_SAFE and errno
 $(LIBRPCOBJ) $(OBJDIR)/logging.o $(OBJDIR)/alloc.o $(OBJDIR)/cfsetospeed.o $(OBJDIR)/cfsetispeed.o \
@@ -434,7 +475,7 @@ $(OBJDIR)/fgetc_unlocked.o $(OBJDIR)/fread.o $(OBJDIR)/ungetc.o: dietstdio.h
 
 # these depend on dietfeatures.h for WANT_LINKER_WARNINGS
 $(OBJDIR)/setlinebuf.o $(OBJDIR)/bzero.o $(OBJDIR)/setegid.o \
-$(OBJDIR)/seteuid.o: dietfeatures.h
+$(OBJDIR)/seteuid.o $(OBJDIR)/toascii.o: dietfeatures.h
 
 # these depend on dietfeatures.h for WANT_FULL_POSIX_COMPAT
 $(OBJDIR)/strncpy.o: dietfeatures.h
@@ -446,8 +487,14 @@ $(OBJDIR)/stat64.o $(OBJDIR)/fstat64.o $(OBJDIR)/lstat64.o: include/sys/stat.h
 # these depend on dietfeatures.h for WANT_INET_ADDR_DNS
 $(OBJDIR)/gethostbyname_r.o: dietfeatures.h
 
+# WANT_PLUGPLAY_DNS
+$(OBJDIR)/getaddrinfo.o: dietfeatures.h
+
 $(OBJDIR)/strsignal.o: include/signal.h
 
 $(LIBPTHREAD_OBJS): include/pthread.h
 
 # CFLAGS+=-W -Wshadow -Wid-clash-31 -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings
+
+# WANT_LARGEFILE_BACKCOMPAT
+$(OBJDIR)/fcntl64.o: dietfeatures.h

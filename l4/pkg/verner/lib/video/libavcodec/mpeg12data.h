@@ -4,14 +4,14 @@
  */
 
 const int16_t ff_mpeg1_default_intra_matrix[64] = {
-	8, 16, 19, 22, 26, 27, 29, 34,
-	16, 16, 22, 24, 27, 29, 34, 37,
-	19, 22, 26, 27, 29, 34, 34, 38,
-	22, 22, 26, 27, 29, 34, 37, 40,
-	22, 26, 27, 29, 32, 35, 40, 48,
-	26, 27, 29, 32, 35, 40, 48, 58,
-	26, 27, 29, 34, 38, 46, 56, 69,
-	27, 29, 35, 38, 46, 56, 69, 83
+        8, 16, 19, 22, 26, 27, 29, 34,
+        16, 16, 22, 24, 27, 29, 34, 37,
+        19, 22, 26, 27, 29, 34, 34, 38,
+        22, 22, 26, 27, 29, 34, 37, 40,
+        22, 26, 27, 29, 32, 35, 40, 48,
+        26, 27, 29, 32, 35, 40, 48, 58,
+        26, 27, 29, 34, 38, 46, 56, 69,
+        27, 29, 35, 38, 46, 56, 69, 83
 };
 
 const int16_t ff_mpeg1_default_non_intra_matrix[64] = {
@@ -23,29 +23,6 @@ const int16_t ff_mpeg1_default_non_intra_matrix[64] = {
     16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16,
-};
-
-static const unsigned char vlc_dc_table[256] = {
-    0, 1, 2, 2,
-    3, 3, 3, 3,
-    4, 4, 4, 4, 4, 4, 4, 4,
-    5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-
-    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
 };
 
 static const uint16_t vlc_dc_lum_code[12] = {
@@ -110,20 +87,20 @@ static const uint16_t mpeg2_vlc[113][2] = {
   {0x20, 8}, {0x16,13}, {0x15,13}, {0x1f,15},
   {0x1e,15}, {0x1d,15}, {0x1c,15}, {0x1b,15},
   {0x1a,15}, {0x19,15}, {0x13,16}, {0x12,16},
-  {0x11,16}, {0x10,16}, {0x05, 5}, {0x07, 7}, 
-  {0xfc, 8}, {0x0c,10}, {0x14,13}, {0x07, 5}, 
-  {0x26, 8}, {0x1c,12}, {0x13,13}, {0x06, 6}, 
-  {0xfd, 8}, {0x12,12}, {0x07, 6}, {0x04, 9}, 
-  {0x12,13}, {0x06, 7}, {0x1e,12}, {0x14,16}, 
-  {0x04, 7}, {0x15,12}, {0x05, 7}, {0x11,12}, 
-  {0x78, 7}, {0x11,13}, {0x7a, 7}, {0x10,13}, 
-  {0x21, 8}, {0x1a,16}, {0x25, 8}, {0x19,16}, 
-  {0x24, 8}, {0x18,16}, {0x05, 9}, {0x17,16}, 
-  {0x07, 9}, {0x16,16}, {0x0d,10}, {0x15,16}, 
-  {0x1f,12}, {0x1a,12}, {0x19,12}, {0x17,12}, 
-  {0x16,12}, {0x1f,13}, {0x1e,13}, {0x1d,13}, 
-  {0x1c,13}, {0x1b,13}, {0x1f,16}, {0x1e,16}, 
-  {0x1d,16}, {0x1c,16}, {0x1b,16}, 
+  {0x11,16}, {0x10,16}, {0x05, 5}, {0x07, 7},
+  {0xfc, 8}, {0x0c,10}, {0x14,13}, {0x07, 5},
+  {0x26, 8}, {0x1c,12}, {0x13,13}, {0x06, 6},
+  {0xfd, 8}, {0x12,12}, {0x07, 6}, {0x04, 9},
+  {0x12,13}, {0x06, 7}, {0x1e,12}, {0x14,16},
+  {0x04, 7}, {0x15,12}, {0x05, 7}, {0x11,12},
+  {0x78, 7}, {0x11,13}, {0x7a, 7}, {0x10,13},
+  {0x21, 8}, {0x1a,16}, {0x25, 8}, {0x19,16},
+  {0x24, 8}, {0x18,16}, {0x05, 9}, {0x17,16},
+  {0x07, 9}, {0x16,16}, {0x0d,10}, {0x15,16},
+  {0x1f,12}, {0x1a,12}, {0x19,12}, {0x17,12},
+  {0x16,12}, {0x1f,13}, {0x1e,13}, {0x1d,13},
+  {0x1c,13}, {0x1b,13}, {0x1f,16}, {0x1e,16},
+  {0x1d,16}, {0x1c,16}, {0x1b,16},
   {0x01,6}, /* escape */
   {0x06,4}, /* EOB */
 };
@@ -217,7 +194,8 @@ static const uint8_t mbAddrIncrTable[36][2] = {
     {0x0, 8}, /* end (and 15 more 0 bits should follow) */
 };
 
-static const uint8_t mbPatTable[63][2] = {
+static const uint8_t mbPatTable[64][2] = {
+    {0x1, 9},
     {0xb, 5},
     {0x9, 5},
     {0xd, 6},
@@ -283,10 +261,8 @@ static const uint8_t mbPatTable[63][2] = {
     {0xc, 6}
 };
 
-#define MB_TYPE_PAT       0x40000000
 #define MB_TYPE_ZERO_MV   0x20000000
 #define IS_ZERO_MV(a)   ((a)&MB_TYPE_ZERO_MV)
-#define IS_PAT(a)       ((a)&MB_TYPE_PAT)
 
 static const uint8_t table_mb_ptype[7][2] = {
     { 3, 5 }, // 0x01 MB_INTRA
@@ -300,12 +276,12 @@ static const uint8_t table_mb_ptype[7][2] = {
 
 static const uint32_t ptype2mb_type[7] = {
                     MB_TYPE_INTRA,
-                    MB_TYPE_L0 | MB_TYPE_PAT | MB_TYPE_ZERO_MV | MB_TYPE_16x16,
+                    MB_TYPE_L0 | MB_TYPE_CBP | MB_TYPE_ZERO_MV | MB_TYPE_16x16,
                     MB_TYPE_L0,
-                    MB_TYPE_L0 | MB_TYPE_PAT,
+                    MB_TYPE_L0 | MB_TYPE_CBP,
     MB_TYPE_QUANT | MB_TYPE_INTRA,
-    MB_TYPE_QUANT | MB_TYPE_L0 | MB_TYPE_PAT | MB_TYPE_ZERO_MV | MB_TYPE_16x16,
-    MB_TYPE_QUANT | MB_TYPE_L0 | MB_TYPE_PAT,
+    MB_TYPE_QUANT | MB_TYPE_L0 | MB_TYPE_CBP | MB_TYPE_ZERO_MV | MB_TYPE_16x16,
+    MB_TYPE_QUANT | MB_TYPE_L0 | MB_TYPE_CBP,
 };
 
 static const uint8_t table_mb_btype[11][2] = {
@@ -325,15 +301,15 @@ static const uint8_t table_mb_btype[11][2] = {
 static const uint32_t btype2mb_type[11] = {
                     MB_TYPE_INTRA,
                     MB_TYPE_L1,
-                    MB_TYPE_L1   | MB_TYPE_PAT,
+                    MB_TYPE_L1   | MB_TYPE_CBP,
                     MB_TYPE_L0,
-                    MB_TYPE_L0   | MB_TYPE_PAT,
+                    MB_TYPE_L0   | MB_TYPE_CBP,
                     MB_TYPE_L0L1,
-                    MB_TYPE_L0L1 | MB_TYPE_PAT,
+                    MB_TYPE_L0L1 | MB_TYPE_CBP,
     MB_TYPE_QUANT | MB_TYPE_INTRA,
-    MB_TYPE_QUANT | MB_TYPE_L1   | MB_TYPE_PAT,
-    MB_TYPE_QUANT | MB_TYPE_L0   | MB_TYPE_PAT,
-    MB_TYPE_QUANT | MB_TYPE_L0L1 | MB_TYPE_PAT,
+    MB_TYPE_QUANT | MB_TYPE_L1   | MB_TYPE_CBP,
+    MB_TYPE_QUANT | MB_TYPE_L0   | MB_TYPE_CBP,
+    MB_TYPE_QUANT | MB_TYPE_L0L1 | MB_TYPE_CBP,
 };
 
 static const uint8_t mbMotionVectorTable[17][2] = {
@@ -356,28 +332,24 @@ static const uint8_t mbMotionVectorTable[17][2] = {
 { 0xc, 10 },
 };
 
-#define MPEG1_FRAME_RATE_BASE 1001
-
-static const int frame_rate_tab[16] = {
-        0,        
-    24000,
-    24024,
-    25025,
-    30000,
-    30030,
-    50050,
-    60000,
-    60060,
+static const AVRational frame_rate_tab[] = {
+    {    0,    0},
+    {24000, 1001},
+    {   24,    1},
+    {   25,    1},
+    {30000, 1001},
+    {   30,    1},
+    {   50,    1},
+    {60000, 1001},
+    {   60,    1},
   // Xing's 15fps: (9)
-    15015,
+    {   15,    1},
   // libmpeg3's "Unofficial economy rates": (10-13)
-     5005,
-    10010,
-    12012,
-    15015,
-  // random, just to avoid segfault !never encode these
-    25025,
-    25025,
+    {    5,    1},
+    {   10,    1},
+    {   12,    1},
+    {   15,    1},
+    {    0,    0},
 };
 
 static const uint8_t non_linear_qscale[32] = {
@@ -387,7 +359,7 @@ static const uint8_t non_linear_qscale[32] = {
     56,64,72,80,88,96,104,112,
 };
 
-uint8_t ff_mpeg1_dc_scale_table[128]={ // MN: mpeg2 really can have such large qscales?
+const uint8_t ff_mpeg1_dc_scale_table[128]={
 //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
     8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
     8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
@@ -395,12 +367,43 @@ uint8_t ff_mpeg1_dc_scale_table[128]={ // MN: mpeg2 really can have such large q
     8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
 };
 
+const static uint8_t mpeg2_dc_scale_table1[128]={
+//  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+};
+
+static const uint8_t mpeg2_dc_scale_table2[128]={
+//  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+};
+
+static const uint8_t mpeg2_dc_scale_table3[128]={
+//  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+};
+
+static const uint8_t *mpeg2_dc_scale_table[4]={
+    ff_mpeg1_dc_scale_table,
+    mpeg2_dc_scale_table1,
+    mpeg2_dc_scale_table2,
+    mpeg2_dc_scale_table3,
+};
+
 static const float mpeg1_aspect[16]={
     0.0000,
     1.0000,
     0.6735,
     0.7031,
-    
+
     0.7615,
     0.8055,
     0.8437,
@@ -416,11 +419,29 @@ static const float mpeg1_aspect[16]={
     1.2015,
 };
 
-static const float mpeg2_aspect[16]={
-    0,
-    1.0,
-    -3.0/4.0,
-    -9.0/16.0,
-    -1.0/2.21,
+static const AVRational mpeg2_aspect[16]={
+    {0,1},
+    {1,1},
+    {4,3},
+    {16,9},
+    {221,100},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
+    {0,1},
 };
 
+static const uint8_t svcd_scan_offset_placeholder[14]={
+    0x10, 0x0E,
+    0x00, 0x80, 0x81,
+    0x00, 0x80, 0x81,
+    0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff,
+};

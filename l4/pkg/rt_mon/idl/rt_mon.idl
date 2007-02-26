@@ -22,7 +22,8 @@ library rt_mon
 
         /* Enumerate all dataspaces available.
          */
-        void list_ds([out, size_is(count), prealloc] rt_mon_dss * dss[],
-                     [in, out] int * count);
+        void list_ds([out, size_is(count), prealloc_client, prealloc_server]
+	    rt_mon_dss * dss[],
+   	    [in, out] int * count);
     };
 };

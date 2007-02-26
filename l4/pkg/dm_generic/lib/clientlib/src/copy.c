@@ -65,11 +65,11 @@ __do_copy(const l4dm_dataspace_t * ds, l4_offs_t src_offs, l4_offs_t dst_offs,
   else
     ret = if_l4dm_generic_copy_call(&(ds->manager), ds->id, src_offs, dst_offs,
                                     num, flags, "", copy, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: copy ds %u at "l4util_idfmt \
             " failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

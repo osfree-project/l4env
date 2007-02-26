@@ -45,8 +45,10 @@ static inline int try_to_wake_up(struct task_struct *p, int synchronous)
 {
   p->state = TASK_RUNNING;
 
-  /* unlock process' self_lock */
-  l4semaphore_up(&p->dde_sem);
+  /* unlock process' self_lock if it's not already running (i.e. current) */
+  /* XXX what about other processes running? */
+  if (current != p)
+    l4semaphore_up(&p->dde_sem);
 
   return 1;
 }

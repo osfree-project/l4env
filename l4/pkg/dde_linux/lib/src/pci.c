@@ -46,6 +46,7 @@
 /* L4 */
 #include <l4/env/errno.h>
 #include <l4/generic_io/libio.h>
+#include <l4/sigma0/kip.h>
 
 #include <l4/dde_linux/dde.h>
 
@@ -111,7 +112,7 @@ static inline void __pci_io_to_linux(l4io_pci_dev_t *l4io,
   linus->device = l4io->device;
   linus->subsystem_vendor = l4io->sub_vendor;
   linus->subsystem_device = l4io->sub_device;
-  linus->class = l4io->class;
+  linus->class = l4io->dev_class;
 
   linus->irq = l4io->irq;
   for (i = 0; i < 12; i++)
@@ -504,6 +505,15 @@ int pci_enable_wake(struct pci_dev *dev, u32 state, int enable)
 
 /** FIXME Dummy (could also go into L4IO */
 int pci_save_state(struct pci_dev *dev, u32 *buffer)
+{
+#if DEBUG_MSG
+  LOG_Enter("%s", dev->name);
+#endif
+  return -EINVAL;
+}
+
+/** FIXME Dummy (could also go into L4IO */
+int pci_restore_state(struct pci_dev *dev, u32 *buffer)
 {
 #if DEBUG_MSG
   LOG_Enter("%s", dev->name);
@@ -1317,7 +1327,7 @@ PCI_OP(write, dword, int)
  *
  * \todo consider pcibus no as parameter
  */
-int l4dde_pci_init()
+int l4dde_pci_init(void)
 {
   struct pci_dev *dev = NULL;
   int err, i;
@@ -1326,6 +1336,10 @@ int l4dde_pci_init()
 
   if (_initialized)
     return -L4_ESKIPPED;
+
+  /* If we're running under UX, pretend everything is fine */
+  if (l4sigma0_kip_kernel_is_ux())
+    return 0;
 
   /* setup virtual bus */
   INIT_LIST_HEAD(&pcibus.devices);

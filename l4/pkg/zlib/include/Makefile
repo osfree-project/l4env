@@ -1,21 +1,21 @@
 PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../..
 
-LIBZ		:= $(PKGDIR)/lib/dist
+include $(L4DIR)/mk/Makeconf
+
+LIBZ		:= $(PKGDIR_ABS)/lib/dist
 EXPORTED	:= zconf.h zlib.h
+EXPORTED_O      := $(addprefix $(OBJ_DIR)/, $(EXPORTED))
+INCSRC_DIR      := $(OBJ_DIR)
+TARGET          := $(EXPORTED)
 
-all:: $(EXPORTED)
+all:: $(EXPORTED_O)
 
-$(foreach f,$(EXPORTED),$(f)) : % : $(LIBZ)/%
+$(EXPORTED_O):$(OBJ_DIR)/%: $(LIBZ)/%
 	@$(INSTALL_LOCAL_MESSAGE)
-	$(VERBOSE)$(LN) -s $< .
+	$(VERBOSE)$(LN) -fs $< $@
 
 cleanall::
-	$(VERBOSE)rm -f $(EXPORTED)
+	$(VERBOSE)rm -f $(EXPORTED_O)
 
 include $(L4DIR)/mk/include.mk
-
-
-
-
-

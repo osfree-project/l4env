@@ -55,3 +55,7 @@ void Boot_info::init()
 #endif
 }
 
+PUBLIC static
+void
+Boot_info::reset_checksum_ro(void)
+{}

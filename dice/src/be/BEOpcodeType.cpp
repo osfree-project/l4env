@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEOpcodeType.cpp
- *    \brief   contains the implementation of the class CBEOpcodeType
+ *  \brief   contains the implementation of the class CBEOpcodeType
  *
  *    \date    01/21/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -28,7 +28,8 @@
 
 #include "be/BEOpcodeType.h"
 #include "be/BEContext.h"
-
+#include "be/BESizes.h"
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 
 
@@ -36,31 +37,36 @@ CBEOpcodeType::CBEOpcodeType()
 {
 }
 
-CBEOpcodeType::CBEOpcodeType(CBEOpcodeType & src):CBEType(src)
+CBEOpcodeType::CBEOpcodeType(CBEOpcodeType & src)
+: CBEType(src)
 {
 }
 
-/**    \brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEOpcodeType::~CBEOpcodeType()
 {
 
 }
 
-/**    \brief creates the back-end structure for a type class for opcodes
- *    \param pContext the context of the code generation
- *    \return true if code generation was successful
+/** \brief creates the back-end structure for a type class for opcodes
+ *  \return true if code generation was successful
  *
- * This implementation sets the basic members, but uses special values, specific for opcodes.
+ * This implementation sets the basic members, but uses special values,
+ * specific for opcodes.
  */
-bool CBEOpcodeType::CreateBackEnd(CBEContext * pContext)
+void
+CBEOpcodeType::CreateBackEnd()
 {
-    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
-    return CBEType::CreateBackEnd(false, pContext->GetSizes()->GetOpcodeSize(),
-        TYPE_INTEGER, pContext);
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n", 
+	__func__);
+    CBEType::CreateBackEnd(false, CCompiler::GetSizes()->GetOpcodeSize(),
+        TYPE_LONG);
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n", 
+	__func__);
 }
 
-/**    \brief generates an exact copy of this class
- *    \return a reference to the new object
+/** \brief generates an exact copy of this class
+ *  \return a reference to the new object
  */
 CObject *CBEOpcodeType::Clone()
 {

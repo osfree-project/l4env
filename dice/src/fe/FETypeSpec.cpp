@@ -36,13 +36,15 @@
 
 // needed for Error function
 #include "Compiler.h"
+#include <cassert>
 
-CFETypeSpec::CFETypeSpec(TYPESPEC_TYPE nType)
+CFETypeSpec::CFETypeSpec(unsigned int nType)
 {
     m_nType = nType;
 }
 
-CFETypeSpec::CFETypeSpec(CFETypeSpec & src):CFEInterfaceComponent(src)
+CFETypeSpec::CFETypeSpec(CFETypeSpec & src)
+: CFEInterfaceComponent(src)
 {
     m_nType = src.m_nType;
 }
@@ -54,16 +56,16 @@ CFETypeSpec::~CFETypeSpec()
 }
 
 /** retrieves the type of the type spec
- *    \return the type of the type spec
+ *  \return the type of the type spec
  */
-TYPESPEC_TYPE CFETypeSpec::GetType()
+unsigned int CFETypeSpec::GetType()
 {
     return m_nType;
 }
 
 /** \brief test a type whether it is a constructed type or not
- *    \param pType the type to test
- *    \return true if it is a constructed type, false if not
+ *  \param pType the type to test
+ *  \return true if it is a constructed type, false if not
  *
  * This function also follows user-defined types
  */
@@ -86,7 +88,8 @@ bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
             // if not found now, this can be an interface
             if (pRoot->FindInterface(sUserName))
                 return true; // is CORBA_Object a constructed type?
-            CCompiler::GccError(pType, 0, "User defined type \"%s\" not defined\n",
+            CCompiler::GccError(pType, 0,
+		"User defined type \"%s\" not defined\n",
                 sUserName.c_str());
             return false;
         }
@@ -94,6 +97,8 @@ bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
         return IsConstructedType(pUserDecl->GetType());
     }
     // is constructed -> test for struct and union
+    // cannot use CFEConstructedType, because enum is derived from
+    // CFEConstructedType, but not really a cosntructed type
     if (dynamic_cast<CFEStructType*>(pType))
         return true;
     if (dynamic_cast<CFEUnionType*>(pType))
@@ -103,8 +108,8 @@ bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
 }
 
 /** \brief test if a type is a pointered type
- *    \param pType the type to test
- *    \return true if it is a pointered type, false if not
+ *  \param pType the type to test
+ *  \return true if it is a pointered type, false if not
  *
  * This function also follows user-defined types
  */
@@ -112,7 +117,12 @@ bool CFETypeSpec::IsPointerType(CFETypeSpec * pType)
 {
     // if type is simple -> return false
     if (dynamic_cast<CFESimpleType*>(pType))
+    {
+	if ((pType->m_nType == TYPE_VOID_ASTERISK) ||
+	    (pType->m_nType == TYPE_CHAR_ASTERISK))
+	    return true;
         return false;
+    }
     // if user defined -> follow the definition
     if (dynamic_cast<CFEUserDefinedType*>(pType))
     {
@@ -128,25 +138,18 @@ bool CFETypeSpec::IsPointerType(CFETypeSpec * pType)
         // check if we found the user defined type (if not: panic)
         if (!pUserDecl)
         {
-            CCompiler::GccError(pType, 0, "User defined type \"%s\" not defined\n",
+            CCompiler::GccError(pType, 0,
+		"User defined type \"%s\" not defined\n",
                 sUserName.c_str());
             return false;
         }
         // test decls for pointers
-        vector<CFEDeclarator*>::iterator iterD = pUserDecl->GetFirstDeclarator();
-        CFEDeclarator *pDecl = pUserDecl->GetNextDeclarator(iterD);
+        CFEDeclarator *pDecl = pUserDecl->m_Declarators.First();
         if (pDecl && (pDecl->GetStars() > 0))
             return true;
         // test the found type
         return IsPointerType(pUserDecl->GetType());
     }
     // not a pointered type -> return false
-    return false;
-}
-
-/** helper function */
-bool CFETypeSpec::CheckConsistency()
-{
-    CCompiler::GccError(this, 0, "The type %d does not implement the CheckConsistency function.", m_nType);
     return false;
 }

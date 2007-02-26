@@ -36,7 +36,8 @@
  *  \ingroup backend
  *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end operation
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
 class CL4BEDispatchFunction : public CBEDispatchFunction
 {
@@ -45,16 +46,14 @@ public:
     /** \brief constructor
      */
     CL4BEDispatchFunction();
-    virtual ~CL4BEDispatchFunction();
+    ~CL4BEDispatchFunction();
 
 protected:
     /** \brief copy constructor */
     CL4BEDispatchFunction(CL4BEDispatchFunction &src);
 
 protected:
-    virtual void WriteSwitch(CBEFile * pFile,  CBEContext * pContext);
-    virtual void WriteSetWrongOpcodeException(CBEFile* pFile,  CBEContext* pContext);
-    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile);
 };
 
 #endif

@@ -3,11 +3,30 @@
 #include <set>
 #include <vector>
 
+class TEST_A
+{
+private:
+	std::set<int> _s;
+	std::set<int>::iterator _t;
+ 
+public:
+	TEST_A(){
+		_s.insert(1);
+		_t = _s.begin();
+	}
+
+        int f() const {
+		return *_t;
+	}
+};
+
+
 int main(){
 	std::cout << "Starting set test\n";
 	std::set<int> a;
 	std::vector<int> c;
 	std::vector<int>::iterator k, l;
+	int z;
 
 	c.clear();
 
@@ -65,6 +84,32 @@ int main(){
 		++i;
 	}
 
+
+	std::cout << "Checking to make sure that iterator is comparable to" << std::endl;
+	std::cout << "const_iterator: ";
+
+	i = a.begin();
+	q = a.begin();
+
+//	if( std::set<int>::const_iterator(i) == q){
+	if(i == q){
+		std::cout << "OK" << std::endl;
+	}else{
+		std::cout << "FAIL" << std::endl;
+	}
+
+	std::cout << "Checking to make sure that iterator is comparable to" << std::endl;
+	std::cout << "const_iterator: ";
+
+	i = a.begin();
+	q = a.begin();
+
+//	if( std::set<int>::const_iterator(i) == q){
+	if(q == i){
+		std::cout << "OK" << std::endl;
+	}else{
+		std::cout << "FAIL" << std::endl;
+	}
 
 	std::cout << "Set algorithms test" << std::endl;
 	std::cout << "Testing std::includes\n";
@@ -290,9 +335,8 @@ int main(){
 		std::cout << "Set a !>= b" << std::endl;
 	}
 
-
-
-
+	TEST_A test_a;
+	z = test_a.f();
 
 	return 0;
 }

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEConditionalExpression.cpp
- *    \brief   contains the implementation of the class CFEConditionalExpression
+ *  \brief   contains the implementation of the class CFEConditionalExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -55,7 +55,7 @@ CFEConditionalExpression::~CFEConditionalExpression()
 }
 
 /** returns the integer value of this expression
- *    \return the integer value of the true branch if the condition is true, otherwise the integer value of the false branch
+ *  \return the integer value of the true branch if the condition is true, otherwise the integer value of the false branch
  */
 long CFEConditionalExpression::GetIntValue()
 {
@@ -63,10 +63,10 @@ long CFEConditionalExpression::GetIntValue()
 }
 
 /** checks the type og the expression
- *    \param nType the type to check for
- *    \return true if this expression evaluates to the requested expression
+ *  \param nType the type to check for
+ *  \return true if this expression evaluates to the requested expression
  */
-bool CFEConditionalExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEConditionalExpression::IsOfType(unsigned int nType)
 {
     return (GetCondition()->IsOfType(TYPE_BOOLEAN)
         || GetCondition()->IsOfType(TYPE_INTEGER)
@@ -76,7 +76,7 @@ bool CFEConditionalExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /** returns the condition expression
- *    \return the condition expression
+ *  \return the condition expression
  */
 CFEExpression *CFEConditionalExpression::GetCondition()
 {
@@ -84,40 +84,11 @@ CFEExpression *CFEConditionalExpression::GetCondition()
 }
 
 /** creates a copy of this object
- *    \return a reference to the new object
+ *  \return a reference to the new object
  */
 CObject *CFEConditionalExpression::Clone()
 {
     return new CFEConditionalExpression(*this);
-}
-
-/** serialize this object
- *    \param pFile th file to serialize from/to
- */
-void CFEConditionalExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<conditional_expression>\n");
-      pFile->IncIndent();
-      pFile->PrintIndent("<condition>\n");
-      pFile->IncIndent();
-      GetCondition()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</condition>\n");
-      pFile->PrintIndent("<true_branch>\n");
-      pFile->IncIndent();
-      GetOperand()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</true_branch>\n");
-      pFile->PrintIndent("<false_branch>\n");
-      pFile->IncIndent();
-      GetOperand2()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</false_branch>\n");
-      pFile->DecIndent();
-      pFile->PrintIndent("</conditional_expression>\n");
-      }
 }
 
 /** \brief print the object to a string

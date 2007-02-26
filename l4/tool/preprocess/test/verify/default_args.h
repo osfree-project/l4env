@@ -14,7 +14,7 @@ vec(T f1 = T(), T f2 = T(), T f3 = T(),
     T f4 = T(), T f5 = T(), T f6 = T());
 
 //
-// IMPLEMENTATION includes follow (for use by inline functions)
+// IMPLEMENTATION includes follow (for use by inline functions/templates)
 //
 
 #line 1 "default_args.cpp"

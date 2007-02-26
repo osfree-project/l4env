@@ -7,24 +7,23 @@
 
 #include "ore-local.h"
 
-// ??? What do we need this for ???
-void custom_irq_handler(l4_threadid_t client, l4_umword_t dw0, l4_umword_t dw1)
-{
-  //LOG("custom irq handler: "l4util_idfmt" dw0 = %d, dw1 = %d",
-  //    l4util_idstr(client), dw0, dw1);
-}
-
+// TODO: hmmm...
 void irq_handler(l4_int32_t irq, void *arg)
 {
-  LOGd(ORE_DEBUG_IRQ, "irq alien handler: IRQ %d", irq);
+  //LOGd(ORE_DEBUG_IRQ, "irq alien handler: IRQ %d, %p", irq, arg);
 }
 
+/* Main netif_rx function. It is called by the device driver and 
+ * cares for delivering incoming packets to the clients' own netif_rx()
+ * routines.
+ */
 int netif_rx(struct sk_buff *skb)
 {
-  l4ore_handle_t channel;
-
   // find out who will receive this skb
-  channel = find_channel_for_skb(skb, 0);
+  int channel = find_channel_for_skb(skb, 0);
+
+  if (ORE_DEBUG_PACKET)
+      LOG_SKB(skb);
 
   // if the first channel lookup fails, the packet is not for us
   if (channel < 0)
@@ -41,16 +40,15 @@ int netif_rx(struct sk_buff *skb)
     {
       int ret = NET_RX_SUCCESS;
 
-      l4lock_lock(&ore_connection_table[channel].channel_lock);
-
-      // discard packet if it is for an inactive connection
+      // only accept packet if connection is in active state
       if (ore_connection_table[channel].config.rw_active)
+      {
+        LOGd(ORE_DEBUG_IRQ, "packet for channel %d", channel);
         ret = ore_connection_table[channel].netif_rx_func(channel, skb);
-
-      l4lock_unlock(&ore_connection_table[channel].channel_lock);
+      }
 
       if (ret != NET_RX_SUCCESS)
-        LOG_Error("Error sending packet for channel %d", channel);
+        LOG_Error("Error receiving packet for channel %d", channel);
 
       // find next recipient
       channel = find_channel_for_skb(skb, channel+1);

@@ -6,7 +6,7 @@ For x86:
   1)
      boostrap is started by a multiboot compliant bootloader and modules are
      attached as multiboot modules. GRUB example:
-     
+
        kernel bootstrap arg1 args2 ...
        module kernel
        module sigma0
@@ -18,7 +18,9 @@ For x86:
       bootstrap is started by a multiboot compliant bootloader but includes
       all modules by itself. GRUB example:
 
-       kernel bootstrap args...
+       kernel bootstrap_hello args...
+
+      For module specifications looks into modules.list
 
    3)
       bootstrap can boot from real-mode, esp. with pxelinux, i.e. it can be
@@ -31,9 +33,16 @@ For x86:
       compliant loader. Also needs to include all modules.
 
 For arm:
-   
+
    Just the single image mode, i.e. all modules packed into bootstrap.
    Anything else doesn't make any sense (currently).
+
+
+Generating bootstrap in single-image-mode:
+
+ Call make with E=entryname, e.g.
+
+ $ make E=hello
 
 
 Local customization:

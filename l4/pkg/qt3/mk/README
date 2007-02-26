@@ -7,8 +7,9 @@ and simple_mem backends.
 
 All Makefiles for Qt applications should include this file before
 
-  $(L4DIR)/mk/prog.mk or
-  $(L4DIR)/mk/lib.mk. 
+  $(L4DIR)/mk/prog.mk
+or
+  $(L4DIR)/mk/lib.mk.
 
 
 The folling additional 'make' variables are available:
@@ -18,7 +19,9 @@ SRC_MOC
         'moc'.
 
 SRC_UI
-        Contains all .ui files to be fed into 'uic'.
+        Contains all .ui files to be fed into 'uic'. Have a look at the
+        'ftpclient' and 'sheep' examples on how to access the images from
+        the source code.
 
 SRC_UI_IMG
         Contains all image files, that should be embedded into the
@@ -30,10 +33,10 @@ QT3_IO_BACKEND
           'dope': use DOpE driver
           'sdl':  use VESA framebuffer driver
         Only the 'con' driver provides support for multiple Qt/E
-        processes on one desktop.
+        processes on one desktop. Therefore it is the default.
 
 DEBUG_LIBQT3
         Set to '1', if you want to link against a version of
-        libqt3_embedded.a, which has debugging symbols. This will
-        increase link times, however.
+        libqt3_embedded_dbg.a instaed of libqt3_embedded.a. The former
+        has debugging symbols, however, it will increase link times.
 

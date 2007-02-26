@@ -14,7 +14,7 @@
 
 #include <l4/rt_mon/types.h>
 
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/thread_time.h>
 
@@ -39,10 +39,10 @@ do                                                                        \
         (time_val) = l4_tsc_to_us(l4_rdtsc());                            \
         break;                                                            \
     case RT_MON_FAST_THREAD_TIME:                                         \
-        (time_val) = l4_tsc_to_us(l4util_thread_time(l4util_kip()));      \
+        (time_val) = l4_tsc_to_us(l4util_thread_time(l4sigma0_kip()));    \
         break;                                                            \
     case RT_MON_FAST_THREAD_TIME_TSC:                                     \
-        (time_val) = l4util_thread_time(l4util_kip());                    \
+        (time_val) = l4util_thread_time(l4sigma0_kip());                  \
         break;                                                            \
     default:                                                              \
         LOG("corrupted CLOCKTYPE");                                       \
@@ -59,7 +59,7 @@ L4_INLINE void rt_mon_calibrate_clock(int clock);
 L4_INLINE void rt_mon_calibrate_clock(int clock)
 {
     if (clock == RT_MON_TSC_TO_US_TIME || clock == RT_MON_FAST_THREAD_TIME)
-        if (l4_scaler_tsc_to_us != 0)  // calibrate on demand
+        if (l4_scaler_tsc_to_us == 0)  // calibrate on demand
             l4_calibrate_tsc();
 }
 

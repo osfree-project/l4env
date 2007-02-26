@@ -1,4 +1,142 @@
-$Log$
+$Log, ChangeLog,v $
+
+3.1.1
+ - [feature] on installation a version suffix is appended to the binary name,
+   allowing installation of multiple dice binaries. The 'dice' name is linked
+   to the versioned binary.
+ - [feature] inspired by madwifi, I added an svn revision info to --verion
+   line.
+ - [fix] warn on colliding operation IDs for two base interfaces in the
+   derived interface.
+ - [fix] classes generated from derived interfaces derive from the classes of
+   the base interfaces now. This has some consequences for member variables
+   (exist in base class) and constructors (call base class constructor).
+ - [fix (minor)] compiler warning of gcc for generated C++ stubs when
+   initializing exception member
+ - [fix] parameters with constructed type and [out, ref] parameter were not
+   unmarshalled correctly
+ - [fix] for X0: actually invoke IPC in reply function
+
+3.1.0
+ - replace -C option with -x corba (conforms to gcc and easier to extend)
+ - fix recognition of unnamed union/struct fields in C parser
+ - changed verboseness levels:
+   -v1 only print options
+   -v2 + verbose compiler output (same as -v)
+   -v3 + verbose parser output
+   -v4 + verbose scanner output
+ - add --disable-verbose option to configure (requires automake 1.9)
+ - reimplemented [sched_donate] function attribute to modify time donation
+   during IPC
+ - implement send-only function in socket back-end (Stephen Kell)
+ - add receive timeout in socket back-end (Stephen Kell)
+ - more C++-ification (using more STL functionality)
+ - replace [prealloc] by [prealloc_client] and [prealloc_server].
+ - several bug fixes
+
+3.0.0
+ - changed --verbose Option handling
+ - tracing plugin
+ - allow type attribute specification for return type of operation
+ - support attribute [without_using_exceptions] for interface
+ - Dice is order preserving, that is, elements in the target code appear
+   in the order of the respective elements in the source IDL
+ - -falign-to-type is default for ARM
+ - added -fgenerate-line-directive to generate source line statements in
+   target code
+ - split [error_function] into [error_function_client] and 
+   [error_function_server]
+ - -fuse-symbols/-fuse-defines is deprecated
+ - backend for X0 adaption deprecated
+ - fix fpage receive window if no fpages expected
+ - fix functions with [out] fpage and no return type
+ - fix [out] one-way functions with return type
+ - add [dedicated_partner] attribute for interface to allow close sessions
+ - message buffer format changed from byte-stream to structured type
+
+2.3.0
+ - -fserver-parameter is default now
+ - -fctypes and -fl4types are deprectaed. The behaviour of -fctypes is default
+   now. To generated CORBA compliant data types specify -fcorba-types.
+ - Added Option -fcorba-types that will cause the usage of CORBA types.
+ - examples subdir has been superceeded by l4/pkg/dice-testsuite
+ - several bug fixes (AMD64, memory management at server side)
+
+2.2.9
+ - better support for C++: -BmCPP generates .cc/.hh files and g++ comformant
+   code
+ - support AMD64 for V2 using C Bindings (-Bpamd64)
+ - specify output directory using -o Option
+ - removed optimization (-O) option (unused)
+ - some bug-fixes
+
+2.2.8
+ - replaced Vector and String class by STL implementations
+ - made usage of 'long long' type detectable by configure script
+ - configure checks for existence of 'long long' type and 'atoll' function
+ - added option to align parameters in the message buffer to the size of their
+   type
+ - starting support for L4 V4 (aka X2) ABI
+ - add function attribute [allow_reply_only] for asynchronous servers
+ - add function attribute [noopcode] to not sent opcodes
+ - add function attribute [noexceptions] to not sent exceptions
+ - add option -fno-dispatcher to not generate the dispatcher
+   function
+
+2.2.7
+ - split server-loop function into a simpler server-loop
+   and a dispatch function
+ - added option to not generate server loop function
+ - added CORBA Common Data Representaion (CDR) back-end
+
+2.2.6
+ - type-attributes in C parser
+ - ARM backend for X0
+ - sequence type supported
+ - CORBA string mapping fixed
+ - [in] arrays are const arguments now
+ - exceptions supported for system-exceptions
+   . IPC error
+   . wrong opcode
+ - unified CORBA types into one header
+ - generates only C files for IDL file given as argument
+
+2.2.5
+- some more magic for the CORBA types:
+  . configure sets the l4dir and the include path where dice includes are	
+    installed to
+  . dice adds them to the include paths with "/dice" added
+    -> thus /usr/include and $(L4DIR)/include are no longer added automatically
+       but /usr/include/dice and $(L4DIR)/include/dice instead
+  . adapted automatic include of "dice/dice-corba-types.h" appropriately
+  . added possibility to mark a file as "privately included" meaning that no
+    #include statement will appear for it in generated files
+    -> "dice-corba-types.h" will not appear in generated files
+
+2.2.4
+ - bug fix release for 2.2.3
+ - fixes problems introduced with new parser architecture
+ - import and include behave (almost) the same now
+ - smaller fixes for [oneway]
+ - SOCKETAPI -> L4API_linux
+ - some gcc adaption to gcc-c front-end
+
+2.2.3
+ - several bug-fixes
+ - enhanced front-end with a seperate C parser
+
+2.2.2
+ - tons of bug-fixes
+ - x0 Back-End added (untested)
+ - x0adaption Back-End added (imitates V2 API on X0 kernel)
+ 
+2.2.1
+ - added 'socket' Back-End
+
+2.2.0
+ - BE: flexpages, indirect strings
+ - works for L4 version 2
+
 Revision 1.2  2002/11/30 13:09:37  ra3
 - added back-end to use sockets for communication
 - cleaned up L4 back-end
@@ -9,6 +147,4 @@ Revision 1.1  2002/11/20 17:21:47  ra3
 - adapted to automake/autoconf
   -> parser moved into own subdir
   -> man/html doku in own subdir
-
-
 

@@ -59,6 +59,9 @@ l4_inter_task_ex_regs(l4_threadid_t destination,
                       l4_umword_t *old_sp,
                       unsigned long flags);
 
+L4_INLINE l4_threadid_t
+l4_thread_ex_regs_pager(l4_threadid_t destination);
+
 L4_INLINE void
 l4_thread_switch(l4_threadid_t destination);
 
@@ -86,6 +89,18 @@ L4_INLINE int
 l4_privctrl(l4_umword_t cmd,
             l4_umword_t param);
 
+/**
+ * Internal prototypes
+ */
+L4_INLINE void
+__do_l4_thread_ex_regs(l4_umword_t val0,
+                       l4_umword_t ip,
+                       l4_umword_t sp,
+                       l4_threadid_t *preempter,
+                       l4_threadid_t *pager,
+                       l4_umword_t *old_cpsr,
+                       l4_umword_t *old_ip,
+                       l4_umword_t *old_sp);
 
 /*----------------------------------------------------------------------------
  * Implementation

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEUserDefinedExpression.h
- *    \brief   contains the declaration of the class CFEUserDefinedExpression
+ *  \brief   contains the declaration of the class CFEUserDefinedExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /**    \class CFEUserDefinedExpression
  *    \ingroup frontend
- *    \brief represents an expression, which is user defined
+ *  \brief represents an expression, which is user defined
  *
  * An expression is user defined if the name of another expression (const value)
  * is used.
@@ -45,28 +45,27 @@ class CFEUserDefinedExpression : public CFEExpression
 // standard constructor/destructor
 public:
     /** constructs a user defined expression
-     *    \param sExpName the name of the user defined expression */
+     *  \param sExpName the name of the user defined expression */
     CFEUserDefinedExpression(string sExpName);
     virtual ~CFEUserDefinedExpression();
 
 protected:
-    /**    \brief copy constrcutor
-     *    \param src the source to copy from
+    /** \brief copy constrcutor
+     *  \param src the source to copy from
      */
     CFEUserDefinedExpression(CFEUserDefinedExpression &src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CObject* Clone();
-    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual bool IsOfType(unsigned int nType);
     virtual long GetIntValue();
     virtual string GetExpName();
 
 // attributes
 protected:
     /**    \var string m_sExpName
-     *    \brief the name of the expression
+     *  \brief the name of the expression
      */
     string m_sExpName;
 };

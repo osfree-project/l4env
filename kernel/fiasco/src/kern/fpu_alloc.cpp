@@ -18,7 +18,7 @@ slab_cache_anon *
 Fpu_alloc::slab_alloc()
 {
   static slab_cache_anon *my_slab 
-    = new Kmem_slab_simple(Fpu::state_size(),Fpu::state_align());
+    = new Kmem_slab_simple(Fpu::state_size(), Fpu::state_align(), "Fpu state");
   return my_slab;
 }
 

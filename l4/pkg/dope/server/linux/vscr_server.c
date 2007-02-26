@@ -88,12 +88,12 @@ static void vscreen_server_thread(void *arg) {
  *** SERVICE FUNCTIONS ***
  *************************/
 
-static int start(VSCREEN *vscr_widget) {
+static int start(THREAD *t, VSCREEN *vscr_widget) {
 	int result;
 	thread_started = 0;
 
 	/* start server thread */
-	result = thread->start_thread(NULL, &vscreen_server_thread, (void *)vscr_widget);
+	result = thread->start_thread(t, &vscreen_server_thread, (void *)vscr_widget);
 
 	/* shake hands with newly created thread */
 	if (result == 0)

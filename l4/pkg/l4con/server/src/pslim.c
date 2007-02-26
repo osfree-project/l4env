@@ -15,12 +15,11 @@
 
 #include <stdlib.h>
 #include <string.h>		/* needed for memmove */
-#include <l4/sys/kdebug.h>
 
 /* local includes */
+#include "main.h"
 #include "l4con.h"
-#include "pslim_func.h"
-#include "con_macros.h"
+#include "pslim.h"
 #include "con_hw/init.h"
 #include "con_yuv2rgb/yuv2rgb.h"
 
@@ -55,23 +54,20 @@ static inline void _bmap32lsb(l4_uint8_t*, l4_uint8_t*, l4_uint32_t,
 			      l4_uint32_t, l4_uint32_t, l4_uint32_t, 
 			      struct pslim_offset*, l4_uint32_t);
 static inline void _set16(l4_uint8_t*, l4_uint8_t*, l4_uint32_t, 
-			  l4_uint32_t, struct pslim_offset*, l4_uint32_t, 
+			  l4_uint32_t, struct pslim_offset*, 
 			  l4_uint32_t, l4_uint32_t);
 static inline void _set24(l4_uint8_t*, l4_uint8_t*, l4_uint32_t, 
-			  l4_uint32_t, struct pslim_offset*, l4_uint32_t, 
+			  l4_uint32_t, struct pslim_offset*,
 			  l4_uint32_t, l4_uint32_t);
 static inline void _set32(l4_uint8_t*, l4_uint8_t*, l4_uint32_t, 
-			  l4_uint32_t, struct pslim_offset*, l4_uint32_t, 
+			  l4_uint32_t, struct pslim_offset*,
 			  l4_uint32_t, l4_uint32_t);
 static inline void _copy16(l4_uint8_t*, l4_int16_t, l4_int16_t, l4_int16_t, 
-			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t, 
-			   l4_uint32_t);
+			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t); 
 static inline void _copy24(l4_uint8_t*, l4_int16_t, l4_int16_t, l4_int16_t, 
-			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t, 
-			   l4_uint32_t);
+			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t);
 static inline void _copy32(l4_uint8_t*, l4_int16_t, l4_int16_t, l4_int16_t, 
-			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t, 
-			   l4_uint32_t);
+			   l4_int16_t, l4_uint32_t, l4_uint32_t, l4_uint32_t);
 
 static inline void _fill16(l4_uint8_t*, l4_uint32_t, l4_uint32_t, 
 			   l4_uint32_t, l4_uint32_t);
@@ -94,12 +90,6 @@ static inline void sw_cscs(struct l4con_vc*, l4_int16_t, l4_int16_t,
 			   l4_uint32_t scale, struct pslim_offset*, 
 			   l4_uint8_t mode);
 
-void sw_copy(struct l4con_vc*, int, int, int, int, int, int);
-void sw_fill(struct l4con_vc*, int, int, int, int, unsigned col);
-
-/********************************************************************
- * inline function
- ********************************************************************/							  
 static inline l4_uint16_t 
 set_rgb16(l4_uint32_t r, l4_uint32_t g, l4_uint32_t b)
 {
@@ -115,7 +105,7 @@ set_rgb24(l4_uint32_t r, l4_uint32_t g, l4_uint32_t b)
 }
 
 
-#define OFFSET(x, y, ptr) ptr += (y) * bwidth + (x) * bytepp;
+#define OFFSET(x, y, ptr, bytepp) ptr += (y) * bwidth + (x) * (bytepp);
 
 /* clipping */
 
@@ -138,7 +128,7 @@ clip_rect(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect)
     return 0;
   if (rect->x < 0)
     {
-      if (-rect->x > rect->w)
+      if (-rect->x >= rect->w)
 	/* not visible - left of border */
 	return 0;
       /* clip left */
@@ -147,7 +137,7 @@ clip_rect(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect)
     }
   if (rect->y < 0) 
     {
-      if (-rect->y > rect->h)
+      if (-rect->y >= rect->h)
 	/* not visible - above border */
 	return 0;
       /* clip top */
@@ -499,27 +489,43 @@ _set16(l4_uint8_t *vfb,
        l4_uint8_t *pmap, 
        l4_uint32_t w, l4_uint32_t h,
        struct pslim_offset* offset,
-       l4_uint32_t bytepp,
        l4_uint32_t bwidth,
        l4_uint32_t pwidth)
 {
   int i;
-  
-  for (i = 0; i < h; i++) 
-    {
-      pmap += bytepp * offset->preskip_x;
+
 #ifdef ARCH_x86
-      {
-	unsigned dummy;
-	asm volatile ("cld ; rep movsw"
-		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		     :"0"(pmap), "1"(vfb), "2"(w));
-      }
-#else
-      memcpy(vfb, pmap, w);
+  if (use_fastmemcpy && (w % 4 == 0))
+    {
+      asm ("emms");
+      for (i = 0; i < h; i++)
+	{
+	  l4_umword_t dummy;
+	  pmap += 2 * offset->preskip_x;
+	  asm volatile("xorl    %%edx,%%edx              \n\t"
+		       "1:                               \n\t"
+	               "movq    (%%esi,%%edx,8),%%mm0    \n\t"
+	               "movntq  %%mm0,(%%edi,%%edx,8)    \n\t"
+		       "add     $1,%%edx                 \n\t"
+		       "dec     %%ecx                    \n\t"
+		       "jnz     1b                       \n\t"
+		       : "=c"(dummy), "=d"(dummy)
+		       : "c"(w/4), "S"(pmap), "D"(vfb));
+	  vfb  += bwidth;
+	  pmap += pwidth;
+	}
+      asm ("sfence; emms");
+    }
+  else
 #endif
-      vfb  += bwidth;
-      pmap += pwidth;
+    {
+      for (i = 0; i < h; i++)
+	{
+	  pmap += 2 * offset->preskip_x;
+	  memcpy(vfb, pmap, w*2);
+	  vfb  += bwidth;
+	  pmap += pwidth;
+	}
     }
 }
 
@@ -528,25 +534,15 @@ _set24(l4_uint8_t *vfb,
        l4_uint8_t *pmap, 
        l4_uint32_t w, l4_uint32_t h,
        struct pslim_offset* offset,
-       l4_uint32_t bytepp,
        l4_uint32_t bwidth,
        l4_uint32_t pwidth)
 {
   int i;
-   
-  for (i = 0; i < h; i++) 
+
+  for (i = 0; i < h; i++)
     {
-      pmap += bytepp * offset->preskip_x;
-#ifdef ARCH_x86
-      {
-	unsigned dummy;
-	asm volatile ("cld ; rep movsb" 
-		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		     :"0"(pmap), "1"(vfb), "2"(3*w));
-      }
-#else
+      pmap += 3 * offset->preskip_x;
       memcpy(vfb, pmap, w*3);
-#endif
       vfb  += bwidth;
       pmap += pwidth;
     }
@@ -557,25 +553,15 @@ _set32(l4_uint8_t *vfb,
        l4_uint8_t *pmap,
        l4_uint32_t w, l4_uint32_t h,
        struct pslim_offset* offset,
-       l4_uint32_t bytepp,
        l4_uint32_t bwidth,
        l4_uint32_t pwidth)
 {
   int i;
    
-  for (i = 0; i < h; i++) 
+  for (i = 0; i < h; i++)
     {
-      pmap += bytepp * offset->preskip_x;
-#ifdef ARCH_x86
-      {
-	unsigned dummy;
-	asm volatile ("cld ; rep movsl" 
-		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		     :"0"(pmap), "1"(vfb), "2"(w));
-      }
-#else
-      memcpy(vfb, pmap, w);
-#endif
+      pmap += 4 * offset->preskip_x;
+      memcpy(vfb, pmap, w*4);
       vfb  += bwidth;
       pmap += pwidth;
    }
@@ -586,7 +572,6 @@ _copy16(l4_uint8_t *vfb,
 	l4_int16_t x, l4_int16_t y,
 	l4_int16_t dx, l4_int16_t dy, 
 	l4_uint32_t w, l4_uint32_t h,
-	l4_uint32_t bytepp,
 	l4_uint32_t bwidth)
 {
   int i;
@@ -597,8 +582,8 @@ _copy16(l4_uint8_t *vfb,
   
   if (y >= dy)
     {
-      OFFSET( x,  y, src);
-      OFFSET(dx, dy, dest);
+      OFFSET( x,  y, src,  2);
+      OFFSET(dx, dy, dest, 2);
       for (i = 0; i < h; i++) 
 	{
 	  /* memmove can deal with overlapping regions */
@@ -609,8 +594,8 @@ _copy16(l4_uint8_t *vfb,
     }
   else
     {
-      OFFSET( x,  y + h - 1, src);
-      OFFSET(dx, dy + h - 1, dest);
+      OFFSET( x,  y + h - 1, src,  2);
+      OFFSET(dx, dy + h - 1, dest, 2);
       for (i = 0; i < h; i++)
 	{
 	  /* memmove can deal with overlapping regions */
@@ -626,7 +611,6 @@ _copy24(l4_uint8_t *vfb,
 	l4_int16_t x, l4_int16_t y,
 	l4_int16_t dx, l4_int16_t dy, 
 	l4_uint32_t w, l4_uint32_t h,
-	l4_uint32_t bytepp,
 	l4_uint32_t bwidth)
 {
    int i,j;
@@ -637,8 +621,8 @@ _copy24(l4_uint8_t *vfb,
 	 if (x == dx)
 	    return;
 	 /* my way: start right go left */
-	 OFFSET( x,  y, src);
-	 OFFSET(dx, dy, dest);
+	 OFFSET( x,  y, src,  3);
+	 OFFSET(dx, dy, dest, 3);
 	 for (i = 0; i < h; i++) {
 	    for (j = w; j >= 0; --j) {
 	        *(l4_uint16_t*) (&dest[3*j]) = *(l4_uint16_t*) (&src[3*j]);   
@@ -650,8 +634,8 @@ _copy24(l4_uint8_t *vfb,
 	 
       } 
       else {		/* copy from top to bottom */
-	 OFFSET( x,  y, src);
-	 OFFSET(dx, dy, dest);
+	 OFFSET( x,  y, src,  3);
+	 OFFSET(dx, dy, dest, 3);
 	 for (i = 0; i < h; i++) {
 	    for (j = 0; j < w; j++) {
 	       *(l4_uint16_t*) (&dest[3*j]) = *(l4_uint16_t*) (&src[3*j]);   
@@ -663,8 +647,8 @@ _copy24(l4_uint8_t *vfb,
       }
    } 
    else {		/* copy from bottom to top */
-      OFFSET( x,  y + h, src);
-      OFFSET(dx, dy + h, dest);
+      OFFSET( x,  y + h, src,  3);
+      OFFSET(dx, dy + h, dest, 3);
       for (i = 0; i < h; i++) {
 	 src -= bwidth;
 	 dest -= bwidth;
@@ -681,7 +665,6 @@ _copy32(l4_uint8_t *vfb,
 	l4_int16_t x, l4_int16_t y,
 	l4_int16_t dx, l4_int16_t dy, 
 	l4_uint32_t w, l4_uint32_t h,
-	l4_uint32_t bytepp,
 	l4_uint32_t bwidth)
 {
    int i,j;
@@ -692,8 +675,8 @@ _copy32(l4_uint8_t *vfb,
 	 if (x == dx)
 	    return;
 	 /* my way: start right go left */
-	 OFFSET( x,  y, src);
-	 OFFSET(dx, dy, dest);
+	 OFFSET( x,  y, src,  4);
+	 OFFSET(dx, dy, dest, 4);
 	 for (i = 0; i < h; i++) {
 	    for (j = w; j >= 0; --j) 
 	       *(l4_uint32_t*) (&dest[4*j]) = *(l4_uint32_t*) (&src[4*j]);      
@@ -703,8 +686,8 @@ _copy32(l4_uint8_t *vfb,
 	 
       } 
       else {		/* copy from top to bottom */
-	 OFFSET( x,  y, src);
-	 OFFSET(dx, dy, dest);
+	 OFFSET( x,  y, src,  4);
+	 OFFSET(dx, dy, dest, 4);
 	 for (i = 0; i < h; i++) {
 	    for (j = 0; j < w; j++)
 	       *(l4_uint32_t*) (&dest[4*j]) = *(l4_uint32_t*) (&src[4*j]);      
@@ -714,8 +697,8 @@ _copy32(l4_uint8_t *vfb,
       }
    } 
    else {		/* copy from bottom to top */
-      OFFSET( x,  y + h, src);
-      OFFSET(dx, dy + h, dest);
+      OFFSET( x,  y + h, src,  4);
+      OFFSET(dx, dy + h, dest, 4);
       for (i = 0; i < h; i++) {
 	 src -= bwidth;
 	 dest -= bwidth;
@@ -731,23 +714,12 @@ _fill16(l4_uint8_t *vfb,
 	l4_uint32_t color,
 	l4_uint32_t bwidth)
 {
-  int i;
-   
+  int i,j;
+  
   for (i = 0; i < h; i++) 
     {
-#ifdef ARCH_x86
-      int dummy;
-      asm volatile ("cld ; rep stosw" 
-		   :"=D"(dummy), "=c"(dummy)
-		   :"0"(vfb), "1"(w), "a"(color));
-#else
-      int j;
       for (j = 0; j < w; j++)
-        {
-	  vfb[j * 2]     = color & 0xff;
-	  vfb[j * 2 + 1] = (color >> 8) & 0xff;
-	}
-#endif
+	*(l4_uint16_t*) (&vfb[2*j]) = (l4_uint16_t)color;
       vfb += bwidth;
     }
 }
@@ -762,8 +734,8 @@ _fill24(l4_uint8_t *vfb,
   
    for (i = 0; i < h; i++) {
       for (j = 0; j < w; j++) {
-	 *(l4_uint16_t*) (&vfb[3*j]) = (l4_uint16_t)color;
-	 vfb[3*j+2] = (l4_uint8_t) (color >> 16);
+	 *(l4_uint16_t*) (&vfb[3*j  ]) = (l4_uint16_t)color;
+	                   vfb[3*j+2]  = (l4_uint8_t) (color >> 16);
       }
       vfb += bwidth;
    }
@@ -788,10 +760,9 @@ void
 sw_fill(struct l4con_vc *vc, int x, int y, int w, int h, unsigned color)
 {
   l4_uint8_t *vfb = (l4_uint8_t*) vc->fb;
-  l4_uint32_t bytepp = vc->bytes_per_pixel;
   l4_uint32_t bwidth = vc->bytes_per_line;
-  
-  OFFSET(x, y, vfb);
+
+  OFFSET(x, y, vfb, vc->bytes_per_pixel);
 
   /* wait for any pending acceleration operation */
   vc->do_sync();
@@ -820,10 +791,9 @@ sw_bmap(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
         struct pslim_offset* offset, l4_uint8_t mode)
 {
   l4_uint8_t *vfb = (l4_uint8_t*) vc->fb;
-  l4_uint32_t bytepp = vc->bytes_per_pixel;
   l4_uint32_t bwidth = vc->bytes_per_line;
   
-  OFFSET(x, y, vfb);
+  OFFSET(x, y, vfb, vc->bytes_per_pixel);
   
   /* wait for any pending acceleration operation */
   vc->do_sync();
@@ -874,7 +844,7 @@ sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
   l4_uint32_t bwidth = vc->bytes_per_line;
   l4_uint32_t pwidth;
   
-  OFFSET(x, y, vfb);
+  OFFSET(x, y, vfb, bytepp);
 
   if (!pmap)
     {
@@ -890,21 +860,20 @@ sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
 		        (w + offset->preskip_x + offset->endskip_x);
     }
 
-  
   /* wait for any pending acceleration operation */
   vc->do_sync();
 
   switch(vc->gmode & GRAPH_BPPMASK) 
     {
     case GRAPH_BPP_32:
-      _set32(vfb, pmap, w, h, offset, bytepp, bwidth, pwidth);
+      _set32(vfb, pmap, w, h, offset, bwidth, pwidth);
       break;
     case GRAPH_BPP_24:
-      _set24(vfb, pmap, w, h, offset, bytepp, bwidth, pwidth);
+      _set24(vfb, pmap, w, h, offset, bwidth, pwidth);
       break;
     case GRAPH_BPP_16:
     default:
-      _set16(vfb, pmap, w, h, offset, bytepp, bwidth, pwidth);
+      _set16(vfb, pmap, w, h, offset, bwidth, pwidth);
     }
 
   /* force redraw of changed screen content (needed by VMware) */
@@ -916,7 +885,6 @@ void
 sw_copy(struct l4con_vc *vc, int x, int y, int w, int h, int dx, int dy)
 {
   l4_uint8_t *vfb = (l4_uint8_t*) vc->fb;
-  l4_uint32_t bytepp = vc->bytes_per_pixel;
   l4_uint32_t bwidth = vc->bytes_per_line;
   
   /* wait for any pending acceleration operation */
@@ -925,14 +893,14 @@ sw_copy(struct l4con_vc *vc, int x, int y, int w, int h, int dx, int dy)
   switch(vc->gmode & GRAPH_BPPMASK) 
     {
     case GRAPH_BPP_32:
-      _copy32(vfb, x, y, dx, dy, w, h, bytepp, bwidth);
+      _copy32(vfb, x, y, dx, dy, w, h, bwidth);
       break;
     case GRAPH_BPP_24:
-      _copy24(vfb, x, y, dx, dy, w, h, bytepp, bwidth);
+      _copy24(vfb, x, y, dx, dy, w, h, bwidth);
       break;
     case GRAPH_BPP_16:
     default:
-      _copy16(vfb, x, y, dx, dy, w, h, bytepp, bwidth);
+      _copy16(vfb, x, y, dx, dy, w, h, bwidth);
     }
   
   /* force redraw of changed screen content (needed by VMware) */
@@ -970,8 +938,8 @@ pslim_fill(struct l4con_vc *vc, int from_user,
     /* nothing todo */
     return;
 
-  vc->do_fill(vc, rect->x+vc->xofs, rect->y+vc->yofs,
-		  rect->w, rect->h, color);
+  vc->do_fill(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, 
+                  rect->w, rect->h, color);
 }
 
 /* SVGAlib calls this:	ACCEL_PUTBITMAP (mode 2)
@@ -991,8 +959,8 @@ pslim_bmap(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
     /* nothing todo */
     return;
 
-  sw_bmap(vc, rect->x+vc->xofs, rect->y+vc->yofs, rect->w, rect->h,
-	      bmap, fgc, bgc, &offset, mode);
+  sw_bmap(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, rect->w, rect->h,
+              bmap, fgc, bgc, &offset, mode);
 }
 
 /* SVGAlib calls this:	PUTBOX  (and knows about masked boxes!) */
@@ -1010,8 +978,8 @@ pslim_set(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
     /* nothing todo */
     return;
 
-  sw_set(vc, rect->x+vc->xofs, rect->y+vc->yofs, 
-	     rect->w, rect->h, (l4_uint8_t*) pmap, &offset);
+  sw_set(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, 
+             rect->w, rect->h, (l4_uint8_t*) pmap, &offset);
 }
 
 /* SVGAlib calls this:	COPYBOX */
@@ -1027,8 +995,8 @@ pslim_copy(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
     /* nothing todo */
     return;
 
-  vc->do_copy(vc, rect->x+vc->xofs, rect->y+vc->yofs,
-                  rect->w, rect->h, dx+vc->xofs, dy+vc->yofs);
+  vc->do_copy(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, rect->w, rect->h,
+                  dx+vc->pan_xofs, dy+vc->pan_yofs);
 }
 
 /* COLOR-SPACE CONVERT and (optional) SCALE 
@@ -1055,6 +1023,6 @@ pslim_cscs(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
     /* nothing todo */
     return;
 
-  sw_cscs(vc, rect->x+vc->xofs, rect->y+vc->yofs, rect->w, rect->h,
-	      y, u, v, scale, &offset, mode);
+  sw_cscs(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, rect->w, rect->h,
+          y, u, v, scale, &offset, mode);
 }

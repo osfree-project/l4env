@@ -2,7 +2,7 @@ NOTARGETSTOINSTALL = 1
 
 PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
-SYSTEMS          = x86-l4v2 x86-l4x0
+SYSTEMS          = x86-l4v2
 TARGET           = libpresenter_controller.a
 
 SRC_C	= presenter_server.c presenter_view.c presenter_encapl4x.c

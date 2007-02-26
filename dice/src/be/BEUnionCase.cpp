@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEUnionCase.cpp
- *    \brief   contains the implementation of the class CBEUnionCase
+ *  \file    dice/src/be/BEUnionCase.cpp
+ *  \brief   contains the implementation of the class CBEUnionCase
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/15/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,70 +31,64 @@
 #include "be/BEExpression.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
-
+#include "BEClassFactory.h"
 #include "fe/FEUnionCase.h"
+#include "Compiler.h"
+#include <cassert>
 
 CBEUnionCase::CBEUnionCase()
+: m_Labels(0, this)
 {
+    m_bDefault = false;
 }
 
 CBEUnionCase::CBEUnionCase(CBEUnionCase & src)
-: CBETypedDeclarator(src)
+: CBETypedDeclarator(src),
+  m_Labels(src.m_Labels)
 {
     m_bDefault = src.m_bDefault;
-    vector<CBEExpression*>::iterator iter;
-    for (iter = src.m_vCaseLabels.begin(); iter != src.m_vCaseLabels.end(); iter++)
-    {
-        CBEExpression *pNew = (CBEExpression*)((*iter)->Clone());
-        m_vCaseLabels.push_back(pNew);
-        pNew->SetParent(this);
-    }
+    m_Labels.Adopt(this);
 }
 
-/**    \brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEUnionCase::~CBEUnionCase()
-{
-    while (!m_vCaseLabels.empty())
-    {
-        delete m_vCaseLabels.back();
-        m_vCaseLabels.pop_back();
-    }
-}
+{ }
 
-/**    \brief creates the back-end structure for a union case
- *    \param pFEUnionCase the corresponding front-end union case
- *    \param pContext the context of the code generation
- *    \return true if code generation was successful
+/** \brief creates the back-end structure for a union case
+ *  \param pFEUnionCase the corresponding front-end union case
+ *  \return true if code generation was successful
  */
-bool CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase, CBEContext * pContext)
+void
+CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
 {
     assert(pFEUnionCase);
     // the union arm is the typed declarator we initialize the base class with:
-    if (!CBETypedDeclarator::CreateBackEnd(pFEUnionCase->GetUnionArm(), pContext))
-    {
-        VERBOSE("CBEUnionCase::CreateBE failed because base class could not be initialized\n");
-        return false;
-    }
+    CBETypedDeclarator::CreateBackEnd(pFEUnionCase->GetUnionArm());
     // now init union case specific stuff
     m_bDefault = pFEUnionCase->IsDefault();
-    if (!m_bDefault)
+    if (m_bDefault)
+	return;
+
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+
+    vector<CFEExpression*>::iterator iter;
+    for (iter = pFEUnionCase->m_UnionCaseLabelList.begin();
+	iter != pFEUnionCase->m_UnionCaseLabelList.end();
+	iter++)
     {
-        vector<CFEExpression*>::iterator iter = pFEUnionCase->GetFirstUnionCaseLabel();
-        CFEExpression *pFELabel;
-        while ((pFELabel = pFEUnionCase->GetNextUnionCaseLabel(iter)) != 0)
-        {
-            CBEExpression *pLabel = pContext->GetClassFactory()->GetNewExpression();
-            AddLabel(pLabel);
-            if (!pLabel->CreateBackEnd(pFELabel, pContext))
-            {
-                RemoveLabel(pLabel);
-                delete pLabel;
-                VERBOSE("CBEUnionCase::CreateBE failed because label could not be added\n");
-                return false;
-            }
-        }
+	CBEExpression *pLabel = pCF->GetNewExpression();
+	m_Labels.Add(pLabel);
+	try
+	{
+	    pLabel->CreateBackEnd(*iter);
+	}
+	catch (CBECreateException *e)
+	{
+	    m_Labels.Remove(pLabel);
+	    delete pLabel;
+	    throw;
+	}
     }
-    return true;
 }
 
 /** \brief creates the union case
@@ -102,83 +96,26 @@ bool CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase, CBEContext * pCont
  *  \param sName the name of the union arm
  *  \param pCaseLabel the case label
  *  \param bDefault true if this is the default arm
- *  \param pContext the context of the create process
  *  \return true if successful
  *
  * If neither pCaseLabel nor bDefault is set, then this is the member of a C
  * style union.
  */
-bool CBEUnionCase::CreateBackEnd(CBEType *pType, string sName,
-     CBEExpression *pCaseLabel, bool bDefault, CBEContext *pContext)
+void CBEUnionCase::CreateBackEnd(CBEType *pType,
+    string sName,
+    CBEExpression *pCaseLabel,
+    bool bDefault)
 {
-    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__, sName.c_str());
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
 
-    if (!CBETypedDeclarator::CreateBackEnd(pType, sName, pContext))
-    {
-        VERBOSE("%s failed, because base class could not be initialized\n",
-            __PRETTY_FUNCTION__);
-        return false;
-    }
+    CBETypedDeclarator::CreateBackEnd(pType, sName);
     m_bDefault = bDefault;
     if (pCaseLabel)
-        AddLabel(pCaseLabel);
-
-    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
-    return true;
-}
-
-/**    \brief adds another label to the vector
- *    \param pLabel the new label
- */
-void CBEUnionCase::AddLabel(CBEExpression * pLabel)
-{
-    if (!pLabel)
-        return;
-    m_vCaseLabels.push_back(pLabel);
-    pLabel->SetParent(this);
-}
-
-/**    \brief removes a label from the labels list
- *    \param pLabel the label to remove
- */
-void CBEUnionCase::RemoveLabel(CBEExpression * pLabel)
-{
-    if (!pLabel)
-        return;
-    vector<CBEExpression*>::iterator iter;
-    for (iter = m_vCaseLabels.begin(); iter != m_vCaseLabels.end(); iter++)
     {
-        if (*iter == pLabel)
-        {
-            m_vCaseLabels.erase(iter);
-            return;
-        }
+        m_Labels.Add(pCaseLabel);
     }
-}
 
-/**    \brief retrieves pointer to first label
- *    \return the pointer to the first label
- */
-vector<CBEExpression*>::iterator CBEUnionCase::GetFirstLabel()
-{
-    return m_vCaseLabels.begin();
-}
-
-/**    \brief retrieves a reference to the next label
- *    \param iter the pointer to this label
- *    \return a reference to the expression
- */
-CBEExpression *CBEUnionCase::GetNextLabel(vector<CBEExpression*>::iterator &iter)
-{
-    if (iter == m_vCaseLabels.end())
-        return 0;
-    return *iter++;
-}
-
-/** \brief returns true if this is the default case
- *  \return true if this is the default case
- */
-bool CBEUnionCase::IsDefault()
-{
-    return m_bDefault;
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEUnionCase::%s returns true\n", __func__);
 }

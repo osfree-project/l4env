@@ -50,7 +50,7 @@ contxt_putchar(int c)
 {
   if (__init)
     {
-      l4_uint8_t str[1] = { c };
+      char str[1] = { c };
       contxt_write(str, 1);
     }
   else

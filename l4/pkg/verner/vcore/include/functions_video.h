@@ -84,5 +84,9 @@ VideoCoreComponentIntern_setPrediction (l4_threadid_t thread_id,
 					const char *learnFile,
 					const char *predictFile);
 
+l4_int32_t
+VideoCoreComponentIntern_setH264Speed (l4_threadid_t thread_id,
+					l4_int32_t speed);
+
 EXTERN_C_END
 #endif

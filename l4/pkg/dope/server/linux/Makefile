@@ -10,14 +10,14 @@ DEFINES         += -DSOCKETAPI -DDICE_DEFAULT_PORT=htons\(\(int\)dice_server_par
 SERVERIDL        = dope.idl vscr.idl
 CLIENTIDL        = dopeapp.idl
 
-PRIVATE_LIBDIR   = $(PKGDIR)/server/common/OBJ-$(SYSTEM) \
-                   $(PKGDIR)/server/gfx/OBJ-$(SYSTEM)
+PRIVATE_LIBDIR   = $(PKGDIR_OBJ)/server/common/OBJ-$(SYSTEM) \
+                   $(PKGDIR_OBJ)/server/gfx/OBJ-$(SYSTEM)
 
 LIBS             = -lcommon -lgfx -lpthread -lSDL
 
 PRIVATE_INCDIR   = $(PKGDIR)/include \
                    $(PKGDIR)/server/include \
-                   $(L4DIR)/tool/dice/include
+                   $(DICE_INCDIR)
 
 SRC_C            = messenger.c dummies.c     \
                    scrdrv.c server.c    startup.c     \

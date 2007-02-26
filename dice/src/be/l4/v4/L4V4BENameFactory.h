@@ -1,10 +1,11 @@
 /**
- *    \file    dice/src/be/l4/v4/L4V4BENameFactory.h
- *    \brief    contains the declaration of the class CL4V4BENameFactory
+ *  \file    dice/src/be/l4/v4/L4V4BENameFactory.h
+ *  \brief   contains the declaration of the class CL4V4BENameFactory
  *
- *    \date    01/08/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *  \date    01/08/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -31,10 +32,6 @@
 
 #include <be/l4/L4BENameFactory.h>
 
-//@{
-#define STR_MSGTAG_VARIABLE     (STR_L4BENF_MAX + 1)    /**< variable name of the MsgTag return variable */
-//@}
-
 /** \class CL4V4BENameFactory
  *  \ingroup backend
  *  \brief contains functions to create V4 specific names
@@ -44,24 +41,24 @@ class CL4V4BENameFactory : public CL4BENameFactory
 
 public:
     /** \brief creates the instance of the name factory
-     *    \param bVerbose true if class should print status output
      */
-    CL4V4BENameFactory(bool bVerbose = false);
+    CL4V4BENameFactory();
     virtual ~CL4V4BENameFactory();
 
-protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief contains the L4 V4 specific values for the GetString function
      */
-    CL4V4BENameFactory(CL4V4BENameFactory &src);
+    enum
+    {
+	STR_L4V4_BASE = STR_L4_MAX, /**< ensure disjunct values */
+	STR_MSGTAG_VARIABLE,        /**< variable name of the MsgTag return variable */
+	STR_INIT_RCVSTR_VARIABLE,   /**< variable to hold string length for init-rcvstr call */
+	STR_L4V4_MAX                /**< maximum L4V4 value */
+    };
 
-public:
-    virtual string GetString(int nStringCode, CBEContext *pContext, void *pParam);
-    virtual string GetMsgTagVarName(CBEContext *pContext);
-
-protected:
-    virtual string GetL4TypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize);
-    virtual string GetTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize);
+    virtual string GetString(int nStringCode, void *pParam);
+    virtual string GetMsgTagVariable();
+    virtual string GetInitRcvstrVariable();
+    virtual string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 
 };
 

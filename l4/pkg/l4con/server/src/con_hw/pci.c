@@ -178,6 +178,7 @@ pci_resource(unsigned int bus, unsigned int devfn,
     {
     case 0:  reg = PCI_BASE_ADDRESS_0; break;
     case 1:  reg = PCI_BASE_ADDRESS_1; break;
+    case 2:  reg = PCI_BASE_ADDRESS_2; break;
     default: return;
     }
 

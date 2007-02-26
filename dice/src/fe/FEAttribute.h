@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEAttribute.h
- *    \brief   contains the declaration of the class CFEAttribute
+ *  \file    dice/src/fe/FEAttribute.h
+ *  \brief   contains the declaration of the class CFEAttribute
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -34,8 +34,8 @@
 #include "Attribute-Type.h"
 
 /** \class CFEAttribute
- *    \ingroup frontend
- *    \brief the base class for all attributes
+ *  \ingroup frontend
+ *  \brief the base class for all attributes
  *
  * the attributes of an operation or interface
  */
@@ -48,27 +48,31 @@ public:
     /** constructs an attrbiute (standard constructor) */
     CFEAttribute();
     /** constructs an attribute
-     *    \param nType the type of the attribute (see ATTR_TYPE)
+     *  \param nType the type of the attribute (see ATTR_TYPE)
      */
     CFEAttribute(ATTR_TYPE nType);
     virtual ~CFEAttribute();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEAttribute(CFEAttribute &src);
 
 //operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual CObject* Clone();
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEAttribute(*this); }
     virtual ATTR_TYPE GetAttrType();
+    bool Match(ATTR_TYPE type);
 
 // attributes
 protected:
-    /**    \var ATTR_TYPE m_nType
-     *    \brief the attribute type
+    /** \var ATTR_TYPE m_nType
+     *  \brief the attribute type
      */
     ATTR_TYPE m_nType;
 };

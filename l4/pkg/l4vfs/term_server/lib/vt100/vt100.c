@@ -138,7 +138,7 @@ void parse_character(termstate_t * term, l4_uint8_t c)
         term->esc_state = ESnormal;
         switch (c)
         {
-        case 'h':  
+        case 'h':
             if (term->ques)
             {
                 // handle question commands ending with h
@@ -187,7 +187,7 @@ void parse_character(termstate_t * term, l4_uint8_t c)
                 }
                 return;
             }
-        case 'l':  
+        case 'l':
             if (term->ques)
             {
                 for(i = 0; i <= term->used_par; i++)
@@ -200,7 +200,7 @@ void parse_character(termstate_t * term, l4_uint8_t c)
                         break;
                     case  5: // deactivate inverse screen
                         if(set_mode(term, 0))
-                            //vt100_redraw(term); 
+                            //vt100_redraw(term);
                         break;
                     case  6: // origin mode = whole screen
                         term->origin_mode = VT100_ORIGIN_GLOBAL;
@@ -216,7 +216,7 @@ void parse_character(termstate_t * term, l4_uint8_t c)
                     }
                     return;
                 }
-            }            
+            }
             else // handle commands without question mark
             {
                 for( i=0; i <= term->used_par; i++ )

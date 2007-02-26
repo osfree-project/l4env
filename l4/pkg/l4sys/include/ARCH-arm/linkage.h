@@ -11,17 +11,22 @@
 # define PIC_CLOBBER ,"r10"
 #endif
 
-
-#ifdef __ASSEMBLER__
-
+#ifdef __ASSEMBLY__
+#ifndef ENTRY
 #define ENTRY(name) \
   .globl name; \
   .p2align(2); \
   name:
-
-#endif /* __ASSEMBLER__ */
+#endif
+#endif
 
 #define FASTCALL(x)	x
 #define fastcall
+
+#ifdef __PIC__
+# define LONG_CALL
+#else
+# define LONG_CALL __attribute__((long_call))
+#endif
 
 #endif /* ! __L4__SYS__ARCH_ARM__LINKAGE_H__ */

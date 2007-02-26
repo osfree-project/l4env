@@ -29,6 +29,7 @@
 #include "demux_avi.h"
 #include "demux_mpg.h"
 #include "demux_mp3.h"
+#include "demux_raw.h"
 
 #endif /* end vdemuxer */
 
@@ -122,8 +123,14 @@ static import_plugin_info_t import_plugin_info[] = {
    vid_import_mpg_init, vid_import_mpg_commit,
    vid_import_mpg_step, vid_import_mpg_close,
    vid_import_mpg_seek},
-  /* Audio import plugins */
 #endif
+  {
+   PLUG_MODE_IMPORT, STREAM_TYPE_VIDEO, PLUG_NAME_RAW,
+   /* import functions */
+   vid_import_raw_init, vid_import_raw_commit,
+   vid_import_raw_step, vid_import_raw_close,
+   vid_import_raw_seek},
+  /* Audio import plugins */
 #if VDEMUXER_BUILD_OGMLIB
   {
    PLUG_MODE_IMPORT, STREAM_TYPE_AUDIO, PLUG_NAME_OGM,
@@ -201,7 +208,7 @@ find_plugin_by_name (const char *name, unsigned int mode, unsigned int type)
       id++;
     }
   }
-  LOG_Error ("Did not found plugin %s!", name);
+  LOG_Error ("Did not find plugin %s!", name);
   /* found nothing */
   return -1;
 }

@@ -19,6 +19,16 @@ Jdb_kern_info_smas::Jdb_kern_info_smas()
   Jdb_kern_info::register_subcmd(this);
 }
 
+#undef offsetof
+#define offsetof(TYPE, MEMBER) (((size_t) &((TYPE *)10)->MEMBER) - 10)
+
+static inline NOEXPORT
+Space*
+Jdb_kern_info_smas::space_of_memspace (Mem_space* s)
+{
+  return (Space*)(((char*) s) - offsetof(Space, _mem_space));
+}
+
 PUBLIC
 void
 Jdb_kern_info_smas::show()
@@ -34,7 +44,7 @@ Jdb_kern_info_smas::show()
 
   printf("  kdir version: %08x\n", Kmem::smas_pdir_version());
 
-  Space *last_space = smas._spaces[0];
+  Mem_space *last_space = smas._spaces[0];
   printf("  00-");
   for (unsigned i=0, j=0; i<=smas._available_size; i++)
     {
@@ -44,7 +54,7 @@ Jdb_kern_info_smas::show()
 	  if (last_space)
 	    {
     	      printf("%02x  version %08x area %08x-%08x\n", 
-		    (unsigned) ((Space*)last_space)->id(),
+		    (unsigned) space_of_memspace(last_space)->id(),
 		    last_space->smas_pdir_version(),
 	      	    last_space->small_space_base(),
       		    last_space->small_space_base() +

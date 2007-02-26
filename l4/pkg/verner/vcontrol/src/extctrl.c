@@ -41,7 +41,7 @@ void
 ec_init (void)
 {
   /* five rows are already used here (found player-UI.dpe!) */
-#if BUILD_RT_SUPPORT || BUILD_goom
+#if BUILD_RT_SUPPORT || BUILD_goom || H264_SLICE_SCHEDULE
   int row = 5;
 #endif
 
@@ -209,7 +209,19 @@ ec_init (void)
 
 #endif
 
-
+#if H264_SLICE_SCHEDULE
+  vdope_cmd (app_id, "c=new Label()");
+  vdope_cmd (app_id, "c.set(-text \"simulated machine speed:\")");
+  vdope_cmdf (app_id, "extctrl_grid.place(c, -column 1 -row %i -align \"w\")",
+	      ++row);
+  vdope_cmd (app_id, "extctrl_scale_speed=new Scale()");
+  vdope_cmd (app_id, "extctrl_scale_speed.set(-from 0 -to 100 -value 100)");
+  vdope_cmdf (app_id,
+	      "extctrl_grid.place(extctrl_scale_speed, -column 1 -row %i)",
+	      ++row);
+  vdope_bind (app_id, "extctrl_scale_speed", "slid", ec_callback,
+	      (void *) CMD_SPEED_CHANGE);
+#endif
 }
 
 
@@ -473,6 +485,18 @@ ec_callback (dope_event * e, void *arg)
 	 ppOptions ? ppOptions : "");
     }
     break;
+
+#if H264_SLICE_SCHEDULE
+  case CMD_SPEED_CHANGE:
+    {
+      int speed;
+      vdope_req (app_id, result, 16, "extctrl_scale_speed.value");
+      speed = strtod (result, (char **) NULL);
+      vdope_cmdf (app_id, "extctrl_scale_speed.set(-value %i)", speed);
+      VideoCoreComponentIntern_setH264Speed(video_chain.vcore_thread_id, speed);
+    }
+    break;
+#endif
 
   }				/* end case */
 }

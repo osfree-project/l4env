@@ -31,7 +31,6 @@ enum {
 
 class Context;
 class Space;
-class Space;
 class Sched_context;
 class Sys_ipc_frame;
 class Sys_ex_regs_frame;

@@ -62,7 +62,10 @@ typedef struct page_area
 #define SET_AREA_USED(a)   ((a)->flags |= AREA_USED)   ///< mark area used
 #define SET_AREA_UNUSED(a) ((a)->flags &= ~AREA_USED)  ///< mark area unused
 
-#define WIN_OFFSET(x)        ((x) & ((1 << DMPHYS_MEMMAP_LOG2_SIZE) - 1))
+// the followin macro prevents gcc from complaining about 32bit shifts
+#define __SHIFT_WO_SIZE_WARNING(a,b) (((a) << ((b)-1)) << 1)
+#define WIN_OFFSET(x)        ((x) & (__SHIFT_WO_SIZE_WARNING(1UL,DMPHYS_MEMMAP_LOG2_SIZE) - 1))
+#define WIN_REM(x)           ((x) & ~(__SHIFT_WO_SIZE_WARNING(1UL,DMPHYS_MEMMAP_LOG2_SIZE) - 1))
 
 /**
  * Return map address of area
@@ -77,7 +80,7 @@ typedef struct page_area
 /**
  * Return phys. address of map address
  */
-#define PHYS_ADDR(addr)      ((l4_addr_t)(addr) - DMPHYS_MEMMAP_START + WIN_OFFSET(RAM_BASE))
+#define PHYS_ADDR(addr)      ((l4_addr_t)(addr) - DMPHYS_MEMMAP_START + WIN_REM(RAM_BASE))
 
 /**
  * Memory pool descriptor
@@ -103,6 +106,10 @@ struct page_pool
 /*****************************************************************************
  *** Prototypes
  *****************************************************************************/
+
+/* clear newly allocated pages before handing them out to the client */
+void
+dmphys_pages_clear(page_area_t *area);
 
 /* page area handling init */
 int

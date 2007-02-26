@@ -398,7 +398,7 @@ test_mem_bandwidth_thread(void)
   static struct
     {
       l4util_idt_header_t header;
-      l4util_idt_desc_t   desc[20];
+      l4util_idt_desc_t   desc[0x20];
     } __attribute__((packed)) idt;
 
   l4util_idt_init (&idt.header, 0x20);
@@ -425,7 +425,7 @@ test_mem_bandwidth_thread(void)
 void
 test_memory_bandwidth(int nr)
 {
-  sysenter = 0;
+  callmode = 0;
 
   create_thread(memcpy_id,(l4_umword_t)test_mem_bandwidth_thread,
  	        (l4_umword_t)memcpy_stack + STACKSIZE,pager_id);

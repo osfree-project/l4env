@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BEWaitAnyFunction.cpp
- *    \brief   contains the implementation of the class CL4BEWaitAnyFunction
+ *  \file    dice/src/be/l4/L4BEWaitAnyFunction.cpp
+ *  \brief   contains the implementation of the class CL4BEWaitAnyFunction
  *
- *    \date    03/07/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    03/07/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,18 +30,20 @@
 #include "L4BENameFactory.h"
 #include "L4BEClassFactory.h"
 #include "L4BESizes.h"
+#include "L4BEIPC.h"
+#include "L4BEMarshaller.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEUserDefinedType.h"
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEOperationFunction.h"
-#include "L4BEMsgBufferType.h"
-#include "L4BEIPC.h"
-#include "be/BEMarshaller.h"
-
-#include "TypeSpec-Type.h"
+#include "be/BEMsgBuffer.h"
+#include "L4BETrace.h"
+#include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4BEWaitAnyFunction::CL4BEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CBEWaitAnyFunction(bOpenWait, bReply)
@@ -53,39 +55,44 @@ CL4BEWaitAnyFunction::CL4BEWaitAnyFunction(CL4BEWaitAnyFunction & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CL4BEWaitAnyFunction::~CL4BEWaitAnyFunction()
 {
-
 }
 
-/** \brief writes the variable declarations of this function
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * The variable declarations of the wait-any function only contains so-called
- * helper variables. This is the result variable.
+/** \brief initialize instance of this class
+ *  \param pFEInterface the interface to use as reference
+ *  \return true if successful
  */
 void
-CL4BEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile,
-    CBEContext * pContext)
+CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
 {
-    // first call base class
-    CBEWaitAnyFunction::WriteVariableDeclaration(pFile, pContext);
+    // set local variables
+    CBEWaitAnyFunction::CreateBackEnd(pFEInterface);
 
-    // write result variable
-    string sResult =
-        pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    *pFile << "\tl4_msgdope_t " << sResult << " = { msgdope: 0 };\n";
+    string exc = string(__func__);
+    // add local variables
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 
-    // write loop variable for msg buffer dump
-    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-        *pFile << "\tint _i;\n";
+    string sCurr;
+    try
+    {
+	sCurr = sResult;
+	AddLocalVariable(sDope, sResult, 0, 
+	    string("{ msgdope: 0 }"));
+    }
+    catch (CBECreateException *e)
+    {
+	exc += " failed, because local variable (" + sCurr +
+	    ") could not be added.";
+	throw new CBECreateException(exc);
+    }
 }
 
 /** \brief initializes the variables
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * For reply only:
  * We do not initialize the receive indirect strings, because we assume that
@@ -96,301 +103,387 @@ CL4BEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile,
  * The receive flexpage is reinitialized, because it might have changed.
  */
 void
-CL4BEWaitAnyFunction::WriteVariableInitialization(CBEFile * pFile,
-    CBEContext * pContext)
+CL4BEWaitAnyFunction::WriteVariableInitialization(CBEFile * pFile)
 {
     // call base class
-    CBEWaitAnyFunction::WriteVariableInitialization(pFile, pContext);
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
+    CBEWaitAnyFunction::WriteVariableInitialization(pFile);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     if (pMsgBuffer && m_bReply)
     {
-        // init receive flexpage
-        pMsgBuffer->WriteInitialization(pFile, TYPE_FLEXPAGE,
-            GetReceiveDirection(), pContext);
+	// init receive flexpage
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_FLEXPAGE,
+	    GetReceiveDirection());
     }
 }
 
 /** \brief writes the invocation call to thetarget file
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * The wait any function simply waits for any message and unmarshals the opcode.
  * Since the message buffer is a referenced parameter, we know for sure, that
  * the "buffer" is a pointer.
  */
-void CL4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+void
+CL4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    // init size and send dopes
-    if (!m_bReply)
-        // do not overwrite message buffer if reply is sent
-        pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SEND, 0, pContext);
+    // if not sending a reply, i.e., no send phase, we can ignore the
+    // send dope.
+    // The size dope should be set independently.
+    // When sending a reply, we do not overwrite the send dope, because it
+    // has been set in the marshal functions.
 
     // invocate
-    WriteIPC(pFile, pContext);
-    WriteExceptionCheck(pFile, pContext); // reset exception
-    WriteIPCErrorCheck(pFile, pContext); // set IPC exception
+    WriteIPC(pFile);
+    WriteExceptionCheck(pFile); // reset exception
 
-    if (m_bReply)
-        WriteReleaseMemory(pFile, pContext);
+    // print trace code before IPC error check to have unmodified values in
+    // message buffer
+    assert(m_pTrace);
+    m_pTrace->AfterReplyWait(pFile, this);
+	
+    WriteIPCErrorCheck(pFile); // set IPC exception
 
-    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-    {
-        string sResult =
-            pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-        pMsgBuffer->WriteDump(pFile, sResult, pContext);
-    }
+    WriteReleaseMemory(pFile);
 }
 
 /** \brief writes the ipc code
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CL4BEWaitAnyFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
+void CL4BEWaitAnyFunction::WriteIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
+    CBECommunication *pComm = GetCommunication();
+    assert(pComm);
     if (m_bOpenWait)
     {
-        if (m_bReply)
-            WriteIPCReplyWait(pFile, pContext);
-        else
-            m_pComm->WriteWait(pFile, this, pContext);
+	if (m_bReply)
+	    WriteIPCReplyWait(pFile);
+	else
+	{
+	    CBEClass *pClass = GetSpecificParent<CBEClass>();
+	    assert(pClass);
+	    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+		WriteDedicatedWait(pFile);
+	    else
+		pComm->WriteWait(pFile, this);
+	}
     }
     else
-        m_pComm->WriteReceive(pFile, this, pContext);
+	pComm->WriteReceive(pFile, this);
+}
+
+
+/** \brief writes the switch between receive and wait
+ *  \param pFile the file to write to
+ */
+void
+CL4BEWaitAnyFunction::WriteDedicatedWait(CBEFile *pFile)
+{
+    CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
+	CCompiler::GetNameFactory());
+    string sPartner = pNF->GetPartnerVariable();
+    *pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
+	" /* no dedicated partner */\n";
+    pFile->IncIndent();
+    CBECommunication *pComm = GetCommunication();
+    pComm->WriteWait(pFile, this);
+    pFile->DecIndent();
+    *pFile << "\telse /* dedicated partner */\n";
+    pFile->IncIndent();
+    pComm->WriteReceive(pFile, this);
+    pFile->DecIndent();
 }
 
 /** \brief writes the ipc code
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
 void
-CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile,
-    CBEContext *pContext)
+CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pContext->IsOptionSet(PROGRAM_TRACE_SERVER))
-    {
-        string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD,
-            false, pContext, 0);
-        string sFunc = pContext->GetTraceServerFunc();
-        if (sFunc.empty())
-            sFunc = string("printf");
-        pFile->PrintIndent("%s(\"reply (dw0=%%x, dw1=%%x)%s\", ",
-                            sFunc.c_str(),
-                            (sFunc=="LOG")?"":"\\n");
-        pFile->Print("(*((%s*)(&(", sMWord.c_str());
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[0])))), ");
-        pFile->Print("(*((%s*)(&(", sMWord.c_str());
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[4]))))");
-        pFile->Print(");\n");
-        // dwords
-        pFile->PrintIndent("%s(\"  words: %%d%s\", ",
-                            sFunc.c_str(),
-                            (sFunc=="LOG")?"":"\\n");
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-        pFile->Print(".md.dwords);\n");
-        // strings
-        pFile->PrintIndent("%s(\"  strings: %%d%s\", ",
-                            sFunc.c_str(),
-                            (sFunc=="LOG")?"":"\\n");
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-        pFile->Print(".md.strings);\n");
-        // print if we got an fpage
-        pFile->PrintIndent("%s(\"  fpage: %%s%s\", (",
-                            sFunc.c_str(),
-                            (sFunc=="LOG")?"":"\\n");
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, DIRECTION_OUT, pContext);
-        pFile->Print(".md.fpage_received==1)?\"yes\":\"no\");\n");
-    }
-    CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
-    int nShortWords = pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD);
-    // to determine if we can send a short IPC we have to test the size dope of the message
-    pFile->PrintIndent("if ((");
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-    pFile->Print(".md.dwords <= %d) && (", nShortWords);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-    pFile->Print(".md.strings == 0))\n");
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
+    assert(pMarshaller);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    int nDirection = GetSendDirection();
+
+    assert(m_pTrace);
+    m_pTrace->BeforeReplyWait(pFile, this);
+
+    CL4BESizes *pSizes = (CL4BESizes*)CCompiler::GetSizes();
+    int nShortWords = pSizes->GetMaxShortIPCSize() / 
+	pSizes->GetSizeOfType(TYPE_MWORD);
+    // to determine if we can send a short IPC we have to test the size dope
+    // of the message
+    *pFile << "\tif ((";
+    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+	0);
+    *pFile << ".md.dwords <= " << nShortWords << ") && (";
+    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+	0);
+    *pFile << ".md.strings == 0))\n";
     pFile->IncIndent();
     // if fpage
-    pFile->PrintIndent("if (");
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-    pFile->Print(".md.fpage_received == 1)\n");
+    *pFile << "\tif (";
+    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+	0);
+    *pFile << ".md.fpage_received == 1)\n";
     pFile->IncIndent();
     // short IPC
-    WriteShortFlexpageIPC(pFile, pContext);
+    WriteShortFlexpageIPC(pFile);
     // else (fpage)
     pFile->DecIndent();
-    pFile->PrintIndent("else\n");
+    *pFile << "\telse\n";
     pFile->IncIndent();
     // !fpage
-    WriteShortIPC(pFile, pContext);
+    WriteShortIPC(pFile);
     pFile->DecIndent();
     pFile->DecIndent();
-    pFile->PrintIndent("else\n");
+    *pFile << "\telse\n";
     pFile->IncIndent();
     // if fpage
-    pFile->PrintIndent("if (");
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_OUT, pContext);
-    pFile->Print(".md.fpage_received == 1)\n");
+    *pFile << "\tif (";
+    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+	0);
+    *pFile << ".md.fpage_received == 1)\n";
     pFile->IncIndent();
     // long IPC
-    WriteLongFlexpageIPC(pFile, pContext);
+    WriteLongFlexpageIPC(pFile);
     // else (fpage)
     pFile->DecIndent();
-    pFile->PrintIndent("else\n");
+    *pFile << "\telse\n";
     pFile->IncIndent();
     // ! fpage
-    WriteLongIPC(pFile, pContext);
+    WriteLongIPC(pFile);
     pFile->DecIndent();
     pFile->DecIndent();
 }
 
 /** \brief write the ip code with a short msg reply containing a flexpage
  *  \param pFile the file to write to
- *  \param pContext the contet of the write operation
  */
 void
-CL4BEWaitAnyFunction::WriteShortFlexpageIPC(CBEFile *pFile, CBEContext *pContext)
+CL4BEWaitAnyFunction::WriteShortFlexpageIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
-    ((CL4BEIPC*)m_pComm)->WriteReplyAndWait(pFile, this, true, true, pContext);
+    CL4BEIPC *pComm = static_cast<CL4BEIPC*>(GetCommunication());
+    assert(pComm);
+
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+    {
+	CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
+	    CCompiler::GetNameFactory());
+	string sPartner = pNF->GetPartnerVariable();
+	*pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
+	    " /* no dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteReplyAndWait(pFile, this, true, true);
+	pFile->DecIndent();
+	*pFile << "\telse /* dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteCall(pFile, this);
+	pFile->DecIndent();
+    }
+    else
+	pComm->WriteReplyAndWait(pFile, this, true, true);
 }
 
 /** \brief write the ipc code with a short msg reply
  *  \param pFile the file to write to
- *  \param pContext the contet of the write operation
  */
-void CL4BEWaitAnyFunction::WriteShortIPC(CBEFile *pFile, CBEContext *pContext)
+void CL4BEWaitAnyFunction::WriteShortIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
-    ((CL4BEIPC*)m_pComm)->WriteReplyAndWait(pFile, this, false, true, pContext);
+    CL4BEIPC *pComm = static_cast<CL4BEIPC*>(GetCommunication());
+    assert(pComm);
+
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+    {
+	CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
+	    CCompiler::GetNameFactory());
+	string sPartner = pNF->GetPartnerVariable();
+	*pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
+	    " /* no dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteReplyAndWait(pFile, this, false, true);
+	pFile->DecIndent();
+	*pFile << "\telse /* dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteCall(pFile, this);
+	pFile->DecIndent();
+    }
+    else
+	pComm->WriteReplyAndWait(pFile, this, false, true);
 }
 
 /** \brief write the ipc code with a long msg containing flexpages
  *  \param pFile the file to write to
- *  \param pContext the contet of the write operation
  */
 void
-CL4BEWaitAnyFunction::WriteLongFlexpageIPC(CBEFile *pFile, CBEContext *pContext)
+CL4BEWaitAnyFunction::WriteLongFlexpageIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
-    ((CL4BEIPC*)m_pComm)->WriteReplyAndWait(pFile, this, true, false, pContext);
+    CL4BEIPC *pComm = static_cast<CL4BEIPC*>(GetCommunication());
+    assert(pComm);
+
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+    {
+	CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
+	    CCompiler::GetNameFactory());
+	string sPartner = pNF->GetPartnerVariable();
+	*pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
+	    " /* no dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteReplyAndWait(pFile, this, true, false);
+	pFile->DecIndent();
+	*pFile << "\telse /* dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteCall(pFile, this);
+	pFile->DecIndent();
+    }
+    else
+	pComm->WriteReplyAndWait(pFile, this, true, false);
 }
 
 /** \brief write ipc code with a long msg
  *  \param pFile the file to write to
- *  \param pContext the contet of the write operation
  */
-void CL4BEWaitAnyFunction::WriteLongIPC(CBEFile *pFile, CBEContext *pContext)
+void CL4BEWaitAnyFunction::WriteLongIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
-    ((CL4BEIPC*)m_pComm)->WriteReplyAndWait(pFile, this, false, false, pContext);
+    CL4BEIPC *pComm = static_cast<CL4BEIPC*>(GetCommunication());
+    assert(pComm);
+
+    CBEClass *pClass = GetSpecificParent<CBEClass>();
+    assert(pClass);
+    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+    {
+	CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
+	    CCompiler::GetNameFactory());
+	string sPartner = pNF->GetPartnerVariable();
+	*pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
+	    " /* no dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteReplyAndWait(pFile, this, false, false);
+	pFile->DecIndent();
+	*pFile << "\telse /* dedicated partner */\n";
+	pFile->IncIndent();
+	pComm->WriteCall(pFile, this);
+	pFile->DecIndent();
+    }
+    else
+	pComm->WriteReplyAndWait(pFile, this, false, false);
 }
 
 /** \brief write the checking code for opcode exceptions
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * reset any previous exceptions. Must be called before IPC Error check
  */
 void
-CL4BEWaitAnyFunction::WriteExceptionCheck(CBEFile * pFile, CBEContext * pContext)
+CL4BEWaitAnyFunction::WriteExceptionCheck(CBEFile * pFile)
 {
     // set exception if not set already
-    *pFile << "\t// clear exception if set\n";
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
-    pFile->PrintIndent("if (");
-    pDecl->WriteName(pFile, pContext);
-    if (pDecl->GetStars() > 0)
-        pFile->Print("->");
-    else
-        pFile->Print(".");
-    pFile->Print("major != CORBA_NO_EXCEPTION)\n");
+    *pFile << "\t/* clear exception if set*/\n";
+    CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
+    string sEnv;
+    if (pDecl->GetStars() == 0)
+	sEnv = "&";
+    sEnv += pDecl->GetName();
+
+    *pFile << "\tif (DICE_EXPECT_FALSE(DICE_HAS_EXCEPTION(" << sEnv << ")))\n";
     pFile->IncIndent();
     // set exception
-    pFile->PrintIndent("CORBA_server_exception_set(");
+    *pFile << "\tCORBA_server_exception_set(";
     if (pDecl->GetStars() == 0)
-        pFile->Print("&");
-    pDecl->WriteName(pFile, pContext);
-    pFile->Print(",\n");
+	*pFile << "&";
+    pDecl->WriteName(pFile);
+    *pFile << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("CORBA_NO_EXCEPTION,\n");
-    pFile->PrintIndent("CORBA_DICE_EXCEPTION_NONE,\n");
-    pFile->PrintIndent("0);\n");
+    *pFile << "\tCORBA_NO_EXCEPTION,\n";
+    *pFile << "\tCORBA_DICE_EXCEPTION_NONE,\n";
+    *pFile << "\t0);\n";
     pFile->DecIndent();
     pFile->DecIndent();
 }
 
 /** \brief write the error checking code for the IPC
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext)
+void 
+CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile)
 {
-    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    pFile->PrintIndent("/* test for IPC errors */\n");
-    pFile->PrintIndent("if (L4_IPC_IS_ERROR(%s))\n", sResult.c_str());
-    pFile->PrintIndent("{\n");
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    *pFile << "\t/* test for IPC errors */\n";
+    *pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n";
+    *pFile << "\t{\n";
     pFile->IncIndent();
     // set opcode to zero value
-    if (m_pReturnVar)
-        m_pReturnVar->WriteSetZero(pFile, pContext);
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    if (pReturn)
+	pReturn->WriteSetZero(pFile);
     if (!m_sErrorFunction.empty())
     {
-        *pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
-        WriteCallParameter(pFile, m_pCorbaEnv, pContext);
-        *pFile << ");\n";
+	*pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+	WriteCallParameter(pFile, pEnv, true);
+	*pFile << ");\n";
     }
-    // set zero value in msgbuffer
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    bool bUseConstOffset = true;
-    pMarshaller->MarshalValue(pFile, this, pContext->GetSizes()->GetOpcodeSize(), 0, 0, bUseConstOffset, pContext);
-    delete pMarshaller;
+    // get environment variable
+    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+    string sEnv;
+    if (pDecl->GetStars() == 0)
+	sEnv = "&";
+    sEnv += pDecl->GetName();
+    // if scheduling attribute is used, then reset the scheduling bit in case
+    // of error
+    if (m_Attributes.Find(ATTR_SCHED_DONATE))
+    {
+	*pFile << "\t/* reset scheduling bits */\n";
+	*pFile << "\tdice_l4_sched_donate_srv(" << sEnv << ");\n";
+    }
+
+    // if error print it here
+    CL4BETrace *pTrace = dynamic_cast<CL4BETrace*>(m_pTrace);
+    if (pTrace)
+	pTrace->WaitIPCError(pFile, this);
+
+    // set zero value in opcode in msgbuffer
+    CBEMarshaller *pMarshaller = GetMarshaller();
+    pMarshaller->MarshalValue(pFile, this, pReturn, 0);
     // set exception if not set already
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
-    pFile->PrintIndent("if (");
-    pDecl->WriteName(pFile, pContext);
-    if (pDecl->GetStars() > 0)
-        pFile->Print("->");
-    else
-        pFile->Print(".");
-    pFile->Print("major == CORBA_NO_EXCEPTION)\n");
+    *pFile << "\tif (DICE_IS_NO_EXCEPTION(" << sEnv << "))\n";
     pFile->IncIndent();
     // set exception
     string sSetFunc;
-    if (((CBEUserDefinedType*)m_pCorbaEnv->GetType())->GetName() ==
-        "CORBA_Server_Environment")
-        sSetFunc = "CORBA_server_exception_set";
+    if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
+	"CORBA_Server_Environment")
+	sSetFunc = "CORBA_server_exception_set";
     else
-        sSetFunc = "CORBA_exception_set";
+	sSetFunc = "CORBA_exception_set";
     *pFile << "\t" << sSetFunc << "(";
     if (pDecl->GetStars() == 0)
-        pFile->Print("&");
-    pDecl->WriteName(pFile, pContext);
-    pFile->Print(",\n");
+	*pFile << "&";
+    pDecl->WriteName(pFile);
+    *pFile << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("CORBA_SYSTEM_EXCEPTION,\n");
-    pFile->PrintIndent("CORBA_DICE_INTERNAL_IPC_ERROR,\n");
-    pFile->PrintIndent("0);\n");
+    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    *pFile << "\tCORBA_DICE_INTERNAL_IPC_ERROR,\n";
+    *pFile << "\t0);\n";
     pFile->DecIndent();
     pFile->DecIndent();
     // returns 0 -> falls into default branch of server loop
-    WriteReturn(pFile, pContext);
+    WriteReturn(pFile);
     pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    *pFile << "\t}\n";
 }
 
-/** \brief free memory allocated at the server which should be freed after the reply
+/** \brief free memory allocated at the server which should be freed after \
+ *         the reply
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * This function uses the dice_get_last_ptr method to free memory
  *
@@ -398,131 +491,176 @@ void CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pCon
  * -ffree_mem_after_reply is set
  */
 void
-CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile *pFile, CBEContext *pContext)
+CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile *pFile)
 {
     // check [out, ref] parameters
     assert(m_pClass);
-    if (!pContext->IsOptionSet(PROGRAM_FREE_MEM_AFTER_REPLY) &&
-        !m_pClass->HasParametersWithAttribute(ATTR_REF, ATTR_OUT))
-        return;
+    if (!CCompiler::IsOptionSet(PROGRAM_FREE_MEM_AFTER_REPLY) &&
+	!m_pClass->HasParametersWithAttribute(ATTR_REF, ATTR_OUT))
+	return;
 
-    pFile->PrintIndent("{\n");
+    *pFile << "\t{\n";
     pFile->IncIndent();
-    pFile->PrintIndent("void* ptr;\n");
-    pFile->PrintIndent("while ((ptr = dice_get_last_ptr(");
+    *pFile << "\tvoid* ptr;\n";
+    *pFile << "\twhile ((ptr = dice_get_last_ptr(";
     // env
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
+    CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
     if (pDecl->GetStars() == 0)
-        pFile->Print("&");
-    pDecl->WriteName(pFile, pContext);
-    pFile->Print(")) != 0)\n");
+	*pFile << "&";
+    pDecl->WriteName(pFile);
+    *pFile << ")) != 0)\n";
     pFile->IncIndent();
-    pFile->PrintIndent("");
-    pContext->WriteFree(pFile, this);
-    pFile->Print("(ptr);\n");
+    *pFile << "\t";
+    CBEContext::WriteFree(pFile, this);
+    *pFile << "(ptr);\n";
     pFile->DecIndent();
     pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    *pFile << "\t}\n";
 }
 
 /** \brief writes the unmarshalling code for this function
  *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to \
- *           false if not possible
- *  \param pContext the context of the write operation
  *
  * The wait-any function does only unmarshal the opcode. We can print this code
  * by hand. We should use a marshaller anyways.
  */
-void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile,
-    int nStartOffset,
-    bool& bUseConstOffset,
-    CBEContext * pContext)
+void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    /* If the option noopcode is set, we do not unmarshal anything at all. */
-    if (FindAttribute(ATTR_NOOPCODE))
-        return;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
+    assert (m_pTrace);
+    bool bLocalTrace = false;
+    if (!m_bTraceOn)
     {
-        // we have to always check if this was a flexpage IPC
-        string sResult =
-            pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-        *pFile << "\tif (l4_ipc_fpage_received(" << sResult << "))\n";
-        WriteFlexpageOpcodePatch(pFile, pContext);  // does indent itself
-        *pFile << "\telse\n";
-        pFile->IncIndent();
-        WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
-        pFile->DecIndent();
+	m_pTrace->BeforeUnmarshalling(pFile, this);
+	m_bTraceOn = bLocalTrace = true;
+    }
+
+    /* If the option noopcode is set, we do not unmarshal anything at all. */
+    if (m_Attributes.Find(ATTR_NOOPCODE))
+	return;
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    int nDirection = GetReceiveDirection();
+    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, nDirection) > 0)
+    {
+	// we have to always check if this was a flexpage IPC
+	//
+	// Because the wait-any function always has a return type (the opcode)
+	// we do not have to check for it separately
+	string sResult =
+	    CCompiler::GetNameFactory()->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	*pFile << "\tif (l4_ipc_fpage_received(" << sResult << "))\n";
+	WriteFlexpageOpcodePatch(pFile);  // does indent itself
+	*pFile << "\telse\n";
+	pFile->IncIndent();
+	WriteMarshalReturn(pFile, false);
+	pFile->DecIndent();
     }
     else
     {
-        WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+	WriteMarshalReturn(pFile, false);
+    }
+
+    if (bLocalTrace)
+    {
+	m_pTrace->AfterUnmarshalling(pFile, this);
+	m_bTraceOn = false;
     }
 }
 
 /** \brief writes a patch to find the opcode if flexpage were received
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
- * This function may receive messages from different function. Because we don't know at
- * compile time, which function sends, we don't know if the message contains a flexpage.
- * If it does the unmarshalled opcode is wrong. Because flexpages have to come first in
- * the message buffer, the opcode cannot be the first parameter. We have to check this
- * condition and get the opcode from behind the flexpages.
+ * This function may receive messages from different function. Because we
+ * don't know at compile time, which function sends, we don't know if the
+ * message contains a flexpage.  If it does the unmarshalled opcode is wrong.
+ * Because flexpages have to come first in the message buffer, the opcode
+ * cannot be the first parameter. We have to check this condition and get the
+ * opcode from behind the flexpages.
  *
- * First we get the number of flexpages of the interface. If it has none, we don't need
- * this extra code. If it has a fixed number of flexpages (either none is sent or one, but
- * if flexpages are sent it is always the same number of flexpages) we can hard code
- * the offset were to find the opcode. If we have different numbers of flexpages (one
- * function may send one, another sends two) we have to use code which can deal with a variable
- * number of flexpages.
+ * First we get the number of flexpages of the interface. If it has none, we
+ * don't need this extra code. If it has a fixed number of flexpages (either
+ * none is sent or one, but if flexpages are sent it is always the same number
+ * of flexpages) we can hard code the offset were to find the opcode. If we
+ * have different numbers of flexpages (one function may send one, another
+ * sends two) we have to use code which can deal with a variable number of
+ * flexpages.
  */
-void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile *pFile,
-    CBEContext *pContext)
+void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
-        return;
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    int nDirection = GetReceiveDirection();
+    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, nDirection) == 0)
+	return;
+    
     bool bFixedNumberOfFlexpages = true;
-    int nNumberOfFlexpages = m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages);
+    int nNumberOfFlexpages = 
+	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages);
+    CBESizes *pSizes = CCompiler::GetSizes();
+    int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
+	             pSizes->GetSizeOfType(TYPE_MWORD);
     // if fixed number  (should be true for only one flexpage as well)
     if (bFixedNumberOfFlexpages)
     {
-        // the fixed offset (where to find the opcode) is:
-        // offset = 8*nMaxNumberOfFlexpages + 8
-        bool bUseConstOffset = true;
-        pFile->IncIndent();
-        WriteUnmarshalReturn(pFile, 8*nNumberOfFlexpages+8, bUseConstOffset, pContext);
-        pFile->DecIndent();
+	// the fixed offset (where to find the opcode) is:
+	// offset = 8*nMaxNumberOfFlexpages + 8
+	pFile->IncIndent();
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	if (!pReturn)
+	    return;
+	CL4BEMarshaller *pMarshaller = 
+	    dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
+	assert(pMarshaller);
+	pMarshaller->MarshalParameter(pFile, this, pReturn, false, 
+	    (nNumberOfFlexpages+1) * nSizeFpage);
+	pFile->DecIndent();
     }
     else
     {
-        // the variable offset can be determined by searching for the delimiter flexpage
-        // which is two zero dwords
-        pFile->PrintIndent("{\n");
-        pFile->IncIndent();
-        // search for delimiter flexpage
-        string sTempVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        // init temp var
-        pFile->PrintIndent("%s = 0;\n", sTempVar.c_str());
-        pFile->PrintIndent("while ((");
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[%s] != 0) && (", sTempVar.c_str());
-        pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[%s+4] != 0)) %s += 8;\n", sTempVar.c_str(), sTempVar.c_str());
-        // now sTempVar points to the delimiter flexpage
-        // we have to add another 8 bytes to find the opcode, because UnmarshalReturn does only use
-        // temp-var
-        pFile->PrintIndent("%s += 8;\n", sTempVar.c_str());
-        // now unmarshal opcode
-        bool bUseConstOffset = false;
-        WriteUnmarshalReturn(pFile, 0, bUseConstOffset, pContext);
-        pFile->DecIndent();
-        pFile->PrintIndent("}\n");
+	// the variable offset can be determined by searching for the
+	// delimiter flexpage which is two zero dwords
+	*pFile << "\t{\n";
+	pFile->IncIndent();
+	// search for delimiter flexpage
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sTempVar = pNF->GetTempOffsetVariable();
+	// init temp var
+	*pFile << "\t" << sTempVar << " = 0;\n";
+	*pFile << "\twhile ((";
+	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	*pFile << "[" << sTempVar << "++] != 0) && (";
+	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	*pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
+
+	// now sTempVar points to the delimiter flexpage
+	// we have to add another 8 bytes to find the opcode, because
+	// UnmarshalReturn does only use temp-var
+	*pFile << "\t/* skip zero fpage */\n";
+	*pFile << "\t" << sTempVar << " += 2;\n";
+	// now unmarshal opcode
+	WriteMarshalReturn(pFile, false);
+	pFile->DecIndent();
+	*pFile << "\t}\n";
+    }
+}
+
+/** \brief writes the clean up of the function
+ *  \param pFile the file to write to
+ *
+ * reset the scheduling bit if it could be used.
+ */
+void CL4BEWaitAnyFunction::WriteCleanup(CBEFile * pFile)
+{
+    // get environment variable
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+    string sEnv;
+    if (pDecl->GetStars() == 0)
+	sEnv = "&";
+    sEnv += pDecl->GetName();
+    // if scheduling attribute is used, then reset the scheduling bit in case
+    // of error
+    if (m_Attributes.Find(ATTR_SCHED_DONATE))
+    {
+	*pFile << "\t/* reset scheduling bits */\n";
+	*pFile << "\tdice_l4_sched_donate_srv(" << sEnv << ");\n";
     }
 }

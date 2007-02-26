@@ -7,7 +7,8 @@
 extern "C" {
 #endif
 
-typedef int         (*Peek_task) (Address addr, unsigned task);
+typedef int         (*Peek_task) (Address addr, unsigned task,
+				  Mword *value, int width);
 typedef const char* (*Get_symbol) (Address addr, unsigned task);
 
 extern unsigned int

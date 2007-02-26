@@ -12,16 +12,14 @@
 #define __ASSEMBLY__
 #include <l4/sys/compiler.h>
 
+#ifndef __PIC__
+
 /*--- .text (program code) -------------------------*/
 	.text
 
 	/* reference printf to suck in log's version of printf
 	 * (instead of OSKit's) */
 	.globl printf
-
-	/* reference stuff to suck in our (liboskit10_support) version
-	 * (instead of OSKit's) */
-        .globl pc_reset
 
 	/* needed by base_multiboot_init_mem */
 	.globl	_start_of_kernel
@@ -30,25 +28,25 @@ _start_of_kernel:
 	.globl	_start
 _start:
 	/* Save the address of our trampoline page. */
-	movl	%esp, crt0_tramppage
+	mov	%esp, crt0_tramppage
 	andl	$0xFFFFF000, crt0_tramppage
 
 	/* Save the multiboot flag. */
-	movl	%eax, crt0_multiboot_flag
+	mov	%eax, crt0_multiboot_flag
 
 	/* Save the pointer to our multiboot info structure. Normally
 	 * it will point into the trampoline page. */
-	movl	%ebx, crt0_multiboot_info
+	mov	%ebx, crt0_multiboot_info
 
 	/* Save the pointer to the L4env infopage. Only valid if
 	 * crt0_multiboot_flag is ~(L4UTIL_MB_VALID) */
-	movl	%esi, crt0_l4env_infopage
+	mov	%esi, crt0_l4env_infopage
 
 	/* Switch to our own stack.  */
-	movl	$crt0_stack_high,%esp
+	mov	$crt0_stack_high,%esp
 
 	/* Clear the base pointer so that stack backtraces will work.  */
-	xorl	%ebp,%ebp
+	xor	%ebp,%ebp
 
 	/* Jump into C code (init backends, call constructors, call main). */
 	call	__main
@@ -78,13 +76,7 @@ ctors:
 	.p2align(2)
 dtors:
 
-
-/*--- .anno (annoations used by OSKit) --------------*/
-	.section .anno,"aw",@progbits
-	.p2align(4)
-	.globl	__ANNO_START__
-__ANNO_START__:
-
+#endif /* __PIC__ */
 
 /*--- .data (initialized data) ---------------------*/
 	.data
@@ -97,6 +89,7 @@ start_of_data:
 __dso_handle:
 	.long	0
 
+#ifndef __PIC__
 
 /*--- .eh_frame (exception frames) -----------------*/
 	.section .eh_frame,"aw"
@@ -129,3 +122,4 @@ crt0_multiboot_info:
 crt0_l4env_infopage:
 	.space	4
 
+#endif /* __PIC__ */

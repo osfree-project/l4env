@@ -327,7 +327,6 @@ static void serial_esc_fn(void){
  *
  * Context: Main thread.
  *
- * \param	prio priority of the flusher thread
  * \return	0 on success
  */
 int flusher_init(void){

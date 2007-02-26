@@ -13,6 +13,12 @@ public:
   static const unsigned scheduler_granularity	= 10000U;
   static const unsigned default_time_slice	= 10 * scheduler_granularity;
 
+  enum {
+    // Size of the host address space, change the following if your host
+    // address space size is different, do not go below 2GB (0x80000000)
+    Host_as_size       = 0xc0000000U
+  };
+
   static const bool backward_compatibility	= true;
   static const bool hlt_works_ok		= true;
   static const bool getchar_does_hlt		= false;
@@ -20,6 +26,8 @@ public:
   static const bool pic_prio_modify		= true;
   static const bool enable_io_protection	= false;
   static const bool kinfo_timer_uses_rdtsc	= false;
+  static const bool scheduler_one_shot          = false;
+  static const bool old_sigma0_adapter_hack     = false;
 
   static const char char_micro;
 };

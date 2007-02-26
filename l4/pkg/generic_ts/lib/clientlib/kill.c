@@ -31,10 +31,12 @@ l4ts_kill_task(l4_taskid_t taskid, l4_uint8_t options)
     return -L4_ENOTFOUND;
 
   if ((error = l4_ts_kill_call(&l4ts_server_id, &taskid, options, &_env)) < 0
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
-      LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
-	   l4util_idstr(l4ts_server_id), error, _env.major);
+      LOGd(DEBUG_TASK, "failed (dest="l4util_idfmt" server=" l4util_idfmt
+	   ", ret=%d, exc %d)",
+	   l4util_idstr(taskid), l4util_idstr(l4ts_server_id),
+	   error, DICE_EXCEPTION_MAJOR(&_env));
       return error ? error : -L4_EIPC;
     }
 
@@ -52,10 +54,12 @@ l4ts_kill_task_recursive(l4_taskid_t taskid)
 
   if ((error = l4_ts_kill_recursive_call(&l4ts_server_id, 
 				         &taskid, &_env)) < 0
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
-      LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
-	   l4util_idstr(l4ts_server_id), error, _env.major);
+      LOGd(DEBUG_TASK, "failed (dest="l4util_idfmt" server=" l4util_idfmt
+	   ", ret=%d, exc %d)",
+	   l4util_idstr(taskid), l4util_idstr(l4ts_server_id),
+	   error, DICE_EXCEPTION_MAJOR(&_env));
       return error ? error : -L4_EIPC;
     }
 

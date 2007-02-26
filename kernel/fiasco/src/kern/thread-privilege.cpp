@@ -28,7 +28,7 @@ Thread::sys_privilege_control()
       return;
 
     case Space_index::Prctrl_transfer:
-      dst = lookup(regs->dst());
+      dst = lookup(regs->dst(), space());
       if (EXPECT_FALSE (!dst))
 	goto error;
 

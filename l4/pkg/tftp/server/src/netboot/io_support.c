@@ -3,6 +3,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/macros.h>
 #include <l4/l4rm/l4rm.h>
+#include <l4/sigma0/sigma0.h>
 #include "io_support.h"
 #include "types.h"
 
@@ -40,19 +41,16 @@ l4_addr_t
 io_support_remap(l4_addr_t phys_addr, l4_size_t size)
 {
   l4_addr_t virt_addr;
-  l4_addr_t map_addr;
   l4_offs_t offset;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
   l4_uint32_t rg;
   int error;
 
   if (use_l4io)
     {
-      if (!(virt_addr = l4io_request_mem_region(phys_addr, size, &offset)))
+      if (!(virt_addr = l4io_request_mem_region(phys_addr, size, 0, &offset)))
 	Panic("Can't request memory region from l4io.");
 
-      LOG_printf("Mapped I/O memory %08x => %08x+%06x [%dkB] via l4io\n",
+      LOG_printf("Mapped I/O memory %08lx => %08lx+%06lx [%dkB] via l4io\n",
 	     phys_addr, virt_addr, offset, size >> 10);
 
       return virt_addr;
@@ -61,44 +59,28 @@ io_support_remap(l4_addr_t phys_addr, l4_size_t size)
     {
       extern l4_threadid_t l4rm_task_pager_id;
 
-      offset     = phys_addr - (phys_addr & L4_SUPERPAGEMASK);
-      size       = (offset+size+L4_SUPERPAGESIZE-1) & L4_SUPERPAGEMASK;
-      phys_addr &= L4_SUPERPAGEMASK;
+      offset     = phys_addr - l4_trunc_superpage(phys_addr);
+      size       = l4_round_superpage(offset+size);
+      phys_addr  = l4_trunc_superpage(phys_addr);
 
       if ((error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, &virt_addr, &rg)))
 	Panic("Error %d reserving region size=%dMB for memory",
 	    error, size>>20);
 
-      LOG_printf("Mapping I/O memory %08x => %08x+%06x [%dkB]\n",
+      LOG_printf("Mapping I/O memory %08lx => %08lx+%06lx [%dkB]\n",
 	    phys_addr+offset, virt_addr, offset, size>>10);
 
-      /* check here for curious video buffer, one candidate is VMware */
-      if (phys_addr < 0x80000000)
-	Panic("I/O memory address is below 2GB (0x80000000),\n"
-	      "don't know how to map it as device super I/O page.");
-
-      for (map_addr=virt_addr; size>0; size-=L4_SUPERPAGESIZE,
-				       phys_addr+=L4_SUPERPAGESIZE, 
-				       map_addr+=L4_SUPERPAGESIZE)
+      if ((error = l4sigma0_map_iomem(l4rm_task_pager_id, phys_addr,
+				      virt_addr, size, 0)))
 	{
-	  for (;;)
+	  switch (error)
 	    {
-	      /* we could get l4_thread_ex_regs'd ... */
-	      error =
-		l4_ipc_call(l4rm_task_pager_id,
-			    L4_IPC_SHORT_MSG, (phys_addr-0x40000000) | 2, 0,
-		   	    L4_IPC_MAPMSG(map_addr, L4_LOG2_SUPERPAGESIZE),
-	   		    &dummy, &dummy,
-   			    L4_IPC_NEVER, &result);
-	      if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
-		break;
+	    case -2: Panic("IPC error mapping I/O memory");
+	    case -3: Panic("No fpage received mapping I/O memory");
+	    case -4: Panic("I/O memory address is below 2GB (0x80000000),\n"
+			   "don't know how to map it as device super I/O "
+			   "page.");
 	    }
-
-	  if (error)
-	    Panic("Error 0x%02x mapping I/O memory", error);
-
-	  if (!l4_ipc_fpage_received(result))
-	    Panic("No fpage received, result=0x%04x", result.msgdope);
 	}
 
       return virt_addr + offset;
@@ -127,7 +109,7 @@ io_support_unmap(l4_addr_t virt_addr)
       LOG_printf("Unmapped I/O %memory. WARNING: Not unmapped!\n");
     }
 #else
-  LOG_printf("WARNING: iounmap not implemented (%08x)\n", virt_addr);
+  LOG_printf("WARNING: iounmap not implemented (%08lx)\n", virt_addr);
 #endif
 }
 
@@ -138,7 +120,7 @@ io_support_scan_pci_bus (int type, struct pci_device *dev)
     {
       l4io_pdev_t start = 0;
       l4io_pci_dev_t new;
-      l4_addr_t ioaddr, membase;
+      l4_uint32_t ioaddr, membase;
       unsigned int bus, devfn;
       int reg;
 

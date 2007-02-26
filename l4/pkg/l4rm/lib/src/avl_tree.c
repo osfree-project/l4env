@@ -91,8 +91,8 @@ avlt_insert(avlt_key_t key, avlt_data_t data)
   avlt_t * t;   /* parent of s */
   int a;        /* indicates which subtree of s has grown, -1 left, +1 right */
 
-  LOGdL(DEBUG_AVLT_INSERT, "key 0x%08X-0x%08X\n  data = %u",
-        key.start, key.end, (unsigned)data);
+  LOGdL(DEBUG_AVLT_INSERT, "key 0x"l4_addr_fmt"-0x"l4_addr_fmt"\n  data = %lu",
+        key.start, key.end, (l4_addr_t)data);
 
   /* empty tree */
   if (tree_head.right == NULL)
@@ -103,7 +103,7 @@ avlt_insert(avlt_key_t key, avlt_data_t data)
         return -AVLT_NO_MEM;
 
 #if DEBUG_AVLT_INSERT
-      LOG_printf("  new root node, 0x%08x\n", (unsigned)q);
+      LOG_printf("  new root node, 0x"l4_addr_fmt"\n", (l4_addr_t)q);
 #endif
 
       /* setup node */
@@ -409,7 +409,8 @@ avlt_remove(avlt_key_t key)
  
       /* found, replace q */
       LOGdL(DEBUG_AVLT_REMOVE, "replace\n" \
-            "  key 0x%08x-0x%08x with 0x%08x-0x%08x", 
+            "  key 0x"l4_addr_fmt"-0x"l4_addr_fmt" with 0x"l4_addr_fmt
+	    "-0x"l4_addr_fmt, 
             q->key.start, q->key.end, r->key.start, r->key.end);
       
       q->key = r->key;
@@ -459,7 +460,8 @@ avlt_remove(avlt_key_t key)
       if (q == p->right)
 	{
 #if DEBUG_AVLT_REMOVE
-	  LOG_printf("  remove right successor of key 0x%08x-0x%08x (%d)\n",
+	  LOG_printf("  remove right successor of key 0x"l4_addr_fmt
+	         "-0x"l4_addr_fmt" (%d)\n",
                  p->key.start, p->key.end, avlt_node_index(q));
 #endif
 	  if (q->left != NULL)
@@ -475,7 +477,8 @@ avlt_remove(avlt_key_t key)
       else
 	{
 #if DEBUG_AVLT_REMOVE
-	  LOG_printf("  remove left successor of key 0x%08x-0x%08x (%d)\n",
+	  LOG_printf("  remove left successor of key 0x"l4_addr_fmt
+	         "-0x"l4_addr_fmt" (%d)\n",
                  p->key.start, p->key.end, avlt_node_index(q));
 #endif
 	  if (q->left != NULL)
@@ -910,7 +913,7 @@ __avlt_build_tree(void)
     {
       level = l4util_log2(i);
 
-      LOGdL(DEBUG_AVLT_SHOW, "i = %d, level = %d", i, level);
+      LOGdL(DEBUG_AVLT_SHOW, "i = %ld, level = %d", i, level);
 
       bits = level - 1;
       p = tree_head.right;
@@ -942,9 +945,10 @@ __avlt_build_tree(void)
 #endif
 	  row = 2 * (level + 1);
 
-	  LOGdL(DEBUG_AVLT_SHOW, "node at 0x%08x, level = %d\n" \
-                "  0x%08x - 0x%08x: 0x%08x", (unsigned)p, level,
-                p->key.start, p->key.end, (unsigned)p->data);
+	  LOGdL(DEBUG_AVLT_SHOW, "node at 0x"l4_addr_fmt", level = %d\n" \
+                "  0x"l4_addr_fmt" - 0x"l4_addr_fmt": 0x"l4_addr_fmt"",
+		(l4_addr_t)p, level, p->key.start, p->key.end,
+		(l4_addr_t)p->data);
 	  LOGdL(DEBUG_AVLT_SHOW,"row = %d, pos = %d",row,pos);
 
 #if SHOW_LONG
@@ -959,14 +963,14 @@ __avlt_build_tree(void)
 	    sprintf(right, "xx");
 
 	  sprintf(str, " %2x,%2d,%2u,%2s,%2s", avlt_node_index(p), p->b,
-		  (unsigned)p->data, left, right);
+		  p->data, left, right);
 	  memcpy(&__tree[row][pos], str, strlen(str));
-	  sprintf(str, "%08X-%08X", p->key.start, p->key.end);
+	  sprintf(str, l4_addr_fmt"-"l4_addr_fmt"", p->key.start, p->key.end);
 	  memcpy(&__tree[row + 1][pos], str, strlen(str));
 #else
-	  sprintf(str, "%2d,%2d", avlt_node_index(p), p->b);
+	  sprintf(str, "%2ld,%2d", avlt_node_index(p), p->b);
 	  memcpy(&__tree[row][pos], str, strlen(str));
-	  sprintf(str, "%2u-%2u", p->key.start, p->key.end);
+	  sprintf(str, "%2lu-%2lu", p->key.start, p->key.end);
 	  memcpy(&__tree[row + 1][pos], str, strlen(str));
 #endif
 	}
@@ -1000,7 +1004,7 @@ avlt_show_tree(void)
 
   /* head node */
   if (tree_head.right != NULL)
-    sprintf(root, "%2d", avlt_node_index(tree_head.right));
+    sprintf(root, "%2ld", avlt_node_index(tree_head.right));
   else 
     sprintf(root, "xx");
 
@@ -1040,7 +1044,7 @@ avlt_show_tree(void)
  */
 /*****************************************************************************/ 
 int
-AVLT_insert(l4_uint32_t start, l4_uint32_t end, l4_uint32_t data)
+AVLT_insert(l4_addr_t start, l4_addr_t end, l4_addr_t data)
 {
   avlt_key_t key;
 
@@ -1063,7 +1067,7 @@ AVLT_insert(l4_uint32_t start, l4_uint32_t end, l4_uint32_t data)
  */
 /*****************************************************************************/ 
 int
-AVLT_remove(l4_uint32_t start, l4_uint32_t end)
+AVLT_remove(l4_addr_t start, l4_addr_t end)
 {
   avlt_key_t key;
 
@@ -1085,7 +1089,7 @@ AVLT_remove(l4_uint32_t start, l4_uint32_t end)
  */
 /*****************************************************************************/ 
 int 
-AVLT_find(l4_uint32_t start, l4_uint32_t end)
+AVLT_find(l4_addr_t start, l4_addr_t end)
 {
   avlt_key_t key;
   avlt_data_t data;

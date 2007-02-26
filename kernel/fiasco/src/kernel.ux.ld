@@ -48,10 +48,31 @@ SECTIONS {
 
   PROVIDE (_etext = .);
 
+  . = ALIGN(4K);
+  .kip : { 
+    *(.kernel_info_page)
+    _initkip_start = .;
+    KEEP(*(.initkip.version))
+    KEEP(*(.initkip.features))
+    KEEP(*(.initkip.features.fini))
+    _initkip_end = .;
+    . = ALIGN(4K);
+  }
+
   .data : {
     *(.data .data.* .gnu.linkonce.d.*)
     SORT (CONSTRUCTORS)
   }
+
+  .tdata : {
+    *(.tdata .tdata.* .gnu.linkonce.td.*)
+  }
+  .tbss : {
+    *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon)
+  }
+
+  .eh_frame         : { KEEP (*(.eh_frame)) }
+  .gcc_except_table : { *(.gcc_except_table) }
 
   .ctors : {
     KEEP (*crtbegin.o(.ctors))
@@ -78,11 +99,6 @@ SECTIONS {
   .initcall : {
     PROVIDE (_initcall_start = .);
     *(.initcall.*)
-    _initkip_start = .;
-    KEEP(*(.initkip.version))
-    KEEP(*(.initkip.features))
-    KEEP(*(.initkip.features.fini))
-    _initkip_end = .;
     . = ALIGN(4096);
     PROVIDE (_initcall_end = .);
   }

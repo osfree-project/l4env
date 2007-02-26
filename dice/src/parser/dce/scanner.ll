@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
-using namespace std;
+#include <cassert>
 
 #include "fe/FEUnaryExpression.h" // for enum EXPT_OPERATOR
 
@@ -47,9 +47,9 @@ using namespace std;
 #include "fe/FEFunctionDeclarator.h"
 #include "fe/FEArrayDeclarator.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEIDLUnionType.h"
+#include "fe/FEEnumType.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEPipeType.h"
@@ -88,8 +88,6 @@ bool bAllowInterfaceAsType = false;
 
 extern int dcedebug;
 
-// we don't need unput so "remove" additional code
-#define YY_NO_UNPUT
 
 // number conversion
 static unsigned int OctToInt (char *);
@@ -108,9 +106,12 @@ extern int c_inc; // set to attribute
     else { lvalp->_id = new string(yytext); if (dcedebug) fprintf(stderr,"( ID(3): %s (%d) )",yytext,c_inc); return ID; } \
     }
 
+// we don't need unput so "remove" additional code
+#define YY_NO_UNPUT
+
 %}
 
-%option noyywrap
+%option noyywrap nounput
 %option never-interactive
 /* %option reentrant-bison */
 
@@ -139,8 +140,8 @@ VersionRep      [1-9][0-9]*("."[0-9]+)?
 
 %%
 
-    /* since CPP ran over our IDL files, we have 'line' directives in the source code,
-     * which have the following format
+    /* since CPP ran over our IDL files, we have 'line' directives in the 
+     * source code, which have the following format
      * # linenum filename flags
      * flags is optional and can be 1, 2, 3, or 4
      * 1 - start of file
@@ -179,79 +180,105 @@ VersionRep      [1-9][0-9]*("."[0-9]+)?
                         sNewFileNameDCE = sTopLevelInFileName;
                 }
 <line2>[1-4]    {
-                    // if line directive is without these flags only new line numbers are defined.
-                    // find path file
+		    // if line directive is without these flags only new line
+		    // numbers are defined.  find path file
                     int nFlags = atoi(yytext);
                     if (dcedebug)
-                        fprintf(stderr, "DCE: # %d \"%s\" %d found\n", nNewLineNumberDCE,
-                            sNewFileNameDCE.c_str(), nFlags);
+                        fprintf(stderr, "DCE: # %d \"%s\" %d found\n", 
+			    nNewLineNumberDCE, sNewFileNameDCE.c_str(), nFlags);
                     CParser *pParser = CParser::GetCurrentParser();
                     switch(nFlags)
                     {
                     case 1:
-                    case 3:
+                    {
+                        // get path for file
+                        CPreProcess *pPreProcess = 
+			    CPreProcess::GetPreProcessor();
+                        unsigned char nRet = 2;
+                        // comment following line to allow recursive 
+			// self-inclusion
+                        if (sNewFileNameDCE != sInFileName)
+                            // import this file
+                            nRet = pParser->Import(sNewFileNameDCE);
+                        switch (nRet)
                         {
-                            // get path for file
-                            CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
-                            unsigned char nRet = 2;
-                            // comment following line to allow recursive self-inclusion
-                            if (sNewFileNameDCE != sInFileName)
-                                // import this file
-                                nRet = pParser->Import(sNewFileNameDCE);
-                            switch (nRet)
-                            {
-                            case 0:
-                                // error
-                                yyterminate();
-                                break;
-                            case 1:
-                                // ok, but create file
-                                {
-                                    // simply create new CFEFile and set it as current
-                                    string sPath = pPreProcess->FindPathToFile(sNewFileNameDCE, gLineNumber);
-                                    string sOrigName = pPreProcess->GetOriginalIncludeForFile(sNewFileNameDCE, gLineNumber);
-                                    bool bStdInc = pPreProcess->IsStandardInclude(sNewFileNameDCE, gLineNumber);
-                                    // IDL files should be included in the search list of the preprocessor.
-                                    // nonetheless, we do this additional check, just to make sure...
+                        case 0:
+                            // error
+                            yyterminate();
+                            break;
+                        case 1:
+                            // ok, but create file
+                        {
+                            // simply create new CFEFile and set it as current
+                            string sPath = pPreProcess->FindPathToFile(
+			        sNewFileNameDCE, gLineNumber);
+                            string sOrigName = 
+			        pPreProcess->GetOriginalIncludeForFile(
+				    sNewFileNameDCE, gLineNumber);
+                            bool bStdInc = pPreProcess->IsStandardInclude(
+			        sNewFileNameDCE, gLineNumber);
+			    // The returned path should never be empty. If it
+			    // is, then the file name sNewFileNameDCE did not
+			    // contain it. The preprocessor, however, stored
+			    // it in an additional vector, so go check there.
+			    if (sPath.empty())
+			        sPath =
+				pPreProcess->GetIncludePath(sNewFileNameDCE);
+                            // IDL files should be included in the search 
+			    // list of the preprocessor.  nonetheless, we do
+			    // this additional check, just to make sure...
 
-                                    // if path is set and origname is empty, then sNewFileNameGccC is with full path
-                                    // and FindPathToFile returned an include path that matches the beginning of the
-                                    // string. Now we get the original name by cutting off the beginning of the string,
-                                    // which is the path
-                                    // ITS DEACTIVATED BUT THERE
-                                    //if (!sPath.empty() && sOrigName.empty())
-                                    //    sOrigName = sNewFileNameDCE.Right(sNewFileNameDCE.GetLength()-sPath.GetLength());
-                                    if (sOrigName.empty())
-                                        sOrigName = sNewFileNameDCE;
-                                    CFEFile *pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bStdInc);
-                                    CParser::SetCurrentFile(pFEFile);
-                                    sInFileName = sNewFileNameDCE;
-                                    gLineNumber = nNewLineNumberDCE;
-                                    if (dcedebug)
-                                        fprintf(stderr, " gLineNumber: %d (%s)\n", gLineNumber, sInFileName.c_str());
-                                }
-                                // fall through
-                            case 2:
-                                // ok do nothing
-                                break;
-                            }
+			    // if path is set and origname is empty, then
+			    // sNewFileNameGccC is with full path and
+			    // FindPathToFile returned an include path that
+			    // matches the beginning of the string. Now we get
+			    // the original name by cutting off the beginning
+			    // of the string, which is the path
+                            // ITS DEACTIVATED BUT THERE
+			    //if (!sPath.empty() && sOrigName.empty())
+			    //sOrigName =
+			    //sNewFileNameDCE.Right(
+			    //    sNewFileNameDCE.GetLength()-
+			    //    sPath.GetLength());
+			    if (sOrigName.empty())
+                                sOrigName = sNewFileNameDCE;
+                            CFEFile *pFEFile = new CFEFile(sOrigName, sPath, 
+			        gLineNumber, bStdInc);
+                            CParser::SetCurrentFile(pFEFile);
+                            sInFileName = sNewFileNameDCE;
+                            gLineNumber = nNewLineNumberDCE;
+                            if (dcedebug)
+                                fprintf(stderr, " gLineNumber: %d (%s)\n", 
+				    gLineNumber, sInFileName.c_str());
                         }
+                        // fall through
+                        case 2:
+                            // ok do nothing
+                            break;
+                        }
+                    }
                         bNeedToSetFileDCE = false;
                         break;
                     case 2:
                         // check if we have to switch the parsers back
                         if (pParser->DoEndImport())
                         {
-                            // update state info for parent, so its has new line number
-                            // Gcc might have eliminated some lines, so old line number can be incorrect
-                            pParser->UpdateState(sNewFileNameDCE, nNewLineNumberDCE);
+			    // update state info for parent, so its has new
+			    // line number Gcc might have eliminated some
+			    // lines, so old line number can be incorrect
+                            pParser->UpdateState(sNewFileNameDCE, 
+			        nNewLineNumberDCE);
                             bNeedToSetFileDCE = false;
                             return EOF_TOKEN;
                         }
                         else
                             CParser::SetCurrentFileParent();
                         break;
+                    case 3:
                     case 4:
+		    	/* ignore 3 and 4, because they only provide
+			 * additional meaning to the line statement
+			 */
                         break;
                     }
                 }
@@ -267,7 +294,8 @@ VersionRep      [1-9][0-9]*("."[0-9]+)?
                         else
                             sInFileName = sNewFileNameDCE;
                         if (dcedebug)
-                            fprintf(stderr, "DCE: # %d \"%s\" (reset line number)\n", gLineNumber, sInFileName.c_str());
+                            fprintf(stderr, "DCE: # %d \"%s\" (reset line)\n", 
+			        gLineNumber, sInFileName.c_str());
                     }
                 }
 
@@ -395,6 +423,8 @@ errfunc_server  RETURN_IF_ATTR(ERROR_FUNCTION_SERVER)
 server_parameter      RETURN_IF_ATTR(SERVER_PARAMETER)
 init_with_in    RETURN_IF_ATTR(INIT_WITH_IN)
 prealloc        RETURN_IF_ATTR(PREALLOC)
+prealloc_client RETURN_IF_ATTR(PREALLOC_CLIENT)
+prealloc_server RETURN_IF_ATTR(PREALLOC_SERVER)
 allow_reply_only      RETURN_IF_ATTR(ALLOW_REPLY_ONLY)
 hidden          RETURN_IF_ATTR(HIDDEN)
 lcid            RETURN_IF_ATTR(LCID)
@@ -426,9 +456,13 @@ oneway          RETURN_IF_ATTR(ONEWAY);
 callback        RETURN_IF_ATTR(CALLBACK);
 noopcode        RETURN_IF_ATTR(NOOPCODE);
 noexceptions    RETURN_IF_ATTR(NOEXCEPTIONS);
-l4_schedule_deceit     RETURN_IF_ATTR(L4_SCHED_DECEIT);
-l4_sched_deceit        RETURN_IF_ATTR(L4_SCHED_DECEIT);
+l4_schedule_deceit     RETURN_IF_ATTR(SCHED_DONATE);
+l4_sched_deceit        RETURN_IF_ATTR(SCHED_DONATE);
+schedule_donate        RETURN_IF_ATTR(SCHED_DONATE);
+sched_donate	       RETURN_IF_ATTR(SCHED_DONATE);
+dedicated_partner      RETURN_IF_ATTR(DEDICATED_PARTNER);
 attribute       return ATTRIBUTE;
+__attribute__	return ATTRIBUTE;
 ">>="           return RS_ASSIGN;
 "<<="           return LS_ASSIGN;
 "+="            return ADD_ASSIGN;

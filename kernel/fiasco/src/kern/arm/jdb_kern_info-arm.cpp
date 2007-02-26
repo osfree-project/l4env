@@ -24,14 +24,18 @@ PUBLIC
 void
 Jdb_kern_info_misc::show()
 {
-  Space *s = current_space();
+  Mem_space *s = current_mem_space();
 
+//   printf("clck: %08x.%08x\n"
+// 	 "pdir: %08x (taskno=%03x, chief=%03x)\n",
+// 	 (unsigned) (Kip::k()->clock >> 32), 
+// 	 (unsigned) (Kip::k()->clock),
+//  	 (unsigned) s,
+//  	 unsigned(s->id()),  unsigned(s->chief()));
   printf("clck: %08x.%08x\n"
-	 "pdir: %08x (taskno=%03x, chief=%03x)\n",
+	 "pdir: %08x\n",
 	 (unsigned) (Kip::k()->clock >> 32), 
 	 (unsigned) (Kip::k()->clock),
-	 (unsigned) s,
-	 unsigned(s->id()),  unsigned(s->chief()));
+ 	 (unsigned) s->dir());
 }
-
 

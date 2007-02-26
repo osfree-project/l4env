@@ -15,6 +15,7 @@ namespace Page
     USER_XO  = 0x0800, ///< User Execute only
     USER_RWX = 0x0c00, ///< User Read/Write/Execute
 
+    Cache_mask    = 0x0c,
     NONCACHEABLE  = 0x00, ///< Caching is off
     CACHEABLE     = 0x0c, ///< Cache is enabled
 
@@ -26,8 +27,28 @@ namespace Page
   };
 };
 
+class Paging
+{};
+
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
+
+/* this functions do nothing on the ARM architecture */
+PUBLIC static inline
+Address
+Paging::canonize(Address addr)
+{
+  return addr;
+}
+
+PUBLIC static inline
+Address
+Paging::decanonize(Address addr)
+{
+  return addr;
+}
+
+//---------------------------------------------------------------------------
 
 PUBLIC static inline
 Mword PF::is_alignment_error(Mword error)
@@ -48,8 +69,16 @@ Mword PF::is_usermode_error( Mword error )
 IMPLEMENT inline
 Mword PF::is_read_error( Mword error )
 {
-  return (error & 0x00020000/*PF_WRITE*/);
+  return (error & 0x00020000/*PF_READ*/);
 }
+
+IMPLEMENT inline
+Mword PF::write_error()
+{ return 0x00000005; }
+
+IMPLEMENT inline
+Mword PF::usermode_error()
+{ return 0x00010000; }
 
 IMPLEMENT inline
 Mword PF::addr_to_msgword0( Address pfa, Mword error )

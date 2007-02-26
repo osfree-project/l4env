@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BECommunication.h
- *    \brief   contains the declaration of the class CBECommunication
+ *  \file    dice/src/be/BECommunication.h
+ *  \brief   contains the declaration of the class CBECommunication
  *
- *    \date    08/13/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    08/13/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,7 +32,6 @@
 #include <be/BEObject.h>
 
 class CBEFunction;
-class CBEContext;
 
 /** \class CBECommunication
  *  \ingroup backend
@@ -45,21 +44,58 @@ class CBECommunication : public CBEObject
 public:
     /** creates a new object of this class */
     CBECommunication();
-    virtual ~CBECommunication();
+    ~CBECommunication();
 
 public:
-    virtual bool CheckProperty(CBEFunction *pFunction, int nProperty, CBEContext *pContext);
+    /** \brief write the call implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteCall(CBEFile *pFile, CBEFunction* pFunction) = 0;
+    /** \brief write the receive implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteReceive(CBEFile *pFile, CBEFunction* pFunction) = 0;
+    /** \brief write the reply and receive implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    /** \brief write the wait implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteWait(CBEFile* pFile, CBEFunction *pFunction) = 0;
+    /** \brief write the send implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteSend(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    /** \brief write the reply implementation
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    /** \brief write the initialization code for the communication
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteInitialization(CBEFile *pFile, 
+	CBEFunction *pFunction) = 0;
+    /** \brief write the binding code of the application to the communication
+     *         socket
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteBind(CBEFile *pFile, CBEFunction *pFunction) = 0;
+    /** \brief write the clean up code for the communication
+     *  \param pFile the file to write to
+     *  \param pFunction the function to write for
+     */
+    virtual void WriteCleanup(CBEFile *pFile, CBEFunction *pFunction) = 0;
 
-    virtual void WriteCall(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pContext);
-    virtual void WriteReceive(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pContext);
-    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
-    virtual void WriteWait(CBEFile* pFile, CBEFunction *pFunction, CBEContext* pContext);
-    virtual void WriteSend(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
-    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
-
-    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
-    virtual void WriteBind(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual bool AddLocalVariable(CBEFunction *pFunction);
 };
 
 #endif

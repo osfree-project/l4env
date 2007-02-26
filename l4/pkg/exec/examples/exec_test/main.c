@@ -19,7 +19,7 @@
 #include <l4/names/libnames.h>
 #include <l4/env/env.h>
 #include <l4/l4rm/l4rm.h>
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 #include <l4/exec/exec.h>
 #include <l4/exec/errno.h>
 #include <l4/exec/exec-client.h>
@@ -88,7 +88,7 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
 
 	  if (area_beg != 0)
 	    {
-	      printf("Relocatable area starts at %08x\n", area_beg);
+	      printf("Relocatable area starts at %08lx\n", area_beg);
 	      printf("sections at %p size %08x\n",
 		  env->section, sizeof(l4exec_section_t));
 	      enter_kdebug("stop");
@@ -98,7 +98,7 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
 	  if ((error = l4rm_direct_area_reserve(area_size, 0,
 						&area_addr, &rm_area)))
 	    {
-	      printf("Error reserving area (%08x size %08x)\n",
+	      printf("Error reserving area (%08lx size %08x)\n",
 		  area_addr, area_size);
 	      enter_kdebug("area_reserve");
 	    }
@@ -122,7 +122,7 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
 		    l4rm_direct_area_attach_to_region(&l4exc->ds,
 				      rm_area, (void *)sec_addr, sec_size, 0, 0)))
 		{
-		  printf("Error %d attaching to area id %d (%08x-%08x)\n",
+		  printf("Error %d attaching to area id %d (%08lx-%08lx)\n",
 		         error, rm_area, sec_addr, sec_addr+sec_size);
 		  l4rm_show_region_list();
 		  enter_kdebug("attach_to_region");

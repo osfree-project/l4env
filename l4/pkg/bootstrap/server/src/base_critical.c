@@ -2,8 +2,8 @@
 #include <l4/util/irq.h>
 #include "base_critical.h"
 
-static unsigned flags;
-static unsigned entry_count;
+static l4_umword_t flags;
+static l4_umword_t entry_count;
 
 void
 base_critical_enter(void)

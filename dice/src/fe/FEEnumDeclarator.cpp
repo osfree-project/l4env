@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEEnumDeclarator.cpp
- *    \brief   contains the implementation of the class CFEEnumDeclarator
+ *  \file    dice/src/fe/FEEnumDeclarator.cpp
+ *  \brief   contains the implementation of the class CFEEnumDeclarator
  *
- *    \date    06/08/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    06/08/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -57,33 +57,12 @@ CFEEnumDeclarator::~CFEEnumDeclarator()
     delete m_pInitialValue;
 }
 
-/**    \brief creates a copy of this object
- *    \return a reference to a new object
+/** \brief creates a copy of this object
+ *  \return a reference to a new object
  */
 CObject *CFEEnumDeclarator::Clone()
 {
     return new CFEEnumDeclarator(*this);
-}
-
-/** serializes this object
- *    \param pFile the file to serialize to/from
- */
-void CFEEnumDeclarator::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<enum_declarator>\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
-        if (m_pInitialValue)
-        {
-            pFile->PrintIndent("<value>\n");
-            m_pInitialValue->Serialize(pFile);
-            pFile->PrintIndent("</value>\n");
-        }
-        pFile->DecIndent();
-        pFile->PrintIndent("</enum_declarator>\n");
-    }
 }
 
 /** \brief retrieves a reference to the initial value of the enum

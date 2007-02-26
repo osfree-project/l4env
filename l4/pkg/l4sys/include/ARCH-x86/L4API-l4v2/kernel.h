@@ -10,7 +10,11 @@
 #define __L4_KERNEL_H__
 
 #include <l4/sys/types.h>
-#include <l4/sys/compiler.h>
+
+typedef struct {
+  l4_addr_t start; ///< start address
+  l4_addr_t end;   ///< end address
+} l4_region_t;
 
 /**
  * L4 Kernel Info Page.
@@ -19,12 +23,14 @@
 typedef struct
 {
   /* offset 0x00 */
-  l4_umword_t            magic;               /**< Kernel Info Page
+  l4_uint32_t            magic;               /**< Kernel Info Page
 					       **  identifier ("L4µK").
 					       **/
-  l4_umword_t            version;             ///< Kernel version
+  l4_uint32_t            version;             ///< Kernel version
   l4_uint8_t             offset_version_strings;
-  l4_uint8_t             reserved[7];
+  l4_uint8_t             fill0[3];
+  l4_uint8_t             kip_sys_calls;
+  l4_uint8_t             fill1[3];
 
   /* the following stuff is undocumented; we assume that the kernel
      info page is located at offset 0x1000 into the L4 kernel boot
@@ -42,19 +48,19 @@ typedef struct
   /* Sigma0 */
   l4_umword_t            sigma0_esp;          ///< Sigma0 start stack pointer
   l4_umword_t            sigma0_eip;          ///< Sigma0 instruction pointer
-  l4_low_high_t          sigma0_memory;       ///< Sigma0 code/data area
+  l4_umword_t	         _res01[2];
 
   /* offset 0x30 */
   /* Sigma1 */
   l4_umword_t            sigma1_esp;          ///< Sigma1 start stack pointer
   l4_umword_t            sigma1_eip;          ///< Sigma1 instruction pointer
-  l4_low_high_t          sigma1_memory;       ///< Sigma1 code/data
+  l4_umword_t	         _res02[2];
 
   /* offset 0x40 */
   /* Root task */
   l4_umword_t            root_esp;            ///< Root task stack pointer
   l4_umword_t            root_eip;            ///< Root task instruction pointer
-  l4_low_high_t          root_memory;         ///< Root task code/data
+  l4_umword_t	         _res03[2];
 
   /* offset 0x50 */
   /* L4 configuration */
@@ -116,11 +122,8 @@ typedef struct
 					       **/
 
   /* offset 0x60 */
-  l4_low_high_t          main_memory;         ///< Main memory area
-  l4_low_high_t          reserved0;           ///< Reserved memory (kernel code)
-  l4_low_high_t          reserved1;           ///< Reserved memory (kernel data)
-  l4_low_high_t          semi_reserved;       ///< Reserved memory
-  l4_low_high_t          dedicated[4];        ///< Dedicated memory areas
+  l4_umword_t	       total_ram;             ///< Size of RAM in bytes
+  l4_umword_t	       _res04[15];
 
   /* offset 0xA0 */
   volatile l4_cpu_time_t clock;               ///< L4 system clock (µs)
@@ -145,24 +148,19 @@ typedef struct
 
   /* offset 0xC0 */
   /* System call entries */
-  l4_uint32_t            sys_ipc;             ///< ipc syscall entry
-  l4_uint32_t            sys_id_nearest;      ///< id_nearest syscall entry
-  l4_uint32_t            sys_fpage_unmap;     ///< fpage_unmap syscall entry
-  l4_uint32_t            sys_thread_switch;   ///< thread_switch syscall entry
-  l4_uint32_t            sys_thread_schedule; ///< thread_schedule syscall entry
-  l4_uint32_t            sys_lthread_ex_regs; /**< sys_lthread_ex_regs
+  l4_umword_t            sys_ipc;             ///< ipc syscall entry
+  l4_umword_t            sys_id_nearest;      ///< id_nearest syscall entry
+  l4_umword_t            sys_fpage_unmap;     ///< fpage_unmap syscall entry
+  l4_umword_t            sys_thread_switch;   ///< thread_switch syscall entry
+  l4_umword_t            sys_thread_schedule; ///< thread_schedule syscall entry
+  l4_umword_t            sys_lthread_ex_regs; /**< sys_lthread_ex_regs
 					       **  syscall entry.
 					       **/
-  l4_uint32_t            sys_task_new;        ///< sys_task_new syscall entry.
+  l4_umword_t            sys_task_new;        ///< sys_task_new syscall entry.
+  l4_umword_t            sys_privctrl;
 
-  char  version_strings[512];
-
-  char  sys_calls[256];
-
-  char  pad[288];
-
-  /* ============================================== */
-  char  lipc_code[256];
+  l4_umword_t		 user_ptr;
+  l4_umword_t		 vhw_offset;
 
 } l4_kernel_info_t;
 

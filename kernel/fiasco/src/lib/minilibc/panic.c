@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <panic.h>
+#include "types.h"
 
 void __attribute__((weak)) 
 __assert_fail (const char *__assertion, const char *__file,
 	       unsigned int __line)
 {
   printf("\nAssertion failed: '%s'\n"
-         "  %s:%i at %08x\n",
-         __assertion, __file, __line, (unsigned)__builtin_return_address(0));
+         "  %s:%i at "L4_PTR_FMT"\n",
+         __assertion, __file, __line, (Address)__builtin_return_address(0));
 
   exit(1);
 }

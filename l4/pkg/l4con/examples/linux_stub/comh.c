@@ -141,11 +141,7 @@ comh_thread(void *data)
       if (!atomic_read(&comh->valid))
 	{
 	  /* next entry is still not valid -- goto sleep */
-	  l4_umword_t dummy;
-	  l4_msgdope_t result;
-
-	  l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
-			 L4_IPC_NEVER, &result);
+	  l4_ipc_sleep(L4_IPC_NEVER);
 	}
       comh_sleep_state = 0;
 

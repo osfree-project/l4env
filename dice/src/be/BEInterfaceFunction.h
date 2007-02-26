@@ -40,7 +40,8 @@ class CBEContext;
  *  \ingroup backend
  *  \brief the function class for the back-end
  *
- * This class contains resembles a back-end function which belongs to a front-end interface (server loop, etc.)
+ * This class contains resembles a back-end function which belongs to a
+ * front-end interface (server loop, etc.)
  */
 class CBEInterfaceFunction : public CBEFunction
 {
@@ -48,17 +49,18 @@ class CBEInterfaceFunction : public CBEFunction
 public:
     /** \brief constructor
      */
-    CBEInterfaceFunction();
-    virtual ~CBEInterfaceFunction();
+    CBEInterfaceFunction(FUNCTION_TYPE nFunctionType);
+    ~CBEInterfaceFunction();
 
 protected:
     /** \brief copy constructor */
     CBEInterfaceFunction(CBEInterfaceFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
+    virtual void AddParameters(void);
 };
 
 #endif // !__DICE_BEINTERFACEFUNCTION_H__

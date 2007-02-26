@@ -85,6 +85,28 @@ struct lx_stat {
 };
 
 /*
+ * socket/net defines
+ */
+#define LX_SOCK_STREAM 1
+#define LX_PF_LOCAL    1
+#define LX_PF_UNIX     LX_PF_LOCAL
+#define LX_AF_UNIX     LX_PF_LOCAL
+#define LX_AF_LOCAL    LX_AF_UNIX
+
+#define LX_SOCKADDR_COMMON_SIZE  (sizeof(unsigned short int))
+
+struct lx_sockaddr {
+	unsigned short int sa_family;
+	char sa_data[14];
+};
+
+struct lx_sockaddr_un {
+	unsigned short int sun_family;
+	char sun_path[108];
+};
+
+
+/*
  * fcntl defines
  */
 #define LX_O_RDONLY		00
@@ -167,6 +189,7 @@ extern int  lx_ipc(unsigned int call, int first, int second, int third, const vo
 extern int  lx_select(int n, lx_fd_set *readfds, lx_fd_set *writefds, lx_fd_set *exceptfds, struct lx_timeval *timeout);
 extern int  lx_poll(struct lx_pollfd *fds, lx_nfds_t nfds, int timeout);
 extern long lx_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
+extern int  lx_socketcall(int call, unsigned long *args);
 
 /*
  * Wrapper functions
@@ -178,6 +201,9 @@ extern unsigned int lx_msleep(unsigned int mseconds);
 extern lx_pid_t lx_wait(int *wait_stat);
 
 extern void *lx_shmat(int shmid, const void *shmaddr, int shmflg);
+
+extern int  lx_socket(int family, int type, int protocol);
+extern int  lx_connect(int sockfd, const struct lx_sockaddr *saddr, unsigned long addrlen);
 
 extern void lx_outchar(unsigned char c);
 extern void lx_outdec32(unsigned int i);

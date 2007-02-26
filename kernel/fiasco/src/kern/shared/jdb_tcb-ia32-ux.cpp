@@ -19,6 +19,7 @@ IMPLEMENTATION [ia32,ux]:
 #include "static_init.h"
 #include "thread.h"
 #include "types.h"
+#include "cpu.h"
 
 class Jdb_tcb : public Jdb_module
 {
@@ -134,6 +135,7 @@ Jdb_tcb_ptr::in_backtrace(Address bt_start, Address tcb)
 
 PUBLIC
 Jdb_tcb::Jdb_tcb()
+  : Jdb_module("INFO")
 {
   static Jdb_handler enter(at_jdb_enter);
 
@@ -184,12 +186,12 @@ Jdb_tcb::print_entry_frame_regs(Task_num task)
 {
   Jdb_entry_frame *ef = Jdb::get_entry_frame();
   int from_user       = ef->from_user();
-  Address disass_addr = ef->eip;
+  Address disass_addr = ef->ip();
 
   // registers, disassemble
   printf("EAX=%08lx  ESI=%08lx  DS=%04lx\n"
 	 "EBX=%08lx  EDI=%08lx  ES=%04lx     ",
-	 ef->eax, ef->esi, ef->ds & 0xffff, ef->ebx, ef->edi, ef->es & 0xffff);
+	 ef->_eax, ef->_esi, ef->_ds & 0xffff, ef->_ebx, ef->_edi, ef->_es & 0xffff);
 
   if (jdb_disasm_one_line != 0)
     {
@@ -199,20 +201,21 @@ Jdb_tcb::print_entry_frame_regs(Task_num task)
     }
 
   printf("ECX=%08lx  EBP=%08lx  GS=%04lx     ",
-	 ef->ecx, ef->ebp, ef->gs & 0xffff);
+	 ef->_ecx, ef->_ebp, ef->_gs & 0xffff);
 
   if (jdb_disasm_one_line != 0)
     jdb_disasm_one_line(-40, disass_addr, 0, from_user ? task : 0);
 
   printf("EDX=%08lx  ESP=%08lx  SS=%04lx\n"
-	 "trapno %ld, error %08lx, from %s mode\n"
+	 "trap %ld (%s), error %08lx, from %s mode\n"
 	 "CS=%04lx  EIP=%s%08lx\033[m  EFlags=%08lx\n",
-	 ef->edx, ef->_get_esp(), ef->_get_ss() & 0xffff,
-	 ef->trapno, ef->err, from_user ? "user" : "kernel",
-	 ef->cs & 0xffff, Jdb::esc_emph, ef->eip, ef->eflags);
+	 ef->_edx, ef->sp(), ef->ss() & 0xffff,
+	 ef->_trapno, Cpu::exception_string(ef->_trapno), ef->_err,
+	 from_user ? "user" : "kernel",
+	 ef->cs() & 0xffff, Jdb::esc_emph, ef->ip(), ef->flags());
 
-  if (ef->trapno == 14)
-    printf("page fault linear address %08lx\n", ef->cr2);
+  if (ef->_trapno == 14)
+    printf("page fault linear address "L4_PTR_FMT"\n", ef->_cr2);
 }
 
 static void
@@ -263,7 +266,7 @@ Jdb_tcb::info_thread_state(Thread *t, Jdb::Guessed_thread_state state)
 	     "page fault linear address %08lx",
 	     p.top_value( -7), p.top_value( -8), p.top_value(-6), 
 	     p.top_value( -9), p.top_value( -2), p.top_value(-1) & 0xffff, 
-	     p.top_value(-10), p.top_value(-11));
+	     p.top_value(-11), p.top_value(-10));
       break;
     case Jdb::s_interrupt:
       printf("EAX=%08lx\n"
@@ -309,7 +312,7 @@ Jdb_tcb::show(L4_uid tid, int level)
 {
 new_tcb:
 
-  Thread *t              = Thread::lookup(tid);
+  Thread *t              = Thread::id_to_tcb(tid);
   Thread *t_current      = Jdb::get_current_active();
   bool is_current_thread;
   bool redraw_screen     = true;
@@ -333,7 +336,7 @@ new_tcb:
       return NOTHING;
     }
 
-  Address ksp  = is_current_thread ? ef->get_ksp()
+  Address ksp  = is_current_thread ? ef->ksp()
 				   : (Address)t->get_kernel_sp();
   Address tcb  = (Address)context_of((void*)ksp);
   Jdb_tcb_ptr current(ksp);
@@ -409,10 +412,15 @@ whole_screen:
 	  t->sched()->left(), t->sched()->quantum(), Config::char_micro);
   t->_pager->print_uid(3);
 
+  putstr("\tcap: ");
+  t->_cap_handler->print_uid(3);
+
   putstr("\npreemptr: ");
   Thread::lookup(context_of(t->preemption()->receiver()))->print_uid(3);
 
-  putstr("\t\t\tready lnk: ");
+  printf("\t%smonitored", t->space()->task_caps_enabled() ? "" : "not ");
+
+  putstr("\tready lnk: ");
   if (t->state() & Thread_ready)
     {
       if (t->_ready_next)
@@ -497,7 +505,7 @@ dump_stack:
 		  continue;
 		}
 
-	      char *s1="", *s2 = "";
+	      char const *s1="", *s2 = "";
     	      if (p.is_user_value())
 		{
 		  s1 = Jdb::esc_iret;
@@ -715,19 +723,19 @@ dump_stack:
 
 		      switch (reg)
 			{
-			case  1: x= 4; y= 9; reg_ptr = &ef->eax; break;
-			case  2: x= 4; y=10; reg_ptr = &ef->ebx; break;
-			case  3: x= 4; y=11; reg_ptr = &ef->ecx; break;
-			case  4: x= 4; y=12; reg_ptr = &ef->edx; break;
-			case  5: x=18; y=11; reg_ptr = &ef->ebp; break;
-			case  6: x=18; y= 9; reg_ptr = &ef->esi; break;
-			case  7: x=18; y=10; reg_ptr = &ef->edi; break;
-			case  8: x=13; y=14; reg_ptr = &ef->eip; break;
+			case  1: x= 4; y= 9; reg_ptr = &ef->_eax; break;
+			case  2: x= 4; y=10; reg_ptr = &ef->_ebx; break;
+			case  3: x= 4; y=11; reg_ptr = &ef->_ecx; break;
+			case  4: x= 4; y=12; reg_ptr = &ef->_edx; break;
+			case  5: x=18; y=11; reg_ptr = &ef->_ebp; break;
+			case  6: x=18; y= 9; reg_ptr = &ef->_esi; break;
+			case  7: x=18; y=10; reg_ptr = &ef->_edi; break;
+			case  8: x=13; y=14; reg_ptr = &ef->_eip; break;
 			case  9: // we have no esp if we come from kernel
 				 if (!ef->from_user())
 				   goto no_change;
-				 x=18; y=12; reg_ptr = &ef->esp; break;
-			case 10: x=35; y=12; reg_ptr = &ef->eflags; 
+				 x=18; y=12; reg_ptr = &ef->_esp; break;
+			case 10: x=35; y=12; reg_ptr = &ef->_eflags; 
 				 break;
 			default: goto no_change;
 			}
@@ -735,7 +743,8 @@ dump_stack:
 		      Jdb::cursor(y+1, x+1);
 		      putstr("        ");
 		      Jdb::printf_statline("tcb", 0, "edit %s = %08lx", 
-					   Jdb::reg_names[reg-1], *reg_ptr);
+					   Jdb_screen::Reg_names[reg-1],
+					   *reg_ptr);
 		      Jdb::cursor(y+1, x+1);
 		      if (Jdb_input::get_mword(&value, 8, 16))
 			*reg_ptr = value;
@@ -831,7 +840,7 @@ Jdb_tcb::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_tcb::cmds() const
 {
   static Cmd cs[] =
@@ -846,7 +855,7 @@ Jdb_tcb::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_tcb::num_cmds() const
 { return 1; }
 
@@ -864,7 +873,7 @@ void
 Jdb_tcb::print_regs_invalid_tid()
 {
   const Mword mask 
-    = (Config::thread_block_size * Config::max_threads()) - 1;
+    = (Config::thread_block_size * Mem_layout::max_threads()) - 1;
   const Mword tsksz = Config::thread_block_size * L4_uid::threads_per_task();
 
   LThread_num task = ((Address)Jdb::get_thread() & mask) / tsksz;

@@ -3,7 +3,7 @@
 #include "initcalls.h"
 
 /**
- * definitions for static, pre-main initialization suff
+ * definitions for static, pre-main initialization stuff
  */
 #ifndef STATIC_INIT_H
 #define STATIC_INIT_H

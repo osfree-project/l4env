@@ -74,7 +74,7 @@ typedef struct
 
 } packet_data_t;
 
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
 /* the context for decoding time prediction */
 typedef struct
 {
@@ -82,6 +82,7 @@ typedef struct
   char *learn_file;
   /* the file to load previous data from for prediction */
   char *predict_file;
+#if PREDICT_DECODING_TIME
   /* the predictor and its allocator */
   predictor_t *predictor;
   /* prediction functions */
@@ -94,6 +95,7 @@ typedef struct
   /* cumulative decoding time and overhead */
   l4_uint64_t decoding_time;
   l4_uint64_t prediction_overhead;
+#endif
 } prediction_context_t;
 #endif
 
@@ -185,7 +187,7 @@ typedef struct
   int rt_verbose_pipc;
 #endif
 
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   prediction_context_t *predict;
 #endif
 

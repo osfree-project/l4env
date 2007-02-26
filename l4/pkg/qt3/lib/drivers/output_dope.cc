@@ -1,3 +1,20 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   lib/drivers/output_dope.cc
+ * \brief  DOpE framebuffer driver for Qt/Embedded.
+ *
+ * \date   10/24/2004
+ * \author Josef Spillner <js177634@inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2005 Technische Universitaet Dresden
+ * This file is part of the Qt3 port for L4/DROPS, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the COPYING file
+ * for details.
+ */
+
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/sys/kdebug.h>

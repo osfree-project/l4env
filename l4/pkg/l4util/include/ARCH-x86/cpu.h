@@ -40,6 +40,15 @@ L4_INLINE unsigned int l4util_cpu_capabilities(void);
  */
 L4_INLINE unsigned int l4util_cpu_capabilities_nocheck(void);
 
+/**
+ * Generic CPUID access function.
+ * \ingroup cpu
+ */
+L4_INLINE void
+l4util_cpu_cpuid(unsigned long mode,
+                 unsigned long *eax, unsigned long *ebx,
+                 unsigned long *ecx, unsigned long *edx);
+
 static inline void
 l4util_cpu_pause(void)
 {
@@ -69,19 +78,27 @@ l4util_cpu_has_cpuid(void)
   return eax & 0x200000;
 }
 
+L4_INLINE void
+l4util_cpu_cpuid(unsigned long mode,
+                 unsigned long *eax, unsigned long *ebx,
+                 unsigned long *ecx, unsigned long *edx)
+{
+  asm volatile("cpuid"
+               : "=a" (*eax),
+                 "=b" (*ebx),
+                 "=c" (*ecx),
+                 "=d" (*edx)
+               : "a"  (mode)
+               : "cc");
+}
+
 L4_INLINE unsigned int
 l4util_cpu_capabilities_nocheck(void)
 {
-  unsigned int dummy;
-  unsigned int capability;
+  unsigned long dummy, capability;
 
   /* get CPU capabilities */
-  asm volatile("pushl %%ebx ; cpuid ; popl %%ebx"
-               : "=a" (dummy),
-                 "=c" (dummy),
-                 "=d" (capability)
-               : "a" (0x00000001)
-               : "cc");
+  l4util_cpu_cpuid(1, &dummy, &dummy, &dummy, &capability);
 
   return capability;
 }

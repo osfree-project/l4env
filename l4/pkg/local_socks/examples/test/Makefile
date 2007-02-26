@@ -4,8 +4,8 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= local_socks-test-server local_socks-test-client
 
 # the default relocation address. This may be superseded by a STATIC file.
-DEFAULT_RELOC_local_socks-test-server	= 0x01900000
-DEFAULT_RELOC_local_socks-test-client	= 0x01950000
+DEFAULT_RELOC_local_socks-test-server	= 0x01800000
+DEFAULT_RELOC_local_socks-test-client	= 0x01850000
 
 # list your .c files here
 SRC_C				= util.c

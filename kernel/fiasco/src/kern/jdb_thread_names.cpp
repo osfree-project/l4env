@@ -89,7 +89,7 @@ Name_entry::set(Global_id id, const char *name)
   _id = id;
   for (i=0; i<sizeof(_name)-1; i++)
     {
-      _name[i] = current_space()->peek_user(name++);
+      _name[i] = current_mem_space()->peek_user(name++);
       if (!_name[i])
 	break;
     }
@@ -116,9 +116,7 @@ Jdb_thread_names::register_thread(Global_id id, const char *name)
     {
       Name_entry *n;
 
-      id.version(0);
-      n = lookup(id);
-      if (n)
+      if ((n = lookup(id, false)))
 	n->invalidate();
       return;
     }
@@ -140,10 +138,12 @@ Jdb_thread_names::register_thread(Global_id id, const char *name)
 
 PUBLIC static
 Name_entry *
-Jdb_thread_names::lookup(Global_id id)
+Jdb_thread_names::lookup(Global_id id, bool strict)
 {
   for (int i=0; i<Name_entries; i++)
-    if (_names[i].id() == id)
+    if (( strict && _names[i].id() == id) ||
+	(!strict && _names[i].id().d_task()   == id.d_task()
+	         && _names[i].id().d_thread() == id.d_thread()))
       return &_names[i];
 
   return 0;

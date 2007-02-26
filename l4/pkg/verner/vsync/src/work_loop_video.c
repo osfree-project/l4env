@@ -53,7 +53,7 @@
 /* rt support */
 #include <l4/sys/rt_sched.h> // RT Scheduling
 #include <l4/rmgr/librmgr.h> // rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
+#include <l4/sigma0/kip.h> // l4sigma0_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -279,7 +279,7 @@ work_loop_video (void *data)
 
 #if !RT_USE_CPU_RESERVE
   /* Get KIP */
-  kinfo = l4util_kip_map ();
+  kinfo = l4sigma0_kip_map (L4_INVALID_ID);
   if (!kinfo)
     Panic ("get KIP failed!\n");
 #endif

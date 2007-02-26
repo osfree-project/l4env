@@ -27,8 +27,6 @@
  */
 
 #include "be/BEException.h"
-#include "be/BEContext.h"
-
 #include "fe/FEIdentifier.h"
 
 
@@ -36,7 +34,8 @@ CBEException::CBEException()
 {
 }
 
-CBEException::CBEException(CBEException & src):CBEObject(src)
+CBEException::CBEException(CBEException & src)
+ : CBEObject(src)
 {
     m_sName = src.m_sName;
 }
@@ -48,15 +47,14 @@ CBEException::~CBEException()
 
 /** \brief prepares the target code generation for this element
  *  \param pFEException the respective front-end exception
- *  \param pContext the context of the code generation
+
  *  \return true if code generationwas successful
  */
-bool CBEException::CreateBackEnd(CFEIdentifier * pFEException, CBEContext * pContext)
+void
+CBEException::CreateBackEnd(CFEIdentifier * pFEException)
 {
     // call CBEObject's CreateBackEnd method
-    if (!CBEObject::CreateBackEnd(pFEException))
-        return false;
+    CBEObject::CreateBackEnd(pFEException);
 
     m_sName = pFEException->GetName();
-    return true;
 }

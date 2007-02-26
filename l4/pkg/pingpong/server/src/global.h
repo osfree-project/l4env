@@ -13,6 +13,7 @@
 #define NR_MSG        8
 #define NR_DWORDS     4093  /* whole message descriptor occupies 4 pages */
 #define NR_STRINGS    4
+#define NR_BYTES      ((NR_DWORDS + 3) * 4)
 
 #define SMAS_SIZE     16
 
@@ -26,13 +27,14 @@
 #define REGISTER_DWORDS 2
 #endif
 
-#define INTRA		0
-#define INTER		1
+enum test_type { INTER, INTRA, SINGLE, };
+
+enum callmodes { INT30, SYSENTER, KIPCALL, NR_MODES };
 
 #define TIMER_ON	\
-  do { if (fiasco_running) fiasco_timer_disable(); } while (0)
-#define TIMER_OFF	\
   do { if (fiasco_running) fiasco_timer_enable(); } while (0)
+#define TIMER_OFF	\
+  do { if (fiasco_running) fiasco_timer_disable(); } while (0)
 
 extern void create_thread(l4_threadid_t id, l4_umword_t eip, 
 			  l4_umword_t esp, l4_threadid_t new_pager);
@@ -42,7 +44,6 @@ extern void test_cache_tlb(int nr);
 extern void flooder(void);
 extern void test_flooder(void);
 
-extern void dummy_exception13_handler(void);
 extern void exception6_handler(void);
 extern void exception6_c_handler(void);
 
@@ -58,11 +59,11 @@ extern l4_threadid_t intra_ping, inter_ping;
 extern l4_threadid_t intra_pong, inter_pong;
 extern l4_umword_t scratch_mem, fpagesize;
 extern l4_umword_t strsize, strnum, rounds;
-extern l4_umword_t mhz;
+extern l4_uint32_t mhz;
 extern l4_umword_t global_rounds;
 extern int use_superpages;
 extern int deceit;
-extern int sysenter;
+extern int callmode;
 extern int ux_running;
 extern int fiasco_running;
 extern int dont_do_cold;

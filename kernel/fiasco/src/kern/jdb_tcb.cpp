@@ -5,6 +5,7 @@ INTERFACE[ia32,ux,arm]:
 IMPLEMENTATION[ia32,ux,arm]:
 
 #include <cstdio>
+#include <cstring>
 
 #include "entry_frame.h"
 #include "jdb.h"
@@ -31,6 +32,8 @@ class Jdb_tcb : public Jdb_module
 
 private:
   static void print_entry_frame_regs();
+protected:
+  static bool is_mapped(void const *addr);
 };
 
 class Jdb_tcb_ptr
@@ -214,7 +217,7 @@ Jdb_tcb::show(L4_uid tid, int level)
 {
 new_tcb:
 
-  Thread *t              = Thread::lookup(tid);
+  Thread *t              = Thread::id_to_tcb(tid);
   Thread *t_current      = Jdb::get_current_active();
   bool is_current_thread;
   bool redraw_screen     = true;
@@ -223,7 +226,7 @@ new_tcb:
     {
 #if 0
       const Mword mask 
-	= (Config::thread_block_size * Config::max_threads()) - 1;
+	= (Config::thread_block_size * Mem_layout::max_threads()) - 1;
       const Mword tsksz = Config::thread_block_size*L4_uid::threads_per_task();
       LThread_num task = ((Address)Jdb::get_thread() & mask) / tsksz;
 #endif
@@ -302,38 +305,47 @@ whole_screen:
     {
       Signed64 diff = (t->_timeout->get_timeout()) * 1000;
       if (diff < 0)
-	diff = 0;
-      time_str[Jdb::write_ll_ns(diff, time_str, 
-			        12 < sizeof(time_str)-1 ? 12 : sizeof(time_str)-1,
-	                        false)] = '\0';
-      printf("%s", time_str);
+	strcpy(time_str, "over");
+      else
+	Jdb::write_ll_ns(diff, time_str,
+	                 11 < sizeof(time_str)-1 ? 11 : sizeof(time_str)-1,
+	                 false);
+      printf("%-13s", time_str);
     }
 
   putstr("\ncpu time: ");
-  time_str[Jdb::write_ll_ns(t->consumed_time() * 1000, time_str, 
-			    11 < sizeof(time_str)-1 ? 11 : sizeof(time_str)-1,
-                            false)] = '\0';
-  printf("%s", time_str);
+  Jdb::write_ll_ns(t->consumed_time()*1000, time_str, 
+                   11 < sizeof(time_str) ? 11 : sizeof(time_str), false);
+  printf("%-13s", time_str);
 
   printf("\t\t\ttimeslice: %llu/%llu %cs\n"
          "pager\t: ",
 	  t->sched()->left(), t->sched()->quantum(), Config::char_micro);
   t->_pager->print_uid(3);
 
+  putstr("\tcap: ");
+  t->_cap_handler->print_uid(3);
+
   putstr("\npreemptr: ");
   Thread::lookup(context_of(t->preemption()->receiver()))->print_uid(3);
 
-  putstr("\t\t\tready lnk : ");
+  printf("\t%smonitored", t->space()->task_caps_enabled() ? "" : "not ");
+
+  putstr("\tready lnk: ");
   if (t->state() & Thread_ready)
     {
       if (t->_ready_next)
 	Thread::lookup(t->_ready_next)->print_uid(3);
+      else if (is_current_thread)
+	putstr(" ???.??");
       else
-	putstr("???.??");
+	putstr("\033[31;1m???.??\033[m");
       if (t->_ready_prev)
 	Thread::lookup(t->_ready_prev)->print_uid(4); 
+      else if (is_current_thread)
+	putstr(" ???.??");
       else
-      	putstr(" ???.??");
+      	putstr(" \033[31;1m???.??\033[m");
       putchar('\n');
     }
   else
@@ -349,6 +361,9 @@ whole_screen:
   else
     putstr(" ---.--");
   putchar('\n');
+
+
+//  printf("last_irq = %08lx\n", t->last_irq);
 
   if (is_current_thread)
     print_entry_frame_regs();
@@ -409,12 +424,12 @@ dump_stack:
 
       if (p.valid())
 	{
-	  printf("%03lx:", p.addr() & 0xfff);
+	  printf("    %03lx ", p.addr() & 0xfff);
 	  for (int x=0; x <= 7; x++, p+=1)
 	    {
 	      // It is possible that we have an invalid kernel_sp
 	      // (in result of an kernel error). Handle it smoothly.
-	      if (!Kmem::virt_to_phys((const void*)p.addr()).is_null())
+	      if (is_mapped((const void*)p.addr()))
     		printf(" %s%08lx%s", p.is_user_value() ? Jdb::esc_iret : "",
 				     p.value(),
 				     p.is_user_value() ? "\033[m" : "");
@@ -435,14 +450,18 @@ dump_stack:
       current.offs(absy*32 + addy*32 + addx*4);
       if (current.valid())
 	{
-	  Jdb::cursor(addy+17, 9*addx+6);
+	  Jdb::cursor(addy+17, 1);
+	  printf("%08lx", current.addr());
+	  Jdb::cursor(addy+17, 9*addx+10);
 	  printf("%s%08lx\033[m", Jdb::esc_emph, current.value());
 	}
-      Jdb::cursor(addy+17, 9*addx+6);
+      Jdb::cursor(addy+17, 9*addx+10);
       int c=Jdb_core::getchar();
       if (current.valid())
 	{
-	  Jdb::cursor(addy+17, 9*addx+6);
+	  Jdb::cursor(addy+17, 1);
+	  printf("    %03lx ", current.addr() & 0xfff);
+	  Jdb::cursor(addy+17, 9*addx+10);
 	  printf("%s%08lx\033[m", current.is_user_value() ? Jdb::esc_iret : "", 
 	                          current.value());
 	}
@@ -452,7 +471,7 @@ dump_stack:
 	return GO_BACK;
 
       Mword   lines    = Jdb_screen::height() - 17;
-      Mword   cols     = 8;
+      Mword   cols     = Jdb_screen::Columns - 1;
       Address max_absy = Config::thread_block_size/32 - lines;
       if (lines > Config::thread_block_size/32)
 	max_absy = 0;
@@ -502,7 +521,7 @@ dump_stack:
 		}
 	      break;
 	    case 'r': // ready-list
-	      putchar(c);
+	      putstr("[n]ext/[p]revious in ready list?");
 	      switch (Jdb_core::getchar())
 		{
 		case 'n':
@@ -530,7 +549,7 @@ dump_stack:
 		}
 	      break;
 	    case 'p': // present-list or show_pages
-	      putchar(c);
+	      putstr("[n]ext/[p]revious in present list?");
 	      switch (c=Jdb_core::getchar()) 
 		{
 		case 'n':
@@ -566,14 +585,14 @@ dump_stack:
 		  Mword value;
 		  int c;
 
-		  Jdb::cursor(addy+17, 9*addx+6);
+		  Jdb::cursor(addy+17, 9*addx+10);
 		  printf("        ");
-		  Jdb::printf_statline("tcb", 
+		  Jdb::printf_statline("tcb",
 					is_current_thread
-					  ? "  (<Space>=edit registers)" : "",
-					"edit <%08x> = %08x",
+					  ? "<Space>=edit registers" : 0,
+					"edit <%08lx> = %08lx",
 				        current.addr(), current.value());
-		  Jdb::cursor(addy+17, 9*addx+6);
+		  Jdb::cursor(addy+17, 9*addx+10);
 		  c = Jdb_core::getchar();
 		  if (c==KEY_ESC)
 		    {
@@ -589,7 +608,7 @@ dump_stack:
 		      Jdb::cursor(addy+17, 9*addx+6);
 		      if (!Jdb_input::get_mword(&value, c, 16))
 			{
-			  Jdb::cursor(addy+17, 9*addx+6);
+			  Jdb::cursor(addy+17, 9*addx+10);
 			  printf("%08lx", current.value());
 			  break;
 			}
@@ -730,7 +749,7 @@ Jdb_tcb::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_tcb::cmds() const
 {
   static Cmd cs[] =
@@ -745,7 +764,7 @@ Jdb_tcb::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_tcb::num_cmds() const
 { return 1; }
 

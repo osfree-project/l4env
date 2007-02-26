@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file    l4env/inlude/errno.h 
+ * \file    l4env/inlude/errno.h
  * \brief   L4ENV, error codes and erroor-string functions.
  * \ingroup errno
  *
@@ -12,16 +12,16 @@
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
@@ -36,7 +36,7 @@
  *****************************************************************************/
 
 #define L4_EUNKNOWN        1  /* unknown error */
-#define L4_ENOMEM          2  /* cannot allocate memory */  
+#define L4_ENOMEM          2  /* cannot allocate memory */
 #define L4_EINVAL          3  /* invalid argument */
 #define L4_EINVAL_OFFS     4  /* invalid offset in dataspace */
 #define L4_EIPC            5  /* IPC error */
@@ -79,7 +79,7 @@
 /* 0x100 (256) .. 0x10F (271) are reserved for event-package */
 
 /*****************************************************************************
- *** typedefs 
+ *** typedefs
  *****************************************************************************/
 
 /**
@@ -106,7 +106,7 @@ typedef struct l4env_err_desc
 /**
  * Declare error message table
  * \ingroup errno
- * 
+ *
  * \param  vis            Error table scope (global or static)
  * \param  name           Error table name
  * \param  arr            Error table definition (l4env_err_msg_t array)
@@ -117,11 +117,11 @@ typedef struct l4env_err_desc
                               sizeof(l4env_err_description_##name)  \
                                   / sizeof(l4env_err_msg_t),        \
                               l4env_err_description_##name}
-                              
+
 /**
  * Construct a description of error codes
  * \ingroup errno
- * 
+ *
  * \param  name           Error table name
  * \param  arr            Error table definition (l4env_err_msg_t array)
  */
@@ -130,7 +130,7 @@ typedef struct l4env_err_desc
 /**
  * Construct a description of error code, static version
  * \ingroup errno
- * 
+ *
  * \param  name           Error table name
  * \param  arr            Error table definition (l4env_err_msg_t array)
  */
@@ -142,7 +142,7 @@ typedef struct l4env_err_desc
  */
 typedef struct l4env_err_fn_desc
 {
-  struct l4env_err_fn_desc * next;         
+  struct l4env_err_fn_desc * next;
   char *                     (*fn)(int);   ///< error-string function
   const char *               unknown;      ///< string for unkown error code
   int                        unknown_len;  ///< length of unknown-string
@@ -204,7 +204,7 @@ __BEGIN_DECLS;
 extern const char * l4env_err_unknown;
 
 /*****************************************************************************/
-/** 
+/**
  * \brief Register an error-function
  * \ingroup errno
  *
@@ -232,12 +232,12 @@ extern const char * l4env_err_unknown;
  * registerd/used.
  */
 /*****************************************************************************/
-extern int 
+extern int
 l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc);
 
 /*****************************************************************************/
-/** 
- * \brief  Register an error-description structure containing error-codes 
+/**
+ * \brief  Register an error-description structure containing error-codes
  *         and messages
  * \ingroup errno
  *
@@ -255,11 +255,11 @@ l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc);
  * array, nor returns any of the registered functions a valid error-string.
  */
 /*****************************************************************************/
-extern int 
+extern int
 l4env_err_register_desc(l4env_err_desc_t * desc);
 
 /*****************************************************************************/
-/** 
+/**
  * \brief  Return string describing error code
  * \ingroup errno
  *

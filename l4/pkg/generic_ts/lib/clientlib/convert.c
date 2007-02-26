@@ -32,10 +32,10 @@ l4ts_taskno_to_taskid(l4_uint32_t tasknr, l4_taskid_t *taskid)
 
   if ((error = l4_ts_taskno_to_taskid_call(&l4ts_server_id, tasknr, 
 				      taskid, &_env)) < 0
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
-	   l4util_idstr(l4ts_server_id), error, _env.major);
+	   l4util_idstr(l4ts_server_id), error, DICE_EXCEPTION_MAJOR(&_env));
       return error ? error : -L4_EIPC;
     }
 

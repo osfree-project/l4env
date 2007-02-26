@@ -65,12 +65,12 @@ __command_thread(void * data)
 l4_int32_t 
 l4blk_cmd_create_stream_component(CORBA_Object _dice_corba_obj,
                                   l4blk_driver_id_t drv,
-                                  l4_uint32_t device,
-                                  l4_uint32_t bandwidth,
-                                  l4_uint32_t period,
-                                  l4_uint32_t blk_size,
+                                  unsigned long device,
+                                  unsigned long bandwidth,
+                                  unsigned long period,
+                                  unsigned long blk_size,
                                   float q,
-                                  l4_uint32_t meta_int,
+                                  unsigned long meta_int,
                                   l4blk_stream_t * stream,
                                   CORBA_Server_Environment * _dice_corba_env)
 {
@@ -102,8 +102,8 @@ l4_int32_t
 l4blk_cmd_start_stream_component(CORBA_Object _dice_corba_obj,
                                  l4blk_driver_id_t drv,
                                  l4blk_stream_t stream,
-                                 l4_uint32_t time,
-                                 l4_uint32_t request_no,
+                                 unsigned long time,
+                                 unsigned long request_no,
                                  CORBA_Server_Environment * _dice_corba_env)
 {
   /* not supported */

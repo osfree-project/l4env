@@ -24,6 +24,9 @@ IMPLEMENTATION:
 
 class Jdb_disasm : public Jdb_module
 {
+public:
+  Jdb_disasm() FIASCO_INIT;
+private:
   static char show_intel_syntax;
   static char show_lines;
 };
@@ -230,21 +233,27 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
       switch (int c = Jdb_core::getchar())
 	{
 	case KEY_CURSOR_LEFT:
+	case 'h':
 	  virt -= 1;
 	  break;
 	case KEY_CURSOR_RIGHT:
+	case 'l':
 	  virt += 1;
 	  break;
 	case KEY_CURSOR_DOWN:
+	case 'j':
 	  disasm_offset(virt, +1, task);
 	  break;
 	case KEY_CURSOR_UP:
+	case 'k':
 	  disasm_offset(virt, -1, task);
 	  break;
 	case KEY_PAGE_UP:
+	case 'K':
 	  disasm_offset(virt, -Jdb_screen::height()+2, task);
 	  break;
 	case KEY_PAGE_DOWN:
+	case 'J':
 	  disasm_offset(virt, +Jdb_screen::height()-2, task);
 	  break;
 	case ' ':
@@ -254,6 +263,7 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
 	  show_intel_syntax ^= 1;
 	  break;
 	case KEY_CURSOR_HOME:
+	case 'H':
 	  if (level > 0)
 	    return GO_BACK;
 	  break;
@@ -296,7 +306,7 @@ Jdb_disasm::action(int cmd, void *&args, char const *&fmt, int &next_char)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_disasm::cmds() const
 {
   static Cmd cs[] =
@@ -310,11 +320,11 @@ Jdb_disasm::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_disasm::num_cmds() const
 { return 1; }
 
-PUBLIC
+IMPLEMENT
 Jdb_disasm::Jdb_disasm()
   : Jdb_module("INFO")
 {}

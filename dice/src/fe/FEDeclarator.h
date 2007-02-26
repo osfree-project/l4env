@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEDeclarator.h
- *    \brief   contains the declaration of the class CFEDeclarator
+ *  \file    dice/src/fe/FEDeclarator.h
+ *  \brief   contains the declaration of the class CFEDeclarator
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -44,11 +44,11 @@ enum DECL_TYPE {
 #include "fe/FEIdentifier.h"
 
 /** \class CFEDeclarator
- *    \ingroup frontend
- *    \brief describes an declarator
+ *  \ingroup frontend
+ *  \brief describes an declarator
  *
- * This class is used to describe a declarator. A declarator can be, for instance,
- * a variable declaration, or a parameter.
+ * This class is used to describe a declarator. A declarator can be, for
+ * instance, a variable declaration, or a parameter.
  */
 class CFEDeclarator : public CFEIdentifier
 {
@@ -75,14 +75,12 @@ public:
 
 // operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual void SetBitfields(int nBitfields);
     virtual int GetBitfields();
     virtual CObject* Clone();
-    virtual bool IsReference();
     virtual DECL_TYPE GetType();
-    virtual int GetStars();
-    virtual void SetStars(int nNumStars);
+    int GetStars();
+    void SetStars(int nNumStars);
 
 protected:
     virtual void SetType(DECL_TYPE nNewType);
@@ -90,19 +88,17 @@ protected:
 // attributes
 protected:
     /** \var int m_nBitfields
-     *    \brief the bit-fields of a struct member
+     *  \brief the bit-fields of a struct member
      */
     int m_nBitfields;
     /** \var int m_nNumStars
-     *    \brief how many asterisks appear in declaration?
+     *  \brief how many asterisks appear in declaration?
      */
     int m_nNumStars;
-    /**    \var DECL_TYPE m_nType
-     *    \brief the type of the declaration (e.g. array declaration)
+    /** \var DECL_TYPE m_nType
+     *  \brief the type of the declaration (e.g. array declaration)
      */
     DECL_TYPE m_nType;
-
-    friend class CFETypedDeclarator;
 };
 
 #endif /* __DICE_FE_FEDECLARATOR_H__ */

@@ -61,19 +61,3 @@ CObject *CFEPipeType::Clone()
 {
     return new CFEPipeType(*this);
 }
-
-/** serialize this object
- *  \param pFile the file to serialize to/from
- */
-void CFEPipeType::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<pipe_type>\n");
-      pFile->IncIndent();
-      if (m_pType)
-          m_pType->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</pipe_type>\n");
-      }
-}

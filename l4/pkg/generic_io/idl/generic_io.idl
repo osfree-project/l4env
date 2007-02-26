@@ -101,10 +101,14 @@ library l4
       /**
        * \brief  Unregister io client.
        *
+       * \param  client  the client to unregister, must be equal to the
+       *                 caller if called by a client (this function is
+       *                 also called by the events thread).
+       *                 
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long unregister_client();
+      long unregister_client(l4_threadid_t client);
 
       /***********************************************************************/
       /**
@@ -158,6 +162,9 @@ library l4
        *
        * \param  addr  start of memory region
        * \param  len   length of memory region
+       * \param  flags bit 0=1: map memory cacheable (otherwise uncacheable)
+       *               bit 1=1: set MTRR with attribute ``write combining''
+       *                        to that physical memory range
        *
        * \retval region fpage for memory region
        * \retval offset in io region the requested memory starts
@@ -170,6 +177,7 @@ library l4
       /***********************************************************************/
       long request_mem_region([in] unsigned long addr,
                               [in] unsigned long len,
+			      [in] unsigned long flags,
                               [out] fpage *region,
                               [out] unsigned long *offset);
 
@@ -186,7 +194,7 @@ library l4
       /***********************************************************************/
       long search_mem_region([in]  unsigned long addr,
                              [out] unsigned long *start,
-			     [out] unsigned long *len);
+			     [out] l4_size_t *len);
 
       /***********************************************************************/
       /**
@@ -223,6 +231,18 @@ library l4
        */
       /***********************************************************************/
       long release_dma([in] unsigned long channel);
+
+      /***********************************************************************/
+      /**
+       * \brief  Release all ressources of a client. For internal use by
+       *         the event thread only.
+       *
+       * \param  client   Client
+       */
+      /***********************************************************************/
+      long release_client([in] l4_threadid_t client);
+
+
       /** @} */
 
       /**
@@ -327,7 +347,7 @@ library l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_set_power_state([in] l4_io_pdev_t pdev, [in, out] long *state);
+      long pci_set_power_state([in] l4_io_pdev_t pdev, [in, out] int *state);
 
       /***********************************************************************/
       /**
@@ -358,7 +378,7 @@ library l4
        */
       /***********************************************************************/
       long pci_read_config_word([in] l4_io_pdev_t pdev,
-                                [in] long offset, [out] unsigned short *val);
+                                [in] long offset, [out] l4_uint16_t *val);
 
       /***********************************************************************/
       /**
@@ -373,7 +393,7 @@ library l4
        */
       /***********************************************************************/
       long pci_read_config_dword([in] l4_io_pdev_t pdev,
-                                 [in] long offset, [out] unsigned long *val);
+                                 [in] long offset, [out] l4_uint32_t *val);
 
       /***********************************************************************/
       /**

@@ -53,11 +53,12 @@ l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_transfer_call(&(ds->manager),ds->id, &new_owner, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: transfer ownership failed, ds %u at "\
             l4util_idfmt", new owner "l4util_idfmt" (ret %d, exc %d)!", ds->id, 
-            l4util_idstr(ds->manager), l4util_idstr(new_owner), ret, _env.major);
+            l4util_idstr(ds->manager), l4util_idstr(new_owner), ret,
+	    DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
 	return ret;
       else

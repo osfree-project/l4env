@@ -1,0 +1,17 @@
+vpath %.offs $(SRC_DIR)
+
+include $(SRC_DIR)/Makefile
+
+io_info.o: l4io_info.offs.h
+io_info_ll.o: l4io_info.offs.h
+
+%.offs.h: %.offs
+	$(GENOFFSETS) -m c -o $@.c $<
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CC) -c $(CPPFLAGS) $(CFLAGS) $@.c -o $@.o
+	$(OBJCOPY) -j .e_length -j .offsets --adjust-section-vma .offsets=32 -Obinary $@.o $@.bin
+	$(GENOFFSETS) -m d -f $@.bin -o $@ $<
+
+
+clean::
+	rm -rf l4io_info.offs.*

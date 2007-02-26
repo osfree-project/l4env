@@ -2,7 +2,6 @@
 #define __L4__ARCH_ARM__KERNEL_H__
 
 #include <l4/sys/types.h>
-#include <l4/sys/compiler.h>
 
 /**
  * L4 Kernel Info Page.
@@ -14,10 +13,10 @@ typedef struct
   l4_umword_t            magic;               /**< Kernel Info Page
 					       **  identifier ("L4µK").
 					       **/
-  l4_umword_t            version;             ///< Kernel version
+  l4_uint32_t            version;             ///< Kernel version
   l4_uint8_t             offset_version_strings;
   l4_uint8_t             res0[3];
-  l4_umword_t            mem_info;
+  l4_umword_t            res01;
 
   /* the following stuff is undocumented; we assume that the kernel
      info page is located at offset 0x1000 into the L4 kernel boot
@@ -26,7 +25,7 @@ typedef struct
 
   /* offset 0x10 */
   l4_umword_t res1[4];
-  
+
   /* offset 0x20 */
   /* Sigma0 */
   l4_umword_t            sigma0_esp;          ///< Sigma0 start stack pointer
@@ -56,7 +55,7 @@ typedef struct
 					       **  - bits 8-15: set the number
 					       **    of mapping nodes.
 					       **/
-  l4_umword_t            reserved2;
+  l4_umword_t            mem_info;
   l4_umword_t            kdebug_config;       /**< Kernel debugger config.
 					       **
 					       **  Values:
@@ -115,7 +114,8 @@ typedef struct
   /* offset 0xB0 */
   l4_uint32_t            frequency_cpu;       ///< CPU frequency in kHz
   l4_uint32_t            frequency_bus;       ///< Bus frequency
-  l4_uint32_t            reserved4[2];
+  l4_umword_t		 user_ptr;
+  l4_uint32_t            reserved4[1];
 
   /* offset 0xC0 */
 
@@ -155,18 +155,18 @@ unsigned
 l4_kernel_info_get_num_mem_descs(l4_kernel_info_t *kip);
 
 L4_INLINE
-void 
+void
 l4_kernel_info_set_mem_desc(l4_kernel_info_mem_desc_t *md,
                             l4_addr_t start,
 			    l4_addr_t end,
 			    unsigned type,
 			    unsigned virt,
 			    unsigned sub_type);
-                   
+
 L4_INLINE
 l4_umword_t
 l4_kernel_info_get_mem_desc_start(l4_kernel_info_mem_desc_t *md);
- 
+
 L4_INLINE
 l4_umword_t
 l4_kernel_info_get_mem_desc_end(l4_kernel_info_mem_desc_t *md);
@@ -197,7 +197,7 @@ L4_INLINE
 l4_kernel_info_mem_desc_t *
 l4_kernel_info_get_mem_descs(l4_kernel_info_t *kip)
 {
-  return (l4_kernel_info_mem_desc_t *)(((l4_addr_t)kip) 
+  return (l4_kernel_info_mem_desc_t *)(((l4_addr_t)kip)
       + (kip->mem_info >> (sizeof(l4_umword_t) * 4)));
 }
 
@@ -209,7 +209,7 @@ l4_kernel_info_get_num_mem_descs(l4_kernel_info_t *kip)
 }
 
 L4_INLINE
-void 
+void
 l4_kernel_info_set_mem_desc(l4_kernel_info_mem_desc_t *md,
                             l4_addr_t start,
 			    l4_addr_t end,

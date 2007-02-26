@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
 
@@ -53,39 +53,40 @@ static int yuv_read(ByteIOContext *f,
     int size;
     URLContext *h;
     AVImageInfo info1, *info = &info1;
-    
+
+    img_size = url_fsize(f);
+
     /* XXX: hack hack */
     h = url_fileno(f);
-    img_size = url_seek(h, 0, SEEK_END);
     url_get_filename(h, fname, sizeof(fname));
 
     if (infer_size(&info->width, &info->height, img_size) < 0) {
-        return -EIO;
+        return AVERROR_IO;
     }
     info->pix_fmt = PIX_FMT_YUV420P;
-    
+
     ret = alloc_cb(opaque, info);
     if (ret)
         return ret;
-    
+
     size = info->width * info->height;
-    
+
     p = strrchr(fname, '.');
     if (!p || p[1] != 'Y')
-        return -EIO;
+        return AVERROR_IO;
 
     get_buffer(f, info->pict.data[0], size);
-    
+
     p[1] = 'U';
     if (url_fopen(pb, fname, URL_RDONLY) < 0)
-        return -EIO;
+        return AVERROR_IO;
 
     get_buffer(pb, info->pict.data[1], size / 4);
     url_fclose(pb);
-    
+
     p[1] = 'V';
     if (url_fopen(pb, fname, URL_RDONLY) < 0)
-        return -EIO;
+        return AVERROR_IO;
 
     get_buffer(pb, info->pict.data[2], size / 4);
     url_fclose(pb);
@@ -100,14 +101,14 @@ static int yuv_write(ByteIOContext *pb2, AVImageInfo *info)
     uint8_t *ptr;
     URLContext *h;
     static const char *ext = "YUV";
-    
+
     /* XXX: hack hack */
     h = url_fileno(pb2);
     url_get_filename(h, fname, sizeof(fname));
 
     p = strrchr(fname, '.');
     if (!p || p[1] != 'Y')
-        return -EIO;
+        return AVERROR_IO;
 
     width = info->width;
     height = info->height;
@@ -122,11 +123,11 @@ static int yuv_write(ByteIOContext *pb2, AVImageInfo *info)
             pb = &pb1;
             p[1] = ext[i];
             if (url_fopen(pb, fname, URL_WRONLY) < 0)
-                return -EIO;
+                return AVERROR_IO;
         } else {
             pb = pb2;
         }
-    
+
         ptr = info->pict.data[i];
         for(j=0;j<height;j++) {
             put_buffer(pb, ptr, width);
@@ -139,7 +140,7 @@ static int yuv_write(ByteIOContext *pb2, AVImageInfo *info)
     }
     return 0;
 }
-    
+
 static int yuv_probe(AVProbeData *pd)
 {
     if (match_ext(pd->filename, "Y"))

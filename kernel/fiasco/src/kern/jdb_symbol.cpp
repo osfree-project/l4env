@@ -1,5 +1,6 @@
 INTERFACE:
 
+#include <globalconfig.h>
 #include "l4_types.h"
 
 class Jdb_symbol_info
@@ -18,6 +19,13 @@ public:
   {
     // don't allow more than 2048 tasks to register their symbols to save space
     Max_tasks = L4_uid::Max_tasks < 2048 ? L4_uid::Max_tasks : 2048,
+#ifdef CONFIG_BIT32
+    Digits = 7,
+    Start  = 11,
+#else
+    Digits = 15,
+    Start  = 19,
+#endif
   };
 
 private:
@@ -84,7 +92,7 @@ Jdb_symbol_info::string_to_addr (const char *symstr)
 {
   Address addr = 0;
 
-  for (int i=0; i<= 7; i++)
+  for (int i=0; i<= Jdb_symbol::Digits; i++)
     {
       switch (Address c = *symstr++)
 	{
@@ -105,8 +113,8 @@ Jdb_symbol_info::string_to_addr (const char *symstr)
 }
 
 // Optimize symbol table to speed up address-to-symbol search.
-// Replace stringified address (8 characters) by 2 dwords of 32 bit: The
-// symbol value and the absolute address of the next symbol (or 0 if end
+// Replace stringified address (8/16 characters) by 2/4 dwords of 32/64 bit:
+// The symbol value and the absolute address of the next symbol (or 0 if end
 // of list)
 PRIVATE
 bool
@@ -126,7 +134,7 @@ Jdb_symbol_info::transform ()
 	  s--;
 	}
 
-      if (!s || (symstr-sym < 11))
+      if (!s || (symstr-sym < Jdb_symbol::Start))
 	{
 	  if (line == 0)
 	    {
@@ -252,8 +260,9 @@ Jdb_symbol::match_symbol (const char *symbol, bool search_instr, Task_num task)
       symnext = *((const char**)sym+1);
       
       // search symbol
-      if (  ( search_instr && ( strstr(sym+11, symbol) == sym+11))
-	  ||(!search_instr && (!strcmp(sym+11, symbol))))
+      if (  ( search_instr && ( strstr(sym+Jdb_symbol::Start, symbol) == 
+	      				sym+Jdb_symbol::Start))
+	  ||(!search_instr && (!strcmp(sym+Jdb_symbol::Start, symbol))))
 	return sym;
     }
 
@@ -423,20 +432,19 @@ Jdb_symbol::match_addr_to_symbol_fuzzy (Address *addr_ptr, Task_num task,
   if (max_sym)
     {
       const char *t = max_sym + 11;
-	  
-      t_symbol[--s_symbol] = '\0';
-      while ((*t != '\n') && (*t != '\0') && (s_symbol--))
+
+      while (*t != '\n' && *t != '\0' && --s_symbol)
 	{
 	  *t_symbol++ = *t++;
 
 	  // print functions with arguments as ()
 	  if (*(t-1) == '(')
-	    while (*t != ')' && (*t != '\n') && (*t != '\0')) t++;
+	    while (*t != ')' && *t != '\n' && *t != '\0')
+	      t++;
 	}
-	  
+
       // terminate string
-      if (s_symbol)
-	*t_symbol = '\0';
+      *t_symbol = '\0';
 
       *addr_ptr = max_addr;
       return true;

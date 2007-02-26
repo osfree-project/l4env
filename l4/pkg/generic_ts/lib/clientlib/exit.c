@@ -37,11 +37,11 @@ l4ts_exit(void)
   for (;;)
     {
       if ((error = l4_ts_exit_call(&l4ts_server_id, &_env)) < 0
-     	  || _env.major != CORBA_NO_EXCEPTION)
+     	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt
 			   ", ret=%d, exc %d) -- sleeping",
-	   l4util_idstr(l4ts_server_id), error, _env.major);
+	   l4util_idstr(l4ts_server_id), error, DICE_EXCEPTION_MAJOR(&_env));
 	  l4_sleep_forever();
 	}
 

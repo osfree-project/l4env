@@ -135,7 +135,7 @@ alloc_buffer(l4_size_t size, req_desc_t * req)
               l4env_errstr(ret), ret);
 #endif
 
-  LOGdL(DEBUG_BUFFER, "ds %d at "l4util_idfmt", phys 0x%08x, map %p, size %u", 
+  LOGdL(DEBUG_BUFFER, "ds %d at "l4util_idfmt", phys 0x%08lx, map %p, size %u", 
         req->ds.id, l4util_idstr(req->ds.manager), req->p_addr, req->buf, size);
 
   /* done */

@@ -1,5 +1,28 @@
 L4DIR   ?= ../..
 
+include $(L4DIR)/mk/Makeconf
+
+ifeq ($(IN_OBJ_DIR),)
+
+all install clean cleanall:: $(OBJ_DIR)/Makefile.build
+	$(MAKE) -C $(OBJ_DIR) O=$(OBJ_BASE) -f Makefile.build $@
+
+$(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
+	$(VERBOSE)install -d $(dir $@)
+	$(VERBOSE)$(LN) -sf $(SRC_DIR)/todo.sty $(OBJ_DIR)
+	$(VERBOSE)$(LN) -sf $(SRC_DIR)/config-language.tex $(OBJ_DIR)
+	$(VERBOSE)$(LN) -sf $(SRC_DIR)/own.bib $(OBJ_DIR)
+	$(VERBOSE)$(LN) -sf $(SRC_DIR)/code $(OBJ_DIR)
+	$(VERBOSE)echo 'IN_OBJ_DIR=1'                 > $@
+	$(VERBOSE)echo 'L4DIR=$(L4DIR_ABS)'          >> $@
+	$(VERBOSE)echo 'SRC_DIR=$(SRC_DIR)'          >> $@
+	$(VERBOSE)echo 'OBJ_BASE=$(OBJ_BASE)'        >> $@
+	$(VERBOSE)echo 'vpath %.tex $(SRC_DIR)'      >> $@
+	$(VERBOSE)echo 'include $(SRC_DIR)/Makefile' >> $@
+
+else
+
+
 SPEC = spec.tex
 SRC_TEX = $(SPEC) abstract.tex
 SRC_HTML = bid-spec.tex
@@ -7,29 +30,32 @@ SRC_HTML = bid-spec.tex
 SRC_DOX	 = $(SRC_HTML:.tex=.cfg)
 LANG_TEX = config-language.tex
 
-all::
-
-$(SRC_DOX:.cfg=.title):
-	@echo guide >$@
-	@echo "Building Infrastructure for DROPS (BID) Specification" >>$@
+$(OBJ_DIR)/$(SRC_DOX:.cfg=.title):
+	$(VERBOSE)echo guide >$@
+	$(VERBOSE)echo "Building Infrastructure for DROPS (BID) Specification" >>$@
 
 $(SRC_HTML:.tex=): $(SRC_HTML) $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf)
 	$(VERBOSE)$(RM) -r $@
 	$(VERBOSE)install -d $@/html
-	$(VERBOSE)latex2html -local_icons -split 5 -link 3\
+	@$(GEN_MESSAGE)
+	$(VERBOSE)latex2html -local_icons -split 5 -link 3 \
 		-show_section_numbers $(SRC_HTML) -dir $@/html
 	$(VERBOSE)cp $(SRC_TEX:.tex=.ps) $@/html
 	$(VERBOSE)cp $(SRC_TEX:.tex=.pdf) $@/html
 	$(VERBOSE)touch $@
 
-$(SRC_HTML): $(SPEC:.tex=.dvi)
-	$(VERBOSE)./tex-preprocess.pl $(<:.dvi=.tex) >$@
-	$(VERBOSE)cp $(<:.dvi=.aux) $(@:.tex=.aux)
-	$(VERBOSE)cp $(<:.dvi=.bbl) $(@:.tex=.bbl)
+$(SRC_HTML): $(SPEC:.tex=.pdf)
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(SRC_DIR)/tex-preprocess.pl $(SRC_DIR)/$(<:.pdf=.tex) > $@
+	$(VERBOSE)cp $(<:.pdf=.aux) $(@:.tex=.aux)
+	$(VERBOSE)cp $(<:.pdf=.bbl) $(@:.tex=.bbl)
 
 clean::
-	$(VERBOSE)$(RM) -rv $(SRC_HTML) $(SRC_HTML:.tex=.aux) \
-			$(SRC_HTML:.tex=.bbl)
+	$(VERBOSE)$(RM) -rv $(wildcard $(SRC_HTML) $(SRC_HTML:.tex=.aux) \
+			$(SRC_HTML:.tex=.bbl))
+
+cleanall::
+	$(VERBOSE)$(RM) $(wildcard todo.sty code config-language.tex own.bib)
 
 include $(L4DIR)/mk/doc.mk
 
@@ -52,3 +78,4 @@ help::
 	@echo "pub      - build html, ps and pdf version and publish"
 	@echo "           this requires \"HTMLDIR\" to be set in Makeconf.local"
 
+endif

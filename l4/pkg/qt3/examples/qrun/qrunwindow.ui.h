@@ -10,7 +10,12 @@
 ** destructor.
 *****************************************************************************/
 
+#include <qmessagebox.h>
+
+// ***************************************************************************
+
 void runProgram(const QString binary);
+bool quitIsSafe();
 
 // ***************************************************************************
 
@@ -23,7 +28,7 @@ void QRunWindow::init()
 
 void QRunWindow::fileExit()
 {
-
+    
 }
 
 
@@ -41,18 +46,12 @@ void QRunWindow::runCustomSlot()
     QString binary = runInput->text();
     
     if (binary.length() > 0)
- runProgram(binary);
+	runProgram(binary);
     else
     {
- statusLabel->setText("No binary or loader script specified!");
- statusLabelTimer.start(5000, true);
+	statusLabel->setText("No binary or loader script specified!");
+	statusLabelTimer.start(5000, true);
     }
-}
-
-
-void QRunWindow::ftpclientSlot()
-{
-    runProgram("qttest_ftpclient");
 }
 
 
@@ -61,9 +60,9 @@ void QRunWindow::runProgram(const QString binary)
     bool ok = loaderRun(binary);    
     
     if (ok)
-        emit runSuccess(binary);
+	emit runSuccess(binary);
     else
-        emit runFailed(binary);
+	emit runFailed(binary);
 }
 
 
@@ -85,21 +84,33 @@ void QRunWindow::runFailedSlot( const QString &binary )
 
 
 
+void QRunWindow::widgetsSlot()
+{
+    runProgram("qt3_widgets");
+}
+
+
 void QRunWindow::qvvSlot()
 {
-    runProgram("qttest_qvv");
+    runProgram("qt3_qvv");
 }
 
 
 void QRunWindow::sheepSlot()
 {
-    runProgram("qttest_sheep");
+    runProgram("qt3_sheep");
 }
 
 
 void QRunWindow::qtinyeditorSlot()
 {
-    runProgram("qttest_qtinyeditor");
+    runProgram("qt3_qtinyeditor");
+}
+
+
+void QRunWindow::topSlot()
+{
+    runProgram("qt3_top");
 }
 
 
@@ -107,3 +118,29 @@ void QRunWindow::historySlot( const QString &binary )
 {
     historyBox->insertItem(QString("Program or loader script '") + binary + "' successfully started");
 }
+
+
+bool QRunWindow::quitSlot()
+{
+    if ( !quitIsSafe() &&
+	 QMessageBox::warning(this, "Do you really want to quit?",
+			      "This application is managing the Qt desktop. Quitting it\n"
+			      "will shutdown the whole desktop session including\n"
+			      "all applications.\n"
+			      "\n"	
+			      "Click 'Ok' if this is what you want.",
+			      QMessageBox::Ok, QMessageBox::Cancel) == QMessageBox::Cancel)
+	return false;
+    
+    return true;
+}
+	
+
+
+void QRunWindow::closeEvent(QCloseEvent *e)
+{
+    if (quitSlot())
+	QMainWindow::closeEvent(e);
+}
+
+

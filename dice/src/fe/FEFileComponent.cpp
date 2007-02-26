@@ -30,7 +30,8 @@
 #include "fe/FEFile.h"
 
 /** constructs file component object */
-CFEFileComponent::CFEFileComponent()
+CFEFileComponent::CFEFileComponent(CFEBase* pParent)
+: CFEBase(pParent)
 {
 }
 

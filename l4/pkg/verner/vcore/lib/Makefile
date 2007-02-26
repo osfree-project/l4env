@@ -14,7 +14,7 @@ CLIENTIDL_libvtcore_video_client.a =	vcore_video.idl
 SRC_C_libvtcore_audio_client.a =		clientlib_audio.c 
 CLIENTIDL_libvtcore_audio_client.a =	vcore_audio.idl 
 
-PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR)/../config
+PRIVATE_INCDIR = $(PKGDIR)/../include $(PKGDIR_OBJ)/../config
 
 # include lib role
 include $(L4DIR)/mk/lib.mk

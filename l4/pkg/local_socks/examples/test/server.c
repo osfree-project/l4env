@@ -1,3 +1,19 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   local_socks/examples/test/server.c
+ * \brief  Testcase; server.
+ *
+ * \date   30/08/2004
+ * \author Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+/* (c) 2004-2006 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* *** GENERAL INCLUDES *** */
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,13 +78,13 @@ static void server(void *p) {
     //ret = fcntl(fd1, F_SETFL, O_NDELAY);
     //LOG("fcntl(): %d; errno=%d: %s", ret, errno, strerror(errno));
     do {
-      ret = read(fd1, buf, 1016);
+      ret = read(fd1, buf, 4096);
       //LOG("+read(): %d; errno=%d: %s", ret, errno, strerror(errno));
       //l4_sleep(400);
     } while (ret > 0);
 #endif
 
-#if 0
+#if 1
     /* let select() in client process wait 1000 ms */
     l4_sleep(1000);
 #endif

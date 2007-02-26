@@ -15,7 +15,7 @@ L4LIBS		= -lnethub \
 		  -lcxx_log_io -llogserver -ll4sys -lnames $(ROOTLIB) \
 		  -ll4util
 
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_CC		= main.cc
 

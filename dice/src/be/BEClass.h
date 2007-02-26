@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEClass.h
- *    \brief   contains the declaration of the class CBEClass
+ *  \file    dice/src/be/BEClass.h
+ *  \brief   contains the declaration of the class CBEClass
  *
- *    \date    Tue Jun 25 2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Tue Jun 25 2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
  /*
  * Copyright (C) 2001-2004
@@ -31,11 +31,14 @@
 #ifndef BECLASS_H
 #define BECLASS_H
 
-#include <be/BEObject.h>
+#include "BEObject.h"
+#include "BEContext.h" /* for FUNCTION_TYPE */
+#include "Attribute-Type.h" /* for ATTR_TYPE */
+#include "template.h"
 #include <vector>
-using namespace std;
+#include <map>
+using std::map;
 
-class CBEContext;
 class CBEHeaderFile;
 class CBEImplementationFile;
 class CBEAttribute;
@@ -43,10 +46,11 @@ class CBEConstant;
 class CBEType;
 class CBETypedef;
 class CBETypedDeclarator;
-class CBEMsgBufferType;
 class CBEFunction;
 class CBENameSpace;
 class CBEFile;
+class CBEMsgBuffer;
+class CBESrvLoopFunction;
 
 class CFEInterface;
 class CFEAttribute;
@@ -55,21 +59,6 @@ class CFETypedDeclarator;
 class CFEOperation;
 class CFEConstructedType;
 class CFEAttributeDeclarator;
-
-/** \struct CPredefinedFunctionID
- *  \ingroup backend
- *  \brief helper class to specify a user defined function ID (uuid attribute)
- */
-typedef struct {
-    /** \var string m_sName
-     *  \brief the name of the function
-     */
-    string m_sName;
-    /** \var int m_nNumber
-     *  \brief its function id
-     */
-    int m_nNumber;
-} CPredefinedFunctionID;
 
 /** \class CFunctionGroup
  *  \ingroup backend
@@ -83,13 +72,10 @@ public:
      *  \param pFEOperation the reference to the front-end function
      */
     CFunctionGroup(CFEOperation *pFEOperation);
-    virtual ~CFunctionGroup();
+    ~CFunctionGroup();
 
     string GetName();
     CFEOperation *GetOperation();
-    void AddFunction(CBEFunction *pFunction);
-    vector<CBEFunction*>::iterator GetFirstFunction();
-    CBEFunction *GetNextFunction(vector<CBEFunction*>::iterator &iter);
 
 protected:
     /** \var CFEOperation *m_pFEOperation
@@ -97,10 +83,11 @@ protected:
      */
     CFEOperation *m_pFEOperation;
 
-    /** \var vector<CBEFunction*> m_vFunctions
+public:
+    /** \var CCollection<CBEFunction> m_Functions
      *  \brief the back-end function belonging to the front-end function
      */
-    vector<CBEFunction*> m_vFunctions;
+    CCollection<CBEFunction> m_Functions;
 };
 
 /** \class CBEClass
@@ -111,179 +98,186 @@ protected:
  */
 class CBEClass : public CBEObject
 {
-
 public:
     /** creates an instance of this class */
     CBEClass();
-    virtual ~CBEClass();
+    ~CBEClass();
 
 public: // Public methods
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
-    virtual bool AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext);
-    virtual int GetParameterCount(int nFEType, bool& bSameCount, int nDirection = 0);
-    virtual int GetStringParameterCount(int nDirection = 0, int nMustAttrs = 0, int nMustNotAttrs = 0);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
-    virtual string GetName();
+    void CreateBackEnd(CFEInterface *pFEInterface);
+    bool AddToFile(CBEHeaderFile *pHeader);
+    bool AddToFile(CBEImplementationFile *pImpl);
+    int GetParameterCount(int nFEType, bool& bSameCount, int nDirection = 0);
+    int GetStringParameterCount(int nDirection,
+	ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
+    int GetSize(int nDirection);
+    string GetName();
 
-    virtual CBEAttribute* GetNextAttribute(vector<CBEAttribute*>::iterator &iter);
-    virtual vector<CBEAttribute*>::iterator GetFirstAttribute();
-    virtual void RemoveAttribute(CBEAttribute *pAttribute);
-    virtual CBEAttribute* FindAttribute(int nAttrType);
-    virtual void AddAttribute(CBEAttribute *pAttribute);
+    /** \brief try to match with the name
+     *  \param sName the name to match against
+     *  \return true if given name matches internal name
+     */
+    bool Match(string sName)
+    { return GetName() == sName; }
 
-    virtual CBEClass* GetNextBaseClass(vector<CBEClass*>::iterator &iter);
-    virtual vector<CBEClass*>::iterator GetFirstBaseClass();
-    virtual void RemoveBaseClass(CBEClass *pClass);
-    virtual void AddBaseClass(CBEClass *pClass);
+    void Write(CBEHeaderFile *pFile);
+    void Write(CBEImplementationFile *pFile);
+    void WriteClassName(CBEFile *pFile);
 
-    virtual CBEClass* GetNextDerivedClass(vector<CBEClass*>::iterator &iter);
-    virtual vector<CBEClass*>::iterator GetFirstDerivedClass();
-    virtual void RemoveDerivedClass(CBEClass *pClass);
-    virtual void AddDerivedClass(CBEClass *pClass);
+    CBEClass* GetNextBaseClass(vector<CBEClass*>::iterator &iter);
+    vector<CBEClass*>::iterator GetFirstBaseClass();
 
-    virtual CBEConstant* GetNextConstant(vector<CBEConstant*>::iterator &iter);
-    virtual vector<CBEConstant*>::iterator GetFirstConstant();
-    virtual void RemoveConstant(CBEConstant *pConstant);
-    virtual void AddConstant(CBEConstant *pConstant);
-    virtual CBEConstant* FindConstant(string sConstantName);
+    bool AddOpcodesToFile(CBEHeaderFile *pFile);
+    int GetClassNumber();
 
-    virtual CBETypedDeclarator* GetNextTypedef(vector<CBETypedDeclarator*>::iterator &iter);
-    virtual vector<CBETypedDeclarator*>::iterator GetFirstTypedef();
-    virtual void RemoveTypedef(CBETypedef *pTypedef);
-    virtual void AddTypedef(CBETypedef *pTypedef);
-    virtual CBETypedDeclarator* FindTypedef(string sTypeName);
+    CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
+    CBESrvLoopFunction* GetSrvLoopFunction();
+    CBEType* FindTaggedType(int nType, string sTag);
+    CBETypedef* FindTypedef(string sTypeName);
+    CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
 
-    virtual CBEFunction* GetNextFunction(vector<CBEFunction*>::iterator &iter);
-    virtual vector<CBEFunction*>::iterator GetFirstFunction();
-    virtual void RemoveFunction(CBEFunction *pFunction);
-    virtual void AddFunction(CBEFunction *pFunction);
-    virtual CBEFunction* FindFunction(string sFunctionName);
+    bool IsTargetFile(CBEHeaderFile * pFile);
+    bool IsTargetFile(CBEImplementationFile * pFile);
 
-    virtual bool AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual int GetClassNumber();
-    virtual CBENameSpace* GetNameSpace();
+    bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile);
+    int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
+	int nDirection = 0);
 
-    virtual void Write(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void Write(CBEImplementationFile *pFile, CBEContext *pContext);
+    bool HasParametersWithAttribute(ATTR_TYPE nAttribute1,
+	ATTR_TYPE nAttribute2 = ATTR_NONE);
+    bool HasFunctionWithAttribute(ATTR_TYPE nAttribute);
 
-    virtual CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
-
-    virtual void RemoveTypeDeclaration(CBETypedDeclarator *pTypeDecl);
-    virtual void AddTypeDeclaration(CBETypedDeclarator *pTypeDecl);
-    virtual bool IsTargetFile(CBEHeaderFile * pFile);
-    virtual bool IsTargetFile(CBEImplementationFile * pFile);
-
-    virtual CBEType* FindTaggedType(int nType, string sTag);
-    virtual CBEType* GetNextTaggedType(vector<CBEType*>::iterator &iter);
-    virtual vector<CBEType*>::iterator GetFirstTaggedType();
-    virtual void RemoveTaggedType(CBEType *pType);
-    virtual void AddTaggedType(CBEType *pType);
-    virtual bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile, CBEContext *pContext);
-    virtual CBEMsgBufferType* GetMessageBuffer();
-    virtual int GetParameterCount(int nMustAttrs, int nMustNotAttrs, int nDirection = 0);
-
-    virtual bool HasParametersWithAttribute(int nAttribute1, int nAttribute2 = 0, int nAttribute3 = 0);
+    /** \brief retrieve a handle to the message buffer
+     *  \return a reference to the message buffer
+     */
+    CBEMsgBuffer* GetMessageBuffer()
+    { return m_pMsgBuffer; }
 
 protected:
-    virtual bool CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl, CBEContext *pContext);
-    virtual bool CreateFunctionsNoClassDependency(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool CreateFunctionsClassDependency(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pContext);
-    virtual bool AddInterfaceFunctions(CFEInterface* pFEInterface, CBEContext* pContext);
+    void CreateBackEnd(CFEConstDeclarator *pFEConstant);
+    void CreateBackEnd(CFETypedDeclarator *pFETypedef);
+    void CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl);
+    void CreateBackEnd(CFEAttribute *pFEAttribute);
+    void CreateBackEnd(CFEConstructedType *pFEType);
+    
+    void CreateFunctionsNoClassDependency(CFEOperation *pFEOperation);
+    void CreateFunctionsClassDependency(CFEOperation *pFEOperation);
+    virtual void CreateObject(void);
+    virtual void CreateEnvironment(void);
+    
+    void AddInterfaceFunctions(CFEInterface* pFEInterface);
+    void AddMessageBuffer(CFEInterface* pFEInterface);
 
-    virtual bool CreateAliasForClass(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile, CBEContext *pContext);
+    void CreateAliasForClass(CFEInterface *pFEInterface);
+    bool AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile);
 
-    virtual void WriteTypedef(CBETypedDeclarator *pTypedef, CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteFunction(CBEFunction *pFunction, CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteFunction(CBEFunction *pFunction, CBEImplementationFile *pFile, CBEContext *pContext);
-    virtual void WriteHelperFunctions(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteHelperFunctions(CBEImplementationFile *pFile, CBEContext *pContext);
+    void WriteElements(CBEHeaderFile *pFile);
+    void WriteElements(CBEImplementationFile *pFile);
+    void WriteFunctions(CBEHeaderFile *pFile);
+    void WriteFunctions(CBEImplementationFile *pFile);
+    void WriteBaseClasses(CBEFile *pFile);
 
-    virtual CFunctionGroup* GetNextFunctionGroup(vector<CFunctionGroup*>::iterator &iter);
-    virtual vector<CFunctionGroup*>::iterator GetFirstFunctionGroup();
-    virtual void RemoveFunctionGroup(CFunctionGroup *pGroup);
-    virtual void AddFunctionGroup(CFunctionGroup *pGroup);
+    virtual void WriteMemberVariables(CBEHeaderFile *pFile);
+    virtual void WriteConstructor(CBEHeaderFile *pFile);
+    virtual void WriteDestructor(CBEHeaderFile *pFile);
 
-    virtual int GetOperationNumber(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool IsPredefinedID(vector<CPredefinedFunctionID> *pFunctionIDs, int nNumber);
-    virtual int GetMaxOpcodeNumber(CFEInterface *pFEInterface);
-    virtual int GetUuid(CFEOperation *pFEOperation);
-    virtual bool HasUuid(CFEOperation *pFEOperation);
-    virtual int GetInterfaceNumber(CFEInterface *pFEInterface);
-    virtual int FindInterfaceWithNumber(CFEInterface *pFEInterface,
+    void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile);
+    void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile);
+    void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile);
+    void WriteFunction(CBEFunction *pFunction, CBEHeaderFile *pFile);
+    void WriteFunction(CBEFunction *pFunction, CBEImplementationFile *pFile);
+    virtual void WriteHelperFunctions(CBEHeaderFile *pFile);
+    virtual void WriteHelperFunctions(CBEImplementationFile *pFile);
+
+    int GetOperationNumber(CFEOperation *pFEOperation);
+    bool IsPredefinedID(map<unsigned int, string> *pFunctionIDs,
+	int nNumber);
+    int GetMaxOpcodeNumber(CFEInterface *pFEInterface);
+    int GetUuid(CFEOperation *pFEOperation);
+    bool HasUuid(CFEOperation *pFEOperation);
+    int GetInterfaceNumber(CFEInterface *pFEInterface);
+    int FindInterfaceWithNumber(CFEInterface *pFEInterface,
         int nNumber,
         vector<CFEInterface*> *pCollection);
-    virtual int FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
-        vector<CPredefinedFunctionID> *pNumbers,
-        CBEContext *pContext);
-    virtual int CheckOpcodeCollision(CFEInterface *pFEInterface,
+    int FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
+        map<unsigned int, string> *pNumbers);
+    int CheckOpcodeCollision(CFEInterface *pFEInterface,
         int nOpNumber,
         vector<CFEInterface*> *pCollection,
-        CFEOperation *pFEOperation,
-        CBEContext *pContext);
-    virtual void AddBaseName(string sName);
-    virtual int GetFunctionCount(void);
-    virtual int GetFunctionWriteCount(CBEFile *pFile, CBEContext *pContext);
+        CFEOperation *pFEOperation);
+    void CheckOpcodeCollision(CFEInterface *pFEInterface);
+    void CheckOpcodeCollision(CFEInterface *pFirst, CFEInterface *pSecond);
+    void AddBaseClass(string sName);
+    int GetFunctionCount(void);
+    int GetFunctionWriteCount(CBEFile *pFile);
+    
+    virtual bool MsgBufferInitialization(void);
 
-    virtual void CreateOrderedElementList(void);
+    void CreateOrderedElementList(void);
     void InsertOrderedElement(CObject *pObj);
 
+    void WriteExternCStart(CBEFile *pFile);
+    void WriteExternCEnd(CBEFile *pFile);
+    void WriteLineDirective(CBEFile *pFile, CObject *pObj);
+
 protected: // Protected members
-    /**    \var string m_sName
-     *    \brief the name of the class
+    /** \var string m_sName
+     *  \brief the name of the class
      */
     string m_sName;
-    /** \var CBEMsgBufferType *m_pMsgBuffer
-     *  \brief keep message buffer in seperate variable
+    /** \var CBEMsgBuffer *m_pMsgBuffer
+     *  \brief a reference to the server's message buffer
      */
-    CBEMsgBufferType *m_pMsgBuffer;
-    /** \var vector<CBEFunction*> m_vFunctions
-     *  \brief the operation functions, which are used for calculations
-     */
-    vector<CBEFunction*> m_vFunctions;
-    /** \var vector<CBEConstant*> m_vConstants
-     *  \brief the constants of the Class
-     */
-    vector<CBEConstant*> m_vConstants;
-    /** \var  vector<CBETypedDeclarator*> m_vTypedefs
-     *  \brief the type definition of the Class
-     */
-    vector<CBETypedDeclarator*> m_vTypedefs;
-    /** \var vector<CBEType*> m_vTypeDeclarations
-     *  \brief contains the tagged type declarations
-     */
-    vector<CBEType*> m_vTypeDeclarations;
-    /** \var vector<CBEAttribute*> m_vAttributes
-     *  \brief contains the attributes of the Class
-     */
-    vector<CBEAttribute*> m_vAttributes;
+    CBEMsgBuffer *m_pMsgBuffer;
     /** \var vector<CBEClass*> m_vBaseClasses
      *  \brief contains references to the base classes
      */
     vector<CBEClass*> m_vBaseClasses;
-    /** \var vector<CBEClass*> m_vDerivedClasses
-     *  \brief contains references to the derived classes
-     */
-    vector<CBEClass*> m_vDerivedClasses;
-    /** \var vector<CFunctionGroup*> m_vFunctionGroups
-     *  \brief contains function groups (BE-functions grouped by their FE-functions)
-     */
-    vector<CFunctionGroup*> m_vFunctionGroups;
-    /** \var vector<string> m_vBaseNames
-     *  \brief contains the names to the base interfaces
-     */
-    vector<string> m_vBaseNames;
     /** \var vector<CObject*> m_vOrderedElements
      *  \brief contains ordered list of elements
      */
     vector<CObject*> m_vOrderedElements;
+    /** \var CBETypedDeclarator *m_pCorbaObject
+     *  \brief contains a reference to the CORBA Object parameter
+     */
+    CBETypedDeclarator *m_pCorbaObject;
+    /** \var CBETypedDeclarator *m_pCorbaEnv
+     *  \brief contains a reference to the CORBA Environment parameter
+     */
+    CBETypedDeclarator *m_pCorbaEnv;
+
+    friend class CBEMsgBufferType; // needs to access function groups
+    friend class CBEMsgBuffer;
+
+public:
+    /** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
+     *  \brief contains the attributes of the Class
+     */
+    CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CSearchableCollection<CBEConstant, string> m_Constants
+     *  \brief the constants of the Class
+     */
+    CSearchableCollection<CBEConstant, string> m_Constants;
+    /** \var CCollection<CBEType> m_TypeDeclarations
+     *  \brief contains the tagged type declarations
+     */
+    CCollection<CBEType> m_TypeDeclarations;
+    /** \var CCollection<CBETypedef> m_Typedefs
+     *  \brief the type definition of the Class
+     */
+    CCollection<CBETypedef> m_Typedefs;
+    /** \var CCollection<CBEFunction> m_Functions
+     *  \brief the operation functions, which are used for calculations
+     */
+    CCollection<CBEFunction> m_Functions;
+    /** \var CCollection<CFunctionGroup> m_FunctionGroups
+     *  \brief contains function groups (BE-functions grouped by their FE-functions)
+     */
+    CCollection<CFunctionGroup> m_FunctionGroups;
+    /** \var CCollection<CBEClass> m_DerivedClasses
+     *  \brief contains references to the derived classes
+     */
+    CCollection<CBEClass> m_DerivedClasses;
 };
 
 #endif

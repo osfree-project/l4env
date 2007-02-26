@@ -24,6 +24,9 @@ typedef struct
 	       int sx, int sy, int width, int height, int dx, int dy);
   void (*fill)(struct l4con_vc*,
 	       int sx, int sy, int width, int height, unsigned color);
+  void (*blit)(struct l4con_vc*,
+               const l4_uint8_t* chardata, int width, int height,
+	       int yy, int xx);
   void (*sync)(void);
   void (*pan) (int *x, int *y);
   void (*drty)(int sx, int sy, int width, int height);
@@ -37,20 +40,18 @@ typedef struct
   unsigned int caps;
 } con_accel_t;
 
-void
-con_hw_set_l4io(int l4io);
+int  con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
+		 l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
+     		 con_accel_t *accel, l4_uint8_t **map_vid_mem_addr);
 
-int
-con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits, 
-	    unsigned int vid_mem_addr, unsigned int vid_mem_size,
-	    con_accel_t *accel, l4_uint8_t **map_vid_mem_addr);
+void con_hw_set_l4io(int l4io);
 
-extern unsigned int   hw_vid_mem_addr, hw_vid_mem_size;
-extern unsigned int   hw_map_vid_mem_addr;
+extern l4_addr_t      hw_vid_mem_addr, hw_vid_mem_size;
+extern l4_addr_t      hw_map_vid_mem_addr;
 extern unsigned short hw_xres, hw_yres;
 extern unsigned char  hw_bits;
 
-extern int con_hw_use_l4io;
+extern int            con_hw_use_l4io;
 
 #define ACCEL_FAST_COPY		0x00000001
 #define ACCEL_FAST_FILL		0x00000002
@@ -66,4 +67,3 @@ extern int con_hw_use_l4io;
 #define ACCEL_POST_DIRTY	0x00000100
 
 #endif
-

@@ -23,9 +23,9 @@ L4ENV_ERR_DESC_STATIC(err_strings,
 	L4EVENTS_ERRSTRINGS_DEFINE
 );
 
-static void register_ipc_codes(void)
+static void l4env_err_register_events_codes(void)
 {
   l4env_err_register_desc(&err_strings);
 }
 
-L4C_CTOR(register_ipc_codes, L4CTOR_BEFORE_BACKEND);
+L4C_CTOR(l4env_err_register_events_codes, L4CTOR_BEFORE_BACKEND);

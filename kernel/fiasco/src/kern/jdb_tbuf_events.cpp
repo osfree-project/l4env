@@ -126,15 +126,6 @@ DECLARE_PATCH (lp18, log_preemption);
 static Log_event le9("preemption sent",
 		      Log_event_preemption, 1, &lp18);
 
-#ifdef	CONFIG_LOCAL_IPC
-DECLARE_PATCH (lp19, log_lipc_rollback);
-DECLARE_PATCH (lp20, log_lipc_rollforward);
-DECLARE_PATCH (lp21, log_lipc_copy);
-DECLARE_PATCH (lp22, log_lipc_setup_iret_stack);
-static Log_event le10("lipc fixupcode",
-                      Log_event_lipc, 4, &lp19, &lp20, &lp21, &lp22);
-#endif
-
 DECLARE_PATCH (lp23, log_task_new);
 static Log_event le11("task_new",
 		      Log_event_task_new, 1, &lp23);
@@ -150,11 +141,7 @@ Log_event * const Jdb_tbuf_events::log_events[Log_event_max] =
   &le7,  // pagefault result
   &le8,	 // scheduling event
   &le9,  // preemption sent
-#ifdef	CONFIG_LOCAL_IPC
-  &le10, // lipc fixup code
-#else
   0,
-#endif
   &le11, // task new
   0,     // terminate list
 };

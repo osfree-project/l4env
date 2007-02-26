@@ -1,6 +1,6 @@
 /* $Id$ */
 /**
- * \file 	exec/server/src/elf32.cc
+ * \file	exec/server/src/elf32.cc
  * \brief	ELF32 exec layer
  *
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -12,7 +12,7 @@
 
 #include <l4/env/errno.h>
 #include <l4/sys/consts.h>
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 #include <l4/exec/exec.h>
 #include <l4/exec/errno.h>
 #include <l4/dm_mem/dm_mem.h>
@@ -49,7 +49,7 @@ elf32_obj_t::~elf32_obj_t()
 }
 
 /** Find the appropriate program section a symbol is associated with.
- * 
+ *
  * \param sym		ELF symbol descriptor
  * \param strtab	ELF symbol string table
  * \return		program section the symbol is associated with
@@ -63,11 +63,11 @@ elf32_obj_t::sym_psec(Elf32_Sym *sym, const char *strtab)
     {
       exc_obj_hsec_t *hsec;
 
-      return ((hsec = lookup_hsec(sym->st_shndx))) 
-		    ? hsec->psec 
+      return ((hsec = lookup_hsec(sym->st_shndx)))
+		    ? hsec->psec
 		    : 0;
     }
-  
+
   msg("Symbol \"%s\" not associated with an EXC section",
 	strtab + sym->st_name);
   return 0;
@@ -75,10 +75,10 @@ elf32_obj_t::sym_psec(Elf32_Sym *sym, const char *strtab)
 
 
 /** Load all dependend dynamic libraries.
- * 
+ *
  * \param env		L4 environment infopage
  * \return		0 on success
- * 			-L4_EXEC_BADFORMAT
+ *			-L4_EXEC_BADFORMAT
  */
 int
 elf32_obj_t::load_libs(l4env_infopage_t *env)
@@ -93,7 +93,7 @@ elf32_obj_t::load_libs(l4env_infopage_t *env)
     return 0;
 
   Assert(hsecs);
-  
+
   /* walk throug all dynamic sections */
   for (i=0; i<hsecs_num; i++)
     {
@@ -107,7 +107,7 @@ elf32_obj_t::load_libs(l4env_infopage_t *env)
 
 	  strtab = (const char*)hsec_str->vaddr;
 	  dyn    = (Elf32_Dyn*)hsec->vaddr;
-	  
+
 	  /* Add all first level DT_NEEDED entries (direct dependencies
 	   * == entries of the binary object) to the dependency list */
 	  for ( ; dyn->d_tag!=DT_NULL; dyn++)
@@ -121,14 +121,14 @@ elf32_obj_t::load_libs(l4env_infopage_t *env)
 		  const l4dm_dataspace_t inv_ds = L4DM_INVALID_DATASPACE;
 		  if ((error = check(::exc_obj_load_bin(strtab+dyn->d_un.d_val,
 							&inv_ds,
-							/*force_load=*/0, 
-							client_tid, 
+							/*force_load=*/0,
+							client_tid,
 							new_flags, &exc_obj,
 							env),
 				     "adding new elf object \"%s\"",
 				     strtab+dyn->d_un.d_val)))
 		    return error;
-		  
+
 		  /* add direct dependency to exc_obj */
 		  add_to_dep(exc_obj);
 		}
@@ -142,7 +142,7 @@ elf32_obj_t::load_libs(l4env_infopage_t *env)
 }
 
 /** Create ELF loadable sections. Connect file sections to dataspaces.
- * 
+ *
  * Here we need the environment page for the correct dm_id of each section.
  *
  * \param img		ELF image
@@ -191,16 +191,16 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 	  for (k=0; k<j; k++)
 	    {
 	      l4_addr_t psec_beg, psec_end;
-	      
+
 	      psec = psecs[k];
 	      psec_beg = psec->l4exc.addr;
 	      psec_end = psec->l4exc.addr + psec->l4exc.size;
-	      
+
 	      if (   (sec_beg >= psec_beg || sec_end >= psec_beg)
 		  && (sec_beg <  psec_end || sec_end <  psec_end))
 		{
-		  msg("Merging psec %08x-%08x with psec %08x-%08x",
-		      sec_beg, sec_end, 
+		  msg("Merging psec %08lx-%08lx with psec %08lx-%08lx",
+		      sec_beg, sec_end,
 		      psec->l4exc.addr, psec->l4exc.addr+psec->l4exc.size);
 		  if (sec_beg < psec_beg)
 		    psec_beg = sec_beg;
@@ -213,7 +213,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 		  type = 0;
 		  if (ph->p_flags & PF_R)
 		    type |= L4_DSTYPE_READ;
-		  if (ph->p_flags & PF_W) 
+		  if (ph->p_flags & PF_W)
 		    type |= L4_DSTYPE_WRITE;
 		  if (ph->p_flags & PF_X)
 		    type |= L4_DSTYPE_EXECUTE;
@@ -245,7 +245,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 
 	  if (ph->p_flags & PF_R)
 	    type |= L4_DSTYPE_READ;
-	  if (ph->p_flags & PF_W) 
+	  if (ph->p_flags & PF_W)
 	    type |= L4_DSTYPE_WRITE;
 	  if (ph->p_flags & PF_X)
 	    type |= L4_DSTYPE_EXECUTE;
@@ -273,7 +273,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 
 	  /* Each program section must be reserved in the vm area of the
 	   * application. After attaching/reserving to the applications
-	   * region manager, this flag is cleared. 
+	   * region manager, this flag is cleared.
 	   * This flag is useless for old-style applications. */
 	  type |= L4_DSTYPE_RESERVEME;
 
@@ -282,7 +282,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 	    return -L4_ENOMEM;
 
 	  psec->link_addr = link_addr;
-	  
+
 	  psec->l4exc.addr = sec_beg;
 	  psec->l4exc.size = sec_end-sec_beg;
 	  psec->l4exc.info.id = sect_id;
@@ -303,25 +303,25 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
   // allocate dataspaces
   for (i=0; i<j; i++)
     {
-      
+
       psec = psecs[i];
-      
+
       char dbg_name[32];
-      
+
       sprintf(dbg_name, "psec%d ", i);
       strncat(dbg_name, get_fname(), sizeof(dbg_name)-strlen(dbg_name)-1);
       dbg_name[sizeof(dbg_name)-1] = '\0';
 
       l4_threadid_t dm_id = env->data_dm_id;
-      
+
       if (psec->l4exc.info.type & L4_DSTYPE_EXECUTE)
 	dm_id = env->text_dm_id;
-      
+
       /* Create program section and attach to our address space.
        * If binary is direct mapped, open dataspace contiguous
-       * from memory pool 1. If binary is also dynamic linkable, 
+       * from memory pool 1. If binary is also dynamic linkable,
        * don't specify the address to open from */
-      if ((psec->init_ds(psec->l4exc.addr, psec->l4exc.size, 
+      if ((psec->init_ds(psec->l4exc.addr, psec->l4exc.size,
 			 (flags & EO_DIRECT_MAP),
 			 !(flags & EO_DYNAMIC),
 			 dm_id, dbg_name)))
@@ -332,7 +332,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 #ifdef DEBUG_PH_SECTIONS
   enter_kdebug("stop: ph_sections");;
 #endif
-  
+
   return 0;
 }
 
@@ -369,7 +369,7 @@ elf32_obj_t::img_create_hsecs(exc_img_t *img)
 	  hsec->hs_link = 0;
 	  hsec->hs_size = 0;
 	}
-      
+
       /* section allocates memory? */
       if (sh->sh_flags & SHF_ALLOC)
 	{
@@ -382,11 +382,11 @@ elf32_obj_t::img_create_hsecs(exc_img_t *img)
 
 	  if (!(psec = sh_psec(sh)))
 	    {
-	      Error("allocatable hsec %d at %08x not found in psecs!", 
+	      Error("allocatable hsec %d at %08x not found in psecs!",
 		    i, sh->sh_addr);
 	      return -L4_EXEC_CORRUPT;
 	    }
-	  
+
 	  hsec->vaddr   = sh->sh_addr - psec->l4exc.addr + psec->vaddr;
 	  hsec->psec    = psec;
 	  hsec->hs_type = sh->sh_type;
@@ -396,7 +396,7 @@ elf32_obj_t::img_create_hsecs(exc_img_t *img)
     }
 
   hsecs_num = i;
-  
+
   return 0;
 }
 
@@ -407,7 +407,7 @@ elf32_obj_t::img_create_hsecs(exc_img_t *img)
  * and for grabbing symbols but linking is not neccessary if there are
  * no dynamic info.
  *
- * \param env		L4 environment infopage 
+ * \param env		L4 environment infopage
  * \return		0 on success */
 int
 elf32_obj_t::img_junk_hsecs_on_nodyn(l4env_infopage_t *env)
@@ -422,14 +422,14 @@ elf32_obj_t::img_junk_hsecs_on_nodyn(l4env_infopage_t *env)
 }
 
 /** Find the sections needed for dynamic linking of an ELF object.
- * 
+ *
  * Dynamic sections are not mandatory.
  *
  * Warning: We assume here, that the dynamic section is marked as an
  *          allocateable sections and so was loaded by img_fill_psecs()!
  *
  * \param img		ELF image
- * \return 		0 on success */
+ * \return		0 on success */
 int
 elf32_obj_t::img_save_info(exc_img_t *img)
 {
@@ -450,23 +450,23 @@ elf32_obj_t::img_save_info(exc_img_t *img)
 
 	  /* hash table found, store offset in our address space */
 	  dyn_hashtab = (Elf32_Word*)hsec->vaddr;
-	  
+
 	  /* appropriate symbol table in our address space */
 	  s_link = hsec->hs_link;
 	  if (!(hsec = lookup_hsec(s_link)))
 	    {
-	      msg("Binary corrupt, section link %d=>%d not found", 
+	      msg("Binary corrupt, section link %d=>%d not found",
 		  i, s_link);
 	      return -L4_EXEC_CORRUPT;
 	    }
 	  dyn_symtab = (Elf32_Sym*)hsec->vaddr;
-	  
+
 	  /* appropriate symbol string table in our address space */
 	  j = hsec - hsecs;
 	  s_link = hsec->hs_link;
 	  if (!(hsec = lookup_hsec(s_link)))
 	    {
-	      msg("Binary corrupt, section link %d=>%d not found", 
+	      msg("Binary corrupt, section link %d=>%d not found",
 		  j, s_link);
 	      return -L4_EXEC_CORRUPT;
 	    }
@@ -479,12 +479,12 @@ elf32_obj_t::img_save_info(exc_img_t *img)
   /* warning only, dyn_hashtab is 0 */
   if (!dyn_symtab)
     msg("Has no dynamic info");
-  
+
   return 0;
 }
 
 /** Create ELF loadable sections.
- * 
+ *
  * Connect file sections to dataspaces.
  *
  * \param img		ELF image
@@ -539,15 +539,15 @@ elf32_obj_t::img_fill_psecs(exc_img_t *img)
     {
       int error;
       l4_uint32_t rights = L4DM_RO;
-      
+
       psec = psecs[i];
 
       /* If section is not shared, make it writable if needed. Shared
        * sections are copy-on-write */
       if (  !(psec->l4exc.info.type & L4_DSTYPE_SHARE)
 	  && (psec->l4exc.info.type & L4_DSTYPE_WRITE))
-  	rights = L4DM_RW;
-      
+	rights = L4DM_RW;
+
       if ((error = check(l4dm_share(&psec->l4exc.ds, client_tid, rights),
 			"setting permissions of ds")))
 	return 0;
@@ -580,7 +580,7 @@ elf32_obj_t::img_save_symbols(exc_img_t *img)
     {
       if (!(sh_sym = img_lookup_sh(i, img)))
 	break;
-      
+
       if (sh_sym->sh_type == SHT_SYMTAB)
 	{
 	  unsigned int sz_str, sz_sym;
@@ -590,7 +590,7 @@ elf32_obj_t::img_save_symbols(exc_img_t *img)
 
 	  sz_str = sh_str->sh_size;
 	  sz_sym = sh_sym->sh_size;
-	  
+
 	  if (   !(sym_strtab = (const char*)malloc(sz_str))
 	      || !(sym_symtab = (Elf32_Sym*)malloc(sz_sym)))
 	    {
@@ -610,7 +610,7 @@ elf32_obj_t::img_save_symbols(exc_img_t *img)
 
 	  memcpy((void*)sym_strtab,
 	         (void*)(img->vaddr + sh_str->sh_offset), sz_str);
-	  memcpy((void*)sym_symtab, 
+	  memcpy((void*)sym_symtab,
 	         (void*)(img->vaddr + sh_sym->sh_offset), sz_sym);
 
 	  num_symtab = sz_sym/sizeof(Elf32_Sym);
@@ -626,7 +626,7 @@ elf32_obj_t::img_save_symbols(exc_img_t *img)
   msg("Has no symbols");
   return 0;
 }
-  
+
 /** Save lines of ELF object. */
 int
 elf32_obj_t::img_save_lines(exc_img_t *img)
@@ -649,7 +649,7 @@ elf32_obj_t::img_save_lines(exc_img_t *img)
     {
       if (!(sh_sym = img_lookup_sh(i, img)))
 	break;
-      
+
       if (   (   sh_sym->sh_type == SHT_PROGBITS
 	      || sh_sym->sh_type == SHT_STRTAB)
 	  && (!strcmp(sh_sym->sh_name + strtab, ".stab")))
@@ -711,7 +711,7 @@ elf32_obj_t::img_copy(exc_img_t *img, l4env_infopage_t *env)
     return error;
   enter_kdebug("stop: dy_sections");
 #endif
-  
+
   if (/* create psecs according ELF objects program sections */
       (error = img_create_psecs(img, env)) ||
 
@@ -720,16 +720,16 @@ elf32_obj_t::img_copy(exc_img_t *img, l4env_infopage_t *env)
 
       /* get necessary information so we can work without the file image */
       (error = img_save_info(img)) ||
-      
+
       /* load header sections into appropriate psecs */
       (error = img_fill_psecs(img)) ||
 
       /* save symbol information for Fiasco kernel debugger */
       (error = img_save_symbols(img)) ||
-     
+
       /* save symbol information for Fiasco kernel debugger */
       (error = img_save_lines(img)) ||
-     
+
       /* if ELF object has no dynamic info, we do not need hsecs anymore */
       (error = img_junk_hsecs_on_nodyn(env)))
 
@@ -739,7 +739,7 @@ elf32_obj_t::img_copy(exc_img_t *img, l4env_infopage_t *env)
 }
 
 /** Return the pointer to ELF header section with index i.
- * 
+ *
  * Works on the plain ELF image.
  *
  * \param i		header section index
@@ -758,22 +758,22 @@ elf32_obj_t::img_lookup_sh(int i, exc_img_t *img)
       msg("Want to access section %d (have %d)", i, ehdr->e_shnum);
       return 0;
     }
-  
+
   return (Elf32_Shdr*)(img->vaddr + ehdr->e_shoff + i*ehdr->e_shentsize);
 }
 
 /** Find the symbol in the ELF object.
  * Search in dynamic symbol table
- * 
+ *
  * \param symname	symbol name to find
  * \param need_global	<>0 if symbol has to be global
- * \retval _sym		found symbol table entry 
+ * \retval _sym		found symbol table entry
  * \return		0 on success (symbol found)
- * 			1 symbol found but undefined (objdump says *UND*)
- * 			  and symbol is weak
- * 			2 symbol found and symbol is weak
- * 			-L4_ENOTFOUND if symbol not found or found but
- * 			  undefined (objdump says *UND*) */
+ *			1 symbol found but undefined (objdump says *UND*)
+ *			  and symbol is weak
+ *			2 symbol found and symbol is weak
+ *			-L4_ENOTFOUND if symbol not found or found but
+ *			  undefined (objdump says *UND*) */
 int
 elf32_obj_t::find_sym(const char *symname, int need_global, Elf32_Sym** _sym)
 {
@@ -803,7 +803,7 @@ elf32_obj_t::find_sym(const char *symname, int need_global, Elf32_Sym** _sym)
 	{
 	  /* symbol found */
 	  sym = dyn_symtab + y;
-	  /* if st_shndx is 0, then this symbol is UNDEFINED 
+	  /* if st_shndx is 0, then this symbol is UNDEFINED
 	   * therefore ignore it in this ELF object */
 	  if (!sym->st_shndx)
 	    {
@@ -812,7 +812,7 @@ elf32_obj_t::find_sym(const char *symname, int need_global, Elf32_Sym** _sym)
 	      else
 		return -L4_ENOTFOUND; /* symbol found but undefined */
 	    }
-	  
+
 	  /* return "not found" if the symbol is local bound
 	   * but we need a global bound symbol */
 	  if (need_global && ELF32_ST_BIND(sym->st_info)==STB_LOCAL)
@@ -825,7 +825,7 @@ elf32_obj_t::find_sym(const char *symname, int need_global, Elf32_Sym** _sym)
 			: 0 /* symbol found */;
 	}
     }
-  
+
   return -L4_ENOTFOUND; /* symbol not found */
 }
 
@@ -838,16 +838,16 @@ elf32_obj_t::addr_to_reloc_offs(l4_addr_t addr, l4env_infopage_t *env,
   exc_obj_psec_t *psec;
   l4exec_section_t *l4exc;
   l4_addr_t l4exc_reloc;
-  
+
   if (/* 1st: find to which program section the address belongs to */
          !(psec = addr_psec(addr))
       /* 2nd: find the l4exec_section_t in the envpage the program section
        * belongs to */
-      || !(l4exc = psec->lookup_env(env)) 
+      || !(l4exc = psec->lookup_env(env))
       /* 3rd: determine the relocation address of the program section */
       || !(l4exc_reloc = env_reloc_addr(l4exc, env)))
     {
-      msg("Cannot find address %08x", addr);
+      msg("Cannot find address %08lx", addr);
       return -L4_EXEC_CORRUPT;
     }
 
@@ -859,7 +859,7 @@ elf32_obj_t::addr_to_reloc_offs(l4_addr_t addr, l4env_infopage_t *env,
       return -L4_EXEC_BADFORMAT;
     }
 
-  *reloc_offs = l4exc_reloc 
+  *reloc_offs = l4exc_reloc
 	      - psec->link_addr; /* => relative to the beginning of psec */
   return 0;
 }
@@ -911,17 +911,17 @@ elf32_obj_t::sym_vaddr(Elf32_Sym *sym, l4_addr_t *vaddr)
 }
 
 /** Find the symbol in the relocated ELF library.
- * 
+ *
  * \param symname	name of symbol
  * \param env		L4 environment infopage
  * \retval addr		address of symbol
  * \return		0 on success
- * 			1 symbol found but undefined (objdump says *UND*)
- * 			  and symbol is weak
- * 			2 symbol found and symbol is weak
- * 			-L4_ENOTFOUND if symbol not found or found but
- * 			  undefined (objdump says *UND*)
- * 			-L4_EXEC_BADFORMAT */
+ *			1 symbol found but undefined (objdump says *UND*)
+ *			  and symbol is weak
+ *			2 symbol found and symbol is weak
+ *			-L4_ENOTFOUND if symbol not found or found but
+ *			  undefined (objdump says *UND*)
+ *			-L4_EXEC_BADFORMAT */
 int
 elf32_obj_t::find_sym(const char *symname, l4env_infopage_t *env,
 		      l4_addr_t *addr)
@@ -929,7 +929,7 @@ elf32_obj_t::find_sym(const char *symname, l4env_infopage_t *env,
   int error;
   l4_addr_t reloc_offs;
   Elf32_Sym *sym;
-  
+
   /* find global symbol in ELF object */
   if ((error = find_sym(symname, 1, &sym)))
     return error;
@@ -944,11 +944,11 @@ elf32_obj_t::find_sym(const char *symname, l4env_infopage_t *env,
 
 /** Link relocation entry */
 int
-elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
+elf32_obj_t::link_sym(Elf32_Rel *rel,		 /* relocation entry */
 		      l4_addr_t rel_l4exc_vaddr, /* addr of relocation section
 						  * in our address space */
 		      exc_obj_psec_t *rel_psec,
-    		      l4exec_section_t *rel_l4exc,
+		      l4exec_section_t *rel_l4exc,
 		      l4_addr_t rel_l4exc_reloc,
 		      exc_obj_t **bin_deps,
 		      l4env_infopage_t *env)
@@ -967,7 +967,7 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
   l4_addr_t l4exc_vaddr;	/* addr in our address space of target of rel */
   l4_addr_t l4exc_reloc;	/* relocated addr of area for target of rel */
   l4_addr_t reloc_offs;
-  
+
   /* no debug info for next symbol */
 #ifdef DEBUG_RELOC_ENTRIES
   debug = 1;
@@ -978,13 +978,13 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
   rel_type = ELF32_R_TYPE(rel->r_info);
 
   /* target address which to patch */
-  target = (Elf32_Word*)(rel_l4exc_vaddr + rel->r_offset 
+  target = (Elf32_Word*)(rel_l4exc_vaddr + rel->r_offset
 					 - rel_psec->l4exc.addr);
 
-  if (   (l4_addr_t)target <  rel_l4exc_vaddr 
+  if (   (l4_addr_t)target <  rel_l4exc_vaddr
       || (l4_addr_t)target >= rel_l4exc_vaddr + rel_l4exc->size)
     {
-      msg("target addr %p out of range %08x-%08x",
+      msg("target addr %p out of range %08lx-%08lx",
 	   target, rel_l4exc_vaddr, rel_l4exc_vaddr+rel_l4exc->size);
       debug = 1;
     }
@@ -992,7 +992,7 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
   if (debug)
     {
       elf32_obj_show_reloc_entry(rel, this, rel_l4exc);
-      msg(" target addr %p = %08x + %08x - %08x",
+      msg(" target addr %p = %08lx + %08x - %08lx",
 	   target, rel_l4exc_vaddr, rel->r_offset, rel_psec->l4exc.addr);
     }
 
@@ -1017,7 +1017,7 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
     case R_ARM_GLOB_DAT:
     case R_ARM_COPY:
 #endif
-      /* Dynamic linking: find symbol in binary and dependant libraries 
+      /* Dynamic linking: find symbol in binary and dependant libraries
        * (if bin_obj!=0) or only in the exc_obj itself (if bin_obj==0) */
       if (bin_deps)
 	{
@@ -1028,15 +1028,15 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	  /* Search in binary/deps of the binary object */
 	  for (elf32_obj_t **dep=(elf32_obj_t**)bin_deps; *dep; dep++)
 	    {
-	      /* Search symbol in object list. The symbol has to be defined 
+	      /* Search symbol in object list. The symbol has to be defined
 	       * global if it is situated in another object than our's. */
 	      ret = (*dep)->find_sym(symname, *dep != this, &sym);
 
 	      if (ret == 0)
-	       	{
+		{
 		  /* symbol found */
 		  sym_exc_obj = *dep;
-	      	  break;
+		  break;
 		}
 	      else if ((ret == 1) && (*dep == this))
 		{
@@ -1089,12 +1089,25 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
       /* Preserve absolute symbols as they are */
       if (sym->st_shndx == SHN_ABS)
 	{
-	  *target = sym->st_value;
+	  switch (rel_type)
+	    {
+#ifdef ARCH_x86
+	    case R_386_PC32:
+#endif
+#ifdef ARCH_arm
+	    case R_ARM_REL32:
+#endif
+	      *target = sym->st_value - rel_l4exc_reloc - rel->r_offset - 4;
+	      break;
+	    default:
+	      *target = sym->st_value;
+	      break;
+	    }
 	  break;
 	}
 
-      if (   !(psec = sym_exc_obj->sym_psec(sym, dyn_strtab)) 
-	  || !(l4exc = psec->lookup_env(env)) 
+      if (   !(psec = sym_exc_obj->sym_psec(sym, dyn_strtab))
+	  || !(l4exc = psec->lookup_env(env))
 	  || !(l4exc_reloc = env_reloc_addr(l4exc, env)))
 	{
 	  /* section of target not found */
@@ -1123,11 +1136,11 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	  *target += sym->st_value + l4exc_reloc
 		   - rel->r_offset - rel_l4exc_reloc;
 
-    	  if (debug)
+	  if (debug)
 	    printf("#%6d: write %08x "
 		   "(%s, %08x, info %x)\n"
-		   "       (added %08x + %08x - %08x - %08x)\n",
-    		   sym_nr, *target, sym_exc_obj->get_fname(), 
+		   "       (added %08x + %08lx - %08x - %08lx)\n",
+		   sym_nr, *target, sym_exc_obj->get_fname(),
 		   sym->st_value, sym->st_info,
 		   sym->st_value, l4exc_reloc,
 		   rel->r_offset, rel_l4exc_reloc);
@@ -1143,20 +1156,20 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	  if (!(l4exc_vaddr = exc_obj_psec_here(env, l4exc-env->section)))
 	    return -L4_EXEC_CORRUPT;
 
-	  source = (Elf32_Word*)(l4exc_vaddr + sym->st_value 
+	  source = (Elf32_Word*)(l4exc_vaddr + sym->st_value
 					     - psec->l4exc.addr);
 	  if (debug)
-    	    {
-	      printf(" target addr %p = %08x + %08x - %08x\n",
-	       	  target, rel_l4exc_vaddr, rel->r_offset, rel_psec->l4exc.addr);
-	      printf(" source addr %p = %08x + %08x - %08x\n",
+	    {
+	      printf(" target addr %p = %08lx + %08x - %08lx\n",
+		  target, rel_l4exc_vaddr, rel->r_offset, rel_psec->l4exc.addr);
+	      printf(" source addr %p = %08lx + %08x - %08lx\n",
 		  source, l4exc_vaddr, sym->st_value,
 		  psec->l4exc.addr);
 
 	      printf("#%6d: *%p = *%p size %d "
 		     "(%s, %08x, info %x)\n",
-       		     sym_nr, target, source, sym->st_size,
-		     sym_exc_obj->get_fname(), 
+		     sym_nr, target, source, sym->st_size,
+		     sym_exc_obj->get_fname(),
 		     sym->st_value, sym->st_info);
 	    }
 
@@ -1164,20 +1177,20 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	  break;
 
 	default:
-    	  /* R_386_JMP_SLOT, R_386_32, R_386_GLOB_DAT */
+	  /* R_386_JMP_SLOT, R_386_32, R_386_GLOB_DAT */
 	  /* patch absolute */
 	  *target = l4exc_reloc + sym->st_value - psec->link_addr;
-		      
+
 	  if (debug)
 	    printf("#%6d: write %08x (%s, %08x, info %x)\n"
-		   "        (wrote %08x + %08x - %08x)\n",
-     		   sym_nr, *target, sym_exc_obj->get_fname(), 
+		   "        (wrote %08lx + %08x - %08lx)\n",
+		   sym_nr, *target, sym_exc_obj->get_fname(),
 		   sym->st_value, sym->st_info,
 		   l4exc_reloc, sym->st_value, psec->link_addr);
-		      
+
 	  break;
-    	}
-		  
+	}
+
       break;
 
 #ifdef ARCH_x86
@@ -1191,10 +1204,10 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	printf("            *%p: %08x => ", target, *target);
       if (addr_to_reloc_offs((l4_addr_t)rel->r_offset, env, &reloc_offs))
 	return -L4_EXEC_CORRUPT;
-      
+
       if (debug)
-	printf("%08x\n", *target + reloc_offs);
-      
+	printf("%08lx\n", *target + reloc_offs);
+
       /* patch (offset) */
       *target += reloc_offs;
       break;
@@ -1219,7 +1232,7 @@ elf32_obj_t::link_entry(l4env_infopage_t *env)
   if (addr_to_reloc_offs(entry, env, &reloc_offs))
     return -L4_EXEC_CORRUPT;
 
-  msg("Relocating entry %08x => %08x", entry, entry+reloc_offs);
+  msg("Relocating entry %08lx => %08lx", entry, entry+reloc_offs);
   env->entry_2nd = entry + reloc_offs;
   return 0;
 }
@@ -1231,13 +1244,13 @@ elf32_obj_t::link_entry(l4env_infopage_t *env)
  *
  * An exec section in the infopage holds the address and size where a
  * section lays in the target address space.
- * 
+ *
  * The symbols we try to link here can be determined by "objdump -R <file>"
  *
  * \param bin_deps	pointer to dependent ELF objects
  * \param env		L4 environment infopage
  * \return		0 on success
- * 			-L4_EINVAL */
+ *			-L4_EINVAL */
 int
 elf32_obj_t::link(exc_obj_t **bin_deps, l4env_infopage_t *env)
 {
@@ -1253,7 +1266,7 @@ elf32_obj_t::link(exc_obj_t **bin_deps, l4env_infopage_t *env)
   /* check if exc object was already linked */
   if (!(l4exc = psecs[0]->lookup_env(env)))
     return -L4_EINVAL;
-  
+
   if (!(l4exc->info.type & L4_DSTYPE_LINKME))
     return 0;
 
@@ -1309,7 +1322,7 @@ elf32_obj_t::link(exc_obj_t **bin_deps, l4env_infopage_t *env)
 		}
 
 	      if (rel_psec != rel_psec_cache)
-    		{
+		{
 		  if (   !(rel_l4exc       = rel_psec->lookup_env(env))
 		      || !(rel_l4exc_reloc = env_reloc_addr(rel_l4exc, env))
 		      || !(rel_l4exc_vaddr = exc_obj_psec_here(env,
@@ -1317,7 +1330,7 @@ elf32_obj_t::link(exc_obj_t **bin_deps, l4env_infopage_t *env)
 		    return -L4_EXEC_CORRUPT;
 		}
 
-	      if ((error = link_sym(rel, rel_l4exc_vaddr, rel_psec, rel_l4exc, 
+	      if ((error = link_sym(rel, rel_l4exc_vaddr, rel_psec, rel_l4exc,
 				    rel_l4exc_reloc, bin_deps, env)))
 		return error;
 	    }
@@ -1335,7 +1348,7 @@ elf32_obj_t::link(exc_obj_t **bin_deps, l4env_infopage_t *env)
 
 int
 elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
-{ 
+{
   if (sym_strtab && sym_symtab)
     {
       const bool only_size = (*str == 0);
@@ -1353,7 +1366,7 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 	    s_name = d;
 
 	  if (   (sym->st_shndx >= SHN_LORESERVE)   // ignore special symbols
-       	      || (sym->st_value == 0)               // ignore NIL symbols
+	      || (sym->st_value == 0)               // ignore NIL symbols
 	      || (*s_name == '\0')                  // ignore unnamed symbols
 	      || (!memcmp(s_name, "Letext", 6))     // ignore Letext symbols
 	      || (!memcmp(s_name, "_stext", 6)))    // ignore _stext symbols
@@ -1381,7 +1394,7 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 		    }
 
 		  // really make symbol line
-		  *str += sprintf(*str, "%08x   %.100s\n",
+		  *str += sprintf(*str, "%08lx   %.100s\n",
 		                  l4exc_reloc+sym->st_value-psec->link_addr,
 		                  s_name);
 		}
@@ -1402,7 +1415,7 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 	  if (d)
 	    free((void*)d);
 	}
- 
+
       *str++; // terminating '\0'
     }
 
@@ -1413,10 +1426,10 @@ int
 elf32_obj_t::get_symbols_size(l4_size_t *sym_sz)
 {
   char *len = 0;
-  
+
   get_symbols(0, &len);
   *sym_sz = (l4_size_t)len;
-  
+
   return 0;
 }
 
@@ -1425,14 +1438,14 @@ elf32_obj_t::get_lines(l4env_infopage_t *env, char **str, stab_line_t **lin,
 		       unsigned str_offs)
 {
   stab_line_t *l, *l_end;
-  
+
   if (!stab)
     return 0;
-  
+
   l = *lin;
   stab->get_lines(str, lin);
   l_end = *lin;
- 
+
   for (l_end = *lin; l<l_end; l++)
     {
       if (l->line < 0xfffd)
@@ -1453,7 +1466,7 @@ elf32_obj_t::get_lines(l4env_infopage_t *env, char **str, stab_line_t **lin,
 	  l->addr += str_offs;
 	}
     }
-  
+
   return 0;
 }
 
@@ -1465,18 +1478,18 @@ elf32_obj_t::get_lines_size(l4_size_t *str_size, l4_size_t *lin_size)
 
   *str_size = 0;
   *lin_size = 0;
-  
+
   return 0;
 }
 
 /** Check if we have a valid ELF32 binary image.
- * 
+ *
  * \param img		ELF image
  * \param env		L4 environment infopage
  * \param verbose	0=be quiet, 1=be verbose
  * \return		0 on success
- * 			-L4_EXEC_BADFORMAT
- * 			-L4_EXEC_CORRUPT */
+ *			-L4_EXEC_BADFORMAT
+ *			-L4_EXEC_CORRUPT */
 int
 elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose)
 {
@@ -1554,12 +1567,12 @@ elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose)
   return elf32_obj_check_interp(img, verbose);
 }
 
-/** Check if binary contains an interpreter section. 
+/** Check if binary contains an interpreter section.
  * Must be handled by the interpreter then, not by l4exec.
  *
  * \param img		ELF image
  * \return		0 if binary contains NO interp section
- * 			-L4_EXEC_INTERPRETER if binary contains interp sect */
+ *			-L4_EXEC_INTERPRETER if binary contains interp sect */
 int
 elf32_obj_check_interp(exc_img_t *img, int verbose)
 {
@@ -1594,14 +1607,14 @@ elf32_obj_check_interp(exc_img_t *img, int verbose)
 }
 
 /** Create new ELF32 object if img points to a valid ELF32 file image.
- * 
+ *
  * \param img		ELF image
  * \param env		L4 environment infopage
  * \param id		internal id of exc object
  * \retval exc_obj	pointer to new created ELF object
  * \return		0 on success
- * 			-L4_EXEC_BADFORMAT
- * 			-L4_EXEC_CORRUPT */
+ *			-L4_EXEC_BADFORMAT
+ *			-L4_EXEC_CORRUPT */
 int
 elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
               l4_uint32_t id)

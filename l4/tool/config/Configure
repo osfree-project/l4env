@@ -551,8 +551,8 @@ if [ -z "$DROPSCONF_MACRO" ] ; then
        exit 1
 fi
 
-CONFIG=.tmpconfig
-CONFIG_H=.tmpconfig.h
+CONFIG=$OBJ_DIR_EXPORT/.tmpconfig
+CONFIG_H=$OBJ_DIR_EXPORT/.tmpconfig.h
 trap "rm -f $CONFIG $CONFIG_H ; exit 1" 1 2
 
 #
@@ -585,9 +585,9 @@ if [ -f "$DEFAULTS" ]; then
   echo "# Using defaults found in" $DEFAULTS
   echo "#"
   . $DEFAULTS
-  sed -e 's/# \([^ ]*\) is not.*/\1=n/' <$DEFAULTS >.config-is-not.$$
-  . .config-is-not.$$
-  rm .config-is-not.$$
+  sed -e 's/# \([^ ]*\) is not.*/\1=n/' <$DEFAULTS >$OBJ_DIR_EXPORT/.config-is-not.$$
+  . $OBJ_DIR_EXPORT/.config-is-not.$$
+  rm $OBJ_DIR_EXPORT/.config-is-not.$$
 else
   echo "#"
   echo "# No defaults found"
@@ -600,8 +600,8 @@ rm -f $DROPSCONF_CONFIG.old
 if [ -f $DROPSCONF_CONFIG ]; then
 	mv $DROPSCONF_CONFIG $DROPSCONF_CONFIG.old
 fi
-mv .tmpconfig ${DROPSCONF_CONFIG}
-mv .tmpconfig.h ${DROPSCONF_CONFIG_H}
+mv $OBJ_DIR_EXPORT/.tmpconfig ${DROPSCONF_CONFIG}
+mv $OBJ_DIR_EXPORT/.tmpconfig.h ${DROPSCONF_CONFIG_H}
 
 echo
 echo "*** End of configuration."

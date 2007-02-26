@@ -5,6 +5,7 @@
 IMPLEMENTATION [ia32-abs_syscalls]:
 
 #include <cstdio>
+#include <cstring>
 #include "config.h"
 #include "cpu.h"
 #include "mem_layout.h"
@@ -14,20 +15,24 @@ IMPLEMENTATION [ia32-abs_syscalls]:
 #include "types.h"
 #include "vmem_alloc.h"
 
-#define OFFSET_ipc             0x000
-#define OFFSET_se_ipc          0x000
-#define OFFSET_id_nearest      0x100
-#define OFFSET_fpage_unmap     0x200
-#define OFFSET_thread_switch   0x300
-#define OFFSET_thread_schedule 0x400
-#define OFFSET_lthread_ex_regs 0x500
-#define OFFSET_task_new        0x600
+enum
+{
+  Offs_ipc               = 0x000,
+  Offs_se_ipc            = 0x000,
+  Offs_id_nearest        = 0x100,
+  Offs_fpage_unmap       = 0x200,
+  Offs_thread_switch     = 0x300,
+  Offs_thread_schedule   = 0x400,
+  Offs_lthread_ex_regs   = 0x500,
+  Offs_task_new          = 0x600,
+  Offs_privctrl          = 0x700,
+};
 
 #define SYSCALL_SYMS(sysc) \
 extern char sys_call_##sysc, sys_call_##sysc##_end
 
 #define COPY_SYSCALL(sysc) \
-memcpy( (char*)Mem_layout::Syscalls + OFFSET_##sysc, &sys_call_##sysc, \
+memcpy( (char*)Mem_layout::Syscalls + Offs_##sysc, &sys_call_##sysc, \
         &sys_call_##sysc##_end- &sys_call_##sysc )
 
 
@@ -43,23 +48,26 @@ Sys_call_page::init()
   SYSCALL_SYMS(thread_schedule);
   SYSCALL_SYMS(lthread_ex_regs);
   SYSCALL_SYMS(task_new);
+  SYSCALL_SYMS(privctrl);
 
   if (!Vmem_alloc::page_alloc((void*)Mem_layout::Syscalls,
 			      Vmem_alloc::ZERO_FILL,
-                              Space::Page_user_accessible | 
-			      Pd_entry::global()))
+                              Mem_space::Page_user_accessible 
+			      | Pd_entry::global()
+			      | Page::CACHEABLE))
     panic("FIASCO: can't allocate system-call page.\n");
 
   printf ("Absolute KIP Syscalls using: %s\n",
           Cpu::have_sysenter() ? "Sysenter" : "int 0x30");
 
-  Kip::k()->sys_ipc             = Mem_layout::Syscalls;
-  Kip::k()->sys_id_nearest      = Mem_layout::Syscalls + 0x100;
-  Kip::k()->sys_fpage_unmap     = Mem_layout::Syscalls + 0x200;
-  Kip::k()->sys_thread_switch   = Mem_layout::Syscalls + 0x300;
-  Kip::k()->sys_thread_schedule = Mem_layout::Syscalls + 0x400;
-  Kip::k()->sys_lthread_ex_regs = Mem_layout::Syscalls + 0x500;
-  Kip::k()->sys_task_new        = Mem_layout::Syscalls + 0x600;
+  Kip::k()->sys_ipc             = Mem_layout::Syscalls + Offs_ipc;
+  Kip::k()->sys_id_nearest      = Mem_layout::Syscalls + Offs_id_nearest;
+  Kip::k()->sys_fpage_unmap     = Mem_layout::Syscalls + Offs_fpage_unmap;
+  Kip::k()->sys_thread_switch   = Mem_layout::Syscalls + Offs_thread_switch;
+  Kip::k()->sys_thread_schedule = Mem_layout::Syscalls + Offs_thread_schedule;
+  Kip::k()->sys_lthread_ex_regs = Mem_layout::Syscalls + Offs_lthread_ex_regs;
+  Kip::k()->sys_task_new        = Mem_layout::Syscalls + Offs_task_new;
+  Kip::k()->sys_privctrl        = Mem_layout::Syscalls + Offs_privctrl;
   Kip::k()->kip_sys_calls       = 2;
 
   if (Cpu::have_sysenter())
@@ -73,4 +81,5 @@ Sys_call_page::init()
   COPY_SYSCALL(thread_schedule);
   COPY_SYSCALL(lthread_ex_regs);
   COPY_SYSCALL(task_new);
+  COPY_SYSCALL(privctrl);
 }

@@ -28,8 +28,12 @@ module = (nd)/tftpboot/l4io
 Possible command line arguments are:
 <dl>
 <dt><tt> --noirq </tt></dt>
-  <dd> Do not manage IRQs and leave this task to external managers (original omega0
-  or RMGR).</dd>
+  <dd> Do not manage IRQs and leave this task to external managers (original
+       omega0 or RMGR).</dd>
+<dt><tt> --omega0 </tt></dt>
+  <dd> Set omega0 flag in info page regardless of internal IRQ handling
+       configuration. This is useful if you use L4IO and an external omega0
+       server.</dd>
 <dt><tt> --exclude xxxx:yyyy</tt></dt>
   <dd> Do not allocate the IO-memory for device with vendor-ID xxxx and
        device-ID yyyy. Use this switch to give non-L4Env apps access to
@@ -42,5 +46,10 @@ Possible command line arguments are:
        should handle. If this switch is given at least once, no other
        devices will be handled.
   </dd>
+<dt><tt> --nolist </tt></dt>
+  <dd> Disables PCI device list at startup. </dd>
+<dt><tt> --nosfn </tt></dt>
+  <dd> Disables special fully-nested mode (only effective if --noirq is not
+       set). </dd>
 </dl>
 */

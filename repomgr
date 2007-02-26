@@ -1,0 +1,268 @@
+#! /usr/bin/perl -W
+
+use strict;
+
+my %modules =
+ (
+   bid => { paths => [ qw(l4/Makefile l4/tool/Makefile l4/mk l4/pkg/COPYING
+                        l4/COPYING l4/pkg/Makefile l4/tool/gendep
+			l4/tool/config l4/tool/gosh) ],
+          },
+
+   doc => { paths => [ qw(l4/doc) ], },
+
+   l4env_pkg => {
+      paths => [ qw(l4/pkg/l4con l4/pkg/crtx l4/pkg/cxx l4/pkg/demangle
+                    l4/pkg/dm_generic l4/pkg/dm_mem l4/pkg/dm_phys
+                    l4/pkg/events l4/pkg/generic_blk l4/pkg/generic_fprov
+                    l4/pkg/generic_io l4/pkg/generic_ts l4/pkg/l4env
+                    l4/pkg/exec l4/pkg/linux-24-headers l4/pkg/l4io
+                    l4/pkg/l4rm l4/pkg/l4sys l4/pkg/l4util l4/pkg/input
+                    l4/pkg/loader
+                    l4/pkg/lock l4/pkg/log l4/pkg/names l4/pkg/pci
+                    l4/pkg/omega0 l4/pkg/serial l4/pkg/semaphore
+                    l4/pkg/libsigma0 l4/pkg/ldso
+                    l4/pkg/sigma0 l4/pkg/simple_ts l4/pkg/slab l4/pkg/tftp
+                    l4/pkg/thread l4/pkg/x86emu
+                    l4/pkg/roottask l4/pkg/libc_backends_l4env
+                    l4/pkg/libc_support l4/pkg/bootstrap
+		    l4/pkg/lxfuxlibc ) ], },
+
+   l4env_tools => {
+      paths => [ qw(dice l4/tool/bin/abs2rel.sh l4/tool/bin/genoffsets.pl) ]
+   },
+
+   preprocess => {
+      paths => [ qw(l4/tool/preprocess) ]
+   },
+
+   # l4env with dietlibc
+   l4env_diet => {
+      modules => [ qw(bid doc l4env_tools) ],
+      paths   => [ qw(l4/pkg/dietlibc l4/pkg/dietlibc_r) ],
+   },
+
+   # l4env with uclibc
+   l4env_uclibc => {
+      modules => [ qw(bid doc l4env_tools) ],
+      paths   => [ qw(l4/pkg/uclibc l4/pkg/uclibc_r) ],
+   },
+
+   l4env => {
+      modules => [ qw(l4env_uclibc l4env_pkg) ],
+   },
+
+   hello_pkg => {
+      paths => [ qw(l4/pkg/uclibc l4/pkg/l4sys l4/pkg/hello
+                    l4/pkg/libc_support l4/pkg/l4util l4/pkg/roottask
+                    l4/pkg/libsigma0 l4/pkg/sigma0 l4/pkg/crtx
+                    l4/pkg/demangle l4/pkg/bootstrap l4/pkg/cxx) ],
+   },
+
+   hello => {
+      modules => [ qw(fiasco bid hello_pkg l4env_tools) ],
+   },
+
+   misc => {
+      paths => [ qw(l4/tool/runux l4/pkg/rtc l4/pkg/zlib) ],
+   },
+
+   dope => {
+      paths => [ qw(l4/pkg/dope l4/pkg/proxygon l4/tool/gen_dopecode) ],
+   },
+
+   'l4linux-2.6-env' => {
+      modules => [ qw(l4env dope misc) ],
+   },
+
+   fiasco => {
+      paths   => [ qw(kernel/fiasco/src kernel/fiasco/man kernel/fiasco/tool
+                      kernel/fiasco/Makefile kernel/fiasco/COPYING
+                      kernel/fiasco/mksnap kernel/fiasco/MAINTAINER
+                      kernel/fiasco/README
+                      kernel/fiasco/doc/design/ipc-path-charts) ],
+      modules => [ qw(preprocess) ],
+   },
+   
+   kernel => {
+      paths => [ qw(kernel/Makefile) ],
+   },
+
+   remote_repo => {
+      modules => [ qw(bid fiasco hello l4env l4env_diet l4env_uclibc
+                      dope misc) ],
+      paths   => [ qw(l4/pkg/overlay_wm l4/pkg/dde_linux26
+                      l4/pkg/linux-26-headers l4/pkg/dde_linux l4/pkg/l4ide
+                      l4/pkg/ore l4/pkg/l4vfs l4/pkg/flips
+                      l4/pkg/socket_linux l4/pkg/libpng l4/pkg/nethub
+                      l4/pkg/pingpong l4/pkg/verner l4/pkg/cxx_log_io
+                      l4/pkg/cxx_linux_io l4/pkg/dmon l4/pkg/dsi
+                      l4/pkg/dsi_example l4/pkg/cpu_reserve l4/pkg/libvfb
+                      l4/pkg/rt_mon l4/pkg/presenter l4/pkg/petze
+                      l4/pkg/dice_hello l4/pkg/signal l4/pkg/nitpicker
+                      l4/pkg/uclibc++ l4/pkg/c++-examples
+                      l4/pkg/local_socks l4/pkg/qt3 l4/pkg/ipreg
+                      l4/pkg/arm_drivers l4/pkg/ipcmon) ],
+     },
+
+   all => {
+      modules => [ qw(remote_repo) ],
+   },
+ );
+
+my %commands;
+
+
+sub merge_modules
+{
+  my %paths;
+
+  sub do_merge
+  {
+    my $pathsref = shift;
+    my $count = shift;
+
+    die "Possible looping in modules structure detected!" unless $count;
+
+    foreach my $m (@_)
+      {
+        die "Unknown module '$m' referenced!" unless defined $modules{$m};
+        $$pathsref{$_} = 1 foreach @{$modules{$m}{paths}};
+        do_merge($pathsref, $count - 1, @{$modules{$m}{modules}});
+      }
+  }
+
+  do_merge(\%paths, 20, scalar @_ ? @_ : 'all');
+
+  sort keys %paths;
+}
+
+sub usage
+{
+  my $command = shift;
+
+  # check alias
+  $command = $commands{$command}{alias}
+    if defined $command and defined $commands{$command}{alias};
+
+  if (!defined $command or $command eq 'help')
+    {
+      print "$0 command [option]\n";
+
+      print "Available commands, use '$0 help command' for help on the command:\n";
+      foreach (sort keys %commands)
+        {
+          print "  $_\n" if defined $commands{$_}{public};
+        }
+    }
+  elsif ($command eq 'update')
+    {
+      print "  'update' will update in the following way:\n".
+            "      update itself and re-exec if necessary\n".
+            "      call 'make update' in l4/pkg\n".
+            "      call 'svn update' every directory in kernel\n";
+    }
+  elsif ($command eq 'checkout')
+    {
+      print "  'checkout' will check out the given modules.\n";
+      print "Available modules:\n";
+      print "  $_\n" foreach sort keys %modules;
+    }
+  else
+    {
+      print "  No such command '$command'.\n";
+    }
+}
+
+sub check_module_structure()
+{
+  # make sure the paths look ok
+  foreach (merge_modules())
+    {
+      die "Leading/trailing /'s in modules structure" if /^\// or /\/$/;
+      die "Double // detected in modules structure" if /\/\//;
+    }
+}
+
+sub command_help
+{
+  usage(@_);
+}
+
+sub command_update
+{
+  print "XXX: todo\n";
+}
+
+sub command_checkout
+{
+  unless (defined $_[0])
+    {
+      print "Supply module to check out.\n";
+      usage("checkout");
+      exit 1;
+    }
+
+  my @paths = merge_modules(@_);
+
+  foreach my $paths (@paths)
+    {
+      my @path_elems = split /\/+/, $paths;
+      my $last_elem = pop @path_elems;
+      my $path = '.';
+
+      foreach my $pe (@path_elems)
+        {
+          if (! -d "$path/$pe/.svn")
+            {
+              print "Creating $paths\n";
+
+              system("cd $path && svn --quiet update -N $pe");
+              die "svn update failed" if $?;
+            }
+          $path .= '/'.$pe;
+        }
+    }
+
+  print "Getting sources\n";
+  system("svn --quiet update ".join(' ', @paths));
+  die "svn update failed" if $?;
+}
+
+sub command_paths
+{
+  print "$_\n" foreach merge_modules(@_);
+}
+
+%commands =
+ (
+   help     => { func => \&command_help, },
+   update   => { func => \&command_update, },
+   up       => { func => \&command_update, alias => 'update' },
+   checkout => { func => \&command_checkout, public => 1},
+   co       => { func => \&command_checkout, alias => 'checkout'},
+   paths    => { func => \&command_paths, },
+ );
+
+# ----------------------------------------------------------------
+
+check_module_structure();
+
+my $command = shift;
+
+unless (defined $command)
+  {
+    usage();
+    exit 1;
+  }
+
+if (defined $commands{$command})
+  {
+    &{$commands{$command}{func}}(@ARGV);
+  }
+else
+  {
+    print "Unknown command '$command'.\n";
+    usage();
+    exit 1;
+  }

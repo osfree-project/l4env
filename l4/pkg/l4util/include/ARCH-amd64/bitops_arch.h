@@ -1,0 +1,355 @@
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file    l4util/include/ARCH-amd64/bitops_arch.h
+ * \brief   amd64 bit manipulation functions
+ * \ingroup bitops
+ *
+ * \date    07/03/2001
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *          Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
+ *          Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/*
+ * Copyright (C) 2000-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+#ifndef __L4UTIL__INCLUDE__ARCH_AMD64__BITOPS_ARCH_H__
+#define __L4UTIL__INCLUDE__ARCH_AMD64__BITOPS_ARCH_H__
+
+/*****************************************************************************
+ *** Implementation
+ *****************************************************************************/
+
+/* set bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT32
+L4_INLINE void
+l4util_set_bit32(int b, volatile l4_uint32_t * dest)
+{
+  __asm__ __volatile__
+    (
+     "btsl  %1,%0   \n\t"
+     :
+     :
+     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "Ir"  (b)       /* 1,     bit number */
+     :
+     "memory", "cc"
+     );
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT64
+L4_INLINE void
+l4util_set_bit64(int b, volatile l4_uint64_t * dest)
+{
+  __asm__ __volatile__
+    (
+     "btsl  %1,%0   \n\t"
+     :
+     :
+     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "Ir"  (b)       /* 1,     bit number */
+     :
+     "memory", "cc"
+     );
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT
+L4_INLINE void
+l4util_set_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_set_bit64(b, (volatile l4_uint64_t*)dest);
+}
+
+/* clear bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT32
+L4_INLINE void
+l4util_clear_bit32(int b, volatile l4_uint32_t * dest)
+{
+  __asm__ __volatile__
+    (
+     "btrl  %1,%0   \n\t"
+     :
+     :
+     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "Ir"  (b)        /* 1,     bit number */
+     :
+     "memory", "cc"
+     );
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT64
+L4_INLINE void
+l4util_clear_bit64(int b, volatile l4_uint64_t * dest)
+{
+  __asm__ __volatile__
+    (
+     "btrl  %1,%0   \n\t"
+     :
+     :
+     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "Ir"  (b)        /* 1,     bit number */
+     :
+     "memory", "cc"
+     );
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_CLEAR_BIT
+L4_INLINE void
+l4util_clear_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_clear_bit64(b, (volatile l4_uint64_t*)dest);
+}
+
+/* change bit */
+#define __L4UITIL_BITOPS_HAVE_ARCH_COMPLEMENT_BIT
+L4_INLINE void
+l4util_complement_bit(int b, volatile l4_umword_t * dest)
+{
+  __asm__ __volatile__
+    (
+     "btcq  %1,%0   \n\t"
+     :
+     :
+     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "Ir"  ((l4_umword_t)b)        /* 1,     bit number */
+     :
+     "memory", "cc"
+     );
+}
+
+/* test bit */
+#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT32
+L4_INLINE int
+l4util_test_bit32(int b, volatile l4_uint32_t * dest)
+{
+  l4_int8_t bit;
+
+  __asm__ __volatile__
+    (
+     "btl   %2,%1   \n\t"
+     "setc  %0      \n\t"
+     :
+     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "Ir"  (b)        /* 2,     bit number */
+     :
+     "memory", "cc"
+     );
+
+  return (int)bit;
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT64
+L4_INLINE int
+l4util_test_bit64(int b, volatile l4_uint64_t * dest)
+{
+  l4_int8_t bit;
+
+  __asm__ __volatile__
+    (
+     "btl   %2,%1   \n\t"
+     "setc  %0      \n\t"
+     :
+     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "Ir"  (b)        /* 2,     bit number */
+     :
+     "memory", "cc"
+     );
+
+  return (int)bit;
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT
+L4_INLINE int
+l4util_test_bit(int b, volatile l4_umword_t * dest)
+{
+  return l4util_test_bit64(b, (volatile l4_uint64_t*)dest);
+}
+
+
+/* bit test and set */
+#define __L4UTIL_BITOPS_HAVE_ARCH_BIT_TEST_AND_SET
+L4_INLINE int 
+l4util_bts(int b, volatile l4_umword_t * dest)
+{
+  l4_int8_t bit;
+
+  __asm__ __volatile__
+    (
+     "btsl  %2,%1   \n\t"
+     "setc  %0      \n\t"
+     :
+     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "Ir"  (b)        /* 2,     bit number */
+     :
+     "memory", "cc"
+     );
+
+  return (int)bit;
+}
+
+/* bit test and reset */
+#define __L4UTIL_BITOPS_HAVE_ARCH_BIT_TEST_AND_RESET
+L4_INLINE int
+l4util_btr(int b, volatile l4_umword_t * dest)
+{
+  l4_int8_t bit;
+
+  __asm__ __volatile__
+    (
+     "btrl  %2,%1   \n\t"
+     "setc  %0      \n\t"
+     :
+     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "Ir"  (b)        /* 2,     bit number */
+     :
+     "memory", "cc"
+     );
+
+  return (int)bit;
+}
+
+/* bit test and complement */
+#define __L4UTIL_BITOPS_HAVE_ARCH_BIT_TEST_AND_COMPLEMENT
+L4_INLINE int
+l4util_btc(int b, volatile l4_umword_t * dest)
+{
+  l4_int8_t bit;
+
+  __asm__ __volatile__
+    (
+     "btcl  %2,%1   \n\t"
+     "setc  %0      \n\t"
+     : 
+     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "Ir"  ((l4_umword_t)b)        /* 2,     bit number */
+     :
+     "memory", "cc"
+     );
+
+  return (int)bit;
+}
+
+/* bit scan reverse */
+#define __L4UTIL_BITOPS_HAVE_ARCH_BIT_SCAN_REVERSE
+L4_INLINE int
+l4util_bsr(l4_umword_t word)
+{
+  l4_umword_t tmp;
+
+  if (EXPECT_FALSE(word == 0))
+    return -1;
+
+  __asm__ __volatile__
+    (
+     "bsr %1,%0 \n\t"
+     :
+     "=r" (tmp)       /* 0, index of most significant set bit */
+     :
+     "r"  (word)      /* 1, argument */
+     );
+
+  return tmp;
+}
+
+/* bit scan forwad */
+#define __L4UTIL_BITOPS_HAVE_ARCH_BIT_SCAN_FORWARD
+L4_INLINE int
+l4util_bsf(l4_umword_t word)
+{
+  l4_umword_t tmp;
+
+  if (EXPECT_FALSE(word == 0))
+    return -1;
+
+  __asm__ __volatile__
+    (
+     "bsf %1,%0 \n\t"
+     :
+     "=r" (tmp)       /* 0, index of least significant set bit */
+     :
+     "r"  (word)      /* 1, argument */
+     );
+
+  return tmp;
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_FIND_FIRST_SET_BIT
+L4_INLINE int
+l4util_find_first_set_bit(void * dest, l4_size_t size)
+{
+  l4_mword_t dummy0, dummy1, res;
+
+  __asm__ __volatile__
+    (
+     "xor  %%rax,%%rax		\n\t"
+     "repe; scasl		\n\t"
+     "jz    1f			\n\t"
+     "lea  -4(%%rdi),%%rdi	\n\t"
+     "bsfq  (%%rdi),%%rax	\n"
+     "1:			\n\t"
+     "sub  %%rbx,%%rdi		\n\t"
+     "shl  $3,%%rdi		\n\t"
+     "add  %%rdi,%%rax		\n\t"
+     :
+     "=a" (res), "=&c" (dummy0), "=&D" (dummy1)
+     :
+     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+
+  return res;
+}
+
+#define __L4UTIL_BITOPS_HAVE_ARCH_FIND_FIRST_ZERO_BIT
+L4_INLINE int
+l4util_find_first_zero_bit(void * dest, l4_size_t size)
+{
+  l4_mword_t dummy0, dummy1, dummy2, res;
+
+  if (!size)
+    return 0;
+
+  __asm__ __volatile__
+    (
+     "mov   $-1,%%rax		\n\t"
+     "xor   %%rdx,%%rdx	\n\t"
+     "repe;  scasl		\n\t"
+     "je     1f			\n\t"
+     "xor   -4(%%rdi),%%rax	\n\t"
+     "sub   $4,%%rdi		\n\t"
+     "bsf   %%rax,%%rdx	\n"
+     "1:			\n\t"
+     "sub   %%rbx,%%rdi	\n\t"
+     "shl   $3,%%rdi		\n\t"
+     "add   %%rdi,%%rdx	\n\t"
+     :
+     "=d" (res), "=&c" (dummy0), "=&D" (dummy1), "=&a" (dummy2)
+     :
+     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+
+  return res;
+}
+
+#endif /* ! __L4UTIL__INCLUDE__ARCH_AMD64__BITOPS_ARCH_H__ */

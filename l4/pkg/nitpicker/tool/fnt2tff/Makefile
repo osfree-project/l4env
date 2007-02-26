@@ -1,7 +1,7 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
-SYSTEMS ?= x86-l4v2 x86-l4x0
-DOPEDIR ?= $(L4DIR)/pkg/dopeng
+SYSTEMS ?= x86-l4v2
+DOPEDIR ?= $(L4DIR)/pkg/dope
 MODE     = host
 TARGET   = fnt2tff
 SRC_C    = main.c pool.c conv_fnt.c dopestd.c

@@ -24,6 +24,7 @@
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
 #include <l4/util/stack.h>
+#include <l4/util/reboot.h>
 #include <l4/log/l4log.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/l4rm/l4rm.h>
@@ -85,7 +86,7 @@ stress_test(void)
   int i, ret;
 
   l4dm_memphys_show_pool_areas(0);
-  KDEBUG("start...");
+  LOG("start...");
 
   for (i = 0; i < NUM_DS; i++)
     {
@@ -97,7 +98,7 @@ stress_test(void)
   //  l4dm_memphys_show_pool_areas(0);
 
   l4dm_memphys_show_slabs(0);
-  KDEBUG("opened.");
+  LOG("opened.");
 
   for (i = NUM_DS - 1; i >= 0; i--)
     //for (i = 0; i < NUM_DS; i++)
@@ -107,16 +108,16 @@ stress_test(void)
 	Panic("close dummy dataspace failed (%d)!", ret);
     }
 
-  KDEBUG("closed.");
+  LOG("closed.");
 
   l4dm_memphys_show_slabs(0);
 
-  KDEBUG("slabs.");
+  LOG("slabs.");
 
   l4dm_memphys_show_pool_areas(0);
   l4dm_ds_list_all(dsm_id);
 
-  KDEBUG("continue...");
+  LOG("continue...");
 }
 
 /*****************************************************************************
@@ -137,7 +138,7 @@ test_check_pagesize(void)
   l4_size_t size;
   void * ptr;
   
-  KDEBUG("start...");
+  LOG("start...");
 
   ptr = l4dm_mem_ds_allocate(0x00400000,
 			     L4DM_MEMPHYS_SUPERPAGES | L4RM_LOG2_ALIGNED | 
@@ -146,7 +147,7 @@ test_check_pagesize(void)
   if (ptr == NULL)
     Panic("allocate failed!");
   else
-    LOGL("dataspace %u at "l4util_idfmt", mapped at 0x%08x",
+    LOGL("dataspace %u at "l4util_idfmt", mapped at 0x%08lx",
          ds.id, l4util_idstr(ds.manager), (l4_addr_t)ptr);
 
   l4dm_ds_show(&ds);
@@ -156,9 +157,9 @@ test_check_pagesize(void)
 
   l4dm_close(&ds);
 
-  KDEBUG("next...");
+  LOG("next...");
 
-  ret = l4dm_memphys_open(2,                        // pool
+  ret = l4dm_memphys_open(L4DM_MEMPHYS_DEFAULT,     // pool
 			  0x02000000,               // address
 			  0x00400000,               // size
 			  //L4_SUPERPAGESIZE,         // alignment
@@ -180,9 +181,9 @@ test_check_pagesize(void)
   if (ret < 0)
     Panic("attach dataspace failed (%d)", ret);
   else
-    LOGL("attached to addr 0x%08x", addr);
+    LOGL("attached to addr 0x%08lx", addr);
 
-  ret = l4dm_memphys_open(2,                        // pool
+  ret = l4dm_memphys_open(L4DM_MEMPHYS_DEFAULT,     // pool
 			  0x02400000,               // address
 			  0x00400000,               // size
 			  //L4_SUPERPAGESIZE,         // alignment
@@ -204,16 +205,16 @@ test_check_pagesize(void)
   if (ret < 0)
     Panic("attach dataspace failed (%d)", ret);
   else
-    LOGL("attached to addr 0x%08x", addr);
+    LOGL("attached to addr 0x%08lx", addr);
 
-  KDEBUG("attached.");
+  LOG("attached.");
 
   addr = 0x10000000;
   size = 0x00800000;
   ret = l4dm_memphys_check_pagesize((void *)addr, size, L4_LOG2_SUPERPAGESIZE);
   LOGL("check_pagesize = %d", ret);
 
-  KDEBUG("next...");
+  LOG("next...");
 
   ret = l4dm_memphys_pagesize(&ds, 0, L4_SUPERPAGESIZE, L4_LOG2_SUPERPAGESIZE,
                               &ok);
@@ -222,7 +223,7 @@ test_check_pagesize(void)
   else
     LOGL("ok = %d", ok);
 
-  KDEBUG("done");
+  LOG("done");
 }
 
 /*****************************************************************************
@@ -242,7 +243,7 @@ test_phys_copy(void)
 
   l4_size_t size = (24 * 1024);
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   if (ret < 0)
@@ -254,10 +255,10 @@ test_phys_copy(void)
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
   memset(addr, 0x88, size);
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
   ret = 
     l4dm_memphys_copy(&ds,                            // source dataspace
@@ -279,11 +280,11 @@ test_phys_copy(void)
   else
     LOGL("copy %u at "l4util_idfmt, ds.id, l4util_idstr(ds.manager));
 
-  KDEBUG("copied.");
+  LOG("copied.");
 
   l4dm_memphys_show_pool_areas(L4DM_MEMPHYS_ISA_DMA);
 
-  KDEBUG("done.");
+  LOG("done.");
 }
 
 /*****************************************************************************
@@ -304,10 +305,10 @@ test_debug_DMphys(void)
   l4_size_t ds_map_size;
   l4_threadid_t dummy;
 
-  KDEBUG("start...");
+  LOG("start...");
 
   esp = l4util_stack_get_sp();
-  LOGL("stack at 0x%08x", esp);
+  LOGL("stack at 0x%08lx", esp);
 
   ret = l4rm_lookup((void *)esp, &ds_map_addr, &ds_map_size, 
                     &ds, &offs, &dummy);
@@ -317,25 +318,25 @@ test_debug_DMphys(void)
   if (ret != L4RM_REGION_DATASPACE)
     Panic("invalid region type %d!", ret);
 
-  printf("  ds %u at "l4util_idfmt", offset 0x%08x, map area 0x%08x-0x%08x\n",
+  printf("  ds %u at "l4util_idfmt", offset 0x%08lx, map area 0x%08lx-0x%08lx\n",
          ds.id, l4util_idstr(ds.manager), offs, ds_map_addr, 
          ds_map_addr + ds_map_size);
 
   l4dm_ds_show(&ds);
 
-  KDEBUG("next...");
+  LOG("next...");
 
   l4dm_memphys_show_pools();
 
-  KDEBUG("pools");
+  LOG("pools");
 
   l4dm_memphys_show_pool_areas(L4DM_MEMPHYS_ISA_DMA);
 
-  KDEBUG("areas");
+  LOG("areas");
 
   l4dm_memphys_show_pool_free(L4DM_MEMPHYS_ISA_DMA);
 
-  KDEBUG("free lists");
+  LOG("free lists");
 }
 
 /*****************************************************************************
@@ -350,19 +351,19 @@ test_allocate(void)
   void * ptr;
   l4_size_t size = (32 * 1024);
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ptr = l4dm_mem_allocate(size, L4RM_MAP);
   if (ptr == NULL)
     Panic("memory allocation failed!");
   else
-    LOGL("got mem at 0x%08x", (l4_addr_t)ptr);
+    LOGL("got mem at 0x%08lx", (l4_addr_t)ptr);
 
-  KDEBUG("allocated.");
+  LOG("allocated.");
 
   l4dm_mem_release(ptr);
 
-  KDEBUG("released.");
+  LOG("released.");
 }
 
 /*****************************************************************************
@@ -382,7 +383,7 @@ test_transfer(void)
 
   LOG("TEST_TRANSFER");
 
-  KDEBUG("start...");
+  LOG("start...");
 
   owner = l4_myself();
   owner.id.lthread = 5;
@@ -421,15 +422,18 @@ test_transfer(void)
 
   l4dm_ds_list_all(dsm_id);
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
+  /* do NOT close all dataspaces, because that would also close the dataspace
+   * containing out code segment, and whoops, its all gone.
   ret = l4dm_close_all(dsm_id, owner, 0);
   if (ret < 0)
     Panic("close all failed (%d)", ret);
 
   l4dm_ds_list_all(dsm_id);
+  */
 
-  KDEBUG("closed.");
+  LOG("closed.");
 }
 
 /*****************************************************************************
@@ -449,7 +453,7 @@ test_debug(void)
 
   l4_size_t size = (32 * 1024);
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   if (ret < 0)
@@ -470,7 +474,7 @@ test_debug(void)
   l4dm_ds_list(dsm_id, l4_myself(), L4DM_SAME_TASK);
   //l4dm_ds_list(dsm_id,L4_INVALID_ID);
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
   ret = l4dm_mem_size(&ds, &ds_size);
   if (ret < 0)
@@ -480,13 +484,13 @@ test_debug(void)
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
 
-  KDEBUG("attached.");
+  LOG("attached.");
 
   printf((char *)addr);
 
-  KDEBUG("done.");
+  LOG("done.");
 }
 
 /*****************************************************************************
@@ -508,7 +512,7 @@ test_resize(void)
 
   __scatter_dm_phys();
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   //  ret = l4dm_memphys_open(L4DM_MEMPHYS_DEFAULT, 0x015fe000, 0x2000, 0x1000,
@@ -522,25 +526,25 @@ test_resize(void)
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
 
   ret = l4dm_map(addr, size, L4DM_RW);
   if (ret < 0)
     Panic("map failed (%d)", ret);
 
-  KDEBUG("mapped.");
+  LOG("mapped.");
 
   ret = l4dm_mem_resize(&ds, 0x2000);
   if (ret < 0)
     Panic("resize dataspace failed (%d)!", ret);
 
-  KDEBUG("resized.");
+  LOG("resized.");
 
   ret = l4rm_attach(&ds, 0x2000, 0, L4DM_RW, &addr);
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
 
   ret = l4dm_map(addr, 0x2000, L4DM_RW);
   if (ret < 0)
@@ -554,12 +558,12 @@ test_resize(void)
       LOGL("got %d region(s) (size 0x%08x):", ret, psize);
       for (i = 0; i < ret; i++)
 	{
-	  printf("  0x%08x-0x%08x, size 0x%08x\n", paddrs[i].addr, 
+	  printf("  0x%08lx-0x%08lx, size 0x%08x\n", paddrs[i].addr, 
                  paddrs[i].addr + paddrs[i].size, paddrs[i].size);
 	}
     }
 
-  KDEBUG("paddr");
+  LOG("paddr");
 }
 
 /*****************************************************************************
@@ -577,7 +581,7 @@ test_lock(void)
 
   l4_size_t size = (32 * 1024);
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   if (ret < 0)
@@ -589,42 +593,42 @@ test_lock(void)
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
   
   ret = l4rm_attach_to_region(&ds, (void *)((l4_addr_t)addr + size),
 			      size, 0, L4DM_RW);
   if (ret < 0)
     {
-      LOGL("addr 0x%08x", (unsigned)addr + size);
+      LOGL("addr %p", (char *)addr + size);
       l4rm_show_region_list();
       Panic("attach failed (%d)", ret);
     }
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr + size);
+    LOGL("attached to address %p", (char *)addr + size);
 
   ret = l4dm_mem_lock((void *)(addr + 0x3456), 0x9876);
   if (ret < 0)
     Panic("lock failed (%d)", ret);
 
-  KDEBUG("locked.");
+  LOG("locked.");
 
   ret = l4dm_mem_unlock((void *)addr, 2 * size);
   if (ret < 0)
     Panic("unlock failed (%d)", ret);
   
-  KDEBUG("unlocked.");
+  LOG("unlocked.");
   
   ret = l4dm_mem_ds_lock(&ds, 0x1234, 0x5678);
   if (ret < 0)
     Panic("lock failed (%d)", ret);
 
-  KDEBUG("locked.");
+  LOG("locked.");
 
   ret = l4dm_mem_ds_unlock(&ds, 0x1234, 0x5678);
   if (ret < 0)
     Panic("unlock failed (%d)", ret);
   
-  KDEBUG("unlocked.");
+  LOG("unlocked.");
 }
 
 /*****************************************************************************
@@ -644,58 +648,58 @@ test_paddr(void)
   l4dm_mem_addr_t paddrs[16];
 
   l4_size_t size = (24 * 1024);
-  
+
   __scatter_dm_phys();
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   if (ret < 0)
     Panic("open dataspace failed (%d)", ret);
   else
     LOGL("dataspace %u at "l4util_idfmt, ds.id, l4util_idstr(ds.manager));
-  
+
   ret = l4dm_mem_ds_phys_addr(&ds, 0x800, 0x1000, &paddr, &psize);
   if (ret < 0)
     Panic("get phys. address failed (%d)", ret);
   else
-    LOGL("phys. addr 0x%08x,  size 0x%08x", paddr, psize);
+    LOGL("phys. addr 0x%08lx,  size 0x%08x", paddr, psize);
 
   ret = l4rm_attach(&ds, size, 0, L4DM_RW, &addr);
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address 0x%08lx", (unsigned long)addr);
 
   ret = l4rm_attach_to_region(&ds, (void *)((l4_addr_t)addr + size), 
 			      size, 0, L4DM_RW);
   if (ret < 0)
     {
-      LOGL("addr 0x%08x", (unsigned)addr + size);
+      LOGL("addr 0x%08lx", (unsigned long)addr + size);
       l4rm_show_region_list();
       Panic("attach failed (%d)", ret);
     }
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr + size);
-			      
-  KDEBUG("attached.");
+    LOGL("attached to address 0x%08lx", (unsigned long)addr + size);
+
+  LOG("attached.");
 
   ret = l4dm_mem_phys_addr((void *)((l4_addr_t)addr + 0x6abc),
 			   0x2345, paddrs, 16, &psize);
   if (ret < 0)
-    Panic("get phys. address for VM region 0x%08x-0x%08x failed (%d)",
+    Panic("get phys. address for VM region 0x%08lx-0x%08lx failed (%d)",
 	  (l4_addr_t)addr, (l4_addr_t)addr + size, ret);
   else
     {
       LOGL("got %d region(s) (size 0x%08x):", ret, psize);
       for (i = 0; i < ret; i++)
 	{
-	  printf("  0x%08x-0x%08x,  size 0x%08x\n", paddrs[i].addr,
+	  printf("  0x%08lx-0x%08lx,  size 0x%08x\n", paddrs[i].addr,
                  paddrs[i].addr + paddrs[i].size, paddrs[i].size);
 	}
     }
 
-  KDEBUG("done.");
+  LOG("done.");
 }
 
 /*****************************************************************************
@@ -716,7 +720,7 @@ test_copy(void)
 
   __scatter_dm_phys();
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "test", &ds);
   if (ret < 0)
@@ -728,10 +732,10 @@ test_copy(void)
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
   memset(addr, 0x88, size);
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
   ret = l4dm_copy_long(&ds, 0x800, 1, 0x7800, 0, "test copy", &copy);
   if (ret < 0)
@@ -745,7 +749,7 @@ test_copy(void)
   else
     LOGL("copy size: 0x%08x", ds_size);
 
-  KDEBUG("copied.");
+  LOG("copied.");
 }
 
 /*****************************************************************************
@@ -772,7 +776,7 @@ test_map(void)
   
   __scatter_dm_phys();
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, size, L4DM_CONTIGUOUS, "test", &ds);
   if (ret < 0)
@@ -780,20 +784,20 @@ test_map(void)
   else
     LOGL("dataspace %u at "l4util_idfmt, ds.id, l4util_idstr(ds.manager));
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
   ret = l4rm_attach(&ds, size, 0, L4RM_LOG2_ALIGNED, &addr);
   //ret = l4rm_attach(&ds, size, 0, 0, (void **)&addr);
   if (ret < 0)
     Panic("attach failed (%d)", ret);
   else
-    LOGL("attached to address 0x%08x", (unsigned)addr);
+    LOGL("attached to address %p", (void*)addr);
 
   ret = l4dm_map(addr, L4_PAGESIZE, L4DM_RW | L4DM_MAP_MORE);
   if (ret < 0)
     Panic("map failed (%d)", ret);
 
-  KDEBUG("mapped.");
+  LOG("mapped.");
 
   for (i=0; i<16; i++)
     memset(addr + i*L4_PAGESIZE, '0'+i, L4_PAGESIZE);
@@ -803,16 +807,16 @@ test_map(void)
   if (ret < 0)
     LOG_Error("map failed (%d)", ret);
   else
-    LOGL("mapped to 0x%08x", (unsigned)addr);
+    LOGL("mapped to %p", (void*)addr);
 
   ret = l4dm_close(&ds);
   if (ret < 0)
     Panic("close failed (%d)", ret);
 
-  KDEBUG("next...");
+  LOG("next...");
 
   esp = l4util_stack_get_sp();
-  LOGL("stack at 0x%08x", esp);
+  LOGL("stack at 0x%08lx", esp);
 
   ret = l4rm_lookup((void *)esp, &ds_map_addr, &ds_map_size, 
                     &ds, &offs, &dummy);
@@ -822,7 +826,7 @@ test_map(void)
   if (ret != L4RM_REGION_DATASPACE)
     Panic("invalid region type %d!", ret);
 
-  printf("  ds %u at "l4util_idfmt", offset 0x%08x, map area 0x%08x-0x%08x\n",
+  printf("  ds %u at "l4util_idfmt", offset 0x%08lx, map area 0x%08lx-0x%08lx\n",
          ds.id, l4util_idstr(ds.manager), offs, ds_map_addr,
          ds_map_addr + ds_map_size);
 
@@ -832,9 +836,9 @@ test_map(void)
   if (ret < 0)
     LOG_Error("map failed (%d)", ret);
   else
-    LOGL("mapped to 0x%08x", (unsigned)addr);
+    LOGL("mapped to 0x%08lx", (unsigned long)addr);
 
-  KDEBUG("done");
+  LOG("done");
 }
 
 /*****************************************************************************
@@ -858,7 +862,7 @@ test_open(void)
   else
     LOGL("dataspace %u at "l4util_idfmt, ds.id, l4util_idstr(ds.manager));
 
-  KDEBUG("opened.");
+  LOG("opened.");
 
   ret = l4dm_map_pages(&ds,
 		       0x0000,                /* offset */
@@ -871,13 +875,13 @@ test_open(void)
   if (ret < 0)
     LOG_Error("map page failed (%d)", ret);
 
-  KDEBUG("mapped.");
+  LOG("mapped.");
 
   ret = l4dm_close(&ds);
   if (ret < 0)
     LOG_Error("close dataspace failed (%d)", ret);
 
-  KDEBUG("done");
+  LOG("done");
 }
 
 /*****************************************************************************
@@ -898,7 +902,7 @@ test_is_contiguous(void)
   
   __scatter_dm_phys();
 
-  KDEBUG("start...");
+  LOG("start...");
 
   ret = l4dm_mem_open(dsm_id, size, 0, 0, "not contiguous", &ds1);
   if (ret < 0)
@@ -936,7 +940,7 @@ test_is_contiguous(void)
   
   l4dm_ds_list_all(dsm_id);
 
-  KDEBUG("done");
+  LOG("done");
 }
 
 /*****************************************************************************
@@ -951,7 +955,7 @@ test(void)
   l4dm_dataspace_t ds;
   int ret;
 
-  KDEBUG("start...");
+  LOG("start...");
 
   __scatter_dm_phys();
 
@@ -963,11 +967,11 @@ test(void)
   else
     l4dm_ds_show(&ds);
 
-  KDEBUG("next...");
+  LOG("next...");
 
   l4dm_memphys_show_memmap();
 
-  KDEBUG("next...");
+  LOG("next...");
 
   ret = l4dm_memphys_open(0,                          // pool
 			  0x08000000,                 // addr
@@ -983,13 +987,13 @@ test(void)
 
   l4dm_memphys_show_pool_areas(0);
 
-  KDEBUG("opened");
+  LOG("opened");
 
   l4dm_close(&ds);
 
   l4dm_memphys_show_pool_areas(0);
 
-  KDEBUG("closed");
+  LOG("closed");
 }
 
 void
@@ -1038,11 +1042,11 @@ main(int argc, char * argv[])
   test();
 #endif
 
-#if 0
+#if 1
   test_is_contiguous();
 #endif
 
-#if 0
+#if 1
   test_open();
 #endif
 
@@ -1050,11 +1054,11 @@ main(int argc, char * argv[])
   test_map();
 #endif
 
-#if 0
+#if 1
   test_copy();
 #endif
 
-#if 0
+#if 1
   test_paddr();
 #endif
 
@@ -1062,23 +1066,23 @@ main(int argc, char * argv[])
   test_lock();
 #endif
 
-#if 0
+#if 1
   test_resize();
 #endif
 
-#if 0
+#if 1
   test_debug();
 #endif
 
-#if 0
+#if 1
   test_transfer();
 #endif
 
-#if 0
+#if 1
   test_allocate();
 #endif
 
-#if 0
+#if 1
   test_debug_DMphys();
 #endif
 
@@ -1086,19 +1090,21 @@ main(int argc, char * argv[])
   test_phys_copy();
 #endif
 
-#if 0
+#if 1
   test_check_pagesize();
 #endif
 
-#if 0
+#if 1
   stress_test();
 #endif
 
-#if 0
+#if 1
   exit_test();
 #endif
   
-  KDEBUG("really done.");
+  LOG("really done.");
+  LOG_flush();
+  l4util_reboot();
 
   return 0;
 }

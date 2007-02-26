@@ -7,7 +7,7 @@ TARGET   = libc_be_l4sig.o.a
 
 SRC_C    = startup.c kill.c procmask.c enqueue.c dispatch.c  \
 	   sigaction.c default_handling.c signal.c alarm.c \
-	   timedwait.c exceptions.c
+	   timedwait.c exceptions.c local.c
 
 SRC_S    = except.S
 

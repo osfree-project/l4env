@@ -15,7 +15,9 @@ LINUX_HEADER_DIR = $(PKGDIR)/server/include/linux_headers
 
 PRIVATE_INCDIR	= 	$(LINUX_HEADER_DIR)				\
 					$(DDE_INCDIR) $(LINUX24_INCDIR) \
-				  	$(PKGDIR)/server/include
+				  	$(PKGDIR)/server/include		\
+					$(L4DIR)/include $(L4DIR)/include/$(ARCH)	\
+					$(L4DIR)/include/$(ARCH)/$(L4API)
 
 SRC_C		= arch/i386/lib/old-checksum.c				\
 			  lib/crc32.c								\
@@ -29,6 +31,7 @@ SRC_C		= arch/i386/lib/old-checksum.c				\
 			  net/ethernet/eth.c						\
 			  emul.c									\
 			  net/core/skbuff.c							\
+			  net/core/ethtool.c
 #			  net/sched/sch_generic.c					\
 
 SRC_S		= arch/i386/lib/checksum.S

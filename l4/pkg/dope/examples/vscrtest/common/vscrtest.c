@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /*** DOpE includes ***/
 #include <dopelib.h>
@@ -45,15 +46,19 @@ static struct efxwin {
 	{"bumpwin", "Bumpmapping",0, bump_init,     bump_exec},
 };
 
-long   app_id;                  /* DOpE application id */
-static char strbuf[256];        /* buffer for sprintf */
+long   app_id;                  /* DOpE application id      */
+static char strbuf[256];        /* buffer for sprintf       */
+int    quit = 0;                /* set on request to quit   */
+int    num_efx_threads = 0;     /* number of effect threads */
 
 
 /*** THREAD, THAT IS STARTED FOR EACH EFFECT ***/
 static void efx_thread(void *efx_id) {
 	int id = (int)efx_id;
 	efxwin[id].init();
-	while (1) efxwin[id].exec(efxwin[id].flag);
+	num_efx_threads++;
+	while (!quit) efxwin[id].exec(efxwin[id].flag);
+	num_efx_threads--;
 }
 
 
@@ -71,15 +76,26 @@ static void press_callback(dope_event *e,void *arg) {
 	}
 }
 
+static void exit_callback(dope_event *e, void *arg) {
+
+	/* tell effect threads to exit */
+	quit = 1;
+	while (num_efx_threads) usleep(1000);
+
+	dope_deinit_app(app_id);
+	dope_deinit();
+	exit(0);
+}
+
 
 int main(int argc,char **argv) {
 	int i;
 
 	native_startup(argc,argv);
-	
+
 	/* init DOpE library */
-	dope_init();
-	
+	if (dope_init()) return -1;
+
 	/* register DOpE-application */
 	app_id = dope_init_app("VScrtest");
 
@@ -96,13 +112,18 @@ int main(int argc,char **argv) {
 		sprintf(strbuf,"b%d",i);
 		dope_bind(app_id,strbuf,"press", press_callback, (void *)i);
 	}
+
+	dope_cmd(app_id, "exit = new Button(-text Exit)");
+	dope_cmd(app_id, "mg.place(exit, -column 1 -row 99)");
+	dope_bind(app_id, "exit", "commit", exit_callback, (void *)0);
+
 	dope_cmd(app_id,"mainwin.open()");
 
 	/* start effect threads */
 	for (i=0;i<NUM_EFX;i++) {
 		thread_create(efx_thread,(void *)i);
 	}
-		
+
 	/* enter mainloop */
 	dope_eventloop(app_id);
 	return 0;

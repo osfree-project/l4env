@@ -40,7 +40,7 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
     l4dm_dataspace_t ds;
     l4_size_t ds_size;
 
-    res = l4dm_mem_open(L4DM_DEFAULT_DSM,length,0,0,"dietlibc heap",&ds);
+    res = l4dm_mem_open(L4DM_DEFAULT_DSM, length, 0, 0, "libc heap", &ds);
 
     if (res)
     {
@@ -54,11 +54,11 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
 
     l4dm_mem_size(&ds,&ds_size);
 
-    LOGd(_DEBUG,"mem_size of created dataspace = %d",ds_size);
+    LOGd(_DEBUG,"mem_size of created dataspace = %ld", (l4_addr_t)ds_size);
 
-    res = l4rm_area_reserve(ds_size,L4RM_LOG2_ALIGNED,&addr,&area);
+    res = l4rm_area_reserve(ds_size, L4RM_LOG2_ALIGNED, &addr, &area);
 
-    LOGd(_DEBUG,"reserved area with id: %d",area);
+    LOGd(_DEBUG,"reserved area with id: %d", area);
 
     if (res)
     {
@@ -73,16 +73,16 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
     }
 
 
-    res = l4rm_area_attach(&ds,area,ds_size,0,L4DM_RW,&tmp);
+    res = l4rm_area_attach(&ds, area, ds_size, 0, L4DM_RW, &tmp);
 
     if (res == 0)
     {
         LOGd(_DEBUG,"Attached dataspace to area with id (%d)", area);
 
-        res = add_ds2server(&ds,l4_myself(),area);
+        res = add_ds2server(&ds, l4_myself(), area);
         if (res != 0)
         {
-            res = l4rm_detach(&tmp);
+            res = l4rm_detach(tmp);
 
             if (res != 0)
             {
@@ -128,10 +128,15 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
      * While the linux man page for mmap does not state that anonymous
      * memory is zeroed the netbsd man page does.
      */
+    /* update: we don't need to zero out the memory anymore, because
+     * dm_phys now delivers zero'ed memory
+     */
+#if 0
     if (tmp != NULL)
     {
         memset(tmp, 0, ds_size);
     }
+#endif
 
     return tmp;
 }
@@ -158,8 +163,13 @@ int munmap_anon(ds2server_t *current, void *start, size_t length)
     return 0;
 }
 
+#ifdef USE_DIETLIBC
 void * mremap(void * old_address, size_t old_size, size_t new_size,
               unsigned long flags)
+#else
+void * mremap(void * old_address, size_t old_size, size_t new_size,
+              int may_move)
+#endif
 {
     int ret;
     l4dm_dataspace_t ds;

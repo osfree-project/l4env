@@ -30,10 +30,10 @@ l4ts_dump_tasks(void)
     return -L4_ENOTFOUND;
 
   l4_ts_dump_call(&l4ts_server_id, &_env);
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", exc %d)",
-	   l4util_idstr(l4ts_server_id), _env.major);
+	   l4util_idstr(l4ts_server_id), DICE_EXCEPTION_MAJOR(&_env));
       return -L4_EIPC;
     }
 

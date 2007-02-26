@@ -2,6 +2,7 @@
 #define _DL_FEATURES
 
 #include <alloca.h>
+#include <stddef.h> // fm3: for OSKit
 
 #ifdef  __cplusplus
 # define __BEGIN_DECLS  extern "C" {

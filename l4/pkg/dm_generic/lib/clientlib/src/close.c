@@ -51,11 +51,11 @@ l4dm_close(const l4dm_dataspace_t * ds)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_close_call(&(ds->manager), ds->id, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspace %u at "l4util_idfmt \
             " failed (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager), 
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
@@ -91,10 +91,10 @@ l4dm_close_all(l4_threadid_t dsm_id, l4_threadid_t client, l4_uint32_t flags)
 
   /* call dataspace manager */
   ret = if_l4dm_generic_close_all_call(&dsm_id, &client, flags, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspaces of "l4util_idfmt \
-            " failed (ret %d, exc %d)!", l4util_idstr(client), ret, _env.major);
+            " failed (ret %d, exc %d)!", l4util_idstr(client), ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

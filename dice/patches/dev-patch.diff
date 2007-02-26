@@ -1,0 +1,991 @@
+Index: be/BECallFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BECallFunction.cpp,v
+retrieving revision 1.17
+diff -u -r1.17 BECallFunction.cpp
+--- be/BECallFunction.cpp	6 Oct 2004 15:41:55 -0000	1.17
++++ be/BECallFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -66,6 +66,8 @@
+  */
+ void CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+ {
++    VERBOSE("CBECallFunction::WriteVariableDeclaration called %s in %s\n",
++        GetName().c_str(), pFile->GetFileName().c_str());
+     // declare message buffer
+     CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+     assert(pMsgBuffer);
+@@ -91,6 +93,8 @@
+  */
+ void CBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+ {
++    VERBOSE("CBECallFunction::WriteVariableInitialization called %s in %s\n",
++        GetName().c_str(), pFile->GetFileName().c_str());
+     // init message buffer
+     CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+     assert(pMsgBuffer);
+@@ -153,6 +157,8 @@
+  */
+ bool CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+ {
++    VERBOSE("%s for operation %s called\n", __PRETTY_FUNCTION__,
++        pFEOperation->GetName().c_str());
+     pContext->SetFunctionType(FUNCTION_CALL);
+     // set target file name
+     SetTargetFileName(pFEOperation, pContext);
+@@ -167,6 +173,7 @@
+     if (!AddMessageBuffer(pFEOperation, pContext))
+         return false;
+ 
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+Index: be/BEClass.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEClass.cpp,v
+retrieving revision 1.54
+diff -u -r1.54 BEClass.cpp
+--- be/BEClass.cpp	6 Oct 2004 11:46:17 -0000	1.54
++++ be/BEClass.cpp	7 Oct 2004 08:16:07 -0000
+@@ -131,7 +131,7 @@
+ }
+ 
+ /** \brief returns a reference to the next function in the group
+- *  \param pIter the iterator pointing to the next function
++ *  \param iter the iterator pointing to the next function
+  *  \return a reference to the next function
+  */
+ CBEFunction *CFunctionGroup::GetNextFunction(vector<CBEFunction*>::iterator &iter)
+@@ -231,7 +231,7 @@
+ }
+ 
+ /**    \brief retrieves reference to the next function
+- *    \param pIter the pointer to the next function
++ *    \param iter the pointer to the next function
+  *    \return a reference to the next function
+  */
+ CBEFunction *CBEClass::GetNextFunction(vector<CBEFunction*>::iterator &iter)
+@@ -301,7 +301,7 @@
+ }
+ 
+ /** \brief retrieves a reference to the next attribute
+- *  \param pIter the pointer to the next attribute
++ *  \param iter the pointer to the next attribute
+  *  \return a reference to the next attribute
+  */
+ CBEAttribute* CBEClass::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
+@@ -375,7 +375,7 @@
+ }
+ 
+ /** \brief retrieves a pointer to the next base Class
+- *  \param pIter a pointer to the next base Class
++ *  \param iter a pointer to the next base Class
+  *  \return a reference to the next base Class
+  */
+ CBEClass* CBEClass::GetNextBaseClass(vector<CBEClass*>::iterator &iter)
+@@ -422,7 +422,7 @@
+ }
+ 
+ /** \brief retrieves a pointer to the next derived Class
+- *  \param pIter a pointer to the next derived Class
++ *  \param iter a pointer to the next derived Class
+  *  \return a reference to the next derived Class
+  */
+ CBEClass* CBEClass::GetNextDerivedClass(vector<CBEClass*>::iterator &iter)
+@@ -468,7 +468,7 @@
+ }
+ 
+ /** \brief gets a reference to the next constant
+- *  \param pIter the pointer to the next constant
++ *  \param iter the pointer to the next constant
+  *  \return a reference to the next constant
+  */
+ CBEConstant* CBEClass::GetNextConstant(vector<CBEConstant*>::iterator &iter)
+@@ -533,7 +533,7 @@
+ }
+ 
+ /** \brief gets a reference to the next typedef
+- *  \param pIter the pointer to the next typedef
++ *  \param iter the pointer to the next typedef
+  *  \return a reference to the next typedef
+  */
+ CBETypedDeclarator* CBEClass::GetNextTypedef(vector<CBETypedDeclarator*>::iterator &iter)
+@@ -1842,7 +1835,7 @@
+ }
+ 
+ /** \brief retrieves a reference to the next function group
+- *  \param pIter the pointer to the next function group
++ *  \param iter the pointer to the next function group
+  *  \return a reference to the next function group
+  */
+ CFunctionGroup* CBEClass::GetNextFunctionGroup(vector<CFunctionGroup*>::iterator &iter)
+@@ -2392,7 +2385,7 @@
+ }
+ 
+ /** \brief tries to retrieve a reference to the next type declaration
+- *  \param pIter the pointer to the next type declaration
++ *  \param iter the pointer to the next type declaration
+  *  \return a reference to the next type declaration
+  */
+ CBEType* CBEClass::GetNextTaggedType(vector<CBEType*>::iterator &iter)
+Index: be/BEClass.h
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEClass.h,v
+retrieving revision 1.21
+diff -u -r1.21 BEClass.h
+--- be/BEClass.h	1 Oct 2004 14:54:54 -0000	1.21
++++ be/BEClass.h	7 Oct 2004 08:16:07 -0000
+@@ -55,8 +55,18 @@
+ class CFEConstructedType;
+ class CFEAttributeDeclarator;
+ 
++/** \struct CPredefinedFunctionID
++ *  \ingroup backend
++ *  \brief helper class to specify a user defined function ID (uuid attribute)
++ */
+ typedef struct {
++    /** \var string m_sName
++     *  \brief the name of the function
++     */
+     string m_sName;
++    /** \var int m_nNumber
++     *  \brief its function id
++     */
+     int m_nNumber;
+ } CPredefinedFunctionID;
+ 
+Index: be/BEComponent.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEComponent.cpp,v
+retrieving revision 1.24
+diff -u -r1.24 BEComponent.cpp
+--- be/BEComponent.cpp	6 Oct 2004 11:46:19 -0000	1.24
++++ be/BEComponent.cpp	7 Oct 2004 08:16:07 -0000
+@@ -189,7 +189,9 @@
+         VERBOSE("CBEComponent::CreateBackEndHeader failed because header file could not be created\n");
+         return false;
+     }
++
+     CBERoot *pRoot = GetSpecificParent<CBERoot>();
++    assert(pRoot);
+     pRoot->AddToFile(pImpl, pContext);
+     // if create component function, we use seperate file for this
+     if (pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
+Index: be/BEDispatchFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEDispatchFunction.cpp,v
+retrieving revision 1.14
+diff -u -r1.14 BEDispatchFunction.cpp
+--- be/BEDispatchFunction.cpp	6 Oct 2004 15:41:55 -0000	1.14
++++ be/BEDispatchFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -167,7 +157,8 @@
+  *    \param pFEInterface the interface to add the functions for
+  *    \param pContext the context of the code generation
+  */
+-bool CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface, CBEContext * pContext)
++bool CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface,
++    CBEContext * pContext)
+ {
+     if (!pFEInterface)
+         return true;
+@@ -238,7 +229,7 @@
+ }
+ 
+ /**    \brief retrieves reference to the next function
+- *    \param pIter the pointer to the next function
++ *    \param iter the pointer to the next function
+  *    \return a reference to the next function
+  */
+ CBESwitchCase *CBEDispatchFunction::GetNextSwitchCase(vector<CBESwitchCase*>::iterator &iter)
+@@ -273,9 +264,9 @@
+     pFile->PrintIndent("");
+     delete pOpcodeType;
+ 
+-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
++    CBEMsgBufferType* pMsgBuffer = GetMessageBuffer();
+     assert(pMsgBuffer);
+-    WriteParameter(pFile, pMsgBuffer, pContext, false);
++    WriteParameter(pFile, pMsgBuffer, pContext, false /* no const msgbuf */);
+     // writes environment parameter
+     CBEInterfaceFunction::WriteAfterParameters(pFile, pContext, true);
+ }
+Index: be/BEFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEFunction.cpp,v
+retrieving revision 1.77
+diff -u -r1.77 BEFunction.cpp
+--- be/BEFunction.cpp	6 Oct 2004 09:15:21 -0000	1.77
++++ be/BEFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -222,7 +213,7 @@
+ }
+ 
+ /**    \brief retrieves a reference to the next attribute
+- *    \param pIter the pointer to the next attribute element
++ *    \param iter the pointer to the next attribute element
+  *    \return a reference to the next attribute
+  */
+ CBEAttribute *CBEFunction::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
+@@ -270,7 +261,7 @@
+ }
+ 
+ /**    \brief retrievs a reference to the next parameter
+- *    \param pIter the pointer to the next parameter
++ *    \param iter the pointer to the next parameter
+  *    \return a reference to the next paramater
+  */
+ CBETypedDeclarator *CBEFunction::GetNextParameter(vector<CBETypedDeclarator*>::iterator &iter)
+@@ -329,7 +320,7 @@
+ }
+ 
+ /**    \brief retrievs a reference to the next sorted parameter
+- *    \param pIter the pointer to the next sorted parameter
++ *    \param iter the pointer to the next sorted parameter
+  *    \return a reference to the next sorted paramater
+  */
+ CBETypedDeclarator* CBEFunction::GetNextSortedParameter(vector<CBETypedDeclarator*>::iterator &iter)
+@@ -377,7 +368,7 @@
+ }
+ 
+ /**    \brief retrieves the next exception from the exceptions vector
+- *    \param pIter the pointer to the next exception in the vector
++ *    \param iter the pointer to the next exception in the vector
+  *    \return a reference to the next excpetion
+  */
+ CBEException *CBEFunction::GetNextException(vector<CBEException*>::iterator &iter)
+@@ -403,6 +394,8 @@
+     if (!pFile->IsOpen())
+         return;
+ 
++    VERBOSE("CBEFunction::Write %s in %s called\n", GetName().c_str(),
++        pFile->GetFileName().c_str());
+     // write inline preix
+     WriteInlinePrefix(pFile, pContext);
+     if (pContext->IsOptionSet(PROGRAM_GENERATE_INLINE))
+@@ -420,6 +413,8 @@
+     if (!pFile->IsOpen())
+         return;
+ 
++    VERBOSE("CBEFunction::Write %s in %s called\n", GetName().c_str(),
++        pFile->GetFileName().c_str());
+     WriteInlinePrefix(pFile, pContext);
+     WriteFunctionDefinition(pFile, pContext);
+ }
+@@ -436,24 +431,27 @@
+  */
+ void CBEFunction::WriteFunctionDeclaration(CBEFile * pFile, CBEContext * pContext)
+ {
+-  if (!pFile->IsOpen())
+-    return;
++    if (!pFile->IsOpen())
++        return;
+ 
+-  m_nParameterIndent = 0;
+-  // <return type>
+-  WriteReturnType(pFile, pContext);
+-  // in the header file we add function attributes
+-  WriteFunctionAttributes(pFile, pContext);
+-  pFile->Print("\n");
+-  // <name> (
+-  pFile->Print("%s(", m_sName.c_str());
+-  m_nParameterIndent += m_sName.length() + 1;
++    VERBOSE("CBEFunction::WriteFunctionDeclaration %s in %s called\n",
++        GetName().c_str(), pFile->GetFileName().c_str());
+ 
+-  // <parameter list>
+-  WriteParameterList(pFile, pContext);
++    m_nParameterIndent = 0;
++    // <return type>
++    WriteReturnType(pFile, pContext);
++    // in the header file we add function attributes
++    WriteFunctionAttributes(pFile, pContext);
++    pFile->Print("\n");
++    // <name> (
++    pFile->Print("%s(", m_sName.c_str());
++    m_nParameterIndent += m_sName.length() + 1;
+ 
+-  // ); newline
+-  pFile->Print(");\n");
++    // <parameter list>
++    WriteParameterList(pFile, pContext);
++
++    // ); newline
++    pFile->Print(");\n");
+ }
+ 
+ /**    \brief writes the definition of the function to the target file
+@@ -473,6 +471,9 @@
+     if (!pFile->IsOpen())
+         return;
+ 
++    VERBOSE("CBEFunction::WriteFunctionDefinition %s in %s called\n",
++        GetName().c_str(), pFile->GetFileName().c_str());
++
+     m_nParameterIndent = 0;
+     // return type
+     WriteReturnType(pFile, pContext);
+@@ -561,8 +562,7 @@
+     CBEContext * pContext,
+     bool bUseConst)
+ {
+-    vector<CBEDeclarator*>::iterator iter = pParameter->GetFirstDeclarator();
+-    CBEDeclarator *pDecl = *iter;
++    CBEDeclarator *pDecl = pParameter->GetDeclarator();
+     assert(pDecl);
+     pParameter->WriteType(pFile, pContext, bUseConst);
+     pFile->Print(" ");
+@@ -614,7 +614,7 @@
+             pFile->Print(",\n");
+             pFile->PrintIndent("");
+         }
+-        WriteParameter(pFile, m_pCorbaEnv, pContext, false);
++        WriteParameter(pFile, m_pCorbaEnv, pContext, false /* no const with env */);
+     }
+     else
+     {
+@@ -1530,10 +1488,13 @@
+  *    \param pContext the context of the create process
+  *    \return true if successful
+  *
+- * The type and the name should not be initialized yet. This is all done by this function.
++ * The type and the name should not be initialized yet. This is all done by
++ * this function.
+  */
+-bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, string sName, CBEContext * pContext)
++bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType,
++    string sName, CBEContext * pContext)
+ {
++    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
+     // delete old
+     if (m_pReturnVar)
+         delete m_pReturnVar;
+@@ -1548,6 +1509,8 @@
+         delete pType;
+         delete m_pReturnVar;
+         m_pReturnVar = 0;
++        VERBOSE("%s failed because type could not be created\n",
++            __PRETTY_FUNCTION__);
+         return false;
+     }
+     if (!m_pReturnVar->CreateBackEnd(pType, sName, pContext))
+@@ -1555,6 +1518,8 @@
+         delete pType;
+         delete m_pReturnVar;
+         m_pReturnVar = 0;
++        VERBOSE("%s failed because var could not be created\n",
++            __PRETTY_FUNCTION__);
+         return false;
+     }
+     delete pType;        // is cloned by typed decl.
+@@ -1566,6 +1531,7 @@
+         m_pReturnVar->RemoveAttribute(pAttr);
+         delete pAttr;
+     }
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+@@ -2107,6 +2073,7 @@
+  */
+ bool CBEFunction::CreateBackEnd(CBEContext *pContext)
+ {
++    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
+     if (m_pCorbaObject)
+         delete m_pCorbaObject;
+     if (m_pCorbaEnv)
+@@ -2132,10 +2099,10 @@
+     CBEAttribute *pAttr = pContext->GetClassFactory()->GetNewAttribute();
+     if (!pAttr->CreateBackEnd(ATTR_IN, pContext))
+     {
+-    delete pAttr;
+-    VERBOSE("%s failed, because IN attribute for CORBA Object could not be created\n",
+-        __PRETTY_FUNCTION__);
+-    return false;
++        delete pAttr;
++        VERBOSE("%s failed, because IN attribute for CORBA Object could not be created\n",
++            __PRETTY_FUNCTION__);
++        return false;
+     }
+     m_pCorbaObject->AddAttribute(pAttr);
+     // init CORBA Environment
+@@ -2293,7 +2253,7 @@
+ }
+ 
+ /** \brief retrieves a reference to the next call parameter
+- *  \param pIter the pointer to the next call parameter
++ *  \param iter the pointer to the next call parameter
+  *  \return the reference to the next call parameter
+  */
+ CBETypedDeclarator* CBEFunction::GetNextCallParameter(vector<CBETypedDeclarator*>::iterator &iter)
+@@ -2517,6 +2477,7 @@
+ /** \brief returns the bytes to use for padding a parameter to its size
+  *    \param nCurrentOffset the current position in the message buffer
+  *    \param nParamSize the size of the parameter in bytes
++ *    \param pContext the context of the alignemnt operation
+  *    \return the number of bytes to align this parameter in the msgbuf
+  */
+ int CBEFunction::GetParameterAlignment(int nCurrentOffset, int nParamSize, CBEContext *pContext)
+Index: be/BEFunction.h
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEFunction.h,v
+retrieving revision 1.33
+diff -u -r1.33 BEFunction.h
+--- be/BEFunction.h	1 Oct 2004 14:54:55 -0000	1.33
++++ be/BEFunction.h	7 Oct 2004 08:16:07 -0000
+@@ -247,8 +246,8 @@
+     */
+     CBETarget *m_pTarget;
+     /** \var CBEMsgBufferType *m_pMsgBuffer
+-    *  \brief reference to function local message buffer
+-    */
++     *  \brief reference to function local message buffer
++     */
+     CBEMsgBufferType *m_pMsgBuffer;
+     /** \var CBETypedDeclarator *m_pCorbaObject
+     *  \brief contains a reference to the CORBA Object parameter
+Index: be/BEInterfaceFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEInterfaceFunction.cpp,v
+retrieving revision 1.10
+diff -u -r1.10 BEInterfaceFunction.cpp
+--- be/BEInterfaceFunction.cpp	6 Oct 2004 11:46:20 -0000	1.10
++++ be/BEInterfaceFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -25,11 +25,11 @@
+  * <contact@os.inf.tu-dresden.de>.
+  */
+ 
+-#include "be/BEInterfaceFunction.h"
+-#include "be/BEContext.h"
+-#include "be/BEType.h"
+-#include "be/BETypedDeclarator.h"
+-#include "be/BERoot.h"
++#include "BEInterfaceFunction.h"
++#include "BEContext.h"
++#include "BEType.h"
++#include "BETypedDeclarator.h"
++#include "BERoot.h"
+ 
+ #include "fe/FEInterface.h"
+ #include "TypeSpec-Type.h"
+@@ -43,15 +43,15 @@
+ {
+ }
+ 
+-/**    \brief destructor of target class */
++/** \brief destructor of target class */
+ CBEInterfaceFunction::~CBEInterfaceFunction()
+ {
+ }
+ 
+-/**    \brief creates the back-end function for the interface
+- *    \param pFEInterface the respective front-end interface
+- *    \param pContext the context of the code generation
+- *    \return true if successful
++/** \brief creates the back-end function for the interface
++ *  \param pFEInterface the respective front-end interface
++ *  \param pContext the context of the code generation
++ *  \return true if successful
+  *
+  * Create empty return variable.
+  */
+Index: be/BEMarshalFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEMarshalFunction.cpp,v
+retrieving revision 1.17
+diff -u -r1.17 BEMarshalFunction.cpp
+--- be/BEMarshalFunction.cpp	6 Oct 2004 15:41:55 -0000	1.17
++++ be/BEMarshalFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -283,7 +284,7 @@
+     assert(pMsgBuffer);
+     if (bComma)
+         *pFile << ",\n\t";
+-    WriteParameter(pFile, pMsgBuffer, pContext, false);
++    WriteParameter(pFile, pMsgBuffer, pContext, false /* no const msgbuf */);
+     CBEOperationFunction::WriteAfterParameters(pFile, pContext, true);
+ }
+ 
+Index: be/BEMarshaller.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEMarshaller.cpp,v
+retrieving revision 1.87
+diff -u -r1.87 BEMarshaller.cpp
+--- be/BEMarshaller.cpp	1 Oct 2004 13:42:50 -0000	1.87
++++ be/BEMarshaller.cpp	7 Oct 2004 08:16:07 -0000
+@@ -393,11 +393,11 @@
+ 
+ /** \brief writes the assignment of a declarator to the msgbuffer or the other \
+  *           way around
+- *    \param pFile the file to write to
+- *    \param nStartOffset the offset where to start in the message buffer
+- *    \param bUseConstOffset true if nStartOffset should be used
+- *    \param nAlignment the alignment of the parameter (if we do alignment)
+- *    \param pContext the context of the whole writing
++ *  \param pType the type to write
++ *  \param nStartOffset the offset where to start in the message buffer
++ *  \param bUseConstOffset true if nStartOffset should be used
++ *  \param nAlignment the alignment of the parameter (if we do alignment)
++ *  \param pContext the context of the whole writing
+  */
+ void
+ CBEMarshaller::WriteAssignment(CBEType *pType,
+@@ -517,15 +517,15 @@
+ 
+ /** \brief marshals a fixed sized array
+  *  \param pType the base type of the array
+- *  \param pIter iterator to the current array dimension
+- *  \param nLevel the number of this array dimension
+  *  \param nStartOffset the starting offset in the message buffer
+  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
+  *  \param bLastParameter true if this is last parameter to be marshalled
+- *  \param pIter the iterator pointing to the next array dimensions
++ *  \param iter the iterator pointing to the next array dimensions
+  *  \param nLevel the level reached with the current array boundary
+  *  \param pContext the context of the marshalling operation
+  *  \return the size of the array in the message buffer
++ *
++ * We optimize this marshalling by using memcpy
+  */
+ int
+ CBEMarshaller::MarshalConstArray(CBEType *pType,
+@@ -924,6 +924,7 @@
+  *  \param nStartOffset which index in the message buffer to use
+  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
+  *  \param bDereferencePosition true if the message buffer position shall be dereferenced
++ *  \param bCast true if the buffer should be casted to the type
+  *  \param pContext the context of the write operation
+  */
+ void CBEMarshaller::WriteBuffer(CBEType *pType,
+@@ -1078,12 +1076,14 @@
+  *  \param bLastParameter true if this is the last parameter to be marshalled
+  *  \param pContext the context of the marshalling
+  *
+- * A string is simply marshalled by copying each of its bytes into the message buffer until a 0 (zero) is
+- * encountered. Something like:
+  *
+- * <code>do { buffer[offset+tmp] = &lt,var&gt;[tmp]; } while(&lt;var&gt;[tmp++] != 0); offset += tmp;</code>
++ * Simple copy the string (strcpy(msgbuf, string)). At the server-side, we use a pointer
++ * into the message buffer. To be sure, we don't reference something behind the actual string's
++ * size, we first set the terminating zero. This method can only be used if a) unmarshalling and
++ * b) at the server side.
+  *
+- * If unmarshalling, we need to allocate memory for the string.
++ * This way we do not give the user a pointer to some memory he has to free himself, but we
++ * "recycle" the memory.
+  */
+ int
+ CBEMarshaller::MarshalString(CBEType *pType,
+@@ -1407,6 +1407,7 @@
+  *  \param nStartOffset which index in the message buffer to use
+  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
+  *  \param bDereferencePosition true if the message buffer position shall be dereferenced
++ *  \param bCast true if the message buffer should be casted to the type
+  *  \param pContext the context of the write operation
+  */
+ void CBEMarshaller::WriteBuffer(string sTypeName,
+@@ -1976,7 +1977,7 @@
+  *  \param nPosition the position in the (fictive) message buffer where to marshal to
+  *  \param nPosSize the size of the positions
+  *  \param bWrite true if the array is written to (from the message buffer)
+- *  \param pIter the iterator pointing to the next array bound
++ *  \param iter the iterator pointing to the next array bound
+  *  \param nLevel the number of the current array bound
+  *  \param pContext the context of the write
+  *  \return false if nothing could be written (didn't fit)
+@@ -2491,8 +2492,8 @@
+  *  \param nPosSize the size of the positions
+  *  \param bAllowSmaller true if elements migt be smaller than position
+  *  \param bAllowLarger true if elements might be larger than position
+- *    \param pIter the pointer to the current array boundary
+- *    \param nLevel the number of the current level
++ *  \param iter the pointer to the current array boundary
++ *  \param nLevel the number of the current level
+  *  \param pContext the context of this tests
+  *  \return true if array elements fit in there
+  */
+Index: be/BEOperationFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEOperationFunction.cpp,v
+retrieving revision 1.17
+diff -u -r1.17 BEOperationFunction.cpp
+--- be/BEOperationFunction.cpp	6 Oct 2004 11:46:21 -0000	1.17
++++ be/BEOperationFunction.cpp	7 Oct 2004 08:16:07 -0000
+@@ -125,6 +169,8 @@
+  */
+ bool CBEOperationFunction::AddParameters(CFEOperation * pFEOperation, CBEContext * pContext)
+ {
++    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
++        pFEOperation->GetName().c_str());
+     vector<CFETypedDeclarator*>::iterator iter = pFEOperation->GetFirstParameter();
+     CFETypedDeclarator *pFEParameter;
+     while ((pFEParameter = pFEOperation->GetNextParameter(iter)) != 0)
+@@ -132,6 +178,7 @@
+         if (!AddParameter(pFEParameter, pContext))
+             return false;
+     }
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+@@ -163,6 +210,8 @@
+ bool CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation,
+                      CBEContext * pContext)
+ {
++    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
++        pFEOperation->GetName().c_str());
+     vector<CFEIdentifier*>::iterator iter = pFEOperation->GetFirstRaisesDeclarator();
+     CFEIdentifier *pFEException;
+     while ((pFEException = pFEOperation->GetNextRaisesDeclarator(iter)) != 0)
+@@ -170,6 +219,7 @@
+         if (!AddException(pFEException, pContext))
+             return false;
+     }
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+@@ -198,6 +248,8 @@
+  */
+ bool CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation, CBEContext * pContext)
+ {
++    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
++        pFEOperation->GetName().c_str());
+     vector<CFEAttribute*>::iterator iter = pFEOperation->GetFirstAttribute();
+     CFEAttribute *pFEAttribute;
+     while ((pFEAttribute = pFEOperation->GetNextAttribute(iter)) != 0)
+@@ -205,6 +257,7 @@
+         if (!AddAttribute(pFEAttribute, pContext))
+             return false;
+     }
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+Index: be/BETypedDeclarator.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BETypedDeclarator.cpp,v
+retrieving revision 1.70
+diff -u -r1.70 BETypedDeclarator.cpp
+--- be/BETypedDeclarator.cpp	6 Oct 2004 11:46:22 -0000	1.70
++++ be/BETypedDeclarator.cpp	7 Oct 2004 08:16:08 -0000
+@@ -214,7 +214,7 @@
+  */
+ bool CBETypedDeclarator::CreateBackEnd(CBEType * pType, string sName, CBEContext * pContext)
+ {
+-    VERBOSE("CBETypedDeclarator::CreateBE(given type)\n");
++    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
+ 
+     // create decl
+     CBEDeclarator *pDecl = pContext->GetClassFactory()->GetNewDeclarator();
+@@ -231,6 +231,7 @@
+     m_pType->SetParent(this);
+     // do not need to call create, because original has been created before.
+ 
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
+     return true;
+ }
+ 
+@@ -272,7 +273,7 @@
+ }
+ 
+ /**    \brief retrieves the next attribute
+- *    \param pIter the pointer to the next attribute
++ *    \param iter the pointer to the next attribute
+  *    \return a reference to the next attribute
+  */
+ CBEAttribute *CBETypedDeclarator::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
+@@ -485,7 +486,7 @@
+ }
+ 
+ /**    \brief retrieves a reference to the next declarator
+- *    \param pIter the pointer to the next declarator
++ *    \param iter the pointer to the next declarator
+  *    \return a reference to the next declarator
+  */
+ CBEDeclarator *CBETypedDeclarator::GetNextDeclarator(vector<CBEDeclarator*>::iterator &iter)
+@@ -699,7 +699,7 @@
+            pDeclarator->GetSize(),
+            (FindAttribute(ATTR_OUT))?"true":"false",
+            (GetType() && GetType()->IsConstructedType())?"true":"false",
+-           ()GetSpecificParent<CBEFunction>()->GetName());*/
++           GetSpecificParent<CBEFunction>()->GetName());*/
+ // </DEBUG>
+     return false;
+ }
+@@ -852,11 +853,11 @@
+             if (pContext->IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
+             {
+                 vector<CBEDeclarator*>::iterator iterD = GetFirstDeclarator();
+-                CBEFunction *pFunc = GetSpecificParent<CBEFunction>();
+-                if (pFunc)
++                CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
++                if (pFunction)
+                     CCompiler::Warning("%s in %s has no maximum size (guessing size %d)",
+                         (*iterD)->GetName().c_str(),
+-                        pFunc->GetName().c_str(),
++                        pFunction->GetName().c_str(),
+                         nTypeSize * -nDeclSize);
+                 else
+                     CCompiler::Warning("%s has no maximum size (guessing size %d)",
+@@ -914,11 +915,11 @@
+                 if (pContext->IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
+                 {
+                     vector<CBEDeclarator*>::iterator iterD = GetFirstDeclarator();
+-                    CBEFunction *pFunc = GetSpecificParent<CBEFunction>();
+-                    if (pFunc)
++                    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
++                    if (pFunction)
+                         CCompiler::Warning("%s in %s has no maximum size (guessing size %d)",
+                             (*iterD)->GetName().c_str(),
+-                            pFunc->GetName().c_str(),
++                            pFunction->GetName().c_str(),
+                             nTypeSize * -nDeclSize);
+                     else
+                         CCompiler::Warning("%s has no maximum size (guessing size %d)",
+Index: be/BETypedef.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BETypedef.cpp,v
+retrieving revision 1.12
+diff -u -r1.12 BETypedef.cpp
+--- be/BETypedef.cpp	9 Aug 2004 08:01:03 -0000	1.12
++++ be/BETypedef.cpp	7 Oct 2004 08:16:08 -0000
+@@ -133,13 +133,7 @@
+  */
+ CBEDeclarator* CBETypedef::GetAlias()
+ {
+-    if (!m_pAlias)
+-    {
+-        vector<CBEDeclarator*>::iterator iter = m_vDeclarators.begin();
+-        if (iter != m_vDeclarators.end())
+-            m_pAlias = *iter;
+-    }
+-    return m_pAlias;
++    return GetDeclarator();
+ }
+ 
+ /** \brief creates a new instance of this object */
+Index: be/BEUnionCase.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEUnionCase.cpp,v
+retrieving revision 1.11
+diff -u -r1.11 BEUnionCase.cpp
+--- be/BEUnionCase.cpp	20 Jul 2004 15:44:43 -0000	1.11
++++ be/BEUnionCase.cpp	7 Oct 2004 08:16:08 -0000
+@@ -100,6 +100,36 @@
+     return true;
+ }
+ 
++/** \brief creates the union case
++ *  \param pType the type of the union arm
++ *  \param sName the name of the union arm
++ *  \param pCaseLabel the case label
++ *  \param bDefault true if this is the default arm
++ *  \param pContext the context of the create process
++ *  \return true if successful
++ *
++ * If neither pCaseLabel nor bDefault is set, then this is the member of a C
++ * style union.
++ */
++bool CBEUnionCase::CreateBackEnd(CBEType *pType, string sName,
++     CBEExpression *pCaseLabel, bool bDefault, CBEContext *pContext)
++{
++    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__, sName.c_str());
++
++    if (!CBETypedDeclarator::CreateBackEnd(pType, sName, pContext))
++    {
++        VERBOSE("%s failed, because base class could not be initialized\n",
++            __PRETTY_FUNCTION__);
++        return false;
++    }
++    m_bDefault = bDefault;
++    if (pCaseLabel)
++        AddLabel(pCaseLabel);
++
++    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
++    return true;
++}
++
+ /**    \brief adds another label to the vector
+  *    \param pLabel the new label
+  */
+@@ -138,7 +168,7 @@
+ }
+ 
+ /**    \brief retrieves a reference to the next label
+- *    \param pIter the pointer to this label
++ *    \param iter the pointer to this label
+  *    \return a reference to the expression
+  */
+ CBEExpression *CBEUnionCase::GetNextLabel(vector<CBEExpression*>::iterator &iter)
+Index: be/BEUnionCase.h
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEUnionCase.h,v
+retrieving revision 1.8
+diff -u -r1.8 BEUnionCase.h
+--- be/BEUnionCase.h	20 Jul 2004 08:52:52 -0000	1.8
++++ be/BEUnionCase.h	7 Oct 2004 08:16:08 -0000
+@@ -45,27 +45,30 @@
+ class CBEUnionCase : public CBETypedDeclarator
+ {
+ // Constructor
+-  public:
++public:
+     /**    \brief constructor
+      */
+     CBEUnionCase();
+     virtual ~ CBEUnionCase();
+ 
+-  protected:
++protected:
+     /**    \brief copy constructor
+      *    \param src the source to copy from
+      */
+     CBEUnionCase(CBEUnionCase & src);
+ 
+-  public:
++public:
+     virtual void RemoveLabel(CBEExpression * pLabel);
+     virtual CBEExpression *GetNextLabel(vector<CBEExpression*>::iterator &iter);
+     virtual vector<CBEExpression*>::iterator GetFirstLabel();
+     virtual void AddLabel(CBEExpression * pLabel);
++
+     virtual bool CreateBackEnd(CFEUnionCase * pFEUnionCase, CBEContext * pContext);
++    virtual bool CreateBackEnd(CBEType *pType, string sName, CBEExpression *pCaseLabel, bool bDefault, CBEContext *pContext);
++
+     virtual bool IsDefault();
+ 
+-  protected:
++protected:
+     /**    \var bool m_bDefault
+      *    \brief true is default branch
+      */
+Index: be/BEUnmarshalFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEUnmarshalFunction.cpp,v
+retrieving revision 1.34
+diff -u -r1.34 BEUnmarshalFunction.cpp
+--- be/BEUnmarshalFunction.cpp	6 Oct 2004 15:41:55 -0000	1.34
++++ be/BEUnmarshalFunction.cpp	7 Oct 2004 08:16:08 -0000
+@@ -51,7 +51,7 @@
+ }
+ 
+ CBEUnmarshalFunction::CBEUnmarshalFunction(CBEUnmarshalFunction & src)
+-:CBEOperationFunction(src)
++ : CBEOperationFunction(src)
+ {
+ }
+ 
+@@ -345,14 +345,16 @@
+  */
+ void CBEUnmarshalFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
+ {
+-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+-    assert(pMsgBuffer);
+     if (bComma)
+     {
+         pFile->Print(",\n");
+         pFile->PrintIndent("");
+     }
++    // write message buffer
++    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
++    assert(pMsgBuffer);
+     WriteParameter(pFile, pMsgBuffer, pContext);
++    // base class
+     CBEOperationFunction::WriteAfterParameters(pFile, pContext, true);
+ }
+ 
+Index: be/BEWaitAnyFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEWaitAnyFunction.cpp,v
+retrieving revision 1.17
+diff -u -r1.17 BEWaitAnyFunction.cpp
+--- be/BEWaitAnyFunction.cpp	6 Oct 2004 15:41:55 -0000	1.17
++++ be/BEWaitAnyFunction.cpp	7 Oct 2004 08:16:08 -0000
+@@ -267,14 +256,16 @@
+     CBEContext * pContext,
+     bool bComma)
+ {
+-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+-    assert(pMsgBuffer);
+     if (bComma)
+     {
+         pFile->Print(",\n");
+         pFile->PrintIndent("");
+     }
+-    WriteParameter(pFile, pMsgBuffer, pContext, false);
++    // write message buffer
++    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
++    assert(pMsgBuffer);
++    WriteParameter(pFile, pMsgBuffer, pContext, false /* no const msgbuf */);
++    // base class
+     CBEInterfaceFunction::WriteAfterParameters(pFile, pContext, true);
+ }
+ 
+@@ -305,6 +296,8 @@
+  *  \param pFile the file to print to
+  *  \param pContext the context of the write operation
+  *  \return true if this function wrote something
++ *
++ * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
+  */
+ bool
+ CBEWaitAnyFunction::WriteBeforeParameters(CBEFile *pFile, CBEContext *pContext)
+Index: be/l4/L4BENameFactory.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/l4/L4BENameFactory.cpp,v
+retrieving revision 1.30
+diff -u -r1.30 L4BENameFactory.cpp
+--- be/l4/L4BENameFactory.cpp	26 Jul 2004 07:43:38 -0000	1.30
++++ be/l4/L4BENameFactory.cpp	7 Oct 2004 08:16:09 -0000
+@@ -197,13 +197,13 @@
+     switch(nFEType)
+     {
+     case TYPE_RCV_FLEXPAGE:
+-        sReturn = "fpage";
++        sReturn = "_dice_rcv_fpage";
+         break;
+     case TYPE_MSGDOPE_SIZE:
+-        sReturn = "size";
++        sReturn = "_dice_size_dope";
+         break;
+     case TYPE_MSGDOPE_SEND:
+-        sReturn = "send";
++        sReturn = "_dice_send_dope";
+         break;
+     default:
+         sReturn = CBENameFactory::GetMessageBufferMember(nFEType, pContext);
+Index: be/l4/L4BESrvLoopFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/l4/L4BESrvLoopFunction.cpp,v
+retrieving revision 1.29
+diff -u -r1.29 L4BESrvLoopFunction.cpp
+--- be/l4/L4BESrvLoopFunction.cpp	6 Oct 2004 15:41:57 -0000	1.29
++++ be/l4/L4BESrvLoopFunction.cpp	7 Oct 2004 08:16:09 -0000
+@@ -90,10 +91,10 @@
+     pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SIZE, 0, pContext);
+     // init receive flexpage
+     pMsgBuffer->WriteInitialization(pFile, TYPE_FLEXPAGE,
+-    GetReceiveDirection(), pContext);
++        GetReceiveDirection(), pContext);
+     // init indirect strings
+     pMsgBuffer->WriteInitialization(pFile, TYPE_REFSTRING,
+-    GetReceiveDirection(), pContext);
++        GetReceiveDirection(), pContext);
+     // when we finished initialization, signal that we are ready
+     WriteServerStartupInfo(pFile, pContext);
+ }
+Index: be/l4/x0/arm/X0ArmIPC.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/l4/x0/arm/X0ArmIPC.cpp,v
+retrieving revision 1.5
+diff -u -r1.5 X0ArmIPC.cpp
+--- be/l4/x0/arm/X0ArmIPC.cpp	1 Oct 2004 13:06:20 -0000	1.5
++++ be/l4/x0/arm/X0ArmIPC.cpp	7 Oct 2004 08:16:10 -0000
+@@ -4,7 +4,8 @@
+  *
+  *  \date   08/13/2002
+  *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+- *
++ */
++/*
+  * Copyright (C) 2001-2003
+  * Dresden University of Technology, Operating Systems Research Group
+  *

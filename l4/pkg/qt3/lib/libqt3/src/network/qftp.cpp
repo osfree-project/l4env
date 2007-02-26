@@ -332,18 +332,25 @@ void QFtpDTP::writeData()
 	clearData();
     } else if ( data.dev ) {
 	callWriteData = FALSE;
-#if !defined(Q_OS_DROPS)
 	const int blockSize = 16*1024;
-#else
-	const int blockSize = 3072;
-#endif
 	char buf[blockSize];
 	while ( !data.dev->atEnd() && socket.bytesToWrite()==0 ) {
 	    Q_LONG read = data.dev->readBlock( buf, blockSize );
 #if defined(QFTPDTP_DEBUG)
 	    qDebug( "QFtpDTP::writeData: writeBlock() of size %d bytes", (int)read );
 #endif
+#if !defined(Q_OS_DROPS)
 	    socket.writeBlock( buf, read );
+#else
+            // with L4VFS, we may not be able to write the whole buffer at once
+            Q_LONG left = read;
+            Q_LONG bytes;
+            do {
+                bytes = socket.writeBlock(buf + read - left, left);
+                if (bytes > 0)
+                    left -= bytes;
+            } while (left > 0 && bytes >= 0);
+#endif // ! Q_OS_DROPS
 	    if ( !data.dev )
 		return; // this can happen when a command is aborted
 	}
@@ -516,19 +523,13 @@ bool QFtpDTP::parseDir( const QString &buffer, const QString &userName, QUrlInfo
 
 void QFtpDTP::socketConnected()
 {
-qDebug("## %s:%d", __FUNCTION__, __LINE__);
 #if !defined (Q_WS_QWS)
     // Use a large send buffer to reduce the number
     // of writeBlocks when download and uploading files.
     // The actual size used here (128k) is default on most
     // Unixes.
-#if !defined(Q_OS_DROPS)
     socket.socketDevice()->setSendBufferSize(128 * 1024);
     socket.socketDevice()->setReceiveBufferSize(128 * 1024);
-#else
-    socket.socketDevice()->setSendBufferSize(4 * 1024);
-    socket.socketDevice()->setReceiveBufferSize(4 * 1024);
-#endif
 #endif
 
     bytesDone = 0;
@@ -568,8 +569,7 @@ void QFtpDTP::socketReadyRead()
 	}
     } else {
 	if ( !is_ba && data.dev ) {
-#if !defined(Q_OS_DROPS)
-	    QByteArray ba( socket.bytesAvailable() );
+            QByteArray ba( socket.bytesAvailable() );
 	    Q_LONG bytesRead = socket.readBlock( ba.data(), ba.size() );
 	    if ( bytesRead < 0 ) {
 		// ### error handling
@@ -581,40 +581,21 @@ void QFtpDTP::socketReadyRead()
 	    qDebug( "QFtpDTP read: %d bytes (total %d bytes)", (int)bytesRead, bytesDone );
 #endif
 	    emit dataTransferProgress( bytesDone, bytesTotal );
+#if !defined(Q_OS_DROPS)
             data.dev->writeBlock( ba );
 #else
-            // L4VFS can't handle more than about 4K per write(), so
-            // we change it for DROPS ...
-
-	    QByteArray ba( socket.bytesAvailable() );
-            Q_LONG bytesLeft = ba.size();
-	    Q_LONG bytesRead = 0;
-
+            // L4VFS may not be able to write the whole data block at once, so we do the
+            // following: try to write all, check the return value and write the remaining
+            // bytes if necessary
+            Q_LONG bytesLeft = bytesRead;
             while (bytesLeft > 0) {
-                Q_LONG bytes = socket.readBlock( ba.data() + bytesRead, QMIN(bytesLeft, 3072) );
-                if ( bytes > 0 ) {
+                Q_LONG bytes = data.dev->writeBlock( ba.data() + bytesRead - bytesLeft, bytesLeft );
+                if (bytes > 0)
                     bytesLeft -= bytes;
-                    bytesRead += bytes;
-                } else                    
+                else
                     return; // ### error handling
             }
-	    ba.resize( bytesRead );
-	    bytesDone += bytesRead;
-#if defined(QFTPDTP_DEBUG)
-	    qDebug( "QFtpDTP read: %d bytes (total %d bytes)", (int)bytesRead, bytesDone );
-#endif
-	    emit dataTransferProgress( bytesDone, bytesTotal );
-            bytesLeft = bytesRead;
-            Q_LONG bytesWritten = 0;
-            while (bytesLeft > 0) {
-                Q_LONG bytes = data.dev->writeBlock( ba.data() + bytesWritten, QMIN(3072, bytesLeft) );
-                if (bytes > 0) {
-                    bytesLeft    -= bytes;
-                    bytesWritten += bytes;
-                } else
-                    return; // ### error handling
-            }
-#endif // Q_OS_DROPS
+#endif // ! Q_OS_DROPS
 	} else {
 #if defined(QFTPDTP_DEBUG)
 	    qDebug( "QFtpDTP readyRead: %d bytes available (total %d bytes read)", (int)bytesAvailable(), bytesDone );

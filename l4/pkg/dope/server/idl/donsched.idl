@@ -1,4 +1,4 @@
-/*
+/**
  * \brief   Internally used IDL interface of don scheduling module
  * \date    2004-04-28
  * \author  Norman Feske <nf2@inf.tu-dresden.de>

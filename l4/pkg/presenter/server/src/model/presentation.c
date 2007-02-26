@@ -46,6 +46,12 @@ PRESENTATION {
 
 };
 
+int get_struct_private_presentation_size_FIX_THIS_MESS(void);
+int get_struct_private_presentation_size_FIX_THIS_MESS(void)
+{
+  return sizeof(struct private_presentation);
+}
+
 int init_presentation(struct presenter_services *);
 
 static struct presenter_methods gen_methods;

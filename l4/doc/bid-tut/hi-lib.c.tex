@@ -20,7 +20,7 @@ int hiworld_print(void){
 
     if (check_server()) return -L4_EINVAL;
     hi_print_call(server, &env);
-    return -env.ipc_error;
+    return -env._p.ipc_error;
 }
 //! get the string
 int hiworld_count(void){
@@ -29,6 +29,6 @@ int hiworld_count(void){
 
     if (check_server()) return -L4_EINVAL;
     count=hi_count_call(server, &env);
-    if(!env.ipc_error) return count;
-    return -env.ipc_error;
+    if(!env._p.ipc_error) return count;
+    return -env._p.ipc_error;
 }

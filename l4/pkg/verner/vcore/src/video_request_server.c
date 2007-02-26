@@ -49,10 +49,19 @@ int instance_no = -1;
  */
 static control_struct_t *video_control = NULL;
 
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
 static prediction_context_t predict = {
+#if PREDICT_DECODING_TIME
   NULL, NULL, NULL
+#endif
+#if H264_SLICE_SCHEDULE
+  NULL, NULL
+#endif
 };
+#endif
+
+#if H264_SLICE_SCHEDULE
+void h264_machine_speed(float speed);
 #endif
 
 /*
@@ -130,7 +139,7 @@ VideoCoreComponent_Video_dice_thread (void)
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_connect_UncompressedVideoOut_component
   (CORBA_Object _dice_corba_obj, const l4dm_dataspace_t * ctrl_ds,
    const l4dm_dataspace_t * data_ds, dsi_socket_ref_t * socketref,
@@ -183,7 +192,7 @@ l4_int32_t
     video_control->plugin_ctrl.maxQLevel =
       video_control->plugin_ctrl.minQLevel =
       video_control->plugin_ctrl.currentQLevel = 0;
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
     video_control->predict = &predict;
 #endif
   }
@@ -213,7 +222,7 @@ l4_int32_t
 *
 * unlocks a mutex and let the work_thread run. */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_start_UncompressedVideoOut_component (CORBA_Object
 							       _dice_corba_obj,
 							       const
@@ -245,7 +254,7 @@ VideoCoreComponentIntern_start_UncompressedVideoOut_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_disconnect_UncompressedVideoOut_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -299,7 +308,7 @@ l4_int32_t
 * The work_thread also, but it's waiting for the start_signal.
 */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_connect_CompressedVideoIn_component (CORBA_Object
 							      _dice_corba_obj,
 							      const
@@ -361,7 +370,7 @@ VideoCoreComponentIntern_connect_CompressedVideoIn_component (CORBA_Object
     video_control->plugin_ctrl.maxQLevel =
       video_control->plugin_ctrl.minQLevel =
       video_control->plugin_ctrl.currentQLevel = 0;
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
     video_control->predict = &predict;
 #endif
   }
@@ -390,7 +399,7 @@ VideoCoreComponentIntern_connect_CompressedVideoIn_component (CORBA_Object
 *
 * unlocks a mutex and let the work_thread run. */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_start_CompressedVideoIn_component (CORBA_Object
 							    _dice_corba_obj,
 							    const
@@ -421,7 +430,7 @@ VideoCoreComponentIntern_start_CompressedVideoIn_component (CORBA_Object
  * with DSI-sockets. Afterwards the DSI-socket is closed.
  */
 /*****************************************************************************/
-l4_int32_t
+long
   VideoCoreComponentIntern_disconnect_CompressedVideoIn_component
   (CORBA_Object _dice_corba_obj, l4_int32_t close_socket_flag,
    CORBA_Server_Environment * _dice_corba_env)
@@ -472,18 +481,13 @@ l4_int32_t
  *
  */
 /*****************************************************************************/
-l4_int32_t
-VideoCoreComponentIntern_setVideoRTparams_component (CORBA_Object
-						     _dice_corba_obj,
-						     l4_uint32_t period,
-						     l4_uint32_t
-						     reservation_audio,
-						     l4_uint32_t
-						     reservation_video,
-						     l4_int32_t
-						     verbose_preemption_ipc,
-						     CORBA_Server_Environment
-						     * _dice_corba_env)
+long
+VideoCoreComponentIntern_setVideoRTparams_component (CORBA_Object _dice_corba_obj,
+						     unsigned long period,
+						     unsigned long reservation_audio,
+						     unsigned long reservation_video,
+						     int verbose_preemption_ipc,
+						     CORBA_Server_Environment * _dice_corba_env)
 {
 #if BUILD_RT_SUPPORT
   /* lock */
@@ -529,7 +533,7 @@ VideoCoreComponentIntern_setVideoRTparams_component (CORBA_Object
  *  setVideoPostprocessing("deactivate","","") deactivates the processing-chain.
  */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_setVideoPostprocessing_component (CORBA_Object
 							   _dice_corba_obj,
 							   const char
@@ -558,7 +562,7 @@ VideoCoreComponentIntern_setVideoPostprocessing_component (CORBA_Object
  * Attention: maxQLevel might change while working!!!!
  */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_changeQAPSettings_component (CORBA_Object
 						      _dice_corba_obj,
 						      l4_int32_t useQAP,
@@ -650,13 +654,13 @@ VideoCoreComponentIntern_changeQAPSettings_component (CORBA_Object
  * Either value can be the empty string, which disables learning/prediction respectively.
  */
 /*****************************************************************************/
-l4_int32_t
+long
 VideoCoreComponentIntern_setPrediction_component (CORBA_Object _dice_corba_obj,
 						  const char *learnFile,
 						  const char *predictFile,
 						  CORBA_Server_Environment *_dice_corba_env)
 {
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   /* lock */
   l4semaphore_down (&video_control_access);
   
@@ -667,6 +671,25 @@ VideoCoreComponentIntern_setPrediction_component (CORBA_Object _dice_corba_obj,
 
   /* unlock */
   l4semaphore_up (&video_control_access);
+#endif
+  return 0;
+}
+
+
+/*****************************************************************************/
+/**
+ * \brief Set simulated machine speed for H.264 slice scheduling
+ * 
+ * \param speed  the machine speed factor (in percent) to simulate
+ */
+/*****************************************************************************/
+long
+VideoCoreComponentIntern_setH264Speed_component (CORBA_Object _dice_corba_obj,
+						  l4_int32_t speed,
+						  CORBA_Server_Environment *_dice_corba_env)
+{
+#if H264_SLICE_SCHEDULE
+  h264_machine_speed((float)speed / 100.0);
 #endif
   return 0;
 }

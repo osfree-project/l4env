@@ -2,13 +2,13 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libpci24.a libpci24-single.a
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_C		= compat.c libpci-compat.c pci.c quirks.c names.c \
 		  setup-res.c resource.c pci-i386.c pci-pc.c pci-irq.c
 SRC_C_libpci24-single.a = lock.c
 CPPFLAGS	= -D__KERNEL__ -D__L4__ -DCONFIG_PCI -DCONFIG_PCI_BIOS
-PRIVATE_INCDIR	= ../include .
+PRIVATE_INCDIR	= $(SRC_DIR)/include $(SRC_DIR) .
 
 include $(L4DIR)/mk/lib.mk
 
@@ -27,4 +27,4 @@ gen-devlist: gen-devlist.c Makefile
 clean::
 	$(VERBOSE)$(RM) devlist.h classlist.h gen-devlist
 
-vpath pci.ids $(PKGDIR)/lib/src24
+vpath pci.ids $(SRC_DIR)

@@ -1,6 +1,6 @@
 PKGDIR	= ..
 L4DIR	?= $(PKGDIR)/../..
-TARGET	= io base thread be start util supc++-support
+TARGET	= io base thread be start util tl
 
 include $(L4DIR)/mk/subdir.mk
 
@@ -9,5 +9,4 @@ be: io
 start: base thread util
 thread: io
 util: io
-supc++-support: io base
 

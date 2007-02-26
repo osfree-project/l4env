@@ -26,8 +26,12 @@
 #include <l4/sys/syscalls.h>
 #include <l4/log/l4log.h>
 #include <l4/util/l4_macros.h>
+#include <l4/util/parse_cmd.h>
+
+#include <l4/term_server/vt100.h>
 
 #include "term.h"
+#include "basic_io.h"
 
 #ifdef DEBUG
     int _DEBUG = 1;
@@ -35,9 +39,14 @@
     int _DEBUG = 0;
 #endif
 
-extern int myvolume;
-  
-int main(int argc, char **argv)
+clientstate_t clients[MAX_CLIENTS];   // list of our clients
+term_object_t terms[MAX_TERMS];       // list of our terminals
+
+/* server options */
+int __opt_history   = 0;
+char * keymap;
+
+int main(int argc, const char **argv)
 {
     l4_threadid_t ns;
     int ret, i;
@@ -52,7 +61,23 @@ int main(int argc, char **argv)
         LOG("term initialization failed.");
         exit(1);
     }
-    
+
+    ret = parse_cmdline(
+            &argc, &argv,
+            'h', "history", "default length of terminal history",
+            PARSE_CMD_INT, 500, &__opt_history,
+            'k', "keymap",
+            "keymap to use for scancode -> ascii conversion ('de', 'us')",
+            PARSE_CMD_STRING, NULL, &keymap,
+            0);
+
+    if (ret)
+        LOG_Error("Error parsing command line.");
+
+    LOG("History length: %d", __opt_history);
+
+    vt100_set_keymap(keymap);
+
     // set up root object
     root_id.volume_id = myvolume;
     root_id.object_id = 0;

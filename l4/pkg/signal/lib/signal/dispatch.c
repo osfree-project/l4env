@@ -55,7 +55,7 @@ l4thread_t l4signal_find_thread_alive()
 void l4signal_dispatch_signal( siginfo_t signal, l4_threadid_t thread )
 {
     l4thread_t executor = -1;
-    int flags, old_eip, old_esp;
+    l4_umword_t flags, old_eip, old_esp;
     l4_threadid_t pager, preempter;
 
     // shortcuts for SIGKILL and SIGSTOP as these must not

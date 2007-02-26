@@ -1,10 +1,11 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BEClassFactory.h
- *    \brief    contains the declaration of the class CL4V4BEClassFactory
+ *  \brief   contains the declaration of the class CL4V4BEClassFactory
  *
  *    \date    01/06/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
  * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -40,32 +41,25 @@ class CL4V4BEClassFactory : public CL4BEClassFactory
 {
 // Constructor
 public:
-    /**    \brief constructor
-     *    \param bVerbose true if class should print status output
+    /** \brief constructor
      */
-    CL4V4BEClassFactory(bool bVerbose = false);
+    CL4V4BEClassFactory();
     virtual ~CL4V4BEClassFactory();
 
-protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
-     */
-    CL4V4BEClassFactory(CL4V4BEClassFactory &src);
-
 public:
-    virtual CBETestMainFunction* GetNewTestMainFunction();
-    virtual CBETestServerFunction* GetNewTestServerFunction();
     virtual CBECommunication* GetNewCommunication();
-    virtual CBEMarshaller* GetNewMarshaller(CBEContext* pContext);
     virtual CBESizes* GetNewSizes();
-    virtual CBEMsgBufferType* GetNewMessageBufferType(bool bInterface);
     virtual CBECallFunction* GetNewCallFunction();
-    virtual CBESndFunction* GetNewSndFunction();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEWaitAnyFunction* GetNewRecvAnyFunction();
     virtual CBEWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
-    virtual CBEDispatchFunction* GetNewDispatchFunction();
+    virtual CBESndFunction* GetNewSndFunction();
+    virtual CBEWaitFunction* GetNewWaitFunction();
+    virtual CBEWaitFunction* GetNewRcvFunction();
+    virtual CBEMsgBuffer* GetNewMessageBuffer();
+    virtual CBETrace* GetNewTrace();
+    virtual CBEMarshaller* GetNewMarshaller();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
 };
 

@@ -69,13 +69,14 @@ l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
   map_size = l4_round_page(addr+size) - map_addr;
   map_end  = map_addr + map_size;
 
-  LOGdL(DEBUG_MAP, "map ds area 0x%08x - 0x%08x", map_addr, map_end);
+  LOGdL(DEBUG_MAP, "map ds area 0x"l4_addr_fmt" - 0x"l4_addr_fmt,
+        map_addr, map_end);
 
   /* map, repeat until the requested area is mapped completely */
   for (;;)
     {
-      LOGdL(DEBUG_MAP, "ds %u at "l4util_idfmt", offs 0x%08x, " \
-            "map area 0x%08x-0x%08x", ds->id, l4util_idstr(ds->manager), 
+      LOGdL(DEBUG_MAP, "ds %u at "l4util_idfmt", offs 0x%08lx, " \
+            "map area 0x%08lx-0x%08lx", ds->id, l4util_idstr(ds->manager), 
 	    offs, map_addr, map_end);
 
       /* calculate the max. receive window size with the start address at 
@@ -95,11 +96,12 @@ l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
 	map_sz = size;
 
 #if DEBUG_MAP
-      LOG_printf(" receive window at 0x%08x-0x%08x, size %d\n",
-             rcv_addr, rcv_end, rcv_size2);
-      LOG_printf(" rcv offs 0x%08x, map size 0x%08x\n", rcv_offs, map_sz);
+      LOG_printf(" receive window at 0x"l4_addr_fmt"-0x"l4_addr_fmt
+	  	 ", size %d\n", rcv_addr, rcv_end, rcv_size2);
+      LOG_printf(" rcv offs 0x"l4_addr_fmt", map size 0x"l4_addr_fmt"\n",
+	         rcv_offs, map_sz);
 #endif
-      
+
       /* map, allow partial mapping */
       ret = __do_map(ds, offs, map_sz, rcv_addr, rcv_size2, rcv_offs,
 		     flags | L4DM_MAP_PARTIAL, &fpage_addr, &fpage_size);
@@ -116,12 +118,14 @@ l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
 	    }
 
 #if DEBUG_ERRORS
-	  LOG_printf("l4dm_map_ds: addr 0x%08x, ds %d at "l4util_idfmt
-                 ", offs 0x%08x\n", addr, ds->id,
-		 l4util_idstr(ds->manager), offs);
-	  LOG_printf("dataspace map area 0x%08x-0x%08x\n", map_addr, map_end);
-	  LOG_printf("receive window at 0x%08x, size2 %d, rcv offs 0x%08x\n",
-                 rcv_addr, rcv_size2, rcv_offs);
+	  LOG_printf("l4dm_map_ds: addr 0x"l4_addr_fmt", ds %d at "l4util_idfmt
+                     ", offs 0x"l4_addr_fmt"\n", addr, ds->id,
+		     l4util_idstr(ds->manager), offs);
+	  LOG_printf("dataspace map area 0x"l4_addr_fmt"-0x"l4_addr_fmt"\n",
+	      	     map_addr, map_end);
+	  LOG_printf("receive window at 0x"l4_addr_fmt
+	      	     ", size2 %d, rcv offs 0x"l4_addr_fmt"\n",
+                     rcv_addr, rcv_size2, rcv_offs);
 	  LOGL("libdm_generic: map failed: %d!", ret);
 #endif
 	  return ret;
@@ -129,9 +133,10 @@ l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
       size_mapped = fpage_size - (map_addr - fpage_addr);
 
       LOGdL(DEBUG_MAP,
-            "got fpage fpage at 0x%08x, size 0x%08x, size mapped 0x%08x",
-            fpage_addr, fpage_size, size_mapped);
-      
+            "got fpage fpage at 0x"l4_addr_fmt", size 0x"l4_addr_fmt
+	    ", size mapped 0x"l4_addr_fmt, fpage_addr, (l4_addr_t)fpage_size,
+	    (l4_addr_t)size_mapped);
+
       if (size_mapped >= map_size)
 	return 0;
 

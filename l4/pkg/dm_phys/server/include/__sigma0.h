@@ -25,6 +25,8 @@
  *** Prototypes
  *****************************************************************************/
 
+EXTERN_C_BEGIN
+
 /* init sigma0 comm */
 int
 dmphys_sigma0_init(void);
@@ -52,5 +54,7 @@ dmphys_sigma0_unmap_4Mpage(l4_addr_t page);
 /* map L4 kinfo page */
 l4_kernel_info_t *
 dmphys_sigma0_kinfo(void);
+
+EXTERN_C_END
 
 #endif /* !_DM_PHYS___SIGMA0_H */

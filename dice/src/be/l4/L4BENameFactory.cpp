@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BENameFactory.cpp
+ * \file    dice/src/be/l4/L4BENameFactory.cpp
  * \brief   contains the implementation of the class CL4BENameFactory
  *
- *    \date    02/07/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ * \date    02/07/2002
+ * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,24 +26,18 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/L4BENameFactory.h"
-#include "be/l4/L4BEMsgBufferType.h"
+#include "L4BENameFactory.h"
 #include "be/BEContext.h"
 #include "be/BEDeclarator.h"
-
-#include <ctype.h>
+#include "be/BETypedDeclarator.h"
+#include "TypeSpec-L4Types.h"
+#include "Compiler.h"
+#include <iostream>
+#include <cctype>
 #include <algorithm>
-using namespace std;
 
-#include "TypeSpec-Type.h"
-
-CL4BENameFactory::CL4BENameFactory(bool bVerbose)
-: CBENameFactory(bVerbose)
-{
-}
-
-CL4BENameFactory::CL4BENameFactory(CL4BENameFactory & src)
-: CBENameFactory(src)
+CL4BENameFactory::CL4BENameFactory()
+: CBENameFactory()
 {
 }
 
@@ -55,104 +49,142 @@ CL4BENameFactory::~CL4BENameFactory()
 
 /** \brief general access function to generate strings
  *  \param nStringCode specifying the requested code
- *  \param pContext the context of the name generation
  *  \param pParam additional untyped parameter
  *  \return generated name
  *
- * This function multiplexes the request to the functions of this class' implementation.
+ * This function multiplexes the request to the functions of this class'
+ * implementation.
  */
-string CL4BENameFactory::GetString(int nStringCode, CBEContext * pContext, void *pParam)
+string
+CL4BENameFactory::GetString(int nStringCode,
+    void *pParam)
 {
     switch (nStringCode)
     {
     case STR_RESULT_VAR:
-        return GetResultName(pContext);
+        return GetResultName();
         break;
     case STR_THREAD_ID_VAR:
-        return GetThreadIdVariable(pContext);
+        return GetThreadIdVariable();
         break;
     case STR_INIT_RCVSTRING_FUNC:
         if (pParam)
-            return GetInitRcvStringFunction(pContext, *(string*)pParam);
+            return GetInitRcvStringFunction(*(string*)pParam);
         else
-            return GetInitRcvStringFunction(pContext, string());
+            return GetInitRcvStringFunction(string());
         break;
     case STR_MSGBUF_SIZE_CONST:
         if (pParam)
-            return GetMsgBufferSizeDopeConst((CBEMsgBufferType*)pParam);
+            return GetMsgBufferSizeDopeConst((CBETypedDeclarator*)pParam);
+        return string();
         break;
+    case STR_ZERO_FPAGE:
+	return GetZeroFpage();
+	break;
     default:
         break;
     }
-    return CBENameFactory::GetString(nStringCode, pContext, pParam);
+    return CBENameFactory::GetString(nStringCode, pParam);
 }
 
 /** \brief generates the name of the result variable
- *  \param pContext the context of the code generation
  *  \return the name of the result variable
  */
-string CL4BENameFactory::GetResultName(CBEContext * pContext)
+string
+CL4BENameFactory::GetResultName()
 {
     return string("_dice_result");
 }
 
+/** \brief generated the name for the zero flexpage of the message buffer
+ *  \return name of zero fpage member
+ */
+string
+CL4BENameFactory::GetZeroFpage()
+{
+    return string("_zero_fpage");
+}
+
 /** \brief generates the variable of the client side timeout
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  *
  * At client side we always return the timeout member of the environment,
  * since this should be set by the user anyways.
  */
-string CL4BENameFactory::GetTimeoutClientVariable(CBEContext * pContext)
+string
+CL4BENameFactory::GetTimeoutClientVariable()
 {
-    string sEnv = GetCorbaEnvironmentVariable(pContext);
+    string sEnv = GetCorbaEnvironmentVariable();
     sEnv += "->timeout";
     return sEnv;
 }
 
 /** \brief generates the variable of the component side timeout
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  *
- * We always use the environment's timeout member as well, because
- * we trust that it is set either by the user or per default by the
- * server-loop.
+ * We always use the environment's timeout member as well, because we trust
+ * that it is set either by the user or per default by the server-loop.
  */
-string CL4BENameFactory::GetTimeoutServerVariable(CBEContext * pContext)
+string
+CL4BENameFactory::GetTimeoutServerVariable()
 {
-    string sEnv = GetCorbaEnvironmentVariable(pContext);
+    string sEnv = GetCorbaEnvironmentVariable();
     sEnv += "->timeout";
     return sEnv;
 }
 
 /** \brief generates the variable of the client side scheduling parameter
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  *
  * At client side we always return the scheduling member of the environment,
  * since this should be set by the user anyways.
  */
-string CL4BENameFactory::GetScheduleClientVariable(CBEContext * pContext)
+string
+CL4BENameFactory::GetScheduleClientVariable()
 {
-    string sEnv = GetCorbaEnvironmentVariable(pContext);
+    string sEnv = GetCorbaEnvironmentVariable();
     sEnv += "->_p.sched_bits";
     return sEnv;
 }
 
+/** \brief generates the variable of the server side scheduling parameter
+ *  \return the name of the variable
+ *
+ * At client side we always return the scheduling member of the environment,
+ * since this should be set by the user anyways.
+ */
+string
+CL4BENameFactory::GetScheduleServerVariable()
+{
+    string sEnv = GetCorbaEnvironmentVariable();
+    sEnv += "->_p.sched_bits";
+    return sEnv;
+}
+
+/** \brief generates the variable to access the partner element of env
+ *  \return string containing that var
+ */
+string CL4BENameFactory::GetPartnerVariable()
+{
+    string sEnv = GetCorbaEnvironmentVariable();
+    sEnv += "->partner";
+    return sEnv;
+}
+
 /** \brief generates the variable containing the component identifier
- *  \param pContext the context of the name generation
  *  \return  the name of the variable
  */
-string CL4BENameFactory::GetComponentIDVariable(CBEContext * pContext)
+string
+CL4BENameFactory::GetComponentIDVariable()
 {
-    return GetCorbaObjectVariable(pContext);
+    return GetCorbaObjectVariable();
 }
 
 /** \brief generates a variable containing a l4thread_t
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CL4BENameFactory::GetThreadIdVariable(CBEContext * pContext)
+string
+CL4BENameFactory::GetThreadIdVariable()
 {
     return string("_dice_thread_id");
 }
@@ -160,16 +192,14 @@ string CL4BENameFactory::GetThreadIdVariable(CBEContext * pContext)
 /** \brief create L4 specific type names
  *  \param nType the type number
  *  \param bUnsigned true if the type is unsigned
- *  \param pContext the context of the name generation
  *  \param nSize the size of the type
  */
-string CL4BENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize)
+string
+CL4BENameFactory::GetTypeName(int nType, 
+    bool bUnsigned,
+    int nSize)
 {
     string sReturn;
-    if (pContext->IsOptionSet(PROGRAM_USE_L4TYPES))
-        sReturn = GetL4TypeName(nType, bUnsigned, pContext, nSize);
-    if (!sReturn.empty())
-        return sReturn;
     switch (nType)
     {
     case TYPE_FLEXPAGE:
@@ -192,21 +222,22 @@ string CL4BENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCo
         sReturn = "l4_strdope_t";
         break;
     default:
-        sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, pContext, nSize);
+        sReturn = 
+	    CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
         break;
     }
-    if (m_bVerbose)
-        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
-               __FUNCTION__, sReturn.c_str(), nType);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+	__func__, sReturn.c_str(), nType);
     return sReturn;
 }
 
 /** \brief generates the name of a message buffer member
  *  \param nFEType the type if the member
- *  \param pContext the context of the name generation
  *  \return the name of the variable
  */
-string CL4BENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pContext)
+string
+CL4BENameFactory::GetMessageBufferMember(int nFEType)
 {
     string sReturn;
     switch(nFEType)
@@ -221,92 +252,13 @@ string CL4BENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pConte
         sReturn = "_dice_send_dope";
         break;
     default:
-        sReturn = CBENameFactory::GetMessageBufferMember(nFEType, pContext);
+        sReturn = CBENameFactory::GetMessageBufferMember(nFEType);
         break;
     }
     return sReturn;
-}
-
-/** \brief create specific L4 type names
- *  \param nType the type to create the name for
- *  \param bUnsigned true if the type is unsigned
- *  \param pContext the context of the creation process
- *  \param nSize the size of the type in bytes
- *  \return the L4 type name
- */
-string CL4BENameFactory::GetL4TypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize)
-{
-    string sReturn;
-    switch (nType)
-    {
-    case TYPE_INTEGER:
-    case TYPE_LONG:
-        switch (nSize)
-        {
-        case 1:
-            if (bUnsigned)
-                sReturn = "l4_uint8_t";
-            else
-                sReturn = "l4_int8_t";
-            break;
-        case 2:
-            if (bUnsigned)
-                sReturn = "l4_uint16_t";
-            else
-                sReturn = "l4_int16_t";
-            break;
-        case 4:
-            if (bUnsigned)
-                sReturn = "l4_uint32_t";
-            else
-                sReturn = "l4_int32_t";
-            break;
-        case 8:
-            if (bUnsigned)
-                sReturn = "l4_uint64_t";
-            else
-                sReturn = "l4_int64_t";
-            break;
-        }
-        break;
-    case TYPE_CHAR:
-        if (bUnsigned)
-            sReturn = "l4_uint8_t";
-        else
-            sReturn = "l4_int8_t";
-        break;
-    case TYPE_BYTE:
-        sReturn = "l4_uint8_t";
-        break;
-    }
-
-    if (m_bVerbose)
-        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
-               __FUNCTION__, sReturn.c_str(), nType);
-    return sReturn;
-}
-
-/** \brief create specific C style names
- *  \param nType the type to create the name for
- *  \param bUnsigned true if this type is unsigned
- *  \param pContext the context of the name creation
- *  \param nSize the size of the type
- *  \return the name of the type
- *
- * This implementation simply tests if the wanted C type can also be an L4 type
- */
-string CL4BENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize)
-{
-    string sReturn;
-    if (pContext->IsOptionSet(PROGRAM_USE_L4TYPES))
-        sReturn = GetL4TypeName(nType, bUnsigned, pContext, nSize);
-    if (!sReturn.empty())
-        return sReturn;
-    return CBENameFactory::GetCTypeName(nType, bUnsigned, pContext, nSize);
 }
 
 /** \brief retrieves the name of an init function for receive strings
- *  \param pContext the context of the name creation
  *  \param sFuncName the function-name given by the user
  *  \return the name of the function
  *
@@ -316,31 +268,68 @@ string CL4BENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext * pC
  * side, but basically does it not matter, because the two implementation are
  * in different object-files and binaries)
  */
-string CL4BENameFactory::GetInitRcvStringFunction(CBEContext *pContext, string sFuncName)
+string
+CL4BENameFactory::GetInitRcvStringFunction(string sFuncName)
 {
     if (sFuncName.empty())
     {
-        if (pContext->GetInitRcvStringFunc().empty())
+        if (CCompiler::GetInitRcvStringFunc().empty())
             return string("dice_init_rcvstring");
-        return pContext->GetInitRcvStringFunc();
+        return CCompiler::GetInitRcvStringFunc();
     }
     return sFuncName;
 }
 
-/** \brief returns the name of the constant declaring the size dope of the message buffer
+/** \brief returns the name of the constant declaring the size dope of the \
+ *         message buffer
  *  \param pMsgBuffer the message buffer to write the const for
  *  \return the name of the appropriate constant
  */
-string CL4BENameFactory::GetMsgBufferSizeDopeConst(CBEMsgBufferType* pMsgBuffer)
+string 
+CL4BENameFactory::GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffer)
 {
     string sName;
-    if (pMsgBuffer && pMsgBuffer->GetAlias())
+    if (pMsgBuffer && pMsgBuffer->m_Declarators.First())
     {
-        // use the msg buffer's alias and attach a "_SIZE_INIT"
-        sName = pMsgBuffer->GetAlias()->GetName();
-        transform(sName.begin(), sName.end(), sName.begin(), toupper);
-//         sName.MakeUpper();
+//         use the msg buffer's alias and attach a "_SIZE_INIT"
+        sName = pMsgBuffer->m_Declarators.First()->GetName();
+        transform(sName.begin(), sName.end(), sName.begin(), _toupper);
         sName += "_SIZE_INIT";
     }
+    return sName;
+}
+
+/** \brief get the name for the padding member
+ *  \param nPadType the type of the padding member
+ *  \param nPadToType the type of the member to insert the padding before
+ *  \return the name of this member
+ */
+string
+CL4BENameFactory::GetPaddingMember(int nPadType, 
+    int nPadToType)
+{
+    string sReturn = string("_dice_pad_");
+    // strip leading l4_ and trainling _t's
+    string sType = StripL4Fixes(GetTypeName(nPadToType, false));
+    sReturn += sType;
+    sReturn += "_with_";
+    sType = StripL4Fixes(GetTypeName(nPadType, false));
+    sReturn += sType;
+    // replace spaces in type names
+    replace_if(sReturn.begin(), sReturn.end(), ::isspace, '_');
+    return sReturn;
+}
+
+/** \brief strip leading l4_ prefix and trailing _t suffix
+ *  \param sName the string to strip
+ *  \return the stripped string or the input if nothing stripped
+ */
+string
+CL4BENameFactory::StripL4Fixes(string sName)
+{
+    if (sName.substr(0, 3) == "l4_")
+	sName = sName.substr(3);
+    if (sName.substr(sName.length()-2) == "_t")
+	sName = sName.substr(0, sName.length() - 2);
     return sName;
 }

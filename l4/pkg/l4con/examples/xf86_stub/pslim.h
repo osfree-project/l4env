@@ -1,9 +1,33 @@
 /*!
  * \file	con/examples/xf86_stub/pslim.h
- * \brief	
+ * \brief
  *
  * \date	01/2002
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (c) 2003 by Technische Universität Dresden, Germany
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * TECHNISCHE UNIVERSITÄT DRESDEN BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ */
 
 #ifndef __CON_EXAMPLES_XF86_STUB_PSLIM_H_
 #define __CON_EXAMPLES_XF86_STUB_PSLIM_H_
@@ -27,7 +51,9 @@
 #include "fb.h"
 #include "afb.h"
 #include "mfb.h"
+#ifdef L4CON_USE_CFB24_32
 #include "cfb24_32.h"
+#endif
 
 #include "xaa.h"
 
@@ -49,11 +75,12 @@ typedef struct _PSLIMRec
   XAAInfoRecPtr AccelInfoRec;
   l4_threadid_t vc_tid;
   int dropscon_dev;
-  int accel_flags;
+  l4_uint32_t accel_flags;
   int SavedFgColor;
   Bool shadowFB;
   Bool mapShadow;
   Bool fbMapped;
+  Bool shareDS;
   OptionInfoPtr Options;
   l4dm_dataspace_t mapShadowDs;
 } PSLIMRec, *PSLIMPtr;

@@ -24,6 +24,7 @@
 #define __NR_pipe		42
 #define __NR_ioctl		54
 #define __NR_gettimeofday	78
+#define __NR_socketcall		102
 #define __NR_stat		106
 #define __NR_lstat		107
 #define __NR_fstat		108
@@ -158,6 +159,7 @@ __lx_syscall6(int, ipc, unsigned int, call, int, first, int, second, int, third,
 __lx_syscall5(int, select, int, n, lx_fd_set *, readfds, lx_fd_set *, writefds, lx_fd_set *, exceptfds, struct lx_timeval *, timeout)
 __lx_syscall3(int, poll, struct lx_pollfd *, fds, lx_nfds_t, nfds, int, timeout)
 __lx_syscall3(long, ioctl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
+__lx_syscall2(int, socketcall, int, call, unsigned long *, args);
 
 
 /* ========================================================================
@@ -216,11 +218,25 @@ void *lx_shmat(int shmid, const void *shmaddr, int shmflg)
 
 }
 
+enum { SYS_SOCKET = 1, SYS_CONNECT = 3 };
+
+int lx_socket(int family, int type, int protocol)
+{
+  unsigned long a[3] = { family, type, protocol };
+  return lx_socketcall(SYS_SOCKET, a);
+}
+
+int lx_connect(int sockfd, const struct lx_sockaddr *saddr, unsigned long addrlen)
+{
+  unsigned long a[3] = { sockfd, (unsigned long)saddr, addrlen };
+  return lx_socketcall(SYS_CONNECT, a);
+}
+
 /* ------------------------------------------------------------------ */
 
 void lx_outchar(unsigned char c)
 {
-  lx_write(1, &c, 1);
+  lx_write(1, (char*)&c, 1);
 }
 
 void lx_outdec32(unsigned int i)

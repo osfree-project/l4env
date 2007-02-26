@@ -1,0 +1,21 @@
+#! /bin/sh
+
+set -x
+
+TMPDIR=$(mktemp -d)
+
+exithandler()
+{
+  rm -r $TMPDIR
+}
+
+trap exithandler EXIT
+
+cd ..
+
+for i in mk/defconfig/config.*; do
+  DROPSCONF_DEFCONFIG=$i make O=$TMPDIR oldconfig
+  diff -u $TMPDIR/.Makeconf.bid $i
+  grep -v '^DROPS_STDDIR=' $TMPDIR/.Makeconf.bid > $i
+  rm $TMPDIR/{.Makeconf.bid,.Makeconf.bid.converted,Makeconf.bid.local,Makeconf.bid.local.indep}
+done

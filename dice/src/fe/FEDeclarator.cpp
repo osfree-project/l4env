@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEDeclarator.cpp
- *    \brief   contains the implementation of the class CFEDeclarator
+ *  \brief   contains the implementation of the class CFEDeclarator
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -60,7 +60,7 @@ CFEDeclarator::~CFEDeclarator()
 }
 
 /** returns the number of asterisks
- *    \return the number of asterisks
+ *  \return the number of asterisks
  */
 int CFEDeclarator::GetStars()
 {
@@ -68,7 +68,7 @@ int CFEDeclarator::GetStars()
 }
 
 /** returns the type of the declarator
- *    \return the type of the declarator
+ *  \return the type of the declarator
  */
 DECL_TYPE CFEDeclarator::GetType()
 {
@@ -76,23 +76,15 @@ DECL_TYPE CFEDeclarator::GetType()
 }
 
 /** sets the number of stars for this declarator
- *    \param nNumStars the new number of stars
+ *  \param nNumStars the new number of stars
  */
 void CFEDeclarator::SetStars(int nNumStars)
 {
     m_nNumStars = nNumStars;
 }
 
-/** checks if this declarator is a reference
- *    \return true if this declarator has stars
- */
-bool CFEDeclarator::IsReference()
-{
-    return (GetStars() > 0);
-}
-
 /** creates a copy of this object
- *    \return a reference to the copy of this object
+ *  \return a reference to the copy of this object
  */
 CObject *CFEDeclarator::Clone()
 {
@@ -100,7 +92,7 @@ CObject *CFEDeclarator::Clone()
 }
 
 /** \brief returns the bitfields value
- *    \return the bitfields value
+ *  \return the bitfields value
  *
  * This functionr eturns the number of bit fields the declarator uses
  */
@@ -109,31 +101,14 @@ int CFEDeclarator::GetBitfields()
     return m_nBitfields;
 }
 
-/**    \brief sets the number of bitfields
- *    \param nBitfields the number of bit-fields
+/** \brief sets the number of bitfields
+ *  \param nBitfields the number of bit-fields
  *
  * This function sets the number of bits this declarator uses.
  */
 void CFEDeclarator::SetBitfields(int nBitfields)
 {
     m_nBitfields = nBitfields;
-}
-
-/** serializes this object
- *    \param pFile the file to serialize to
- */
-void CFEDeclarator::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        pFile->PrintIndent("<declarator>\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
-        pFile->PrintIndent("<pointer>%d</pointer>\n", GetStars());
-        pFile->PrintIndent("<bitfields>%d</bitfields>\n", GetBitfields());
-        pFile->DecIndent();
-        pFile->PrintIndent("</declarator>\n");
-    }
 }
 
 /** \brief changes the type of the declarator

@@ -26,14 +26,14 @@
 #ifndef CONFIG_L4_CALL_SYSCALLS
 
 # if !defined(L4V2_IPC_SYSENTER) && !defined(L4X0_IPC_SYSENTER)
-#  define IPC_SYSENTER \
-   "int    $0x30          \n\t"
-#  define IPC_SYSENTER_ASM \
-   int $0x30;
+
+#  define IPC_SYSENTER       "int  $0x30              \n\t"
+#  define IPC_SYSENTER_ASM    int  $0x30;
 
 # else
+
 #  ifdef __PIC__
-#   define IPC_SYSENTER \
+#   define IPC_SYSENTER            \
      "push   %%ecx           \n\t" \
      "push   %%ebp           \n\t" \
      "push   $0x1b           \n\t" \
@@ -45,50 +45,60 @@
      "mov    %%ebp,%%edx     \n\t" \
      "1:                     \n\t"
 #   define IPC_SYSENTER_ASM	\
-     push    %ecx		; \
-     push    %ebp		; \
-     push    $0x1b		; \
-     call    0f			; \
-     0:				; \
-     addl    $(1f-0b),(%esp)	; \
-     mov     %esp,%ecx		; \
-     sysenter			; \
-     mov     %ebp,%edx		; \
+     push    %ecx		;\
+     push    %ebp		;\
+     push    $0x1b		;\
+     call    0f			;\
+     0:				;\
+     addl    $(1f-0b),(%esp)	;\
+     mov     %esp,%ecx		;\
+     sysenter			;\
+     mov     %ebp,%edx		;\
      1:
 #  else
-#   define IPC_SYSENTER \
-     "push   %%ecx           \n\t"  \
-     "push   %%ebp           \n\t"  \
-     "push   $0x1b           \n\t"  \
-     "push   $0f             \n\t"  \
-     "mov    %%esp,%%ecx     \n\t"  \
-     "sysenter               \n\t"  \
-     "mov    %%ebp,%%edx     \n\t"  \
+#   define IPC_SYSENTER            \
+     "push   %%ecx           \n\t" \
+     "push   %%ebp           \n\t" \
+     "push   $0x1b           \n\t" \
+     "push   $0f             \n\t" \
+     "mov    %%esp,%%ecx     \n\t" \
+     "sysenter               \n\t" \
+     "mov    %%ebp,%%edx     \n\t" \
      "0:                     \n\t"
-#   define IPC_SYSENTER_ASM	\
-     push    %ecx		; \
-     push    %ebp		; \
-     push    $0x1b		; \
-     push    $0f		; \
-     mov     %esp,%ecx		; \
-     sysenter			; \
-     mov     %ebp,%edx		; \
+#   define IPC_SYSENTER_ASM	 \
+     push    %ecx		;\
+     push    %ebp		;\
+     push    $0x1b		;\
+     push    $0f		;\
+     mov     %esp,%ecx		;\
+     sysenter			;\
+     mov     %ebp,%edx		;\
      0:
 #  endif
+
 # endif
 
 #else
 
 # ifdef CONFIG_L4_ABS_SYSCALLS
-#  define IPC_SYSENTER \
-  "call __L4_ipc_direct  \n\t"
-#  define IPC_SYSENTER_ASM \
-  call __L4_ipc_direct;
+
+#  ifdef __PIC__
+#   define IPC_SYSENTER      "call __l4sys_abs_ipc_fixup \n\t"
+#   define IPC_SYSENTER_ASM   call __l4sys_abs_ipc_fixup
+#  else
+#   define IPC_SYSENTER      "call __l4sys_ipc_direct    \n\t"
+#   define IPC_SYSENTER_ASM   call __l4sys_ipc_direct
+#  endif
+
 # else
-#  define IPC_SYSENTER \
-  "call *__L4_ipc        \n\t"
-#  define IPC_SYSENTER_ASM \
-  call *__L4_ipc;
+
+#  ifdef __PIC__
+#   error -fPIC with L4_REL_SYSCALLS not possible!
+#  else
+#   define IPC_SYSENTER      "call *__l4sys_ipc          \n\t"
+#   define IPC_SYSENTER_ASM   call *__l4sys_ipc
+#  endif
+
 # endif
 
 #endif

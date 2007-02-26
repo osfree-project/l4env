@@ -33,7 +33,7 @@ extern l4_uint32_t l4_scaler_tsc_linux;
 L4_INLINE l4_cpu_time_t
 l4_rdtsc (void);
 
-/* the same, but only 32 bit. Useful for smaller differences, 
+/* the same, but only 32 bit. Useful for smaller differences,
    needs less cycles. */
 L4_INLINE
 l4_uint32_t l4_rdtsc_32(void);
@@ -45,7 +45,7 @@ l4_uint32_t l4_rdtsc_32(void);
 L4_INLINE l4_cpu_time_t
 l4_rdpmc (int nr);
 
-/* the same, but only 32 bit. Useful for smaller differences, 
+/* the same, but only 32 bit. Useful for smaller differences,
    needs less cycles. */
 L4_INLINE
 l4_uint32_t l4_rdpmc_32(int nr);
@@ -101,7 +101,8 @@ l4_busy_wait_us (l4_uint64_t us);
 EXTERN_C_BEGIN
 
 /** Determine some scalers to be able to convert between real time and CPU
- * ticks. This test uses channel 0 of the PIT (i8254).
+ * ticks. This test uses channel 0 of the PIT (i8254) or the kernel KIP,
+ * depending on availability.
  * Just calls l4_tsc_init(L4_TSC_INIT_AUTO).
  * \ingroup rdtsc
  */
@@ -127,8 +128,8 @@ l4_calibrate_tsc (void);
  * \return 0 on error (no scalers exported by kernel, calibrating failed ...)
  *         otherwise returns (2^32 / (tsc per µsec)). This value has the
  *         same semantics as the value returned by the calibrate_delay_loop()
- *         function of the Linux kernel. 
- * \ingroup rdtsc 
+ *         function of the Linux kernel.
+ * \ingroup rdtsc
  */
 l4_uint32_t
 l4_tsc_init (int constraint);
@@ -154,8 +155,8 @@ L4_INLINE l4_cpu_time_t
 l4_rdtsc (void)
 {
     l4_cpu_time_t v;
-    
-    __asm__ __volatile__ 
+
+    __asm__ __volatile__
 	("				\n\t"
 	 ".byte 0x0f, 0x31		\n\t"
 	/*"rdtsc\n\t"*/
@@ -163,11 +164,11 @@ l4_rdtsc (void)
 	"=A" (v)
 	: /* no inputs */
 	);
-    
+
     return v;
 }
 
-/* the same, but only 32 bit. Useful for smaller differences, 
+/* the same, but only 32 bit. Useful for smaller differences,
    needs less cycles. */
 L4_INLINE
 l4_uint32_t l4_rdtsc_32(void)
@@ -179,7 +180,7 @@ l4_uint32_t l4_rdtsc_32(void)
        : "=a" (x)
        :
        : "edx");
-    
+
   return x;
 }
 
@@ -187,18 +188,18 @@ L4_INLINE l4_cpu_time_t
 l4_rdpmc (int nr)
 {
     l4_cpu_time_t v;
-    
+
     __asm__ __volatile__ (
 	 "rdpmc				\n\t"
 	:
 	"=A" (v)
 	: "c" (nr)
 	);
-    
+
     return v;
 }
 
-/* the same, but only 32 bit. Useful for smaller differences, 
+/* the same, but only 32 bit. Useful for smaller differences,
    needs less cycles. */
 L4_INLINE
 l4_uint32_t l4_rdpmc_32(int nr)
@@ -210,7 +211,7 @@ l4_uint32_t l4_rdpmc_32(int nr)
        : "=a" (x)
        : "c" (nr)
        : "edx");
-    
+
   return x;
 }
 
@@ -277,7 +278,7 @@ l4_tsc_to_s_and_ns (l4_cpu_time_t tsc, l4_uint32_t *s, l4_uint32_t *ns)
 	 "shld	$5, %%eax, %%edx	\n\t"
 	 "shll	$5, %%eax		\n\t"
 	 "divl  %%ecx			\n\t"
-	:"=a" (*s), "=d" (*ns), "=c" (dummy)
+	:"=a" (*s), "=d" (*ns), "=&c" (dummy)
 	: "A" (tsc), "g" (l4_scaler_tsc_to_ns)
 	);
 }
@@ -311,7 +312,7 @@ l4_busy_wait_ns (l4_uint64_t ns)
 {
   l4_cpu_time_t stop = l4_rdtsc();
   stop += l4_ns_to_tsc(ns);
-  
+
   while (l4_rdtsc() < stop)
     ;
 }
@@ -321,7 +322,7 @@ l4_busy_wait_us (l4_uint64_t us)
 {
   l4_cpu_time_t stop = l4_rdtsc ();
   stop += l4_ns_to_tsc(us*1000ULL);
-  
+
   while (l4_rdtsc() < stop)
     ;
 }

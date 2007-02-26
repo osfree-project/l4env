@@ -52,7 +52,7 @@
 /* rt support */
 #include <l4/sys/rt_sched.h> // RT Scheduling
 #include <l4/rmgr/librmgr.h> // rmgr_set_prio
-#include <l4/util/kip.h> // l4util_kip_map
+#include <l4/sigma0/kip.h> // l4sigma0_kip_map
 #if RT_USE_CPU_RESERVE
 #include <l4/cpu_reserve/sched.h>
 #endif
@@ -263,7 +263,7 @@ work_loop_audio (void *data)
 
 #if !RT_USE_CPU_RESEVE
   /* Get KIP */
-  kinfo = l4util_kip_map ();
+  kinfo = l4sigma0_kip_map (L4_INVALID_ID);
   if (!kinfo)
     Panic ("get KIP failed!\n");
 #endif
@@ -349,7 +349,7 @@ work_loop_audio (void *data)
       /* init export plugin */
       if ((ret = control->out_init (&control->plugin_ctrl, &control->streaminfo)) != 0)
       {
-	LOG_Error ("ao_oss_init() failed with %d.", ret);
+	LOGdL (DEBUG_EXPORT, "ao_oss_init() failed with %d.", ret);
 	set_player_mode (PLAYMODE_DROP);
       }
       else
@@ -457,6 +457,13 @@ work_loop_audio (void *data)
       /* try to get next packet */
       recv_return = dsi_packet_get (control->socket, &p);
     }
+#else
+#if VSYNC_NO_AOUT
+    /* in non-RT-mode and no-audio, we sleep here for a little, so we do not
+     * consume the CPU too much by just consuming packets
+     */
+    l4_sleep_forever ();
+#endif
 #endif
     if (recv_return)
     {

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEIdentifier.cpp
- *    \brief   contains the implementation of the class CFEIdentifier
+ *  \brief   contains the implementation of the class CFEIdentifier
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -28,7 +28,6 @@
 
 #include "fe/FEIdentifier.h"
 #include <string>
-using namespace std;
 
 CFEIdentifier::CFEIdentifier()
 {
@@ -45,6 +44,7 @@ CFEIdentifier::CFEIdentifier(const char *sName)
 }
 
 CFEIdentifier::CFEIdentifier(CFEIdentifier & src)
+: CFEBase(src)
 {
     m_sName = src.m_sName;
 }
@@ -56,8 +56,8 @@ CFEIdentifier::~CFEIdentifier()
 }
 
 /** checks this object for equality with another identifier
- *    \param src the other identifier to compare with
- *    \return true if the two string are identical
+ *  \param src the other identifier to compare with
+ *  \return true if the two string are identical
  * The two string are identical if both are 0 or both are the same compared with
  * the strcmp function. They are not the same if only one of them is 0 or if the
  * strings are different.
@@ -68,8 +68,8 @@ bool CFEIdentifier::operator ==(CFEIdentifier & src)
 }
 
 /** checks this object for equality with a string
- *    \param sName the string to compare with
- *    \return true if the string an this object are equal
+ *  \param sName the string to compare with
+ *  \return true if the string an this object are equal
  * See above function for definition of equal.
  */
 bool CFEIdentifier::operator ==(string & sName)
@@ -78,7 +78,7 @@ bool CFEIdentifier::operator ==(string & sName)
 }
 
 /** copies this object
- *    \return a reference to a new identifier object
+ *  \return a reference to a new identifier object
  */
 CObject *CFEIdentifier::Clone()
 {
@@ -86,7 +86,7 @@ CObject *CFEIdentifier::Clone()
 }
 
 /** retrieves the character string from the object
- *    \return a reference to the member string
+ *  \return a reference to the member string
  * If you intend to modify this string, please copy it beforehand.
  */
 string CFEIdentifier::GetName()
@@ -94,8 +94,17 @@ string CFEIdentifier::GetName()
     return m_sName;
 }
 
+/** return true if the given name matches the internally stored value
+ *  \param sName the name to compare against
+ *  \return true if names match
+ */
+bool CFEIdentifier::Match(string sName)
+{
+    return m_sName == sName;
+}
+
 /** prefixes the identifier with the string
- *    \param sPrefix the string to prefix
+ *  \param sPrefix the string to prefix
  */
 void CFEIdentifier::Prefix(string sPrefix)
 {
@@ -103,16 +112,16 @@ void CFEIdentifier::Prefix(string sPrefix)
 }
 
 /** suffixes the identifier with the string
- *    \param sSuffix the string to suffix
+ *  \param sSuffix the string to suffix
  */
 void CFEIdentifier::Suffix(string sSuffix)
 {
     m_sName += sSuffix;
 }
 
-/**    \brief exchanges the names of this identifier
- *    \param sNewName the new name
- *    \return the old name
+/** \brief exchanges the names of this identifier
+ *  \param sNewName the new name
+ *  \return the old name
  *
  * This function sounds like none-sense: why replace the name - the identifier wouldn't
  * be the same. Well, because we can Clone all front-end objects and some objects are

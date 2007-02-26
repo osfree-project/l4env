@@ -23,7 +23,7 @@ ROLE = idl.mk
 # define LOCAL_INSTALLDIR prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
 INSTALLDIR_IDL		?= $(DROPS_STDDIR)/include/$(ARCH)/$(L4API)/$(INSTALL_INC_PREFIX)
-INSTALLDIR_IDL_LOCAL	?= $(L4DIR)/include/$(ARCH)/$(L4API)/$(INSTALL_INC_PREFIX)
+INSTALLDIR_IDL_LOCAL	?= $(OBJ_BASE)/include/$(ARCH)/$(L4API)/$(INSTALL_INC_PREFIX)
 INSTALLFILE_IDL		?= $(INSTALL) -m 644 $(1) $(2)
 INSTALLFILE_IDL_LOCAL	?= $(LN) -sf $(call absfilename,$(1)) $(2)
 
@@ -32,9 +32,6 @@ INSTALLDIR		= $(INSTALLDIR_IDL)
 INSTALLFILE_LOCAL	= $(INSTALLFILE_IDL_LOCAL)
 INSTALLDIR_LOCAL	= $(INSTALLDIR_IDL_LOCAL)
 
-ifneq ($(origin INSTALL_INC_PREFIX), undefined)
-$(warning You have overwritten INSTALL_INC_PREFIX. I hope you know what you are doing.)
-endif
 INSTALL_INC_PREFIX     ?= l4/$(PKGNAME)
 
 # our default MODE is 'l4env'
@@ -57,25 +54,41 @@ ifneq ($(SYSTEM),) # if we have a system, really build
 IDL_EXPORT_STUB ?= %
 IDL_TYPE	?= dice
 
+# C++ specific rules
+IDL_C		= c
+IDL_H		= h
+IDL_CPP		= $(CC)
+ifneq (,$(findstring BmCPP,$(IDL_FLAGS)))
+IDL_C		= cc
+IDL_H		= hh
+IDL_CPP		= $(CXX)
+else
+ifneq (,$(findstring Bmcpp,$(IDL_FLAGS)))
+IDL_C		= cc
+IDL_H		= hh
+IDL_CPP		= $(CXX)
+endif
+endif
+
 IDL_DEP =		$(addprefix .,$(addsuffix .d,$(notdir $(IDL))))
-IDL_SKELETON_C =	$(IDL:.idl=-server.c)
-IDL_SKELETON_H =	$(IDL_SKELETON_C:.c=.h)
-IDL_STUB_C =		$(IDL:.idl=-client.c)
-IDL_STUB_H = 		$(IDL_STUB_C:.c=.h)
-IDL_OPCODE_H =		$(IDL:.idl=-sys.h)
+IDL_SKELETON_C =	$(IDL:.idl=-server.$(IDL_C))
+IDL_SKELETON_H =	$(IDL_SKELETON_C:.$(IDL_C)=.$(IDL_H))
+IDL_STUB_C =		$(IDL:.idl=-client.$(IDL_C))
+IDL_STUB_H = 		$(IDL_STUB_C:.$(IDL_C)=.$(IDL_H))
+IDL_OPCODE_H =		$(IDL:.idl=-sys.$(IDL_H))
 
 IDL_FILES = $(IDL_SKELETON_C) $(IDL_SKELETON_H) $(IDL_STUB_C) $(IDL_STUB_H) \
 	    $(IDL_OPCODE_H)
 
 # Makro that expands to the list of generated files
 # arg1 - name of the idl file. Path and extension will be stripped
-IDL_FILES_EXPAND =	$(addprefix $(notdir $(basename $(1))),-server.c -server.h -client.c -client.h -sys.h)
+IDL_FILES_EXPAND =	$(addprefix $(notdir $(basename $(1))),-server.$(IDL_C) -server.$(IDL_H) -client.$(IDL_C) -client.$(IDL_H) -sys.$(IDL_H))
 
-INSTALL_TARGET = $(patsubst %.idl,%-sys.h,				\
+INSTALL_TARGET = $(patsubst %.idl,%-sys.$(IDL_H),		\
 		   $(filter $(IDL_EXPORT_SKELETON) $(IDL_EXPORT_STUB),$(IDL)))\
-		 $(patsubst %.idl,%-server.h,				\
+		 $(patsubst %.idl,%-server.$(IDL_H),		\
 		   $(filter $(IDL_EXPORT_SKELETON),$(IDL)))		\
-		 $(patsubst %.idl,%-client.h,				\
+		 $(patsubst %.idl,%-client.$(IDL_H),		\
 		   $(filter $(IDL_EXPORT_STUB), $(IDL)))
 
 all:: $(IDL_FILES)
@@ -89,10 +102,11 @@ $(error IDL_TYPE is neither <dice> nor <corba>)
 endif
 
 # the IDL file is found one directory up
-vpath %.idl ..
+vpath %.idl $(SRC_DIR)
 
 # DICE mode
 IDL_FLAGS	+= $(addprefix -P,$(CPPFLAGS))
+IDL_FLAGS	+= $(IDL_FLAGS_$(<F))
 
 # XXX just commented this out as long as dice does not support native x0
 # say dice if we want to build sources for L4X0 API.
@@ -116,24 +130,36 @@ ifeq ($(L4API),linux)
 IDL_FLAGS	+= -Bisock
 endif
 
+ifeq ($(L4API),l4secv2emu)
+IDL_FLAGS	+= -fforce-c-bindings -P-DL4API_l4v2
+endif
+
 ifeq ($(ARCH),arm)
 IDL_FLAGS	+= -Bparm
 endif
 
-ifeq ($(IDL_TYPE),corba)
-IDL_FLAGS	+= -C
+ifeq ($(ARCH),amd64)
+IDL_FLAGS	+= -Bpamd64
 endif
 
-%-server.c %-server.h %-client.c %-client.h %-sys.h: %.idl .general.d
+ifeq ($(IDL_TYPE),corba)
+IDL_FLAGS	+= --x=corba
+endif
+
+# We don't use gendep for generating the dependencies because gendep can only
+# catch open() calls from _one_ applications. Here two applications, dice and
+# the preprocessor perform open.
+%-server.$(IDL_C) %-server.$(IDL_H) %-client.$(IDL_C) %-client.$(IDL_H) %-sys.$(IDL_H): %.idl .general.d
 	@$(GEN_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(DICE_CPP_NAME),"$(call IDL_FILES_EXPAND,$<)",.$(<F).d) CC=$(CC_$(ARCH)) $(DICE) $(IDL_FLAGS) $<
+	$(VERBOSE)CC="$(IDL_CPP)" $(DICE) $(IDL_FLAGS) -MD $<
+	$(VERBOSE)mv $*.d .$(<F).d
 	$(DEPEND_VERBOSE)$(ECHO) "$(call IDL_FILES_EXPAND,$<): $(DICE) $<" >>.$(<F).d
 	$(DEPEND_VERBOSE)$(ECHO) "$(DICE) $<:" >>.$(<F).d
 
 
 clean cleanall::
 	$(VERBOSE)$(RM) $(wildcard $(addprefix $(INSTALLDIR_LOCAL)/, $(IDL_FILES)))
-	$(VERBOSE)$(RM) $(wildcard $(IDL_FILES) *.aoi *.prc)
+	$(VERBOSE)$(RM) $(wildcard $(IDL_FILES))
 
 # include install.inc to define install rules
 include $(L4DIR)/mk/install.inc
@@ -152,7 +178,7 @@ INSTALL_TARGET = $(filter $(IDL_EXPORT_IDL), $(IDL))
 include $(L4DIR)/mk/install.inc
 
 # install idl-files before going down to subdirs
-$(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch)): $(addprefix $(INSTALLDIR_LOCAL)/,$(INSTALL_TARGET))
+$(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)): $(addprefix $(INSTALLDIR_LOCAL)/,$(INSTALL_TARGET))
 
 endif	# architecture is defined, really build
 #####################################################
@@ -162,7 +188,7 @@ endif	# architecture is defined, really build
 #####################################################
 
 -include $(DEPSVAR)
-.PHONY: all clean cleanall config help install oldconfig reloc txtconfig
+.PHONY: all clean cleanall config help install oldconfig txtconfig
 
 help::
 	@echo "  all            - generate .c and .h from idl files and install locally"

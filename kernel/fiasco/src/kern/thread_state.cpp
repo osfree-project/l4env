@@ -11,7 +11,6 @@ enum Thread_state
   Thread_ipc_in_progress  = 0x10, // an IPC operation has not been finished
   Thread_send_in_progress = 0x20, // an IPC send operation hasn't been finished
   Thread_busy             = 0x40, // an IPC rcv handshake has not been finished
-  Thread_lipc_ready       = 0x80, // can we safely overwrite the stack?
   // the ipc handshake bits needs to be in the first byte, 
   // the shortcut depends on it
 
@@ -27,6 +26,9 @@ enum Thread_state
                                      // to do system calls
   Thread_dis_alien        = 0x20000, // Thread is an alien, however the next
                                      // system call is allowed
+  Thread_in_exception     = 0x40000, // Thread has sent an exception but still
+                                     // and got no reply
+  Thread_transfer_in_progress        = 0x80000, // ipc transfer
 
   // constants for convenience
   Thread_ipc_sending_mask    = Thread_send_in_progress |
@@ -36,6 +38,7 @@ enum Thread_state
   Thread_ipc_receiving_mask  = Thread_receiving |
                                Thread_busy |
                                Thread_rcvlong_in_progress |
+                               Thread_transfer_in_progress|
                                Thread_busy_long,
 
   Thread_ipc_mask            = Thread_ipc_in_progress |

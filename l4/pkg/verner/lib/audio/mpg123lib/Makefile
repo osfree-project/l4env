@@ -11,7 +11,7 @@ SRC_C			=	common.c  dct64_i386.c  decode_i386.c  \
 				mp3_common.c  tabinit.c
 
 # include configuration
--include $(PKGDIR)/Makeconf.bid.local
+-include $(PKGDIR_OBJ)/Makeconf.bid.local
 
 # use petze ?
 ifeq ($(MPG123LIB_PETZE),y)

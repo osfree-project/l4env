@@ -22,6 +22,8 @@ IMPLEMENTATION:
  */
 class Jdb_attach_irq : public Jdb_module
 {
+public:
+  Jdb_attach_irq() FIASCO_INIT;
 private:
   static char     subcmd;
   static unsigned irq;
@@ -31,7 +33,7 @@ char     Jdb_attach_irq::subcmd;
 unsigned Jdb_attach_irq::irq;
 static Jdb_attach_irq jdb_attach_irq INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-PUBLIC
+IMPLEMENT
 Jdb_attach_irq::Jdb_attach_irq()
   : Jdb_module("INFO")
 {}
@@ -84,14 +86,14 @@ Jdb_attach_irq::action( int cmd, void *&args, char const *&fmt, int & )
 }
 
 PUBLIC
-int const
+int
 Jdb_attach_irq::num_cmds() const
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_attach_irq::cmds() const
 {
   static Cmd cs[] =

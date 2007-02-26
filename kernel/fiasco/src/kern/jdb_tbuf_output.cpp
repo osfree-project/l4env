@@ -9,21 +9,24 @@ class Jdb_tbuf_output
 {
 private:
   typedef unsigned (Format_entry_fn)(Tb_entry *tb, const char *tidstr,
-				     char *buf, int maxlen);
+				     unsigned tidlen, char *buf, int maxlen);
   static Format_entry_fn *_format_entry_fn[];
+  static bool show_names;
 };
 
 IMPLEMENTATION:
 
+#include <cassert>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 
-#include "assert.h"
 #include "config.h"
 #include "initcalls.h"
 #include "jdb.h"
 #include "jdb_symbol.h"
 #include "jdb_tbuf.h"
+#include "jdb_thread_names.h"
 #include "kdb_ke.h"
 #include "kernel_console.h"
 #include "l4_types.h"
@@ -42,6 +45,7 @@ int jdb_regex_find(const char *buffer, const char **beg, const char **end)
   __attribute__((weak));
 
 Jdb_tbuf_output::Format_entry_fn *Jdb_tbuf_output::_format_entry_fn[Tbuf_max];
+bool Jdb_tbuf_output::show_names;
 
 static void
 console_log_entry(Tb_entry *e, const char *)
@@ -74,7 +78,7 @@ console_log_entry(Tb_entry *e, const char *)
 
 PRIVATE static
 unsigned
-Jdb_tbuf_output::dummy_format_entry (Tb_entry *tb, const char *,
+Jdb_tbuf_output::dummy_format_entry (Tb_entry *tb, const char *, unsigned,
 				     char *buf, int maxlen)
 {
   int len = snprintf(buf, maxlen,
@@ -128,6 +132,13 @@ Jdb_tbuf_output::thread_ip(int e_nr, Global_id *tid, Mword *ip)
 
 PUBLIC static
 void
+Jdb_tbuf_output::toggle_names()
+{
+  show_names = !show_names;
+}
+
+PUBLIC static
+void
 Jdb_tbuf_output::print_entry(int e_nr, char *buf, int maxlen)
 {
   Tb_entry *tb = Jdb_tbuf::lookup(e_nr);
@@ -142,19 +153,24 @@ Jdb_tbuf_output::print_entry(Tb_entry *tb, char *buf, int maxlen)
 {
   assert(tb->type() < Tbuf_max);
 
-  char tidstr[16];
+  char tidstr[32];
   Thread *t = Thread::lookup(tb->ctx());
  
   if (!t)
-    strcpy(tidstr, "---.---");
+    strcpy(tidstr, "---.--");
   else
     {
       Global_id g((Address)tb->ctx(), Mem_layout::Tcbs,
 		  Config::thread_block_size);
-      snprintf(tidstr, sizeof(tidstr), "%x.%02x", g.d_task(), g.d_thread());
+      const char *n = "";
+      if (show_names)
+	n = Jdb_thread_names::lookup(g, false)->name();
+      snprintf(tidstr, sizeof(tidstr), "%3x.%02x%s%.10s",
+	       g.d_task(), g.d_thread(), *n ? " " : "", n);
     }
 
-  unsigned len = _format_entry_fn[tb->type()](tb, tidstr, buf, maxlen);
+  unsigned len = _format_entry_fn[tb->type()](tb, tidstr, 
+					      show_names?17:6, buf, maxlen);
 
   // terminate string
   buf += maxlen-len;

@@ -59,6 +59,8 @@ server/src/con_hw/matrox_vid.c : GPL
 server/src/con_hw/matrox_regs.h : GPL
 server/src/con_hw/pci.c : TUD
 server/src/con_hw/pci.h : TUD
+server/src/con_hw/radeon.c : GPL
+server/src/con_hw/radeon_reg.h : GPL
 server/src/con_hw/riva.c : nVidia (liberal)
 server/src/con_hw/riva.h : TUD
 server/src/con_hw/riva_tbl.h : nVidia (liberal)

@@ -35,6 +35,7 @@
 					Thread_ipc_receiving_mask)
 
 // stackframe structure
+#ifdef CONFIG_BIT32
 #define REG_ECX
 #define REG_EDX	(1*4)
 #define REG_ESI	(2*4)
@@ -47,6 +48,52 @@
 #define REG_EFL	(9*4)
 #define REG_ESP	(10*4)
 #define REG_SS	(11*4)
+#else
+
+
+
+/*
+#define REG_RAX		(THREAD_BLOCK_SIZE - 6*8)
+#define REG_RBP		(THREAD_BLOCK_SIZE - 7*8)
+#define REG_RBX		(THREAD_BLOCK_SIZE - 8*8)
+#define REG_RDI		(THREAD_BLOCK_SIZE - 9*8)
+#define REG_RSI		(THREAD_BLOCK_SIZE - 10*8)
+
+#define REG_RDX		(THREAD_BLOCK_SIZE - 11*8)	
+#define REG_RCX		(THREAD_BLOCK_SIZE - 12*8)
+
+#define REG_R8		(THREAD_BLOCK_SIZE - 13*8)
+#define REG_R9		(THREAD_BLOCK_SIZE - 14*8)
+#define REG_R10		(THREAD_BLOCK_SIZE - 15*8)
+#define REG_R11		(THREAD_BLOCK_SIZE - 16*8)
+#define REG_R12		(THREAD_BLOCK_SIZE - 17*8)
+#define REG_R13		(THREAD_BLOCK_SIZE - 18*8)
+#define REG_R14		(THREAD_BLOCK_SIZE - 19*8)
+#define REG_R15		(THREAD_BLOCK_SIZE - 20*8)
+*/
+
+#define REG_R15
+#define REG_R14 (1*8)
+#define REG_R13 (2*8)
+#define REG_R12 (3*8)
+#define REG_R11 (4*8)
+#define REG_R10 (5*8)
+#define REG_R9  (6*8)
+#define REG_R8  (7*8)
+#define REG_RCX (8*8)
+#define REG_RDX	(9*8)
+#define REG_RSI	(10*8)
+#define REG_RDI	(11*8)
+#define REG_RBX	(12*8)
+#define REG_RBP	(13*8)
+#define REG_RAX	(14*8)
+#define REG_RIP (15*8)
+#define REG_CS	(16*8)
+#define REG_RFL	(17*8)
+#define REG_RSP	(18*8)
+#define REG_SS	(19*8)
+
+#endif
 
 #ifdef CONFIG_ABI_X0
 #  define RETURN_DOPE 0x6000 // three dwords

@@ -22,6 +22,7 @@ SECTIONS
     _stext = .;
     _prog_img_start = _stext;
     *(.text .text.* .gnu.linkonce.t.*)
+    KEEP (*(.text.*personality*))
     KEEP (*(.fini))
     LONG(0xc3)  /* terminate .fini */
     *(.rodata .rodata.* .gnu.linkonce.r.*)
@@ -44,14 +45,16 @@ SECTIONS
   .data :
   {
     *(.data .data.* .gnu.linkonce.d.*)
+    KEEP (*(.gnu.linkonce.d.*personality*))
   }
   /* exception frames for C++ */
   .eh_frame : 
-  { 
+  {
+    __eh_frame_start__ = .;
     KEEP (*(.eh_frame)) 
     LONG(0) /* terminate .eh_frame */
   }
-  .gcc_except_table : { *(.gcc_except_table) }
+  .gcc_except_table : { KEEP(*(.gcc_except_table)) }
   .dynamic :  { *(.dynamic) }
 
   .ctors :
@@ -108,7 +111,7 @@ SECTIONS
   .bss :
   {
    *(.dynbss)
-   *(.bss .gnu.linkonce.b.*)
+   *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
    _end = .;
    PROVIDE (end = .); /* don't fail if user defines this symbol */

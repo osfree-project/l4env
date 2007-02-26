@@ -22,7 +22,7 @@ SECTIONS
   }
 
   _etext = .;
-  PROVIDE (etext = .); /* don't fail if user defines this symbol */
+  PROVIDE (etext = .);
 
   /* ensure that data starts at a new L4 page */
   . = ALIGN(4K);
@@ -48,54 +48,10 @@ SECTIONS
     KEEP (*(.eh_frame)) 
     LONG(0) /* terminate .eh_frame */
   }
-  .gcc_except_table : { *(.gcc_except_table) }
-  .dynamic :  { *(.dynamic) }
 
   . = ALIGN(4);
-  .ctors :
-  {
-    LONG(0)
-    /* traverse this list backwards (see __attribute__((init_priority)) */
-    __CTOR_LIST__ = .;
-    KEEP (*(.ctors))
-    KEEP (*(SORT(.ctors.*)))
-    __CTOR_END__ = .;
-    /* traverse this list forwards */
-    __C_CTOR_LIST__ = .;
-    KEEP (*(SORT(.c_ctors.?)))
-    KEEP (*(SORT(.c_ctors.??)))
-    __C_CTOR_SYS_END__ = .;
-    KEEP (*(SORT(.c_ctors.???)))
-    KEEP (*(SORT(.c_ctors.????)))
-    KEEP (*(SORT(.c_ctors.?????)))
-    KEEP (*(.c_ctors))
-    __C_CTOR_END__ = .;
-  }
-  . = ALIGN(4);
-  .dtors :
-  {
-    LONG(0)
-    /* traverse this list backwards (see __attribute__((init_priority)) */
-    __DTOR_LIST__ = .;
-    KEEP (*(.dtors))
-    KEEP (*(SORT(.dtors.*)))
-    __DTOR_END__ = .;
-    /* traverse this list forwards */
-    __C_DTOR_LIST__ = .;
-    KEEP (*(SORT(.c_dtors.?)))
-    KEEP (*(SORT(.c_dtors.??)))
-    __C_DTOR_SYS_END__ = .;
-    KEEP (*(SORT(.c_dtors.???)))
-    KEEP (*(SORT(.c_dtors.????)))
-    KEEP (*(SORT(.c_dtors.?????)))
-    KEEP (*(.c_dtors))
-    __C_DTOR_END__ = .;
-  }
-
-  .got : { *(.got.plt) *(.got) }
-
   _edata  =  .;
-  PROVIDE (edata = .); /* don't fail if user defines this symbol */
+  PROVIDE (edata = .);
 
   _bss_start = .;
   .bss :
@@ -106,7 +62,7 @@ SECTIONS
   }
   _bss_end = .;
   _end = . ;
-  PROVIDE (end = .); /* don't fail if user defines this symbol */
+  PROVIDE (end = .);
 
   /* Moved here to ensure that these sections are located _after_ the text
    * section. In the other case we would get program sections with a virtual
@@ -117,11 +73,13 @@ SECTIONS
   .rel.dyn : { *(.rel.dyn) }
 
   . = ALIGN(4K);
-  _module_data_start = .;
-  .module_data : { *(.module_data) }
-  _module_data_end = .;
+  .module_data : { 
+    _module_data_start = .;
+    *(.module_data)
+    _module_data_end = .;
+  }
 
-  /* drop the following sections since we don't need them for DROPS */
+  /* drop the following sections since we do not need them for DROPS */
   /DISCARD/ : {
     *(.interp)
     *(.comment)

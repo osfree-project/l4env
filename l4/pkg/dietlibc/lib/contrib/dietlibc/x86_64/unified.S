@@ -9,9 +9,7 @@ exit:
 _exit:
 	mov	$SYS_exit,%al
 
-#ifndef __DYN_LIB
 .global __unified_syscall
-#endif
 __unified_syscall:
 	movzbl	%al, %eax
 	mov	%rcx, %r10
@@ -30,3 +28,5 @@ __unified_syscall:
 #include "dietuglyweaks.h"
 
 	ret
+.Lhere:
+	.size	 __unified_syscall,.Lhere-__unified_syscall

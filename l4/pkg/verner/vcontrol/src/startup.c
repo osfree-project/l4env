@@ -73,7 +73,7 @@ check_arguments (int argc, char **argv)
     {"Q1", no_argument, 0, '1'},
     {"Q2", no_argument, 0, '2'},
     {"Q3", no_argument, 0, '3'},
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
     {"silent", no_argument, 0, 's'},
     {"learn", required_argument, 0, 'l'},
     {"predict", required_argument, 0, 'p'},
@@ -109,7 +109,7 @@ check_arguments (int argc, char **argv)
     case '3':
       user_quality = 3;
       break;
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
     case 's':
       gui_state.silent = 1;
       break;
@@ -191,7 +191,7 @@ main (int argc, char **argv)
   gui_state.rt_reservation_sync_audio = RT_SYNC_AUDIO_EXEC_TIME;
   gui_state.rt_reservation_sync_video = RT_SYNC_VIDEO_EXEC_TIME;
 #endif
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
   video_chain.learn_file = video_chain.predict_file = "";
   audio_chain.learn_file = audio_chain.predict_file = "";
 #endif

@@ -5,7 +5,8 @@ L4DIR 		?= $(PKGDIR)/../../..
 DOPE_DIR	= $(L4DIR)/pkg/dope
 
 # include configuration
--include $(PKGDIR)/../Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/../Makeconf.bid.local
 DEFAULT_RELOC = $(VSYNC_RELOC)
 
 ifeq ($(VSYNC_ES1371_AOUT),y)
@@ -60,21 +61,18 @@ endif
 LIBS            +=   \
 		  -ldsi \
 		  $(GCCLIB) \
-		  -lx86cpucaps -laclib \
-		  -lcr7libc -lcr7libm \
+		  -lx86cpucaps -laclib
 
-PRIVATE_INCDIR  = ./ ./.. \
+PRIVATE_INCDIR  = $(SRC_DIR)/ $(SRC_DIR)/.. \
 		  $(PKGDIR)/../common \
 		  $(PKGDIR)/../lib/include \
+		  $(PKGDIR_OBJ)/../lib/include \
 		  $(PKGDIR)/include \
 		  $(PKGDIR)/../include \
-	          $(PKGDIR)/../config \
+	          $(PKGDIR_OBJ)/../config \
 		  $(PKGDIR)/../plugins/export \
 		  $(PKGDIR)/../plugins/fx \
-		  $(DOPE_DIR)/include \
-		  .
-
-PRIVATE_LIBDIR  = $(PKGDIR)/../lib/
+		  $(DOPE_DIR)/include
 
 
 #AUDIO SETTING
@@ -96,7 +94,7 @@ WARNINGS        = -Wall -Wstrict-prototypes -fno-strict-aliasing
 
 ifeq ($(BUILD_goom),y)
 SRC_C           +=  fx_goom.c
-LIBS            +=  -lfxgoom -lSDL -ldsound -lcr7libm 
+LIBS            +=  -lfxgoom -lSDL -ldsound
 endif
 
 SRC_C_vtsync-es1371 = contrib/es1371.c contrib/ac97_codec.c ao_oss.c
@@ -134,12 +132,10 @@ endif
 #default is prog
 include $(L4DIR)/mk/prog.mk
 
-ifeq ($(USE_OSKIT),)
 DEFINES		+= -DMODVERSIONS -DEXPORT_SYMTAB
-endif
 
 ifeq ($(LINUX24_INCDIR),)
   $(error Please set setup path to Linux 2.4.20 headers (LINUX24_INCDIR) in $(L4DIR)/Makeconf.local)
 endif
 
-Makefile: $(PKGDIR)/../Makeconf.bid.local
+Makefile.inc: $(PKGDIR_OBJ)/../Makeconf.bid.local

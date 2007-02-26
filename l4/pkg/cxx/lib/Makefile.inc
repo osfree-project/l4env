@@ -1,5 +1,10 @@
+# vim:set ft=make:
+
 TARGET_A 	:= $(TARGET).a
 TARGET_E_A	:= $(TARGET)_e.a
+
+CXXFLAGS_amd64-l4v2 += -mcmodel=medium
+CFLAGS_amd64-l4v2 += -mcmodel=medium
 
 CXXFLAGS_F_A	      := $(patsubst %.cc,%.cxxflags,$(SRC_CC))
 CXXFLAGS_F_E_A	      := $(patsubst %.cc,%.e.cxxflags,$(SRC_CC))
@@ -8,7 +13,7 @@ SRC_CC_$(TARGET_A)    := $(SRC_CC)
 SRC_CC_$(TARGET_E_A)  := $(patsubst %.cc,%.e.cc,$(SRC_CC))
 SRC_CC 		      :=
 
-PRIVATE_INCDIR	+= ../
+PRIVATE_INCDIR	+= $(SRC_DIR)/
 
 TARGET := $(TARGET_A) $(TARGET_E_A)
 

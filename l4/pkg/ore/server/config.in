@@ -1,9 +1,35 @@
 mainmenu_name "ORe configuration"
 
-bool 'Build for UX' CONFIG_ORE_UX_ONLY
-
+mainmenu_option next_comment
+comment 'Supported network cards'
+bool 'Build for UX'     CONFIG_ORE_UX_ONLY
 if [ "$CONFIG_ORE_UX_ONLY" != "y" ]; then
+    bool '  3Com 3c590/3c900 series (592/595/597) "Vortex/Boomerang" support' CONFIG_ORE_3C59X
+    bool '  AMD PCNET32' CONFIG_ORE_PCNET32
+    bool '  Broadcom Tigon3 support <BROKEN>' CONFIG_ORE_TIGON3
     bool '  EtherexpressPro/100 support' CONFIG_ORE_EEPRO100
-    bool '  Tulip support'    CONFIG_ORE_TULIP
     bool '  Intel Pro/1000 support' CONFIG_ORE_PRO1000
+	bool '  NE2000' CONFIG_ORE_NE2000
+    bool '  Tulip support'    CONFIG_ORE_TULIP
+    bool '  VIA Rhine support' CONFIG_ORE_RHINE
 fi
+endmenu
+
+mainmenu_option next_comment
+comment 'Misc. features'
+bool 'Events support'   CONFIG_ORE_EVENTS
+if [ "$CONFIG_ORE_EVENTS" == "y" ]; then
+    hex 'event handling thread priority' ORE_EVENTS_THREAD_PRIORITY 0x66
+fi
+int 'Receive quota (packets)' CONFIG_ORE_RX_QUOTA   100
+endmenu
+
+mainmenu_option next_comment
+comment 'Debugging'
+bool 'Debugging features'                   CONFIG_ORE_DEBUGGING
+if [ "$CONFIG_ORE_DEBUGGING" == "y" ]; then
+    bool '  Periodically dump connection table'   CONFIG_ORE_DUMPER
+    int  '      dumper period in seconds'         CONFIG_ORE_DUMPER_PERIOD 30
+fi
+endmenu
+

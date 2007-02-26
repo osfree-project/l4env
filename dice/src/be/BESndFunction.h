@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BESndFunction.h
- *    \brief   contains the declaration of the class CBESndFunction
+ *  \brief   contains the declaration of the class CBESndFunction
  *
  *    \date    01/14/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,7 @@
 
 /**    \class CBESndFunction
  *    \ingroup backend
- *    \brief the function class for the back-end
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
@@ -42,31 +42,31 @@ class CBESndFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBESndFunction();
     virtual ~CBESndFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBESndFunction(CBESndFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual int GetSendDirection();
     virtual int GetReceiveDirection();
-    virtual int GetSize(int nDirection, CBEContext * pContext);
-    virtual int GetFixedSize(int nDirection, CBEContext *pContext);
-    virtual void WriteReturn(CBEFile *pFile, CBEContext *pContext);
+    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(int nDirection);
+    virtual void WriteReturn(CBEFile *pFile);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
 protected:
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual int WriteMarshalReturn(CBEFile * pFile, bool bMarshal);
+    virtual void AddBeforeParameters(void);
 };
 
 #endif // !__DICE_BESNDFUNCTION_H__

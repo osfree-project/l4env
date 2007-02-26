@@ -510,6 +510,9 @@ e1000_probe(struct pci_dev *pdev,
 	netdev->mem_start = mmio_start;
 	netdev->mem_end = mmio_start + mmio_len;
 	netdev->base_addr = adapter->hw.io_base;
+#ifdef __ORE__
+	netdev->irq = pdev->irq;
+#endif
 
 	adapter->bd_number = cards_found;
 

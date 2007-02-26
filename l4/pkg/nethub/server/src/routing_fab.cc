@@ -31,21 +31,22 @@ void Routing_fab::run()
       l4_threadid_t other;
       l4_msgdope_t result;
       l4_umword_t d1, d2;
+      unsigned iface_num;
 
       // L4::cout << "router check for incoming packets\n";
-      while ((in_if = ifl->next_active(d1)))
+      while ((in_if = ifl->next_active(iface_num)))
 	{
 	  // L4::cout << "found active interface\n";
 	  unsigned slot;
 	  in = in_if->next_to_handle(slot);
 	  if (in.valid())
 	    {
-	      // L4::cout << "route pkt from iface " << d1 << '\n';
-	      Routing_entry *re = rtab->route(d1, in.packet());
+	      // L4::cout << "route pkt from iface " << iface_num << '\n';
+	      Routing_entry *re = rtab->route(iface_num, in.packet());
 	      if (!re)
 		{
 		  /*
-		  L4::cout << "no route for packet: [if=" << d1
+		  L4::cout << "no route for packet: [if=" << iface_num
 		           << "; " << Ip_addr(in.packet()->saddr(),(u32)-1) 
 			   << "->" << Ip_addr(in.packet()->daddr(),(u32)-1) 
 			   << "]\n";

@@ -5,9 +5,7 @@
 
 // #define DEBUG
 
-// external prototype cause we don't want to include stdlib.h cause we
-// use the plain mode without the path to any C library
-int atexit(void (*__function)(void));
+int __cxa_atexit(void (*function)(void *), void *arg, void *dso_handle);
 
 #define BEG		{ (crt0_hook) ~1U }
 #define END		{ (crt0_hook)   0 }
@@ -93,7 +91,7 @@ static_construction(void)
 }
 
 static void
-static_destruction(void)
+static_destruction(void *x __attribute__((unused)))
 {
   /* call destructors made with __attribute__((destructor))
    * and static C++ destructors */
@@ -110,12 +108,14 @@ crt0_sys_destruction(void)
   run_hooks_forward(__C_SYS_DTOR_BEG__, "__C_SYS_DTOR_BEG__");
 }
 
+extern void *__dso_handle __attribute__((weak));
+
 /* is called by crt0 immediately before calling __main() */
 void
 crt0_construction(void)
 {
   static_construction();
-  atexit(&static_destruction);
+  __cxa_atexit(&static_destruction, 0, &__dso_handle == 0 ? 0 : __dso_handle);
 }
 
 void
@@ -124,11 +124,15 @@ crt0_dde_construction(void)
   run_hooks_forward(__L4DDE_CTOR_BEG__, "__L4DDE_CTOR_BEG__");
 }
 
+asm (".hidden _init");
+
 /* this special function is called for initializing static libraries */
-asm (".section .init");
-extern void _init(void);
+void _init(void) __attribute__((section(".init")));
+void l4sys_fixup_abs_syscalls(void) __attribute__((weak));
 void
 _init(void)
 {
+  if (l4sys_fixup_abs_syscalls)
+    l4sys_fixup_abs_syscalls();
   static_construction();
 }

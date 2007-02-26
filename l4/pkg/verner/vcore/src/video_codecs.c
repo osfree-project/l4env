@@ -37,11 +37,13 @@
 #if BUILD_xvid10
 #include "vc_xvid_10.h"
 #endif
-#if BUILD_xvid09
-#include "vc_xvid.h"
-#endif
 #if BUILD_libmpeg2
 #include "vc_mpeg.h"
+#endif
+
+#if H264_SLICE_SCHEDULE
+/* the H.264 slice scheduler */
+#include "process.h"
 #endif
 
 int
@@ -79,13 +81,12 @@ determineAndSetupCodec (control_struct_t * control)
       /* MPEG-4 to RAW decode */
       if (0){;}
       else      
-#if (BUILD_xvid10) || (BUILD_xvid09)
+#if BUILD_xvid10
       if ((control->plugin_ctrl.mode == PLUG_MODE_DEC)
 	  && (control->streaminfo.vi.format == VID_FMT_MPEG4))
       {
 	LOGdL (DEBUG_CODEC, "deceided to decode MPEG-4 to RAW");
 	/* XviD */
-#if BUILD_xvid10
 	control->codec_init = vid_codec_xvid_10_init;
 	control->codec_close = vid_codec_xvid_10_close;
 	control->codec_step = vid_codec_xvid_10_step;
@@ -96,11 +97,6 @@ determineAndSetupCodec (control_struct_t * control)
 	control->predict->predict_eval        = predict_xvid_eval;
 	control->predict->predict_discontinue = predict_xvid_discontinue;
 	predict_dispose                       = predict_xvid_dispose;
-#endif
-#elif BUILD_xvid09
-	control->codec_init = vid_codec_xvid_init;
-	control->codec_close = vid_codec_xvid_close;
-	control->codec_step = vid_codec_xvid_step;
 #endif
       }
       else 
@@ -194,6 +190,12 @@ determineAndSetupCodec (control_struct_t * control)
   }
   control->predict->decoding_time       = 0;
   control->predict->prediction_overhead = 0;
+#endif
+
+#if H264_SLICE_SCHEDULE
+  if (control->streaminfo.vi.format == VID_FMT_FOURCC &&
+      control->streaminfo.vi.fourCC == vid_fourcc2int("H264"))
+    h264_prediction_files(control->predict->learn_file, control->predict->predict_file);
 #endif
 
   /* now initialize the codec */

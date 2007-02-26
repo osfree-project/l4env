@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEWaitAnyFunction.h
- *    \brief   contains the declaration of the class CL4BEWaitAnyFunction
+ *  \brief   contains the declaration of the class CL4BEWaitAnyFunction
  *
  *    \date    03/07/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -43,33 +43,35 @@ class CL4BEWaitAnyFunction : public CBEWaitAnyFunction
 // Constructor
 public:
     /** \brief constructor
-     *    \param bOpenWait true if wait is for any sender
-     *    \param bReply true if reply is sent before wait
+     *  \param bOpenWait true if wait is for any sender
+     *  \param bReply true if reply is sent before wait
      */
     CL4BEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CL4BEWaitAnyFunction();
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CL4BEWaitAnyFunction(CL4BEWaitAnyFunction &src);
 
 protected:
-    virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteExceptionCheck(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteIPCReplyWait(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteLongFlexpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteShortFlexpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteReleaseMemory(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteIPCErrorCheck(CBEFile *pFile);
+    virtual void WriteExceptionCheck(CBEFile * pFile);
+    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteIPC(CBEFile *pFile);
+    virtual void WriteIPCReplyWait(CBEFile *pFile);
+    virtual void WriteLongIPC(CBEFile *pFile);
+    virtual void WriteLongFlexpageIPC(CBEFile *pFile);
+    virtual void WriteShortIPC(CBEFile *pFile);
+    virtual void WriteShortFlexpageIPC(CBEFile *pFile);
+    virtual void WriteReleaseMemory(CBEFile *pFile);
+    virtual void WriteDedicatedWait(CBEFile *pFile);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void WriteCleanup(CBEFile * pFile);
 };
 
 #endif // !__DICE_L4BEWAITANYFUNCTION_H__

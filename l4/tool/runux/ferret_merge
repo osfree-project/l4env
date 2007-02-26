@@ -1,0 +1,16 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco -tbuf_entries=32768 -jdb_cmd=I* \
+        -G $UXRES                                                      \
+        -l names                                                       \
+        -l log                                                         \
+        -l dm_phys                                                     \
+        -l simple_ts                                                   \
+        -l l4dope-ux                                                   \
+        -l "fer_sensor_dir -v"                                         \
+        -l fer_list_demo                                               \
+        -l "fer_merge_mon -m2000 -i100 -b /server/ferret/ -s 12:1:0    \
+            --sensor testing --sensor 0:0:0 -s 12:2:0 -v -d 1500"      \
+        -n9 "$@"

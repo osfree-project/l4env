@@ -4,9 +4,13 @@ L4DIR		?= $(PKGDIR)/../..
 MODE		= libc
 LIBCLIBS	= -nostdlib $(GCCLIB)
 LIBCINCDIR	= -nostdinc
-SRC_CC         := uart-sa1100.cc uart-pxa.cc
-SYSTEMS		= arm-l4x0
+SRC_CC	       := uart_integrator.cc
+SYSTEMS		= arm
 TARGET		= libarm_uart.a
 
+PRIVATE_INCDIR += $(SRC_DIR)/../include 
+
 include $(L4DIR)/mk/lib.mk
+
+CXXFLAGS += -fno-exceptions -fno-rtti
 

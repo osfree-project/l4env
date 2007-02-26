@@ -102,7 +102,7 @@ install::
 	$(VERBOSE)$(MAKE) -C include install
 
 reloc::
-	
+	#
 
 include $(L4DIR)/mk/Makeconf
 

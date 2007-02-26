@@ -8,6 +8,7 @@ public:
   void restore_state();
 #endif
   void *state_buffer();
+  void state_buffer(void *b);
 
   Fpu_state();
   ~Fpu_state();
@@ -34,6 +35,12 @@ IMPLEMENT inline
 void *Fpu_state::state_buffer()
 {
   return _state_buffer;
+}
+
+IMPLEMENT inline
+void Fpu_state::state_buffer(void *b)
+{
+  _state_buffer = b;
 }
 
 

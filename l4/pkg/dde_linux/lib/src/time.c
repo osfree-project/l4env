@@ -92,7 +92,7 @@ static inline void __restart_timer_thread(void)
         break;
 
       if (err)
-        LOGdL(DEBUG_ERRORS, "Error: IPC error 0x%02x in __restart()", 
+        LOGdL(DEBUG_ERRORS, "Error: IPC error 0x%02lx in __restart()", 
               L4_IPC_ERROR(result));
     }
   while (err);
@@ -291,7 +291,7 @@ static inline int __timer_sleep(l4_timeout_t to)
 
       if (err)
         {
-          LOG_Error("in IPC (0x%02x)", L4_IPC_ERROR(result));
+          LOG_Error("in IPC (0x%02lx)", L4_IPC_ERROR(result));
           any = L4_INVALID_ID;
         }
     }

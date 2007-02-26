@@ -7,7 +7,7 @@
 
 #include "local.h"
 
-extern int _DEBUG;
+//extern int _DEBUG;
 
 static void l4signal_enqueue_signal_nonrt(siginfo_t sig);
 static void l4signal_enqueue_signal_rt(l4thread_t thread, siginfo_t sig);
@@ -79,7 +79,7 @@ static siginfo_t *l4signal_get_next_pending_nonrt(l4thread_t thread)
     {
         if (non_rt_signals[i] != NULL && !sigismember(&l4signal_sigmask_table[thread].blocked_mask, i+1))
         {
-            LOGd(_DEBUG, "signal to handle: %d", non_rt_signals[i]->si_signo);
+//            LOGd(_DEBUG, "signal to handle: %d", non_rt_signals[i]->si_signo);
             memcpy(ret, non_rt_signals[i], sizeof(siginfo_t));
             free(non_rt_signals[i]);
             non_rt_signals[i] = NULL;
@@ -115,7 +115,7 @@ static siginfo_t *l4signal_get_next_pending_rt(l4thread_t thread)
 
     if (it == NULL) // empty list OR no unblocked signal inside
     {
-        LOGd(_DEBUG, "no more sigs.");
+//        LOGd(_DEBUG, "no more sigs.");
         free(ret);
         return NULL;
     }
@@ -130,7 +130,7 @@ static siginfo_t *l4signal_get_next_pending_rt(l4thread_t thread)
     {
         prev->next = it->next;
     }
-    LOGd(_DEBUG, "it->sig = %p\n", &it->signal);
+//    LOGd(_DEBUG, "it->sig = %p\n", &it->signal);
 
     // copying is slow, but in the next step we want to free
     // the list element and therefore need that data copied

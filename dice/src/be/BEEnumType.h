@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEEnumType.h
- *    \brief   contains the declaration of the class CBEEnumType
+ *  \brief   contains the declaration of the class CBEEnumType
  *
  *    \date    Tue Jul 23 2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,7 +34,6 @@
 #include <be/BEType.h>
 #include <string>
 #include <vector>
-using namespace std;
 
 /** \class CBEEnumType
  *  \ingroup backend
@@ -52,10 +51,10 @@ public: // Public methods
     virtual string GetMemberAt(unsigned int nIndex);
     virtual void RemoveMember(string sMember);
     virtual void AddMember(string sMember);
-    virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
-    virtual void WriteZeroInit(CBEFile * pFile, CBEContext * pContext);
-    virtual void Write(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteCast(CBEFile* pFile,  bool bPointer,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFETypeSpec *pFEType);
+    virtual void WriteZeroInit(CBEFile * pFile);
+    virtual void Write(CBEFile * pFile);
+    virtual void WriteCast(CBEFile* pFile, bool bPointer);
     virtual bool HasTag(string sTag);
 
 protected: // Protected attributes
@@ -64,7 +63,7 @@ protected: // Protected attributes
      */
     vector<string> m_vMembers;
     /**    \var string m_sTag
-     *    \brief the tag if the source is a tagged struct
+     *  \brief the tag if the source is a tagged struct
      */
     string m_sTag;
 };

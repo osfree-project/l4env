@@ -82,15 +82,15 @@ main(int argc, char **argv)
   _env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
   if (con_vc_graph_mapfb_call(&vc_l4id,
 		 	 &snd_fpage, &offset, &_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || DICE_HAS_EXCEPTION(&_env))
     {
-      printf("Error mapping framebuffer (exc=%d)", _env.major);
+      printf("Error mapping framebuffer (exc=%d)", DICE_EXCEPTION_MAJOR(&_env));
       return -1;
     }
 
   write_addr = map_addr + offset;
 
-  printf("ram at %08x, fb at %08x\n", (unsigned)ram, write_addr);
+  printf("ram at %08lx, fb at %08lx\n", (unsigned long)ram, write_addr);
 
   l4_calibrate_tsc();
 

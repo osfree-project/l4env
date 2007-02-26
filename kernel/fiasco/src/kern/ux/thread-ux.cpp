@@ -25,7 +25,7 @@ IMPLEMENTATION [ux]:
 int      (*Thread::int3_handler)(Trap_state*);
 
 IMPLEMENT static inline NEEDS ["emulation.h"]
-Mword const
+Mword
 Thread::exception_cs()
 {
   return Emulation::kernel_cs();
@@ -69,8 +69,8 @@ PRIVATE inline bool Thread::check_trap13_kernel (Trap_state *, bool)
 PRIVATE inline void Thread::check_f00f_bug (Trap_state *)
 {}
 
-PRIVATE inline bool Thread::handle_io_page_fault (Trap_state *, Address, bool)
-{ return false; }
+PRIVATE inline int  Thread::handle_io_page_fault (Trap_state *, Address, bool)
+{ return 0; }
 
 PRIVATE inline bool Thread::handle_sysenter_trap (Trap_state *, Address, bool)
 { return true; }
@@ -151,22 +151,22 @@ Thread::user_invoke()
 {
   Mword dummy;
 
+  Cpu::set_gs(Utcb_init::gs_value());
+
   asm volatile
-    ("  movl %%ds ,  %0		\n\t"
+    ("  movl %%ds ,  %0         \n\t"
      "  movl %0,     %%es	\n\t"
-     "  movl %1   ,  %%gs	\n\t"
-     : "=r"(dummy)
-     : "rm"(Utcb_init::gs_value()));
+     : "=r"(dummy));
 
   user_invoke_generic();
 
   asm volatile
     ("	cmpl $2    , %%edx      \n\t"     // Sigma0
      "	je   1f                 \n\t"
-     "  cmpl $4    , %%edx      \n\t"     // Rmgr
+     "  cmpl $4    , %%edx      \n\t"     // Roottask
      "  je   1f                 \n\t"
      "  xorl %%ebx , %%ebx      \n\t"     // don't pass info if other
-     "  xorl %%ecx , %%ecx      \n\t"     // Sigma0 or Rmgr
+     "  xorl %%ecx , %%ecx      \n\t"     // Sigma0 or Roottask
      "1:                        \n\t"
      "  movl %%eax , %%esp      \n\t"
      "  xorl %%edx , %%edx      \n\t"
@@ -196,22 +196,22 @@ Thread::handle_lldt(Trap_state *ts)
   Address desc_addr;
   int size;
   unsigned int entry_number, task;
-  Space *s;
+  Mem_space *s;
   Thread *t;
 
   if (EXPECT_TRUE
-      (ts->eip >= Kmem::mem_user_max - 4 ||
-       (space()->peek_user((Mword*)ts->eip) & 0xffffff) != 0xd0000f))
+      (ts->ip() >= Kmem::mem_user_max - 4 ||
+       (mem_space()->peek_user((Mword*)ts->ip()) & 0xffffff) != 0xd0000f))
     return 0;
 
 #ifndef GDT_ENTRY_TLS_MIN
 #define GDT_ENTRY_TLS_MIN 6
 #endif
 
-  if (EXPECT_FALSE(ts->ebx == 0)) // size argument
+  if (EXPECT_FALSE(ts->_ebx == 0)) // size argument
     {
-      ts->ebx  = GDT_ENTRY_TLS_MIN;
-      ts->eip += 3;
+      ts->_ebx  = GDT_ENTRY_TLS_MIN;
+      ts->ip(ts->ip() + 3);
       return 1;
     }
 
@@ -222,7 +222,7 @@ Thread::handle_lldt(Trap_state *ts)
 
       while (size >= Cpu::Ldt_entry_size)
         {
-          Gdt_entry desc(space()->peek_user((Unsigned64 *)desc_addr));
+          Gdt_entry desc(mem_space()->peek_user((Unsigned64 *)desc_addr));
 
 	  if (desc.limit())
 	    {
@@ -242,7 +242,7 @@ Thread::handle_lldt(Trap_state *ts)
 	      for (unsigned i = 0; i < sizeof(info) / sizeof(Mword); i++)
 		*(trampoline_page + i + 1) = *(((Mword *)&info) + i);
 
-	      s = Space_index(t->id().task()).lookup();
+	      s = Space_index(t->id().task()).lookup()->mem_space();
 
 	      // Call set_thread_area for given user process
 	      Trampoline::syscall(s->pid(), 243 /* __NR_set_thread_area */,
@@ -273,7 +273,7 @@ Thread::handle_lldt(Trap_state *ts)
     {
       Ldt_user_desc info;
 
-      Gdt_entry desc(space()->peek_user((Unsigned64 *)desc_addr));
+      Gdt_entry desc(mem_space()->peek_user((Unsigned64 *)desc_addr));
 
       info.entry_number    = entry_number;
       info.base_addr       =  desc.base();

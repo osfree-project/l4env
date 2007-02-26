@@ -4,6 +4,7 @@
 #include <l4/log/l4log.h>
 #include <l4/util/util.h>
 #include <l4/ore/ore.h>
+#include <l4/sys/ipc.h>
 
 #if 0
 #include <net/if_ether.h>
@@ -26,11 +27,11 @@ l4_ssize_t l4libc_heapsize = 64 * 1024;
 /* test send/receive through loopback */
 #define TEST_LOOPBACK	    0
 /* test send/receive via eth0 */
-#define TEST_ETH0           0
+#define TEST_ETH0           1
 /* test assignment of original device MAC */
 #define TEST_DEVICE_MAC     0
 /* test reading / writing configuration */
-#define TEST_CONFIG         1
+#define TEST_CONFIG         0
 
 /* Colorful way to find test messages in LOG output. */
 void testlog(char *s);
@@ -73,7 +74,7 @@ void test_open(void)
   testlog("1. Opening loopback device. Expect success.");
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  id = l4ore_open("lo", mac, NULL, NULL, &ore_conf);
+  id = l4ore_open("lo", mac, &ore_conf);
   LOG("ORe returned id: %d", id);
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -83,7 +84,7 @@ void test_open(void)
   testlog("2. Opening device eth0. Expect success.");
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  id = l4ore_open("eth0", mac, NULL, NULL, &ore_conf);
+  id = l4ore_open("eth0", mac, &ore_conf);
   LOG("ORe returned id: %d", id);
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -94,7 +95,7 @@ void test_open(void)
   testlog("3. Opening invalid device name 'bla'. Expect invalid handle.");
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  id = l4ore_open("bla", mac, NULL, NULL, &ore_conf);
+  id = l4ore_open("bla", mac, &ore_conf);
   LOG("ORe returned id: %d", id);
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -104,7 +105,7 @@ void test_open(void)
   // invalid device name
   testlog("4. Opening device eth0 with no mac allocated. Fails. :(");
   LOG("null_mac = %p", null_mac);
-  id = l4ore_open("eth0", null_mac, NULL, NULL, &ore_conf);
+  id = l4ore_open("eth0", null_mac, &ore_conf);
   LOG("ORe returned id: %d", id);
   LOG("null_mac = %p", null_mac);
   if (null_mac)
@@ -129,7 +130,7 @@ void test_send(char *dev)
       buf3[i] = 256 - i;
     }
 
-  channel = l4ore_open(dev, mac, NULL, NULL, &ore_conf);
+  channel = l4ore_open(dev, mac, &ore_conf);
   LOG("MAC = %02X:%02X:%02X:%02X:%02X:%02X", mac[0],
       mac[1], mac[2], mac[3], mac[4], mac[5]);
   LOG("opened '%s' with channel: %d", dev, channel);
@@ -183,7 +184,7 @@ void test_send(char *dev)
   size = 300;
   LOG("set rx buffer size");
 
-  i = l4ore_recv_blocking(channel, &buf2, &size);
+  i = l4ore_recv_blocking(channel, &buf2, &size, L4_IPC_NEVER);
   LOG("received packet: %d, size = %d", i, size);
   LOG("rx buf content: '%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x...'",
       buf2[0], buf2[1], buf2[2], buf2[3], buf2[4], buf2[5],
@@ -193,7 +194,7 @@ void test_send(char *dev)
       buf2[12], buf2[13], buf2[14], buf2[15], buf2[16], buf2[17],
       buf2[18], buf2[19], buf2[20], buf2[21], buf2[22], buf2[23]);
 
-  i = l4ore_recv_blocking(channel, &buf2, &size);
+  i = l4ore_recv_blocking(channel, &buf2, &size, L4_IPC_NEVER);
   LOG("received packet: %d, size = %d", i, size);
   LOG("rx buf content: '%02x %02x %02x %02x %02x %02x %02x %02x "
       "%02x %02x %02x %02x...'",
@@ -238,9 +239,9 @@ void test_original_mac(void)
   testlog("Opening eth0 three times.");
   testlog("Expect first only conn to receive device MAC.");
 
-  id    = l4ore_open("eth0", mac, NULL, NULL, &ore_conf);
-  id2   = l4ore_open("eth0", mac2, NULL, NULL, &ore_conf);
-  id3   = l4ore_open("eth0", mac3, NULL, NULL, &ore_conf);
+  id    = l4ore_open("eth0", mac, &ore_conf);
+  id2   = l4ore_open("eth0", mac2, &ore_conf);
+  id3   = l4ore_open("eth0", mac3, &ore_conf);
   
   LOG("ORe ids are: %d, %d, %d", id, id2, id3);
   LOG("MAC1 = %02x:%02x:%02x:%02x:%02x:%02x",
@@ -263,7 +264,7 @@ void test_config(void)
   LOG_CONFIG(ore_conf);
 
   testlog("opening eth0 with keep_device_mac");
-  id = l4ore_open("eth0", mac, NULL, NULL, &ore_conf);
+  id = l4ore_open("eth0", mac, &ore_conf);
 
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -274,7 +275,7 @@ void test_config(void)
   LOG_CONFIG(ore_conf);
 
   testlog("opening eth0 with keep_device_mac (2nd time)");
-  id2 = l4ore_open("eth0", mac, NULL, NULL, &ore_conf);
+  id2 = l4ore_open("eth0", mac, &ore_conf);
   LOG("MAC = %02x:%02x:%02x:%02x:%02x:%02x",
       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 

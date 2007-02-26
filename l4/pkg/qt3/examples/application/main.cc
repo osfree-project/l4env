@@ -15,9 +15,6 @@
 
 int main( int argc, char ** argv ) {
 
-    // wait a bit for simple_file_server to get ready
-    sleep(2);
-
     QApplication a( argc, argv );
     ApplicationWindow *mw = new ApplicationWindow();
     mw->setCaption( "Qt Example - Application" );

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BERoot.h
- *    \brief   contains the declaration of the class CBERoot
+ *  \file    dice/src/be/BERoot.h
+ *  \brief   contains the declaration of the class CBERoot
  *
- *    \date    01/10/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/10/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,15 +30,16 @@
 #ifndef __DICE_BEROOT_H__
 #define __DICE_BEROOT_H__
 
-#include "be/BEObject.h"
+#include "BEObject.h"
+#include "BEContext.h"
+#include "TypeSpec-Type.h"
+#include "template.h"
 #include <vector>
-using namespace std;
-
-class CBEContext;
+#include <ostream>
+using std::ostream;
 
 class CBEClient;
 class CBEComponent;
-class CBETestsuite;
 class CBEClass;
 class CBETypedef;
 class CBEType;
@@ -55,121 +56,89 @@ class CFEInterface;
 class CFELibrary;
 class CFEFile;
 
-/**    \class CBERoot
- *    \ingroup backend
- *    \brief the root of the back-end structure
+/** \class CBERoot
+ *  \ingroup backend
+ *  \brief the root of the back-end structure
  */
 class CBERoot : public CBEObject
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBERoot();
-    virtual ~CBERoot();
+    ~CBERoot();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBERoot(CBERoot &src);
 
 public: // Public methods
-    virtual CBEFunction* FindFunction(string sFunctionName);
-    virtual void Write(CBEContext *pContext);
-    virtual bool CreateBE(CFEFile *pFEFile, CBEContext *pContext);
+    void Write();
+    void CreateBE(CFEFile *pFEFile);
 
-    virtual CBETypedef* FindTypedef(string sTypeName);
-    virtual CBETypedef* GetNextTypedef(vector<CBETypedef*>::iterator &iter);
-    virtual vector<CBETypedef*>::iterator GetFirstTypedef();
-    virtual void RemoveTypedef(CBETypedef *pTypedef);
-    virtual void AddTypedef(CBETypedef *pTypedef);
+    CBETypedef* FindTypedef(string sTypeName);
+    CBEConstant* FindConstant(string sConstantName);
+    CBENameSpace* FindNameSpace(string sNameSpaceName);
+    CBEClass* FindClass(string sClassName);
+    CBEType* FindTaggedType(unsigned int nType, string sTag);
+    CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
 
-    virtual CBEConstant* FindConstant(string sConstantName);
-    virtual CBEConstant* GetNextConstant(vector<CBEConstant*>::iterator &iter);
-    virtual vector<CBEConstant*>::iterator GetFirstConstant();
-    virtual void RemoveConstant(CBEConstant *pConstant);
-    virtual void AddConstant(CBEConstant *pConstant);
+    bool AddToFile(CBEImplementationFile *pImpl);
+    bool AddToFile(CBEHeaderFile *pHeader);
+    bool AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile);
 
-    virtual CBENameSpace* FindNameSpace(string sNameSpaceName);
-    virtual CBENameSpace* GetNextNameSpace(vector<CBENameSpace*>::iterator &iter);
-    virtual vector<CBENameSpace*>::iterator GetFirstNameSpace();
-    virtual void RemoveNameSpace(CBENameSpace *pNameSpace);
-    virtual void AddNameSpace(CBENameSpace*pNameSpace);
-
-    virtual CBEClass* FindClass(string sClassName);
-    virtual CBEClass* GetNextClass(vector<CBEClass*>::iterator &iter);
-    virtual vector<CBEClass*>::iterator GetFirstClass();
-    virtual void RemoveClass(CBEClass *pClass);
-    virtual void AddClass(CBEClass *pClass);
-
-    virtual bool AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext);
-    virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
-    virtual bool AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile, CBEContext *pContext);
-
-    virtual CBEFunction* FindGlobalFunction(string sFuncName);
-    virtual CBEFunction* GetNextGlobalFunction(vector<CBEFunction*>::iterator &iter);
-    virtual vector<CBEFunction*>::iterator GetFirstGlobalFunction();
-    virtual void RemoveGlobalFunction(CBEFunction *pFunction);
-    virtual void AddGlobalFunction(CBEFunction *pFunction);
-    virtual void PrintTargetFiles(FILE *output, int &nCurCol, int nMaxCol);
-
-    virtual CBEType* FindTaggedType(int nType, string sTag);
-    virtual CBEType* GetNextTaggedType(vector<CBEType*>::iterator &iter);
-    virtual vector<CBEType*>::iterator GetFirstTaggedType();
-    virtual void AddTaggedType(CBEType *pType);
-    virtual void RemoveTaggedType(CBEType *pType);
+    void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
 
 protected: // Protected methods
-    virtual bool CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pContext);
+    void CreateBackEnd(CFEConstDeclarator *pFEConstant);
+    void CreateBackEnd(CFEInterface *pFEInterface);
+    void CreateBackEnd(CFELibrary *pFELibrary);
+    void CreateBackEnd(CFETypedDeclarator *pFETypedef);
+    void CreateBackEnd(CFEFile *pFEFile);
+    void CreateBackEnd(CFEConstructedType *pFEType);
 
 protected:
-    /**    \var CBEClient *m_pClient
-     *    \brief reference to client part
+    /** \var CBEClient *m_pClient
+     *  \brief reference to client part
      *
-     * This variable is a reference, because we use the ClassFactory, which only returns references.
+     * This variable is a reference, because we use the ClassFactory, which
+     * only returns references.
      */
     CBEClient *m_pClient;
-    /**    \var CBEComponent *m_pComponent
-     *    \brief reference to component part
+    /** \var CBEComponent *m_pComponent
+     *  \brief reference to component part
      */
     CBEComponent *m_pComponent;
-    /**    \var CBETestsuite *m_pTestsuite
-     *    \brief reference to testsuite part
-     *
-     * This variable is a reference, because we use the ClassFactory, which only returns references. And
-     * we may set this reference depending on the options of the compiler.
-     */
-    CBETestsuite *m_pTestsuite;
-    /** \var vector<CBEConstant*> m_vConstants
+
+public:
+    /** \var CSearchableCollection<CBEConstant, string> m_Constants
      *  \brief contains the constants of the back-end
      */
-    vector<CBEConstant*> m_vConstants;
-    /** \var vector<CBETypedef*> m_vTypedefs
-     *  \brief contains the type definitions of the back-end
-     */
-    vector<CBETypedef*> m_vTypedefs;
-    /** \var vector<CBEType*> m_vTypeDeclarations
-     *  \brief contains the type declarations, which are not typedefs (usually tagged)
-     */
-    vector<CBEType*> m_vTypeDeclarations;
-    /** \var vector<CBEClass*> m_vClasses
-     *  \brief contains the classes of the back-end
-     */
-    vector<CBEClass*> m_vClasses;
-    /** \var vector<CBENameSpace*> m_vNamespaces
+    CSearchableCollection<CBEConstant, string> m_Constants;
+    /** \var CCollection<CBENameSpace> m_Namespaces
      *  \brief contains the namespaces of the back-end
      */
-    vector<CBENameSpace*> m_vNamespaces;
-    /** \var vector<CBEFunction*> m_vGlobalFunctions
+    CCollection<CBENameSpace> m_Namespaces;
+    /** \var CSearchableCollection<CBEClass, string> m_Classes
+     *  \brief contains the classes of the back-end
+     */
+    CSearchableCollection<CBEClass, string> m_Classes;
+    /** \var CSearchableCollection<CBETypedef, string> m_Typedefs
+     *  \brief contains the type definitions of the back-end
+     */
+    CSearchableCollection<CBETypedef, string> m_Typedefs;
+    /** \var CCollection<CBEType> m_TypeDeclarations
+     *  \brief contains the type declarations, which are not typedefs (usually
+     *         tagged)
+     */
+    CCollection<CBEType> m_TypeDeclarations;
+    /** \var CSearchableCollection<CBEFunction, string> m_GlobalFunctions
      *  \brief contains global functions (outside of classes and name-spaces)
      */
-    vector<CBEFunction*> m_vGlobalFunctions;
+    CSearchableCollection<CBEFunction, string> m_GlobalFunctions;
 };
 
 #endif // !__DICE_BEROOT_H__

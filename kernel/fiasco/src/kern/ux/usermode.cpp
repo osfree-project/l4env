@@ -12,14 +12,13 @@ IMPLEMENTATION:
 
 #include <cassert>
 #include <cerrno>
+#include <climits>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-#include <limits.h>
 #include <panic.h>
-#include <signal.h>
 #include <ucontext.h>
 #include <unistd.h>
 #include <asm/unistd.h>
@@ -42,19 +41,20 @@ IMPLEMENTATION:
 #include "processor.h"
 #include "regdefs.h"
 #include "task.h"
+#include "thread_state.h"
 
 PRIVATE static
 Mword
 Usermode::peek_at_addr (pid_t pid, Address addr, unsigned n)
 {
   Mword val;
-  
+
   if ((addr & sizeof (Mword) - 1) + n > sizeof (Mword))
     val = ptrace (PTRACE_PEEKTEXT, pid, addr, NULL);
   else
     val = ptrace (PTRACE_PEEKTEXT, pid, addr & ~(sizeof (Mword) - 1), NULL) >>
           CHAR_BIT * (addr & sizeof (Mword) - 1);
-    
+
   return val & (Mword) -1 >> CHAR_BIT * (sizeof (Mword) - n);
 }
 
@@ -191,7 +191,7 @@ Usermode::kernel_entry (struct ucontext *context,
                         Mword cr2)
 {
   Mword *kesp = (xcs & 3) == 2
-              ? (Mword *) *Kmem::kernel_esp() - 5
+              ? (Mword *) *Kmem::kernel_sp() - 5
               : (Mword *) context->uc_mcontext.gregs[REG_ESP] - 3;
 
   if (!Kmem::is_tcb_page_fault((Mword) kesp, 0))
@@ -243,7 +243,7 @@ Usermode::kernel_entry (struct ucontext *context,
 
   context->uc_mcontext.gregs[REG_ESP] = (Mword) kesp;
   context->uc_mcontext.gregs[REG_EIP] = Emulation::idt_vector (trap, false);
-  context->uc_mcontext.gregs[REG_EFL] = efl;
+  context->uc_mcontext.gregs[REG_EFL] = efl & ~(EFLAGS_TF | EFLAGS_NT | EFLAGS_RF | EFLAGS_VM);
   sync_interrupt_state (&context->uc_sigmask, efl);
 
   // Make sure interrupts are off
@@ -283,8 +283,28 @@ Usermode::user_exception (pid_t pid, struct ucontext *context,
 
   if (EXPECT_FALSE ((trap = kip_syscall (regs->eip))))
     {
-      regs->eip  = peek_at_addr (pid, regs->esp, 4);
-      regs->esp += 4;
+      Context *t = context_of(((Mword *)*Kmem::kernel_sp()) - 1);
+
+      /* The alien syscall code in entry-*.S substracts 2 bytes from the
+       * EIP to put the EIP back on the instruction to reexecute it.
+       * 'int X' and sysenter etc. are 2 byte instructions.
+       * So we add 2 here to have the EIP in the right position afterwards.
+       *
+       * Furthermore we leave ESP and EIP (with the adjustment) where they
+       * are so that the syscall can be re-executed.
+       *
+       * This is not a problem for native as it does not trap on the
+       * 'call 0xea......' itself there but on the real int/sysenter/etc.
+       * instructions in the syscall page.
+       */
+      if (EXPECT_FALSE((t->state() & (Thread_alien | Thread_dis_alien))
+                       == Thread_alien))
+        regs->eip += 2;
+      else
+        {
+          regs->eip  = peek_at_addr (pid, regs->esp, 4);
+          regs->esp += 4;
+        }
     }
 
   else if ((trap = l4_syscall (peek_at_addr (pid, regs->eip, 2))))
@@ -316,24 +336,25 @@ Usermode::user_exception (pid_t pid, struct ucontext *context,
       switch (trap)
         {
           case 0xd:
-            switch (peek_at_addr (pid, regs->eip, 1))
-              {
-                case 0xfa:	// cli
-                  Pic::set_owner (Boot_info::pid());
-                  regs->eip++;
-                  regs->eflags &= ~EFLAGS_IF;
-                  sync_interrupt_state (0, regs->eflags);
-                  ptrace (PTRACE_SETREGS, pid, NULL, regs);
-                  return false;
+	    if (Boot_info::emulate_clisti())
+	      switch (peek_at_addr (pid, regs->eip, 1))
+		{
+		  case 0xfa:	// cli
+		    Pic::set_owner (Boot_info::pid());
+		    regs->eip++;
+		    regs->eflags &= ~EFLAGS_IF;
+		    sync_interrupt_state (0, regs->eflags);
+		    ptrace (PTRACE_SETREGS, pid, NULL, regs);
+		    return false;
 
-                case 0xfb:	// sti
-                  Pic::set_owner (pid);
-                  regs->eip++;
-                  regs->eflags |= EFLAGS_IF;
-                  sync_interrupt_state (0, regs->eflags);
-                  ptrace (PTRACE_SETREGS, pid, NULL, regs);
-                  return false;
-              }
+		  case 0xfb:	// sti
+		    Pic::set_owner (pid);
+		    regs->eip++;
+		    regs->eflags |= EFLAGS_IF;
+		    sync_interrupt_state (0, regs->eflags);
+		    ptrace (PTRACE_SETREGS, pid, NULL, regs);
+		    return false;
+		}
             break;
 
           case 0xe:
@@ -343,13 +364,13 @@ Usermode::user_exception (pid_t pid, struct ucontext *context,
     }
 
   kernel_entry (context, trap,
-                regs->xss,		/* XSS */
+                regs->xss,      /* XSS */
                 regs->esp,		/* ESP */
-                regs->eflags,		/* EFL */
-                2,			/* XCS */
-                regs->eip,		/* EIP */
-                error,			/* ERR */
-                addr);			/* CR2 */
+                regs->eflags,   /* EFL */
+                2,              /* XCS */
+                regs->eip,      /* EIP */
+                error,          /* ERR */
+                addr);          /* CR2 */
 
   return true;
 }
@@ -375,7 +396,12 @@ Usermode::user_emulation (int stop, pid_t pid, struct ucontext *context,
         break;
 
       case SIGTRAP:
-        if (peek_at_addr (pid, regs->eip - 2, 2) == 0x80cd)
+        if (peek_at_addr (pid, regs->eip - 1, 1) == 0xcc)
+          {
+            trap = 0x3;
+            break;
+          }
+        else if (peek_at_addr (pid, regs->eip - 2, 2) == 0x80cd)
           {
             cancel_syscall (pid, regs);
             trap       = 0xd;
@@ -383,7 +409,7 @@ Usermode::user_emulation (int stop, pid_t pid, struct ucontext *context,
             regs->eip -= 2;
             break;
           }
-        trap = 0x3;
+        trap = 0x1;
         break;
 
       case SIGILL:
@@ -400,13 +426,13 @@ Usermode::user_emulation (int stop, pid_t pid, struct ucontext *context,
     }
 
   kernel_entry (context, trap,
-                regs->xss,		/* XSS */
+                regs->xss,      /* XSS */
                 regs->esp,		/* ESP */
-                regs->eflags,		/* EFL */
-                2,			/* XCS */
-                regs->eip,		/* EIP */
-                error,			/* ERR */
-                0);			/* CR2 */
+                regs->eflags,   /* EFL */
+                2,              /* XCS */
+                regs->eip,      /* EIP */
+                error,          /* ERR */
+                0);             /* CR2 */
 
   return true;
 }
@@ -441,13 +467,13 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
 
       kernel_entry (context,
                     Pic::map_irq_to_gate (irq_pend),
-                    *(kesp + 4),	/* XSS */
-                    *(kesp + 3),	/* ESP */
-                    *(kesp + 2),	/* EFL */
-                    2,			/* XCS */
-                    *(kesp + 0),	/* EIP */
-                    0,			/* ERR */
-                    0);			/* CR2 */
+                    *(kesp + 4),    /* XSS */
+                    *(kesp + 3),    /* ESP */
+                    *(kesp + 2),    /* EFL */
+                    2,              /* XCS */
+                    *(kesp + 0),    /* EIP */
+                    0,              /* ERR */
+                    0);             /* CR2 */
       return;
     }
 
@@ -469,7 +495,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
   regs.xds    = context->uc_mcontext.gregs[REG_DS];
   regs.xes    = context->uc_mcontext.gregs[REG_ES];
   regs.xfs    = context->uc_mcontext.gregs[REG_FS];
-  regs.xgs    = context->uc_mcontext.gregs[REG_GS];
+  regs.xgs    = Cpu::get_gs();
 
   ptrace (PTRACE_SETREGS, pid, NULL, &regs);
 
@@ -506,7 +532,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
   context->uc_mcontext.gregs[REG_DS]  = regs.xds;
   context->uc_mcontext.gregs[REG_ES]  = regs.xes;
   context->uc_mcontext.gregs[REG_FS]  = regs.xfs;
-  context->uc_mcontext.gregs[REG_GS]  = regs.xgs;
+  Cpu::set_gs(regs.xgs);
 
   Fpu::save_state (t->fpu_state());
 }
@@ -612,13 +638,13 @@ Usermode::int_handler (int, siginfo_t *, void *ctx)
 
   kernel_entry (context,
                 Pic::map_irq_to_gate (irq),
-                context->uc_mcontext.gregs[REG_SS],	/* XSS */
-                context->uc_mcontext.gregs[REG_ESP],	/* ESP */
-                context->uc_mcontext.gregs[REG_EFL],	/* EFL */
-                0,					/* XCS */
-                context->uc_mcontext.gregs[REG_EIP],	/* EIP */
-                0,					/* ERR */
-                0);					/* CR2 */
+                context->uc_mcontext.gregs[REG_SS],     /* XSS */
+                context->uc_mcontext.gregs[REG_ESP],    /* ESP */
+                context->uc_mcontext.gregs[REG_EFL],    /* EFL */
+                0,                                      /* XCS */
+                context->uc_mcontext.gregs[REG_EIP],    /* EIP */
+                0,                                      /* ERR */
+                0);                                     /* CR2 */
 }
 
 PRIVATE static
@@ -637,18 +663,18 @@ Usermode::jdb_handler (int sig, siginfo_t *, void *ctx)
    * will then hit an innocent instruction elsewhere with fatal consequences.
    * Therefore a pending SIGSEGV must be cancelled - it will later reoccur.
    */
- 
-  signal (SIGSEGV, SIG_IGN);  		// Cancel signal
-  set_signal (SIGSEGV);			// Reinstall handler
+
+  signal (SIGSEGV, SIG_IGN);    // Cancel signal
+  set_signal (SIGSEGV);         // Reinstall handler
 
   kernel_entry (context, sig == SIGTRAP ? 3 : 1,
-                context->uc_mcontext.gregs[REG_SS],	/* XSS */
+                context->uc_mcontext.gregs[REG_SS],     /* XSS */
                 context->uc_mcontext.gregs[REG_ESP],	/* ESP */
                 context->uc_mcontext.gregs[REG_EFL],	/* EFL */
-                0,					/* XCS */
+                0,                                      /* XCS */
                 context->uc_mcontext.gregs[REG_EIP],	/* EIP */
-                0,					/* ERR */
-                0);					/* CR2 */
+                0,                                      /* ERR */
+                0);                                     /* CR2 */
 }
 
 PUBLIC static

@@ -137,6 +137,9 @@ PUBLIC virtual
 bool
 Mux_console::register_console( Console *c, int pos = 0)
 {
+  if (c->failed())
+    return false;
+
   if(_items >= SIZE) 
     return false;
 
@@ -233,7 +236,7 @@ void
 Mux_console::start_exclusive(Mword any_true)
 {
   // enable exclusive console
-  change_state(any_true, 0, ~0U, (OUTENABLED|INENABLED));
+  change_state(any_true, 0, ~0UL, (OUTENABLED|INENABLED));
   // disable all other consoles
   change_state(0, any_true, ~(OUTENABLED|INENABLED), 0);
 }
@@ -249,7 +252,7 @@ Mux_console::end_exclusive(Mword any_true)
   // disable exclusive console
   change_state(any_true, 0, ~(OUTENABLED|INENABLED), 0);
   // enable all other consoles
-  change_state(0, any_true, ~0U, (OUTENABLED|INENABLED));
+  change_state(0, any_true, ~0UL, (OUTENABLED|INENABLED));
 }
 
 

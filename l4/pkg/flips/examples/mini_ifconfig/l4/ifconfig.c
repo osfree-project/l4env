@@ -36,6 +36,10 @@
 		return;                \
 	} while (0)
 
+#ifdef USE_UCLIBC
+#define IFF_DYNAMIC 0x8000
+#endif
+
 /*** UTILITY: PRINT SOCKET FLAGS ***
  *
  * If you change anything, check size of the string buffer!
@@ -142,7 +146,7 @@ void ifconfig(const char *ifname, const char *inaddr, const char *inmask, const 
   if ((err=ioctl(s, SIOCGIFADDR, &ifr)) < 0)
     ERR_EXIT("ioctl(SIOCGIFADDR) returns %d", err);
   sap = (struct sockaddr_in *)&ifr.ifr_addr;
-  LOG("%s: inet %s\n", ifr.ifr_name, inet_ntoa(sap->sin_addr));
+  LOG("%s: inet %s", ifr.ifr_name, inet_ntoa(sap->sin_addr));
 
   /* set IFNETMASK */
   if (!inet_aton(inmask, &sa.sin_addr))

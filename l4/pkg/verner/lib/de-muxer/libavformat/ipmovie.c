@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 /**
@@ -41,13 +41,6 @@
 #else
 static inline void debug_ipmovie(const char *format, ...) { }
 #endif
-
-
-#define LE_16(x)  ((((uint8_t*)(x))[1] << 8) | ((uint8_t*)(x))[0])
-#define LE_32(x)  ((((uint8_t*)(x))[3] << 24) | \
-                   (((uint8_t*)(x))[2] << 16) | \
-                   (((uint8_t*)(x))[1] << 8) | \
-                    ((uint8_t*)(x))[0])
 
 #define IPMOVIE_SIGNATURE "Interplay MVE File\x1A\0"
 #define IPMOVIE_SIGNATURE_SIZE 20
@@ -96,7 +89,7 @@ typedef struct IPMVEContext {
     unsigned char *buf;
     int buf_size;
 
-    int fps;
+    float fps;
     int frame_pts_inc;
 
     unsigned int video_width;
@@ -125,7 +118,7 @@ typedef struct IPMVEContext {
 
 } IPMVEContext;
 
-static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb, 
+static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb,
     AVPacket *pkt) {
 
     int chunk_type;
@@ -147,16 +140,11 @@ static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb,
         audio_pts *= s->audio_frame_count;
         audio_pts /= s->audio_sample_rate;
 
-        if (av_new_packet(pkt, s->audio_chunk_size))
-            return CHUNK_NOMEM;
+        if (s->audio_chunk_size != av_get_packet(pb, pkt, s->audio_chunk_size))
+            return CHUNK_EOF;
 
         pkt->stream_index = s->audio_stream_index;
         pkt->pts = audio_pts;
-        if (get_buffer(pb, pkt->data, s->audio_chunk_size) != 
-            s->audio_chunk_size) {
-            av_free_packet(pkt);
-            return CHUNK_EOF;
-        }
 
         /* audio frame maintenance */
         if (s->audio_type != CODEC_ID_INTERPLAY_DPCM)
@@ -178,10 +166,11 @@ static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb,
         if (av_new_packet(pkt, s->decode_map_chunk_size + s->video_chunk_size))
             return CHUNK_NOMEM;
 
+        pkt->pos= s->decode_map_chunk_offset;
         url_fseek(pb, s->decode_map_chunk_offset, SEEK_SET);
         s->decode_map_chunk_offset = 0;
 
-        if (get_buffer(pb, pkt->data, s->decode_map_chunk_size) != 
+        if (get_buffer(pb, pkt->data, s->decode_map_chunk_size) !=
             s->decode_map_chunk_size) {
             av_free_packet(pkt);
             return CHUNK_EOF;
@@ -199,6 +188,9 @@ static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb,
         pkt->stream_index = s->video_stream_index;
         pkt->pts = s->video_pts;
 
+        debug_ipmovie("sending video frame with pts %lld\n",
+            pkt->pts);
+
         s->video_pts += s->frame_pts_inc;
 
         chunk_type = CHUNK_VIDEO;
@@ -215,7 +207,7 @@ static int load_ipmovie_packet(IPMVEContext *s, ByteIOContext *pb,
 
 /* This function loads and processes a single chunk in an IP movie file.
  * It returns the type of chunk that was processed. */
-static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb, 
+static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
     AVPacket *pkt)
 {
     unsigned char chunk_preamble[CHUNK_PREAMBLE_SIZE];
@@ -229,6 +221,7 @@ static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
     int i, j;
     int first_color, last_color;
     int audio_flags;
+    unsigned char r, g, b;
 
     /* see if there are any pending packets */
     chunk_type = load_ipmovie_packet(s, pb, pkt);
@@ -330,10 +323,9 @@ static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
                 chunk_type = CHUNK_BAD;
                 break;
             }
-            s->fps = 1000000 / (LE_32(&scratch[0]) * LE_16(&scratch[4]));
-            s->fps++;  /* above calculation usually yields 14.9; we need 15 */
+            s->fps = 1000000.0 / (LE_32(&scratch[0]) * LE_16(&scratch[4]));
             s->frame_pts_inc = 90000 / s->fps;
-            debug_ipmovie("%d frames/second (timer div = %d, subdiv = %d)\n",
+            debug_ipmovie("  %.2f frames/second (timer div = %d, subdiv = %d)\n",
                 s->fps, LE_32(&scratch[0]), LE_16(&scratch[4]));
             break;
 
@@ -366,7 +358,7 @@ static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
                 s->audio_bits,
                 s->audio_sample_rate,
                 (s->audio_channels == 2) ? "stereo" : "mono",
-                (s->audio_type == CODEC_ID_INTERPLAY_DPCM) ? 
+                (s->audio_type == CODEC_ID_INTERPLAY_DPCM) ?
                 "Interplay audio" : "PCM");
             break;
 
@@ -449,7 +441,7 @@ static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
 
             /* load the palette into internal data structure */
             first_color = LE_16(&scratch[0]);
-            last_color = first_color + LE_16(&scratch[2]);
+            last_color = first_color + LE_16(&scratch[2]) - 1;
             /* sanity check (since they are 16 bit values) */
             if ((first_color > 0xFF) || (last_color > 0xFF)) {
                 debug_ipmovie("demux_ipmovie: set_palette indices out of range (%d -> %d)\n",
@@ -461,9 +453,10 @@ static int process_ipmovie_chunk(IPMVEContext *s, ByteIOContext *pb,
             for (i = first_color; i <= last_color; i++) {
                 /* the palette is stored as a 6-bit VGA palette, thus each
                  * component is shifted up to a 8-bit range */
-                s->palette_control.palette[i * 3 + 0] = scratch[j++] * 4;
-                s->palette_control.palette[i * 3 + 1] = scratch[j++] * 4;
-                s->palette_control.palette[i * 3 + 2] = scratch[j++] * 4;
+                r = scratch[j++] * 4;
+                g = scratch[j++] * 4;
+                b = scratch[j++] * 4;
+                s->palette_control.palette[i] = (r << 16) | (g << 8) | (b);
             }
             /* indicate a palette change */
             s->palette_control.palette_changed = 1;
@@ -527,6 +520,8 @@ static int ipmovie_read_header(AVFormatContext *s,
     ByteIOContext *pb = &s->pb;
     AVPacket pkt;
     AVStream *st;
+    unsigned char chunk_preamble[CHUNK_PREAMBLE_SIZE];
+    int chunk_type;
 
     /* initialize private context members */
     ipmovie->video_pts = ipmovie->audio_frame_count = 0;
@@ -540,44 +535,52 @@ static int ipmovie_read_header(AVFormatContext *s,
     if (process_ipmovie_chunk(ipmovie, pb, &pkt) != CHUNK_INIT_VIDEO)
         return AVERROR_INVALIDDATA;
 
-    /* process the next chunk which should be CHUNK_INIT_AUDIO */
-    if (process_ipmovie_chunk(ipmovie, pb, &pkt) != CHUNK_INIT_AUDIO)
-        return AVERROR_INVALIDDATA;
+    /* peek ahead to the next chunk-- if it is an init audio chunk, process
+     * it; if it is the first video chunk, this is a silent file */
+    if (get_buffer(pb, chunk_preamble, CHUNK_PREAMBLE_SIZE) !=
+        CHUNK_PREAMBLE_SIZE)
+        return AVERROR_IO;
+    chunk_type = LE_16(&chunk_preamble[2]);
+    url_fseek(pb, -CHUNK_PREAMBLE_SIZE, SEEK_CUR);
 
-    /* set the pts reference (1 pts = 1/90000) */
-    s->pts_num = 1;
-    s->pts_den = 90000;
+    if (chunk_type == CHUNK_VIDEO)
+        ipmovie->audio_type = 0;  /* no audio */
+    else if (process_ipmovie_chunk(ipmovie, pb, &pkt) != CHUNK_INIT_AUDIO)
+        return AVERROR_INVALIDDATA;
 
     /* initialize the stream decoders */
     st = av_new_stream(s, 0);
     if (!st)
         return AVERROR_NOMEM;
+    av_set_pts_info(st, 33, 1, 90000);
     ipmovie->video_stream_index = st->index;
-    st->codec.codec_type = CODEC_TYPE_VIDEO;
-    st->codec.codec_id = CODEC_ID_INTERPLAY_VIDEO;
-    st->codec.codec_tag = 0;  /* no fourcc */
-    st->codec.width = ipmovie->video_width;
-    st->codec.height = ipmovie->video_height;
+    st->codec->codec_type = CODEC_TYPE_VIDEO;
+    st->codec->codec_id = CODEC_ID_INTERPLAY_VIDEO;
+    st->codec->codec_tag = 0;  /* no fourcc */
+    st->codec->width = ipmovie->video_width;
+    st->codec->height = ipmovie->video_height;
 
     /* palette considerations */
-    st->codec.extradata_size = sizeof(AVPaletteControl);
-    st->codec.extradata = &ipmovie->palette_control;
+    st->codec->palctrl = &ipmovie->palette_control;
 
-    st = av_new_stream(s, 0);
-    if (!st)
-        return AVERROR_NOMEM;
-    ipmovie->audio_stream_index = st->index;
-    st->codec.codec_type = CODEC_TYPE_AUDIO;
-    st->codec.codec_id = ipmovie->audio_type;
-    st->codec.codec_tag = 0;  /* no tag */
-    st->codec.channels = ipmovie->audio_channels;
-    st->codec.sample_rate = ipmovie->audio_sample_rate;
-    st->codec.bits_per_sample = ipmovie->audio_bits;
-    st->codec.bit_rate = st->codec.channels * st->codec.sample_rate *
-        st->codec.bits_per_sample;
-    if (st->codec.codec_id == CODEC_ID_INTERPLAY_DPCM)
-        st->codec.bit_rate /= 2;
-    st->codec.block_align = st->codec.channels * st->codec.bits_per_sample;
+    if (ipmovie->audio_type) {
+        st = av_new_stream(s, 0);
+        if (!st)
+            return AVERROR_NOMEM;
+        av_set_pts_info(st, 33, 1, 90000);
+        ipmovie->audio_stream_index = st->index;
+        st->codec->codec_type = CODEC_TYPE_AUDIO;
+        st->codec->codec_id = ipmovie->audio_type;
+        st->codec->codec_tag = 0;  /* no tag */
+        st->codec->channels = ipmovie->audio_channels;
+        st->codec->sample_rate = ipmovie->audio_sample_rate;
+        st->codec->bits_per_sample = ipmovie->audio_bits;
+        st->codec->bit_rate = st->codec->channels * st->codec->sample_rate *
+            st->codec->bits_per_sample;
+        if (st->codec->codec_id == CODEC_ID_INTERPLAY_DPCM)
+            st->codec->bit_rate /= 2;
+        st->codec->block_align = st->codec->channels * st->codec->bits_per_sample;
+    }
 
     return 0;
 }
@@ -593,7 +596,7 @@ static int ipmovie_read_packet(AVFormatContext *s,
     if (ret == CHUNK_BAD)
         ret = AVERROR_INVALIDDATA;
     else if (ret == CHUNK_EOF)
-        ret = -EIO;
+        ret = AVERROR_IO;
     else if (ret == CHUNK_NOMEM)
         ret = AVERROR_NOMEM;
     else

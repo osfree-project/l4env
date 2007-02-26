@@ -14,78 +14,78 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 #include "avcodec.h"
 #include "ra144.h"
 
-#define DATABLOCK1	20			/* size of 14.4 input block in bytes */
-#define DATACHUNK1	1440			/* size of 14.4 input chunk in bytes */
-#define AUDIOBLOCK	160			/* size of output block in 16-bit words (320 bytes) */
-#define AUDIOBUFFER	12288			/* size of output buffer in 16-bit words (24576 bytes) */
+#define DATABLOCK1      20      /* size of 14.4 input block in bytes */
+#define DATACHUNK1      1440    /* size of 14.4 input chunk in bytes */
+#define AUDIOBLOCK      160     /* size of output block in 16-bit words (320 bytes) */
+#define AUDIOBUFFER     12288   /* size of output buffer in 16-bit words (24576 bytes) */
 /* consts */
-#define NBLOCKS		4				/* number of segments within a block */
-#define BLOCKSIZE	40				/* (quarter) block size in 16-bit words (80 bytes) */
-#define HALFBLOCK	20				/* BLOCKSIZE/2 */
-#define BUFFERSIZE	146				/* for do_output */
+#define NBLOCKS         4       /* number of segments within a block */
+#define BLOCKSIZE       40      /* (quarter) block size in 16-bit words (80 bytes) */
+#define HALFBLOCK       20      /* BLOCKSIZE/2 */
+#define BUFFERSIZE      146     /* for do_output */
 
 
 /* internal globals */
 typedef struct {
-	unsigned int	 resetflag, val, oldval;
-	unsigned int	 unpacked[28];		/* buffer for unpacked input */
-	unsigned int	*iptr;				/* pointer to current input (from unpacked) */
-	unsigned int	 gval;
-	unsigned short	*gsp;
-	unsigned int	 gbuf1[8];
-	unsigned short	 gbuf2[120];
-	signed   short	 output_buffer[40];
-	unsigned int	*decptr;			/* decoder ptr */
-	signed   short	*decsp;
+        unsigned int     resetflag, val, oldval;
+        unsigned int     unpacked[28];          /* buffer for unpacked input */
+        unsigned int    *iptr;                  /* pointer to current input (from unpacked) */
+        unsigned int     gval;
+        unsigned short  *gsp;
+        unsigned int     gbuf1[8];
+        unsigned short   gbuf2[120];
+        signed   short   output_buffer[40];
+        unsigned int    *decptr;                /* decoder ptr */
+        signed   short  *decsp;
 
-	/* the swapped buffers */
-	unsigned int	 swapb1a[10];
-	unsigned int	 swapb2a[10];
-	unsigned int	 swapb1b[10];
-	unsigned int	 swapb2b[10];
-	unsigned int	*swapbuf1;
-	unsigned int	*swapbuf2;
-	unsigned int	*swapbuf1alt;
-	unsigned int	*swapbuf2alt;
+        /* the swapped buffers */
+        unsigned int     swapb1a[10];
+        unsigned int     swapb2a[10];
+        unsigned int     swapb1b[10];
+        unsigned int     swapb2b[10];
+        unsigned int    *swapbuf1;
+        unsigned int    *swapbuf2;
+        unsigned int    *swapbuf1alt;
+        unsigned int    *swapbuf2alt;
 
-	unsigned int buffer[5];
-	unsigned short int buffer_2[148];
-	unsigned short int buffer_a[40];
-	unsigned short int buffer_b[40];
-	unsigned short int buffer_c[40];
-	unsigned short int buffer_d[40];
+        unsigned int buffer[5];
+        unsigned short int buffer_2[148];
+        unsigned short int buffer_a[40];
+        unsigned short int buffer_b[40];
+        unsigned short int buffer_c[40];
+        unsigned short int buffer_d[40];
 
-	unsigned short int work[50];
-	unsigned short *sptr;
+        unsigned short int work[50];
+        unsigned short *sptr;
 
-	int buffer1[10];
-	int buffer2[10];
+        int buffer1[10];
+        int buffer2[10];
 
-	signed short wavtable1[2304];
-	unsigned short wavtable2[2304];
+        signed short wavtable1[2304];
+        unsigned short wavtable2[2304];
 } Real144_internal;
 
 static int ra144_decode_init(AVCodecContext * avctx)
 {
-	Real144_internal *glob=avctx->priv_data;
+        Real144_internal *glob=avctx->priv_data;
 
-	memset(glob,0,sizeof(Real144_internal));
-	glob->resetflag=1;
-	glob->swapbuf1=glob->swapb1a;
-	glob->swapbuf2=glob->swapb2a;
-	glob->swapbuf1alt=glob->swapb1b;
-	glob->swapbuf2alt=glob->swapb2b;
+        memset(glob,0,sizeof(Real144_internal));
+        glob->resetflag=1;
+        glob->swapbuf1=glob->swapb1a;
+        glob->swapbuf2=glob->swapb2a;
+        glob->swapbuf1alt=glob->swapb1b;
+        glob->swapbuf2alt=glob->swapb2b;
 
-	memcpy(glob->wavtable1,wavtable1,sizeof(wavtable1));
-	memcpy(glob->wavtable2,wavtable2,sizeof(wavtable2));
+        memcpy(glob->wavtable1,wavtable1,sizeof(wavtable1));
+        memcpy(glob->wavtable2,wavtable2,sizeof(wavtable2));
 
-	return 0;
+        return 0;
 }
 
 static void final(Real144_internal *glob, short *i1, short *i2, void *out, int *statbuf, int len);
@@ -107,10 +107,10 @@ static void do_voice(int *a1, int *a2)
   int *b1,*b2;
   int x,y;
   int *ptr,*tmp;
-  
+
   b1=buffer;
   b2=a2;
-  
+
   for (x=0;x<10;x++) {
     b1[x]=(*a1)<<4;
 
@@ -123,14 +123,14 @@ static void do_voice(int *a1, int *a2)
     b1=b2;
     b2=tmp;
     a1++;
-  }  
+  }
   ptr=a2+10;
   while (ptr>a2) (*a2++)>>=4;
 }
 
 
 /* do quarter-block output */
-static void do_output_subblock(Real144_internal *glob, int x)
+static void do_output_subblock(Real144_internal *glob, unsigned int x)
 {
   int a,b,c,d,e,f,g;
 
@@ -190,7 +190,7 @@ static void add_wav(Real144_internal *glob, int n, int f, int m1, int m2, int m3
   ptr=glob->wavtable1+n*9;
   ptr2=glob->wavtable2+n*9;
   if (f!=0) {
-    a=((*ptr)*m1)>>((*ptr2)+1); 
+    a=((*ptr)*m1)>>((*ptr2)+1);
   } else {
     a=0;
   }
@@ -299,7 +299,7 @@ static void unpack_input(unsigned char *input, unsigned int *output)
     *(output++)=ptr[x];
     *(output++)=ptr[x+2];
     *(output++)=ptr[x+3];
-    *(output++)=ptr[x+1];    
+    *(output++)=ptr[x+1];
   }
 }
 
@@ -424,7 +424,7 @@ static void dec2(Real144_internal *glob, int *data, int *inp, int n, int f, int 
 
 /* Uncompress one block (20 bytes -> 160*2 bytes) */
 static int ra144_decode_frame(AVCodecContext * avctx,
-            void *data, int *data_size,
+            void *vdata, int *data_size,
             uint8_t * buf, int buf_size)
 {
   unsigned int a,b,c;
@@ -432,12 +432,16 @@ static int ra144_decode_frame(AVCodecContext * avctx,
   signed short *shptr;
   unsigned int *lptr,*temp;
   const short **dptr;
-  void *datao;
+  int16_t *datao;
+  int16_t *data = vdata;
   Real144_internal *glob=avctx->priv_data;
+
+  if(buf_size==0)
+      return 0;
 
   datao = data;
   unpack_input(buf,glob->unpacked);
-  
+
   glob->iptr=glob->unpacked;
   glob->val=decodetable[0][(*(glob->iptr++))<<1];
 
@@ -480,10 +484,10 @@ static int ra144_decode_frame(AVCodecContext * avctx,
     shptr=glob->output_buffer;
     while (shptr<glob->output_buffer+BLOCKSIZE) {
       s=*(shptr++)<<2;
-      *((int16_t *)data)=s;
-      if (s>32767) *((int16_t *)data)=32767;
-      if (s<-32767) *((int16_t *)data)=-32768;
-      ((int16_t *)data)++;
+      *data=s;
+      if (s>32767) *data=32767;
+      if (s<-32767) *data=-32768;
+      data++;
     }
     b+=30;
   }
@@ -495,7 +499,7 @@ static int ra144_decode_frame(AVCodecContext * avctx,
   temp=glob->swapbuf2alt;
   glob->swapbuf2alt=glob->swapbuf2;
   glob->swapbuf2=temp;
-  *data_size=data-datao;
+  *data_size=(data-datao)*sizeof(*data);
   return 20;
 }
 

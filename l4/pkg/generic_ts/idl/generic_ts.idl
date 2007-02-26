@@ -32,6 +32,16 @@ library l4
        * 			- -#L4_ENOTASK  no unused task id available */
       long allocate([out] l4_taskid_t *taskid);
 
+      /** Allocate a new task in the same way as allocate(). However, this
+       * _really_ transfers ownership to the client by making it the
+       * new task's chief.
+       *
+       * \retval taskid		Id of new task assigned to calling client
+       * \return 		0 on success (\a taskid contains a valid id),
+       * 			error code otherwise:
+       * 			- -#L4_ENOTASK  no unused task id available */
+      long allocate2([out] l4_taskid_t *taskid);
+
       /** Create the task. The taskid must be owned by the client.
        * 
        * \param  taskid		Id of pre-allocated task belonging to client
@@ -44,8 +54,9 @@ library l4
        * \param  flags		Flags */
       long create([in,out] l4_taskid_t *taskid, [in] l4_addr_t entry,
 		  [in] l4_addr_t stack,         [in] unsigned long mcp,
-		  [in] l4_taskid_t pager,       [in] long prio,
-		  [in, string] char* resname,   [in] unsigned long flags);
+		  [in] l4_taskid_t pager,       [in] l4_taskid_t caphandler,
+		  [in] long prio,               [in, string] char* resname,
+		  [in] unsigned long flags);
 
       /**
        * Free previously allocated task id.

@@ -7,13 +7,13 @@
  */
 
 #include <stdio.h>
-#include <time.h>
 
 #include <ogg/ogg.h>
-#include <vorbis/vorbisenc.h>
 
 #include "avformat.h"
-#include "oggvorbis.h"
+
+#undef NDEBUG
+#include <assert.h>
 
 #define DECODER_BUFFER_SIZE 4096
 
@@ -22,114 +22,101 @@ typedef struct OggContext {
     /* output */
     ogg_stream_state os ;
     int header_handled ;
-    ogg_int64_t base_packet_no ;
-    ogg_int64_t base_granule_pos ;
+    ogg_packet op;
 
     /* input */
     ogg_sync_state oy ;
 } OggContext ;
 
 
-static int ogg_write_header(AVFormatContext *avfcontext) 
+#ifdef CONFIG_MUXERS
+static int ogg_write_header(AVFormatContext *avfcontext)
 {
     OggContext *context = avfcontext->priv_data;
-    AVCodecContext *avccontext ;
-    vorbis_info vi ;
-    vorbis_dsp_state vd ;
-    vorbis_comment vc ;
-    vorbis_block vb ;
-    ogg_packet header, header_comm, header_code ; 
-    int n ;
-    
-    srand(time(NULL));
-    ogg_stream_init(&context->os, rand());
-    
+    ogg_packet *op= &context->op;
+    int n;
+
+    ogg_stream_init(&context->os, 31415);
+
     for(n = 0 ; n < avfcontext->nb_streams ; n++) {
-	avccontext = &avfcontext->streams[n]->codec ;
+        AVCodecContext *codec = avfcontext->streams[n]->codec;
+        uint8_t *headers = codec->extradata;
+        int headers_len = codec->extradata_size;
+        uint8_t *header_start[3];
+        int header_len[3];
+        int i, j;
 
-	/* begin vorbis specific code */
-		
-	vorbis_info_init(&vi) ;
+        av_set_pts_info(avfcontext->streams[n], 60, 1, AV_TIME_BASE);
 
-	/* code copied from libavcodec/oggvorbis.c */
+        for(j=1,i=0;i<2;++i, ++j) {
+            header_len[i]=0;
+            while(j<headers_len && headers[j]==0xff) {
+                header_len[i]+=0xff;
+                ++j;
+            }
+            header_len[i]+=headers[j];
+        }
+        header_len[2]=headers_len-header_len[0]-header_len[1]-j;
+        headers+=j;
+        header_start[0] = headers;
+        header_start[1] = header_start[0] + header_len[0];
+        header_start[2] = header_start[1] + header_len[1];
 
-	if(oggvorbis_init_encoder(&vi, avccontext) < 0) {
-	    printf("ogg_write_header: init_encoder failed") ;
-	    return -1 ;
-	}
+        for(i=0; i < 3; ++i){
+            op->bytes = header_len[i];
 
-	vorbis_analysis_init(&vd, &vi) ;
-	vorbis_block_init(&vd, &vb) ;
-	
-	vorbis_comment_init(&vc) ;
-	vorbis_comment_add_tag(&vc, "encoder", "ffmpeg") ;
-	if(*avfcontext->title)
-	    vorbis_comment_add_tag(&vc, "title", avfcontext->title) ;
+            op->packet= header_start[i];
+            op->b_o_s= op->packetno==0;
 
-	vorbis_analysis_headerout(&vd, &vc, &header,
-				  &header_comm, &header_code) ;
-	ogg_stream_packetin(&context->os, &header) ;
-	ogg_stream_packetin(&context->os, &header_comm) ;
-	ogg_stream_packetin(&context->os, &header_code) ;  
-	
-	vorbis_block_clear(&vb) ;
-	vorbis_dsp_clear(&vd) ;
-	vorbis_info_clear(&vi) ;
-	vorbis_comment_clear(&vc) ;
-	
-	/* end of vorbis specific code */
+            ogg_stream_packetin(&context->os, op);
 
-	context->header_handled = 0 ;
-	context->base_packet_no = 0 ;
+            op->packetno++; //FIXME multiple streams
+        }
+
+        context->header_handled = 0 ;
     }
-    
+
     return 0 ;
 }
 
-
-static int ogg_write_packet(AVFormatContext *avfcontext,
-			    int stream_index,
-			    unsigned char *buf, int size, int force_pts)
+static int ogg_write_packet(AVFormatContext *avfcontext, AVPacket *pkt)
 {
     OggContext *context = avfcontext->priv_data ;
-    ogg_packet *op ;
+    AVCodecContext *avctx= avfcontext->streams[pkt->stream_index]->codec;
+    ogg_packet *op= &context->op;
     ogg_page og ;
-    int l = 0 ;
-    
+    int64_t pts;
+
+    pts= av_rescale(pkt->pts, avctx->sample_rate, AV_TIME_BASE);
+
+//    av_log(avfcontext, AV_LOG_DEBUG, "M%d\n", size);
+
     /* flush header packets so audio starts on a new page */
 
     if(!context->header_handled) {
-	while(ogg_stream_flush(&context->os, &og)) {
-	    put_buffer(&avfcontext->pb, og.header, og.header_len) ;
-	    put_buffer(&avfcontext->pb, og.body, og.body_len) ;
-	    put_flush_packet(&avfcontext->pb);
-	}
-	context->header_handled = 1 ;
+        while(ogg_stream_flush(&context->os, &og)) {
+            put_buffer(&avfcontext->pb, og.header, og.header_len) ;
+            put_buffer(&avfcontext->pb, og.body, og.body_len) ;
+            put_flush_packet(&avfcontext->pb);
+        }
+        context->header_handled = 1 ;
     }
 
-    while(l < size) {
-	op = (ogg_packet*)(buf + l) ;
-	op->packet = buf + l + sizeof(ogg_packet) ; /* fix data pointer */
+    op->packet = (uint8_t*) pkt->data;
+    op->bytes  = pkt->size;
+    op->b_o_s  = op->packetno == 0;
+    op->granulepos= pts;
 
-	if(!context->base_packet_no) { /* this is the first packet */
-	    context->base_packet_no = op->packetno ; 
-	    context->base_granule_pos = op->granulepos ;
-	}
+    /* correct the fields in the packet -- essential for streaming */
 
-	/* correct the fields in the packet -- essential for streaming */
+    ogg_stream_packetin(&context->os, op);
 
-	op->packetno -= context->base_packet_no ;
-	op->granulepos -= context->base_granule_pos ;
-
-	ogg_stream_packetin(&context->os, op) ;
-	l += sizeof(ogg_packet) + op->bytes ;
-
-	while(ogg_stream_pageout(&context->os, &og)) {
-	    put_buffer(&avfcontext->pb, og.header, og.header_len) ;
-	    put_buffer(&avfcontext->pb, og.body, og.body_len) ;
-	    put_flush_packet(&avfcontext->pb);
-	}
+    while(ogg_stream_pageout(&context->os, &og)) {
+        put_buffer(&avfcontext->pb, og.header, og.header_len);
+        put_buffer(&avfcontext->pb, og.body, og.body_len);
+        put_flush_packet(&avfcontext->pb);
     }
+    op->packetno++;
 
     return 0;
 }
@@ -140,9 +127,9 @@ static int ogg_write_trailer(AVFormatContext *avfcontext) {
     ogg_page og ;
 
     while(ogg_stream_flush(&context->os, &og)) {
-	put_buffer(&avfcontext->pb, og.header, og.header_len) ;
-	put_buffer(&avfcontext->pb, og.body, og.body_len) ;
-	put_flush_packet(&avfcontext->pb);
+        put_buffer(&avfcontext->pb, og.header, og.header_len) ;
+        put_buffer(&avfcontext->pb, og.body, og.body_len) ;
+        put_flush_packet(&avfcontext->pb);
     }
 
     ogg_stream_clear(&context->os) ;
@@ -162,8 +149,9 @@ static AVOutputFormat ogg_oformat = {
     ogg_write_packet,
     ogg_write_trailer,
 } ;
+#endif //CONFIG_MUXERS
 
-
+#if 0
 static int next_packet(AVFormatContext *avfcontext, ogg_packet *op) {
     OggContext *context = avfcontext->priv_data ;
     ogg_page og ;
@@ -171,17 +159,17 @@ static int next_packet(AVFormatContext *avfcontext, ogg_packet *op) {
 
     while(ogg_stream_packetout(&context->os, op) != 1) {
 
-	/* while no pages are available, read in more data to the sync */
-	while(ogg_sync_pageout(&context->oy, &og) != 1) {
-	    buf = ogg_sync_buffer(&context->oy, DECODER_BUFFER_SIZE) ;
-	    if(get_buffer(&avfcontext->pb, buf, DECODER_BUFFER_SIZE) <= 0)
-		return 1 ;
-	    ogg_sync_wrote(&context->oy, DECODER_BUFFER_SIZE) ; 
-	}	
-	
-	/* got a page. Feed it into the stream and get the packet */
-	if(ogg_stream_pagein(&context->os, &og) != 0)
-	    return 1 ;
+        /* while no pages are available, read in more data to the sync */
+        while(ogg_sync_pageout(&context->oy, &og) != 1) {
+            buf = ogg_sync_buffer(&context->oy, DECODER_BUFFER_SIZE) ;
+            if(get_buffer(&avfcontext->pb, buf, DECODER_BUFFER_SIZE) <= 0)
+                return 1 ;
+            ogg_sync_wrote(&context->oy, DECODER_BUFFER_SIZE) ;
+        }
+
+        /* got a page. Feed it into the stream and get the packet */
+        if(ogg_stream_pagein(&context->os, &og) != 0)
+            return 1 ;
     }
 
     return 0 ;
@@ -191,30 +179,50 @@ static int next_packet(AVFormatContext *avfcontext, ogg_packet *op) {
 static int ogg_read_header(AVFormatContext *avfcontext, AVFormatParameters *ap)
 {
     OggContext *context = avfcontext->priv_data;
+    ogg_packet op ;
     char *buf ;
     ogg_page og ;
     AVStream *ast ;
-    
+    AVCodecContext *codec;
+    uint8_t *p;
+    int i;
+
     ogg_sync_init(&context->oy) ;
     buf = ogg_sync_buffer(&context->oy, DECODER_BUFFER_SIZE) ;
 
     if(get_buffer(&avfcontext->pb, buf, DECODER_BUFFER_SIZE) <= 0)
-	return -EIO ;
-    
-    ogg_sync_wrote(&context->oy, DECODER_BUFFER_SIZE) ;   
+        return AVERROR_IO ;
+
+    ogg_sync_wrote(&context->oy, DECODER_BUFFER_SIZE) ;
     ogg_sync_pageout(&context->oy, &og) ;
     ogg_stream_init(&context->os, ogg_page_serialno(&og)) ;
     ogg_stream_pagein(&context->os, &og) ;
-  
+
     /* currently only one vorbis stream supported */
 
     ast = av_new_stream(avfcontext, 0) ;
     if(!ast)
-	return AVERROR_NOMEM ;
+        return AVERROR_NOMEM ;
+    av_set_pts_info(ast, 60, 1, AV_TIME_BASE);
 
-    ast->codec.codec_type = CODEC_TYPE_AUDIO ;
-    ast->codec.codec_id = CODEC_ID_VORBIS ;
-    
+    codec= &ast->codec;
+    codec->codec_type = CODEC_TYPE_AUDIO;
+    codec->codec_id = CODEC_ID_VORBIS;
+    for(i=0; i<3; i++){
+        if(next_packet(avfcontext, &op)){
+            return -1;
+        }
+        if(op.bytes >= (1<<16) || op.bytes < 0)
+            return -1;
+        codec->extradata_size+= 2 + op.bytes;
+        codec->extradata= av_realloc(codec->extradata, codec->extradata_size + FF_INPUT_BUFFER_PADDING_SIZE);
+        memset(codec->extradata + codec->extradata_size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+        p= codec->extradata + codec->extradata_size - 2 - op.bytes;
+        *(p++)= op.bytes>>8;
+        *(p++)= op.bytes&0xFF;
+        memcpy(p, op.packet, op.bytes);
+    }
+
     return 0 ;
 }
 
@@ -222,15 +230,17 @@ static int ogg_read_header(AVFormatContext *avfcontext, AVFormatParameters *ap)
 static int ogg_read_packet(AVFormatContext *avfcontext, AVPacket *pkt) {
     ogg_packet op ;
 
-    if(next_packet(avfcontext, &op)) 
-	return -EIO ;
-    if(av_new_packet(pkt, sizeof(ogg_packet) + op.bytes) < 0)
-	return -EIO ;
+    if(next_packet(avfcontext, &op))
+        return AVERROR_IO ;
+    if(av_new_packet(pkt, op.bytes) < 0)
+        return AVERROR_IO ;
     pkt->stream_index = 0 ;
-    memcpy(pkt->data, &op, sizeof(ogg_packet)) ;
-    memcpy(pkt->data + sizeof(ogg_packet), op.packet, op.bytes) ;
+    memcpy(pkt->data, op.packet, op.bytes);
+    if(avfcontext->streams[0]->codec.sample_rate && op.granulepos!=-1)
+        pkt->pts= av_rescale(op.granulepos, AV_TIME_BASE, avfcontext->streams[0]->codec.sample_rate);
+//    printf("%lld %d %d\n", pkt->pts, (int)op.granulepos, avfcontext->streams[0]->codec.sample_rate);
 
-    return sizeof(ogg_packet) + op.bytes ;
+    return op.bytes;
 }
 
 
@@ -239,6 +249,7 @@ static int ogg_read_close(AVFormatContext *avfcontext) {
 
     ogg_stream_clear(&context->os) ;
     ogg_sync_clear(&context->oy) ;
+    av_freep(&avfcontext->streams[0]->codec.extradata);
 
     return 0 ;
 }
@@ -254,10 +265,12 @@ static AVInputFormat ogg_iformat = {
     ogg_read_close,
     .extensions = "ogg",
 } ;
+#endif
 
-
-int ogg_init(void) {
+int libogg_init(void) {
+#ifdef CONFIG_MUXERS
     av_register_output_format(&ogg_oformat) ;
-    av_register_input_format(&ogg_iformat);
+#endif
+/*     av_register_input_format(&ogg_iformat); */
     return 0 ;
 }

@@ -1,15 +1,26 @@
-INTERFACE [arm-x0]:
+INTERFACE [arm]:
 
 #include "types.h"
+class Treemap;
 
 class Mapping_entry
 {
 public:
-  unsigned space:11;		///< Address-space number
-  unsigned size:1;		///< 0 = 4K mapping, 1 = 4M mapping
-  unsigned address:20;		///< Virtual address in address space
-  unsigned depth:8;		///< Depth in mapping tree
+  union 
+    {
+      struct 
+	{
+	  unsigned long space:11;	///< Address-space number
+	  unsigned long _pad:1;
+	  unsigned long address:20;	///< Virtual address in address space
+	  unsigned long tag:11;	        ///< Unmap tag
+	} data;
+      Treemap *_submap;
+    };
+  Unsigned8 _depth;
 };
+
+IMPLEMENTATION:
 
 class Mapdb_defs {
 public:
@@ -18,17 +29,3 @@ public:
   };
 };
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [arm-x0]:
-
-#include "config.h"		// sigma0_taskno
-
-PUBLIC inline bool Mapping_entry::space_is_sigma0() 
-{
-  return space == Config::sigma0_taskno;
-}
-
-PUBLIC inline void Mapping_entry::set_space_to_sigma0() 
-{
-  space = Config::sigma0_taskno;
-}

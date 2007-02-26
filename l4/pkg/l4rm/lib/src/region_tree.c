@@ -66,8 +66,9 @@ __add_region(void)
 {
   int ret;
 
-  LOGdL(DEBUG_REGION_TREE,"adding region 0x%08x-0x%08x, desc at 0x%08x",
-        arg_key.start, arg_key.end, (unsigned)arg_data);
+  LOGdL(DEBUG_REGION_TREE,"adding region 0x"l4_addr_fmt"-0x"l4_addr_fmt
+        ", desc at 0x"l4_addr_fmt,
+	arg_key.start, arg_key.end, (l4_addr_t)arg_data);
   
   /* insert entry */
   ret = avlt_insert(arg_key, arg_data);
@@ -100,7 +101,7 @@ __remove_region(void)
   avlt_key_t key;
   l4rm_region_desc_t *r;
 
-  LOGdL(DEBUG_REGION_TREE, "removing region at addr 0x%08x", arg_addr);
+  LOGdL(DEBUG_REGION_TREE, "removing region at addr 0x"l4_addr_fmt, arg_addr);
 
   /* find entry */
   key.start = key.end = arg_addr;
@@ -109,8 +110,8 @@ __remove_region(void)
     return -L4_ENOTFOUND;
   r = (l4rm_region_desc_t *)arg_data;
 
-  LOGd(DEBUG_REGION_TREE, "region 0x%08x-%#08x, flags 0x%08x\n", 
-       r->start, r->end, r->flags);
+  LOGd(DEBUG_REGION_TREE, "region 0x"l4_addr_fmt"-"l4_addr_fmt
+       ", flags 0x%08x\n", r->start, r->end, r->flags);
 
   if (REGION_TYPE(r) == arg_type)
     {
@@ -123,8 +124,8 @@ __remove_region(void)
     }
   else
     {
-      LOG_Error("invalid region type for region 0x%08x-0x%08x,\n " \
-                "requested type 0x%08x, got 0x%08x",
+      LOG_Error("invalid region type for region 0x"l4_addr_fmt"-0x"l4_addr_fmt
+	        ",\n requested type 0x%08x, got 0x%08x",
                 r->start, r->end, arg_type, REGION_TYPE(r));
       return -L4_EINVAL;
     }
@@ -149,7 +150,7 @@ __remove_region(void)
  *         - -#L4_ENOMEM   out of memory allocating tree node
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 l4_rm_add_component(CORBA_Object _dice_corba_obj,
                     CORBA_Server_Environment *_dice_corba_env)
 {
@@ -177,7 +178,7 @@ l4_rm_add_component(CORBA_Object _dice_corba_obj,
  *         - -#L4_EINVAL     invalid AVL tree
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 l4_rm_remove_component(CORBA_Object _dice_corba_obj,
                        CORBA_Server_Environment *_dice_corba_env)
 {
@@ -229,10 +230,10 @@ l4rm_tree_insert_region(l4rm_region_desc_t * region, l4_uint32_t flags)
     {
       /* call region mapper thread */
       ret = l4_rm_add_call(&l4rm_service_id, &env);
-      if (ret || (env.major != CORBA_NO_EXCEPTION))
+      if (ret || DICE_HAS_EXCEPTION(&env))
 	{
 	  LOG_Error("L4RM: call region mapper failed: ret %d, exc %d!",
-                    ret, env.major);
+                    ret, DICE_EXCEPTION_MAJOR(&env));
 	  if (ret)
 	    return ret;
 	  else
@@ -282,11 +283,11 @@ l4rm_tree_remove_region(l4_addr_t addr, l4_uint32_t type, l4_uint32_t flags,
     {
       /* call region mapper thread */
       ret = l4_rm_remove_call(&l4rm_service_id, &env);
-      if (ret || (env.major != CORBA_NO_EXCEPTION))
+      if (ret || DICE_HAS_EXCEPTION(&env))
 	{
 	  *region = NULL;
 	  LOG_Error("L4RM: call region mapper failed: ret %d, exc %d!",
-                    ret, env.major);
+                    ret, DICE_EXCEPTION_MAJOR(&env));
 	  if (ret)
 	    return ret;
 	  else

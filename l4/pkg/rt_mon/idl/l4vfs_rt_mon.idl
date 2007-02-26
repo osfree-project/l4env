@@ -1,4 +1,4 @@
-/* -*- c -*- */ 
+/* -*- c -*- */
 import <l4/sys/types.h>
 import <l4/dm_generic/types.h>
 import <l4/l4vfs/object_server.idl>

@@ -2,15 +2,17 @@
 PKGDIR		= ../..
 L4DIR		?= $(PKGDIR)/../..
 
--include $(PKGDIR)/Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/Makeconf.bid.local
 
-# no targets, we only use well known subdirs
 ifeq ($(BUILD_lame),y)
 TARGET += lame
 endif
-ifeq ($(BUILD_mpg123),y)
+# it would be nice to build this conditionally, but this won't work, since
+# file type probing (which is always done) uses this library
+# ifeq ($(BUILD_mpg123),y)
 TARGET += mpg123lib
-endif
+# endif
 ifneq ($(filter clean cleanall,$(MAKECMDGOALS)),)
 TARGET += lame mpg123lib
 endif

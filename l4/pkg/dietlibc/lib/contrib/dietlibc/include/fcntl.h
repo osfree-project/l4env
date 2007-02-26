@@ -3,8 +3,10 @@
 
 #include <sys/cdefs.h>
 
+#include <endian.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 __BEGIN_DECLS
 
@@ -31,6 +33,7 @@ __BEGIN_DECLS
 #define O_LARGEFILE	0100000
 #define O_DIRECTORY	0200000	/* must be a directory */
 #define O_NOFOLLOW	0400000 /* don't follow links */
+#define O_NOATIME	01000000
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -76,16 +79,16 @@ __BEGIN_DECLS
 #define LOCK_RW		192	/* ... Which allows concurrent read & write ops */
 
 struct flock {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
 };
 
 struct flock64 {
-  short  l_type;
-  short  l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   loff_t l_start;
   loff_t l_len;
   pid_t  l_pid;
@@ -109,10 +112,11 @@ struct flock64 {
 #define O_NDELAY	O_NONBLOCK
 #define O_SYNC		040000
 #define FASYNC		020000	/* fcntl, for BSD compatibility */
-#define O_DIRECT	040000	/* direct disk access - should check with OSF/1 */
 #define O_DIRECTORY	0100000	/* must be a directory */
 #define O_NOFOLLOW	0200000 /* don't follow links */
 #define O_LARGEFILE	0400000 /* will be set by the kernel on every open */
+#define O_DIRECT	02000000	/* direct disk access - should check with OSF/1 */
+#define O_NOATIME	04000000
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -154,8 +158,8 @@ struct flock64 {
 #define LOCK_RW        192     /* ... Which allows concurrent read & write ops */
 
 struct flock {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
@@ -181,6 +185,7 @@ struct flock {
 #define O_DIRECT	0x8000	/* direct disk access hint - currently ignored */
 #define O_DIRECTORY	0x10000	/* must be a directory */
 #define O_NOFOLLOW	0x20000	/* don't follow links */
+#define O_NOATIME	0x40000
 
 #define O_NDELAY	O_NONBLOCK
 
@@ -197,6 +202,12 @@ struct flock {
 #define F_GETOWN	23	/*  for sockets. */
 #define F_SETSIG	10	/*  for sockets. */
 #define F_GETSIG	11	/*  for sockets. */
+
+#ifndef __mips64__
+#define F_GETLK64	33	/*  using 'struct flock64' */
+#define F_SETLK64	34
+#define F_SETLKW64	35
+#endif
 
 /* for F_[GET|SET]FL */
 #define FD_CLOEXEC	1	/* actually anything with low bit set goes */
@@ -225,15 +236,33 @@ struct flock {
 #define LOCK_WRITE	128	/* ... Which allows concurrent write operations */
 #define LOCK_RW		192	/* ... Which allows concurrent read & write ops */
 
-typedef struct flock {
-  short l_type;
-  short l_whence;
+#ifndef __mips64__
+struct flock {
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   long  l_sysid;			/* XXXXXXXXXXXXXXXXXXXXXXXXX */
   pid_t l_pid;
   long  pad[4];			/* ZZZZZZZZZZZZZZZZZZZZZZZZZZ */
-} flock_t;
+};
+struct flock64 {
+  int16_t l_type;
+  int16_t l_whence;
+  loff_t l_start;
+  loff_t l_len;
+  pid_t l_pid;
+};
+#else
+struct flock {
+  int16_t l_type;
+  int16_t l_whence;
+  off_t l_start;
+  off_t l_len;
+  pid_t l_pid;
+};
+#define flock64 flock
+#endif
 
 #elif defined(__sparc__)
 
@@ -255,6 +284,8 @@ typedef struct flock {
 #define O_DIRECTORY	0x10000	/* must be a directory */
 #define O_NOFOLLOW	0x20000	/* don't follow links */
 #define O_LARGEFILE	0x40000
+#define O_DIRECT        0x100000 /* direct disk access hint */
+#define O_NOATIME	0x200000
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -301,28 +332,28 @@ typedef struct flock {
 #define LOCK_RW		192	/* ... Which allows concurrent read & write ops */
 
 struct flock {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
-  short __unused;
+  int16_t __unused;
 };
 
 #ifdef __arch64__
 #define flock64 flock
 #else
 struct flock64 {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   loff_t l_start;
   loff_t l_len;
   pid_t l_pid;
-  short __unused;
+  int16_t __unused;
 };
 #endif
 
-#elif defined(powerpc) || defined(__powerpc64__)
+#elif defined(__powerpc__) || defined(__powerpc64__)
 
 /* open/fcntl - O_SYNC is only implemented on blocks devices and on files
    located on an ext2 file system */
@@ -343,6 +374,7 @@ struct flock64 {
 #define O_NOFOLLOW      0100000	/* don't follow links */
 #define O_LARGEFILE     0200000
 #define O_DIRECT	0400000	/* direct disk access hint - currently ignored */
+#define O_NOATIME	01000000
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -390,16 +422,16 @@ struct flock64 {
 #define LOCK_RW		192	/* ... Which allows concurrent read & write ops */
 
 struct flock {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
 };
 
 struct flock64 {
-  short  l_type;
-  short  l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   loff_t l_start;
   loff_t l_len;
   pid_t  l_pid;
@@ -426,6 +458,7 @@ struct flock64 {
 #define O_NOFOLLOW	0100000	/* don't follow links */
 #define O_DIRECT	0200000	/* direct disk access hint - currently ignored */
 #define O_LARGEFILE	0400000
+#define O_NOATIME	01000000
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -473,16 +506,16 @@ struct flock64 {
 #define LOCK_RW		192	/* ... Which allows concurrent read & write ops */
 
 struct flock {
-  short l_type;
-  short l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
 };
 
 struct flock64 {
-  short  l_type;
-  short  l_whence;
+  int16_t l_type;
+  int16_t l_whence;
   loff_t l_start;
   loff_t l_len;
   pid_t  l_pid;
@@ -501,12 +534,20 @@ struct flock64 {
 #define O_CREAT     00000400 /* not fcntl */
 #define O_TRUNC     00001000 /* not fcntl */
 #define O_EXCL      00002000 /* not fcntl */
+#define O_LARGEFILE 00004000
 #define O_ASYNC     00020000
 #define O_SYNC      00100000
 #define O_NONBLOCK  00200004 /* HPUX has separate NDELAY & NONBLOCK */
 #define O_NDELAY    O_NONBLOCK
 #define O_NOCTTY    00400000 /* not fcntl */
+#define O_DSYNC     01000000 /* HPUX only */
+#define O_RSYNC     02000000 /* HPUX only */
+#define O_NOATIME   04000000
 #define O_DIRECTORY  00010000
+
+#define O_DIRECT    00040000 /* direct disk access hint - currently ignored */
+#define O_NOFOLLOW  00000200 /* don't follow links */
+#define O_INVISIBLE 04000000 /* invisible I/O, for DMAPI/XDSM */
 
 #define F_DUPFD     0   /* Duplicate file descriptor.  */
 #define F_GETFD     1   /* Get file descriptor flags.  */
@@ -521,6 +562,11 @@ struct flock64 {
 #define F_SETLK64   9   /* Set record locking info (non-blocking).  */
 #define F_SETLKW64  10  /* Set record locking info (blocking).  */
 
+#define F_GETOWN    11 /*  for sockets. */
+#define F_SETOWN    12 /*  for sockets. */
+#define F_SETSIG    13 /*  for sockets. */
+#define F_GETSIG    14 /*  for sockets. */
+
 #define FD_CLOEXEC  1   /* actually anything with low bit set goes */
 
 #define F_RDLCK     1   /* Read lock.  */
@@ -530,10 +576,25 @@ struct flock64 {
 #define F_EXLCK     4   /* or 3 */
 #define F_SHLCK     8   /* or 4 */
 
+/* for leases */
+#define F_INPROGRESS   16
+
+/* operations for bsd flock(), also used by the kernel implementation */
+#define LOCK_SH                1       /* shared lock */
+#define LOCK_EX                2       /* exclusive lock */
+#define LOCK_NB                4       /* or'd with one of the above to prevent blocking */
+#define LOCK_UN                8       /* remove lock */
+
+#define LOCK_MAND      32      /* This is a mandatory flock */
+#define LOCK_READ      64      /* ... Which allows concurrent read operations */
+#define LOCK_WRITE     128     /* ... Which allows concurrent write operations */
+#define LOCK_RW                192     /* ... Which allows concurrent read & write ops */
+
+
 struct flock
 {
-    short int l_type;   /* Type of lock: F_RDLCK, F_WRLCK, or F_UNLCK.  */
-    short int l_whence; /* Where `l_start' is relative to (like `lseek').  */
+    int16_t l_type;   /* Type of lock: F_RDLCK, F_WRLCK, or F_UNLCK.  */
+    int16_t l_whence; /* Where `l_start' is relative to (like `lseek').  */
     off_t l_start;    /* Offset where the lock begins.  */
     off_t l_len;  /* Size of the locked area; zero means until EOF.  */
     pid_t l_pid;  /* Process holding the lock.  */
@@ -541,8 +602,8 @@ struct flock
 
 struct flock64
 {
-    short int l_type;   /* Type of lock: F_RDLCK, F_WRLCK, or F_UNLCK.  */
-    short int l_whence; /* Where `l_start' is relative to (like `lseek').  */
+    int16_t l_type;   /* Type of lock: F_RDLCK, F_WRLCK, or F_UNLCK.  */
+    int16_t l_whence; /* Where `l_start' is relative to (like `lseek').  */
     off64_t l_start;  /* Offset where the lock begins.  */
     off64_t l_len;    /* Size of the locked area; zero means until EOF.  */
     pid_t l_pid;  /* Process holding the lock.  */
@@ -551,9 +612,19 @@ struct flock64
 #endif
 
 extern int fcntl (int __fd, int __cmd, ...) __THROW;
+#ifndef __NO_STAT64
+extern int fcntl64 (int __fd, int __cmd, ...) __THROW;
+#if defined _FILE_OFFSET_BITS && _FILE_OFFSET_BITS == 64
+#define fcntl fcntl64
+#endif
+#endif
 
 #if !defined(O_ASYNC) && defined(FASYNC)
 #define O_ASYNC FASYNC
+#endif
+
+#if defined(_LINUX_SOURCE) || defined(_GNU_SOURCE)
+ssize_t readahead(int fd, off64_t *offset, size_t count);
 #endif
 
 __END_DECLS

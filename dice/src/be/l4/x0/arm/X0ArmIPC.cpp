@@ -50,21 +50,25 @@ CX0ArmIPC::~CX0ArmIPC()
 /** \brief writes the call IPC
  *  \param pFile the file to write to
  *  \param pFunction the function to write the IPC for
- *  \param pContext the context of the write operation
+ *  \param bSendFlexpage true if we sould send a flexpage
+ *  \param bSendShortIPC true if short IPC should be used
  */
-void CX0ArmIPC::WriteCall(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void CX0ArmIPC::WriteCall(CBEFile* pFile,
+    CBEFunction* pFunction,
+    bool bSendFlexpage, 
+    bool bSendShortIPC)
 {
-    CL4X0BEIPC::WriteCall(pFile, pFunction, pContext);
+    CL4X0BEIPC::WriteCall(pFile, pFunction, bSendFlexpage, bSendShortIPC);
 }
 
 /** \brief writes the receive IPC code
  *  \param pFile the file to write to
  *  \param pFunction the function to write to
- *  \param pContext the context of the write operation
+
  */
-void CX0ArmIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void CX0ArmIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction)
 {
-    CL4X0BEIPC::WriteReceive(pFile, pFunction, pContext);
+    CL4X0BEIPC::WriteReceive(pFile, pFunction);
 }
 
 /** \brief write an IPC reply and receive operation
@@ -72,39 +76,43 @@ void CX0ArmIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction,  CBEContex
  *  \param pFunction the function to write it for
  *  \param bSendFlexpage true if a flexpage should be send (false, if the message buffer should determine this)
  *  \param bSendShortIPC true if a short IPC should be send (false, if message buffer should determine this)
- *  \param pContext the context of the write operation
+
  */
-void CX0ArmIPC::WriteReplyAndWait(CBEFile* pFile,  CBEFunction* pFunction,  bool bSendFlexpage,  bool bSendShortIPC,  CBEContext* pContext)
+void CX0ArmIPC::WriteReplyAndWait(CBEFile* pFile,
+    CBEFunction* pFunction,
+    bool bSendFlexpage,
+    bool bSendShortIPC)
 {
-    CL4X0BEIPC::WriteReplyAndWait(pFile, pFunction, bSendFlexpage, bSendShortIPC, pContext);
+    CL4X0BEIPC::WriteReplyAndWait(pFile, pFunction, bSendFlexpage,
+	bSendShortIPC);
 }
 
 /** \brief write an IPC wait operation
  *  \param pFile the file to write to
  *  \param pFunction the function to write it for
- *  \param pContext the context of the write operation
+
  */
-void CX0ArmIPC::WriteWait(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void CX0ArmIPC::WriteWait(CBEFile* pFile,  CBEFunction* pFunction)
 {
-    CL4X0BEIPC::WriteWait(pFile, pFunction, pContext);
+    CL4X0BEIPC::WriteWait(pFile, pFunction);
 }
 
 /** \brief write an IPC send operation
  *  \param pFile the file to write to
  *  \param pFunction the function to write it for
- *  \param pContext the context of the write operation
+
  */
-void CX0ArmIPC::WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void CX0ArmIPC::WriteSend(CBEFile* pFile,  CBEFunction* pFunction)
 {
-    CL4X0BEIPC::WriteSend(pFile, pFunction, pContext);
+    CL4X0BEIPC::WriteSend(pFile, pFunction);
 }
 
 /** \brief write an IPC reply operation
  *  \param pFile the file to write to
  *  \param pFunction the function to write it for
- *  \param pContext the context of the write operation
+
  */
-void CX0ArmIPC::WriteReply(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void CX0ArmIPC::WriteReply(CBEFile* pFile,  CBEFunction* pFunction)
 {
-    CL4X0BEIPC::WriteReply(pFile, pFunction, pContext);
+    CL4X0BEIPC::WriteReply(pFile, pFunction);
 }

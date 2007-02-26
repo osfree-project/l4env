@@ -58,7 +58,7 @@ static void custom_nitpicker_server_loop(void* dice_server_param) {
 		_dice_corba_env = (CORBA_Server_Environment*)_dice_alloca(sizeof(CORBA_Server_Environment));
 		*_dice_corba_env = (CORBA_Server_Environment)dice_default_server_environment;
 	}
-	_dice_msg_buffer._dice_size_dope = L4_IPC_DOPE(257, 0);
+	DICE_SIZE_DOPE(&_dice_msg_buffer) = L4_IPC_DOPE(257, 0);
 	_dice_opcode = nitpicker_wait_any(_dice_corba_obj,
 	 &_dice_msg_buffer,
 	 _dice_corba_env);

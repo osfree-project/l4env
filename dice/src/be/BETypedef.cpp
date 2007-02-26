@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BETypedef.cpp
- *    \brief   contains the implementation of the class CBETypedef
+ *  \file    dice/src/be/BETypedef.cpp
+ *  \brief   contains the implementation of the class CBETypedef
  *
- *    \date    01/18/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/18/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,152 +32,226 @@
 #include "BEImplementationFile.h"
 #include "BEDeclarator.h"
 #include "BEStructType.h"
-
+#include "BEUserDefinedType.h"
+#include "Compiler.h"
 #include "fe/FETypedDeclarator.h"
+#include "fe/FEDeclarator.h"
 #include "fe/FEFile.h"
+#include <cassert>
 
 CBETypedef::CBETypedef()
+: m_sDefine()
 {
-    m_pAlias = 0;
 }
 
 CBETypedef::CBETypedef(CBETypedef & src)
 : CBETypedDeclarator(src),
   m_sDefine(src.m_sDefine)
 {
-    m_pAlias = 0; // will be found, when first calling GetAlias
 }
 
-/**    \brief destructor of this instance */
-CBETypedef::~CBETypedef()
-{
-}
-
-/**    \brief writes the definition of a type to the target file
- *    \param pFile the file to write to
- *    \param pContext the context of the write operation
- *
- * The reason for CBETypedef to exist is to write the define symbols around the type definition.
- */
-void CBETypedef::WriteDeclaration(CBEHeaderFile * pFile, CBEContext * pContext)
-{
-    bool bNeedDefine = !m_sDefine.empty();
-    if (bNeedDefine)
-    {
-        pFile->Print("#if !defined(%s)\n", m_sDefine.c_str());
-        pFile->Print("#define %s\n", m_sDefine.c_str());
-    }
-
-    int nSize = GetSize();
-    pFile->Print("/* size = %d bytes == %d dwords */\n", nSize, (nSize+3) >> 2);
-
-    pFile->Print("typedef ");
-    CBETypedDeclarator::WriteDeclaration(pFile, pContext);
-    pFile->Print(";\n");
-
-    if (bNeedDefine)
-    {
-        pFile->Print("#endif /* %s */\n\n", m_sDefine.c_str());
-    }
-}
-
-/**    \brief creates the typedef class
- *    \param pFETypedef the corresponding type definition
- *    \param pContext the context of the code generation
- *    \return true if successful
+/** \brief creates the typedef class
+ *  \param pFETypedef the corresponding type definition
+ *  \return true if successful
  *
  * This implementation extracts the define symbol.
  */
-bool CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef, CBEContext * pContext)
+void
+CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called\n", 
+	__func__);
+
     // set target file name
-    SetTargetFileName(pFETypedef, pContext);
+    SetTargetFileName(pFETypedef);
     // if declarator changes, we have to reset the alias as well
-    m_pAlias = 0;
 
-    if (!CBETypedDeclarator::CreateBackEnd(pFETypedef, pContext))
+    CBETypedDeclarator::CreateBackEnd(pFETypedef);
+    // we are making a globalized name out of the declarator here by
+    // extracting the name, getting a typename for it from the name factory
+    // and recreating the declarator
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEDeclarator *pDecl = m_Declarators.First();
+    assert(pDecl);
+    string sAlias = pNF->GetTypeName(pFETypedef, pDecl->GetName());
+    pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
+    m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBETypedef::%s created typedef <type>(%p) %s (%d stars) at %p\n",
+	__func__, GetType(), sAlias.c_str(), pDecl->GetStars(), this);
+    
+    if (dynamic_cast<CBEUserDefinedType*>(m_pType))
     {
-        VERBOSE("%s failed because base typed declarator could not be created\n", __PRETTY_FUNCTION__);
-        return false;
+	assert(dynamic_cast<CBEUserDefinedType*>(m_pType)->GetName() != 
+	    pDecl->GetName());
     }
-
-    // a typedef can have only one name
-    CBEDeclarator *pDecl = GetAlias();
-    string sAlias = pContext->GetNameFactory()->GetTypeName(pFETypedef, pDecl->GetName(), pContext);
-    // recreate decl
-    pDecl->CreateBackEnd(sAlias, pDecl->GetStars(), pContext);
-    m_sDefine = pContext->GetNameFactory()->GetTypeDefine(pDecl->GetName(), pContext);
-
-    return true;
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::%s returns true\n", __func__);
 }
 
 /** \brief creates the typed declarator using a given back-end type and a name
  *  \param pType the type of the typed declarator
  *  \param sName the name of the declarator
- *  \param pFERefObject a reference object at the same position of the newly created type
- *  \param pContext the context of the code generation
+ *  \param pFERefObject a reference object at the same position of the newly \
+ *         created type
  *  \return true if successful
  */
-bool
+void
 CBETypedef::CreateBackEnd(CBEType * pType,
     string sName,
-    CFEBase *pFERefObject,
-    CBEContext * pContext)
+    CFEBase *pFERefObject)
 {
-    SetTargetFileName(pFERefObject, pContext);
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::%s(%p, %s) called\n", __func__, pType, sName.c_str());
+    SetTargetFileName(pFERefObject);
     // if declarator changes, we have to reset the alias as well
-    m_pAlias = 0;
 
-    if (!CBETypedDeclarator::CreateBackEnd(pType, sName, pContext))
+    if (dynamic_cast<CBEUserDefinedType*>(pType))
     {
-        VERBOSE("%s failed because base typed declarator could not be created\n",
-            __PRETTY_FUNCTION__);
-        return false;
+	assert(dynamic_cast<CBEUserDefinedType*>(pType)->GetName() != sName);
     }
-
+    CBETypedDeclarator::CreateBackEnd(pType, sName);
     // a typedef can have only one name
-    CBEDeclarator *pDecl = GetAlias();
-    string sAlias = pContext->GetNameFactory()->GetTypeName(pFERefObject, pDecl->GetName(), pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEDeclarator *pDecl = m_Declarators.First();
+    string sAlias = pNF->GetTypeName(pFERefObject, pDecl->GetName());
     // recreate decl
-    pDecl->CreateBackEnd(sAlias, pDecl->GetStars(), pContext);
-    m_sDefine = pContext->GetNameFactory()->GetTypeDefine(pDecl->GetName(), pContext);
+    pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
+    m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
     // set source file information
     SetSourceLine(pFERefObject->GetSourceLine());
-    if (pFERefObject->GetSpecificParent<CFEFile>())
-        SetSourceFileName(pFERefObject->GetSpecificParent<CFEFile>()->GetFileName());
+    CFEFile *pFEFile = pFERefObject->GetSpecificParent<CFEFile>();
+    if (pFEFile)
+        SetSourceFileName(pFEFile->GetFileName());
 
-    return true;
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::%s(type, name) returns\n",	__func__);
 }
 
 /** \brief adds a typedefinition to the header file
  *  \param pHeader the header file to be added to
- *  \param pContext the context of this creation
  *  \return true if successful
  *
  * A type definition is usually always added to a header file, if it is the
  * respective target file (for the IDL file).
  */
-bool CBETypedef::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
+bool CBETypedef::AddToFile(CBEHeaderFile *pHeader)
 {
-    VERBOSE("CBETypedef::AddToFile(header: %s) for typedef %s called\n",
-        pHeader->GetFileName().c_str(), GetAlias()->GetName().c_str());
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::AddToFile(header: %s) for typedef %s called\n",
+        pHeader->GetFileName().c_str(), 
+	m_Declarators.First()->GetName().c_str());
     if (IsTargetFile(pHeader))
-        pHeader->AddTypedef(this);
+        pHeader->m_Typedefs.Add(this);
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::AddToFile(header) return true\n");
     return true;
 }
 
-/** \brief retrieves the alias type name
- *  \return a reference to the declarator containing the alias
- *
- * The alias of a type is the only name of the typedef.
+
+/** \brief delegates call to language specific class
+ *  \param pFile the file to write to
  */
-CBEDeclarator* CBETypedef::GetAlias()
+void
+CBETypedef::WriteForwardDeclaration(CBEFile *pFile)
 {
-    return GetDeclarator();
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBETypedef::%s called for %s\n", __func__, 
+	m_Declarators.First()->GetName().c_str());
+    
+    if (GetType()->IsConstructedType())
+    {
+	bool bNeedDefine = !m_sDefine.empty();
+	if (bNeedDefine)
+	{
+	    *pFile << "#if !defined(" << m_sDefine << ")\n";
+	    *pFile << "#define " << m_sDefine << "\n";
+	}
+	
+	int nSize = GetSize();
+	*pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2)
+	    << " dwords */\n";
+	
+	*pFile << "\ttypedef ";
+	CBETypedDeclarator::WriteForwardDeclaration(pFile);
+	*pFile << ";\n";
+	
+	if (bNeedDefine)
+	{
+	    *pFile << "#endif /* " << m_sDefine << " */\n\n";
+	}
+    }
+    else
+	WriteDeclaration(pFile);
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", 
+	__func__);
 }
 
-/** \brief creates a new instance of this object */
-CObject * CBETypedef::Clone()
+/** \brief delegates the call to the language specific class
+ *  \param pFile the file to write to
+ */
+void
+CBETypedef::WriteDefinition(CBEFile *pFile)
 {
-    return new CBETypedef(*this);
+    if (GetType()->IsConstructedType())
+    {
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sDefine = pNF->GetTypeName(GetType()->GetFEType(), true);
+	sDefine += m_sDefine;
+	bool bNeedDefine = !m_sDefine.empty();
+	if (bNeedDefine)
+	{
+	    *pFile << "#if !defined(" << sDefine << ")\n";
+	    *pFile << "#define " << sDefine << "\n";
+	}
+	
+	CBETypedDeclarator::WriteDefinition(pFile);
+	*pFile << ";\n";
+	
+	if (bNeedDefine)
+	{
+	    *pFile << "#endif /* " << sDefine << " */\n\n";
+	}
+    }
 }
+
+/** \brief writes the content of a typed declarator to the target file
+ *  \param pFile the file to write to
+ *
+ * A typed declarator, such as a parameter, contain a type, name(s) and
+ * optional attributes.
+ */
+void
+CBETypedef::WriteDeclaration(CBEFile * pFile)
+{
+    if (!pFile->IsOpen())
+	return;
+    
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called for %s\n", __func__,
+	m_Declarators.First()->GetName().c_str());
+    bool bNeedDefine = !m_sDefine.empty();
+    if (bNeedDefine)
+    {
+	*pFile << "#if !defined(" << m_sDefine << ")\n";
+	*pFile << "#define " << m_sDefine << "\n";
+    }
+    
+    int nSize = GetSize();
+    *pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2) <<
+	" dwords */\n";
+    
+    *pFile << "\ttypedef ";
+    CBETypedDeclarator::WriteDeclaration(pFile);
+    *pFile << ";\n";
+    
+    if (bNeedDefine)
+    {
+	*pFile << "#endif /* " << m_sDefine << " */\n\n";
+    }
+    
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", __func__);
+}
+

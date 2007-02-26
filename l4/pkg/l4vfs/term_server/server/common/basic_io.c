@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <termios.h>
 
 #include <l4/l4vfs/types.h>
@@ -53,7 +54,7 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
 {
     int ret;
 
-    // am i responsible for this volume?
+    // am I responsible for this volume?
     LOGd(_DEBUG, "volume id: %d", object_id->volume_id);
     if (object_id->volume_id != myvolume)
         return -ENOENT;
@@ -61,7 +62,7 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
 
     // prevent someone from opening root for writing
     if ((object_id->object_id == 0) &&
-         ( (flags & O_WRONLY) || (flags & O_RDWR)))
+        ((flags & O_WRONLY) || (flags & O_RDWR)))
         return -EACCES;
 
     // find free client state and fill in values
@@ -71,7 +72,7 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
         LOG_Error("error on clientstate_open()");
         return ret;
     }
-    
+
     // open a terminal if the client does not open root
     if (object_id->object_id > 0)
     {
@@ -79,6 +80,8 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
         LOGd(_DEBUG,"opening window");
         if (terms[term].refcount > 0)
         {
+            // FIXME: access control - only the terms owner should
+            //        be able to re-open it.
             terms[term].refcount++;
             LOGd(_DEBUG, "refcount: %d", terms[term].refcount );
         }
@@ -88,6 +91,8 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
             if (i)
             {
                 LOG("error on term open");
+                // XXX: hmm, we should clean up the mess and return a
+                //      nice error code here
                 exit(1);
             }
         }
@@ -96,9 +101,10 @@ l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
     return ret;
 }
 
-l4_int32_t l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
-                                           object_handle_t handle,
-                                           CORBA_Server_Environment *_dice_corba_env)
+l4_int32_t
+l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
+                                object_handle_t handle,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
     // do not care for state of client sem here as we do
     // not want to wait for other threads when closing
@@ -108,7 +114,7 @@ l4_int32_t l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
     if (--terms[term].refcount == 0)
         // close terminal window
         term_close(clients[handle].object_id);
-    
+
     // free clientstate
     ret = clientstate_close(handle, *_dice_corba_obj);
     return ret;
@@ -117,9 +123,9 @@ l4_int32_t l4vfs_common_io_close_component(CORBA_Object _dice_corba_obj,
 l4vfs_ssize_t
 l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
                                object_handle_t h,
-                               l4_int8_t **buf,
+                               char **buf,
                                l4vfs_size_t *count,
-                               l4_int16_t *_dice_reply,
+                               short *_dice_reply,
                                CORBA_Server_Environment *_dice_corba_env)
 {
     l4_threadid_t myself, partner;
@@ -127,7 +133,7 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
     CORBA_Environment env = dice_default_environment;
     env.malloc            = (dice_malloc_func)malloc;
     env.free              = (dice_free_func)free;
-    
+
     l4semaphore_down(&(clients[h].client_sem));
     // no one may read from an invalid object
     if (clients[h].object_id < 0)
@@ -203,13 +209,13 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
 }
 
 void l4vfs_common_io_notify_read_notify_component(
-                                CORBA_Object _dice_corba_obj, 
-                                object_handle_t fd,
-                                l4_int32_t retval,
-                                const l4_int8_t *buf,
-                                l4vfs_size_t *count,
-                                const l4_threadid_t * source,
-                                CORBA_Server_Environment *_dice_corba_env)
+    CORBA_Object _dice_corba_obj,
+    object_handle_t fd,
+    l4vfs_ssize_t retval,
+    const char *buf,
+    l4vfs_size_t *count,
+    const l4_threadid_t *source,
+    CORBA_Server_Environment *_dice_corba_env)
 {
     CORBA_Server_Environment env = dice_default_server_environment;
     env.timeout = L4_IPC_NEVER;
@@ -228,20 +234,20 @@ void l4vfs_common_io_notify_read_notify_component(
         l4semaphore_up(&(clients[fd].client_sem));
         return;
     }
-    
+
     LOGd(_DEBUG, "replying '%s'", buf);
     l4semaphore_up(&(clients[fd].client_sem));
     l4vfs_common_io_read_reply((l4_threadid_t *)source, retval,
-                               (l4_int8_t **)&buf, count, &env);
+                               (char **)&buf, count, &env);
 }
-    
+
 
 l4vfs_ssize_t
 l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                const l4_int8_t *buf,
+                                const char *buf,
                                 l4vfs_size_t *count,
-                                l4_int16_t *_dice_reply,
+                                short *_dice_reply,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
     l4semaphore_down(&(clients[fd].client_sem));
@@ -289,18 +295,20 @@ l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
     return term_write(clients[fd].object_id, (l4_int8_t*)buf, *count);
 }
 
-l4vfs_off_t l4vfs_basic_io_lseek_component(CORBA_Object _dice_corba_obj,
-                                           object_handle_t fd,
-                                           l4vfs_off_t offset,
-                                           l4_int32_t whence,
-                                           CORBA_Server_Environment *_dice_corba_env)
+l4vfs_off_t
+l4vfs_basic_io_lseek_component(CORBA_Object _dice_corba_obj,
+                               object_handle_t fd,
+                               l4vfs_off_t offset,
+                               l4_int32_t whence,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
     return -ESPIPE;
 }
 
-l4_int32_t l4vfs_basic_io_fsync_component(CORBA_Object _dice_corba_obj,
-                                          object_handle_t fd,
-                                          CORBA_Server_Environment *_dice_corba_env)
+l4_int32_t
+l4vfs_basic_io_fsync_component(CORBA_Object _dice_corba_obj,
+                               object_handle_t fd,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
     // just do nothing
     return 0;
@@ -308,16 +316,18 @@ l4_int32_t l4vfs_basic_io_fsync_component(CORBA_Object _dice_corba_obj,
 
 int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                                       object_handle_t fd,
-                                      l4vfs_dirent_t *dirp,
+                                      l4vfs_dirent_t **dirp,
                                       unsigned int *count,
                                       CORBA_Server_Environment *_dice_corba_env)
 {
     dir_t mydir;
     l4vfs_dirent_t *actual;
     void *array_ptr;
-    char *str_number="";
+    char str_buf[10] = "\0";  // used for ".", "..", "vc0" .. "vc3"
     int i, entry_size, array_size;
-    
+
+    mydir.name = str_buf;
+
     l4semaphore_down(&(clients[fd].client_sem));
     // reading root ?
     if (clients[fd].object_id != 0)
@@ -332,7 +342,7 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
         l4semaphore_up(&(clients[fd].client_sem));
         return -EBADF;
     }
-    
+
     // is it the same thread that opened me?
     if (!l4_task_equal(clients[fd].client, *_dice_corba_obj))
     {
@@ -342,7 +352,7 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
 
     // if the current seekpos is at the end of dir yet,
     // return 0
-    if (clients[fd].seekpos > MAX_TERMS+1)
+    if (clients[fd].seekpos > MAX_TERMS + 1)
     {
         l4semaphore_up(&(clients[fd].client_sem));
         return 0;
@@ -351,36 +361,33 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
     // initialization
     array_size = 0;
     array_ptr  = NULL;
-    
-    // now build up the array 
+
+    // now build up the array
     // (MAX_TERMS-1) terminals + "." + ".." = MAX_TERMS+1)
     // start from the current seekpos
-    for (i = clients[fd].seekpos ; i<MAX_TERMS+2; i++)
+    for (i = clients[fd].seekpos ; i < MAX_TERMS + 2; i++)
     {
         switch(i)
         {
             // 1st case - the "." dir
             case 0:
-                mydir.name     = strdup(".");
+                strcpy(mydir.name, ".");
                 mydir.object_id = 0;
                 break;
-            // 2nd case - the ".." dir --> we`ve got a problem 
-            // here. The vc_server must not know and must not 
-            // care about, where it is mounted. This means it 
-            // must not know the .. directory. Therefore we 
+            // 2nd case - the ".." dir --> we`ve got a problem
+            // here. The vc_server must not know and must not
+            // care about, where it is mounted. This means it
+            // must not know the .. directory. Therefore we
             // need to return an invalid object_id here. If the
             // client really wants to know the object_id of ..,
             // it has to resolve this from the name_server
-            case 1: mydir.name     = strdup("..");
+            case 1:
+                strcpy(mydir.name, "..");
                 mydir.object_id = -1;
                 break;
             // the final MAX_TERMS-1 cases: our virtual consoles
             default:
-                mydir.name     = strdup("vc");
-                // get a string representation of the number
-                sprintf( str_number, "%d", i-2 );
-                // concatenate vc and the no.
-                strcat( mydir.name, str_number );
+                sprintf(mydir.name, "vc%d", i - 2);
                 mydir.object_id = i-1;
                 break;
         }
@@ -393,7 +400,7 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
                      + strlen(mydir.name) + 1; // length of the name + 1 for the
                      // \0 character
 
-        // round up to align to word size 
+        // round up to align to word size
         // (got it frome the name_server...)
         entry_size = entry_size + sizeof(int) - 1;
         entry_size = (entry_size/sizeof(int)) * sizeof(int);
@@ -423,7 +430,7 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
         // calculate new array size
         array_size += entry_size;
         clients[fd].seekpos ++;
-    } 
+    }
 
     l4semaphore_up(&(clients[fd].client_sem));
 
@@ -431,22 +438,22 @@ int l4vfs_basic_io_getdents_component(CORBA_Object _dice_corba_obj,
         // for even one entry - return EINVAL then
     if (array_ptr == NULL)
         return -EINVAL;
-    
+
     // finally set the dirp return value
     // - as array_ptr is located on the local stack, we have
     // to memcpy instead of simply setting dirp = array_ptr;
-    memcpy(dirp, array_ptr, array_size);
+    memcpy(*dirp, array_ptr, array_size);
 
     // if everything worked, we return the size of the
     // new array
     return array_size;
 }
 
-object_id_t
-l4vfs_basic_name_server_resolve_component(CORBA_Object _dice_corba_obj,
-                                          const object_id_t *base,
-                                          const char* pathname,
-                                          CORBA_Server_Environment *_dice_corba_env)
+object_id_t l4vfs_basic_name_server_resolve_component(
+    CORBA_Object _dice_corba_obj,
+    const object_id_t *base,
+    const char* pathname,
+    CORBA_Server_Environment *_dice_corba_env)
 {
     object_id_t ret;
     int term_number;
@@ -484,7 +491,7 @@ l4vfs_basic_name_server_resolve_component(CORBA_Object _dice_corba_obj,
         return ret;
     }
 
-    // check . 
+    // check .
     LOGd(_DEBUG, "check .");
     if (pathname[0] ==  '.')
         {
@@ -534,8 +541,10 @@ l4vfs_basic_name_server_resolve_component(CORBA_Object _dice_corba_obj,
 // Bjoern: It should not be a mistake to provide this function. At least 
 //     rev_resolving works - maybe someone wants to use it later.
 char* l4vfs_basic_name_server_rev_resolve_component(
-    CORBA_Object _dice_corba_obj, const object_id_t *dest,
-    object_id_t *parent, CORBA_Server_Environment *_dice_corba_env)
+    CORBA_Object _dice_corba_obj,
+    const object_id_t *dest,
+    object_id_t *parent,
+    CORBA_Server_Environment *_dice_corba_env)
 {
     char *ret = NULL, *no = NULL;
 
@@ -575,7 +584,8 @@ char* l4vfs_basic_name_server_rev_resolve_component(
 
 l4_threadid_t
 l4vfs_basic_name_server_thread_for_volume_component(
-    CORBA_Object _dice_corba_obj, volume_id_t volume_id,
+    CORBA_Object _dice_corba_obj,
+    volume_id_t volume_id,
     CORBA_Server_Environment *_dice_corba_env)
 {
     if (volume_id == myvolume)
@@ -588,17 +598,17 @@ l4vfs_basic_name_server_thread_for_volume_component(
 
 l4_int32_t
 l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
-                            object_handle_t fd,
-                            l4_int32_t cmd,
-                            l4_int8_t **arg,
-                            l4vfs_size_t *count,
-                            CORBA_Server_Environment *_dice_corba_env)
+                                object_handle_t fd,
+                                int cmd,
+                                char **arg,
+                                l4vfs_size_t *count,
+                                CORBA_Server_Environment *_dice_corba_env)
 {
     struct winsize *win;
     struct termios *termios;
     termstate_t *term;
     int termno;
-    
+
     l4semaphore_down(&(clients[fd].client_sem));
     // reading root ?
     if (clients[fd].object_id == 0)
@@ -620,13 +630,13 @@ l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
         l4semaphore_up(&(clients[fd].client_sem));
         return -EBADF;
     }
-    
+
     // calculate term number
     termno = clients[fd].object_id - 1;
     term = terms[termno].terminal;
 
     l4semaphore_up(&(clients[fd].client_sem));
-    
+
     // handle ioctl command
     switch(cmd)
     {
@@ -660,4 +670,41 @@ l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
     }
 
     return -ENOTTY;
+}
+
+l4_int32_t
+l4vfs_basic_io_stat_component(CORBA_Object _dice_corba_obj,
+                              const object_id_t *object_id,
+                              l4vfs_stat_t *buf,
+                              CORBA_Server_Environment *_dice_corba_env)
+{
+    // am I responsible for this volume?
+    LOGd(_DEBUG, "volume id: %d", object_id->volume_id);
+    if (object_id->volume_id != myvolume)
+        return -ENOENT;
+    LOGd(_DEBUG, "entry belongs to vc_server");
+
+    // check for legal local-object_id
+    if (object_id->object_id < 0 || object_id->object_id > MAX_TERMS )
+    {
+        LOGd(_DEBUG, "invalid object id");
+        return -ENOENT;
+    }
+
+    buf->st_dev   = myvolume;
+    buf->st_ino   = object_id->object_id;
+    buf->st_nlink = 1;
+    buf->st_size  = 0;  // useless but defined ...
+    // fixme: other fields are undefined for now ...
+
+    if (object_id->object_id == 0)
+    {
+        buf->st_mode  = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
+    }
+    else
+    {  // maybe pipe is better than reg here?
+        buf->st_mode  = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO;
+    }
+
+    return 0;
 }

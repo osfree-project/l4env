@@ -24,7 +24,7 @@ static l4_uint32_t s_offs_to_systime;
 static l4_uint32_t linux_scaler;
 
 /* We need to define this scaler here for use with l4_tsc_to_ns */
-l4_uint32_t l4_scaler_tsc_to_ns;
+// l4_uint32_t l4_scaler_tsc_to_ns;
 
 /**
  * A fast and cheap way to calculate without violate the 32-bit range */
@@ -58,14 +58,16 @@ init_done(void)
 	  CORBA_Environment _env = dice_default_environment;
 
 	  if (l4rtc_if_get_offset_call(&server, &s_offs_to_systime, &_env)
-	      || _env.major != CORBA_NO_EXCEPTION)
+	      || DICE_HAS_EXCEPTION(&_env))
 	    return -L4_EINVAL;
 
 	  if (l4rtc_if_get_linux_tsc_scaler_call(&server, &linux_scaler, &_env)
-	      || _env.major != CORBA_NO_EXCEPTION)
+	      || DICE_HAS_EXCEPTION(&_env))
 	    return -L4_EINVAL;
 
 	  l4_scaler_tsc_to_ns = muldiv(linux_scaler, 1000, 1<<5);
+	  l4_scaler_tsc_to_us =        linux_scaler;
+	  l4_scaler_ns_to_tsc = muldiv(1U<<27, 1U<<29, 125*linux_scaler);
 	}
     }
 

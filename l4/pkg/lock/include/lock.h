@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file  lock/include/l4/lock.h
+ * \file  lock/include/lock.h
  * \brief Simple L4 locks.
  *
  * \date   12/30/2000

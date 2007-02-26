@@ -1,1 +1,249 @@
+This document gives an overview over architecture and use of the
+ORe network multiplexer.
+
+Overview
+########
+
 ORe is a best-effort network multiplexer for L4 applications. 
+
+
+Contact the developers
+======================
+
+If you have a question regarding ORe which is not answered by this 
+documentation, do not fear to contact the maintainers of the ORe
+package:
+
+Bjoern Doebel       doebel@os.inf.tu-dresden.de
+Christian Helmuth   ch12@os.inf.tu-dresden.de
+
+Using ORe
+#########
+
+What do I need to load?
+=======================
+To successfully establish a network connection with ORe, you need the
+following applications running in addition to the basic L4 stuff you'll
+be running anyway.
+
+- the ORe server
+- L4IO
+
+Optionally you might want to run the Events server so that ORe can obtain
+termination messages from its clients and can cleanly close connections in
+that case.
+
+Establishing a connection
+=========================
+Your client application connects to ORe by calling l4ore_open(char *device,
+unsigned char mac[6], l4ore_config *conf). 
+
+* device is the name of the network interface you want to use (such as "eth0", "lo")
+* mac will store the unique MAC address your application has to use for sending
+  its ethernet packets
+* conf stores the initial configuration options setup by the user according to
+  the connection configuration below.
+
+Open will return a local handle that you later on shall use for send/receive operations.
+
+Configuring a connection
+========================
+You may configure your connection to ORe at the moment of establishing the connection
+by giving a correct l4ore_config struct to the l4ore_open() call. Later you may re-
+configure the connection by calling l4ore_get_config() and l4ore_set_config().
+
+The configuration contains rw_- and ro_-fields. rw means you can write to these fields
+and thereby manage your connection. ro-fields cannot be configured, although some 
+ro-fields can be set up at the open()-time and will thereafter remain unchanged.
+
+rw-options
+----------
+* rw_debug      -   turns on debugging in ORe
+* rw_broadcast  -   enables your connection to receive broadcast packets as well as
+                    packets targetted at your unique MAC
+* rw_active     -   enables you to deactivate your connection for some time, all
+                    incoming packets will be dropped
+
+one-time-rw options
+-------------------
+* ro_keep_device_mac    - can be set at open() time to signal to ORe that your
+                          application wishes to get the original NIC MAC address
+                          instead of a artificially generated one. This is however
+                          only possible for the first application requesting this.
+                          After the open() you mach check if you got the original 
+                          device MAC, by looking at the value in this field. It may
+                          thereafter no more be changed.
+* ro_send_ds        -   if set to a valid dataspace, this DS is used as a dataspace
+                        for sending packets through shared memory. Otherwise, ORe will
+                        send data with string IPC.
+* ro_recv_ds        -   if set to a valid dataspace, this DS is used as a dataspace
+                        for receiving packets through shared memory. Otherwise, ORe
+                        will receive data using string IPC.
+
+ro-options
+----------
+* ro_irq        -   contains the NIC's IRQ
+* ro_mtu        -   contains the NIC's MTU
+
+dsi-options (valid if shared memory communication is used)
+----------------------------------------------------------
+* ro_send_ctl_ds, ro_recv_ctl_ds- the DSI control dataspaces for send/receive
+* ro_send_ds_client_socketref   - the socketref for sending packets at client side
+* ro_send_ds_ore_socketref      - the socketref for receiving packets from the client
+* ro_recv_ds_client_socketref   - the socketref for receiving packets at the client
+* ro_recv_ds_ore_socketref      - the socketref for sending packets to the client
+
+You will not need to touch these fields if you are not using DSI.
+
+
+Sending and receiving packets
+=============================
+
+Sending
+-------
+Packets are send by l4ore_send(int handle, char *buf, l4size_t size).
+* handle is the handle obtained from l4ore_open().
+* buf is the send buffer
+* size is the size of the buffered data
+
+l4ore_send() returns 0 on success.
+
+Receiving
+---------
+Packets can be received with l4ore_recv_blocking() and l4ore_recv_nonblocking().
+
+* l4ore_recv_blocking(int handle, char **buf, unsigned *size, l4_timeout_t timeout)
+  receives data and blocks until data arrives OR the timeout expires.
+  * handle is the handle obtained from l4ore_open().
+  * buf is the receive buffer - it MUST be allocated in memory before receiving.
+  * size will contain the size of the received data OR the size necessary to
+    receive the next packet, if the recv buffer was too small.
+  * timeout is the timeout to wait at maximum.
+
+* l4ore_recv_nonblocking(int handle, char **buf, unsigned *size) receives data
+  if there is some and returns with an error otherwise. The parameters are as in
+  l4ore_recv_blocking(). This function is NOT available, if ORe is used with
+  receive() through the shared memory interface.
+
+l4ore_recv_*() functions return 0 on success. They return a negative IPC error
+if there was an error (e.g., the timeout expired). If a positive value is returned,
+the receive buffer ws too small for the next receive packet. The application can then
+adapt and call recv() with a larger receive buffer so that the packet fits in. The
+size necessary for receiving is the return value of l4_ore_recv*().
+
+But I want to do TCP/IP!
+========================
+
+ORe is NOT a TCP stack. It just multiplexes the real hardware NIC for use by several
+applications. If you want to use TCP/IP or equivalent protocols, you will have to
+implement them in your own application.
+
+For TCP/IP there already is a library in pkg/ore/lib/uip. This library is a port of
+the uIP stack (http://www.sics.se/~adam/uip/) to ORe. This stack is targetted at
+8bit microprocessors and therefore is only a minimal TCP implementation. A major
+drawback is that it can have only one packet travelling around at a time and does
+not send the next one before the first's ack was received. uip-ore is implemented
+as a library and examples for its use can be found in the examples section.
+
+Future work will include the porting of a "real" IP stack to ORe. Recommendations
+are welcome, and currently include:
+- lwIP (http://www.sics.se/~adam/lwip)
+- some kind of FLIPS v2.0
+
+ORe's Architecture
+##################
+
+String-IPC connections
+======================
+todo
+
+Shared memory connections using the DROPS Streaming Interface (DSI)
+===================================================================
+
+Building ORe for use with the DSI
+---------------------------------
+
+* Rebuild the lib and server directory:
+
+l4/pkg/ore> make -C lib cleanall && make -C lib USE_DSI=y
+l4/pkg/ore> make -C server cleanall && make -C server USE_DSI=y
+
+* Link your client applications with the dsi library.
+
+How to use
+----------
+
+ORe is able to hand over packets between client and server using a shared-memory
+dataspace. You can use this feature by simply giving a send or a receive dataspace
+to configuration at the l4ore_open() call. ORe will then automatically use the
+DROPS Streaming Interface (DSI) for communication in those directions you specified.
+(This means: you can also have a shared-mem send and a string IPC receive connection.)
+
+However, shared memory has some drawbacks:
+* Your application must be aware of the shared-mem communication and act upon it. 
+  That's why adding this feature to the L4Linux device driver is very hard - the 
+  whole L4Linux skb allocation would need to handle L4 dataspaces.
+* Shared-memory support is not fully working yet. If you encounter problems,
+  please contact the maintainers.
+* Some more DSI/ORe problems are described below.
+
+Problems with the DSI
+---------------------
+* If the ring buffer is full and the client does not receive a packet
+  thereby returning a free buffer, it is impossible to add further
+  packets. Therefore it is not possible to overwrite old packets with
+  new ones as in the string IPC case.
+
+  After having talked to Lars, it seems that there is no possibility
+  in DSI to circumvent this.
+
+* Multithreaded-clients may run into problems. The current idea is,
+  that the thread opening a connection is registered as the worker
+  thread for the DSI sockets it is using. This results in sync 
+  messages being sent to this thread. If another thread tries to
+  do a blocking packet_get() for this socket and is blocked, it will
+  be blocked and never receive a sync message as this one is being
+  delivered to the registered worker thread.
+
+  Another idea for this might be to create a real worker thread 
+  for each connection. Send/receive then is mapped to an internal
+  short IPC from the client thread to the worker thread with
+    DW0 = address of buffer
+    DW1 = size
+
+* Someone needs to care for the management of the data area. The
+  first implementation of ORe and DSI will rely on the data area
+  being managed correctly by the client.
+  
+  Later on an additional lib should wrap libORe and libdsi to
+  provide packet management for clients.
+
+* As ORe implements two different send/receive protocols, we need
+  a mean to locally transfer data from clients with the one protocol
+  to clients with the other one.
+
+  ** String IPC --> DSI: This one is easy. At netif_rx for DSI, the
+     incoming packet is copied into the client's receive dataspace
+     anyway, nothing more is needed.
+  ** DSI --> String IPC: This one is evil. Normally, string ipc clients
+     just have a pointer pointing to a packet stored somewhere in ORe's
+     memory. This pointer will however point to a client send dataspace
+     if it is a DSI client and ORe cannot ensure that clients do not
+     overwrite data until all receivers have read their packets.
+     *** Approach A: do not commit such a packet until all clients 
+         read it. This is insecure as evil clients could request
+         data from another one and simply do not read this data from
+         ORe.
+     *** Approach B: if we encounter a DSI-to-String IPC conversion,
+         we dynamically create a local copy of the DSI data and 
+         enqueue this data into the String IPC rx lists.
+
+* The ORe client lib supports timeouts for blocking receive operations.
+  This is easy for string IPC connections, but handling is difficult
+  with DSI. The ORe+DSI therefore only supports blocking receive()
+  with an infinite timeout at the moment.
+
+  DSI has a packet_get_abort() function but this one does not fit the
+  needs of timeouts, because the socket is in an undefined state 
+  afterwards. It is only intended to be used before the socket is 
+  closed.

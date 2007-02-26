@@ -30,7 +30,7 @@ IMPLEMENTATION:
 IMPLEMENT FIASCO_INIT
 void Jdb_tbuf_init::init(Observer *o)
 {
-  observer = o;
+  _observer = o;
   static int init_done;
 
   if (!init_done)
@@ -46,8 +46,7 @@ void Jdb_tbuf_init::init(Observer *o)
 	  ||(c = strstr(Cmdline::cmdline(), " -tbuf_entries ")))
 	want_entries = strtol(c+15, 0, 0);
       
-      // minimum: 8kB (  2 pages)
-      // maximum: 2MB (512 pages)
+      // minimum: 8KB (  2 pages), maximum: 2MB (512 pages)
       // must be a power of 2 (for performance reasons)
       for (n = Config::PAGE_SIZE/sizeof(Tb_entry_fit);
 	   n < want_entries && n*sizeof(Tb_entry_fit)<0x200000;
@@ -75,8 +74,8 @@ void Jdb_tbuf_init::init(Observer *o)
 	  va += Config::PAGE_SIZE;
 	}
 
-      status()->tracebuffer0 = (Address)buffer();
-      status()->tracebuffer1 = (Address)buffer() + size / 2;
+      status()->tracebuffer0 = (Address)Mem_layout::Tbuf_ubuffer_area;
+      status()->tracebuffer1 = (Address)Mem_layout::Tbuf_ubuffer_area + size/2;
       status()->size0        =
       status()->size1        = size / 2;
       status()->version0     =
@@ -96,9 +95,10 @@ void Jdb_tbuf_init::init(Observer *o)
       status()->scaler_tsc_to_us = Cpu::get_scaler_tsc_to_us();
       status()->scaler_ns_to_tsc = Cpu::get_scaler_ns_to_tsc();
 
-      tbuf_max    = buffer() + max_entries();
-      count_mask1 =  max_entries()    - 1;
-      count_mask2 = (max_entries())/2 - 1;
+      _tbuf_max    = buffer() + max_entries();
+      _count_mask1 =  max_entries()    - 1;
+      _count_mask2 = (max_entries())/2 - 1;
+      _size        = size;
 
       clear_tbuf();
     }

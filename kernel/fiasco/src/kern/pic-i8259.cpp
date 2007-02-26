@@ -140,6 +140,7 @@ IMPLEMENTATION[i8259]:
 #include "cmdline.h"
 #include "config.h"
 #include "initcalls.h"
+#include "mem_layout.h"
 
 int Pic::special_fully_nested_mode = 1; // be compatible with Jochen's L4
 
@@ -157,7 +158,8 @@ detect_vmware()
 {
   // scan around in the BIOS
   // first address is for VMWare3, second for VMWare4
-  char const *start[] = { (char *)0xf00c0000, (char *)0xf00e4000 };
+  char const *start[] = { (char *)Mem_layout::Adap_vidbios1_beg,
+      			  (char *)Mem_layout::Adap_vidbios2_beg };
   char const *const s = "VMware, Inc.";
 
   for (unsigned i = 0; i < sizeof(start) / sizeof(start[0]); i++)
@@ -196,7 +198,40 @@ Pic::pic_init(unsigned char master_base, unsigned char slave_base)
 {
   // disallow all interrupts before we selectively enable them 
   Pic::disable_all_save();
-
+  /*
+   * Set the LINTEN bit in the HyperTransport Transaction
+   * Control Register.
+   *
+   * This will cause EXTINT and NMI interrupts routed over the
+   * hypertransport bus to be fed into the LAPIC LINT0/LINT1.  If
+   * the bit isn't set, the interrupts will go to the general cpu
+   * INTR/NMI pins.  On a dual-core cpu the interrupt winds up
+   * going to BOTH cpus.  The first cpu that does the interrupt ack
+   * cycle will get the correct interrupt.  The second cpu that does
+   * it will get a spurious interrupt vector (typically IRQ 7).
+   */
+#if 0
+  if ((cpu_id & 0xff0) == 0xf30) 
+#endif
+    {
+#if 0
+      Unsigned32 tcr;
+      Io::out32(0x0cf8,
+	  (1 << 31) | /* enable */
+	  (0 << 16) | /* bus */
+	  (24 << 11) |        /* dev (cpu + 24) */
+	  (0 << 8) |  /* func */
+	  0x68                /* reg */
+	  );
+      tcr = Io::in32(0xcfc);
+      if ((tcr & 0x00010000) == 0) {
+	  Io::out32(0xcfc, tcr|0x00010000);
+	  printf("AMD: Rerouting HyperTransport "
+	      "EXTINT/NMI to APIC\n");
+      }
+      Io::out32(0x0cf8, 0);
+#endif
+  }
   // VMware isn't able to deal with the special fully nested mode
   // correctly so we simply don't use it while running under
   // VMware. Otherwise VMware will barf with 

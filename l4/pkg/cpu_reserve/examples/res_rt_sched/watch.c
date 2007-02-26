@@ -58,6 +58,6 @@ void preempter_thread (void*arg){
 		}
             }
         } else
-	    LOG("Preempt-receive returned %x", L4_IPC_ERROR(result));
+	    LOG("Preempt-receive returned %lx", L4_IPC_ERROR(result));
     }
 }

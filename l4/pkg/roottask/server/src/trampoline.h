@@ -16,7 +16,6 @@
 
 extern char _task_trampoline_end; /* trampoline.c exec.h */
 
-inline void
-task_trampoline(l4_addr_t entry, void *mbi);
+void task_trampoline(l4_addr_t entry, void *mbi);
 
 #endif

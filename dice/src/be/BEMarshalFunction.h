@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEMarshalFunction.h
- *    \brief   contains the declaration of the class CBEMarshalFunction
+ *  \brief   contains the declaration of the class CBEMarshalFunction
  *
  *    \date    10/09/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,52 +32,53 @@
 
 #include <be/BEOperationFunction.h>
 
-/**    \class CBEMarshalFunction
- *    \ingroup backend
- *    \brief the marshalling function class for the back-end
+/** \class CBEMarshalFunction
+ *  \ingroup backend
+ *  \brief the marshalling function class for the back-end
  *
- * This class contains a back-end function which belongs to a front-end operation
+ * This class contains a back-end function which belongs to a front-end
+ * operation
  */
 class CBEMarshalFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEMarshalFunction();
     virtual ~CBEMarshalFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEMarshalFunction(CBEMarshalFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual void WriteReturn(CBEFile * pFile, CBEContext * pContext);
-    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void WriteReturn(CBEFile * pFile);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
     virtual CBETypedDeclarator* FindParameterType(string sTypeName);
-    virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext * pContext);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext);
-    virtual bool AddParameters(CFEOperation * pFEOperation, CBEContext * pContext);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+	    bool bMarshal);
+    virtual void AddParameter(CFETypedDeclarator * pFEParameter);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+
+    virtual CBETypedDeclarator* GetExceptionVariable(void);
 
 protected:
-    virtual int GetReturnSize(int nDirection, CBEContext * pContext);
-    virtual int GetFixedReturnSize(int nDirection, CBEContext * pContext);
-    virtual int GetMaxReturnSize(int nDirection, CBEContext * pContext);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
-    virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteCleanup(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
+    virtual int GetReturnSize(int nDirection);
+    virtual int GetFixedReturnSize(int nDirection);
+    virtual int GetMaxReturnSize(int nDirection);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteCallParameter(CBEFile *pFile, 
+	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+    virtual void AddAfterParameters();
+    virtual void AddBeforeParameters();
 };
 
 #endif

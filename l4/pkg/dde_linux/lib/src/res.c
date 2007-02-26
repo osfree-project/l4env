@@ -30,7 +30,7 @@
  *
  * \todo region handling
  *
- * -# put regions in conversion list via address_add_region() too
+ * -# put regions in conversion list via l4dde_add_region() too
  * -# hold only 1 region list (\c address.c) and call \c address_*() and \c
  * _va()
  */
@@ -101,7 +101,7 @@ struct resource *request_mem_region(unsigned long start, unsigned long n,
   l4_addr_t offset;
 
   LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld, name=\"%s\"", (void*)start, n, name);
-  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, &offset);
+  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, 0, &offset);
 
   if (!vaddr)
     {

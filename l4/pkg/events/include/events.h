@@ -138,8 +138,8 @@ EXTERN_C_BEGIN
  */
 #define L4EVENTS_ERROR_INVALID_COMMAND		0xfb
 
-/*! \brief Undefined error occured 
- **/
+/*! \brief Undefined error occured
+ */
 #define L4EVENTS_ERROR_OTHER			0xfc
 
 /*! \brief another server replied to an open wait call.
@@ -147,23 +147,32 @@ EXTERN_C_BEGIN
 #define L4EVENTS_RECV_OTHER			0xfd
 
 #define L4EVENTS_ERRSTRINGS_DEFINE					\
-  { L4EVENTS_WARNING_TASK_REGISTERED,	  "Task is already registered" }, \
-  { L4EVENTS_WARNING_TASK_NOT_REGISTERED, "Task is not registered" } ,	\
+  { L4EVENTS_WARNING_TASK_REGISTERED,					\
+    "EVENTS: Task is already registered" },				\
+  { L4EVENTS_WARNING_TASK_NOT_REGISTERED,				\
+    "EVENTS: Task is not registered" } ,				\
   { L4EVENTS_WARNING_EVENTS_DELETED,					\
-  	"Task lost pending events deleted during unregister" },		\
+    "EVENTS: Task lost pending events deleted during unregister" },	\
   { L4EVENTS_WARNING_EVENTTYP_NOT_REGISTERED,				\
-  	"There is no registered task for this channel" },		\
-  { L4EVENTS_WARNING_NO_EVENT_TO_RECEIVE, "No event to receive" },	\
+    "EVENTS: There is no registered task for this channel" },		\
+  { L4EVENTS_WARNING_NO_EVENT_TO_RECEIVE,				\
+    "EVENTS: No event to receive" },					\
   { L4EVENTS_WARNING_EVENT_PENDING,					\
-  	"Some registered task has not received this event" },		\
+    "EVENTS: Some registered task has not received this event" },	\
   { L4EVENTS_WARNING_INVALID_EVENTNR,					\
-  	"Acknowledge: Event-number doesn't exist" },			\
-  { L4EVENTS_ERROR_INTERNAL,		"Internal server error occured" },\
-  { L4EVENTS_ERROR_IPC,			"IPC error occured" },		\
-  { L4EVENTS_ERROR_TIMEOUT,		"IPC timeout occured" },	\
-  { L4EVENTS_ERROR_INVALID_COMMAND, 	"Unknown command was sent " },	\
-  { L4EVENTS_ERROR_OTHER,		"Undefined error occured" },	\
-  { L4EVENTS_RECV_OTHER,		"Unknown server replied to open wait" }
+    "EVENTS: Acknowledge: Event-number doesn't exist" },		\
+  { L4EVENTS_ERROR_INTERNAL,						\
+    "EVENTS: Internal server error occured" },				\
+  { L4EVENTS_ERROR_IPC,							\
+    "EVENTS: IPC error occured" },					\
+  { L4EVENTS_ERROR_TIMEOUT,						\
+    "EVENTS: IPC timeout occured" },					\
+  { L4EVENTS_ERROR_INVALID_COMMAND,					\
+    "EVENTS: Unknown command was sent " },				\
+  { L4EVENTS_ERROR_OTHER,						\
+    "EVENTS: Undefined error occured" },				\
+  { L4EVENTS_RECV_OTHER,						\
+    "EVENTS: Unknown server replied to open wait" }
 
 /****************************************************************************
  * \anchor receive and send options
@@ -273,6 +282,10 @@ l4events_init(void);
  * \param event_ch	specifies the channel
  * \param priority	specifies the priority
  * 			(0 is lowest ... 15 is highest)
+ *			If bit 7 is set the client is assumed as untrusted,
+ *			that is if the client is not ready to receive an
+ *			event immediately, the event is assumed as successfully
+ *			delivered.
  *
  * \return 		indicates a successful opration, please see
  *			\ref return-makros for possible return values

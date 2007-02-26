@@ -14,10 +14,10 @@
 #include <l4/sys/types.h>
 #include <l4/cpu_reserve/sched.h>
 #include <l4/sys/rt_sched.h>
+#include <l4/sigma0/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/log/l4log.h>
 #include <l4/util/macros.h>
-#include <l4/util/kip.h>
 #include <l4/env/errno.h>
 #include <l4/thread/thread.h>
 #include <stdio.h>
@@ -29,7 +29,7 @@ int main(int argc, const char**argv){
     int wcet, id;
 
     rmgr_init();
-    kip = l4util_kip_map();
+    kip = l4sigma0_kip_map(L4_INVALID_ID);
 
     wcet = 10000;
     if((err = l4cpu_reserve_add(l4_myself(), "reservation",

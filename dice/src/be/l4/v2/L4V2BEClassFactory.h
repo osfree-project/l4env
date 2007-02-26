@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/v2/L4V2BEClassFactory.h
- *    \brief   contains the declaration of the class CL4V2BEClassFactory
+ *  \file    dice/src/be/l4/v2/L4V2BEClassFactory.h
+ *  \brief   contains the declaration of the class CL4V2BEClassFactory
  *
- *    \date    02/07/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/07/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,36 +32,28 @@
 
 #include "be/l4/L4BEClassFactory.h"
 
-/**    \class CL4V2BEClassFactory
- *    \ingroup backend
- *    \brief the class factory for the back-end classes
+/** \class CL4V2BEClassFactory
+ *  \ingroup backend
+ *  \brief the class factory for the back-end classes
  *
- * We use seperate functions for each class, because the alternative is to use some sort of identifier to find out
- * which class to generate. This involves writing a big switch statement.
+ * We use seperate functions for each class, because the alternative is to use
+ * some sort of identifier to find out which class to generate. This involves
+ * writing a big switch statement.
  */
 class CL4V2BEClassFactory : public CL4BEClassFactory
 {
 // Constructor
 public:
-    /**    \brief constructor
-     *    \param bVerbose true if class should print status output
+    /** \brief constructor
      */
-    CL4V2BEClassFactory(bool bVerbose = false);
-    virtual ~CL4V2BEClassFactory();
-
-protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
-     */
-    CL4V2BEClassFactory(CL4V2BEClassFactory &src);
+    CL4V2BEClassFactory();
+    ~CL4V2BEClassFactory();
 
 public:
-    virtual CBECallFunction* GetNewCallFunction();
     virtual CBESizes * GetNewSizes();
-    virtual CBESndFunction* GetNewSndFunction();
-    virtual CBEMarshaller* GetNewMarshaller(CBEContext* pContext);
     virtual CBECommunication* GetNewCommunication();
-    virtual CBEReplyFunction* GetNewReplyFunction();
+    virtual CBEMsgBuffer* GetNewMessageBuffer();
+    virtual CBEDispatchFunction* GetNewDispatchFunction();
 };
 
 #endif // !__DICE_L4V2BECLASSFACTORY_H__

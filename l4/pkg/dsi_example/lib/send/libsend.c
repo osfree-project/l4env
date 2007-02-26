@@ -80,9 +80,9 @@ __send_connect(dsi_component_t * comp, dsi_socket_ref_t * remote)
   ret = dsi_example_send_connect_call(&send_id,
   				 (dsi_example_send_socket_t *)&comp->socketref,
 				 (dsi_example_send_socket_t *)remote,&env); 
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("connect failed (ret %d, exc %d)",ret,env.major);
+      Panic("connect failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
 
@@ -112,9 +112,9 @@ __send_start(dsi_component_t * comp)
   ret = dsi_example_send_start_call(&send_id,
   			       (dsi_example_send_socket_t *)&comp->socketref,
 			       &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("start failed (ret %d, exc %d)",ret,env.major);
+      Panic("start failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
   
@@ -145,9 +145,9 @@ __send_stop(dsi_component_t * comp)
   ret = dsi_example_send_stop_call(&send_id,
   			      (dsi_example_send_socket_t *)&comp->socketref,
 			       &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("stop failed (ret %d, exc %d)",ret,env.major);
+      Panic("stop failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
   
@@ -178,9 +178,9 @@ __send_close(dsi_component_t * comp)
   ret = dsi_example_send_close_call(&send_id,
   			       (dsi_example_send_socket_t *)&comp->socketref,
 			       &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("close failed (ret %d, exc %d)",ret,env.major);
+      Panic("close failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
   
@@ -218,9 +218,9 @@ send_open(dsi_component_t * sender, l4dm_dataspace_t * ctrl_ds,
   ret = dsi_example_send_open_call(&send_id,&socket_ref,
 			      (dsi_example_send_dataspace_t *)ctrl_ds,
 			      (dsi_example_send_dataspace_t *)data_ds,&env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     {
-      Panic("open socket failed (ret %d, exc %d)",ret,env.major);
+      Panic("open socket failed (ret %d, exc %d)",ret,DICE_EXCEPTION_MAJOR(&env));
       return -1;
     }
 

@@ -54,9 +54,11 @@
 __BEGIN_DECLS
 
 /* Error status for non-reentrant lookup functions.
-   We use a macro to access always the thread-specific `h_errno' variable.  */
+   We use a macro to access always the thread-specific `h_errno' variable.
+   We always need the extern int here in case internal libc code undefines 
+   the macro because it needs access to the underlying storage. */
 extern int h_errno;
-#if defined(__UCLIBC_HAS_THREADS__)
+#ifdef __UCLIBC_HAS_THREADS__
 # define h_errno (*__h_errno_location ())
 #endif
 
@@ -390,7 +392,7 @@ extern int getprotobynumber_r (int __proto,
 			       struct protoent **__restrict __result);
 
 
-#if defined(__UCLIBC_HAS_NETGROUP__)
+#ifdef __UCLIBC_HAS_NETGROUP__
 /* Establish network group NETGROUP for enumeration.
 
    This function is not part of POSIX and therefore no official

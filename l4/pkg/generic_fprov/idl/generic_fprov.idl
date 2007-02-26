@@ -28,7 +28,7 @@ library l4fprov
 	        [in] l4_threadid_t dm, 
 		[in] unsigned long flags,
 	        [out] l4dm_dataspace_t *ds, 
-		[out] unsigned long *size);
+		[out] l4_size_t *size);
     };
 };
 

@@ -41,6 +41,15 @@ typedef struct
   l4_uint16_t      pool;
 } cfg_mem_t;
 
+typedef struct cfg_cap_t
+{
+  struct cfg_cap_t *next;
+  char             *dest;
+  char             type;
+#define CAP_TYPE_ALLOW          1
+#define CAP_TYPE_DENY           2
+} cfg_cap_t;
+
 typedef struct
 {
   cfg_module_t     task;                   /**< fname, parameters */
@@ -55,11 +64,13 @@ typedef struct
 					        and shared libraries from */
   l4_threadid_t    dsm_id;                 /**< dataspace manager for program
 					        sections and modules */
+  l4_threadid_t    caphandler;             /**< capability fault handler */
+  cfg_cap_t        *caplist;               /**< list of capabilities */
   l4_addr_t        image;                  /**< attached binary image */
   l4_size_t        sz_image;               /**< size of binary image */
   l4dm_dataspace_t ds_image;               /**< dataspace of program image */
   l4_taskid_t      task_id;                /**< filled in after task startup */
-  l4_umword_t      flags;                  /**< see CFG_F_ constants */
+  l4_uint32_t      flags;                  /**< see CFG_F_ constants */
 #define CFG_F_TEMPLATE		0x00000001 /**< this is a template */
 #define CFG_F_MEMDUMP		0x00000002 /**< dump memory */
 #define CFG_F_DIRECT_MAPPED	0x00000004 /**< sections are mapped 1:1 */
@@ -72,6 +83,8 @@ typedef struct
 #define CFG_F_STOP		0x00000200 /**< stop app just before start */
 #define CFG_F_NOSUPERPAGES	0x00000400 /**< don't use superpages */
 #define CFG_F_INTERPRETER	0x00000800 /**< interpret using libld-l4.s.so */
+#define CFG_F_ALL_WRITABLE	0x00001000 /**< all sections writable */
+#define CFG_F_L4ENV_BINARY	0x00002000 /**< l4env binary with infopage */
 } cfg_task_t;
 
 extern unsigned int cfg_verbose;
@@ -85,7 +98,7 @@ int  cfg_new_task(const char *fname, const char *args);
 void cfg_new_task_template(void);
 int  cfg_new_module(const char *fname, const char *args,
 		    l4_addr_t low, l4_addr_t high);
-int  cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high, 
+int  cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high,
 	         l4_umword_t flags);
 int  cfg_new_ioport(int low, int high);
 cfg_task_t** cfg_next_task(void);
@@ -94,7 +107,10 @@ int  cfg_task_mcp (unsigned int mcp);
 int  cfg_task_flag(unsigned int flag);
 int  cfg_task_fprov(const char *fname);
 int  cfg_task_dsm(const char *fname);
+int  cfg_task_caphandler(const char *fname);
+int  cfg_task_ipc(const char *name, int type);
 
+int cfg_lookup_name(const char *name, l4_threadid_t *id);
 void cfg_setup_input(const char *cfg_buffer, int size);
 void cfg_done(void);
 int  cfg_parse(void);

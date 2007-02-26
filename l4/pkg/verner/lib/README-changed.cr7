@@ -2,27 +2,3 @@
 
 video/xvidcore-1.0
 - include Makefile and /build/generic/Makefile
-
-video/libavcodec:
-
-!depend cr7_dietlibc: qsort, toupper, is*, strto*
-- changed Makefile
-- include config.mak + config.h
-- replaced fprintf(stderr with printf(
-- #include <ctype.h> removed
-- #include <assert.h> removcd
-- added assert-macro in common.h (breaks debugging)
-- eval.c: removed include <sdtlib.h> 
-- strtol/oul/od redefined --> cr7_strto*
-
-de-muxer/libaformat:
-
-!depend cr7_dietlibc: qsort, toupper, is*, strto*
-- changed Makefile
-- include config.mak + config.h
-- replaced fprintf(stderr with printf(
-- file.c: changed to use fileops.
-- allformat.c: items not support by DROPS removed (pipes, streams, network)
-- pnm.c & mp3.c removed from Makefile, unknonw refernce to __strtol_internal...
-- allformat.c: pnm + mp3 removed
-- strtol/oul/od redefined --> cr7_strto*

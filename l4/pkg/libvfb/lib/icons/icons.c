@@ -13,6 +13,9 @@ extern int _binary_tree_none_raw_start;
 extern int _binary_folder_grey_raw_start;
 extern int _binary_misc_raw_start;
 extern int _binary_unknown_raw_start;
+extern int _binary_filetype_vt_raw_start;
+extern int _binary_filetype_dpe_raw_start;
+extern int _binary_filetype_txt_raw_start;
 
 vfb_icon_t tree_plus =
 {
@@ -59,6 +62,21 @@ vfb_icon_t unknown =
     16, 16, 4, (char *)&_binary_unknown_raw_start
 };
 
+vfb_icon_t filetype_vt =
+{
+    16, 16, 4, (char *)&_binary_filetype_vt_raw_start
+};
+
+vfb_icon_t filetype_dpe =
+{
+    16, 16, 4, (char *)&_binary_filetype_dpe_raw_start
+};
+
+vfb_icon_t filetype_txt =
+{
+    16, 16, 4, (char *)&_binary_filetype_txt_raw_start
+};
+
 void vfb_icon_get_pixel(const vfb_icon_t * icon, int x, int y,
                         int *r, int *g, int *b, int *a)
 {
@@ -68,8 +86,9 @@ void vfb_icon_get_pixel(const vfb_icon_t * icon, int x, int y,
     *a = icon->pixel_data[(x + y * icon->width) * icon->bytes_per_pixel + 3];
 }
 
-const vfb_icon_t * vfb_icon_get_for_name(char * name)
+const vfb_icon_t * vfb_icon_get_for_name(const char * name)
 {
+    // eh, well, this is kind of ugly
     if (strcmp(name, "tree_corner") == 0)
         return &tree_corner;
     else if (strcmp(name, "tree_cross") == 0)
@@ -88,6 +107,12 @@ const vfb_icon_t * vfb_icon_get_for_name(char * name)
         return &misc;
     else if (strcmp(name, "unknown") == 0)
         return &unknown;
+    else if (strcmp(name, "filetype_vt") == 0)
+        return &filetype_vt;
+    else if (strcmp(name, "filetype_dpe") == 0)
+        return &filetype_dpe;
+    else if (strcmp(name, "filetype_txt") == 0)
+        return &filetype_txt;
 
     return NULL;
 }

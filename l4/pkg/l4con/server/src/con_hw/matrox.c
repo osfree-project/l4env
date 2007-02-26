@@ -395,6 +395,94 @@ matrox_fill(struct l4con_vc *vc,
   mga_ydstlen(sy, height);
 }
 
+#if 0
+static void
+matrox_blit(struct l4con_vc *vc, unsigned fgx, unsigned bgx,
+	    const l4_uint8_t* chardata, int width, int height, int yy, int xx)
+{
+  l4_uint32_t step;
+  l4_uint32_t ydstlen;
+  l4_uint32_t xlen;
+  l4_uint32_t ar0;
+  l4_uint32_t charcell;
+  l4_uint32_t fxbndry;
+  int easy;
+
+  step = (width + 7) >> 3;
+  charcell = height * step;
+  xlen = (charcell + 3) & ~3;
+  ydstlen = (yy << 16) | height;
+  if (width == step << 3)
+    {
+      ar0 = height * width - 1;
+      easy = 1;
+    }
+  else
+    {
+      ar0 = width - 1;
+      easy = 0;
+    }
+
+  mga_fifo(3);
+  if (easy)
+    mga_outl(M_DWGCTL, M_DWG_ILOAD | M_DWG_SGNZERO | M_DWG_SHIFTZERO | 
+		       M_DWG_LINEAR | M_DWG_REPLACE);
+  else
+    mga_outl(M_DWGCTL, M_DWG_ILOAD | M_DWG_SGNZERO | M_DWG_SHIFTZERO | 
+		       M_DWG_BFCOL | M_DWG_REPLACE);
+  fxbndry = ((xx + width - 1) << 16) | xx;
+
+  mga_fifo(6);
+  mga_writel(mga_mmio_vbase, M_FXBNDRY, fxbndry);
+  mga_writel(mga_mmio_vbase, M_AR0, ar0);
+  mga_writel(mga_mmio_vbase, M_AR3, 0);
+  if (easy)
+    {
+      mga_writel(mga_mmio_vbase, M_YDSTLEN | M_EXEC, ydstlen);
+      memcpy((void*)mga_mmio_vbase, chardata, xlen);
+    }
+  else
+    {
+      mga_writel(mga_mmio_vbase, M_AR5, 0);
+      mga_writel(mga_mmio_vbase, M_YDSTLEN | M_EXEC, ydstlen);
+      if ((step & 3) == 0)
+	{
+	  /* Great. Source has 32bit aligned lines, so we can feed them
+	     directly to the accelerator. */
+	  memcpy((void*)mga_mmio_vbase, chardata, charcell);
+	}
+      else if (step == 1)
+	{
+	  /* Special case for 1..8bit widths */
+	  while (height--)
+	    {
+	      mga_outl(0, *chardata);
+	      chardata++;
+	    }
+	}
+      else if (step == 2)
+	{
+	  /* Special case for 9..15bit widths */
+	  while (height--)
+	    {
+	      mga_outl(0, *(l4_uint16_t*)chardata);
+	      chardata += 2;
+	    }
+	}
+      else
+	{
+	  while (height--)
+	    {
+	      size_t i;	      
+	      for (i = 0; i < step; i += 4)
+      		mga_outl(0, *(l4_uint32_t*)(chardata + i));
+	      chardata += step;
+	    }
+	}
+    }
+}
+#endif
+
 /* Without I/O flexpages, we can't prohibit other L4 tasks to write to I/O
  * ports. In that case it is possible, that we start X in L4Linux which does
  * some things with the PCI configuration area of our graphics card so that
@@ -409,9 +497,11 @@ matrox_test_for_card_disappeared(void)
 
       printf("Matrox video card disappered -- re-mapping memory mapped "
 	     "registers.\n");
-      PCIBIOS_READ_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id, PCI_COMMAND, &tmp);
+      PCIBIOS_READ_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id,
+			       PCI_COMMAND, &tmp);
       tmp |= PCI_COMMAND_MEMORY;
-      PCIBIOS_WRITE_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id, PCI_COMMAND, tmp);
+      PCIBIOS_WRITE_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id,
+				PCI_COMMAND, tmp);
     }
 }
 
@@ -462,7 +552,8 @@ matrox_probe(unsigned int bus, unsigned int devfn,
 {
   struct board_t *b = &matrox_boards[dev->driver_data];
   unsigned char rev;
-  unsigned int addr0, addr1, size0, size1, ctrl_addr, video_addr, video_size;
+  l4_addr_t addr0, addr1, ctrl_addr, video_addr;
+  l4_size_t size0, size1, video_size;
 
   PCIBIOS_READ_CONFIG_BYTE (bus, devfn, PCI_REVISION_ID, &rev);
 
@@ -490,10 +581,11 @@ matrox_probe(unsigned int bus, unsigned int devfn,
   printf("Found Matrox %s rev 0x%02x (PCI %02x/%02x)\n",
 	  b->name, rev, bus, devfn);
 
-  if (map_io_mem(ctrl_addr, 0x4000, "ctrl", &mga_mmio_vbase)<0)
+  if (map_io_mem(ctrl_addr, 0x4000, 0, "ctrl", (l4_addr_t *)&mga_mmio_vbase)<0)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(video_addr, video_size, "video", &hw_map_vid_mem_addr) < 0)
+  if (map_io_mem(video_addr, video_size, 1, "video",
+	         (l4_addr_t *)&hw_map_vid_mem_addr) < 0)
     return -L4_ENOTFOUND;
 
   /* Linux driver comment: select non-DMA memory for PCI_MGA_DATA, otherwise
@@ -512,6 +604,7 @@ matrox_probe(unsigned int bus, unsigned int devfn,
   accel->fill = matrox_fill;
   accel->sync = matrox_sync;
   accel->pan  = matrox_pan;
+//  accel->blit = matrox_blit;
   accel->caps = ACCEL_FAST_COPY | ACCEL_FAST_FILL;
 
   matrox_pci_bus_id   = bus;

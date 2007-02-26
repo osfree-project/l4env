@@ -13,6 +13,7 @@
 #include <omega0_proto.h>
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
+#include <l4/sys/ktrace.h>
 #include <l4/util/util.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/log/l4log.h>
@@ -350,7 +351,7 @@ static int handle_user_request(int irq,
 static void attach_irq(int num){
     int error;
     l4_msgdope_t result;
-    int dummy;
+    l4_umword_t dummy;
     l4_threadid_t irq_th;
   
     if(rmgr_get_irq(num) != 0){
@@ -458,7 +459,7 @@ void irq_handler(int num){
 		continue;
 	    }
 	    LOGd(OMEGA0_DEBUG_REQUESTS,
-		 "request %#08x from "l4util_idfmt" (%c,%c,%c,%c,%c,%#x)",
+		 "request %#08lx from "l4util_idfmt" (%c,%c,%c,%c,%c,%#x)",
 		 ipc.request.i, l4util_idstr(ipc.sender),
 		 ipc.request.s.wait?'w':'-',
 		 ipc.request.s.consume?'c':'-',
@@ -508,13 +509,13 @@ int attach_irqs(void){
     if((error=create_threads_sync())) return error;
 
     buf[0]=0;
-    p+=sprintf(p, "available irqs=[ ");
+    p+=sprintf(p, "Available IRQs=[ ");
     for(i=0;i<IRQ_NUMS;i++){
 	if(irqs[i].available) p+=sprintf(p, "%x ", i);
 	else p+=sprintf(p, "<!%x> ", i);
     }
-    p+=sprintf(p, "]");
-    LOGl(buf);
+    p+=sprintf(p, "]\n");
+    LOG_printf(buf);
     
     return 0;
 }

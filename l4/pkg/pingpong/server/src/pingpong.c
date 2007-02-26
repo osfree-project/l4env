@@ -17,14 +17,17 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kernel.h>
 #include <l4/sys/ktrace.h>
+#include <l4/sigma0/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/util/util.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/util/bitops.h>
 #include <l4/util/reboot.h>
-#include <l4/util/kip.h>
 #include <l4/util/l4_macros.h>
+#include <l4/util/port_io.h>
+#include <l4/util/irq.h>
+#include <l4/sigma0/sigma0.h>
 #ifdef USE_DIETLIBC
 #include <l4/env_support/getchar.h>
 #endif
@@ -33,12 +36,6 @@
 #include "pingpong.h"
 #include "worker.h"
 #include "helper.h"
-
-#define NR_MSG        8
-#define NR_DWORDS     4093  /* whole message descriptor occupies 4 pages */
-#define NR_STRINGS    4
-
-#define SMAS_SIZE     16
 
 /* threads */
 l4_threadid_t main_id;		/* main thread */
@@ -60,13 +57,14 @@ l4_uint32_t timer_hz;
 l4_uint32_t timer_resolution;
 l4_kernel_info_t *kip;
 int use_superpages;
-int sysenter;
+int callmode;
 int deceit;
 int cold;
 int ux_running;
 int fiasco_running;
 
 static int dont_do_sysenter;
+static int dont_do_kipcalls;
 static int dont_do_deceit;
 static int dont_do_superpages;
 static int dont_do_multiple_fpages;
@@ -105,7 +103,7 @@ test_timer_frequency(void)
 static void
 detect_kernel(void)
 {
-  if (!(kip = l4util_kip_map()))
+  if (!(kip = l4sigma0_kip_map(L4_INVALID_ID)))
     {
       printf("failed to map kernel info page\n");
       return;
@@ -118,6 +116,7 @@ detect_kernel(void)
       puts("Jochen LN -- disabling 4MB mappings");
       dont_do_superpages = 1;
       dont_do_sysenter = 1;
+      dont_do_kipcalls = 1;
       dont_do_deceit = 1;
       break;
     case 0x0004711:
@@ -125,9 +124,10 @@ detect_kernel(void)
       dont_do_multiple_fpages = 1;
       dont_do_ipc_asm = 1;
       dont_do_deceit = 1;
+      dont_do_kipcalls = 1;
       break;
-    case 0x01004444:
-      if (strstr(l4util_kip_version_string(), "(ux)"))
+    case L4SIGMA0_KIP_VERSION_FIASCO:
+      if (strstr(l4sigma0_kip_version_string(), "(ux)"))
 	{
 	  puts("Fiasco-UX");
 	  ux_running = 1;
@@ -179,6 +179,14 @@ detect_sysenter(void)
     }
 }
 
+/** Determine if kernel supports KIP calls. */
+static void
+detect_kipcalls(void)
+{
+  if (!dont_do_kipcalls)
+    dont_do_kipcalls = !l4sigma0_kip_kernel_has_feature("kip_syscalls");
+}
+
 void do_sleep(void);
 extern void asm_do_sleep(void);
 
@@ -201,23 +209,75 @@ do_sleep(void)
     }
 }
 
+/* keymap without shift */
+static const unsigned char keymap[] =
+{    0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=',   8,
+  '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\r',
+     0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`',
+    0, '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/',
+};
+
+/* getchar for both kdb and keyboard */
+static int getchar_multi(void)
+{
+  int ch;
+  unsigned long flags;
+  l4util_flags_save(&flags);
+
+  while (1)
+    {
+      if (!ux_running && l4util_in8(0x64) & 0x01)
+        {
+          /* keyboard character available */
+          int scancode = l4util_in8(0x60);
+          if (scancode & 0x80) /* key release - drop */
+            continue;
+          scancode &= 0x7f;
+          ch = 0;
+          if (scancode >= sizeof(keymap)/sizeof(keymap[0]))
+            goto out;
+          ch = keymap[scancode];
+          goto out;
+        }
+
+      if ((ch = l4kd_inchar()) != -1)
+        goto out;
+
+      l4_sleep(50);
+    }
+
+out:
+  l4util_flags_restore(&flags);
+  return ch;
+}
+
 /** print name of test. */
 static void
-print_testname(const char *test, int nr, int inter, int show_sysenter)
+print_testname(const char *test, int nr, enum test_type type, int show_sysenter)
 {
   if (ux_running)
     show_sysenter = 0;
 
-  if (inter == INTER)
-    printf(">> %c: %s: "l4util_idfmt" <==> "l4util_idfmt"%s\n",
-         nr, test, l4util_idstr(inter_ping), l4util_idstr(inter_pong),
-	 show_sysenter ? sysenter ? " (sysenter)" : " (int30)"
-		       : "");
-  else
-    printf(">> %c: %s: "l4util_idfmt" <==> "l4util_idfmt"%s\n",
-         nr, test, l4util_idstr(intra_ping), l4util_idstr(intra_pong),
-	 show_sysenter ? sysenter ? " (sysenter)" : " (int30)"
-		       : "");
+  switch (type)
+    {
+    case INTER:
+      printf(">> %c: %s: "l4util_idfmt" <==> "l4util_idfmt"%s\n",
+	     nr, test, l4util_idstr(inter_ping), l4util_idstr(inter_pong),
+	     show_sysenter ? (callmode == 1) ? " (sysenter)" : 
+	                     (callmode == 2) ? " (kipcalls)" : " (int30)"
+	                   : "");
+      break;
+    case INTRA:
+      printf(">> %c: %s: "l4util_idfmt" <==> "l4util_idfmt"%s\n",
+             nr, test, l4util_idstr(intra_ping), l4util_idstr(intra_pong),
+             show_sysenter ? (callmode == 1) ? " (sysenter)" : 
+	                     (callmode == 2) ? " (kipcalls)" : " (int30)"
+                           : "");
+      break;
+    case SINGLE:
+      printf(">> %c: %s: "l4util_idfmt"\n", nr, test, l4util_idstr(intra_ping));
+      break;
+    }
 }
 
 static void
@@ -248,13 +308,38 @@ create_thread(l4_threadid_t id, l4_umword_t eip, l4_umword_t esp,
 
   /* get our preempter/pager */
   preempter = pager = L4_INVALID_ID;
-  l4_thread_ex_regs(main_id,(l4_umword_t)-1,(l4_umword_t)-1,&preempter,
-                    &pager,&dummy,&dummy,&dummy);
+  l4_thread_ex_regs_flags(main_id,(l4_umword_t)-1,(l4_umword_t)-1,&preempter,
+                          &pager,&dummy,&dummy,&dummy,
+			  L4_THREAD_EX_REGS_NO_CANCEL);
 
   /* create thread */
   l4_thread_ex_regs(id,eip,esp,&preempter,&new_pager,
 		    &dummy,&dummy,&dummy);
 
+}
+
+
+/** create ping and pong threads. */
+static void
+create_ping_thread(void (*ping_thread)(void))
+{
+  create_thread(ping_id, (l4_umword_t)ping_thread,
+			 (l4_umword_t)ping_stack + STACKSIZE, pager_id);
+}
+
+static void
+create_pong_thread(void (*pong_thread)(void))
+{
+  create_thread(pong_id, (l4_umword_t)pong_thread,
+			 (l4_umword_t)pong_stack + STACKSIZE, pager_id);
+}
+
+static void
+create_pingpong_threads(void (*ping_thread)(void),
+                        void (*pong_thread)(void))
+{
+  create_ping_thread(ping_thread);
+  create_pong_thread(pong_thread);
 }
 
 /** create ping and pong tasks. */
@@ -295,6 +380,14 @@ create_pingpong_tasks(void (*ping_thread)(void),
   send(pong_id);
 }
 
+/** Kill pong thread. */
+static void
+kill_pong_thread(void)
+{
+  create_thread(pong_id,(l4_umword_t)asm_do_sleep,
+                (l4_umword_t)pong_stack + STACKSIZE, pager_id);
+}
+
 /** kill ping and pong tasks. */
 static void
 kill_pingpong_tasks(void)
@@ -308,25 +401,19 @@ kill_pingpong_tasks(void)
 static void
 map_4k_page(l4_threadid_t from, l4_umword_t addr)
 {
-  l4_snd_fpage_t fpage;
-  l4_msgdope_t result;
-
-  l4_ipc_call(from,
-		   L4_IPC_SHORT_MSG, addr, L4_LOG2_PAGESIZE,
-		   L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
-		     &fpage.snd_base, &fpage.fpage.fpage,
-		   L4_IPC_NEVER, &result);
-  if (L4_IPC_IS_ERROR(result))
+  switch (l4sigma0_map_mem(from, addr, addr, L4_PAGESIZE))
     {
-      printf("IPC error %02x mapping 4kB page at %08x from "l4util_idfmt"\n", 
-	     L4_IPC_ERROR(result), addr, l4util_idstr(from));
-      enter_kdebug("map_4k_page");
-    }
-  else if (fpage.fpage.fp.size != L4_LOG2_PAGESIZE)
-    {
-      printf("Can't map 4kB page at %08x from "l4util_idfmt"\n", 
+    case -2:
+      printf("IPC error mapping 4KB page at %08lx from "l4util_idfmt"\n",
 	     addr, l4util_idstr(from));
       enter_kdebug("map_4k_page");
+      break;
+    case -3:
+      printf("Can't map 4KB page at %08lx from "l4util_idfmt"\n",
+	     addr, l4util_idstr(from));
+      rmgr_dump_mem();
+      enter_kdebug("map_4k_page");
+      break;
     }
 }
 
@@ -334,25 +421,19 @@ map_4k_page(l4_threadid_t from, l4_umword_t addr)
 static void
 map_4m_page(l4_threadid_t from, l4_umword_t addr)
 {
-  l4_snd_fpage_t fpage;
-  l4_msgdope_t result;
-
-  l4_ipc_call(from,
-		   L4_IPC_SHORT_MSG, addr|1, L4_LOG2_SUPERPAGESIZE << 2,
-		   L4_IPC_MAPMSG(addr, L4_LOG2_SUPERPAGESIZE),
-		     &fpage.snd_base, &fpage.fpage.fpage,
-		   L4_IPC_NEVER, &result);
-  if (L4_IPC_IS_ERROR(result))
+  switch (l4sigma0_map_mem(from, addr, addr, L4_SUPERPAGESIZE))
     {
-      printf("IPC error %02x mapping 4MB page at %08x from "l4util_idfmt"\n", 
-	     L4_IPC_ERROR(result), addr, l4util_idstr(from));
-      enter_kdebug("map_4M_page");
-    }
-  else if (fpage.fpage.fp.size != L4_LOG2_SUPERPAGESIZE)
-    {
-      printf("Can't map 4MB page at %08x from "l4util_idfmt"\n", 
+    case -2:
+      printf("IPC error mapping 4MB page at %08lx from "l4util_idfmt"\n",
 	     addr, l4util_idstr(from));
       enter_kdebug("map_4M_page");
+      break;
+    case -3:
+      printf("Can't map 4MB page at %08lx from "l4util_idfmt"\n",
+	     addr, l4util_idstr(from));
+      rmgr_dump_mem();
+      enter_kdebug("map_4M_page");
+      break;
     }
 }
 
@@ -371,8 +452,9 @@ void
 map_scratch_mem_from_pager(void)
 {
   l4_umword_t a;
+  l4_umword_t inc_size = use_superpages ? L4_SUPERPAGESIZE : L4_PAGESIZE;
 
-  for (a=scratch_mem; a<scratch_mem+SCRATCH_MEM_SIZE; a+=L4_PAGESIZE)
+  for (a = scratch_mem; a < scratch_mem + SCRATCH_MEM_SIZE; a += inc_size)
     {
       if (use_superpages)
 	map_4m_page(pager_id, a);
@@ -393,42 +475,65 @@ pager(void)
 
   while (1)
     {
-      l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&pfa,&eip,L4_IPC_NEVER,&result);
+      l4_ipc_wait(&src, L4_IPC_SHORT_MSG, &pfa, &eip, L4_IPC_NEVER, &result);
       while (1)
 	{
-	  if (use_superpages &&
-	      pfa >= scratch_mem &&
-	      pfa <= scratch_mem + SCRATCH_MEM_SIZE)
+          int fn = pfa & SIGMA0_REQ_ID_MASK;
+
+	  if (SIGMA0_IS_MAGIC_REQ(pfa) && fn == SIGMA0_REQ_ID_FPAGE_RAM)
 	    {
-	      snd_base = pfa & L4_SUPERPAGEMASK;
-	      fp = snd_base | (L4_LOG2_SUPERPAGESIZE << 2);
+              l4_fpage_t fpage = { .raw = eip };
+              pfa = fpage.fp.page << L4_PAGESHIFT;
+
+	      if (use_superpages &&
+                  pfa >= scratch_mem &&
+                  pfa <= scratch_mem + SCRATCH_MEM_SIZE)
+                {
+                  snd_base = (fpage.fp.page << L4_PAGESHIFT) & L4_SUPERPAGEMASK;
+	          fp = snd_base | (L4_LOG2_SUPERPAGESIZE << 2);
+                }
+              else
+                {
+                  snd_base = fpage.fp.page << L4_PAGESHIFT;
+	          fp = snd_base | (L4_LOG2_PAGESIZE << 2);
+                }
+              fp |= 2;
 	    }
-	  else
-	    {
-	      snd_base = pfa & L4_PAGEMASK;
-	      fp = snd_base | (L4_LOG2_PAGESIZE << 2);
-	    }
+          else
+            {
+              if (use_superpages &&
+                  pfa >= scratch_mem &&
+                  pfa <= scratch_mem + SCRATCH_MEM_SIZE)
+                {
+                  snd_base = pfa & L4_SUPERPAGEMASK;
+                  fp = snd_base | (L4_LOG2_SUPERPAGESIZE << 2);
+                }
+              else
+                {
+                  snd_base = pfa & L4_PAGEMASK;
+                  fp = snd_base | (L4_LOG2_PAGESIZE << 2);
+                }
+            }
 
 	  /* sanity check */
-      	  if (   (pfa < (unsigned)&_start || pfa > (unsigned)&_end)
+          if (   (pfa < (unsigned)&_start || pfa > (unsigned)&_end)
 	      && (pfa < scratch_mem || pfa > scratch_mem+SCRATCH_MEM_SIZE))
-	      
 		{
-		  printf("Pager: pfa=%08x eip=%08x from "
+		  printf("Pager: pfa=%08lx eip=%08lx from "
 			  l4util_idfmt" received\n",
 			  pfa, eip, l4util_idstr(src));
 		  enter_kdebug("stop");
 		}
 	  if (pfa & 2)
-    	    fp |= 2;
+	    fp |= 2;
 
 	  l4_ipc_reply_and_wait(src,L4_IPC_SHORT_FPAGE,snd_base,fp,
 				     &src,L4_IPC_SHORT_MSG,&pfa,&eip,
 			    	     L4_IPC_NEVER,&result);
 	  if (L4_IPC_IS_ERROR(result))
 	    {
-	      printf("pager: IPC error (dope=0x%08x) "
-		     "serving pfa=%08x eip=%08x from "l4util_idfmt"\n",
+	      printf("pager: IPC error (dope=0x%08lx) "
+		     "serving pfa=%08lx eip=%08lx from "l4util_idfmt"\n",
 		     result.msgdope, pfa, eip, l4util_idstr(src));
 	      break;
 	    }
@@ -449,21 +554,30 @@ bench_short_intraAS(int nr)
   printf("  === Shortcut (Client=Timeout(NEVER), Server=Timeout(0)) ===\n");
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
 
-	  create_thread(ping_id, 
-	      (l4_umword_t)(sysenter ? cold ? sysenter_ping_short_cold_thread
-					    : sysenter_ping_short_thread
-				     : cold ? int30_ping_short_cold_thread
-					    : int30_ping_short_thread),
-	      (l4_umword_t)ping_stack + STACKSIZE, pager_id);
-
-	  create_thread(pong_id,
-	      (l4_umword_t)(sysenter ? sysenter_pong_short_thread
-				     : int30_pong_short_thread),
-	      (l4_umword_t)pong_stack + STACKSIZE, pager_id);
+	  if (callmode == 0)
+	      create_pingpong_threads(cold ?
+		  int30_ping_short_cold_thread :
+		  int30_ping_short_thread,
+		  int30_pong_short_thread);
+	  else if (callmode == 1)
+	      create_pingpong_threads(cold ?
+		  sysenter_ping_short_cold_thread :
+		  sysenter_ping_short_thread,
+		  sysenter_pong_short_thread);
+	  else if (callmode == 2)
+	      create_pingpong_threads(cold ? 
+		  kipcalls_ping_short_cold_thread :
+		  kipcalls_ping_short_thread, 
+		  kipcalls_pong_short_thread);
 
 	  move_to_small_space(ping_id, smas_pos[0]);
 
@@ -474,8 +588,7 @@ bench_short_intraAS(int nr)
 	  recv_ping_timeout(timeout_50s);
 
 	  /* shutdown pong thread, ping thread already sleeps */
-    	  create_thread(pong_id,(l4_umword_t)asm_do_sleep,
-	      (l4_umword_t)pong_stack + STACKSIZE,pager_id);
+          kill_pong_thread();
 
 	  TIMER_ON;
 
@@ -492,21 +605,30 @@ bench_short_intraAS(int nr)
   printf("  === No Shortcut (Receive Timeout 1s) ===\n");
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
 
-	  create_thread(ping_id, 
-	      (l4_umword_t)(sysenter ? cold ? sysenter_ping_short_to_cold_thread
-					    : sysenter_ping_short_to_thread
-				     : cold ? int30_ping_short_to_cold_thread
-					    : int30_ping_short_to_thread),
-	      (l4_umword_t)ping_stack + STACKSIZE, pager_id);
-
-	  create_thread(pong_id,
-	      (l4_umword_t)(sysenter ? sysenter_pong_short_to_thread
-				     : int30_pong_short_to_thread),
-	      (l4_umword_t)pong_stack + STACKSIZE, pager_id);
+	  if (callmode == 0)
+	      create_pingpong_threads(cold ? 
+		  int30_ping_short_to_cold_thread :
+		  int30_ping_short_to_thread, 
+		  int30_pong_short_to_thread);
+	  else if (callmode == 1)
+	      create_pingpong_threads(cold ? 
+		  sysenter_ping_short_to_cold_thread :
+		  sysenter_ping_short_to_thread, 
+		  sysenter_pong_short_to_thread);
+	  else if (callmode == 2)
+	      create_pingpong_threads(cold ? 
+		  kipcalls_ping_short_to_cold_thread :
+		  kipcalls_ping_short_to_thread, 
+		  kipcalls_pong_short_to_thread);
 
 	  move_to_small_space(ping_id, smas_pos[0]);
 
@@ -517,8 +639,7 @@ bench_short_intraAS(int nr)
 	  recv_ping_timeout(timeout_50s);
 
 	  /* shutdown pong thread, ping thread already sleeps */
-	  create_thread(pong_id,(l4_umword_t)asm_do_sleep,
-	      (l4_umword_t)pong_stack + STACKSIZE,pager_id);
+          kill_pong_thread();
 
 	  TIMER_ON;
 
@@ -542,17 +663,29 @@ bench_short_interAS(int nr)
   printf("  === Shortcut (Client=Timeout(NEVER), Server=Timeout(0)) ===\n");
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
-	  create_pingpong_tasks(sysenter 
-				  ? cold ? sysenter_ping_short_cold_thread
-					 : sysenter_ping_short_thread
-				  : cold ? int30_ping_short_cold_thread
-					 : int30_ping_short_thread,
-				 sysenter 
-				   ? sysenter_pong_short_thread
-				   : int30_pong_short_thread);
+	  if (callmode == 0)
+	      create_pingpong_tasks(cold ? 
+		  int30_ping_short_cold_thread :
+		  int30_ping_short_thread, 
+		  int30_pong_short_thread);
+	  else if (callmode == 1)
+	      create_pingpong_tasks(cold ? 
+		  sysenter_ping_short_cold_thread :
+		  sysenter_ping_short_thread, 
+		  sysenter_pong_short_thread);
+	  else if (callmode == 2)
+	      create_pingpong_tasks(cold ? 
+		  kipcalls_ping_short_cold_thread :
+		  kipcalls_ping_short_thread, 
+		  kipcalls_pong_short_thread);
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
 	  TIMER_ON;
@@ -562,17 +695,29 @@ bench_short_interAS(int nr)
   printf("  === No Shortcut (Receive Timeout 1s) ===\n");
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
-	  create_pingpong_tasks(sysenter
-				  ? cold ? sysenter_ping_short_to_cold_thread
-					 : sysenter_ping_short_to_thread
-				  : cold ? int30_ping_short_to_cold_thread
-					 : int30_ping_short_to_thread,
-				 sysenter 
-				   ? sysenter_pong_short_to_thread
-				   : int30_pong_short_to_thread);
+	  if (callmode == 0)
+	      create_pingpong_tasks(cold ? 
+		  int30_ping_short_cold_thread :
+		  int30_ping_short_thread, 
+		  int30_pong_short_thread);
+	  else if (callmode == 1)
+	      create_pingpong_tasks(cold ? 
+		  sysenter_ping_short_cold_thread :
+		  sysenter_ping_short_thread, 
+		  sysenter_pong_short_thread);
+	  else if (callmode == 2)
+	      create_pingpong_tasks(cold ? 
+		  kipcalls_ping_short_cold_thread :
+		  kipcalls_ping_short_thread, 
+		  kipcalls_pong_short_thread);
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
 	  TIMER_ON;
@@ -588,7 +733,7 @@ test_short_interAS_flood(int nr)
 
   print_testname("short inter IPC", nr, INTER, 0);
   printf("   0=shortcut 1=no shortcut: ");
-  sc = getchar();
+  sc = getchar_multi();
   printf("%c\n", sc=='0' ? '0' : '1');
 
   TIMER_OFF;
@@ -620,25 +765,57 @@ static void
 bench_short_dc_interAS(int nr)
 {
   print_testname("short inter IPC / don't switch to receiver", nr, INTER, 0);
+  printf("  Make sure to have enough kernel memory available, test will fail otherwise.\n");
   ping_id = inter_ping;
   pong_id = inter_pong;
 
   for (deceit=0; deceit<2; deceit++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  l4_threadid_t t;
 	  l4_threadid_t p;
-	  void (*pong_thread)(void) = 
-	    deceit ? sysenter ? sysenter_pong_short_dc_thread
-			      :    int30_pong_short_dc_thread
-		   : sysenter ? sysenter_pong_short_ndc_thread
-			      :    int30_pong_short_ndc_thread;
-	  void (*ping_thread)(void) = 
-	    deceit ? sysenter ? sysenter_ping_short_dc_thread
-			      :    int30_ping_short_dc_thread
-		   : sysenter ? sysenter_ping_short_ndc_thread
-			      :    int30_ping_short_ndc_thread;
+	  void (*pong_thread)(void) = 0;
+	  void (*ping_thread)(void) = 0;
+	  if (deceit)
+	  {
+	      if (callmode == 0)
+	      {
+		  pong_thread = int30_pong_short_dc_thread;
+		  ping_thread = int30_ping_short_dc_thread;
+	      }
+	      else if (callmode == 1)
+	      {
+		  pong_thread = sysenter_pong_short_dc_thread;
+		  ping_thread = sysenter_ping_short_dc_thread;
+	      }
+	      else if (callmode == 2)
+	      {
+		  pong_thread = kipcalls_pong_short_dc_thread;
+		  ping_thread = kipcalls_ping_short_dc_thread;
+	      }
+	  } else {
+	      if (callmode == 0)
+	      {
+		  pong_thread = int30_pong_short_ndc_thread;
+		  ping_thread = int30_ping_short_ndc_thread;
+	      }
+	      else if (callmode == 1)
+	      {
+		  pong_thread = sysenter_pong_short_ndc_thread;
+		  ping_thread = sysenter_ping_short_ndc_thread;
+	      }
+	      else if (callmode == 2)
+	      {
+		  pong_thread = kipcalls_pong_short_ndc_thread;
+		  ping_thread = kipcalls_ping_short_ndc_thread;
+	      }
+	  }
 	  int ping_tasks=0, pong_tasks=0;
 	  int i;
 
@@ -647,7 +824,7 @@ bench_short_dc_interAS(int nr)
 	    {
 	      p = pong_id;
 	      p.id.task += i;
-	      t = rmgr_task_new(p, 255, 
+	      t = rmgr_task_new(p, 255,
 				(l4_umword_t)scratch_mem + (i+1)*STACKSIZE,
 				(l4_umword_t)pong_thread, pager_id);
 	      if (l4_is_nil_id(t) || l4_is_invalid_id(t))
@@ -672,7 +849,7 @@ bench_short_dc_interAS(int nr)
 	    }
 	  ping_tasks = 1;
 
-    	  recv(ping_id);
+	  recv(ping_id);
 	  send(ping_id);
 
 	  /* wait for measurement to be finished, then kill tasks */
@@ -720,7 +897,8 @@ bench_long_interAS(int nr)
     };
   int i;
 
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because callmode directly is fastest */
+  callmode = 1-dont_do_sysenter;
   print_testname("long inter IPC", nr, INTER, 1);
 
   for (cold=0; cold<2-dont_do_cold; cold++)
@@ -732,12 +910,12 @@ bench_long_interAS(int nr)
 	  if (ux_running)
 	    rounds /= 10;
 
-	  create_pingpong_tasks(sysenter 
+	  create_pingpong_tasks(callmode 
 				   ? cold ? sysenter_ping_long_cold_thread
 					  : sysenter_ping_long_thread
 				   : cold ? int30_ping_long_cold_thread
 					  : int30_ping_long_thread,
-				sysenter ? sysenter_pong_long_thread
+				callmode ? sysenter_pong_long_thread
 					 : int30_pong_long_thread);
 
     	  /* wait for measurement to be finished, then kill tasks */
@@ -768,7 +946,8 @@ bench_indirect_interAS(int nr)
     };
   int i;
 
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   print_testname("indirect inter IPC", nr, INTER, 1);
 
   for (cold=0; cold<2-dont_do_cold; cold++)
@@ -781,12 +960,12 @@ bench_indirect_interAS(int nr)
 	  if (ux_running)
 	    rounds /= 10;
 
-	  create_pingpong_tasks(sysenter 
+	  create_pingpong_tasks(callmode 
 				   ? cold ? sysenter_ping_indirect_cold_thread
 					  : sysenter_ping_indirect_thread
 				   : cold ? int30_ping_indirect_cold_thread
 					  : int30_ping_indirect_thread,
-				sysenter ? sysenter_pong_indirect_thread
+				callmode ? sysenter_pong_indirect_thread
 					 : int30_pong_indirect_thread);
 	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
@@ -806,16 +985,17 @@ bench_shortMap_test(void)
 #endif
   int i;
 
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   for (i=0; i<sizeof(fpagesizes)/sizeof(fpagesizes[0]); i++)
     {
       fpagesize = fpagesizes[i]*L4_PAGESIZE;
       rounds    = SCRATCH_MEM_SIZE/(fpagesize*8);
 
       TIMER_OFF;
-      create_pingpong_tasks(sysenter ? sysenter_ping_fpage_thread
+      create_pingpong_tasks(callmode ? sysenter_ping_fpage_thread
 				     : int30_ping_fpage_thread, 
-			    sysenter ? sysenter_pong_fpage_thread
+			    callmode ? sysenter_pong_fpage_thread
 				     : int30_pong_fpage_thread);
 
       /* wait for measurement to be finished, then kill tasks */
@@ -830,7 +1010,8 @@ static void
 bench_shortMap_interAS(int nr)
 {
   use_superpages = 0;
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   print_testname("short fpage map from 4k", nr, INTER, 1);
 
   bench_shortMap_test();
@@ -853,16 +1034,17 @@ bench_longMap_interAS(int nr)
   if (rounds > NR_MSG)
     rounds = NR_MSG;
 
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   print_testname("long fpage map", nr, INTER, 1);
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      create_pingpong_tasks(sysenter 
+      create_pingpong_tasks(callmode 
 				? cold ? sysenter_ping_long_fpage_cold_thread
 				       : sysenter_ping_long_fpage_thread
 				: cold ? int30_ping_long_fpage_cold_thread
 				       : int30_ping_long_fpage_thread,
-			    sysenter ? sysenter_pong_long_fpage_thread
+			    callmode ? sysenter_pong_long_fpage_thread
 				     : int30_pong_long_fpage_thread);
 
       /* wait for measurement to be finished, then kill tasks */
@@ -876,11 +1058,12 @@ static void
 bench_pagefault_test(void)
 {
   rounds = SCRATCH_MEM_SIZE/(fpagesize*8);
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   TIMER_OFF;
-  create_pingpong_tasks(sysenter ? sysenter_ping_pagefault_thread
+  create_pingpong_tasks(callmode ? sysenter_ping_pagefault_thread
 				 : int30_ping_pagefault_thread,
-			sysenter ? sysenter_pong_pagefault_thread
+			callmode ? sysenter_pong_pagefault_thread
 				 : int30_pong_pagefault_thread);
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
@@ -891,7 +1074,8 @@ bench_pagefault_test(void)
 static void
 bench_pagefault_interAS(int nr)
 {
-  sysenter = 1-dont_do_sysenter;
+  /* don't care about kip-calls, because sysenter directly is fastest */
+  callmode = 1-dont_do_sysenter;
   print_testname("pagefault inter address space", nr, INTER, 1);
 
   fpagesize = L4_PAGESIZE;
@@ -918,18 +1102,21 @@ bench_pagefault_interAS(int nr)
 }
 
 static void
-bench_exception_intraAS(int nr)
+bench_exceptions(int nr)
 {
   /* start ping and pong thread */
-  sysenter = 0;
-  print_testname("intra exceptions", nr, INTRA, 0);
+  callmode = 0;
+  print_testname("intra reflection exceptions", nr, SINGLE, 0);
 
   ping_id = intra_ping;
 
   move_to_small_space(ping_id, smas_pos[0]);
 
-  create_thread(ping_id,(l4_umword_t)(ping_exception_thread),
-		(l4_umword_t)ping_stack + STACKSIZE,pager_id);
+  TIMER_OFF;
+  create_ping_thread(ping_exception_intraAS_idt_thread);
+
+  send(ping_id);
+  recv(ping_id);
 
   /* wait for measurement to be finished */
   recv_ping_timeout(timeout_50s);
@@ -937,6 +1124,68 @@ bench_exception_intraAS(int nr)
   send(ping_id);
 
   move_to_small_space(ping_id, 0);
+
+  /* ----- */
+  print_testname("inter reflection exceptions", nr, INTER, 0);
+  ping_id = inter_ping;
+  pong_id = inter_pong;
+
+  create_pingpong_tasks(ping_exception_interAS_idt_thread,
+                        exception_reflection_pong_handler);
+
+  send(ping_id);
+  recv(ping_id);
+
+  recv_ping_timeout(timeout_50s);
+  kill_pingpong_tasks();
+  send(ping_id);
+  TIMER_ON;
+
+  if (!l4sigma0_kip_kernel_has_feature("exception_ipc"))
+    {
+      printf("Kernel does not support exception IPC, "
+             "remaining tests skipped.\n");
+      return;
+    }
+
+  /* ------------------------------------------------------ */
+  print_testname("intra IPC exception", nr, INTRA, 0);
+  ping_id = intra_ping;
+  pong_id = intra_pong;
+
+  TIMER_OFF;
+
+  create_thread(ping_id, (l4_umword_t)ping_exception_IPC_thread,
+                (l4_umword_t)ping_stack + STACKSIZE, pong_id);
+  create_pong_thread(exception_IPC_pong_handler);
+
+  /* Hand-shake with thread to start */
+  recv(pong_id);
+  send(pong_id);
+  recv(ping_id);
+  send(ping_id);
+  /* Wait to finish */
+  recv_ping_timeout(timeout_50s);
+  send(ping_id);
+  kill_pong_thread();
+
+  TIMER_ON;
+
+  /* ----- */
+  print_testname("inter IPC exception", nr, INTER, 0);
+  ping_id = inter_ping;
+  pong_id = inter_pong;
+
+  create_pingpong_tasks(ping_exception_IPC_thread,
+                        exception_IPC_pong_handler);
+
+  recv(ping_id);
+  send(ping_id);
+
+  recv_ping_timeout(timeout_50s);
+  kill_pingpong_tasks();
+  send(ping_id);
+  TIMER_ON;
 }
 
 /** IPC benchmark - short INTER-AS with c-bindings. */
@@ -946,16 +1195,35 @@ bench_short_casm_interAS(int nr)
   print_testname("short inter IPC (c-inline-bindings)", nr, INTER, 0);
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
-	  create_pingpong_tasks(sysenter 
-				   ? cold ? sysenter_ping_short_c_cold_thread
-					  : sysenter_ping_short_c_thread
-				   : cold ? int30_ping_short_c_cold_thread
-					  : int30_ping_short_c_thread,
-				sysenter ? sysenter_pong_short_c_thread
-					 : int30_pong_short_c_thread);
+	  if (callmode == 0)
+	  {
+	      create_pingpong_tasks(cold ?
+		  int30_ping_short_c_cold_thread :
+		  int30_ping_short_c_thread,
+		  int30_pong_short_c_thread);
+	  }
+	  else if (callmode == 1)
+	  {
+	      create_pingpong_tasks(cold ?
+		  sysenter_ping_short_c_cold_thread :
+		  sysenter_ping_short_c_thread,
+		  sysenter_pong_short_c_thread);
+	  }
+	  else if (callmode == 2)
+	  {
+	      create_pingpong_tasks(cold ?
+		  kipcalls_ping_short_c_cold_thread :
+		  kipcalls_ping_short_c_thread,
+		  kipcalls_pong_short_c_thread);
+	  }
 
 	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
@@ -967,16 +1235,35 @@ bench_short_casm_interAS(int nr)
   print_testname("short inter IPC (external assembler)", nr, INTER, 0);
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      for (sysenter=0; sysenter<2-dont_do_sysenter; sysenter++)
+      for (callmode=0; callmode<3; callmode++)
 	{
+	  if (callmode == 1 && dont_do_sysenter)
+	      continue;
+	  if (callmode == 2 && dont_do_kipcalls)
+	      continue;
+
 	  TIMER_OFF;
-	  create_pingpong_tasks(sysenter
-				  ? cold ? sysenter_ping_short_asm_cold_thread
-				         : sysenter_ping_short_asm_thread
-				  : cold ? int30_ping_short_asm_cold_thread
-					 : int30_ping_short_asm_thread,
-				sysenter ? sysenter_pong_short_asm_thread
-					 : int30_pong_short_asm_thread);
+	  if (callmode == 0)
+	  {
+	      create_pingpong_tasks(cold ?
+		  int30_ping_short_asm_cold_thread :
+		  int30_ping_short_asm_thread,
+		  int30_pong_short_asm_thread);
+	  }
+	  else if (callmode == 1)
+	  {
+	      create_pingpong_tasks(cold ?
+		  sysenter_ping_short_asm_cold_thread :
+		  sysenter_ping_short_asm_thread,
+		  sysenter_pong_short_asm_thread);
+	  }
+	  else if (callmode == 2)
+	  {
+	      create_pingpong_tasks(cold ?
+		  kipcalls_ping_short_asm_cold_thread :
+		  kipcalls_ping_short_asm_thread,
+		  kipcalls_pong_short_asm_thread);
+	  }
 
 	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
@@ -990,37 +1277,31 @@ bench_short_casm_interAS(int nr)
 static void
 bench_short_compare(int nr)
 {
-  sysenter = 1;
+  callmode = 1;
 
   print_testname("short IPC intra-AS shortcut/no-shortcut", nr, INTRA, 1);
   ping_id = intra_ping;
   pong_id = intra_pong;
 
   TIMER_OFF;
-  create_thread(ping_id, (l4_umword_t)sysenter_ping_short_thread,
-			 (l4_umword_t)ping_stack + STACKSIZE,pager_id);
-  create_thread(pong_id, (l4_umword_t)sysenter_pong_short_thread,
-			 (l4_umword_t)pong_stack + STACKSIZE,pager_id);
+  create_pingpong_threads(sysenter_ping_short_thread,
+                          sysenter_pong_short_thread);
   recv(pong_id);
   send(pong_id);
   recv_ping_timeout(timeout_50s);
-  create_thread(pong_id,(l4_umword_t)asm_do_sleep,
-		(l4_umword_t)pong_stack + STACKSIZE,pager_id);
+  kill_pong_thread();
   TIMER_ON;
 
   send(ping_id);
   l4_thread_switch(L4_NIL_ID);
 
   TIMER_OFF;
-  create_thread(ping_id, (l4_umword_t)sysenter_ping_short_to_thread,
-			 (l4_umword_t)ping_stack + STACKSIZE,pager_id);
-  create_thread(pong_id, (l4_umword_t)sysenter_pong_short_to_thread,
-			 (l4_umword_t)pong_stack + STACKSIZE,pager_id);
+  create_pingpong_threads(sysenter_ping_short_to_thread,
+                          sysenter_pong_short_to_thread);
   recv(pong_id);
   send(pong_id);
   recv_ping_timeout(timeout_50s);
-  create_thread(pong_id,(l4_umword_t)asm_do_sleep,
-		(l4_umword_t)pong_stack + STACKSIZE,pager_id);
+  kill_pong_thread();
   TIMER_ON;
 
   send(ping_id);
@@ -1036,6 +1317,44 @@ bench_short_compare(int nr)
 
   create_pingpong_tasks(sysenter_ping_short_to_thread,
 			sysenter_pong_short_to_thread);
+  recv_ping_timeout(timeout_50s);
+  kill_pingpong_tasks();
+  TIMER_ON;
+}
+
+/* Simple intra and inter IPC using different UTCB sizes,
+ * should probably integrated into other IPC tests with sysenter/int30
+ * hot/old etc. */
+static void
+bench_utcb_ipc(int nr)
+{
+  print_testname("IPC with UTCB data transfer", nr, INTRA, 1);
+  ping_id = intra_ping;
+  pong_id = intra_pong;
+
+  TIMER_OFF;
+  create_pingpong_threads(ping_utcb_ipc_thread,
+                          pong_utcb_ipc_thread);
+
+  recv(pong_id);
+  send(pong_id);
+  recv(ping_id);
+  send(ping_id);
+  recv_ping_timeout(timeout_50s);
+
+  kill_pong_thread();
+
+  TIMER_ON;
+
+  print_testname("IPC with UTCB data transfer", nr, INTER, 1);
+  ping_id = inter_ping;
+  pong_id = inter_pong;
+
+  TIMER_OFF;
+  create_pingpong_tasks(ping_utcb_ipc_thread,
+                        pong_utcb_ipc_thread);
+  recv(ping_id);
+  send(ping_id);
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
   TIMER_ON;
@@ -1144,7 +1463,7 @@ help(void)
 "  3: Same as test 2 except that the server replies indirect strings.\n"
 "\n"
 "  Press any key to continue ...");
-  getchar();
+  getchar_multi();
   printf("\r"
 "  4: Same as test 1 except that the server replies one short flexpage.\n"
 "\n"
@@ -1168,7 +1487,7 @@ help(void)
 "  d: Send once to 200 different Tasks without implicit switching to the\n"
 "     receiver. Compared to call/receive+send.\n"
 "  Press any key to continue ...");
-  getchar();
+  getchar_multi();
   printf("\r%40s", "");
 }
 
@@ -1204,10 +1523,11 @@ main(int argc, const char **argv)
       { "short fpage inter address space",  bench_shortMap_interAS,   1, '4' },
       { "long  fpage inter address space",  bench_longMap_interAS,    1, '5' },
       { "pagefault inter address space",    bench_pagefault_interAS,  1, '6' },
-      { "exception intra address space",    bench_exception_intraAS,  1, '7' },
+      { "exception handling methods",       bench_exceptions,         1, '7' },
       { "short IPC inter c-inl-/asm-bind",  bench_short_casm_interAS, 1, '8' },
       { "compare fast sysenter IPC",        bench_short_compare,      1, '9' },
       { "short IPC inter / don't switch",   bench_short_dc_interAS,   1, 'd' },
+      { "IPC using UTCB",                   bench_utcb_ipc,           1, 'u' },
       { "measure specific instructions",    test_instruction_cycles,  1, 'c' },
 //    { "measure costs of TLB/Cache",       test_cache_tlb,           1, 't' },
       { "memory bandwidth (memcpy)",        test_memory_bandwidth,    1, 'm' },
@@ -1249,9 +1569,12 @@ main(int argc, const char **argv)
 
   detect_kernel();
   detect_sysenter();
+  detect_kipcalls();
 
   printf("Sysenter %s\n",
-        dont_do_sysenter ? "disabled/not available" : "enabled");
+         dont_do_sysenter ? "disabled/not available" : "enabled");
+  printf("Kipcall %s\n",
+         dont_do_kipcalls ? "disabled/not available" : "enabled");
 
   test_rdtsc();
   test_cpu();
@@ -1287,7 +1610,7 @@ main(int argc, const char **argv)
     }
   else
     {
-      printf("at %08x-%08x reserved\n",
+      printf("at %08lx-%08lx reserved\n",
 	     scratch_mem, scratch_mem+SCRATCH_MEM_SIZE);
       map_scratch_mem_from_rmgr();
     }
@@ -1300,6 +1623,8 @@ main(int argc, const char **argv)
     test[9].enabled = 0;
   if (dont_do_deceit || scratch_mem == -1)
     test[10].enabled = 0;
+  if (!l4sigma0_kip_kernel_has_feature("utcb"))
+    test[11].enabled = 0;
   if (scratch_mem == -1)
     test[12].enabled = 0;
 
@@ -1331,7 +1656,7 @@ main(int argc, const char **argv)
 
 invalid_key:
       if (test_nr == -1)
-	c = loop ? 'a' : getchar();
+	c = loop ? 'a' : getchar_multi();
       else
 	{
 	  c = test_nr + '0';
@@ -1369,7 +1694,7 @@ invalid_key:
 	    {
 	      printf("\n"
 	             ">> 0: (0-0)  1: (0-2)  2: (1-0)  3:(1-2)");
-	      switch (getchar())
+	      switch (getchar_multi())
 		{
 		case '0': smas_pos[0] = 0; smas_pos[1] = 0; break;
 		case '1': smas_pos[0] = 0; smas_pos[1] = 2; break;

@@ -31,14 +31,16 @@ void free_warning(void* addr)
 #endif
 
 #define dice_default_environment \
-  { CORBA_NO_EXCEPTION, 0, { param: 0 }, L4_IPC_NEVER_INITIALIZER, \
-    { fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
-    malloc_warning, free_warning }
+    { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+	{ param: 0 }, L4_IPC_NEVER_INITIALIZER, \
+	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
+	malloc_warning, free_warning }
 #define dice_default_server_environment \
-  { CORBA_NO_EXCEPTION, 0, { param: 0 }, L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0), \
-    { fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
-    malloc_warning, free_warning, \
-    0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
+    { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+	{ param: 0 }, L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0), \
+	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
+	malloc_warning, free_warning, L4_INVALID_ID_INIT, \
+	    0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
 
 #ifdef __cplusplus
 namespace dice
@@ -46,25 +48,38 @@ namespace dice
     
     extern inline
     CORBA_Environment::CORBA_Environment()
+    : _exception(),
+      _p(),
+      timeout(),
+      rcv_fpage(),
+      malloc(malloc_warning),
+      free(free_warning)
     {
-	major = 0;
-	repos_id = 0;
+	_exception._corba.major = CORBA_NO_EXCEPTION;
+	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
-	timeout.timeout = 0;
+	timeout = L4_IPC_NEVER;
 	rcv_fpage.fp.grant = 1;
 	rcv_fpage.fp.write = 1;
 	rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;
 	rcv_fpage.fp.zero = 0;
 	rcv_fpage.fp.page = 0;
-	malloc = malloc_warning;
-	free = free_warning;
     }
     
     extern inline
     CORBA_Server_Environment::CORBA_Server_Environment()
+    : _exception(),
+      _p(),
+      timeout(),
+      rcv_fpage(),
+      malloc(malloc_warning),
+      free(free_warning),
+      partner(L4_INVALID_ID),
+      user_data(0),
+      ptrs_cur(0)
     {
-	major = 0;
-	repos_id = 0;
+	_exception._corba.major = CORBA_NO_EXCEPTION;
+	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
 	timeout = L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0);
 	rcv_fpage.fp.grant = 1;
@@ -72,12 +87,8 @@ namespace dice
 	rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;
 	rcv_fpage.fp.zero = 0;
 	rcv_fpage.fp.page = 0;
-	malloc = malloc_warning;
-	free = free_warning;
-	user_data = 0;
 	for (int i=0; i < DICE_PTRS_MAX; i++)
 	    ptrs[i] = 0;
-	ptrs_cur = 0;
     }
 }
 #endif
@@ -92,35 +103,52 @@ namespace dice
 /*
  * defines some values and macros for the default function
  */
-#define DICE_GET_DWORD(buf, pos)   *((l4_umword_t*)(&((buf)->_bytes[pos*4])))
-#define DICE_GET_STRING(buf, pos)  ((buf)->_strings[pos]).rcv_str
-#define DICE_GET_STRSIZE(buf, pos) ((buf)->_strings[pos]).rcv_size
+
+#define DICE_GET_DWORD(buf, pos)   ((buf)->_word._word[pos])
+#define DICE_GET_STRING(buf, pos)  ((buf)->_word._strings[pos]).rcv_str
+#define DICE_GET_STRSIZE(buf, pos) ((buf)->_word._strings[pos]).rcv_size
 
 #define DICE_UNMARSHAL_DWORD(buf, var, pos)  var=DICE_GET_DWORD(buf, pos)
 #define DICE_MARSHAL_DWORD(buf, var, pos)    DICE_GET_DWORD(buf, pos)=var
 
-#define DICE_UNMARSHAL_STRING(buf, ptr, size, pos) ptr=DICE_GET_STRING(buf, pos); \
-                                                   size=DICE_GET_STRSIZE(buf, pos)
-#define DICE_MARSHAL_STRING(buf, ptr, size, pos)   ((buf)->_strings[pos]).snd_str=ptr; \
-                                                   ((buf)->_strings[pos]).snd_size=size
+#define DICE_UNMARSHAL_STRING(buf, ptr, size, pos) do { \
+    ptr=DICE_GET_STRING(buf, pos); \
+    size=DICE_GET_STRSIZE(buf, pos); \
+    } while (0)
+#define DICE_MARSHAL_STRING(buf, ptr, size, pos)   do { \
+    ((buf)->_word._strings[pos]).snd_str=ptr; \
+    ((buf)->_word._strings[pos]).snd_size=size; \
+    } while (0)
 
-#define DICE_UNMARSHAL_FPAGE(buf, snd_fpage, pos) (snd_fpage).snd_base=DICE_GET_DWORD(buf,pos); \
-                                                  (snd_fpage).fpage=DICE_GET_DWORD(buf,pos+1)
-#define DICE_MARSHAL_FPAGE(buf, snd_fpage, pos)   DICE_GET_DWORD(buf,pos)=(l4_umword_t)(snd_fpage).snd_base; \
-                                                  DICE_GET_DWORD(buf,pos+1)=(l4_umword_t)(snd_fpage).fpage.fpage
-#define DICE_MARSHAL_ZERO_FPAGE(buf, pos)         DICE_GET_DWORD(buf,pos)=0; \
-					          DICE_GET_DWORD(buf,pos+1)=0
+#define DICE_UNMARSHAL_FPAGE(buf, snd_fpage, pos) do { \
+    (snd_fpage).snd_base=DICE_GET_DWORD(buf,pos); \
+    (snd_fpage).fpage.raw=DICE_GET_DWORD(buf,pos+1); \
+    } while (0)
+#define DICE_MARSHAL_FPAGE(buf, snd_fpage, pos)   do { \
+    DICE_GET_DWORD(buf,pos)=(l4_umword_t)(snd_fpage).snd_base; \
+    DICE_GET_DWORD(buf,pos+1)=(l4_umword_t)(snd_fpage).fpage.fpage; \
+    } while (0)
+#define DICE_MARSHAL_ZERO_FPAGE(buf, pos)         do { \
+    DICE_GET_DWORD(buf,pos)=0; \
+    DICE_GET_DWORD(buf,pos+1)=0; \
+    } while (0)
 
-#define DICE_GET_DWORD_COUNT(buf)                 ((buf)->_dice_send_dope.md.dwords)
-#define DICE_GET_STRING_COUNT(buf)                ((buf)->_dice_send_dope.md.strings)
-#define DICE_SET_ZERO_COUNT(buf)                  (buf)->_dice_send_dope.md.dwords = 0; \
-						  (buf)->_dice_send_dope.md.strings = 0; \
-						  (buf)->_dice_send_dope.md.fpage_received = 0
-#define DICE_SET_DWORD_COUNT(buf, count)          (buf)->_dice_send_dope.md.dwords = count
-#define DICE_SET_STRING_COUNT(buf, count)         (buf)->_dice_send_dope.md.strings = count
-#define DICE_SET_SHORTIPC_COUNT(buf)              DICE_SET_DWORD_COUNT(buf,2); \
-                                                  DICE_SET_STRING_COUNT(buf,0); \
-						  (buf)->_dice_send_dope.md.fpage_received = 0
-#define DICE_SET_SEND_FPAGE(buf)                  (buf)->_dice_send_dope.md.fpage_received = 1					     
+#define DICE_SEND_DOPE(buf)             (buf)->_word._dice_send_dope
+#define DICE_SIZE_DOPE(buf)             (buf)->_word._dice_size_dope
+#define DICE_GET_DWORD_COUNT(buf)       (DICE_SEND_DOPE(buf).md.dwords)
+#define DICE_GET_STRING_COUNT(buf)      (DICE_SEND_DOPE(buf).md.strings)
+#define DICE_SET_ZERO_COUNT(buf)        do { \
+    DICE_SEND_DOPE(buf).md.dwords = 0; \
+    DICE_SEND_DOPE(buf).md.strings = 0; \
+    DICE_SEND_DOPE(buf).md.fpage_received = 0; \
+    } while (0)
+#define DICE_SET_DWORD_COUNT(buf, cnt)     DICE_SEND_DOPE(buf).md.dwords = cnt
+#define DICE_SET_STRING_COUNT(buf, cnt)    DICE_SEND_DOPE(buf).md.strings = cnt
+#define DICE_SET_SHORTIPC_COUNT(buf)     do { \
+    DICE_SET_DWORD_COUNT(buf,2); \
+    DICE_SET_STRING_COUNT(buf,0); \
+    DICE_SEND_DOPE(buf).md.fpage_received = 0; \
+    } while (0)
+#define DICE_SET_SEND_FPAGE(buf)     DICE_SEND_DOPE(buf).md.fpage_received = 1					     
 
 #endif // __DICE_L4_V2_H__

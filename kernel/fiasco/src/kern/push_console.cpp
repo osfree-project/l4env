@@ -3,14 +3,14 @@ INTERFACE:
 #include "console.h"
 #include "l4_types.h"
 
-class Space;
+class Mem_space;
 
 class Push_console : public Console
 {
 private:
   static const Unsigned8 *sequence_str;
   static Mword            sequence_len;
-  static Space           *sequence_space;
+  static Mem_space       *sequence_space;
 };
 
 
@@ -22,7 +22,7 @@ IMPLEMENTATION:
 
 Unsigned8 const *Push_console::sequence_str;
 Mword            Push_console::sequence_len;
-Space           *Push_console::sequence_space;
+Mem_space       *Push_console::sequence_space;
 
 static
 int
@@ -84,7 +84,7 @@ Push_console::write(char const * /*str*/, size_t len)
 
 PUBLIC static
 void
-Push_console::push(Unsigned8 const *str, size_t len, Space *space = 0)
+Push_console::push(Unsigned8 const *str, size_t len, Mem_space *space = 0)
 {
   sequence_str    = str;
   sequence_space  = space;

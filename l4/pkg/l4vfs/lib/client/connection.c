@@ -25,8 +25,8 @@ l4_threadid_t l4vfs_init_connection(l4_threadid_t server)
     server_thread = l4vfs_connection_init_connection_call(&server, &env);
 
     /* check if server implements connection interface */
-    if (env.major    == CORBA_SYSTEM_EXCEPTION &&
-        env.repos_id == CORBA_DICE_EXCEPTION_WRONG_OPCODE)
+    if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
+        DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_WRONG_OPCODE)
     {
         return server;   // no, server does not, so use the service thread
     }

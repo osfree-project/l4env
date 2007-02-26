@@ -32,7 +32,6 @@
 #include "input.h"
 
 
-static CORBA_Environment env = dice_default_environment;
 static CORBA_Object_base input_event_listener_base;
 static CORBA_Object input_event_listener;
 
@@ -43,21 +42,33 @@ static CORBA_Object input_event_listener;
 
 /*** DOPE PRESS EVENT CALLBACK ***/
 void ovl_input_press_callback(dope_event *e, void *arg) {
+	CORBA_Environment env = dice_default_environment;
 	if (!input_event_listener) return;
+#ifndef L4API_linux
+	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+#endif
 	input_listener_button_call(input_event_listener, 1, e->press.code, &env);
 }
 
 
 /*** DOPE RELEASE EVENT CALLBACK ***/
 void ovl_input_release_callback(dope_event *e, void *arg) {
+	CORBA_Environment env = dice_default_environment;
 	if (!input_event_listener) return;
+#ifndef L4API_linux
+	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+#endif
 	input_listener_button_call(input_event_listener, 2, e->release.code, &env);
 }
 
 
 /*** DOPE MOTION EVENT CALLBACK ***/
 void ovl_input_motion_callback(dope_event *e, void *arg) {
+	CORBA_Environment env = dice_default_environment;
 	if (!input_event_listener) return;
+#ifndef L4API_linux
+	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+#endif
 	input_listener_motion_call(input_event_listener,
 	                           e->motion.abs_x, e->motion.abs_y,
 	                           e->motion.rel_x, e->motion.rel_y,

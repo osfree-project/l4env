@@ -20,7 +20,7 @@
 
 
 INSTALLDIR_INC		?= $(DROPS_STDDIR)/include
-INSTALLDIR_INC_LOCAL	?= $(L4DIR)/include
+INSTALLDIR_INC_LOCAL	?= $(OBJ_BASE)/include
 
 INSTALLDIR		= $(INSTALLDIR_INC)
 INSTALLDIR_LOCAL	= $(INSTALLDIR_INC_LOCAL)
@@ -31,10 +31,8 @@ TARGET_CMD		:= find . -name \*.h -print
 else
 TARGET_CMD		:= echo $(TARGET)
 endif
-ifneq ($(origin INSTALL_INC_PREFIX), undefined)
-$(warning You have overwritten INSTALL_INC_PREFIX. I hope you know what you are doing.)
-endif
 INSTALL_INC_PREFIX	?= l4/$(PKGNAME)
+INCSRC_DIR		?= $(SRC_DIR)
 
 include $(L4DIR)/mk/Makeconf
 .general.d: $(L4DIR)/mk/include.mk
@@ -48,7 +46,7 @@ do_link = if (readlink($$dst) ne $$src) {                                     \
           }
 do_inst = system("install","-vm","644",$$src,$$dst) && exit 1;
 installscript = perl -e '                                                     \
-  chomp($$dir=`$(PWDCMD)`);                                                   \
+  chomp($$srcdir="$(INCSRC_DIR)");                                            \
   $$notify=1;                                                                 \
   while(<>) {                                                                 \
     split; while(@_) {                                                        \
@@ -57,7 +55,7 @@ installscript = perl -e '                                                     \
 	 s|^ARCH-([^/]*)/([^ ]*)$$|\1/$(INSTALL_INC_PREFIX)/\2| ||            \
 	 s|^L4API-([^/]*)/([^ ]*)$$|\1/$(INSTALL_INC_PREFIX)/\2| ||           \
 	 s|^([^ ]*)$$|$(INSTALL_INC_PREFIX)/\1|) {                            \
-	    $$src="$$dir/$$src";                                              \
+	    $$src="$$srcdir/$$src" if $$src !~ /^\//;                         \
 	    $$dstdir=$$dst="$(if $(1),$(INSTALLDIR_LOCAL),$(INSTALLDIR))/$$_";\
 	    $$dstdir=~s|/[^/]*$$||;                                           \
 	    -d $$dstdir || system("install","-vd",$$dstdir) && exit 1;        \

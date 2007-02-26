@@ -1,4 +1,4 @@
-INTERFACE [ia32]:
+INTERFACE [ia32,amd64]:
 
 EXTENSION class Utcb_init
 {
@@ -35,9 +35,10 @@ Utcb_init::init()
 
   if (!Vmem_alloc::page_alloc ((void *) global_utcb_ptr,
 			       Vmem_alloc::ZERO_FILL,
-			       (Space::Page_user_accessible
-				| Space::Page_writable
-				| Pd_entry::global())))
+			       (Mem_space::Page_user_accessible
+				| Mem_space::Page_writable
+				| Pd_entry::global()
+				| Page::CACHEABLE)))
     panic ("UTCB pointer page allocation failure");
 
   Cpu::get_gdt()->set_entry_byte (Gdt::gdt_utcb / 8, 
@@ -49,11 +50,35 @@ Utcb_init::init()
 				  Gdt_entry::Size_32);
 
   Cpu::set_gs (gs_value());
-  init_lipc_kip();
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [ia32-!utcb]:
+IMPLEMENTATION [amd64-utcb]:
+
+#include <cstdio>
+#include "gdt.h"
+#include "paging.h"
+#include "panic.h"
+#include "space.h"
+#include "vmem_alloc.h"
+
+IMPLEMENT 
+void
+Utcb_init::init()
+{
+  global_utcb_ptr = (Address*) Mem_layout::Utcb_ptr_page;
+
+  if (!Vmem_alloc::page_alloc ((void *) global_utcb_ptr,
+			       Vmem_alloc::ZERO_FILL,
+			       (Mem_space::Page_user_accessible
+				| Mem_space::Page_writable
+				| Pd_entry::global()
+				| Page::CACHEABLE)))
+    panic ("UTCB pointer page allocation failure");
+}
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [{ia32,amd64}-!utcb]:
 
 #include "gdt.h"
 
@@ -101,7 +126,6 @@ Utcb_init::init()
 			 Mem_layout::Utcb_ptr_page,	// address
 			 sizeof (Address) - 1);		// limit
 
-  init_lipc_kip();
 }
 
 
@@ -113,35 +137,3 @@ Unsigned32
 Utcb_init::gs_value() 
 { return 0; }
 
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION[{ia32,ux}-!lipc]:
-
-PRIVATE static inline
-void
-Utcb_init::init_lipc_kip()
-{}
-
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION[{ia32,ux}-lipc]:
-
-PRIVATE static
-void
-Utcb_init::init_lipc_kip()
-{
-  /* sizeof(Utcb) should be a power of 2 */
-  assert((sizeof(Utcb) & (sizeof(Utcb) - 1)) == 0);
-
-  // copy lipc code in the kip
-  Kip *ki = Kip::k();
-
-  // check if the lipc code fits in the kip
-  assert((unsigned int) (&Mem_layout::asm_lipc_code_end 
-			 - &Mem_layout::asm_lipc_code_start) 
-         <= sizeof(ki->lipc_code));
-
-  memcpy (ki->lipc_code, &Mem_layout::asm_lipc_code_start,
-          &Mem_layout::asm_lipc_code_end - &Mem_layout::asm_lipc_code_start);
-  printf("Enabling KIP-LIPC\n");
-}

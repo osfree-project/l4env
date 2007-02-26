@@ -45,13 +45,31 @@ interface overlay {
 	/*** MAKE OVERLAY WINDOW VISIBLE ***/
 	void open_window([in] int win_id);
 
-	/*** CLISE OVERLAY WINDOW ***/
+	/*** CLOSE OVERLAY WINDOW ***/
 	void close_window([in] int win_id);
 
 	/*** SET POSITION AND SIZE OF AN OVERLAY WINDOW ***/
 	void place_window([in] int win_id,
 	                  [in] int x, [in] int y, [in] int w, [in] int h);
 
-	/*** BRING OVERLAY WINDOW ON TOP ***/
-	void top_window([in] int win_id);
+	/*** DEFINE STACKING POSITION OF WINDOW ***
+	 *
+	 * \param neighbor  neighbor view id or
+	 *                 -1  top or bottom of view stack
+	 * \param behind    0  insert view in front or
+	 *                  1  behind the specified neightbor
+	 *
+	 * To insert a view at the top of the view stack, specify
+	 * neighbor = -1 and behind = 1. To insert a view at the
+	 * bottom of the view stack, specify neighbor = -1 and
+	 * behind = 0.
+	 */
+	void stack_window([in] int win_id, [in] int neighbor_id, [in] int behind,
+	                  [in] int do_redraw);
+
+	/*** SET TITLE OF AN OVERLAY WINDOW ***/
+	void title_window([in] int win_id, [in, string] char *title);
+
+	/*** DEFINE OVERLAY WINDOW THAT IS USED AS DESKTOP BACKGROUND ***/
+	void set_background([in] int win_id);
 };

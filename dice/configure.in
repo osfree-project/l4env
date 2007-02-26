@@ -1,16 +1,20 @@
 dnl Process this file with autoconf to produce a configure script.
 
+AC_PREREQ(2.50)
+
 AC_INIT(src/main.cpp)
-AM_INIT_AUTOMAKE(dice, 2.2.9)
+AM_INIT_AUTOMAKE(dice, 3.1.1)
 AM_CONFIG_HEADER(config.h)
 
 dnl Test for AIX
 AC_AIX
 
+dnl dynamic load library support
+AC_PROG_RANLIB
+
 dnl Checks for programs.
 AC_PROG_CXX
 AC_SUBST(CXX)
-AC_PROG_RANLIB
 AM_PROG_LEX
 dnl check for specific bison version
 AC_PROG_YACC
@@ -72,17 +76,30 @@ dnl Check for debugging
 AC_ARG_ENABLE(debug,
 [  --disable-debug         disable debugging code (assert, etc.)],
 [case "${enableval}" in
-  yes) debug=true ;;
-  no) debug=false ;;
-  *) AC_MSG_ERROR(bad value ${enableval} for --disable-debug) ;;
+yes) debug=true ;;
+no) debug=false ;;
+*) AC_MSG_ERROR(bad value ${enableval} for --disable-debug) ;;
 esac],[debug=true])
 if test "$debug" == "false" ; then
   CPPFLAGS="$CPPFLAGS -DNDEBUG"
   AC_SUBST(CPPFLAGS)
 fi
 
+dnl Check for verbose build
+AC_ARG_ENABLE(verbose,
+[  --disable-verbose        disable verbose build],
+[case "${enableval}" in
+yes) verbose=true ;;
+no) verbose=false ;;
+*) AC_MSG_ERROR(bad value ${enableval} for --disable-verbose) ;;
+esac],[verbose=true])
+if test "$verbose" == "false" ; then
+  AM_MAKEFLAGS="$AM_MAKEFLAGS -s"
+  AC_SUBST(AM_MAKEFLAGS)
+fi
+
 dnl Modified files.
-AC_OUTPUT(
+AC_CONFIG_FILES([
 GNUmakefile
 doc/Makefile
 doc/manual/Makefile
@@ -100,14 +117,15 @@ src/fe/Makefile
 src/be/Makefile
 src/be/l4/Makefile
 src/be/l4/v2/Makefile
+src/be/l4/v2/amd64/Makefile
+src/be/l4/v2/ia32/Makefile
 src/be/l4/x0/Makefile
-src/be/l4/x0/arm/Makefile
-src/be/l4/x0/ia32/Makefile
-src/be/l4/x0adapt/Makefile
 src/be/l4/v4/Makefile
 src/be/l4/v4/ia32/Makefile
 src/be/sock/Makefile
 src/be/cdr/Makefile
 include/Makefile
 include/dice/Makefile
-)
+])
+
+AC_OUTPUT

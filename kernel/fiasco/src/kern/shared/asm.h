@@ -44,7 +44,7 @@
 	// check for the right thread state 
 	// (cancel and fpu_owner might also be set)
 	movl	OFS__THREAD__STATE(%ebx), %edx
-	andl	$~(Thread_cancel | Thread_fpu_owner), %edx
+	andl	$~(Thread_cancel | Thread_fpu_owner | Thread_alien | Thread_dis_alien), %edx
 	cmpl	$(Thread_ready), %edx
 	jne	1f
 	.text	1

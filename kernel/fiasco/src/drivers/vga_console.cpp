@@ -64,7 +64,7 @@ public:
    */
   int getchar( bool blocking = true );
 
-  inline bool const is_working();
+  inline bool is_working();
 
 private:
 
@@ -106,6 +106,7 @@ IMPLEMENTATION:
 #include <cctype>
 
 #include "io.h"
+#include "mem_layout.h"
 
 
 IMPLEMENT
@@ -137,7 +138,7 @@ Vga_console::Vga_console( Address vbase, unsigned width, unsigned height,
   _is_working = true;
   *vm = x;
 
-  if (vbase == 0xf00b0000)
+  if (vbase == Mem_layout::Adap_vram_mda_beg)
     _crtc = 0x3b4;
   else
     _crtc = 0x3d4;
@@ -454,7 +455,7 @@ Vga_console::~Vga_console()
 
 
 IMPLEMENT inline
-bool const Vga_console::is_working()
+bool Vga_console::is_working()
 {
   return _is_working;
 }

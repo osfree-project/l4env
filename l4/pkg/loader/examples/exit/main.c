@@ -26,12 +26,12 @@
 #include <l4/loader/loader-client.h>
 #include <l4/env/env.h>
 #include <l4/thread/thread.h>
-#include <l4/semaphore/semaphore.h>
 #include <l4/exec/exec.h>
 #include <l4/log/l4log.h>
 #include <l4/events/events.h>
 #include <l4/util/reboot.h>
 #include <l4/util/rand.h>
+#include <l4/util/util.h>
 
 #include <stdio.h>
 #include <stdlib.h>

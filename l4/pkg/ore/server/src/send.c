@@ -11,40 +11,46 @@
 
 #include "ore-local.h"
 
-CORBA_int ore_ore_send_component(CORBA_Object _dice_corba_obj,
-                       l4ore_handle_t channel,
+/* Send component function.
+ *
+ * - perform sanity and security checks
+ * - call the client's real send function
+ */
+CORBA_int ore_rxtx_send_component(CORBA_Object _dice_corba_obj,
                        const CORBA_char *buf,
-                       l4_umword_t size,
-                       int tx_blocking,
-                       short *_dice_reply,
+                       l4_size_t size,
                        CORBA_Server_Environment *_dice_corba_env)
 {
   int ret = 0;
+  int channel = *(int *)l4thread_data_get_current(__l4ore_tls_id_key);
+  
+  LOGd(ORE_DEBUG_COMPONENTS, "send on channel %d", channel);
+  LOG_MAC(ORE_DEBUG_COMPONENTS, buf);
 
-  LOGd_Enter(ORE_DEBUG_COMPONENTS);
-
-  l4lock_lock(&ore_connection_table[channel].channel_lock);
-
-  if (ore_connection_table[channel].in_use == 0)
-    {
-      LOG_Error("Trying to send via unused connection.");
-      ret = -L4_EBADF;
-    }
-
+  ret = sanity_check_rxtx(channel, *_dice_corba_obj);
+  if (ret < 0)
+      return ret;
+  
   if (ore_connection_table[channel].config.rw_active == 0)
     {
       LOG_Error("Trying to send via inactive connection.");
       ret = -L4_EBADF;
     }
 
-  if (ret == 0)
-    ret = ore_connection_table[channel].tx_component_func(_dice_corba_obj,
-                                                        channel, buf, size,
-                                                        tx_blocking,
-                                                        _dice_reply,
-                                                        _dice_corba_env);
+  /* blocked-waiting clients can have a timeout. we recognize this here,
+   * because if a client calls send(), it has stopped waiting for RX
+   */
+  if (ore_connection_table[channel].flags & ORE_FLAG_RX_WAITING &&
+	  l4_thread_equal(ore_connection_table[channel].waiting_client,
+		  			  *_dice_corba_obj))
+	  ore_connection_table[channel].flags &= ~ORE_FLAG_RX_WAITING;
 
-  l4lock_unlock(&ore_connection_table[channel].channel_lock);
+
+  // still no error? then go on
+  if (!ret)
+    ret = ore_connection_table[channel].tx_component_func(
+                _dice_corba_obj, buf, size, _dice_corba_env);
 
   return ret;
 }
+

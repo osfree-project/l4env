@@ -49,13 +49,14 @@
  *         - -#L4_EINVAL_OFFS offset points beyond end of dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_memphys_dmphys_pagesize_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint32_t ds_id, l4_uint32_t offs,
-                                          l4_uint32_t size,
-                                          l4_uint32_t pagesize,
-                                          l4_uint32_t *ok,
-                                          CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_memphys_dmphys_pagesize_component (CORBA_Object _dice_corba_obj,
+                                           unsigned long ds_id,
+                                           unsigned long offs,
+                                           unsigned long size,
+                                           unsigned long pagesize,
+                                           int *ok,
+                                           CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
@@ -70,21 +71,21 @@ if_l4dm_memphys_dmphys_pagesize_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
 	      ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %ld!",
 	      l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;
     }
 
-  if ((pagesize != DMPHYS_LOG2_PAGESIZE) && 
+  if ((pagesize != DMPHYS_LOG2_PAGESIZE) &&
       (pagesize != DMPHYS_LOG2_SUPERPAGESIZE))
     {
       /* unsupported pagesize, we just print a warning, but continue to
        * check, the area migth be available with a larger pagesize */
-      LOG_printf("DMphys: warning, unsupported pagesize %d!\n", pagesize);
+      LOG_printf("DMphys: warning, unsupported pagesize %ld!\n", pagesize);
     }
 
   /* find offset in dataspace */

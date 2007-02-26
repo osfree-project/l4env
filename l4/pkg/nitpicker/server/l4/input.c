@@ -40,47 +40,61 @@ void foreach_input_event(void (*handle)(int type, int code, int rx, int ry)) {
 	static int num_ev, curr_ev;
 	unsigned long now = l4_tsc_to_us(l4_rdtsc());
 
-	/* check if the time is right for handling the input */
-	if (now < last_input + 20*1000) return;
+	/*
+	 * Check if the time is right for handling the input
+	 * or if the time stamp counter wrapped.
+	 */
+	if ((now < last_input + 20*1000) && (now > last_input)) return;
 	last_input = now;
 
-	/* poll some new input events from libinput */
-	if ((num_ev == curr_ev) && l4input_ispending()) {
-		curr_ev = 0;
-		num_ev  = l4input_flush(ev, MAX_INPUT_EVENTS);
-	}
+	while (1) {
 
-	/* no event */
-	if (curr_ev >= num_ev) return;
-
-	/* merge motion events */
-	if (ev[curr_ev].type == EV_REL) {
-		int rx = 0, ry = 0;
-
-		/* merge motion events */
-		for (; (ev[curr_ev].type == EV_REL) && (curr_ev < num_ev); curr_ev++) {
-			rx += ev[curr_ev].code ? 0 : ev[curr_ev].value;
-			ry += ev[curr_ev].code ? ev[curr_ev].value : 0;
+		/* poll some new input events from libinput */
+		if ((num_ev == curr_ev) && l4input_ispending()) {
+			curr_ev = 0;
+			num_ev  = l4input_flush(ev, MAX_INPUT_EVENTS);
 		}
 
-		handle(NITEVENT_TYPE_MOTION, 0, rx, ry);
-		return;
-	}
+		/* no event */
+		if (curr_ev >= num_ev) return;
 
-	if (ev[curr_ev].type == EV_KEY) {
+		/* merge relative events of same type */
+		if (ev[curr_ev].type == EV_REL) {
+			int rx = 0, ry = 0, wx = 0, wy = 0;
 
-		int type = ev[curr_ev].value ? NITEVENT_TYPE_PRESS : NITEVENT_TYPE_RELEASE;
-		int code = ev[curr_ev].code;
+			/* merge motion events */
+			for (; (ev[curr_ev].type == EV_REL) && (curr_ev < num_ev); curr_ev++) {
+				rx += (ev[curr_ev].code == REL_X)      ? ev[curr_ev].value : 0;
+				ry += (ev[curr_ev].code == REL_Y)      ? ev[curr_ev].value : 0;
+				wx += (ev[curr_ev].code == REL_HWHEEL) ? ev[curr_ev].value : 0;
+				wy += (ev[curr_ev].code == REL_WHEEL)  ? ev[curr_ev].value : 0;
+			}
 
+			if (rx || ry) handle(NITEVENT_TYPE_MOTION, 0, rx, ry);
+			if (wx || wy) handle(NITEVENT_TYPE_WHEEL,  0, wx, wy);
+
+			continue;
+		}
+
+		if (ev[curr_ev].type == EV_KEY) {
+
+			int type = ev[curr_ev].value ? NITEVENT_TYPE_PRESS : NITEVENT_TYPE_RELEASE;
+			int code = ev[curr_ev].code;
+
+			/* l4input delivers wrong keycode for PRINT, patch this */
+			if (code == KEY_SYSRQ) code = KEY_PRINT;
+
+			curr_ev++;
+
+			/* handle key press/release event */
+			handle(type, code, 0, 0);
+
+			continue;
+		}
+
+		/* skip any other event */
 		curr_ev++;
-
-		/* handle key press/release event */
-		handle(type, code, 0, 0);
-		return;
 	}
-
-	/* skip any other event */
-	curr_ev++;
 }
 
 
@@ -90,7 +104,7 @@ int input_init(void) {
 	TRY(!l4_calibrate_tsc(), "L4_calibrare_tsc failed");
 
 	TRY(l4input_init(l4io_page ? l4io_page->omega0 : 0,
-	                 L4THREAD_DEFAULT_PRIO, NULL),
+	                 0xc0, NULL),
 	                 "Initialization of l4input failed");
 
 	return 0;

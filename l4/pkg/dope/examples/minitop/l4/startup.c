@@ -21,7 +21,7 @@
 
 /*** L4 INCLUDES ***/
 #include <l4/log/l4log.h>
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/util.h>
 
 /*** LOCAL INCLUDES ***/
@@ -32,13 +32,13 @@ l4_ssize_t l4libc_heapsize = 500*1024;
 
 
 void native_startup(int argc, char **argv) {
-  l4_kernel_info_t *kip = l4util_kip_map();
+  l4_kernel_info_t *kip = l4sigma0_kip_map(L4_INVALID_ID);
   if (!kip)
     {
       printf("Cannot map kip");
       exit(-1);
     }
-  if (kip->version != 0x01004444)
+  if (kip->version != L4SIGMA0_KIP_VERSION_FIASCO)
     {
       printf("Only works with Fiasco!");
       exit(-2);

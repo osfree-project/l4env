@@ -68,6 +68,8 @@ l4th_thread_start(void)
   LOGdL(DEBUG_CREATE, "I am at %p, "l4util_idfmt" (l4th: %x)",
         me, l4util_idstr(me->l4_id), me->id);
 
+  l4th_thread_setup_arch(me);
+
   /* call thread function */
   me->func(me->startup_data);
 
@@ -122,7 +124,7 @@ __send_startup_notification(l4th_tcb_t * tcb)
     {
       LOG_printf("l4thread: Error sending startup notification (%d -> %d)\n",
              tcb->id, tcb->parent->id);
-      LOG_Error("l4thread: IPC error %02x, magic 0x%08x -> 0x%08x",
+      LOG_Error("l4thread: IPC error %02x, magic 0x%08x -> 0x%08lx",
                 error, L4THREAD_STARTUP_MAGIC, ~dw0);
       return -L4_EIPC;
     }
@@ -305,7 +307,7 @@ __create(l4thread_t thread, l4thread_fn_t func, const char * name,
       l4th_tcb_unlock(tcb);
       l4th_tcb_free(tcb);
       l4th_tcb_unlock(me);
-      return ret;
+      return -L4_EUSED;
     }
 
   LOGdL(DEBUG_CREATE,
@@ -355,7 +357,7 @@ __create(l4thread_t thread, l4thread_fn_t func, const char * name,
       tcb->stack.map_addr = stack_pointer - stack_size;
     }
 
-  LOGdl(DEBUG_STACK_INIT, "Setting up stack at %p+%d...",
+  LOGdl(DEBUG_STACK_INIT, "Setting up stack at %p+%zd...",
        (void*)tcb->stack.map_addr, tcb->stack.size);
 
   /* setup stack */
@@ -371,8 +373,9 @@ __create(l4thread_t thread, l4thread_fn_t func, const char * name,
 
   /* start thread */
   LOGdL(DEBUG_CREATE,"creating thread %d ("l4util_idfmt")\n" \
-        " fn at 0x%08x, stack high at 0x%08x, data 0x%08x",
-        tcb->id, l4util_idstr(tcb->l4_id), (unsigned)func, sp, (unsigned)data);
+        " fn at 0x%08lx, stack high at 0x%08lx, data 0x%08lx",
+        tcb->id, l4util_idstr(tcb->l4_id), (unsigned long)func,
+	sp, (unsigned long)data);
 
   tcb->func = func;
   tcb->startup_data = data;
@@ -599,7 +602,7 @@ l4thread_setup(l4_threadid_t l4_id, const char * name,
   l4th_tcb_t * tcb;
   int ret;
 
-  LOGdL(DEBUG_CREATE, "thread "l4util_idfmt"\n  stack 0x%08x-0x%08x\n",
+  LOGdL(DEBUG_CREATE, "thread "l4util_idfmt"\n  stack 0x%08lx-0x%08lx\n",
         l4util_idstr(l4_id), stack_low, stack_high);
 
   /* setup tcb */

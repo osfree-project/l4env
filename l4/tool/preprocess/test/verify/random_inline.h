@@ -225,7 +225,7 @@ inline void function68();
 void function69();
 
 //
-// IMPLEMENTATION includes follow (for use by inline functions)
+// IMPLEMENTATION includes follow (for use by inline functions/templates)
 //
 
 #line 16 "random.cpp"
@@ -236,6 +236,11 @@ void function69();
 // IMPLEMENTATION of inline functions (and needed classes)
 //
 
+#line 19 "random.cpp"
+
+class Rambo
+{
+};
 
 #line 23 "random.cpp"
 
@@ -249,11 +254,6 @@ inline void Foo::function0() {}
 
 
 inline void Foo::function1() {}
-#line 19 "random.cpp"
-
-class Rambo
-{
-};
 
 #line 32 "random.cpp"
 

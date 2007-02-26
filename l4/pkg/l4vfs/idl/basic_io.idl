@@ -26,21 +26,21 @@ library l4vfs
     [uuid(50)]
     interface basic_io : common_io
     {
-        /** 
+        /**
          * @brief open an object
-         * 
+         *
          * @param object_id id of the object to open
          * @param flags     flags as described in 'man 2 open'
-         * 
+         *
          * @return handle to open object (>= 0)
          *         - -errorcode in case of error (see 'man 2 open')
          */
         object_handle_t open([in] object_id_t object_id, [in] int flags);
 
 
-        /** 
+        /**
          * @brief create and open a new object
-         * 
+         *
          * @note  The name should be a local name, relative to parent.
          *        It is up to the clientlib to resolve longer names to
          *        a pair of (parent, name).
@@ -49,7 +49,7 @@ library l4vfs
          * @param name   name of the object to be created
          * @param flags  flags as described in 'man 2 open'
          * @param mode   see 'man 2 open', ignored for now by most servers
-         * 
+         *
          * @return handle to created and opened object (>= 0)
          *         - -errorcode in case of error (see 'man 2 open')
          */
@@ -58,81 +58,82 @@ library l4vfs
                               [in] int flags,
                               [in] l4vfs_mode_t mode);
 
-        /** 
+        /**
          * @brief remove an object from the name space
-         * 
+         *
          * @param file object to unlink
-         * 
+         *
          * @return 0 on success, errorcode otherwise, (see 'man 2 unlink')
          */
         int             unlink([in] object_id_t file);
 
-        /** 
+        /**
          * @brief remove an directory from the name space
-         * 
+         *
          * @param dir directory to remove
-         * 
+         *
          * @return 0 on success, errorcode otherwise, (see 'man 2 rmdir')
          */
         int             rmdir([in] object_id_t dir);
 
-        /** 
+        /**
          * @brief change seek position for opened file
-         * 
+         *
          * @param handle handle to operate on
          * @param offset target offset
          * @param whence addressing mode to use (see 'man 2 lseek')
-         * 
+         *
          * @return new seek position in file, on success
          *         - -errocode on error (see 'man 2 lseek')
-         */ 
+         */
         l4vfs_off_t     lseek([in] object_handle_t handle,
                               [in] l4vfs_off_t offset,
                               [in] int whence);
 
-        /** 
+        /**
          * @brief Synchronize file state with storage medium
-         * 
+         *
          * @param handle handle to operate on
-         * 
+         *
          * @return 0 on success, errorcode otherwise (see 'man 2 fsync')
          */
         int             fsync([in] object_handle_t handle);
 
-        /** 
+        /**
          * @brief
-         * 
+         *
          * @param  handle handle to operate on
          * @retval dirp   pointer to memory buffer to fill with results
          * @param  count  size of the memory buffer in bytes
-         * 
+         *
          * @return the number of bytes read, on success,
          *         - errorcode otherwise (see 'man 2 getdents')
          */
         int             getdents([in] object_handle_t handle,
                                  [out, size_is(count),
                                   transmit_as(unsigned char),
-                                  ref, prealloc] l4vfs_dirent_t * dirp,
+                                  ref, prealloc_client, prealloc_server]
+				  l4vfs_dirent_t ** dirp,
                                  [in, out] unsigned int * count);
 
-        /** 
+        /**
          * @brief get metadata about object
-         * 
+         *
          * @param  object_id object_id to operate on
          * @retval buf       memory buffer to copy results to
-         * 
+         *
          * @return 0 on success,
          *         -  -errorcode otherwise
          */
         int             stat([in] object_id_t object_id,
                              [out] l4vfs_stat_t * buf);
 
-        /** 
+        /**
          * @brief check access right for a specific access mode
-         * 
+         *
          * @param file object to operate on
          * @param mode access mode to check right for
-         * 
+         *
          * @return 0 on success,
          *         - -errorcode otherwise (see 'man 2 access')
          */

@@ -4,7 +4,8 @@ L4DIR		?= $(PKGDIR)/../../..
 TARGET =	idl
 
 # verner config
--include $(PKGDIR)/../Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/../Makeconf.bid.local
 
 ifeq "$(VCONREMOTE_BUILD)" "y"
 TARGET +=	lib server

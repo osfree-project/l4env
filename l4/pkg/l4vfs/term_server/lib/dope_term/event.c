@@ -26,8 +26,8 @@ extern int _DEBUG;
 void dope_term_eventloop( void *app )
 {
     l4thread_started(NULL);
-    
+
     dope_eventloop(*(long *)app);
-    
+
     return; // probably never
 }

@@ -1,69 +1,110 @@
-#
-# sample menu.lst for running Qt applications in DROPS
-# 
-# based on Adam's menu.lst from the DROPS demo disk
-#
-#
-# This menu.lst file gives some hints on how to run Qt applications
-# in the DROPS environment. Adapt the paths/devices below as needed.
-#
+# #########################################################
+# setup German keyboard
+setkey parenleft asterisk
+setkey parenright parenleft
+setkey equal parenright
+setkey slash ampersand
+setkey question underscore
+setkey minus slash
+setkey underscore question
+setkey z y
+setkey y z
 
-default 1
+# no timeout
+timeout 0
+default 0
 
-color 23 52
+#serial --unit=1 --speed=115200
+#terminal serial console
 
-set P              := (hd0,2)/v2
-set QT             := (hd0,2)/qt3
+# #########################################################
 
-set GRUB_COMPORT   ?= 0
-set FIASCO_COMPORT ?= 1
+set R = (nd)/tftpboot/cw183155
+set QT3 = $(R)/qt3
 
-set SERIAL         ?= -noserial
-set WAIT           ?= -nowait
-set FIASCOARGS     ?= "$(SERIAL) $(WAIT) -nokdb"
+# #########################################################
 
-set VBE_MODE       = 0x114
+title Qt3: QRun via TFTP
 
-title ################## Qt/Embedded for DROPS #####################
-echo
-
-title Qt3 client/server test
-kernel $(P)/rmgr -sigma0 task modname "simple_file_server" module modname "fontdir" module modname "helvetica_100_50.qpf"
-module $(P)/main $(FIASCOARGS)
+kernel $(R)/bin-qt/bootstrap -sigma0 -roottask -symbols -serial 
 modaddr 0x03000000
-module $(P)/sigma0
-module $(P)/names
-module $(P)/log --prio 0xA1 --buffer 0
-module $(P)/dm_phys -v
-module $(P)/rtc
-module $(P)/con
-module $(P)/name_server
-module $(P)/local_socks
-module $(P)/simple_file_server -v14
-module $(QT)/fontdir
-module $(QT)/helvetica_100_50.qpf
-module $(P)/fstab -c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts
-module $(P)/qttest_server -qws -display DROPS:0
-module $(P)/qttest_client -display DROPS:0
-vbeset $(VBE_MODE)
+module $(R)/fiasco/build/fiasco -nokdb -nowait -serial -comport 1 -serial_esc -jdb_cmd=JH
+module $(R)/bin-qt/sigma0
+module $(R)/bin-qt/roottask -sigma0 -symbols -lines task modname "bmodfs" attached 2 modules
+module $(R)/fiasco/build/Symbols
+module $(R)/fiasco/build/Lines
+module $(R)/bin-qt/names
+module $(R)/bin-qt/dm_phys
+module $(R)/bin-qt/log
+module $(R)/bin-qt/rtc
+module $(R)/bin-qt/l4io --noirq
+module $(R)/bin-qt/tftp --l4io
+module $(R)/bin-qt/events
+module $(R)/bin-qt/simple_ts --events --tasks 300
+module $(R)/bin-qt/con --l4io --vbe=0x117
+module $(R)/bin-qt/name_server
+module $(R)/bin-qt/local_socks
+module $(R)/bin-qt/l4exec
+module $(R)/bin-qt/bmodfs
+ module $(R)/cfg/cfg_qrun
+ module $(R)/bin-qt/bmodfs
+module $(R)/bin-qt/loader $(R)/cfg/cfg_qt3_file_servers $(R)/cfg/cfg_qrun
 
-title Qt3 text editor
-kernel $(P)/rmgr -sigma0 task modname "simple_file_server" module modname "fontdir" module modname "helvetica_100_50.qpf"
-module $(P)/main $(FIASCOARGS)
-modaddr 0x03000000
-module $(P)/sigma0
-module $(P)/names
-module $(P)/log --prio 0xA1 --buffer 0
-module $(P)/dm_phys -v
-module $(P)/rtc
-module $(P)/con
-module $(P)/name_server
-module $(P)/local_socks
-module $(P)/simple_file_server -v14
-module $(QT)/fontdir
-module $(QT)/helvetica_100_50.qpf
-module $(P)/fstab -c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts
-module $(P)/qttest_application -qws -display DROPS:0
-vbeset $(VBE_MODE)
+# #########################################################
 
+title Qt3: QRun via BMODFS
+
+kernel $(R)/bin-qt/bootstrap -sigma0 -roottask -serial 
+modaddr 0x02000000
+module $(R)/fiasco/build/fiasco -nokdb -nowait -serial -comport 1 -jdb_cmd=JH
+module $(R)/bin-qt/sigma0
+module $(R)/bin-qt/roottask -sigma0 task modname "bmodfs" attached 34 moddules
+module $(R)/bin-qt/names
+module $(R)/bin-qt/dm_phys --events
+module $(R)/bin-qt/log
+module $(R)/bin-qt/rtc
+module $(R)/bin-qt/l4io --noirq
+module $(R)/bin-qt/events
+module $(R)/bin-qt/simple_ts --events --tasks 300
+module $(R)/bin-qt/con --l4io --vbe=0x117
+module $(R)/bin-qt/name_server
+module $(R)/bin-qt/local_socks --events
+module $(R)/bin-qt/l4exec
+module $(R)/bin-qt/usbhid
+module $(R)/bin-qt/bmodfs
+ module $(R)/bin-qt/libloader.s.so
+ module $(R)/bin-qt/simple_file_server
+ module $(R)/bin-qt/tmpfs
+ module $(R)/bin-qt/fstab
+ module $(R)/bin-qt/qt3_qrun
+ module $(R)/bin-qt/qt3_sheep
+ module $(R)/bin-qt/qt3_qvv
+ module $(R)/bin-qt/qt3_top
+ module $(R)/bin-qt/qt3_qtinyeditor
+ module $(R)/bin-qt/qt3_widgets
+ module $(R)/bin-qt/qt3_tutorial
+ module $(R)/cfg/cfg_qrun
+ module $(R)/cfg/cfg_qt3_file_servers
+ module $(QT3)/fonts/fontdir
+ module $(QT3)/fonts/helvetica_100_50.qpf
+ module $(QT3)/fonts/helvetica_100_50i.qpf
+ module $(QT3)/fonts/helvetica_100_75.qpf
+ module $(QT3)/fonts/helvetica_180_50.qpf
+ module $(QT3)/text/README.qrun
+ module $(QT3)/text/application.cc
+ module $(QT3)/images/Bay.jpg
+ module $(QT3)/images/Fantasy.jpg
+ module $(QT3)/images/GreenInfinity.jpg
+ module $(QT3)/images/Redwoods.jpg
+ module $(QT3)/images/qt.png
+ module $(QT3)/images/trolltech.gif
+ module $(QT3)/sheep/speicher.ini
+ module $(QT3)/sheep/gameparm.ini
+ module $(QT3)/sheep/hiscore.ini
+ module $(QT3)/sheep/userlevels.csv
+ module $(QT3)/sheep/levelfile.csv
+ module $(QT3)/sheep/hiscore.csv
+ module $(QT3)/sheep/help.rtf
+ module $(QT3)/sheep/about.rtf
+module $(R)/bin-qt/loader --fprov=BMODFS --events cfg_qt3_file_servers cfg_qrun
 

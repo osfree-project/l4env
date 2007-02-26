@@ -2,6 +2,7 @@
 
 #undef L4V2_IPC_SYSENTER
 #undef L4X0_IPC_SYSENTER
+#undef CONFIG_L4_CALL_SYSCALLS
 
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>

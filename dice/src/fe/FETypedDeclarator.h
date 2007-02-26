@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FETypedDeclarator.h
- *    \brief   contains the declaration of the class CFETypedDeclarator
+ *  \file    dice/src/fe/FETypedDeclarator.h
+ *  \brief   contains the declaration of the class CFETypedDeclarator
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -42,18 +42,18 @@ enum TYPEDDECL_TYPE {
     TYPEDECL_ATTRIBUTE  /**< an interface attribute member */
 };
 
-#include "fe/FEInterfaceComponent.h"
+#include "FEInterfaceComponent.h"
+#include "FEAttribute.h"
+#include "FEDeclarator.h"
 #include "Attribute-Type.h" // needed for the declaration of ATTR_TYPE
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFETypeSpec;
-class CFEDeclarator;
-class CFEAttribute;
 
-/**    \class CFETypedDeclarator
- *    \ingroup frontend
- *    \brief represents a typed declarator
+/** \class CFETypedDeclarator
+ *  \ingroup frontend
+ *  \brief represents a typed declarator
  *
  * A typed declarator is a declared variable with a type and attributes.
  */
@@ -76,48 +76,40 @@ public:
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFETypedDeclarator(CFETypedDeclarator &src);
 
 // operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
-    virtual void AddDeclarator(CFEDeclarator *pDeclarator);
-    virtual void AddAttribute(CFEAttribute *pNewAttr);
-    virtual void RemoveAttribute(ATTR_TYPE eAttrType);
-    virtual bool RemoveDeclarator(CFEDeclarator *pDeclarator);
+    virtual void Accept(CVisitor&);
     virtual CObject* Clone();
     virtual CFETypeSpec* ReplaceType(CFETypeSpec *pNewType);
     virtual TYPEDDECL_TYPE GetTypedDeclType();
-    virtual CFEDeclarator* FindDeclarator(string sName);
-    virtual CFEAttribute* FindAttribute(ATTR_TYPE eAttrType);
-    virtual CFEAttribute* GetNextAttribute(vector<CFEAttribute*>::iterator &iter);
-    virtual vector<CFEAttribute*>::iterator GetFirstAttribute();
-    virtual CFEDeclarator* GetNextDeclarator(vector<CFEDeclarator*>::iterator &iter);
-    virtual vector<CFEDeclarator*>::iterator GetFirstDeclarator();
     virtual CFETypeSpec* GetType();
     virtual bool IsTypedef();
+    bool Match(string sName);
 
 // attributes
 protected:
-    /**    \var TYPEDDECL_TYPE m_nType
-     *    \brief the type of the declarator
+    /** \var TYPEDDECL_TYPE m_nType
+     *  \brief the type of the declarator
      */
     TYPEDDECL_TYPE m_nType;
-    /** \var vector<CFEAttribute*> m_vTypeAttributes
-     *  \brief the attributes of the declarator
-     */
-    vector<CFEAttribute*> m_vTypeAttributes;
-    /** \var vector<CFEDeclarator*> m_vDeclarators
-     *   \brief the variable names
-     */
-    vector<CFEDeclarator*> m_vDeclarators;
-    /**    \var CFETypeSpec *m_pType
-     *    \brief the type of the declarator
+    /** \var CFETypeSpec *m_pType
+     *  \brief the type of the declarator
      */
     CFETypeSpec *m_pType;
+
+public:
+    /** \var CCollection<CFEAttribute> m_Attributes
+     *  \brief the attributes of the declarator
+     */
+    CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CCollection<CFEDeclarator> m_Declarators
+     *   \brief the variable names
+     */
+    CSearchableCollection<CFEDeclarator, string> m_Declarators;
 };
 
 #endif /* __DICE_FE_FETYPEDDECLARATOR_H__ */

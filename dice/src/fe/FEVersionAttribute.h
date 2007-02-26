@@ -32,14 +32,14 @@
 
 #include "fe/FEAttribute.h"
 
-/** \struct _version_t
+/** \struct version_t
  *  \ingroup frontend
  *  \brief helper struct for parser
  *
  * This struct contains the members of a version, defined in the IDL's grammar.
  * It has been introduced to simplify the grammar.
  */
-typedef struct _version_t {
+struct version_t {
     /** \var int nMajor
      *  \brief the major number of the version
      */
@@ -48,7 +48,7 @@ typedef struct _version_t {
      *  \brief the minor number of the version
      */
     int nMinor;
-} version_t; /**< alias type for struct _version_t */
+};
 
 /** \class CFEVersionAttribute
  *  \ingroup frontend
@@ -79,7 +79,6 @@ protected:
 
 // operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CObject* Clone();
     virtual version_t GetVersion();
     virtual void GetVersion(int& major, int& minor);

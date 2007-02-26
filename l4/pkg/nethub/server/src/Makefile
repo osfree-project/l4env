@@ -22,7 +22,7 @@ SRC_CC		:= main.cc ip_forward.cc ip.cc ip_sec.cc pager.cc \
 		   routing_fab.cc interface.cc ip_sec_fwd.cc      \
 		   ike_connector.cc time.cc
 
-PRIVATE_INCDIR	+= ..
+PRIVATE_INCDIR	+= $(SRC_DIR)
 SRC_C		:= 
 ifeq ("$(WITHOUT_CRYPTO)","y")
   DEFINES	+= -DWITHOUT_CRYPTO
@@ -32,15 +32,15 @@ ifeq ("$(USE_L4CRYPTO)","y")
   L4LIBS 	+= -ll4crypto
   SRC_CC	+= ip_sec_l4crypto.cc
 else
-PRIVATE_INCDIR	+= ../crypto
+PRIVATE_INCDIR	+= $(SRC_DIR)/crypto
   SRC_C 	+= crypto/ipsec_md5c.c
 endif
 endif
 
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SERVERIDL	:= nh.idl
-IDL_PATH	:= $(PKGDIR)/base_lib/idl/OBJ-$(ARCH)-$(L4API)
+IDL_PKGDIR	:= $(PKGDIR_OBJ)/base_lib
 
 
 CPPFLAGS 	+= -DLOG_TAG=\"nethub\"
@@ -50,7 +50,7 @@ include $(L4DIR)/mk/prog.mk
 
 ifeq ($(filter clean cleanall scrub,$(MAKECMDGOALS)),)
 ifeq ("$(WITHOUT_CRYPTO)$(USE_L4CRYPTO)","nn")
-OBJS		+= ../crypto/libdes.a
+OBJS		+= $(SRC_DIR)/crypto/libdes.a
 endif
 endif
 

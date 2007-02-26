@@ -32,7 +32,7 @@
 /**
  * data key allocation bit field
  */
-static l4_uint32_t l4th_data_keys = 0;
+static l4_umword_t l4th_data_keys = 0;
 
 /*****************************************************************************
  *** helpers

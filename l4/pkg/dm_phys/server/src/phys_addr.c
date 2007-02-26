@@ -48,19 +48,21 @@
  *         - -#L4_EINVAL_OFFS  offset points beyond end of dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id, l4_uint32_t offset,
-                                l4_uint32_t size,
-                                l4_uint32_t *paddr, l4_uint32_t *psize,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_phys_addr_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 unsigned long offset,
+                                 l4_size_t size,
+                                 unsigned long *paddr,
+                                 l4_size_t *psize,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
   page_area_t * area;
   l4_offs_t area_offs;
 
-  LOGdL(DEBUG_PHYS_ADDR, "ds %u, caller "l4util_idfmt,
+  LOGdL(DEBUG_PHYS_ADDR, "ds %lu, caller "l4util_idfmt,
         ds_id, l4util_idstr(*_dice_corba_obj));
 
   /* get dataspace descriptor, caller must be a client */
@@ -69,10 +71,10 @@ if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
 	      ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %ld!",
              l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;
@@ -84,7 +86,7 @@ if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
     {
       /* offset points beyond end of dataspace */      
       LOGdL(DEBUG_ERRORS,
-            "DMphys: invalid offset 0x%08x in dataspace %u (size 0x%08x)!",
+            "DMphys: invalid offset 0x%08lx in dataspace %lu (size 0x%08x)!",
 	    offset, ds_id, dmphys_ds_get_size(ds));
       return -L4_EINVAL_OFFS;
     }
@@ -95,9 +97,9 @@ if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
   if ((size != L4DM_WHOLE_DS) && (*psize > size))
     *psize = size;
 
-  LOGdL(DEBUG_PHYS_ADDR, "offset 0x%08x\n" \
-        " area 0x%08x-0x%08x, area offset 0x%08x\n" \
-        " phys. addr 0x%08x, region size 0x%08x",
+  LOGdL(DEBUG_PHYS_ADDR, "offset 0x%08lx\n" \
+        " area 0x%08lx-0x%08lx, area offset 0x%08lx\n" \
+        " phys. addr 0x%08lx, region size 0x%08x",
         offset, area->addr, area->addr + area->size, area_offs, *paddr, *psize);
 
   /* done */
@@ -118,27 +120,28 @@ if_l4dm_mem_phys_addr_component(CORBA_Object _dice_corba_obj,
  *         - -#L4_EPERM        caller is not a client of the dataspace
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_mem_is_contiguous_component(CORBA_Object _dice_corba_obj,
-                                    l4_uint32_t ds_id, l4_int32_t *is_cont,
-                                    CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_mem_is_contiguous_component (CORBA_Object _dice_corba_obj,
+                                     unsigned long ds_id,
+                                     long *is_cont,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   int ret,num;
   dmphys_dataspace_t * ds;
-  
-  LOGdL(DEBUG_PHYS_ADDR,"ds %u, caller "l4util_idfmt,
+
+  LOGdL(DEBUG_PHYS_ADDR,"ds %lu, caller "l4util_idfmt,
         ds_id, l4util_idstr(*_dice_corba_obj));
-  
+
   /* get dataspace descriptor, caller must be a client */
   ret = dmphys_ds_get_check_client(ds_id, *_dice_corba_obj, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %ld!",
 	      l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;

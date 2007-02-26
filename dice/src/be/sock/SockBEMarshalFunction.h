@@ -53,8 +53,7 @@ protected:
     /** \brief copy constructor */
     CSockBEMarshalFunction(CSockBEMarshalFunction &src);
 
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
-    virtual void WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma);
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 };
 
 #endif

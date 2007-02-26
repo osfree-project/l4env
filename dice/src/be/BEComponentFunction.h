@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEComponentFunction.h
- *    \brief   contains the declaration of the class CBEComponentFunction
+ *  \brief   contains the declaration of the class CBEComponentFunction
  *
  *    \date    01/22/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,9 +34,9 @@
 
 class CFEOperation;
 
-/**    \class CBEComponentFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CBEComponentFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
  * This class resembles the component function skeleton.
  */
@@ -44,46 +44,48 @@ class CBEComponentFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEComponentFunction();
     virtual ~CBEComponentFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEComponentFunction(CBEComponentFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool AddToFile(CBEImplementationFile * pImpl, CBEContext * pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool AddToFile(CBEImplementationFile * pImpl);
     virtual bool IsTargetFile(CBEImplementationFile * pFile);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
-    virtual void WriteReturn(CBEFile *pFile, CBEContext *pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual void WriteReturn(CBEFile *pFile);
 
 protected:
-    virtual void WriteGlobalVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteFunctionDefinition(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-    virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual bool WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteFunctionDefinition(CBEFile* pFile);
+    virtual void WriteFunctionDeclaration(CBEFile* pFile);
+    virtual bool DoWriteFunctionInline(CBEFile *pFile);
+    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void SetTargetFileName(CFEBase * pFEObject);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteVariableDeclaration(CBEFile *pFile);
+    virtual void WriteMarshalling(CBEFile * pFile);
+    virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
+    virtual void AddAfterParameters(void);
+    virtual void AddBeforeParameters(void);
+
+    virtual bool DoTestParameter(CBETypedDeclarator *pParameter);
 
 protected:
-    /**    \var CBEFunction *m_pFunction
-     *    \brief a reference to the function which is tested (if we test at all)
+    /** \var CBEFunction *m_pFunction
+     *  \brief a reference to the function which is tested (if we test at all)
      */
     CBEFunction *m_pFunction;
-    /** \var CBETypedDeclarator *m_pReplyVar
-     *    \brief reference to the additional parameter for reply code
+    /** \var unsigned char m_nSkipParameter
+     *  \brief bitmap indication whether to skip CORBA Object or Env
      */
-    CBETypedDeclarator *m_pReplyVar;
+    unsigned char m_nSkipParameter;
 };
 
 #endif // !__DICE_BECOMPONENTFUNCTION_H__

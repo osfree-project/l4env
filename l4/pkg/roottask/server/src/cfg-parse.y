@@ -74,7 +74,7 @@ static unsigned c_max = -1, c_low = 0, c_high = -1, c_mask = 0xffffffff;
 /* grammer rules follow */
 %%
 
-file	: rules
+file	: globalconstraint rules
 	;
 
 rules	: rule rules
@@ -86,10 +86,10 @@ rule	: taskspec constraints modules
 		    printf("  configured task 0x%02x (%s):\n",
 		      __cfg_task, __cfg_name);
 		    if (!quota_is_default_mem(&q))
-		      printf("    memory:    [%x,%x,%x]\n",
+		      printf("    memory:    [%lx,%lx,%lx]\n",
 			q.mem.low, q.mem.high, q.mem.max);
 		    if (!quota_is_default_himem(&q))
-		      printf("    high mem:  [%x,%x,%x]\n",
+		      printf("    high mem:  [%lx,%lx,%lx]\n",
 			q.himem.low, q.himem.high, q.himem.max);
 		    if (!quota_is_default_task(&q))
 		      printf("    task:      [%x,%x,%x]\n",
@@ -122,7 +122,6 @@ rule	: taskspec constraints modules
 
 	| smallsizerule
 	| flag
-	| globalconstraint
 	;
 
 smallsizerule : SMALLSIZE number{ small_space_size = $2; };
@@ -185,8 +184,8 @@ nextmod	: MODULE		{ __cfg_mod++; }
 
 taskspec : TASK			{ __cfg_task++; }
 	| TASK taskname	
-	| TASK RMGR		{ __cfg_task = myself.id.task; }
-	| TASK SIGMA0		{ __cfg_task = my_pager.id.task; }
+	| TASK RMGR		{ __cfg_task = TASKNO_ROOT; }
+	| TASK SIGMA0		{ __cfg_task = TASKNO_SIGMA0; }
 	| TASK number		{ __cfg_task = $2; }
 	;
 

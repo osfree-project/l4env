@@ -5,6 +5,7 @@
  *
  * \date   19/03/2004
  * \author Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
+ *         Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
  * This is the events server.
  */
@@ -72,7 +73,6 @@ static l4_uint32_t max_alloc_size;
 static void
 copy_evt_to_evt(const l4events_event_t *evt_src, l4events_event_t *evt_dst)
 {
-
   LOGd(DEBUGLVL(4), "copy evt to evt");
 
   evt_dst->len = evt_src->len;
@@ -98,19 +98,19 @@ my_malloc(int size)
   if (debug_malloc)
     LOG("malloc size: %d", size);
 
-  if (addr == NULL)
-  {
-    LOG("malloc size: %d", alloc_size);
-    enter_kdebug("malloc error");
-  }
+  if (!addr)
+    {
+      LOG("malloc size: %d", alloc_size);
+      enter_kdebug("malloc error");
+    }
 
   if (debug_malloc)
-  {
-    alloc_size = alloc_size + size;
-    if (alloc_size > max_alloc_size)
-      max_alloc_size = alloc_size;
-    alloc_time = alloc_time + (out-in);
-  }
+    {
+      alloc_size = alloc_size + size;
+      if (alloc_size > max_alloc_size)
+	max_alloc_size = alloc_size;
+      alloc_time = alloc_time + (out-in);
+    }
 
   return addr;
 }
@@ -122,10 +122,10 @@ my_free(void* addr, int size)
   l4_uint32_t in=0, out=0;
 
   if (debug_malloc)
-  {
-    in = l4_rdtsc();
-    LOG("free size: %d", size);
-  }
+    {
+      in = l4_rdtsc();
+      LOG("free size: %d", size);
+    }
 
   free(addr);
 
@@ -133,10 +133,10 @@ my_free(void* addr, int size)
     out = l4_rdtsc();
 
   if (debug_malloc)
-  {
-    alloc_size = alloc_size - size;
-    alloc_time = alloc_time + (out-in);
-  }
+    {
+      alloc_size = alloc_size - size;
+      alloc_time = alloc_time + (out-in);
+    }
 }
 
 /****************************************************************************
@@ -153,28 +153,28 @@ insert_event_into_blocked_queues(channel_item_t *curr_channel,
   task_item_t *curr_task;
   event_ref_t *curr_event_ref;
   int prior;
-    
+
   for (prior = L4EVENTS_MAX_PRIORITY; prior >= 0; prior--)
-  {
-    curr_task_ref = curr_channel->first_task_ref[prior];
-
-    /* run through the registered task list */
-    while (curr_task_ref != NULL)
     {
-      curr_task = curr_task_ref->task_item;
+      curr_task_ref = curr_channel->first_task_ref[prior];
 
-      /* create event_ref for curr_event */ 
-      curr_event_ref = (event_ref_t*) my_malloc( sizeof(event_ref_t));
-      curr_event_ref->event_item = curr_event;
-      curr_event_ref->next_ref = NULL;
+      /* run through the registered task list */
+      while (curr_task_ref)
+	{
+	  curr_task = curr_task_ref->task_item;
 
-      /* link event into blocked list */
-      link_event_into_blocked_queue(curr_task, curr_event_ref);
+	  /* create event_ref for curr_event */ 
+	  curr_event_ref = (event_ref_t*) my_malloc( sizeof(event_ref_t));
+	  curr_event_ref->event_item = curr_event;
+	  curr_event_ref->next_ref = NULL;
 
-      /* go to the next registered task in the list */
-      curr_task_ref = curr_task_ref->next_ref;
+	  /* link event into blocked list */
+	  link_event_into_blocked_queue(curr_task, curr_event_ref);
+
+	  /* go to the next registered task in the list */
+	  curr_task_ref = curr_task_ref->next_ref;
+	}
     }
-  }
 }
 
 /****************************************************************************
@@ -192,101 +192,114 @@ send_event_to_lower_priority(event_item_t *curr_event)
   int found = false;
   int prior = curr_event->priority; 
   channel_item_t *curr_channel = curr_event->channel;
-   
-  LOGd(DEBUGLVL(2), "send event [%i,%i] to lower priority task",
+  
+  LOGd(DEBUGLVL(2), "send event [%i,%li] to lower priority task",
 	  curr_event->event_ch, curr_event->event_nr);
   
-  while (!wait_for_receive && !wait_for_ack && (prior >= 0))
-  {
-  /* try to notify all registered all registered tasks for the channel */
-  task_ref_t *curr_task_ref = curr_channel->first_task_ref[prior];
-
-  /* run through the registered task list of a priority */
-  while (curr_task_ref != NULL)
-  {
-    task_item_t *curr_task = curr_task_ref->task_item;
-    event_ref_t *prev_event_ref = NULL;
-    event_ref_t *curr_event_ref = curr_task->first_blocked_event_ref;
-    found = false;
-    
-    /* find the event in the blocked-queue of the task */
-    while ((curr_event_ref != NULL) && !found)
+  while (!wait_for_receive && !wait_for_ack && prior >= 0)
     {
-      if (curr_event_ref->event_item == curr_event)
-      {
-	found = true;
+      /* try to notify all registered all registered tasks for the channel */
+      task_ref_t *curr_task_ref = curr_channel->first_task_ref[prior];
 
-        /* unlink event from blocked list */
-        unlink_event_from_blocked_queue(
-	  curr_task, curr_event_ref, prev_event_ref);
-      }
-      else
-      {
-	prev_event_ref = curr_event_ref;
-	curr_event_ref = curr_event_ref->next_ref;
-      }
-    }
+      /* run through the registered task list of a priority */
+      while (curr_task_ref)
+	{
+	  task_item_t *curr_task      = curr_task_ref->task_item;
+	  event_ref_t *prev_event_ref = NULL;
+	  event_ref_t *curr_event_ref = curr_task->first_blocked_event_ref;
+	  found = false;
 
-    if (found)
-    {
-    /* check if curr_task is already waiting for an event,
-     * and try to send if so */
-    if (!l4_is_invalid_id(curr_task->waiting_threadid) &&
-        (curr_task->waiting_length >= curr_event->event->len) &&
-	((((curr_task->waiting_event_ch != L4EVENTS_NO_CHANNEL) &&
-	    (curr_task->waiting_event_ch == curr_event->event_ch))) ||
-	 (curr_task->waiting_event_ch == L4EVENTS_NO_CHANNEL)))
-    {
-      LOGd(DEBUGLVL(2), "try to notify task for event");
+	  /* find the event in the blocked-queue of the task */
+	  while (curr_event_ref && !found)
+	    {
+	      if (curr_event_ref->event_item == curr_event)
+		{
+		  found = true;
+
+	  	  /* unlink event from blocked list */
+		  unlink_event_from_blocked_queue(curr_task, curr_event_ref, 
+						  prev_event_ref);
+		}
+	      else
+		{
+		  prev_event_ref = curr_event_ref;
+		  curr_event_ref = curr_event_ref->next_ref;
+		}
+	    }
+
+	  if (found)
+	    {
+	      /* check if curr_task is already waiting for an event,
+	       * and try to send if so */
+	      if (!l4_is_invalid_id(curr_task->waiting_threadid) &&
+		  (curr_task->waiting_length >= curr_event->event->len) &&
+		  ((((curr_task->waiting_event_ch != L4EVENTS_NO_CHANNEL) &&
+		     (curr_task->waiting_event_ch == curr_event->event_ch))) ||
+		   (curr_task->waiting_event_ch == L4EVENTS_NO_CHANNEL)))
+		{
+		  LOGd(DEBUGLVL(2), "try to notify task for event");
 	
-      /* try to notify the waiting thread */
-      send_error = receive_event_reply(curr_task->waiting_threadid,
-					curr_event->event_ch, 
-					curr_event->event_nr, 
-					*curr_event->event);
+		  /* try to notify the waiting thread */
+		  send_error = receive_event_reply(curr_task->waiting_threadid,
+						   curr_event->event_ch, 
+						   curr_event->event_nr, 
+						   *curr_event->event);
+		  if (send_error == L4_IPC_ENOT_EXISTENT)
+		    {
+		      printf("server "l4util_idfmt" dead, unregistering\n",
+			     l4util_idstr(curr_task->waiting_threadid));
+		      curr_task_ref = curr_task_ref->next_ref;
+		      my_free(curr_event_ref, sizeof(event_ref_t));
+		      server_unregister_all(curr_task->waiting_threadid);
+		      continue;
+		    }
 
-      curr_task->waiting_threadid = L4_INVALID_ID;
-    }
-    else
-    {
-      /* if the event cant be sent immediatly we have to link it
-         in the pending-queue */
-      send_error = true;
-    }
+		  curr_task->waiting_threadid = L4_INVALID_ID;
+		}
+	      else
+		{
+		  /* if the event can't be sent immediatly we have to link it
+		     in the pending-queue */
+		  send_error = true;
+		}
 
-    /* link the event in the wait queue for this task,
-       if he has the event not received for some reason */
-    if (send_error)
-    {
-      wait_for_receive = true;
-      
-      /* append the the new element at the end of the pending wait-queue */
-      link_event_into_pending_queue(curr_task, curr_event_ref);
-    }
-    else
-    {
-      /* sending was ok but may be, the sending task wants to give ack */
-      if (curr_task->waiting_ack)
-      {
-	wait_for_ack = true;
-	
-        /* append the the new element at the end of the ack wait-queue */
-        link_event_into_ack_queue(curr_task, curr_event_ref);
-      }
-      else
-      {
-	/* sending was ok and the task wants not give acknowledge */
-	my_free(curr_event_ref, sizeof(event_ref_t));
-      }
-    }
-    }
+	      /* link the event in the wait queue for this task,
+		 if he has the event not received for some reason */
+	      if (send_error && !curr_task->untrusted)
+		{
+		  wait_for_receive = true;
 
-    /* go to the next registered task in the list */
-    curr_task_ref = curr_task_ref->next_ref;
-  }
+	    	  /* append the the new element at the end of the 
+		   * pending wait-queue */
+		  link_event_into_pending_queue(curr_task, curr_event_ref);
+		}
+	      else
+		{
+		  /* sending was ok but may be, the sending task 
+		   * wants to give ack */
+		  if (curr_task->waiting_ack)
+		    {
+		      wait_for_ack = true;
+		      
+		      /* append the the new element at the end 
+		       * of the ack wait-queue */
+		      link_event_into_ack_queue(curr_task, curr_event_ref);
+		    }
+		  else
+		    {
+		      /* sending was ok and the task wants not
+		       * give acknowledge */
+		      my_free(curr_event_ref, sizeof(event_ref_t));
+		    }
+		}
+	    }
+
+	  /* go to the next registered task in the list */
+	  curr_task_ref = curr_task_ref->next_ref;
+	}
   
-    prior--;
-  }
+      prior--;
+    }
  
   /* save the PRIORITY */
   curr_event->priority = prior;
@@ -310,57 +323,54 @@ send_ack_event(l4events_nr_t enr)
   ack_item_t *curr_ack = NULL;
   ack_item_t *prev_ack = NULL;
 
-  LOGd(DEBUGLVL(1), "event-nr: %d", enr);
+  LOGd(DEBUGLVL(1), "event-nr: %ld", enr);
 
   curr_ack = ack_list;
 
-  while ((curr_ack != NULL) && !found)
-  {
-    if (curr_ack->event_nr == enr)
+  while (curr_ack && !found)
     {
-      if (l4_is_nil_id(curr_ack->threadid) ||
-         (l4_is_invalid_id(curr_ack->threadid)))
-      {
-	/* set a marker, because sender is not waiting */
-	LOGd(DEBUGLVL(2), "no waiting sender");
-	curr_ack->threadid = L4_INVALID_ID;
-	return;
-      }
-
-	/* try to notify waiting sender */
-	LOGd(DEBUGLVL(2), "try to give ack waiting sender");
-
-	send_error =
-	  get_ack_reply(curr_ack->threadid,
-	      		L4EVENTS_OK,
-			curr_ack->event_ch,
-			curr_ack->event_nr);
-
-	if (send_error)
+      if (curr_ack->event_nr == enr)
 	{
-	  LOGd(DEBUGLVL(3), "giving ack failed");
-	  /* notification failed */
-	  curr_ack->threadid = L4_INVALID_ID;
+	  if (l4_is_nil_id(curr_ack->threadid) ||
+	      (l4_is_invalid_id(curr_ack->threadid)))
+	    {
+	      /* set a marker, because sender is not waiting */
+	      LOGd(DEBUGLVL(2), "no waiting sender");
+	      curr_ack->threadid = L4_INVALID_ID;
+	      return;
+	    }
+
+	  /* try to notify waiting sender */
+	  LOGd(DEBUGLVL(2), "try to give ack waiting sender");
+
+	  send_error = get_ack_reply(curr_ack->threadid, L4EVENTS_OK,
+				     curr_ack->event_ch, curr_ack->event_nr);
+
+	  if (send_error)
+	    {
+	      LOGd(DEBUGLVL(3), "giving ack failed");
+	      /* notification failed */
+	      curr_ack->threadid = L4_INVALID_ID;
+	    }
+	  else
+	    {
+	      LOGd(DEBUGLVL(3), "giving ack succeded");
+	      /* unlink after notification */
+	      unlink_item_from_ack_list(ack_list, curr_ack, prev_ack);
+	      my_free(curr_ack, sizeof(ack_item_t));
+	    }
+	  found = true;
 	}
-	else
+      else
 	{
-	  LOGd(DEBUGLVL(3), "giving ack succeded");
-	  /* unlink after notification */
-	  unlink_item_from_ack_list(ack_list, curr_ack, prev_ack);
-	  my_free(curr_ack, sizeof(ack_item_t));
+	  /* go to next element in list */
+	  prev_ack = curr_ack;
+	  curr_ack = curr_ack->next_item;
 	}
-      found = true;
     }
-    else
-    {
-      /* go to next element in list */
-      prev_ack = curr_ack;
-      curr_ack = curr_ack->next_item;
-    }
-  }
 
   if (!found)
-    LOGd(DEBUGLVL(1), "event-nr %d doesnt exist!", enr);
+    LOGd(DEBUGLVL(1), "event-nr %ld doesnt exist!", enr);
 }
 
 /****************************************************************************
@@ -371,23 +381,22 @@ send_ack_event(l4events_nr_t enr)
 static void
 delete_event(event_item_t *curr_event)
 {
-  if ((curr_event->pending_tasks == 0) && 
-      (curr_event->ack_tasks == 0))
-  {
-    LOGd(DEBUGLVL(3), "delete event [%d,%d]",
-	curr_event->event_ch, curr_event->event_nr);
+  if (curr_event->pending_tasks == 0 && curr_event->ack_tasks == 0)
+    {
+      LOGd(DEBUGLVL(3), "delete event [%d,%ld]",
+	  curr_event->event_ch, curr_event->event_nr);
 
-    /* give ack to the sender */
-    send_ack_event(curr_event->event_nr);
+      /* give ack to the sender */
+      send_ack_event(curr_event->event_nr);
 
-    if (curr_event->timeout >= 0)
-      unlink_event_from_timeout_queue(curr_event);
+      if (curr_event->timeout >= 0)
+	unlink_event_from_timeout_queue(curr_event);
 
-    my_free(curr_event->event,
-	sizeof(curr_event->event->len) + curr_event->event->len);
+      my_free(curr_event->event,
+	  sizeof(curr_event->event->len) + curr_event->event->len);
 
-    my_free(curr_event, sizeof(event_item_t));
-  }
+      my_free(curr_event, sizeof(event_item_t));
+    }
 }
 
 /****************************************************************************
@@ -398,44 +407,41 @@ delete_event(event_item_t *curr_event)
  *
  ****************************************************************************/
 static void 
-remove_events_from_blocked_queue(
-    task_item_t *curr_task,
-    l4events_ch_t event_ch)
+remove_events_from_blocked_queue(task_item_t *curr_task,
+				 l4events_ch_t event_ch)
 {
-      event_ref_t *curr_event_ref = curr_task->first_blocked_event_ref;
-      event_ref_t *prev_event_ref = NULL;
-      event_ref_t *temp_event_ref = NULL;
-      event_item_t *curr_event = NULL;
+  event_ref_t *curr_event_ref = curr_task->first_blocked_event_ref;
+  event_ref_t *prev_event_ref = NULL;
+  event_ref_t *temp_event_ref = NULL;
+  event_item_t *curr_event    = NULL;
 
-      LOGd(DEBUGLVL(2), "task:%x channel:%d", curr_task->taskid, event_ch);
-      
-      /* go through the bloecked-queue of task */
-      while (curr_event_ref != NULL)
-      {
-        curr_event = curr_event_ref->event_item;
+  LOGd(DEBUGLVL(2), "task:%lx channel:%d", curr_task->taskid, event_ch);
 
-	/* check the channel */
-	if (curr_event->event_ch == event_ch)
+  /* go through the bloecked-queue of task */
+  while (curr_event_ref)
+    {
+      curr_event = curr_event_ref->event_item;
+
+      /* check the channel */
+      if (curr_event->event_ch == event_ch)
 	{
 	  /* go to next element */
 	  temp_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
-	  
+
 	  /* unlink event from blocked-queue of task */
 	  unlink_event_from_blocked_queue(
-	    curr_task, temp_event_ref, prev_event_ref);
-	  
+	      curr_task, temp_event_ref, prev_event_ref);
+
 	  my_free(temp_event_ref, sizeof(event_ref_t));
 	}
-	else
+      else
 	{
 	  /* go to next element */
 	  prev_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
 	}
-      }
-
-      return;
+    }
 }
 
 /****************************************************************************
@@ -447,49 +453,48 @@ remove_events_from_blocked_queue(
  *
  ****************************************************************************/
 static int
-remove_events_from_pending_queue(
-    task_item_t *curr_task,
-    l4events_ch_t event_ch)
+remove_events_from_pending_queue(task_item_t *curr_task,
+				 l4events_ch_t event_ch)
 {
-      event_ref_t *curr_event_ref = curr_task->first_pending_event_ref;
-      event_ref_t *prev_event_ref = NULL;
-      event_ref_t *temp_event_ref = NULL;
-      event_item_t *curr_event = NULL;
-      int events_unlinked = false;
+  event_ref_t *curr_event_ref = curr_task->first_pending_event_ref;
+  event_ref_t *prev_event_ref = NULL;
+  event_ref_t *temp_event_ref = NULL;
+  event_item_t *curr_event    = NULL;
+  int events_unlinked = false;
 
-      LOGd(DEBUGLVL(2), "task:%x channel:%d", curr_task->taskid, event_ch);
+  LOGd(DEBUGLVL(2), "task:%lx channel:%d", curr_task->taskid, event_ch);
 
-      /* go through the pending-queue of task */
-      while (curr_event_ref != NULL)
-      {
-        curr_event = curr_event_ref->event_item;
+  /* go through the pending-queue of task */
+  while (curr_event_ref)
+    {
+      curr_event = curr_event_ref->event_item;
 
-	if (curr_event->event_ch == event_ch)
+      if (curr_event->event_ch == event_ch)
 	{
 	  events_unlinked = true;
-	  
+
 	  /* go to next element */
 	  temp_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
-	  
+
 	  /* unlink event from pending-queue of task */
-	  unlink_event_from_pending_queue(
-	    curr_task, temp_event_ref, prev_event_ref);
-	  
+	  unlink_event_from_pending_queue(curr_task, temp_event_ref, 
+					  prev_event_ref);
+
 	  my_free(temp_event_ref, sizeof(event_ref_t));
 
 	  send_event_to_lower_priority(curr_event);
 	  delete_event(curr_event);
 	}
-	else
+      else
 	{
 	  /* go to next element */
 	  prev_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
 	}
-      }
+    }
 
-      return events_unlinked;
+  return events_unlinked;
 }
 
 /****************************************************************************
@@ -501,49 +506,48 @@ remove_events_from_pending_queue(
  *
  ****************************************************************************/
 static int 
-remove_events_from_ack_queue(
-    task_item_t *curr_task,
-    l4events_ch_t event_ch)
+remove_events_from_ack_queue(task_item_t *curr_task,
+			     l4events_ch_t event_ch)
 {
-      event_ref_t *curr_event_ref = curr_task->first_ack_event_ref;
-      event_ref_t *prev_event_ref = NULL;
-      event_ref_t *temp_event_ref = NULL;
-      event_item_t *curr_event = NULL;
-      int events_unlinked = false;
+  event_ref_t *curr_event_ref = curr_task->first_ack_event_ref;
+  event_ref_t *prev_event_ref = NULL;
+  event_ref_t *temp_event_ref = NULL;
+  event_item_t *curr_event = NULL;
+  int events_unlinked = false;
 
-      LOGd(DEBUGLVL(2), "task:%x channel:%d", curr_task->taskid, event_ch);
-      
-      /* go through the ack-queue of task */
-      while (curr_event_ref != NULL)
-      {
-        curr_event = curr_event_ref->event_item;
+  LOGd(DEBUGLVL(2), "task:%lx channel:%d", curr_task->taskid, event_ch);
 
-	if (curr_event->event_ch == event_ch)
+  /* go through the ack-queue of task */
+  while (curr_event_ref)
+    {
+      curr_event = curr_event_ref->event_item;
+
+      if (curr_event->event_ch == event_ch)
 	{
 	  events_unlinked = true;
-	  
+
 	  /* go to next element */
 	  temp_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
-	  
+
 	  /* unlink event from the ack-queue ot task */
-	  unlink_event_from_ack_queue(
-	    curr_task, temp_event_ref, prev_event_ref);
-	  
+	  unlink_event_from_ack_queue(curr_task, temp_event_ref, 
+				      prev_event_ref);
+
 	  my_free(temp_event_ref, sizeof(event_ref_t));
 
 	  send_event_to_lower_priority(curr_event);
 	  delete_event(curr_event);
 	}
-	else
+      else
 	{
 	  /* go to next element */
 	  prev_event_ref = curr_event_ref;
 	  curr_event_ref = curr_event_ref->next_ref;
 	}
-      }
+    }
 
-      return events_unlinked;
+  return events_unlinked;
 }
 
 
@@ -559,7 +563,7 @@ remove_events_from_ack_queue(
  * 
  ********************************************************************/
 l4_uint8_t
-server_register(l4_threadid_t *client, 
+server_register(l4_threadid_t client, 
     		l4events_ch_t event_ch, 
 		l4events_pr_t prior)
 {
@@ -572,106 +576,114 @@ server_register(l4_threadid_t *client,
   task_ref_t *curr_task_ref = NULL;
   task_ref_t *prev_task_ref = NULL;
   int priority = 0;
+  int untrusted = 0;
 
   LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> channel:%d priority:%d",
-	l4util_idstr(*client), event_ch, prior);
- 
+      l4util_idstr(client), event_ch, prior);
+
+  if (prior & 0x80)
+    {
+      untrusted = 1;
+      prior &= ~0x80;
+    }
+
   if ((prior > L4EVENTS_MAX_PRIORITY) || (prior < 0))
     return L4EVENTS_ERROR_INVALID_COMMAND;
 
   /* find task and channel */
   find_channel(event_ch, curr_channel, prev_channel);
-  find_task(client->id.task, curr_task, prev_task);
+  find_task(client.id.task, curr_task, prev_task);
 
   /* if channel already exists, try also to find the task */
-  if (curr_channel != NULL)
+  if (curr_channel)
     {
-      find_task_for_channel(curr_channel, client->id.task, priority,
-			  curr_task_ref, prev_task_ref);
+      find_task_for_channel(curr_channel, client.id.task, priority,
+			    curr_task_ref, prev_task_ref);
     }
 
   /* task already exists, try also to find the channel */
-  if (curr_task != NULL)
+  if (curr_task)
     {
       find_channel_for_task(curr_task, event_ch, 
-			  curr_channel_ref, prev_channel_ref);
+			    curr_channel_ref, prev_channel_ref);
     }
 
   /* make some consistency check of our data structures */
   Assert 
     (((curr_channel_ref == NULL) && (curr_task_ref == NULL)) ||
      ((curr_channel_ref != NULL) && (curr_task_ref != NULL)));
- 
+
   /* don't register twice a task for an event */
-  if ((curr_channel_ref != NULL) && (curr_task_ref != NULL))
-  {
-    LOGd(DEBUGLVL(2), "task already for channel registered");
-    return L4EVENTS_WARNING_TASK_REGISTERED;
-  }
-  
+  if (curr_channel_ref && curr_task_ref)
+    {
+      LOGd(DEBUGLVL(2), "task already for channel registered");
+      return L4EVENTS_WARNING_TASK_REGISTERED;
+    }
+
   /* create an new channel and/or task-struct */
-  if ((curr_channel_ref == NULL) && (curr_task_ref == NULL))
-  {
-    LOGd(DEBUGLVL(2), "task NOT yet registered for event");
-
-    /* create a new channel */
-    if (curr_channel == NULL)
+  if (!curr_channel_ref || !curr_task_ref)
     {
-      int pr;
+      LOGd(DEBUGLVL(2), "task NOT yet registered for event");
 
-      LOGd(DEBUGLVL(2), "create a new channel: %d", event_ch);
+      /* create a new channel */
+      if (!curr_channel)
+	{
+	  int pr;
 
-      curr_channel = (channel_item_t*) my_malloc( sizeof(channel_item_t));
-      curr_channel->event_ch = event_ch;
-      curr_channel->registered_tasks = 0;
-      for (pr=0; pr<=L4EVENTS_MAX_PRIORITY; pr++)
-        curr_channel->first_task_ref[pr] = NULL;
-     
-      link_item_into_channel_list(channel_list, curr_channel);
+	  LOGd(DEBUGLVL(2), "create a new channel: %d", event_ch);
+
+	  curr_channel = (channel_item_t*) my_malloc( sizeof(channel_item_t));
+	  curr_channel->event_ch = event_ch;
+	  curr_channel->registered_tasks = 0;
+	  for (pr=0; pr<=L4EVENTS_MAX_PRIORITY; pr++)
+	    curr_channel->first_task_ref[pr] = NULL;
+
+	  link_item_into_channel_list(channel_list, curr_channel);
+	}
+
+      /* create a new task */
+      if (!curr_task)
+	{
+	  LOGd(DEBUGLVL(2), "create a new task: %x", client.id.task);
+
+	  curr_task = my_malloc( sizeof(task_item_t));
+	  curr_task->taskid = client.id.task;
+	  curr_task->registered_channels = 0;
+	  curr_task->blocked_events = 0;
+	  curr_task->pending_events = 0;
+	  curr_task->ack_events = 0;
+	  curr_task->untrusted = untrusted;
+	  curr_task->waiting_threadid = L4_INVALID_ID;
+	  curr_task->first_channel_ref = NULL;
+	  curr_task->first_blocked_event_ref = NULL;
+	  curr_task->last_blocked_event_ref = NULL;
+	  curr_task->first_pending_event_ref = NULL;
+	  curr_task->last_pending_event_ref = NULL;
+	  curr_task->first_ack_event_ref = NULL;
+	  curr_task->last_ack_event_ref = NULL;
+
+	  link_task_into_task_list(task_list, curr_task);
+	}
+
+      LOGd(DEBUGLVL(2), "link task and channel together");
+
+      /* create a new list element for channel */
+      curr_channel_ref = (channel_ref_t*) my_malloc( sizeof(channel_ref_t));
+      curr_channel_ref->channel_item = curr_channel;
+
+      /* link channel into list of registered channels for the task */
+      link_channel_to_task(curr_task, curr_channel_ref);
+
+      /* create a new list element for the task */
+      curr_task_ref = (task_ref_t*) my_malloc( sizeof(task_ref_t));
+      curr_task_ref->task_item = curr_task;
+
+      /* link task into list of registered tasks for the channel */
+      link_task_to_channel(curr_channel, prior, curr_task_ref);
     }
-
-    /* create a new task */
-    if (curr_task == NULL)
-    {
-      LOGd(DEBUGLVL(2), "create a new task: %x", client->id.task);
-
-      curr_task = my_malloc( sizeof(task_item_t));
-      curr_task->taskid = client->id.task;
-      curr_task->registered_channels = 0;
-      curr_task->blocked_events = 0;
-      curr_task->pending_events = 0;
-      curr_task->ack_events = 0;
-      curr_task->waiting_threadid = L4_INVALID_ID;
-      curr_task->first_channel_ref = NULL;
-      curr_task->first_blocked_event_ref = NULL;
-      curr_task->last_blocked_event_ref = NULL;
-      curr_task->first_pending_event_ref = NULL;
-      curr_task->last_pending_event_ref = NULL;
-      curr_task->first_ack_event_ref = NULL;
-      curr_task->last_ack_event_ref = NULL;
-    
-      link_task_into_task_list(task_list, curr_task);
-    }
-
-    LOGd(DEBUGLVL(2), "link task and channel together");
-
-    /* create a new list element for channel */
-    curr_channel_ref = (channel_ref_t*) my_malloc( sizeof(channel_ref_t));
-    curr_channel_ref->channel_item = curr_channel;
-    
-    /* link channel into list of registered channels for the task */
-    link_channel_to_task(curr_task, curr_channel_ref);
-
-    /* create a new list element for the task */
-    curr_task_ref = (task_ref_t*) my_malloc( sizeof(task_ref_t));
-    curr_task_ref->task_item = curr_task;
-    
-    /* link task into list of registered tasks for the channel */
-    link_task_to_channel(curr_channel, prior, curr_task_ref);
-  }
 
   return L4EVENTS_OK;
-};
+}
 
 
 /****************************************************************************
@@ -691,7 +703,7 @@ server_register(l4_threadid_t *client,
  * 
  ****************************************************************************/
 l4_uint8_t
-server_unregister(l4_threadid_t *client, l4events_ch_t event_ch)
+server_unregister(l4_threadid_t client, l4events_ch_t event_ch)
 {
   channel_item_t *curr_channel = NULL;
   channel_item_t *prev_channel = NULL;
@@ -706,24 +718,24 @@ server_unregister(l4_threadid_t *client, l4events_ch_t event_ch)
   l4_uint8_t result = L4EVENTS_OK;
 
   LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> channel:%d",
-  	l4util_idstr(*client), event_ch);
+      l4util_idstr(client), event_ch);
 
   /* find task and channel */
   find_channel(event_ch, curr_channel, prev_channel);
-  find_task(client->id.task, curr_task, prev_task);
+  find_task(client.id.task, curr_task, prev_task);
 
   /* if channel already exists, try also to find the task */
-  if (curr_channel != NULL)
+  if (curr_channel)
     {
-      find_task_for_channel(curr_channel, client->id.task, priority, 
-			  curr_task_ref, prev_task_ref);
+      find_task_for_channel(curr_channel, client.id.task, priority, 
+			    curr_task_ref, prev_task_ref);
     }
 
   /* if task aleady exists, try also to find the channel */
-  if (curr_task != NULL)
+  if (curr_task)
     {
       find_channel_for_task(curr_task, event_ch, 
-			  curr_channel_ref, prev_channel_ref);
+			    curr_channel_ref, prev_channel_ref);
     }
 
   /* make some consistency check of our data structures */
@@ -732,67 +744,66 @@ server_unregister(l4_threadid_t *client, l4events_ch_t event_ch)
      ((curr_channel_ref != NULL) && (curr_task_ref != NULL)));
 
   /* don't unregister if this task is not already registered */
-  if ((curr_channel_ref == NULL) && (curr_task_ref == NULL))
-  {
-    LOGd(DEBUGLVL(2), "task NOT registered for channel %d", event_ch);
-    return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
-  }
+  if (!curr_channel_ref && !curr_task_ref)
+    {
+      LOGd(DEBUGLVL(2), "task NOT registered for channel %d", event_ch);
+      return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
+    }
 
   /* the task is really registered for this channel */
-  if ((curr_channel_ref != NULL) && (curr_task_ref != NULL))
-  {
-
-    /* delete some (hopfully not important) blocked events */
-    if (curr_task->blocked_events > 0)
-      remove_events_from_blocked_queue(curr_task, event_ch);
-    
-    /* delete some (hopfully not important) events the task has
-       not yet received */
-    if (curr_task->pending_events > 0)
-      events_unlinked = 
-	remove_events_from_pending_queue(curr_task, event_ch);
-
-    /* delete some (hopfully not important) events the task has
-       not yet acknowledged */
-    if (curr_task->ack_events > 0)
-      events_unlinked =
-	remove_events_from_ack_queue(curr_task, event_ch);
-
-    LOGd(DEBUGLVL(3), "unlink channel from task");
-
-    /* unlink the channel the task wants to unregister */
-    unlink_channel_from_task(curr_task,
-			     curr_channel_ref, prev_channel_ref);
-    my_free(curr_channel_ref, sizeof(channel_ref_t));
-
-    /* make some consistency checks on our data structures */
-    Assert 
-       (!((curr_task->first_channel_ref == NULL) &&
-         (curr_task->pending_events > 0)));
-
-    /* if the task is not registered for any other channel
-       delete it from the task list */
-    if (curr_task->registered_channels == 0)
+  if (curr_channel_ref && curr_task_ref)
     {
-      unlink_task_from_task_list(task_list, curr_task, prev_task);
-      my_free(curr_task, sizeof(task_item_t));
+      /* delete some (hopfully not important) blocked events */
+      if (curr_task->blocked_events > 0)
+	remove_events_from_blocked_queue(curr_task, event_ch);
+
+      /* delete some (hopfully not important) events the task has
+	 not yet received */
+      if (curr_task->pending_events > 0)
+	events_unlinked = 
+	  remove_events_from_pending_queue(curr_task, event_ch);
+
+      /* delete some (hopfully not important) events the task has
+	 not yet acknowledged */
+      if (curr_task->ack_events > 0)
+	events_unlinked =
+	  remove_events_from_ack_queue(curr_task, event_ch);
+
+      LOGd(DEBUGLVL(3), "unlink channel from task");
+
+      /* unlink the channel the task wants to unregister */
+      unlink_channel_from_task(curr_task,
+	  curr_channel_ref, prev_channel_ref);
+      my_free(curr_channel_ref, sizeof(channel_ref_t));
+
+      /* make some consistency checks on our data structures */
+      Assert 
+	(!((curr_task->first_channel_ref == NULL) &&
+	   (curr_task->pending_events > 0)));
+
+      /* if the task is not registered for any other channel
+	 delete it from the task list */
+      if (curr_task->registered_channels == 0)
+	{
+	  unlink_task_from_task_list(task_list, curr_task, prev_task);
+	  my_free(curr_task, sizeof(task_item_t));
+	}
+
+      LOGd(DEBUGLVL(3), "unlink task from channel");
+
+      /* unlink task from the list of registered tasks in the channel */
+      unlink_task_from_channel(curr_channel, priority, 
+			       curr_task_ref, prev_task_ref);
+      my_free(curr_task_ref, sizeof(task_ref_t));
+
+      /* if the channel has no registered tasks any more, delete it from the
+	 channel list */
+      if (curr_channel->registered_tasks == 0)
+	{
+	  unlink_item_from_channel_list(curr_channel, prev_channel);
+	  my_free(curr_channel, sizeof(channel_item_t));
+	}
     }
-
-    LOGd(DEBUGLVL(3), "unlink task from channel");
-
-    /* unlink task from the list of registered tasks in the channel */
-    unlink_task_from_channel(curr_channel, priority, 
-			     curr_task_ref, prev_task_ref);
-    my_free(curr_task_ref, sizeof(task_ref_t));
-
-    /* if the channel has no registered tasks any more, delete it from the
-       channel list */
-    if (curr_channel->registered_tasks == 0)
-    {
-      unlink_item_from_channel_list(curr_channel, prev_channel);
-      my_free(curr_channel, sizeof(channel_item_t));
-    }
-  }
 
   /* give a warning if some events get lost */
   if (events_unlinked)
@@ -801,7 +812,7 @@ server_unregister(l4_threadid_t *client, l4events_ch_t event_ch)
     result = L4EVENTS_OK;
 
   return result;
-};
+}
 
 
 /********************************************************************
@@ -813,26 +824,28 @@ server_unregister(l4_threadid_t *client, l4events_ch_t event_ch)
  *
  ********************************************************************/
 l4_uint8_t
-server_unregister_all(l4_threadid_t *client)
+server_unregister_all(l4_threadid_t client)
 {
   task_item_t *curr_task = NULL;
   task_item_t *prev_task = NULL;
   l4_uint8_t result = L4EVENTS_OK;
 
-  LOGd(DEBUGLVL(1), l4util_idfmt, l4util_idstr(*client));
+  LOGd(DEBUGLVL(1), l4util_idfmt, l4util_idstr(client));
   
-  find_task(client->id.task, curr_task, prev_task);
+  find_task(client.id.task, curr_task, prev_task);
 
-  if (curr_task == NULL)
+  if (!curr_task)
     {
       LOGd(DEBUGLVL(2), "task NOT registered");
       return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
     }
 
   /* loop trough the registered channel-list */
-  while (curr_task->first_channel_ref != NULL)
-    result = result | server_unregister(client,
-    		curr_task->first_channel_ref->channel_item->event_ch);
+  while (curr_task->first_channel_ref)
+    {
+      result |= server_unregister(client, curr_task->first_channel_ref->
+	                                  channel_item->event_ch);
+    }
 
   return result;
 }
@@ -851,7 +864,7 @@ server_unregister_all(l4_threadid_t *client)
  * 				  
  ********************************************************************/
 l4_uint8_t
-server_send_event(l4_threadid_t *client,
+server_send_event(l4_threadid_t client,
 		  l4events_ch_t event_ch,
 		  const l4events_event_t *event,
 		  int async, int ack)
@@ -862,23 +875,23 @@ server_send_event(l4_threadid_t *client,
   l4_uint8_t result = L4EVENTS_OK;
 
   LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> channel:%d",
-  	l4util_idstr(*client), event_ch);
+      l4util_idstr(client), event_ch);
 
   find_channel(event_ch, curr_channel, prev_channel);
 
-  if (curr_channel == NULL)
-  {
-    LOGd(DEBUGLVL(2), "NO task registered for channel");
-    send_event_reply(L4EVENTS_WARNING_EVENTTYP_NOT_REGISTERED, 
-			*client, L4EVENTS_NO_NR);
-    return L4EVENTS_OK;
-  }
+  if (!curr_channel)
+    {
+      LOGd(DEBUGLVL(2), "NO task registered for channel");
+      send_event_reply(L4EVENTS_WARNING_EVENTTYP_NOT_REGISTERED, 
+	  client, L4EVENTS_NO_NR);
+      return L4EVENTS_OK;
+    }
 
   /* reply to the client immediatly, if it is wanted */
   if (async)
-    send_event_reply(L4EVENTS_OK, *client, event_nr);
+    send_event_reply(L4EVENTS_OK, client, event_nr);
 
-  LOGd(DEBUGLVL(3), "create event [%d,%d]", event_ch, event_nr);
+  LOGd(DEBUGLVL(3), "create event [%d,%ld]", event_ch, event_nr);
 
   /* create an event */
   curr_event = (event_item_t*) my_malloc( sizeof(event_item_t));
@@ -893,7 +906,7 @@ server_send_event(l4_threadid_t *client,
   curr_event->timeout = -1;
   curr_event->timeout_prev_event = NULL;
   curr_event->timeout_next_event = NULL;
-  
+
   curr_event->event = my_malloc(sizeof(event->len) + event->len);
   copy_evt_to_evt(event, curr_event->event);
 
@@ -910,49 +923,49 @@ server_send_event(l4_threadid_t *client,
 
   /* reply to client now, if it is wanted */
   if (!async)
-    send_event_reply(result, *client, curr_event->event_nr);
+    send_event_reply(result, client, curr_event->event_nr);
 
   /* mark event for acknowledge, if sending thread wants it */
   if (ack)
-  {
-    ack_item_t *curr_ack_item = NULL;
+    {
+      ack_item_t *curr_ack_item = NULL;
 
-    LOGd(DEBUGLVL(1), "add ack-item for sender "l4util_idfmt" -> event-nr:%d",
-      		l4util_idstr(*client), curr_event->event_nr);
+      LOGd(DEBUGLVL(1), "add ack-item for sender "l4util_idfmt" -> event-nr:%ld",
+	  l4util_idstr(client), curr_event->event_nr);
 
-    curr_ack_item = my_malloc(sizeof(ack_item_t));
-   
-    curr_ack_item->senderid = *client;
-    /* if some tasks waiting for this event don't give notification 
-       to the sending thread */
-    if ((curr_event->pending_tasks > 0) || (curr_event->ack_tasks > 0))
-      curr_ack_item->threadid = L4_NIL_ID;
-    else
-      curr_ack_item->threadid = L4_INVALID_ID;
-    
-    curr_ack_item->event_ch = curr_event->event_ch;
-    curr_ack_item->event_nr = curr_event->event_nr;
-   
-    /* link event into the global ack-list */
-    link_item_into_ack_list(ack_list, curr_ack_item);
-  }
+      curr_ack_item = my_malloc(sizeof(ack_item_t));
+
+      curr_ack_item->senderid = client;
+      /* if some tasks waiting for this event don't give notification 
+	 to the sending thread */
+      if ((curr_event->pending_tasks > 0) || (curr_event->ack_tasks > 0))
+	curr_ack_item->threadid = L4_NIL_ID;
+      else
+	curr_ack_item->threadid = L4_INVALID_ID;
+
+      curr_ack_item->event_ch = curr_event->event_ch;
+      curr_ack_item->event_nr = curr_event->event_nr;
+
+      /* link event into the global ack-list */
+      link_item_into_ack_list(ack_list, curr_ack_item);
+    }
 
   /* don't delete event */
   if ((curr_event->pending_tasks > 0) || (curr_event->ack_tasks > 0))
-  {
-    result = L4EVENTS_WARNING_EVENT_PENDING;
-  }
+    {
+      result = L4EVENTS_WARNING_EVENT_PENDING;
+    }
   /* delete event event because all registered tasks are noticed */
   else
-  {
-    LOGd(DEBUGLVL(3), "delete event [%d,%d]", 
-	curr_event->event_ch, curr_event->event_nr);
+    {
+      LOGd(DEBUGLVL(3), "delete event [%d,%ld]", 
+	  curr_event->event_ch, curr_event->event_nr);
 
-    my_free(curr_event->event,
-    	    sizeof(curr_event->event->len) + curr_event->event->len);
+      my_free(curr_event->event,
+	  sizeof(curr_event->event->len) + curr_event->event->len);
 
-    my_free(curr_event, sizeof(event_item_t));
-  }
+      my_free(curr_event, sizeof(event_item_t));
+    }
 
   /* XXX for DICE implementation XXX */
   return result;
@@ -976,7 +989,7 @@ server_send_event(l4_threadid_t *client,
  * 
  ********************************************************************/
 l4_uint8_t
-server_receive_event(l4_threadid_t *client,
+server_receive_event(l4_threadid_t client,
 			l4events_ch_t *event_ch,
 			l4events_event_t *event,
 			int ack)
@@ -988,100 +1001,104 @@ server_receive_event(l4_threadid_t *client,
   event_ref_t *prev_event_ref = NULL;
   int found = false;
   int send_error = true;
-  
+
   LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> channel:%d with(out) ack:%d",
-    l4util_idstr(*client), *event_ch, ack);
+      l4util_idstr(client), *event_ch, ack);
 
-  find_task(client->id.task, curr_task, prev_task);
+  find_task(client.id.task, curr_task, prev_task);
 
-  if (curr_task == NULL)
-  {
-    LOGd(DEBUGLVL(2), "client "l4util_idfmt" NOT registered",
-	l4util_idstr(*client));
-    return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
-  }
+  if (!curr_task)
+    {
+      LOGd(DEBUGLVL(2), "client "l4util_idfmt" NOT registered",
+	  l4util_idstr(client));
+      return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
+    }
 
   prev_event_ref = NULL;
   curr_event_ref = curr_task->first_pending_event_ref;
 
   /* find some event to reveive for this task */
-  while ((curr_event_ref != NULL) && !found)
-  {
-    curr_event = curr_event_ref->event_item;
-
-    if ((curr_event->event->len <= event->len) &&
-        ((((*event_ch != L4EVENTS_NO_CHANNEL) && 
-	   (curr_event->event_ch == *event_ch))) ||
-	   (*event_ch == L4EVENTS_NO_CHANNEL)))
+  while (curr_event_ref && !found)
     {
-      LOGd(DEBUGLVL(2), "receive event [%d,%d] for task %x",
-	  curr_event->event_ch, curr_event->event_nr,
-	  curr_task->taskid);
+      curr_event = curr_event_ref->event_item;
 
-      found = true;
-      /* XXX  for DICE implementation  XXX */
-      *event_ch = curr_event->event_ch;
-      copy_evt_to_evt(curr_event->event, event);
+      if ((curr_event->event->len <= event->len) &&
+	  (((*event_ch != L4EVENTS_NO_CHANNEL && 
+	     curr_event->event_ch == *event_ch)) ||
+	   (*event_ch == L4EVENTS_NO_CHANNEL)))
+	{
+	  LOGd(DEBUGLVL(2), "receive event [%d,%ld] for task %lx",
+	      curr_event->event_ch, curr_event->event_nr,
+	      curr_task->taskid);
 
-      /* try to send the event to the receiving task */
-      send_error = receive_event_reply(*client, 
-	  				curr_event->event_ch,
-					curr_event->event_nr,
-					*curr_event->event); 
+	  found = true;
+	  /* XXX  for DICE implementation  XXX */
+	  *event_ch = curr_event->event_ch;
+	  copy_evt_to_evt(curr_event->event, event);
 
-      /* no thread is waiting now, of course */
-      curr_task->waiting_threadid = L4_INVALID_ID;
+	  /* try to send the event to the receiving task */
+	  send_error = receive_event_reply(client, 
+					   curr_event->event_ch,
+					   curr_event->event_nr,
+					   *curr_event->event); 
+
+	  /* no thread is waiting now, of course */
+	  curr_task->waiting_threadid = L4_INVALID_ID;
+	}
+      else
+	curr_event_ref = curr_event_ref->next_ref;
     }
-    else
-      curr_event_ref = curr_event_ref->next_ref;
-  }
 
   /* found no event for this task */
   if (!found)
-  {
-    LOGd(DEBUGLVL(2), 
-	"NO event to receive for task %x, wait...",
-	curr_task->taskid);
+    {
+      LOGd(DEBUGLVL(2), 
+	  "NO event to receive for task %lx, wait...",
+	  curr_task->taskid);
 
-    /* of course, there is no event to send */
-    send_error = true;
+      /* of course, there is no event to send */
+      send_error = true;
 
-    /* leave the thread waiting */
-    curr_task->waiting_threadid = *client;
-    curr_task->waiting_length = event->len;
-    curr_task->waiting_event_ch = *event_ch;
-    curr_task->waiting_ack = ack;
+      /* leave the thread waiting */
+      curr_task->waiting_threadid = client;
+      curr_task->waiting_length = event->len;
+      curr_task->waiting_event_ch = *event_ch;
+      curr_task->waiting_ack = ack;
 
-    return L4EVENTS_WARNING_NO_EVENT_TO_RECEIVE;
-  }
+      return L4EVENTS_WARNING_NO_EVENT_TO_RECEIVE;
+    }
 
   /* if sending the pending event was successful then
      unlink the event from task's pending-queue */
-  if (!send_error)
-  {
-    LOGd(DEBUGLVL(2),
-	"sending event was successfull for task %x",
-	curr_task->taskid);
-
-    /* unlink the event from pending-queue of the task */
-    unlink_event_from_pending_queue(
-	curr_task, curr_event_ref, prev_event_ref);
-   
-    if (!ack)
+  if (!send_error || curr_task->untrusted)
     {
-      my_free(curr_event_ref, sizeof(event_ref_t));
+      if (!send_error)
+	LOGd(DEBUGLVL(2),
+	    "sending event was successfull for task %lx",
+	    curr_task->taskid);
+      else
+	LOGd(DEBUGLVL(2),
+	    "sending event was NOT successfull for task %lx",
+	    curr_task->taskid);
 
-      /* try to send the event to a lower priority class */
-      send_event_to_lower_priority(curr_event);
-    
-      /* try to delete the event */
-      delete_event(curr_event);
+      /* unlink the event from pending-queue of the task */
+      unlink_event_from_pending_queue(
+	  curr_task, curr_event_ref, prev_event_ref);
+
+      if (!ack)
+	{
+	  my_free(curr_event_ref, sizeof(event_ref_t));
+
+	  /* try to send the event to a lower priority class */
+	  send_event_to_lower_priority(curr_event);
+
+	  /* try to delete the event */
+	  delete_event(curr_event);
+	}
+      else
+	/* link event into ack-queue of the task */
+	link_event_into_ack_queue(curr_task, curr_event_ref);
     }
-    else
-      /* link event into ack-queue of the task */
-      link_event_into_ack_queue(
-	curr_task, curr_event_ref);
-  }
 
   return L4EVENTS_OK;
 }
@@ -1102,46 +1119,46 @@ server_receive_event(l4_threadid_t *client,
  * 
  ********************************************************************/
 l4_uint8_t
-server_give_ack(l4_threadid_t *threadid, l4events_nr_t levent_nr)
+server_give_ack(l4_threadid_t threadid, l4events_nr_t levent_nr)
 {
   task_item_t *curr_task = NULL;
   task_item_t *prev_task = NULL;
   event_item_t *curr_event = NULL;
   event_ref_t *curr_event_ref = NULL;
   event_ref_t *prev_event_ref = NULL;
- 
-  LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> event-nr:%d",
-      l4util_idstr(*threadid), levent_nr);
- 
-  find_task(threadid->id.task, curr_task, prev_task);
 
-  if (curr_task == NULL)
-  {
-    LOGd(DEBUGLVL(2), "client "l4util_idfmt" NOT registered",
-	l4util_idstr(*threadid));
-    
-    return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
-  }
+  LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> event-nr:%ld",
+      l4util_idstr(threadid), levent_nr);
+
+  find_task(threadid.id.task, curr_task, prev_task);
+
+  if (!curr_task)
+    {
+      LOGd(DEBUGLVL(2), "client "l4util_idfmt" NOT registered",
+	  l4util_idstr(threadid));
+
+      return L4EVENTS_WARNING_TASK_NOT_REGISTERED;
+    }
 
   /* search for proper event_nr in ack list */
   find_event_for_event_nr(levent_nr, curr_task,
 			  curr_event_ref, prev_event_ref);
- 
+
   /* event-nr not found */
-  if (curr_event_ref == NULL)
+  if (!curr_event_ref)
     return L4EVENTS_WARNING_INVALID_EVENTNR;
 
   curr_event = curr_event_ref->event_item;
 
   /* unlink event from ack-queue of the task */
   unlink_event_from_ack_queue(
-	curr_task, curr_event_ref, prev_event_ref);
-  
+      curr_task, curr_event_ref, prev_event_ref);
+
   my_free(curr_event_ref, sizeof(event_ref_t));
-    
+
   /* try to send the event to a lower priority class */
   send_event_to_lower_priority(curr_event);
-  
+
   /* try to delete the event */
   delete_event(curr_event);
 
@@ -1161,81 +1178,78 @@ server_give_ack(l4_threadid_t *threadid, l4events_nr_t levent_nr)
  *
  *********************************************************************/
 l4_uint8_t
-server_get_ack(l4_threadid_t *threadid, l4events_nr_t levent_nr)
+server_get_ack(l4_threadid_t threadid, l4events_nr_t levent_nr)
 {
   ack_item_t *curr_ack = ack_list;
   ack_item_t *prev_ack = NULL;
   int found = false;
   int send_error;
-  
-  LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> eventnr:%d",
-      	l4util_idstr(*threadid), levent_nr);
 
-  while ((curr_ack != NULL) && !found)
-  {
-    if ((curr_ack->event_nr == levent_nr) ||
-       ((levent_nr == 0) && 
-        l4_thread_equal(curr_ack->senderid, *threadid)))
+  LOGd(DEBUGLVL(1), "client "l4util_idfmt" -> eventnr:%ld",
+      l4util_idstr(threadid), levent_nr);
+
+  while (curr_ack && !found)
     {
-      LOGd(DEBUGLVL(2),"event-nr:%d found for sender", 
-	  curr_ack->event_nr);
-      found = true;
-      
-      if (!l4_is_invalid_id(curr_ack->threadid))
+      if ((curr_ack->event_nr == levent_nr) ||
+	  ((levent_nr == 0) && 
+	   l4_thread_equal(curr_ack->senderid, threadid)))
 	{
-	  /* no notification because event is pending */
-	  LOGd(DEBUGLVL(3), "wait to give ack sender for event");
-	  curr_ack->threadid = *threadid;
-	  if (levent_nr == 0) 
-	    continue;
-	  else
-	    return L4EVENTS_OK;
-	}
-      
-	/* try notification of because event is ready */
-	LOGd(DEBUGLVL(3), "try to give ack sender for event");
-	
-	send_error =
-	  get_ack_reply(*threadid,
-	      		L4EVENTS_OK,
-      			curr_ack->event_ch,
-      			curr_ack->event_nr);
+	  LOGd(DEBUGLVL(2),"event-nr:%ld found for sender", 
+	      curr_ack->event_nr);
+	  found = true;
 
-	if (send_error)
-	{
-	  /* notification failed */
-	  curr_ack->threadid = L4_INVALID_ID;
-	}
-	else
-	{
-	  /* unlink after notification of the sender */
-	  if (prev_ack != NULL)
-	    prev_ack->next_item = curr_ack->next_item;
-	  else
-	    ack_list = curr_ack->next_item;
+	  if (!l4_is_invalid_id(curr_ack->threadid))
+	    {
+	      /* no notification because event is pending */
+	      LOGd(DEBUGLVL(3), "wait to give ack sender for event");
+	      curr_ack->threadid = threadid;
+	      if (levent_nr == 0) 
+		continue;
+	      else
+		return L4EVENTS_OK;
+	    }
 
-      	  my_free(curr_ack, sizeof(ack_item_t));
+	  /* try notification of because event is ready */
+	  LOGd(DEBUGLVL(3), "try to give ack sender for event");
+
+	  send_error = get_ack_reply(threadid, L4EVENTS_OK,
+				     curr_ack->event_ch,
+				     curr_ack->event_nr);
+	  if (send_error)
+	    {
+	      /* notification failed */
+	      curr_ack->threadid = L4_INVALID_ID;
+	    }
+	  else
+	    {
+	      /* unlink after notification of the sender */
+	      if (prev_ack)
+		prev_ack->next_item = curr_ack->next_item;
+	      else
+		ack_list = curr_ack->next_item;
+
+	      my_free(curr_ack, sizeof(ack_item_t));
+	    }
+	  return L4EVENTS_OK;
 	}
-	return L4EVENTS_OK;
+      else
+	{
+	  /* go to next element in list */
+	  prev_ack = curr_ack;
+	  curr_ack = curr_ack->next_item;
+	}
     }
-    else
-    {
-      /* go to next element in list */
-      prev_ack = curr_ack;
-      curr_ack = curr_ack->next_item;
-    }
-  }
 
   if (!found)
-  {
-    LOGd(DEBUGLVL(2), "event-nr:%d NOT found", levent_nr);
-    
-    send_error =
-	  get_ack_reply(*threadid,
-	      		L4EVENTS_WARNING_INVALID_EVENTNR,
-	      		L4EVENTS_NO_CHANNEL, 
-			L4EVENTS_NO_NR);
-  }
+    {
+      LOGd(DEBUGLVL(2), "event-nr:%ld NOT found", levent_nr);
+
+      send_error =
+	get_ack_reply(threadid,
+	    L4EVENTS_WARNING_INVALID_EVENTNR,
+	    L4EVENTS_NO_CHANNEL, 
+	    L4EVENTS_NO_NR);
+    }
 
   return L4EVENTS_OK;
 }
@@ -1257,31 +1271,30 @@ l4_uint8_t
 server_handle_timeout(void)
 {
   /* if timeout list is empty, we have nothing to do */
-  if (timeout_first_event == NULL)
+  if (!timeout_first_event)
     return 0;
- 
+
   /* decrement counter of first element  */
   timeout_first_event->timeout--;
- 
-  while ((timeout_first_event != NULL) && 
-	 (timeout_first_event->timeout == 0))
-  {
-    event_item_t *curr_event = timeout_first_event;
 
-    LOGd(DEBUGLVL(2), "unlink event [%i,%i]",
+  while (timeout_first_event && timeout_first_event->timeout == 0)
+    {
+      event_item_t *curr_event = timeout_first_event;
+
+      LOGd(DEBUGLVL(2), "unlink event [%i,%li]",
 	  curr_event->event_ch, curr_event->event_nr);
-      
-    /* unlink from timeout queue, first */
-    unlink_event_from_timeout_queue(curr_event);
 
-    /* if neccessary event with new timeout in queue */
-    send_event_to_lower_priority(curr_event);
+      /* unlink from timeout queue, first */
+      unlink_event_from_timeout_queue(curr_event);
 
-    /* delete the event if no more acknowledging or pending 
-       tasks for this event */
-    delete_event(curr_event);
-  }
-  
+      /* if neccessary event with new timeout in queue */
+      send_event_to_lower_priority(curr_event);
+
+      /* delete the event if no more acknowledging or pending 
+	 tasks for this event */
+      delete_event(curr_event);
+    }
+
   return L4EVENTS_OK;
 }
 
@@ -1306,14 +1319,12 @@ void server_dump(void)
   printf("----- end of event-server dump -------\n");
 
   if (debug_malloc)
-  {
-    printf("\n");
-    printf("malloc size: %u\n", alloc_size);
-    printf("malloc time: %u\n\n", alloc_time);
-    printf("\n");
-  }
-
-  return;
+    {
+      printf("\n");
+      printf("malloc size: %u\n", alloc_size);
+      printf("malloc time: %u\n\n", alloc_time);
+      printf("\n");
+    }
 }
 
 /*********************************************************************
@@ -1384,5 +1395,4 @@ int main(int argc, const char *argv[])
   server_loop(0);
 
   return 0;
-};
-
+}

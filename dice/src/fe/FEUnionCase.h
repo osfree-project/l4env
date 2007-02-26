@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEUnionCase.h
- *    \brief   contains the declaration of the class CFEUnionCase
+ *  \file    dice/src/fe/FEUnionCase.h
+ *  \brief   contains the declaration of the class CFEUnionCase
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,15 +31,15 @@
 #define __DICE_FE_FEUNIONCASE_H__
 
 #include "fe/FEBase.h"
+#include "fe/FEExpression.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CFETypedDeclarator;
-class CFEExpression;
 
-/**    \class CFEUnionCase
- *    \ingroup frontend
- *    \brief represents a single case branch of a union
+/** \class CFEUnionCase
+ *  \ingroup frontend
+ *  \brief represents a single case branch of a union
  */
 class CFEUnionCase : public CFEBase
 {
@@ -49,41 +49,51 @@ public:
     /** standard constructor for union case object */
     CFEUnionCase();
     /** constructor for union case object
-     *    \param pUnionArm the corresponding union arm (a type declarator)
-     *    \param pCaseLabels the labels of the bolonging case statement(s) */
-    CFEUnionCase(CFETypedDeclarator *pUnionArm, vector<CFEExpression*> *pCaseLabels = 0);
+     *  \param pUnionArm the corresponding union arm (a type declarator)
+     *  \param pCaseLabels the labels of the bolonging case statement(s) */
+    CFEUnionCase(CFETypedDeclarator *pUnionArm,
+	vector<CFEExpression*> *pCaseLabels = 0);
     virtual ~CFEUnionCase();
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEUnionCase(CFEUnionCase &src);
 
 // operations
 public:
-    virtual void Serialize(CFile *pFile);
-    virtual bool CheckConsistency();
+    virtual void Accept(CVisitor&);
     virtual bool IsDefault();
-    virtual CObject* Clone();
-    virtual CFEExpression* GetNextUnionCaseLabel(vector<CFEExpression*>::iterator &iter);
-    virtual vector<CFEExpression*>::iterator GetFirstUnionCaseLabel();
-    virtual CFETypedDeclarator* GetUnionArm();
+
+    /** retrieves the union arm
+     *  \return the typed declarator, which is this union case's arm
+     */
+    virtual CFETypedDeclarator* GetUnionArm()
+    { return m_pUnionArm; }
+
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEUnionCase(*this); }
 
 // attributes
 protected:
-    /**    \var bool m_bDefault
-     *    \brief shows, whether this is the default branch
+    /** \var bool m_bDefault
+     *  \brief shows, whether this is the default branch
      */
     bool m_bDefault;
-    /**    \var CFETypedDeclarator *m_pUnionArm
-     *    \brief the variable declaration, which hides in this branch
+    /** \var CFETypedDeclarator *m_pUnionArm
+     *  \brief the variable declaration, which hides in this branch
      */
     CFETypedDeclarator *m_pUnionArm;
-    /**    \var vector<CFEExpression*> m_vUnionCaseLabelList
-     *    \brief the case labels (if not default) - should be constant values
+
+public:
+    /** \var CCollection<CFEExpression> m_UnionCaseLabelList
+     *  \brief the case labels (if not default) - should be constant values
      */
-    vector<CFEExpression*> m_vUnionCaseLabelList; // of type const expression
+    CCollection<CFEExpression> m_UnionCaseLabelList;
 };
 
 #endif /* __DICE_FE_FEUNIONCASE_H__ */

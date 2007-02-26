@@ -12,7 +12,7 @@ IMPLEMENTATION:
 class J_reg_dump : public Jdb_module
 {
 public:
-  J_reg_dump();
+  J_reg_dump() FIASCO_INIT;
   Jdb::Action action();
 };
 

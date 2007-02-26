@@ -30,14 +30,14 @@ static int _DEBUG = 1;
 static int _DEBUG = 0;
 #endif
 
-l4_int32_t
-l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
-                            const char* fname,
-                            const l4_threadid_t *dm,
-                            l4_uint32_t flags,
-                            l4dm_dataspace_t *ds,
-                            l4_uint32_t *size,
-                            CORBA_Server_Environment *_dice_corba_env)
+long
+l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
+                             const char* fname,
+                             const l4_threadid_t *dm,
+                             unsigned long flags,
+                             l4dm_dataspace_t *ds,
+                             l4_size_t *size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
     int err,fd;
     int errcount = 0;

@@ -15,7 +15,7 @@
 #define OMEGA0_DEBUG_MEASUREMENT_SENDTIME 0
 
 // set to 1 if you want verbose startup
-#define OMEGA0_DEBUG_STARTUP 1
+#define OMEGA0_DEBUG_STARTUP 0
 
 /* set to 1 if you want the server to enter-kdebug on fairly hard
  * errors (like memory shortage or other unexpected things). */

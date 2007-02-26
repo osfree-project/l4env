@@ -15,7 +15,7 @@
 
 #include <l4/log/l4log.h>
 
-int write(int fd, const void *buf, size_t count) __THROW
+ssize_t write(int fd, const void *buf, size_t count)
 {
     // just accept write to stdout and stderr
     if ((fd == STDOUT_FILENO) || (fd == STDERR_FILENO))

@@ -1,0 +1,51 @@
+#! /bin/bash
+
+# This is the runux script to start Qt programs via loader
+
+. ${0%/*}/generic.inc
+
+# 
+[ -n "$UXRES" ] || UXRES=800x600@16
+[ -n "$UXMEM" ] || UXMEM=256
+[ -n "$L4DIR" ] || L4DIR=${0%/*}/../..
+
+# FB_PROVIDER should be set to 'con-ux', 'proxygon', 'l4dope-ux' or
+# 'sdl' (for direct framebuffer access)
+[ -n "$FB_PROVIDER" ] || FB_PROVIDER=con-ux
+
+if [ "$FB_PROVIDER" = "proxygon" ]
+then
+    FB_PROVIDER_EXTRA="l4dope-ux"
+fi
+
+if [ "$FB_PROVIDER" = "sdl" ]
+then
+    FB_PROVIDER=""
+fi
+
+if [ -z "$1" ]
+then
+    echo "You must specify at least some loader scripts or binaries!"
+    echo " usage: $0 loader_binary [binaries]"
+    echo "  e.g.: $0 \"$CFGPATH/cfg_qrun\""
+    exit 1;
+fi
+
+
+${0%/*}/fiasco                 \
+	-m$UXMEM               \
+	-G$UXRES               \
+	-n8 -n10 -n11 -n12     \
+	names                  \
+	log                    \
+	"dm_phys --events"     \
+	rtc-ux                 \
+        "simple_ts --events"   \
+        fuxfprov               \
+	$FB_PROVIDER           \
+	$FB_PROVIDER_EXTRA     \
+        events                 \
+	name_server            \
+	"local_socks --events" \
+        "loader --events $CFGPATH/cfg_qt3_file_servers $1"
+

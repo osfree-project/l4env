@@ -87,11 +87,12 @@ l4dm_memphys_copy(const l4dm_dataspace_t * ds, l4_offs_t src_offs,
                                          dst_offs, num, dst_pool, dst_addr, 
                                          dst_size, dst_align, flags, name,
                                          copy, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_phys: copy dataspace %u at DMphys ("l4util_idfmt") failed "
-	    "(ret %d, exc %d)", ds->id, l4util_idstr(dsm_id), ret, _env.major);
+	    "(ret %d, exc %d)", ds->id, l4util_idstr(dsm_id), ret,
+	    DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else

@@ -2,8 +2,8 @@
  * $Id$
  */
 
-#ifndef __L4_SYSCALLS_L42_GCC295_NOPIC_PROFILE_H__
-#define __L4_SYSCALLS_L42_GCC295_NOPIC_PROFILE_H__
+#ifndef __L4_SYSCALLS_L42_PROFILE_H__
+#define __L4_SYSCALLS_L42_PROFILE_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,4 +131,3 @@ l4_task_new(l4_taskid_t destination,
 }
 
 #endif
-

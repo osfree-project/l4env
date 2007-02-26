@@ -26,8 +26,8 @@
 #include <l4/loader/loader-client.h>
 #include <l4/loader/loader.h>
 #include <l4/env/env.h>
+#include <l4/events/events.h>
 #include <l4/thread/thread.h>
-#include <l4/semaphore/semaphore.h>
 #include <l4/generic_ts/generic_ts.h>
 #include <l4/exec/exec.h>
 #include <l4/log/l4log.h>
@@ -46,7 +46,6 @@
 #include <l4/l4con/l4contxt.h>
 #endif
 
-char LOG_tag[9] = "run";		/**< tell log library who we are. */
 l4_ssize_t l4libc_heapsize = -256*1024;
 const  int l4thread_max_threads = 6;
 
@@ -65,10 +64,11 @@ help(void)
 {
   printf(
 "  a ... show information about all loaded applications at loader\n"
-"  A ... dump all applications of the task server tp L4 debug console\n"
+"  A ... dump all applications of the task server to L4 debug console\n"
 "  c ... close all dataspaces of a specific task\n"
 "  d ... show all allocated dataspaces of the default dataspace manager\n"
 "  D ... show detail information about a specific dataspace\n"
+"  e ... show information about events server to L4 debug console\n"
 "  f ... set default file provider\n"
 "  k ... kill an application which was loaded by the loader using the task id\n"
 "  l ... load a new application using tftp\n"
@@ -78,6 +78,7 @@ help(void)
 "  p ... dump dataspace manager's pool info to L4 debug console\n"
 "  r ... dump rmgr memory info to L4 debug console\n"
 "  K ... enter kernel debugger\n"
+"  Q ... quit\n"
 "  ^ ... reboot machine\n");
 }
 
@@ -135,7 +136,7 @@ dump_l4env_infopage(l4env_infopage_t *env)
 	  pos++;
 	}
 
-      printf("  %s ds %3d: %08x-%08x ",
+      printf("  %s ds %3d: %08lx-%08lx ",
 	   pos_str, l4exc->ds.id, l4exc->addr, l4exc->addr+l4exc->size);
       for (j=1, k=0; j<=L4_DSTYPE_ERRLINK; j<<=1, k++)
 	{
@@ -284,8 +285,9 @@ restart:
       printf("==========================================================="
 	     "=====================\n"
 	     "       total %08x (%7uKB,%4uMB)\n",
-	     total_size, (total_size+(1<<9)-1)/(1<<10),
-	     (size+(1<<19)-1)/(1<<20));
+	     total_size,
+	     (total_size+(1<<9 )-1)/(1<<10),
+	     (total_size+(1<<19)-1)/(1<<20));
     }
 }
 
@@ -648,6 +650,12 @@ restart:
     }
 }
 
+static void
+show_events_info(void)
+{
+  l4events_dump();
+}
+
 /** basic command input loop. */
 static void
 command_loop(void)
@@ -686,6 +694,9 @@ command_loop(void)
 	  break;
 	case 'D':
 	  show_one_ds();
+	  break;
+	case 'e':
+	  show_events_info();
 	  break;
 	case 'f':
 	  set_file_provider();
@@ -744,6 +755,13 @@ command_loop(void)
 	  printf("  Entering kernel debugger\n");
 	  enter_kdebug("Enter from run");
 	  break;
+	case 'Q':
+	  printf("  Really quit? Press 'y'...");
+	  if (getchar() == 'y')
+	    exit(0);
+	  else
+	    printf(" go on.\n");
+	  break;
 	default:
 	  printf("## invalid command\n");
 	}
@@ -754,6 +772,31 @@ static void
 add_to_load_app_ihb(int id, const char *string, int num)
 {
   contxt_ihb_add(&load_app_ihb, string);
+}
+
+static int
+set_fprov(const char *fprov_name)
+{
+  if (!fprov_name || !*fprov_name)
+    {
+      l4env_infopage_t *l4env_infopage = l4env_get_infopage();
+      if (!l4env_infopage)
+	fprov_name = "TFTP"; /* Fall back to TFTP */
+      else
+	tftp_id = l4env_infopage->fprov_id;
+    }
+
+  if (fprov_name && *fprov_name)
+    {
+      if (!names_waitfor_name(fprov_name, &tftp_id, 30000))
+	{
+	  LOG("File provider \"%s\" not found -- terminating", fprov_name);
+	  return -2;
+	}
+
+      printf("File provider is \"%s\"", fprov_name);
+    }
+  return 0;
 }
 
 /** main function. */
@@ -768,7 +811,7 @@ main(int argc, const char *argv[])
 
   if ((error = parse_cmdline(&argc, &argv,
 		'f', "fprov", "specify file provider",
-		PARSE_CMD_STRING, "TFTP", &fprov_name,
+		PARSE_CMD_STRING, "", &fprov_name,
 		'i', "ihb", "add entry to input history of [l]oad",
 		PARSE_CMD_FN_ARG, 0, &add_to_load_app_ihb,
 		0)))
@@ -796,13 +839,8 @@ main(int argc, const char *argv[])
       return -2;
     }
 
-  if (!names_waitfor_name(fprov_name, &tftp_id, 30000))
-    {
-      LOG("File provider \"%s\" not found -- terminating", fprov_name);
-      return -2;
-    }
-
-  printf("File provider is \"%s\"", fprov_name);
+  if ((error = set_fprov(fprov_name)))
+    return error;
 
   dm_id = l4env_get_default_dsm();
 

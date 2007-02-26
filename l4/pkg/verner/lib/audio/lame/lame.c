@@ -1488,6 +1488,8 @@ int lame_encode_finish(lame_global_flags *gfp,char *mp3buffer, int mp3buffer_siz
 }
 
 
+/* VERNER does not need this and we don't want to deal with id3_writetag() */
+#if 0
 /*****************************************************************/
 /* write VBR Xing header, and ID3 tag, if asked for               */
 /*****************************************************************/
@@ -1509,6 +1511,7 @@ void lame_mp3_tags(lame_global_flags *gfp)
     id3_writetag(gfp->outPath, &id3tag);
   }
 }
+#endif
 
 
 void lame_version(lame_global_flags *gfp,char *ostring) {

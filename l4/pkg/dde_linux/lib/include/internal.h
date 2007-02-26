@@ -24,10 +24,6 @@
 #include <linux/vmalloc.h>
 #include "__config.h"
 
-/* Address Conversion Helpers */
-void address_add_region(l4_addr_t, l4_addr_t, l4_size_t);
-void address_remove_region(l4_addr_t, l4_size_t);
-
 /* Region Handling Helpers */
 
 /** region data type */
@@ -62,7 +58,7 @@ static inline void dde_add_region(struct dde_region **head,
 
   *head = p;
 
-  LOGd(DEBUG_MSG, "new dde_region [0x%08x, 0x%08x, %d]", va, pa, size);
+  LOGd(DEBUG_MSG, "new dde_region [0x%08lx, 0x%08lx, %d]", va, pa, size);
 }
 
 /** Internal Region Removal

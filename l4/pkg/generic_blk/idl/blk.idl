@@ -183,7 +183,7 @@ library l4blk
                [in] l4_uint32_t command,
                [in, ref, size_is(in_size)] void * in_args,
                [in] int in_size,
-               [out, ref, prealloc, size_is(out_size)] void ** out_args,
+               [out, ref, prealloc_client, size_is(out_size)] void ** out_args,
                [in, out] int * out_size);
     };
 

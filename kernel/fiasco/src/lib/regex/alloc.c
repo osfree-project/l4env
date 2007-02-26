@@ -54,7 +54,7 @@ static unsigned linear_mem_free;
 static void*
 regex_mmap(size_t size)
 {
-  unsigned j;
+  Address j;
   char *ptr;
 
   size = PAGE_ALIGN(size);
@@ -78,10 +78,10 @@ regex_mmap(size_t size)
 static void
 regex_munmap(void *ptr, size_t size)
 {
-  unsigned i, j;
+  Address i, j;
 
   size = PAGE_ALIGN(size);
-  i = ((unsigned)ptr - (unsigned)linear_mem) / PAGE_SIZE;
+  i = ((Address)ptr - (Address)linear_mem) / PAGE_SIZE;
   j = (1<<(size/PAGE_SIZE))-1;
   linear_mem_free |= j<<i;
 }
@@ -89,12 +89,12 @@ regex_munmap(void *ptr, size_t size)
 static void*
 regex_mremap(void *ptr, size_t old_size, size_t new_size)
 {
-  unsigned i, j, k;
+  Address i, j, k;
   void *new_ptr;
 
   old_size = PAGE_ALIGN(old_size);
   new_size = PAGE_ALIGN(new_size);
-  i = ((unsigned)ptr - (unsigned)linear_mem) / PAGE_SIZE;
+  i = ((Address)ptr - (Address)linear_mem) / PAGE_SIZE;
   j = (1<<(old_size/PAGE_SIZE))-1;
   k = (1<<(new_size/PAGE_SIZE))-1;
 

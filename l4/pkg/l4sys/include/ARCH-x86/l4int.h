@@ -12,6 +12,8 @@
 #ifndef _L4_SYS_L4INT_H
 #define _L4_SYS_L4INT_H
 
+#define L4_MWORD_BITS		32
+
 /* fixed sized data types */
 typedef signed char             l4_int8_t;    /**< \ingroup api_types_common */
 typedef unsigned char           l4_uint8_t;   /**< \ingroup api_types_common */
@@ -23,15 +25,15 @@ typedef signed long long        l4_int64_t;   /**< \ingroup api_types_common */
 typedef unsigned long long      l4_uint64_t;  /**< \ingroup api_types_common */
 
 /* some common data types */
-typedef l4_uint32_t             l4_addr_t;    /**< \ingroup api_types_common */
-typedef l4_uint32_t             l4_offs_t;    /**< \ingroup api_types_common */
-typedef l4_uint32_t             l4_size_t;    /**< \ingroup api_types_common */
-typedef l4_int32_t              l4_ssize_t;   /**< \ingroup api_types_common */
+typedef unsigned long           l4_addr_t;    /**< \ingroup api_types_common */
+typedef unsigned long           l4_offs_t;    /**< \ingroup api_types_common */
+typedef unsigned int            l4_size_t;    /**< \ingroup api_types_common */
+typedef signed int              l4_ssize_t;   /**< \ingroup api_types_common */
 
-typedef signed int              l4_mword_t;   /**< Signed machine word
+typedef signed long             l4_mword_t;   /**< Signed machine word
 					       **  \ingroup api_types_common
 					       **/
-typedef unsigned int            l4_umword_t;  /**< Unsigned machine word
+typedef unsigned long           l4_umword_t;  /**< Unsigned machine word
 					       **  \ingroup api_types_common
 					       **/
 /**

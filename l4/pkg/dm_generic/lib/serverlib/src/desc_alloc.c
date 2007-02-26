@@ -17,6 +17,7 @@
 /* L4/L4Env includes */
 #include <l4/slab/slab.h>
 #include <l4/util/macros.h>
+#include <l4/util/l4_macros.h>
 
 /* DM_generic includes */
 #include <l4/dm_generic/dsmlib.h>
@@ -68,7 +69,7 @@ __grow(l4slab_cache_t * cache, void ** data)
 
   page = get_page(data);
 
-  LOGdL(DEBUG_PAGE_ALLOC, "got page at 0x%08x", (unsigned)page);
+  LOGdL(DEBUG_PAGE_ALLOC, "got page at 0x"l4_addr_fmt, (l4_addr_t)page);
 
   return page;
 }
@@ -85,7 +86,7 @@ __grow(l4slab_cache_t * cache, void ** data)
 static void
 __release(l4slab_cache_t * cache, void * page, void * data)
 {
-  LOGdL(DEBUG_PAGE_ALLOC, "release page at 0x%08x", (unsigned)page);
+  LOGdL(DEBUG_PAGE_ALLOC, "release page at 0x"l4_addr_fmt, (l4_addr_t)page);
 
   free_page(page,data);
 }

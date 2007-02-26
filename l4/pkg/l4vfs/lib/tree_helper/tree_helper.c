@@ -30,8 +30,6 @@ static local_object_id_t _get_new_id(void)
     return id_counter++;
 }
 
-
-
 l4vfs_th_node_t * l4vfs_th_node_for_id(local_object_id_t id)
 {
     int i;
@@ -80,6 +78,7 @@ l4vfs_th_node_t * l4vfs_th_new_node(const char * name, int type,
     node->type        = type;
     node->id          = _get_new_id();
     node->usage_count = 0;
+    node->first_child = NULL;
 
     // insert into table
     for (i = 0; i < TREE_HELPER_MAX_OBJECTS; i++)
@@ -103,6 +102,10 @@ l4vfs_th_node_t * l4vfs_th_new_node(const char * name, int type,
         temp = parent->first_child;
         node->next = temp;
         parent->first_child = node;
+    }
+    else
+    {
+        node->next = NULL;
     }
 
     return node; // finally
@@ -174,7 +177,6 @@ int l4vfs_th_free_node(l4vfs_th_node_t * node)
     return 0;
 }
 
-
 // resolve long path
 local_object_id_t l4vfs_th_resolve(local_object_id_t base, const char * name)
 {
@@ -241,7 +243,7 @@ local_object_id_t l4vfs_th_local_resolve(local_object_id_t base,
             return base;
     }
     if (strlen(name) == 2)
-        if (strcmp(name, "..") == 0) 
+        if (strcmp(name, "..") == 0)
         {
             if (node->parent)
                 return node->parent->id;
@@ -265,7 +267,7 @@ char * l4vfs_th_rev_resolve(local_object_id_t base, local_object_id_t * parent)
     char * path, * ret, * temp;
 
     node = l4vfs_th_node_for_id(base);
- 
+
     path = strdup("");
     // until we are at the root or parent
     while (node->parent != NULL || node->id == *parent)

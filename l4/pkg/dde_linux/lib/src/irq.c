@@ -45,6 +45,7 @@
 #include <l4/rmgr/librmgr.h>
 #include <l4/util/irq.h>
 #include <l4/util/thread.h>  /* attach_interrupt() */
+#include <l4/sigma0/kip.h>
 #include <l4/thread/thread.h>
 #include <l4/lock/lock.h>
 
@@ -69,13 +70,15 @@ static struct irq_desc
   int active;           /**< IRQ in use */
   int num;              /**< IRQ number */
   l4thread_t t;         /**< handler thread */
-  void (*handler) (int, void *, struct pt_regs *);
-                        /**< ISR */
+  struct {
+    void (*isr) (int, void *, struct pt_regs *);
+                          /**< ISRs */
+    unsigned long flags;  /**< flags from request_irq() */
+    const char *dev_name; /**< dev_name from request_irq() */
+    void *dev_id;         /**< dev_id from request_irq() */
+  } h[MAX_IRQ_HANDLERS];
   void (*def_handler) (int, void *);
                         /**< deferred handler */
-  unsigned long flags;  /**< flags from request_irq() */
-  const char *dev_name; /**< dev_name from request_irq() */
-  void *dev_id;         /**< dev_id from request_irq() */
   void *dev_def_id;     /**< deffered handler id */
 } handlers[NR_IRQS];
 
@@ -85,13 +88,16 @@ static int use_omega0 = 0;
 
 static int _initialized = 0;  /**< initialization flag */
 
-int l4dde_irq_set_prio(unsigned int irq, unsigned prio){
-    struct irq_desc *handler;
+static int _running_ux = 0;   /**< running under ux flag */
 
-    /* Oh, I remember, currently only one handler per IRQ is allowed. */
-    handler = &handlers[irq];
-    if(!handler) return -L4_EINVAL;
-    return l4thread_set_prio(handler->t, prio);
+int l4dde_irq_set_prio(unsigned int irq, unsigned prio)
+{
+  struct irq_desc *handler = &handlers[irq];
+
+  if ( !(irq < NR_IRQS) || !handler->active )
+    return -L4_EINVAL;
+
+  return l4thread_set_prio(handler->t, prio);
 }
 
 
@@ -116,7 +122,7 @@ static inline int __omega0_attach(unsigned int irq, int *handle)
 
   /* setup irq descriptor */
   irqdesc.s.num = irq + 1;
-  irqdesc.s.shared = 0;
+  irqdesc.s.shared = 1;      /* XXX always try sharing */
 
   /* attach IRQ */
   *handle = omega0_attach(irqdesc);
@@ -165,11 +171,14 @@ static inline int __omega0_wait(unsigned int irq, int handle, unsigned int flags
  */
 static inline void __enable_irq(unsigned int irq)
 {
-  int port;
-  l4util_cli();
-  port = (((irq & 0x08) << 4) + 0x21);
-  l4util_out8(l4util_in8(port) & ~(1 << (irq & 7)), port);
-  l4util_sti();
+  if (!_running_ux)
+    {
+      unsigned short  port;
+      l4util_cli();
+      port = (((irq & 0x08) << 4) + 0x21);
+      l4util_out8(l4util_in8(port) & ~(1 << (irq & 7)), port);
+      l4util_sti();
+    }
 }
 
 /** Disable IRQ
@@ -178,11 +187,14 @@ static inline void __enable_irq(unsigned int irq)
  */
 static inline void __disable_irq(unsigned int irq)
 {
-  unsigned short port;
-  l4util_cli();
-  port = (((irq & 0x08) << 4) + 0x21);
-  l4util_out8(l4util_in8(port) | (1 << (irq & 7)), port);
-  l4util_sti();
+  if (!_running_ux)
+    {
+      unsigned short port;
+      l4util_cli();
+      port = (((irq & 0x08) << 4) + 0x21);
+      l4util_out8(l4util_in8(port) | (1 << (irq & 7)), port);
+      l4util_sti();
+    }
 }
 
 /** Disable and acknowledge IRQ
@@ -191,7 +203,8 @@ static inline void __disable_irq(unsigned int irq)
  */
 static inline void __ack_irq(unsigned int irq)
 {
-  l4util_irq_acknowledge(irq);
+  if (!_running_ux)
+    l4util_irq_acknowledge(irq);
 }
 
 /** @} */
@@ -265,7 +278,7 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
         error = __omega0_wait(irq, irq_handle, om_flags);
       else
         {
-          if(omega0_alien_handler)
+          if (omega0_alien_handler)
             {
               l4_threadid_t alien;
               while(1)
@@ -273,7 +286,7 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
                   error = l4_ipc_wait(&alien,
                                       L4_IPC_SHORT_MSG, &dw0, &dw1,
                                       L4_IPC_NEVER, &result);
-                  if(error || l4_thread_equal(irq_id, alien))
+                  if (error || l4_thread_equal(irq_id, alien))
                     break;
                   omega0_alien_handler(alien, dw0, dw1);
                 }
@@ -295,8 +308,11 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
           LOGd(DEBUG_IRQ, "got IRQ %d\n", irq);
           if (irq_desc->active)
             {
-              irq_desc->handler(irq, irq_desc->dev_id, 0);
-              if(irq_desc->def_handler)
+              int i;
+              for (i = 0; i < MAX_IRQ_HANDLERS; i++)
+                if (irq_desc->h[i].isr)
+                  irq_desc->h[i].isr(irq, irq_desc->h[i].dev_id, 0);
+              if (irq_desc->def_handler)
                 irq_desc->def_handler(irq, irq_desc->dev_def_id);
             }
           if (use_omega0)
@@ -325,7 +341,7 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
  *
  * \return 0 on success; error code otherwise
  *
- * \todo reattachment
+ * \todo FIXME consider locking!
  */
 int request_irq(unsigned int irq,
                 void (*handler) (int, void *, struct pt_regs *),
@@ -334,56 +350,58 @@ int request_irq(unsigned int irq,
   l4thread_t irq_tid;
   char name[16];
 
-  if (irq >= NR_IRQS)
+  if ( !(irq < NR_IRQS) )
     return -EINVAL;
   if (!handler)
     return -EINVAL;
 
-  if(handlers[irq].t)
+  /* IRQ thread already up ? */
+  if (!handlers[irq].t)
     {
-      if (handlers[irq].active)
+      /* create IRQ handler thread */
+      LOG_snprintf(name, 16, ".irq%.2X", irq);
+      irq_tid = l4thread_create_long(L4THREAD_INVALID_ID,
+                                     (l4thread_fn_t) dde_irq_thread,
+                                     name,
+                                     L4THREAD_INVALID_SP,
+                                     L4THREAD_DEFAULT_SIZE,
+                                     L4THREAD_DEFAULT_PRIO,
+                                     (void *) &handlers[irq],
+                                     L4THREAD_CREATE_SYNC);
+
+      if (irq_tid < 0)
         {
-          LOGd(DEBUG_IRQ, "XXX attempt to reattach to active irq %d", irq);
+          LOGdL(DEBUG_ERRORS, "Error: thread creation failed");
+          return -EAGAIN;
+        }
+      if (*(int*)l4thread_startup_return(irq_tid))
+        {
+          LOGdL(DEBUG_ERRORS, "Error: irq not free");
           return -EBUSY;
         }
-      handlers[irq].active = 1;
-
-      /* XXX what about handler, flags, ... ? */
-
-      LOGd(DEBUG_IRQ, "reattached to irq %d", irq);
-      return 0;
+      handlers[irq].t = irq_tid;
     }
 
-  handlers[irq].handler = handler;
+  int i;
+  for (i = 0; i < MAX_IRQ_HANDLERS; i++)
+    if (!handlers[irq].h[i].isr)
+      break;
 
-  /* create IRQ handler thread */
-  LOG_snprintf(name, 16, ".irq%.2X", irq);
-  irq_tid = l4thread_create_long(L4THREAD_INVALID_ID,
-                                 (l4thread_fn_t) dde_irq_thread,
-                                 name,
-                                 L4THREAD_INVALID_SP,
-                                 L4THREAD_DEFAULT_SIZE,
-                                 L4THREAD_DEFAULT_PRIO,
-                                 (void *) &handlers[irq],
-                                 L4THREAD_CREATE_SYNC);
-
-  if (irq_tid<0)
+  if (i == MAX_IRQ_HANDLERS)
     {
-      LOGdL(DEBUG_ERRORS, "Error: thread creation failed");
-      return -EAGAIN;
-    }
-  if (*(int*)l4thread_startup_return(irq_tid))
-    {
-      LOGdL(DEBUG_ERRORS, "Error: irq not free");
+      LOGd(DEBUG_ERRORS, "Error: maximum number of irq handlers exceeded");
       return -EBUSY;
     }
 
-  handlers[irq].active = 1;
-  handlers[irq].t = irq_tid;
+  handlers[irq].h[i].isr = handler;
 
-  handlers[irq].flags = flags;
-  handlers[irq].dev_name = dev_name;
-  handlers[irq].dev_id = dev_id;
+  LOGd(DEBUG_IRQ, "new handler for irq %d is %p", irq, handler);
+
+  handlers[irq].h[i].flags = flags;
+  handlers[irq].h[i].dev_name = dev_name;
+  handlers[irq].h[i].dev_id = dev_id;
+
+  handlers[irq].active = 1;
 
   LOGd(DEBUG_IRQ, "attached to irq %d", irq);
 
@@ -402,7 +420,18 @@ int request_irq(unsigned int irq,
  */
 void free_irq(unsigned int irq, void *dev_id)
 {
-  handlers[irq].active = 0;
+  int i;
+  int active = 0;
+
+  for (i = 0; i < MAX_IRQ_HANDLERS; i++)
+    {
+      if (handlers[irq].h[i].dev_id == dev_id)
+        handlers[irq].h[i].isr = NULL;
+      if (handlers[irq].h[i].isr)
+        active = 1;
+    }
+
+  handlers[irq].active = active;
 
   LOGd(DEBUG_IRQ, "XXX attempt to free irq %d ("l4util_idfmt")", irq,
        l4util_idstr(l4thread_l4_id(handlers[irq].t)));
@@ -412,7 +441,7 @@ int l4dde_set_deferred_irq_handler(unsigned int irq,
                                    void (*def_handler) (int, void *),
                                    void *dev_def_id)
 {
-    if(handlers[irq].active==0)
+    if (handlers[irq].active==0)
       {
         LOGd(DEBUG_IRQ, "attempt to set deferred handler for free irq %d",
              irq);
@@ -499,10 +528,13 @@ int l4dde_irq_init(int omega0)
   if (_initialized)
     return -L4_ESKIPPED;
 
+  if (l4sigma0_kip_kernel_is_ux())
+    _running_ux = 1;
+
   use_omega0 = omega0;
 
   memset(&handlers, 0, sizeof(handlers));
-  for (i=0; i<NR_IRQS;i++)
+  for (i = 0; i < NR_IRQS; i++)
     handlers[i].num = i;
 
   ++_initialized;
@@ -518,14 +550,14 @@ int l4dde_irq_init(int omega0)
  */
 l4_threadid_t l4dde_irq_l4_id(int irq)
 {
-    if(irq >= NR_IRQS) return L4_INVALID_ID;
-    if(!handlers[irq].active) return L4_INVALID_ID;
+    if (irq >= NR_IRQS) return L4_INVALID_ID;
+    if (!handlers[irq].active) return L4_INVALID_ID;
     return l4thread_l4_id(handlers[irq].t);
 }
 
 omega0_alien_handler_t l4dde_set_alien_handler(omega0_alien_handler_t handler)
 {
-    if(!_initialized) return (omega0_alien_handler_t)-1;
+    if (!_initialized) return (omega0_alien_handler_t)-1;
     return omega0_set_alien_handler(handler);
 }
 

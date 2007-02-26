@@ -18,10 +18,10 @@ INTERFACE:
 // must _not_ be declared `const'.  Likewise, a function that calls a
 // non-`const' function usually must not be `const'.  It does not make
 // sense for a `const' function to return `void'.
-#define FIASCO_CONST		__attribute__ ((const))
+#define FIASCO_CONST		__attribute__ ((__const__))
 
 #ifdef __i386__
-#define FIASCO_FASTCALL		__attribute__ ((regparm(3)))
+#define FIASCO_FASTCALL		__attribute__ ((__regparm__(3)))
 #else
 #define FIASCO_FASTCALL
 #endif
@@ -31,12 +31,12 @@ INTERFACE:
 # define ALWAYS_INLINE		/* empty */
 # define FIASCO_NOINLINE
 #else
-# define MARK_AS_DEPRECATED	__attribute__ ((deprecated))
-# define ALWAYS_INLINE		__attribute__ ((always_inline))
-# define FIASCO_NOINLINE        __attribute__ ((noinline))
+# define MARK_AS_DEPRECATED	__attribute__ ((__deprecated__))
+# define ALWAYS_INLINE		__attribute__ ((__always_inline__))
+# define FIASCO_NOINLINE        __attribute__ ((__noinline__))
 #endif
 
-#define FIASCO_NORETURN         __attribute__ ((noreturn))
+#define FIASCO_NORETURN         __attribute__ ((__noreturn__))
 
 IMPLEMENTATION:
 //-

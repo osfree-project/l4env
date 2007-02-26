@@ -2,7 +2,7 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../../..
 
-SYSTEMS        = x86-l4v2 x86-l4x0
+SYSTEMS        = x86-l4v2
 
 PRIVATE_INCDIR = $(PKGDIR)/server/common
 
@@ -23,6 +23,7 @@ LIBS           = -u putchar -u puts -u printf                                \
                  -ll4vfs_term_server_internal                                \
                  -ll4vfs_term_server_main                                    \
                  -ll4vfs_term_server_internal-server                         \
-                 -ll4vfs_common_io_notify-server
+                 -ll4vfs_common_io_notify-server							 \
+				 -lparsecmdline
 
 include $(L4DIR)/mk/prog.mk

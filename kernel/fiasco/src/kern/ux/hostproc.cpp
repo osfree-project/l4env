@@ -67,9 +67,12 @@ Hostproc::setup (unsigned int taskno)
   check (!sigaction (SIGSEGV, &action, NULL));
 
   // Map trampoline page
-  mmap ((void *) Mem_layout::Trampoline_page, Config::PAGE_SIZE,
-	PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_FIXED,
-	Boot_info::fd(), Mem_layout::Trampoline_frame);
+  check (mmap ((void *) Mem_layout::Trampoline_page,
+         Config::PAGE_SIZE,
+	     PROT_READ | PROT_WRITE | PROT_EXEC,
+	     MAP_SHARED | MAP_FIXED,
+         Boot_info::fd(),
+         Mem_layout::Trampoline_frame) != MAP_FAILED);
 
   ptrace (PTRACE_TRACEME, 0, NULL, NULL);
 

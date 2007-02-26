@@ -3,10 +3,10 @@
 
 #include <l4/sys/compiler.h>
 
-#ifndef L4_SYSCALL_MAGIC_OFFSET 
-#  define L4_SYSCALL_MAGIC_OFFSET 	8
+#ifndef L4_SYSCALL_MAGIC_OFFSET
+#  define L4_SYSCALL_MAGIC_OFFSET	8
 #endif
-#define L4_SYSCALL_ENTER_KDEBUG 	(-0x00000020-L4_SYSCALL_MAGIC_OFFSET)
+#define L4_SYSCALL_ENTER_KDEBUG		(-0x00000020-L4_SYSCALL_MAGIC_OFFSET)
 
 #define enter_kdebug(text...)			\
 __asm__ __volatile__ (				\
@@ -21,7 +21,7 @@ __asm__ __volatile__ (				\
     : "i" (L4_SYSCALL_ENTER_KDEBUG)		\
     : "lr")
 
-L4_INLINE void 
+L4_INLINE void
 outnstring(const char* x, unsigned len);
 
 L4_INLINE void
@@ -60,14 +60,14 @@ l4_sys_cli(void);
 L4_INLINE void
 l4_sys_sti(void);
 
-EXTERN_C long int 
-l4_atomic_add(volatile long int* mem, long int offset) __attribute__((long_call));
+EXTERN_C long int
+l4_atomic_add(volatile long int* mem, long int offset) LONG_CALL;
 
-EXTERN_C long int 
-l4_atomic_cmpxchg(volatile long int* mem, long int oldval, long int newval) __attribute__((long_call));
+EXTERN_C long int
+l4_atomic_cmpxchg(volatile long int* mem, long int oldval, long int newval) LONG_CALL;
 
-EXTERN_C long int 
-l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) __attribute__((long_call));
+EXTERN_C long int
+l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) LONG_CALL;
 
 /*
  * -------------------------------------------------------------------
@@ -106,7 +106,7 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
        "=r" (r0)						\
        :							\
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
-       "0" (r0) 						\
+       "0" (r0)							\
       );							\
     r0;								\
   })
@@ -126,14 +126,41 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
        "=r" (r0)						\
        :							\
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
-       "0" (r0), 						\
-       "r" (r1) 						\
+       "0" (r0),						\
+       "r" (r1)							\
+      );							\
+    r0;								\
+  })
+
+#define __KDEBUG_ARM_PARAM_5(nr, p1, p2, p3, p4, p5)		\
+  ({								\
+    register unsigned long r0 asm("r0") = (unsigned long)(p1);	\
+    register unsigned long r1 asm("r1") = (unsigned long)(p2);	\
+    register unsigned long r2 asm("r2") = (unsigned long)(p3);	\
+    register unsigned long r3 asm("r3") = (unsigned long)(p4);	\
+    register unsigned long r4 asm("r4") = (unsigned long)(p5);	\
+    __asm__ __volatile__					\
+      (								\
+       "stmdb sp!, {r5-r12,lr}	\n\t"				\
+       "mov	lr, pc		\n\t"				\
+       "mov	pc, %1		\n\t"				\
+       "cmp	lr, #" #nr "	\n\t"				\
+       "ldmia sp!, {r5-r12,lr}	\n\t"				\
+       :							\
+       "=r" (r0)						\
+       :							\
+       "i" (L4_SYSCALL_ENTER_KDEBUG),				\
+       "0" (r0),						\
+       "r" (r1),						\
+       "r" (r2),						\
+       "r" (r3),						\
+       "r" (r4)							\
       );							\
     r0;								\
   })
 
 
-L4_INLINE void 
+L4_INLINE void
 outnstring(const char* x, unsigned len)
 {
   __KDEBUG_ARM_PARAM_2(3, x, len);

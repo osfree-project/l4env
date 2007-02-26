@@ -415,7 +415,7 @@ QPixmap *pm_broken_img;
     if( lvi )
       save_pos = lvi->text( 1 );
 
-    while( lvi = vb->firstChild() )
+    while( ( lvi = vb->firstChild() ) )
       delete lvi;
 
     cdir.setSorting( QDir::DirsFirst | QDir::Name );
@@ -478,7 +478,7 @@ QPixmap *pm_broken_img;
       sl -= 3;
       }
     char msg[128];
-    sprintf( msg, "Files found: %d (%s bytes)", count, bstr.data() );
+    sprintf( msg, "Files found: %ld (%s bytes)", count, bstr.data() );
     sb->message( msg );
  
     vb->sort();
@@ -600,7 +600,7 @@ QPixmap *pm_broken_img;
   void qvvMainWindow::closeAll()
   {
     qvvView *view;
-    while( view = views.first() )
+    while( ( view = views.first() ) )
       {
       views.removeFirst();
       delete view;
@@ -622,7 +622,7 @@ QPixmap *pm_broken_img;
     cdir.cdUp();
     loadDir( cdir.absPath() );
     QListViewItem *lvi = vb->currentItem();
-    while( lvi = lvi->nextSibling() )
+    while( ( lvi = lvi->nextSibling() ) )
       {
       if ( dname != lvi->text( 1 ) ) continue;
       vb->clearSelection();
@@ -701,6 +701,7 @@ QPixmap *pm_broken_img;
     new_current = lvi->itemBelow();
     if ( new_current == NULL )
       new_current = lvi->itemAbove();
+#if !defined(Q_OS_DROPS)
    
     QString dst_name = cdir.homeDirPath();
     dst_name += "/.qvv_trash";
@@ -729,12 +730,17 @@ QPixmap *pm_broken_img;
       while( cdir.exists( new_dst_name ) );
       dst_name = new_dst_name;
       }
+#endif
    
     QString src_name = cdir.absPath();
     src_name += "/";
     src_name += lvi->text( 1 );
    
+#if !defined(Q_OS_DROPS)
     if( cdir.rename( src_name, dst_name ) )
+#else
+    if( cdir.remove( src_name ) )
+#endif
       {
       delete lvi;
       if ( new_current != NULL )
@@ -746,7 +752,11 @@ QPixmap *pm_broken_img;
         }
       }
     else
+#if !defined(Q_OS_DROPS)
       printf( "qvv: cannot rename to: %s\n", dst_name.data() );
+#else
+      qDebug( "qvv: cannot remove %s", src_name.data() );
+#endif
   };
 
   void qvvMainWindow::slotGoToDir()
@@ -1324,8 +1334,6 @@ QPixmap *pm_broken_img;
 
 int main( int argc, char * argv[] )
 {
-  sleep(2);
-
   QApplication a( argc, argv );
   app = &a;
 

@@ -31,12 +31,12 @@
 #include "verner_config.h"
 
 /* codecs */
-#include "ac_mp3.h"
+#include "ac_pass.h"
 #if BUILD_lame
 #include "ac_lame.h"
 #endif
 #if BUILD_mpg123
-#include "ac_pass.h"
+#include "ac_mp3.h"
 #endif
 
 int

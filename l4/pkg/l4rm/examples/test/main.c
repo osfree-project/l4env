@@ -159,7 +159,7 @@ avl_test(void)
 static int
 __pf_callback(l4_addr_t addr, l4_addr_t eip, l4_threadid_t src)
 {
-  printf("pf at 0x%08x, eip 0x%08x, src "l4util_idfmt"\n", 
+  printf("pf at 0x%08lx, eip 0x%08lx, src "l4util_idfmt"\n", 
          addr, eip, l4util_idstr(src));
   enter_kdebug("-");
   return L4RM_REPLY_EXCEPTION;
@@ -221,7 +221,7 @@ rm_test(void)
   if (ret < 0)
     printf("l4rm_area_setup failed: %s\n", l4env_errstr(ret));
   else
-    printf("got area at 0x%08x\n", addr1);
+    printf("got area at 0x%08lx\n", addr1);
   l4rm_show_region_list();
   enter_kdebug("-");
 
@@ -240,17 +240,17 @@ rm_test(void)
   if (ret < 0)
     printf("l4rm_area_reserve failed: %s (%d)\n",l4env_errstr(ret),ret);
   else
-    printf("area %x at 0x%08x\n",area,addr1);
+    printf("area %x at 0x%08lx\n",area,addr1);
 
   l4rm_show_region_list();
   enter_kdebug("-");
 
   ret = l4rm_area_release_addr((void *)addr1);
   if (ret < 0)
-    printf("l4rm_area_release_addr 0x%08x failed: %s (%d)\n",addr1,
+    printf("l4rm_area_release_addr 0x%08lx failed: %s (%d)\n",addr1,
 	   l4env_errstr(ret),ret);
   else
-    printf("released area at 0x%08x\n",addr1);
+    printf("released area at 0x%08lx\n",addr1);
 
   l4rm_show_region_list();
   enter_kdebug("-");
@@ -288,7 +288,7 @@ rm_test(void)
     }
   cycles = (l4_uint32_t)(t_end - t_start);
   printf("lookup: ds %d at "l4util_idfmt
-         ", offset %d, maped to 0x%08x, size %u\n",
+         ", offset %ld, maped to 0x%08lx, size %u\n",
 	 ds2.id,l4util_idstr(ds2.manager),offset,a,map_size);
   printf("%u cyles\n",cycles);
   enter_kdebug("lookup");
@@ -331,7 +331,7 @@ rm_test(void)
       printf("reserve area failed: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("reserved area %x at 0x%08x\n",area,addr2);
+  printf("reserved area %x at 0x%08lx\n",area,addr2);
 
   ret = l4rm_area_attach(&ds1,area,4096,0,0,&addr3);
   if (ret)
@@ -381,7 +381,7 @@ rm_test(void)
       printf("reserve area failed: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("reserved area at 0x%08x, id 0x%05x\n",area_addr,area);
+  printf("reserved area at 0x%08lx, id 0x%05x\n",area_addr,area);
 
   l4rm_show_region_list();
   enter_kdebug("-");

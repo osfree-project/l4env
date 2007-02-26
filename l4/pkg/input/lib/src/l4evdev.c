@@ -33,6 +33,7 @@
 
 /* Linux */
 #include <linux/input.h>
+#include <linux/jiffies.h>
 
 #include "internal.h"
 
@@ -64,6 +65,12 @@ struct l4evdev {
 	int devn;
 	char name[16];
 	struct input_handle handle;
+
+	/* for touchpads */
+	unsigned int pkt_count;
+	int old_x[4], old_y[4];
+	int frac_dx, frac_dy;
+	unsigned long touch;
 };
 
 struct l4evdev *pcspkr;
@@ -82,6 +89,212 @@ static int l4evdev_buffer_tail = 0;
 
 static l4lock_t l4evdev_lock = L4LOCK_UNLOCKED_INITIALIZER;
 
+/*************************
+ *** TOUCHPAD HANDLING ***
+ *************************/
+/* convert absolute to relative events for inappropriate devices like touchpads
+ * (taken from input/mousedev.c) */
+static unsigned int tpad_touch(struct l4evdev *mousedev, int value)
+{
+	if (!value) {
+/* FIXME tap support */
+#if 0
+		if (mousedev->touch &&
+		    time_before(jiffies, mousedev->touch + msecs_to_jiffies(tap_time))) {
+			/*
+			 * Toggle left button to emulate tap.
+			 * We rely on the fact that mousedev_mix always has 0
+			 * motion packet so we won't mess current position.
+			 */
+			set_bit(0, &mousedev->packet.buttons);
+			set_bit(0, &mousedev_mix.packet.buttons);
+			mousedev_notify_readers(mousedev, &mousedev_mix.packet);
+			mousedev_notify_readers(&mousedev_mix, &mousedev_mix.packet);
+			clear_bit(0, &mousedev->packet.buttons);
+			clear_bit(0, &mousedev_mix.packet.buttons);
+		}
+#endif
+		mousedev->touch = mousedev->pkt_count = 0;
+		mousedev->frac_dx = 0;
+		mousedev->frac_dy = 0;
+	}
+	else
+		if (!mousedev->touch)
+			mousedev->touch = jiffies;
+
+	/* FIXME tap support */
+	return KEY_RESERVED;
+}
+
+static unsigned int tpad_trans_key(unsigned int code)
+{
+	unsigned int button;
+
+	switch (code) {
+
+	/* not translated */
+	case BTN_LEFT:
+	case BTN_RIGHT:
+	case BTN_MIDDLE:
+	case BTN_SIDE:
+	case BTN_EXTRA:
+		button = code;
+		break;
+
+	/* translations */
+	case BTN_TOUCH:
+	case BTN_0:
+		button = BTN_LEFT;
+		break;
+	case BTN_1:
+		button = BTN_RIGHT;
+		break;
+	case BTN_2:
+		button = BTN_MIDDLE;
+		break;
+	case BTN_3:
+		button = BTN_SIDE;
+		break;
+	case BTN_4:
+		button = BTN_EXTRA;
+		break;
+
+	/* abort per default */
+	default:
+		button = KEY_RESERVED;
+	}
+
+	return button;
+}
+
+#define fx(i)  (mousedev->old_x[(mousedev->pkt_count - (i)) & 03])
+#define fy(i)  (mousedev->old_y[(mousedev->pkt_count - (i)) & 03])
+
+/* check event and convert if appropriate
+ * returns 1 if event should be ignored */
+static int tpad_event(struct input_dev *dev, struct l4evdev *mousedev,
+                      unsigned int *type0, unsigned int *code0, int *value0)
+{
+	int size, tmp;
+	unsigned int type = *type0;
+	unsigned int code = *code0;
+	int value         = *value0;
+	enum { FRACTION_DENOM = 128 };
+
+	/* is it really a touchpad ? */
+	if (!test_bit(BTN_TOOL_FINGER, dev->keybit))
+		return 0;
+
+	switch (type) {
+
+	case EV_KEY:
+		/* from input/mousedev.c:315 */
+
+		/* ignore */
+		if (value == 2) return 1;
+
+		if (code == BTN_TOUCH)
+			code = tpad_touch(mousedev, value);
+		else
+			code = tpad_trans_key(code);
+
+		/* ignore some unhandled codes */
+		if (code == KEY_RESERVED) return 1;
+		break;
+
+
+	case EV_SYN:
+		/* from input/mousedev.c:324 */
+
+		if (code == SYN_REPORT) {
+			if (mousedev->touch) {
+				mousedev->pkt_count++;
+				/* Input system eats duplicate events, but we need all of them
+				 * to do correct averaging so apply present one forward
+				 */
+				fx(0) = fx(1);
+				fy(0) = fy(1);
+			}
+		}
+
+		/* ignore this event */
+		return 1;
+		break;
+
+
+	case EV_ABS:
+		/* from input/mousedev.c:119 */
+
+		/* ignore if pad was not touched */
+		if (!mousedev->touch) return 1;
+
+		size = dev->absmax[ABS_X] - dev->absmin[ABS_X];
+		if (size == 0) size = 256 * 2;
+		switch (code) {
+		case ABS_X:
+			fx(0) = value;
+			/* ignore events with insufficient state */
+			if (mousedev->pkt_count < 2) return 1;
+
+			tmp = ((value - fx(2)) * (256 * FRACTION_DENOM)) / size;
+			tmp += mousedev->frac_dx;
+			value = tmp / FRACTION_DENOM;
+			mousedev->frac_dx = tmp - value * FRACTION_DENOM;
+			code = REL_X;
+			type = EV_REL;
+			break;
+
+		case ABS_Y:
+			fy(0) = value;
+			/* ignore events with insufficient state */
+			if (mousedev->pkt_count < 2) return 1;
+
+			tmp = ((value - fy(2)) * (256 * FRACTION_DENOM)) / size;
+			tmp += mousedev->frac_dy;
+			value = tmp / FRACTION_DENOM;
+			mousedev->frac_dy = tmp - value * FRACTION_DENOM;
+			code = REL_Y;
+			type = EV_REL;
+			break;
+
+		default: /* ignore this event */
+			return 1;
+		}
+		break;
+
+	default:
+		/* ignore unknown events */
+#if DEBUG_L4EVDEV
+		printf("l4evdev.c: tpad ignored. D: %s, T: %d, C: %d, V: %d\n",
+		       mousedev->handle.dev->phys, type, code, value);
+#endif
+		return 1;
+	}
+
+	/* propagate handled events */
+	*type0 = type;
+	*code0 = code;
+	*value0 = value;
+	return 0;
+}
+
+/** SOME EVENTS ARE FILTERED OUT **/
+static inline int filter_event(struct input_handle *handle, unsigned int type,
+                               unsigned int code, int value)
+{
+	/* filter sound driver events */
+	if (test_bit(EV_SND, handle->dev->evbit)) return 1;
+
+	/* filter sync events */
+	if ((type == EV_SYN)) return 1;
+
+	/* filter misc event: scancode -- no handlers yet */
+	if ((type == EV_MSC) && (code == MSC_SCAN)) return 1;
+
+	/* accepted */
+	return 0;
+}
+
 
 /** HANDLE INCOMING EVENTS (CALLBACK VARIANT) **/
 static void(*callback)(struct l4input *) = NULL;
@@ -94,12 +307,13 @@ static void l4evdev_event_cb(struct input_handle *handle, unsigned int type,
 #endif
 	static struct l4input ev;
 
-#if DEBUG_L4EVDEV
-	count++;
-#endif
-
-	if (test_bit(EV_SND, handle->dev->evbit))
+	/* handle touchpads */
+	if (tpad_event(handle->dev, (struct l4evdev *)handle->private,
+	               &type, &code, &value))
 		return;
+
+	/* event filter */
+	if (filter_event(handle, type, code, value)) return;
 
 	ev.type = type;
 	ev.code = code;
@@ -109,9 +323,8 @@ static void l4evdev_event_cb(struct input_handle *handle, unsigned int type,
 	callback(&ev);
 
 #if DEBUG_L4EVDEV
-	if (!(count % 100))
-		printf("l4evdev.c: Event[%ld]. Dev: %s, Type: %d, Code: %d, Value: %d\n",
-		       count, handle->dev->phys, type, code, value);
+	printf("l4evdev.c: Ev[%ld]. D: %s, T: %d, C: %d, V: %d\n",
+	       count++, handle->dev->phys, type, code, value);
 #endif
 }
 
@@ -124,12 +337,13 @@ static void l4evdev_event(struct input_handle *handle, unsigned int type,
 #endif
 	struct l4evdev *evdev = handle->private;
 
-#if DEBUG_L4EVDEV
-	count++;
-#endif
-
-	if (test_bit(EV_SND, handle->dev->evbit))
+	/* handle touchpads */
+	if (tpad_event(handle->dev, (struct l4evdev *)handle->private,
+	               &type, &code, &value))
 		return;
+
+	/* event filter */
+	if (filter_event(handle, type, code, value)) return;
 
 	l4lock_lock(&l4evdev_lock);
 
@@ -155,9 +369,8 @@ static void l4evdev_event(struct input_handle *handle, unsigned int type,
 	l4lock_unlock(&l4evdev_lock);
 
 #if DEBUG_L4EVDEV
-	if (!(count % 100))
-		printf("l4evdev.c: Event[%ld]. Dev: %s, Type: %d, Code: %d, Value: %d\n",
-		       count, handle->dev->phys, type, code, value);
+	printf("l4evdev.c: Ev[%ld]. D: %s, T: %d, C: %d, V: %d\n",
+	       count++, handle->dev->phys, type, code, value);
 #endif
 }
 
@@ -257,9 +470,10 @@ int l4input_ispending()
 	return !(HEAD==TAIL);
 }
 
-int l4input_flush(void *buffer, int count)
+int l4input_flush(void *buf, int count)
 {
 	int num = 0;
+	struct l4input *buffer = buf;
 
 	l4lock_lock(&l4evdev_lock);
 
@@ -267,13 +481,18 @@ int l4input_flush(void *buffer, int count)
 		/* flush event buffer */
 		/* XXX if sizeof(struct l4input) and sizeof(struct input_event) differ
 		   memcpy is not enough  */
-		memcpy(buffer, &BUFFER[TAIL].event, sizeof(struct input_event));
+
+
+	        buffer->time = 1;
+	        buffer->type = BUFFER[TAIL].event.type;
+		buffer->code = BUFFER[TAIL].event.code;
+		buffer->value = BUFFER[TAIL].event.value;
 
 		//memset(&BUFFER[TAIL], 0, sizeof(struct l4evdev_event));
 
 		num++; count--;
 		INC(TAIL);
-		buffer += sizeof(struct input_event);
+		buffer ++;
 	}
 
 	l4lock_unlock(&l4evdev_lock);

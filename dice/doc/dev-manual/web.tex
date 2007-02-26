@@ -1,0 +1,610 @@
+\section{Former Webcontent} 
+
+The Developer Notes shall give you a short overview over things, which
+had to be taken into account while writing the IDL compiler. Some of
+them are preconditions given by either an IDL specification or the
+target language or the wishes of the future users of the IDL
+compiler. Thus the developer notes are not only meant for developers,
+but also for users, who would like to know the WHYs.
+
+Since I have been asked many times, what the reasons are for
+parameters to be specified in a certain way, I wrote a short
+description of the directional attributes, their usage and what the
+target language representation looks like. It might be interesting if
+you wish to use a certain behaviour.
+
+Another interesting point - if you wish to work on the source yourself
+- certainly are the HOWs and WHYs for the design of the back-end. I
+tried to describe the create and write process of the back-end to show
+you "the big picture". The process of adding the back-end elements to
+the target files is also described.
+
+For those of you, who wish to write your own Back-End, there is a
+short overview. It contains a description of the source-code structure
+(where to find which files) and a description of the class-factory,
+which will make the writing of an own back-end a "piece of a cake".
+
+The description of the parser may be interesting for those of you, who
+wanted to know what happends when the IDL file is parsed. It currently
+covers the several parser runs (pre-processing, etc.) and covers in
+detail, what happends for included and imported files.
+
+If you would like to know more about something which does not appear
+on the website, please send me an email and will try to add an
+exlaination asap. Or if you had a problem, which was not solved on the
+websites and you digged through the code and would like to let others
+know what the solution or reason is, please feel free to let me know
+as well. I would certainly appreciate contributions to the website.
+
+\subsection{Backend Create and Write}
+This page will give a brief overview of some design decision made in
+this version of DICE. To briefly scratch the overall design: The
+compiler first preprocesses the IDL files using its own preprocessor
+and cpp - the gcc preprocessor. Then it generates the front-end
+classes using the respective parser (either parser-dce or
+parser-corba). The front-end classes are an in-memory representation
+of the IDL files. They are used to perform some sanity checks using
+the CheckConsistency function. If you specify the -E (stop after
+preprocessing) option then this is the state written to the XML file.
+
+After the front-end objects have been created the back-end, or rather
+its root, is created. The rest of the back-end is then created using
+the CreateBackEnd call. It recursively creates an in-memory
+representation of the target code. In Dice 1.3 and before the target
+code has been written 'on the fly' from the front-end objects. This
+had some disadvantages if the code should be optimized before beeing
+written. To perform some optimization before writing the code the
+data-representation has been used. The data-representation is now
+included in the generated back-end object. Another argument for
+creating the back-end before writing it is a clean distinction between
+the target code and the IDL files.
+
+After the back-end has been created it is written to the target files
+using the Write call. During the write, the back-end uses a central
+instance to write the marshalling and unmarshalling code, which is the
+marshaller class (and it derived classes). Depending on the
+optimization levels different marshallers can be used.
+
+\subsubsection{Front-End Creation}
+The front-end presentation of the IDL file is generated in the parser,
+which has been created from the grammar by the bison tool. The
+representation is pretty straight forward. For every library (or
+module) exists an instance of the CFELibrary class and so on. The
+naming of the front-end classes is rather oriented to the DCE IDL,
+because it was the first IDL supported by Dice. Thus is a function
+called operation a module library, etc. The structure of the classes
+is also oriented towards the DCE IDL, because I think it is a superset
+of the CORBA IDL. Most of the elements of the CORBA IDL can also be
+transferred into the DCE IDL very easyly.
+
+\subsubsection{Back-End Create Process}
+The creation process of the back-end is seperated in multiple
+steps. The first step is to create an target code representation of
+the IDL specification. Here the different IDL constructs have to be
+mapped onto target code constructs. So does the front-end library
+class map onto the back-end name-space class and the front-end
+interface class maps onto the back-end class class. Even though these
+are C++ constructs and Dice preferably generates C code these classes
+are generated as well. One reason is that C++ is an extension (in the
+scope seen here) to C, thus namespaces and classes can be ignore in
+C. Another reason to have them present in the back-edn structure is,
+that the generation of differnt target code, e.g. C++ or Java is
+fairly simple if these constructs are available.
+
+The first create run also generates the C functions for the target
+code. This is interesting, because one IDL function maps to multiple C
+functions. These C functions are all added to the respective C++
+class. Depending on their attributes either functions for a call are
+created or function for simple message passing. At this point it is
+indifferent whether the function belong to the client or the
+component. They are all generated.
+
+After this representation has been created, the target files are
+created. The same function call (CreateBackEnd) is used (at least for
+the first step). Now the target files, depending on the communication
+side and the function's attributes add the different function, classes
+or namespaces to their collection. Here only references are added,
+which are found using the names of the functions and the FindFunction
+methods. A detailed description can be found on a seperate page.
+
+\subsubsection{Back-End Write Process}
+The write process is again initiated at the root of the back-end. The
+root writes the back-end by calling the client and component's Write
+methods, which in turn call the Write methods of all their files. So
+if a file should not be written it should not be created in the first
+place. The files will iterate over their member, which have been added
+in the Create process and call their respective Write functions. The
+first implementation of Dice 2.1 had the functions added to the
+back-end files. This approach has become obsolete with the support for
+C++. Instead we call the name-space's or class's Write functions now,
+which in turn call the respective function's Write methods.
+
+To distinguish between a function/class/namespace declaration and
+definition two different Write functions are implemented. One for the
+header files and one for the implementation files. The files
+alsoimplement a function (GetTarget) which allows to determine the
+communication side of the Write call. The function/class/namespace can
+now decide what to write or if it wants to skip the write call.
+
+To write a class declaration the class's write call simply wraps the
+calls to the function's Write methods into the definition of the
+class. A function's Write call also has to take care of the function's
+names. Basically a function stores its name in the m_sName member,
+which is set during the function's creation. For C targets the name is
+build from the namespaces and class names as well as the original
+function name and a suffix, which describes the functionality inside
+the function (call, receive, send, unmarshal, etc.). To make this C++
+compliant the name-factory should be overloaded to return only the
+function name and the suffix. While writing the function definition
+the class' name has to be written before the function's name. E.g. by
+calling ((CBEClass*)GetParent())->GetName().
+
+\subsection{Directional Attributes and their Meaning}
+% shouldn't this go int
+
+This page will discuss how IDL parameters are mapped to C parameters
+and how they are finally marshalled or unmarshalled to/from the
+message buffer. This discussion is probably unnecessary, since the
+CORBA C language mapping clearly defines how parameters are mapped
+between the IDL specification and the C target language.
+
+For all OMG IDL types (except arrays), if the OMG IDL signature
+specifies that an argument is an out or inout parameter, then the
+caller must always pass the address of that type (or the value of a
+pointer to that type); the callee must dereference the parameter to
+get to the type. For arrays, the caller must pass the address of the
+first element of the array.
+
+Example:
+void func1(in long t1, out long t2);
+is translated to:
+CORBA_void func1(CORBA_long t1, CORBA_long *t2);
+
+{\em For in parameters the value of the parameter must be passed for
+all of the basic types, enumeration types, and object references. For
+all arrays, the address of the first element of the array must be
+passed. For all other structured types, the address of a variable of
+that type must be passed, regardless of whether they are fixed- or
+variable-length. For strings a char* or wchar* must be passed.}
+
+\paragraph{OMG IDL}
+{\em For inout parameters, the address of a variable of the correct
+type must be passed for all of the basic types, enumeration types,
+object references, and structured types. For strings, the address of a
+char* and the * of a wchar must be passed. For all arrays the address
+of the first element of the array must be passed.}
+
+\paragraph{DCE IDL}
+{\em The out attribute must be a pointer. DCE IDL compilers require
+the presence of an explicit * as a pointer declarator in the parameter
+declaration. Microsoft IDL offers an extension that drops this
+requirement and allows an array or a previously defined pointer type.}
+
+\paragraph{CORBA IDL}
+{\em For out parameters of type variable-length struct,
+variable-length union, string, sequence, an array holding
+avariable-length type, or any, the ORB will allocate storage for the
+output value using the appropriate type-specific allocation
+function. The client may use and retain that storag indefinitely, and
+must indicate when the value is no longer needed by calling the
+procedure CORBA_free, ...}
+
+\paragraph{DCE IDL}
+{\em An out-only parameter is assumed to be undefined when the remote
+procedure is called and memory for the object is allocated by the
+server. Since top-level pointer/parameters must always point to valid
+storage, and therefore cannot be NULL, out cannot be applied to
+top-level unique or ptr pointers. Parameters that are ref pointers
+must be either in or in, out parameters.}
+
+The definitions declare the communication stubs to allocate the memory
+for the out parameters. This is difficult if we optimize the
+communication using indirect string buffers, which have to be
+allocated in advance (we dont know how big the indirect string has to
+be, but have to allocate memory for it). And sometimes the user wishes
+to decide, where he/she wants the indirect string data to go to.
+
+To be able to distinguish between the behaviour described above and
+the wished behaviour of indirect strings, we use the ref attribute
+from the DCE IDL. It has the following characteristics:
+
+\paragraph{DCE IDL}
+{\em A pointer attribute can be applied as a type attribute, as a
+field attribute that applies to a structure member, union member, or
+parameter; or as a function attribute that applies to the function
+return type. The pointer attribute can also appear with the
+pointer_default keyword.}
+
+A reference pointer has the following characteristics:
+
+\begin{itemize}
+\item 
+	Always points to valid storage; never has the value NULL. A
+	reference pointer can always be dereferenced.
+\item 
+	Never changes during a call. A reference pointer always points
+	to the same storage on the client before and after the call.
+\item 
+	Does not allocate new memory on the client. Data returned from
+	the server is written into existing storage specified by the
+	value of the reference pointer before the call.
+\item 
+	Does not cause aliasing. Storage pointed to by a reference
+	pointer cannot be reached from any other name in the function.
+\end{itemize}
+
+A reference pointer cannot be used as the type of a pointer returned
+by a function.
+
+If no attribute is specified for a top-level pointer parameter, it is
+treated as a reference pointer.
+
+These characteristics - except the last - do exactly describe what we
+want. Currently the ref attribute is only supported with parameters. o
+user's manual
+
+\subsection{Writing Your own Back-End}
+\emph{Annotation} 
+The current Back-End was written for the target language C (with
+existing structures to produce code for C++) and the target platform
+L4 micro-kernel. Keep this in mind while reading this page.
+
+When I wrote the Back-End classes I intended to keep the base-classes
+free from any platform-specific code. This means that you could use
+these classes to send messages via sockets on a Linux as well as L4
+IPC on a L4 micro-kernel. These base classes are situated in the
+directory dice/src/be. Their names all start with CBE where C stands
+for 'Class' and BE stands for 'Back-End'. The file-names are the same
+as the class-names, except that they are missing the C. (A class named
+CBEBase would be situated in the files BEBase.h and BEBase.cpp.) This
+may sound strange, but is a habit I got used to, while programming for
+Windows.
+
+The structure of the back-end consists of multiple parts. The first
+part is the 'in-memory' representation of the target code. This
+includes the classes CBENameSpace, CBEClass, CBEConstant,
+CBEAttribute, CBETypedDeclarator (CBEDeclarator, CBETypedef), and
+CBEFunction and classes derived from CBEFunction. This representation
+is generated during the create process of the back-end (see Back-End
+Create and Write for details). As you can see there are classes
+CBENameSpace and CBEClass which are not necessary for a C target
+language, but exist to make the implementation of a C++ back-end
+fairly simple. These classes do not know anything about a specific
+target platform (well, they know the size of data types, but that's
+about it). All they do during the Create call is to extract
+information from the front-end relevant to the back-end.
+
+The second part of the back-end is a representation of the target
+files. This includes the class CBEFile and classes derived from it, as
+well as the classes CBEClient, CBEComponent, and CBETestsuite. These
+classes form the previously mentioned classes into the communication
+relationship. This means, that the appropriate classes and functions
+are associated with the respective sides of the communication (client
+or server/component) and the target files they will be written
+to. When the step of writing the target code is executed the client,
+component and testsuite classes are called rather than the name-space
+and class object. The client classes originally (in version 2.1.1beta)
+included the functions of the target code directly, which implied,
+that only functions belong to a file. In version 2.1.1beta this has
+been changed to include the name-spaces and classes, which (again)
+allows easier integration of a C++ back-end.
+
+After creating the back-end and before calling the Write methods, the
+compiler executes an optimization run. This is implemented by calling
+the root's Optimize function, which in turn calls the name-space's and
+class' Optimize functions. During this run such things as reordering
+of parameters and checking if bit-stuffing can be applied are
+performed. Future version may also apply other, more advanced
+algorithms.
+
+Eventually the back-end starts writing the code. The client and
+component objects create the target files, which in turn iterate over
+their members and call their write functions. This is also performed
+in a specific order, thus the order of the IDL may not be the same as
+the order of the C code. When marshalling data, a special class the
+Marshaller is created, which writes the marshalling code for the
+different data types. This code is concentrated in this class to have
+one spot in the code, which includes the marshalling logic.
+
+Then Dice support the communication platform L4. The L4 specific stuff
+is implemented in the classes located in src/be/l4. This mostly
+includes derived classes for the different function classes. They
+implement th L4 specific generation of the message buffer and
+invocation calls. It may be possible that there is some mixture of
+general and L4 specific code. If you find such code, please report it
+to me, so I may fix this.
+
+The L4 specific back-end also demonstrates best how to write your own
+back-end. You "simply" overload the classes and functions, which you
+think should behave differently for your back-end. You also have to
+overload the class-factory to generate your classes, when called. The
+whole back-end uses the class-factory to create new classes. Thus you
+can insert own code at the correct location without changing the
+general framework. To make use of your back-end, you have to change a
+line in the Compiler class, which creates the appropriate
+class-factory, depending on the given compiler option. This should be
+the way to go. You may - of course - change the existing code to
+implement your back-end, but keep in mind that you would have to do
+this for every new release or patch over and over again. Implementing
+a new back-end by overloading BE classes allows you to let your BE
+coexist with progressing versions of the compiler.
+
+\subsection{Parser Scanner Details}
+
+\subsubsection{The parser runs}
+
+The parser performs several runs to generate the in-memory
+representation of the IDL. The first run scans the current IDL file
+for all include and import statements. It stores these information in
+the current parser instance (CParser).
+
+The second run is an invocation of the pre-processor, which is usually
+the Gnu C pre-processor (CPP). The CPP pre-processor replaces all
+macros, defines and include statements. This also means that all files
+defined by #include are included. The possible import statements stay
+as they are.
+
+The third runs finally reads all the IDL statements and generates the
+in-memory representation. This run may encounter import
+statements. These import statements have several semantics differnt to
+#include statements:
+
+\begin{itemize}
+\item
+	import includes only IDL elments - it ignores C or C++
+	statements
+\item
+	A file included with import is parsed in a own context -
+	symbols are only valid within the range of the imported file.
+\end{itemize}
+
+When the third run encounters an import statement, it creates a new
+instance of a parser and lets it perform all of the described steps on
+the imported files. After the new parser finishes, the IDL elements of
+the imported files are within an new CFEFile class, which is added as
+"imported" to the current IDL file (CFEFile).
+
+So far to the theory, now lets have a look how this is implemented in
+Dice.
+
+\subsubsection{How bison and lex are used}
+I used bison and flex to generate the input file parsers. Flex is used
+to generate the scanners (which make tokens from the IDL files) and
+bison uses these tokens to build up a syntax tree for a specific
+grammar. There are three scanners (the flex files). One for the
+pre-process step of scanning for include and import statements, and
+one for each of the supported IDLs - DCE and CORBA. This implies that
+Dice can invoke only one parser for the IDL files, which requires a
+strict seperation of DCE and CORBA syntax.
+
+After the first two steps of pre-processing have been finished for an
+IDL file, the bison-generated parser is called for the top-level IDL
+file. If an import is encountered the bison-generated parser informs
+the CParser class, which in turn switches the input buffers for the
+scanner. The scanner in turn informs the CParser class if the end of a
+file is reached. This way, the CParser class can keep states for the
+different imported files, but the parser and scanner do not need to
+know (a lot) about different input files.
+
+To switch input buffers the CParser class uses two functions in the
+scanner files. Since the switching of input buffers uses
+scanner-specific variables, I implemented different functions for the
+different scanners. The CParser class has to call the appropriate
+functions depending on the IDL type.
+
+This is one of the differences between the theory and the
+implementation. Since the code generated by bison and flex uses global
+variables I cannot encapsulate the scanner and parser into a class and
+instantiate a new CParser for each imported file. Instead we switch
+the input buffers of the scanner.
+
+The switching involves several rules in the parser and scanner. When
+the parser (e.g., dceparse()) encounters an import statement, it gets
+a copy of the current parser by calling
+CParser::GetCurrentParser(). It then invokes the function Import with
+the name of the imported file.
+
+The method CParser::Import(String) pre-processes the file, which
+includes calling CPP. After that Import creates a new instance of
+CFEFile and adds it to the current file and then sets the current file
+to this file. Finally it saves the context of the scanner by calling
+SaveLexContext, which stores the line-number and switches the input
+buffer by calling, e.g., SwitchToFileDce(FILE*). The latter creates a
+new input buffer for the scanner and return a reference to the old
+one.
+
+After the CParser class did all this the control returns to the
+parser, which called the Import method. It then proceeds to read the
+IDL from a "new" file.
+
+When the scanner encounters a end-of-file symbol, it calls the method
+CParser::EndImport(). This method first checks the include level, to
+see if this is the end-of-file for the top-level file. If it is, does
+the method return true, which make the scanner stop reading tokens and
+sending an end-of-input token to the parser. If the include level
+indicates an imported file, the method restores the scanner's context
+by calling RestoreLexContext(), which in turn switches the input
+buffer back to the stored buffer by calling, e.g.,
+RestoreBufferDce. The latter resets the input buffer using flex
+specific functions.
+
+The scanner's context include line-numbers, the input buffer, the
+state of the scanner, whether the current file is a C header file,
+etc. The latter information is used by the scanner to deliver tokens
+depending on the currently scanned language. E.g. is interface a
+reserved word in the IDL, but has no special meaning in the C
+code. (In the file scanner-dce.ll are some macros, which deliver
+either the token for interface of an identifier for this word).
+
+\subsubsection{Include vs. Import}
+The second difference between the theory and the implementation is the
+fact, that files included with #include should be included as is,
+which implies that they may only contain valid IDL syntax. This
+implies that C header files can only be include using import, which in
+turn means, that symbols and macros defined in the C header files
+cannot be used or evaluated in the IDL file. Therefore, we relaxed
+this semantic and drop anything which is not a typedefinition or const
+declaration of an #included file as well.
+
+\subsection{Add Back-End Elements to Target Files}
+
+\subsubsection{The Creation of the Back-End Elements}
+
+The elements of the back-end are created during the calls to the
+CreateBackEnd method. This method basically builds an in-memory
+representation of the target code structure. The current back-end is
+pretty C/C++ oriented, which means that libraries are transformed into
+name-space and interfaces into classes.
+
+I like to point out some detail of the front-end generation, which
+effects the generation of the back-end as well. If a C header file is
+included it may contain type definitions. These type definitions are
+added to the corresponding CFEFile class of the front-end. When the
+back-end is created these type definitions are "top-level" type
+definitions - they will be added to the back-end root class
+(CBERoot). We cannot drop them, because we need information about
+them, such as their names, size, etc.
+
+After the back-end elements have been created (and the content of
+several input files is all in one big back-end structure). We create
+the client, component and testsuite targets. They, in turn, create
+appropriate target files and add the elements of the back-end to these
+files.
+
+\subsubsection{Creating the client, server and test-suite}
+
+CBERoot creates the client, server(component) and test-suite classes
+in the method CBERoot::CreateBE. After creating the classes it calls
+their CreateBackEnd methods\footnote{Why the difference in the naming
+of the methods? Basically, all functions involved in creating the
+back-end are named CreateBackEnd. The entry point to the create
+process - CBERoot's create method CreateBE - is called differently for
+historical reasons. The create method have all been named
+CreateBE. During the rewrite of the back-end (from version 2.0 to 2.1)
+the methods have been renamed to differentiate between their
+behaviour.}. When CreateBE is finsihed it returns to the compiler
+class.
+
+The client's CreateBackEnd function as well as the component's
+CreateBackEnd function are implemented by their common base class
+CBETarget. The test-suite is an exception, because it does not create
+the same files. The function CBETarget::CreateBackEnd receives as an
+input parameter the current front-end file, which is for the very
+first call to this function the root IDL
+file. CBETarget::CreateBackEnd will reject all file, which are no IDL
+files. This ensures, that it creates target files only for IDL
+files. If the option PROGRAM_FILE_ALL is set, which means that Dice
+has been called with the option -fall (or -f5), CreateBackEnd calls
+itself for all included files. This ensures, that elements of included
+IDL files, are inserted into the target file before the elements of
+the top-level file. The reasons for this is, that you usually include
+other IDL file to use their types, constants, or interface. Therefore,
+the target file also has to contain especially types from included
+file before the function which use them.
+
+CBETarget::CreateBackEnd then calls the function CreateBackEndHeader
+with the current front-end file as parameter. This way, there is
+always one target header file for each input IDL file (regardless of
+the -f option). Then CreateBackEnd calls, depending on the -f option,
+different functions. For -fidlfile and -fall it calls
+CreateBackEndFile with the current front-end file as input
+parameter. For the option -fmodule CreateBackEndModule is called; for
+-finterface CreateBackEndInterface is called; and for -ffunction
+CreateBackEndFunction is called. The effect of the different functions
+is the granularity which is used to generate the target implementation
+files. -fmodule make Dice generate one target implementation file for
+each IDL module. If there exist interfaces, types, or constants
+outside of a module, a general file is generated (its the same file as
+for -fidlfile, without the modules).
+
+CBETarget::CreateBackEndHeader fails if called, and has to be
+overloaded. It is no pure virtual function, because then every derived
+class would have to overload it, even if the new implementation
+contains nothing. This has to be done, so the class factory can create
+an instance of the derived class, which it can't if there are pure
+virtual function, which are not overloaded. To catch the "misuse" of
+these functions, which have to be overloaded, The implementation
+causes an assert, which points to the malicious call. This way there
+is only one "empty" function, instead of multiple "empty" functions in
+the derived classes.
+
+The implementation of CreateBackEnd of the test-suite creates one
+implementation file, which will contain the main function of the
+test-application and some wrapper functions for the client stubs and
+server-loops. CreateBackEnd then adds the names of the client's and
+server's header files as includes to the test-suite's implementation
+file. And then it calls the root class' AddToFile function.
+
+\subsubsection{Adding the Back-End Elements to the Target Files}
+
+There exist two functions of AddToFile. One has a parameter of type
+CBEHeaderFile and one has a parameter of the type
+CBEImplementationFile. This way each implementation can selectively
+add elements to the appropriate file.
+
+The implementation of CBERoot::AddToFile for the header file iterates
+over the constants, type definitions, classes, and name-spaces and
+adds each of them to the file by calling the appropriate
+AddToFile. The implementation file specific implementation does not
+add the constants and type-definition, but instead global functions. A
+global function is for instance the main function of the test-suite.
+
+The implementation of the AddToFile function of a constant or
+type-definition - for instance - calls the AddToFile function of the
+respective instance of the class. The intention to use an AddToFile
+function per class, which might be added to a file, was to be able to
+locally decide whether this elements should be added to the file or
+not. One of the checks done here is, for instance, whether an element
+belongs to this specific target file.
+
+To be able to test the affiliation of a back-end element to a target
+file depends on the IDL file the element belonged to, the target file
+and the compiler option, which determines what target files are
+generated. This is basically done using a string comparison of the
+target file name. During the CreateBackEnd process, the back-end
+elements set they target file name in the CBEObject class. This file
+name contains a "generic" part, which is build from the name of the
+corresponding IDL file or library of interface or function name, and a
+"specific" part, which indicates if the file belongs to the client or
+server or testsuite. Therefore, we can check the association later by
+comparing the file name of the target file the elements should be
+added to with the file name stored during creation. The start of the
+file-name should be the same. E.g., if the IDL file's name was
+test.idl and the option -fidlfile was selected, the generated files
+are named test-client.c/h, test-server.c/h, test-sys.h and
+test-testsuite.c. When we later try to add a type definition to the
+target file test-client.h or test-server.h, the start of the file
+test- has to be the same.
+
+If we included a C header file in the IDL file, then the defined types
+of the header file will fail the test of the target file and not be
+added to the target file generated for the IDL file.
+
+When adding classes to a target file, we have to check the compiler
+optons. If the option is set to -ffunction it is probably not useful
+to add the whole class to the target file, but instead only the
+appropriate function. Therefore CBEClass::AddToFile checks for this
+condition and calls the CBEFunction::AddToFile method instead of
+solely adding the whole class to the target file. The class has to be
+added too, because the target file may contain types and constants
+defined for the class.
+
+Similar actions have to be taken for name-spaces and the options
+-ffunction and -finterface. In both cases the implementation of
+CBENameSpace::AddToFile iterates over the class instead of solely
+adding itself. It has to add itself as well, because the target file
+may contain types and constants of the name-space.
+
+The target file for a back-end element is set using the
+SetTargetFileName function. Since the "base" of a file name may be
+different for a header file and an implementation file, both names are
+stored. Because SetTargetFileName can be called for constants,
+type-definitions, name-spaces, classes, and functions, we also have to
+check for the first two, which file they may belong to. A
+type-definition of a library/name-space "A" in the IDL file "b.idl"
+with option -finterface will be added to the file "A.h".
+
+When the test of the target file is performed, the function
+IsTargetFile(CBEFile) is called. The function tests which file the
+target file is (CBEHeaderFile or CBEImplementationFile) and compares
+the appropriate stored name with the name of the file.

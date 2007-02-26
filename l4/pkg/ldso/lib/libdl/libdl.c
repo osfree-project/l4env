@@ -137,7 +137,9 @@ static void __attribute__ ((destructor)) dl_cleanup(void)
 	}
 }
 
-extern void mmap_list_regions(void);
+extern void _dl_mmap_list_regions(int only_unseen);
+extern void _dl_debug_info_sum(void);
+extern void _dl_debug_info_del(struct elf_resolve *tpnt);
 
 void *dlopen(const char *libname, int flag)
 {
@@ -389,8 +391,11 @@ void *dlopen(const char *libname, int flag)
 		}
 	}
 #endif
+#ifdef ARCH_x86
+	_dl_debug_info_sum();
+#endif
 #ifdef DEBUG
-	mmap_list_regions();
+	_dl_mmap_list_regions(1);
 #endif
 	_dl_unmap_cache();
 	return (void *) dyn_chain;
@@ -515,6 +520,10 @@ static int do_dlclose(void *vhandle, int need_fini)
 				if (end < ppnt->p_vaddr + ppnt->p_memsz)
 					end = ppnt->p_vaddr + ppnt->p_memsz;
 			}
+#ifdef ARCH_x86
+			// fm3
+			_dl_debug_info_del(tpnt);
+#endif
 			_dl_munmap((void*)tpnt->loadaddr, end);
 			/* Free elements in RTLD_LOCAL scope list */ 
 			for (runp = tpnt->rtld_local; runp; runp = tmp) {

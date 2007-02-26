@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEAttributeDeclarator.cpp
- *    \brief   contains the implementation of the class CFEAttributeDeclarator
+ *  \brief   contains the implementation of the class CFEAttributeDeclarator
  *
  *    \date    12/17/2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>

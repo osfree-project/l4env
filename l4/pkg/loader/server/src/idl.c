@@ -47,15 +47,15 @@ return_error_msg(int error, const char * const msg, const char *fname)
  * \retval error_msg	error message
  * \retval _env		IDL exception structure
  * \return		0 on success */
-l4_int32_t 
-l4loader_app_open_component(CORBA_Object client,
-			    const l4dm_dataspace_t *img_ds,
-			    const char* fname_and_arg,
-			    const l4_threadid_t *fprov,
-			    l4_uint32_t flags,
-			    l4_taskid_t task_ids[16],
-			    char ** error_msg,
-			    CORBA_Server_Environment *_env)
+long
+l4loader_app_open_component (CORBA_Object _dice_corba_obj,
+                             const l4dm_dataspace_t *img_ds,
+                             const char* fname,
+                             const l4_threadid_t *fprov,
+                             unsigned long flags,
+                             l4_taskid_t task_ids[16],
+                             char* *error_msg,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   int ret = 0;
   int is_binary = 0;
@@ -66,25 +66,25 @@ l4loader_app_open_component(CORBA_Object client,
   error_msg[0] = '\0';
 
   if (l4dm_is_invalid_ds(*ds))
-    ret = load_config_script_from_file(fname_and_arg, *fprov, *client, 
+    ret = load_config_script_from_file(fname, *fprov, *_dice_corba_obj,
 				       flags, task_ids);
 
   else
     {
       if ((ret = l4dm_mem_size(ds, &size)))
 	{
-	  return_error_msg(ret, "determining size", fname_and_arg);
+	  return_error_msg(ret, "determining size", fname);
 	  goto error;
 	}
 
       if ((ret = l4rm_attach(ds, size, 0, L4DM_RO, &addr)))
 	{
-	  return_error_msg(ret, "attaching ds", fname_and_arg);
+	  return_error_msg(ret, "attaching ds", fname);
 	  goto error;
 	}
 
-      ret = load_config_script(fname_and_arg, *fprov, ds, (l4_addr_t)addr,
-			       size, *client, flags, &is_binary, task_ids);
+      ret = load_config_script(fname, *fprov, ds, (l4_addr_t)addr,
+			       size, *_dice_corba_obj, flags, &is_binary, task_ids);
 
 error:
       if (!is_binary)
@@ -100,10 +100,10 @@ error:
  * \param client	caller
  * \param taskid	ID of task to continue as returned by open()
  * \retval _env		IDL exception structure */
-l4_int32_t
-l4loader_app_cont_component(CORBA_Object client,
-			    const l4_taskid_t *taskid,
-			    CORBA_Server_Environment *_env)
+long
+l4loader_app_cont_component (CORBA_Object _dice_corba_obj,
+                             const l4_taskid_t *taskid,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   app_t *app = task_to_app(*taskid);
   if (!app)
@@ -120,11 +120,11 @@ l4loader_app_cont_component(CORBA_Object client,
  * \param flags		flags (currently unused)
  * \retval _env		IDL exception structure
  * \return		0 on success */
-l4_int32_t 
-l4loader_app_kill_component(CORBA_Object client,
-			    const l4_taskid_t *task_id,
-			    l4_uint32_t flags,
-			    CORBA_Server_Environment *_env)
+long
+l4loader_app_kill_component (CORBA_Object _dice_corba_obj,
+                             const l4_taskid_t *task_id,
+                             unsigned long flags,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   return app_kill(*task_id);
 }
@@ -136,17 +136,17 @@ l4loader_app_kill_component(CORBA_Object client,
  * \param flags		flags (currently unused)
  * \retval _env		IDL exception structure
  * \return		0 on success */
-l4_int32_t 
-l4loader_app_dump_component(CORBA_Object client,
-			    l4_uint32_t task_id,
-			    l4_uint32_t flags,
-			    CORBA_Server_Environment *_env)
+long
+l4loader_app_dump_component (CORBA_Object _dice_corba_obj,
+                             unsigned long task_id,
+                             unsigned long flags,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   return app_dump(task_id);
 }
 
 /** Get application info
- * 
+ *
  * \param client	caller
  * \param task_id	id of task to get info from
  * \param flags		flags (currently unused)
@@ -154,27 +154,30 @@ l4loader_app_dump_component(CORBA_Object client,
  * \retval l4env_page	L4 environment infopage of process
  * \retval _env		IDL exception structure
  * \return		0 on success */
-l4_int32_t 
-l4loader_app_info_component(CORBA_Object client,
-			    l4_uint32_t task_id,
-			    l4_uint32_t flags,
-			    char* *fname,
-			    l4dm_dataspace_t *l4env_page,
-			    CORBA_Server_Environment *_env)
+long
+l4loader_app_info_component (CORBA_Object _dice_corba_obj,
+                             unsigned long task_id,
+                             unsigned long flags,
+                             char* *fname,
+                             l4dm_dataspace_t *l4env_page,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
-  return app_info(task_id, l4env_page, *client, fname);
+  return app_info(task_id, l4env_page, *_dice_corba_obj, fname);
 }
 
 
 /** Load a library at runtime app's */
-l4_int32_t
-l4loader_app_lib_open_component(CORBA_Object _dice_corba_obj,
-				const char* fname,
-				const l4_threadid_t *fprov,
-				l4_uint32_t flags,
-				envpage_t *envpage,
-				CORBA_Server_Environment *_dice_corba_env)
+long
+l4loader_app_lib_open_component (CORBA_Object _dice_corba_obj,
+                                 const char* fname,
+                                 const l4_threadid_t *fprov,
+                                 unsigned long flags,
+                                 envpage_t *envpage,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
+#ifdef USE_LDSO
+  return -L4_EINVAL;
+#else
   app_t *app = task_to_app(*_dice_corba_obj);
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
   int error;
@@ -189,14 +192,18 @@ l4loader_app_lib_open_component(CORBA_Object _dice_corba_obj,
   // copy infopage to client
   memcpy(env, app->env, sizeof(l4env_infopage_t));
   return 0;
+#endif
 }
 
 /** Link a library which was loaded at app's runtime */
-l4_int32_t
-l4loader_app_lib_link_component(CORBA_Object _dice_corba_obj,
-				envpage_t *envpage,
-				CORBA_Server_Environment *_dice_corba_env)
+long
+l4loader_app_lib_link_component (CORBA_Object _dice_corba_obj,
+                                 envpage_t *envpage,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
+#ifdef USE_LDSO
+  return -L4_EINVAL;
+#else
   app_t *app = task_to_app(*_dice_corba_obj);
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
 
@@ -207,19 +214,24 @@ l4loader_app_lib_link_component(CORBA_Object _dice_corba_obj,
   //     changed program sections.
   memcpy(app->env, env, sizeof(l4env_infopage_t));
   return lib_link(app);
+#endif
 }
 
 /** Find a symbol of a dynamic object */
-l4_int32_t
-l4loader_app_lib_dsym_component(CORBA_Object _dice_corba_obj,
-				const char* symname,
-				envpage_t *envpage,
-				l4_addr_t *addr,
-				CORBA_Server_Environment *_dice_corba_env)
+long
+l4loader_app_lib_dsym_component (CORBA_Object _dice_corba_obj,
+                                 const char* symname,
+                                 envpage_t *envpage,
+                                 l4_addr_t *addr,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
+#ifdef USE_LDSO
+  return -L4_EINVAL;
+#else
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
 
   return exec_if_get_dsym(symname, env, addr);
+#endif
 }
 
 /** IDL server loop */

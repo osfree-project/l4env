@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEUserDefinedType.h
- *    \brief   contains the declaration of the class CBEUserDefinedType
+ *  \brief   contains the declaration of the class CBEUserDefinedType
  *
  *    \date    02/13/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,13 +32,12 @@
 
 #include "be/BEType.h"
 
-class CBEContext;
 class CBEUnionCase;
 class CFETypeSpec;
 
-/**    \class CBEUserDefinedType
- *    \ingroup backend
- *    \brief the back-end union type
+/** \class CBEUserDefinedType
+ *  \ingroup backend
+ *  \brief the back-end union type
  */
 class CBEUserDefinedType : public CBEType
 {
@@ -56,26 +55,38 @@ protected:
     CBEUserDefinedType(CBEUserDefinedType &src);
 
 public:
-    virtual void WriteZeroInit(CBEFile *pFile, CBEContext *pContext);
+    /** \brief generates an exact copy of this class
+     *  \return a reference to the new object
+     */
+    virtual CObject* Clone()
+    { return new CBEUserDefinedType(*this); }
+
+    virtual void WriteZeroInit(CBEFile *pFile);
     virtual int GetSize();
+    virtual int GetMaxSize();
     virtual string GetName();
-    virtual CObject* Clone();
     virtual bool IsConstructedType();
-    virtual bool CreateBackEnd(string sName, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
+    
+    virtual void CreateBackEnd(string sName);
+    virtual void CreateBackEnd(CFETypeSpec *pFEType);
+
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void WriteGetSize(CBEFile *pFile, 
+	vector<CDeclaratorStackLocation*> *pStack,
+	CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual bool IsArrayType();
     virtual bool IsPointerType();
     virtual int GetArrayDimensionCount();
     virtual int GetIndirectionCount();
-    virtual void WriteIndirect(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteIndirect(CBEFile* pFile);
+
+    virtual CBEType* GetRealType();
+    virtual CBEDeclarator* GetRealName();
 
 protected:
     virtual int GetSizeOfTypedef(string sTypeName);
-    virtual CBEType* GetRealType();
-    virtual CBEDeclarator* GetRealName();
+    virtual int GetMaxSizeOfTypedef(string sTypeName);
 
 protected:
     /** \var string m_sOriginalName

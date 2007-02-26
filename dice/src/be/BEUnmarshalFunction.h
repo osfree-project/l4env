@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEUnmarshalFunction.h
- *    \brief   contains the declaration of the class CBEUnmarshalFunction
+ *  \brief   contains the declaration of the class CBEUnmarshalFunction
  *
  *    \date    01/20/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -34,46 +34,48 @@
 
 class CFEInterface;
 
-/**    \class CBEUnmarshalFunction
- *    \ingroup backend
- *    \brief the function class for the back-end
+/** \class CBEUnmarshalFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
- * This class contains a back-end function which belongs to a front-end operation
+ * This class contains a back-end function which belongs to a front-end
+ * operation
  */
 class CBEUnmarshalFunction : public CBEOperationFunction
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEUnmarshalFunction();
     virtual ~CBEUnmarshalFunction();
 
 protected:
-    /**    \brief copy constructor */
+    /** \brief copy constructor */
     CBEUnmarshalFunction(CBEUnmarshalFunction &src);
 
 public:
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext * pContext);
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall = false);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+	    bool bMarshal);
+    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator,
+	bool bCall = false);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(string sTypeName);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
+    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+
+    virtual CBETypedDeclarator* GetExceptionVariable(void);
 
 protected:
-    virtual bool AddParameter(CFETypedDeclarator *pFEParameter, CBEContext *pContext);
-    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
-    virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
+    virtual void AddParameter(CFETypedDeclarator *pFEParameter);
+    virtual void WriteInvocation(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile *pFile);
+    virtual void WriteCallParameter(CBEFile *pFile, 
+	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+    virtual void AddAfterParameters();
 };
 
 #endif // !__DICE_BEUNMARSHALFUNCTION_H__

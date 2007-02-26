@@ -61,7 +61,7 @@ static struct dde_region *conv = NULL;
  * \param  pa    physical start address
  * \param  size  region size
  */
-void address_add_region(l4_addr_t va, l4_addr_t pa, l4_size_t size)
+void l4dde_add_region(l4_addr_t va, l4_addr_t pa, l4_size_t size)
 {
   dde_add_region(&conv, va, pa, size);
 }
@@ -71,7 +71,7 @@ void address_add_region(l4_addr_t va, l4_addr_t pa, l4_size_t size)
  * \param  va    virtual start address
  * \param  size  region size
  */
-void address_remove_region(l4_addr_t va, l4_size_t size)
+void l4dde_remove_region(l4_addr_t va, l4_size_t size)
 {
   dde_remove_region(&conv, va, 0, size);
 }

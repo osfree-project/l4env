@@ -1,6 +1,7 @@
 dice
 .deps
 .buildnumber
+.libs
 templates
 Makefile
 Makefile.in

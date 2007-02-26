@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEConstructedType.h
- *    \brief   contains the declaration of the class CFEConstructedType
+ *  \brief   contains the declaration of the class CFEConstructedType
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -35,7 +35,7 @@
 /* CFEConstructedType : for class-type checking only (ppure virtual class) */
 /** \class CFEConstructedType
  *    \ingroup frontend
- *    \brief base class of constructed types
+ *  \brief base class of constructed types
  *
  * This class is only used for type checking. If the type checking (whether a
  * type is a constructed type) can be implemented another way, this class can
@@ -47,25 +47,49 @@ class CFEConstructedType : public CFETypeSpec
 // standard constructor/destructor
 public:
     /** CFEConstructedType constructor
-     *    \param nType the type f the constructed type
+     *  \param nType the type of the constructed type
      */
-    CFEConstructedType(TYPESPEC_TYPE nType);
+    CFEConstructedType(unsigned int nType);
     virtual ~CFEConstructedType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CFEConstructedType(CFEConstructedType &src);
 
 public:
-    virtual bool IsForwardDeclaration();
+    /** \brief returns the value of m_bForwardDeclaration
+     *  \return the value of m_bForwardDeclaration
+     */
+    bool IsForwardDeclaration()
+    { return m_bForwardDeclaration; }
+    /** \brief return the tag of the constructed type
+     *  \return the tag
+     */
+    string GetTag()
+    { return m_sTag; }
+    /** \brief set the tag of the constructed type
+     *  \param sTag the new tag
+     */
+    void SetTag(string sTag)
+    { m_sTag = sTag; }
+    /** \brief returns true if tag matches
+     *  \param sTag the tag to check against
+     *  \return true if matches
+     */
+    bool Match(string sTag)
+    { return m_sTag == sTag; }
 
 protected:
     /** \var bool m_bForwardDeclaration
      *  \brief true if this struct is a forward declaration
      */
     bool m_bForwardDeclaration;
+    /** \var string m_sTag
+     *  \brief the tag of the struct
+     */
+    string m_sTag;
 };
 
 #endif /* __DICE_FE_FECONSTRUCTEDTYPE_H__ */

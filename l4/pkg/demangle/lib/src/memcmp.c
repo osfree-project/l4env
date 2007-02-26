@@ -38,10 +38,12 @@
  *	contents are identical upto the length of s1.
  */
 
-int memcmp(const void *s1v, const void *s2v, unsigned size);
+#include <stddef.h>
+
+int memcmp(const void *s1v, const void *s2v, size_t size);
 
 int
-memcmp(const void *s1v, const void *s2v, unsigned size)
+memcmp(const void *s1v, const void *s2v, size_t size)
 {
 	register const char *s1 = s1v, *s2 = s2v;
 	register unsigned int a, b;

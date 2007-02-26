@@ -51,9 +51,6 @@ int ovl_window_init(char *ovl_name) {
 //	l4thread_t listener;
 //	l4_threadid_t listener_tid;
 
-	printf("libovlwindow(init): l4thread_init\n");
-	l4thread_init();
-	
 	if (!ovl_name) ovl_name = "OvlWM";
 	printf("libovlwindow(init): ask names for %s\n",ovl_name);
 	while (names_waitfor_name(ovl_name, ovl_window_srv, 2000) == 0) {

@@ -123,7 +123,7 @@ IMPLEMENTATION:
 // #include <errno.h>
 
 #ifdef DEBUG
-#include <stdio.h>
+#include <cstdio>
 #endif
 
 // /* extern asm ("mcount"); */

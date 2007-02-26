@@ -26,11 +26,11 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FEArrayType.h"
-#include "fe/FEExpression.h"
+#include "FEArrayType.h"
+#include "FEExpression.h"
 #include "File.h"
-
 #include "Compiler.h"
+#include <iostream>
 
 CFEArrayType::CFEArrayType(CFETypeSpec * pBaseType, CFEExpression * pBound)
 :CFETypeSpec(TYPE_ARRAY)
@@ -91,48 +91,13 @@ CFEExpression *CFEArrayType::GetBound()
     return m_pBound;
 }
 
-/** \brief check consistency
- *  \return false if error, true if everything is fine
- *
- * An array-type is consistent if its base type is consitent and the bound (if any) is.
+/** \brief accept iterations of the visitors
+ *  \param v reference to the visitor
  */
-bool CFEArrayType::CheckConsistency()
+void CFEArrayType::Accept(CVisitor& v)
 {
-    if (!m_pBaseType)
-      {
-      CCompiler::GccError(this, 0, "An array-type without a base type.");
-      return false;
-      }
-    if (!(m_pBaseType->CheckConsistency()))
-    return false;
+    if (m_pBaseType)
+	m_pBaseType->Accept(v);
     if (m_pBound)
-      {
-      if (!(m_pBound->CheckConsistency()))
-          return false;
-      }
-    return true;
-}
-
-/** serializes this object
- *  \param pFile the file to serialize to/from
- */
-void CFEArrayType::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<array_type>\n");
-      pFile->IncIndent();
-      if (m_pBaseType)
-          m_pBaseType->Serialize(pFile);
-      if (m_pBound)
-        {
-        pFile->PrintIndent("<bound>\n");
-        pFile->IncIndent();
-        m_pBound->Serialize(pFile);
-        pFile->DecIndent();
-        pFile->PrintIndent("</bound>\n");
-        }
-      pFile->DecIndent();
-      pFile->PrintIndent("</array_type>\n");
-      }
+	m_pBound->Accept(v);
 }

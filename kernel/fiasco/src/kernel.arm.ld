@@ -59,7 +59,7 @@ SECTIONS {
 
   PROVIDE(bootstrap_bss_start = .);
   .bss_bootstrap : {
-    bootstrap*(.bss COMMON .gnu.linkonce.b.*)
+    bootstrap*(.bss .bss.* COMMON .gnu.linkonce.b.*)
   }
   PROVIDE(bootstrap_bss_end = .);
 
@@ -69,6 +69,7 @@ SECTIONS {
   . = end_of_loader - kernel_load_addr + virt_address;
 
   .kip : AT (end_of_loader) {
+    _kernel_image_start = .;
     *(.kernel_info_page)
     _initkip_start = .;
     KEEP(*(.initkip.version))
@@ -130,7 +131,7 @@ SECTIONS {
   . = ALIGN(4K);
   .bss : AT (ADDR(.bss) - phys_offset) {
     PROVIDE(__bss_start = .);
-    *(.bss COMMON .gnu.linkonce.b.*)
+    *(.bss .bss.* COMMON .gnu.linkonce.b.*)
     *(.bss.jdb)
     PROVIDE(__bss_end = .);
     . = ALIGN(4K);

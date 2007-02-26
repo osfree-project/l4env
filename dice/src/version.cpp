@@ -1,6 +1,7 @@
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include "svnversion.h"
 
 const char* dice_build   = __DATE__ " " __TIME__;
 const char* dice_version = VERSION;
@@ -9,6 +10,8 @@ const char* dice_user    = __USER__;
 #else
 const char* dice_user    = 0;
 #endif
-const char* dice_configure_gcc     = __CONFIGURECXX__;
-const char* dice_compile_gcc       = __WHICHCXX__;
-
+#ifdef SVNVERSION
+const char* dice_svnrev  = SVNVERSION;
+#else
+const char* dice_svnrev  = 0;
+#endif

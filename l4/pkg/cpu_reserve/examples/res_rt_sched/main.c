@@ -21,9 +21,9 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/timeout.h>
 #include <l4/sys/types.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/atomic.h>
 #include <l4/util/l4_macros.h>
-#include <l4/util/kip.h>
 #include <l4/util/util.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/rmgr/librmgr.h>
@@ -148,6 +148,7 @@ int main (int argc, const char**argv)
     l4_kernel_info_t *kinfo;
     l4_threadid_t next_period_id;
     l4thread_t worker_t;
+    l4_umword_t dummy1;
 
     if(parse_cmdline(&argc, &argv,
 		     'm', "mandpreempt", "log mandatory preemption ipcs",
@@ -169,7 +170,7 @@ int main (int argc, const char**argv)
     }else{
 	LOG("Do reservations directly at the kernel");
     }
-    kinfo = l4util_kip_map();
+    kinfo = l4sigma0_kip_map(L4_INVALID_ID);
 
     if((worker_t = l4thread_create_named(worker, ".worker",
 					 0, L4THREAD_CREATE_ASYNC))<0){
@@ -186,7 +187,7 @@ int main (int argc, const char**argv)
 	 * and watching */
 	unsigned *array;
 	int wcet;
-	
+
 	// add mandatory timeslice
 	wcet = time_mand;
 	if((ret = l4cpu_reserve_add(worker_id, "mandatory",
@@ -196,7 +197,7 @@ int main (int argc, const char**argv)
 	    l4env_perror("l4cpu_reserve_add(mandatory)", -ret);
 	    return 1;
 	}
-	
+
 	// add optional mandatory timeslice
 	wcet = 5000;
 	if((ret = l4cpu_reserve_add(worker_id, "optional",
@@ -241,27 +242,28 @@ int main (int argc, const char**argv)
 	}
 	preempter = l4thread_l4_id(preempter_t);
 	rmgr_set_prio(preempter, 255);
-	
+
 	// set preemter
 	pager = L4_INVALID_ID;
-	l4_thread_ex_regs(worker_id, -1, -1, &preempter, &pager,
-			  &word1, &word1, &word1);
+	l4_thread_ex_regs_flags(worker_id, -1, -1, &preempter, &pager,
+	                        &dummy1, &dummy1, &dummy1,
+	                        L4_THREAD_EX_REGS_NO_CANCEL);
 
 	// add mandatory timeslice
 	if((ret = l4_rt_add_timeslice(worker_id, 50, time_mand))!=0) {
 	    LOG("l4_rt_add_timeslice(): %d", ret);
 	    return 1;
 	}
-	
+
 	// add optional mandatory timeslice
 	if((ret = l4_rt_add_timeslice(worker_id, 40, 5000))!=0) {
 	    LOG("l4_rt_add_timeslice(): %d", ret);
 	    return 1;
 	}
-	
+
 	// set period
 	l4_rt_set_period (worker_id, period);
-	
+
 	// commit to periodic work
 	if((ret = l4_rt_begin_strictly_periodic(worker_id,
 						kinfo->clock + 20000))!=0) {

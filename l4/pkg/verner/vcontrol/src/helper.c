@@ -325,7 +325,7 @@ build_and_connect_video_chain (connect_chain_t * chain)
 						chain->quality, &dummy,
 						&dummy);
 
-#if PREDICT_DECODING_TIME
+#if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
     /* set prediction */
     VideoCoreComponentIntern_setPrediction(chain->vcore_thread_id,
 					   chain->learn_file,

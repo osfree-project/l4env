@@ -1,7 +1,7 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 
-SYSTEMS  = x86-l4v2 x86-l4x0
+SYSTEMS  = x86-l4v2 amd64-l4v2
 DEFINES  = -DL4LIBC_HEAPSIZE=1024*1024
 MODE     = l4env_minimal
 TARGET   = libc_be_buddy_slab_mem.a

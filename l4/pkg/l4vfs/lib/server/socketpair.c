@@ -1,5 +1,5 @@
 /**
- * \file   l4vfs/lib/server/fcntl.c
+ * \file   l4vfs/lib/server/socketpair.c
  * \brief  
  *
  * \date   09/13/2004

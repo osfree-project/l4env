@@ -208,6 +208,8 @@ void unlink_gendisk(struct gendisk *disk)
 			      disk->minors);
 }
 
+#define to_disk(obj) container_of(obj,struct gendisk,kobj)
+
 /**
  * get_gendisk - get partitioning information for a given device
  * @dev: device to get partitioning information for
@@ -221,13 +223,84 @@ struct gendisk *get_gendisk(dev_t dev, int *part)
 	return (struct gendisk *)kobj;
 }
 
+#ifdef CONFIG_PROC_FS
+/* iterator */
+static void *part_start(struct seq_file *part, loff_t *pos)
+{
+	struct list_head *p;
+	loff_t l = *pos;
+
+	down_read(&block_subsys.rwsem);
+	list_for_each(p, &block_subsys.kset.list)
+		if (!l--)
+			return list_entry(p, struct gendisk, kobj.entry);
+	return NULL;
+}
+
+static void *part_next(struct seq_file *part, void *v, loff_t *pos)
+{
+	struct list_head *p = ((struct gendisk *)v)->kobj.entry.next;
+	++*pos;
+	return p==&block_subsys.kset.list ? NULL : 
+		list_entry(p, struct gendisk, kobj.entry);
+}
+
+static void part_stop(struct seq_file *part, void *v)
+{
+	up_read(&block_subsys.rwsem);
+}
+
+static int show_partition(struct seq_file *part, void *v)
+{
+	struct gendisk *sgp = v;
+	int n;
+	char buf[BDEVNAME_SIZE];
+
+	if (&sgp->kobj.entry == block_subsys.kset.list.next)
+		seq_puts(part, "major minor  #blocks  name\n\n");
+
+	/* Don't show non-partitionable removeable devices or empty devices */
+	if (!get_capacity(sgp) ||
+			(sgp->minors == 1 && (sgp->flags & GENHD_FL_REMOVABLE)))
+		return 0;
+	if (sgp->flags & GENHD_FL_SUPPRESS_PARTITION_INFO)
+		return 0;
+
+	/* show the full disk and all non-0 size partitions of it */
+	seq_printf(part, "%4d  %4d %10llu %s\n",
+		sgp->major, sgp->first_minor,
+		(unsigned long long)get_capacity(sgp) >> 1,
+		disk_name(sgp, 0, buf));
+	for (n = 0; n < sgp->minors - 1; n++) {
+		if (!sgp->part[n])
+			continue;
+		if (sgp->part[n]->nr_sects == 0)
+			continue;
+		seq_printf(part, "%4d  %4d %10llu %s\n",
+			sgp->major, n + 1 + sgp->first_minor,
+			(unsigned long long)sgp->part[n]->nr_sects >> 1 ,
+			disk_name(sgp, n + 1, buf));
+	}
+
+	return 0;
+}
+
+struct seq_operations partitions_op = {
+	.start =part_start,
+	.next =	part_next,
+	.stop =	part_stop,
+	.show =	show_partition
+};
+#endif
+
+
 extern int blk_dev_init(void);
 
 static struct kobject *base_probe(dev_t dev, int *part, void *data)
 {
 	if (request_module("block-major-%d-%d", MAJOR(dev), MINOR(dev)) > 0)
-	    /* Make old-style 2.4 aliases work */
-	    request_module("block-major-%d", MAJOR(dev));
+		/* Make old-style 2.4 aliases work */
+		request_module("block-major-%d", MAJOR(dev));
 	return NULL;
 }
 
@@ -244,17 +317,217 @@ int __init device_init(void)
 
 module_init(device_init);
 
+struct disk_attribute {
+	struct attribute attr;
+	ssize_t (*show)(struct gendisk *, char *);
+};
 
-/* eventually for later use
+static ssize_t disk_attr_show(struct kobject *kobj, struct attribute *attr,
+			      char *page)
+{
+	struct gendisk *disk = to_disk(kobj);
+	struct disk_attribute *disk_attr =
+		container_of(attr,struct disk_attribute,attr);
+	ssize_t ret = 0;
+
+	if (disk_attr->show)
+		ret = disk_attr->show(disk,page);
+	return ret;
+}
+
+static struct sysfs_ops disk_sysfs_ops = {
+	.show	= &disk_attr_show,
+};
+
+static ssize_t disk_dev_read(struct gendisk * disk, char *page)
+{
+	dev_t base = MKDEV(disk->major, disk->first_minor); 
+	return print_dev_t(page, base);
+}
+static ssize_t disk_range_read(struct gendisk * disk, char *page)
+{
+	return sprintf(page, "%d\n", disk->minors);
+}
+static ssize_t disk_size_read(struct gendisk * disk, char *page)
+{
+	return sprintf(page, "%llu\n", (unsigned long long)get_capacity(disk));
+}
+
+static inline unsigned jiffies_to_msec(unsigned jif)
+{
+#ifndef DDE_LINUX
+#if 1000 % HZ == 0
+	return jif * (1000 / HZ);
+#elif HZ % 1000 == 0
+	return jif / (HZ / 1000);
+#else
+	return (jif / HZ) * 1000 + (jif % HZ) * 1000 / HZ;
+#endif
+#else /* DDE_LINUX */
+	return (jif * 1000) / HZ;
+#endif
+}
+static ssize_t disk_stats_read(struct gendisk * disk, char *page)
+{
+	disk_round_stats(disk);
+	return sprintf(page,
+		"%8u %8u %8llu %8u "
+		"%8u %8u %8llu %8u "
+		"%8u %8u %8u"
+		"\n",
+		disk_stat_read(disk, reads), disk_stat_read(disk, read_merges),
+		(unsigned long long)disk_stat_read(disk, read_sectors),
+		jiffies_to_msec(disk_stat_read(disk, read_ticks)),
+		disk_stat_read(disk, writes), 
+		disk_stat_read(disk, write_merges),
+		(unsigned long long)disk_stat_read(disk, write_sectors),
+		jiffies_to_msec(disk_stat_read(disk, write_ticks)),
+		disk->in_flight,
+		jiffies_to_msec(disk_stat_read(disk, io_ticks)),
+		jiffies_to_msec(disk_stat_read(disk, time_in_queue)));
+}
+static struct disk_attribute disk_attr_dev = {
+	.attr = {.name = "dev", .mode = S_IRUGO },
+	.show	= disk_dev_read
+};
+static struct disk_attribute disk_attr_range = {
+	.attr = {.name = "range", .mode = S_IRUGO },
+	.show	= disk_range_read
+};
+static struct disk_attribute disk_attr_size = {
+	.attr = {.name = "size", .mode = S_IRUGO },
+	.show	= disk_size_read
+};
+static struct disk_attribute disk_attr_stat = {
+	.attr = {.name = "stat", .mode = S_IRUGO },
+	.show	= disk_stats_read
+};
+
+static struct attribute * default_attrs[] = {
+	&disk_attr_dev.attr,
+	&disk_attr_range.attr,
+	&disk_attr_size.attr,
+	&disk_attr_stat.attr,
+	NULL,
+};
+
 static void disk_release(struct kobject * kobj)
 {
-	struct gendisk *disk = (struct gendisk *)kobj;
+	struct gendisk *disk = to_disk(kobj);
 	kfree(disk->random);
 	kfree(disk->part);
 	free_disk_stats(disk);
 	kfree(disk);
 }
-*/
+
+static struct kobj_type ktype_block = {
+	.release	= disk_release,
+	.sysfs_ops	= &disk_sysfs_ops,
+	.default_attrs	= default_attrs,
+};
+
+extern struct kobj_type ktype_part;
+
+static int block_hotplug_filter(struct kset *kset, struct kobject *kobj)
+{
+	struct kobj_type *ktype = get_ktype(kobj);
+
+	return ((ktype == &ktype_block) || (ktype == &ktype_part));
+}
+
+static struct kset_hotplug_ops block_hotplug_ops = {
+	.filter	= block_hotplug_filter,
+};
+
+/* declare block_subsys. */
+static decl_subsys(block, &ktype_block, &block_hotplug_ops);
+
+
+/*
+ * aggregate disk stat collector.  Uses the same stats that the sysfs
+ * entries do, above, but makes them available through one seq_file.
+ * Watching a few disks may be efficient through sysfs, but watching
+ * all of them will be more efficient through this interface.
+ *
+ * The output looks suspiciously like /proc/partitions with a bunch of
+ * extra fields.
+ */
+
+/* iterator */
+static void *diskstats_start(struct seq_file *part, loff_t *pos)
+{
+	loff_t k = *pos;
+	struct list_head *p;
+
+	down_read(&block_subsys.rwsem);
+	list_for_each(p, &block_subsys.kset.list)
+		if (!k--)
+			return list_entry(p, struct gendisk, kobj.entry);
+	return NULL;
+}
+
+static void *diskstats_next(struct seq_file *part, void *v, loff_t *pos)
+{
+	struct list_head *p = ((struct gendisk *)v)->kobj.entry.next;
+	++*pos;
+	return p==&block_subsys.kset.list ? NULL :
+		list_entry(p, struct gendisk, kobj.entry);
+}
+
+static void diskstats_stop(struct seq_file *part, void *v)
+{
+	up_read(&block_subsys.rwsem);
+}
+
+static int diskstats_show(struct seq_file *s, void *v)
+{
+	struct gendisk *gp = v;
+	char buf[BDEVNAME_SIZE];
+	int n = 0;
+
+	/*
+	if (&sgp->kobj.entry == block_subsys.kset.list.next)
+		seq_puts(s,	"major minor name"
+				"     rio rmerge rsect ruse wio wmerge "
+				"wsect wuse running use aveq"
+				"\n\n");
+	*/
+ 
+	disk_round_stats(gp);
+	seq_printf(s, "%4d %4d %s %u %u %llu %u %u %u %llu %u %u %u %u\n",
+		gp->major, n + gp->first_minor, disk_name(gp, n, buf),
+		disk_stat_read(gp, reads), disk_stat_read(gp, read_merges),
+		(unsigned long long)disk_stat_read(gp, read_sectors),
+		jiffies_to_msec(disk_stat_read(gp, read_ticks)),
+		disk_stat_read(gp, writes), disk_stat_read(gp, write_merges),
+		(unsigned long long)disk_stat_read(gp, write_sectors),
+		jiffies_to_msec(disk_stat_read(gp, write_ticks)),
+		gp->in_flight,
+		jiffies_to_msec(disk_stat_read(gp, io_ticks)),
+		jiffies_to_msec(disk_stat_read(gp, time_in_queue)));
+
+	/* now show all non-0 size partitions of it */
+	for (n = 0; n < gp->minors - 1; n++) {
+		struct hd_struct *hd = gp->part[n];
+
+		if (hd && hd->nr_sects)
+			seq_printf(s, "%4d %4d %s %u %u %u %u\n",
+				gp->major, n + gp->first_minor + 1,
+				disk_name(gp, n + 1, buf),
+				hd->reads, hd->read_sectors,
+				hd->writes, hd->write_sectors);
+	}
+ 
+	return 0;
+}
+
+struct seq_operations diskstats_op = {
+	.start	= diskstats_start,
+	.next	= diskstats_next,
+	.stop	= diskstats_stop,
+	.show	= diskstats_show
+};
+
 
 struct gendisk *alloc_disk(int minors)
 {

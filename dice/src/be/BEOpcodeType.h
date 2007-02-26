@@ -32,7 +32,6 @@
 
 #include "be/BEType.h"
 
-class CBEContext;
 class CBETypedDeclarator;
 
 /** \class CBEOpcodeType
@@ -56,9 +55,7 @@ protected:
 
 public:
     virtual CObject* Clone();
-    virtual bool CreateBackEnd(CBEContext *pContext);
-
-protected:
+    virtual void CreateBackEnd();
 };
 
 #endif // !__DICE_BEOPCODETYPE_H__

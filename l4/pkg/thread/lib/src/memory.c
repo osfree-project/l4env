@@ -128,7 +128,7 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
     }
 
 #if DEBUG_MEM_ALLOC
-  LOG_printf("  attached to region at 0x%08x\n", desc->map_addr);
+  LOG_printf("  attached to region at 0x%08lx\n", desc->map_addr);
 #endif
 
   if (!l4_is_invalid_id(owner))
@@ -169,7 +169,7 @@ l4th_pages_free(l4th_mem_desc_t * desc)
   int ret;
   
   LOGdL(DEBUG_MEM_FREE,
-        "free ds %d at "l4util_idfmt"\n  mapped to 0x%08x, size %u",
+        "free ds %d at "l4util_idfmt"\n  mapped to 0x%08lx, size %zu",
         desc->ds.id, l4util_idstr(desc->ds.manager), 
         desc->map_addr, desc->size);
   

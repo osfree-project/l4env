@@ -24,12 +24,13 @@ int create_threads_sync(){
     char name[16];
 
     /* get my own preempter and pager */
-    l4_thread_ex_regs(l4_myself(), -1, -1, &preempter, &pager,
-		      &dummy, &dummy, &dummy);
+    l4_thread_ex_regs_flags(l4_myself(), -1, -1, &preempter, &pager,
+		            &dummy, &dummy, &dummy,
+			    L4_THREAD_EX_REGS_NO_CANCEL);
     if(l4_is_invalid_id(pager)) return -1;	// no pager!
   
     for(i = 0; i < IRQ_NUMS; i++){
-	thread.id.lthread = i+1;
+	thread.id.lthread = i+2;
 	new_preempter=preempter;
 	new_pager = pager;
 

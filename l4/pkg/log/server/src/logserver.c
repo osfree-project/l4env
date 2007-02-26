@@ -39,6 +39,7 @@
 #include "tcpip.h"
 #include "config.h"
 #include "muxed.h"
+#include "log-server.h"
 
 int	verbose=0;
 unsigned buffer_size, buffer_head, buffer_tail;
@@ -49,11 +50,6 @@ unsigned buffer_size = 4096;	/* we use a buffer size of 4KB per default
 
 //! A string-buffer containing the received string
 static char message_buffer[LOG_BUFFERSIZE+5];
-//! A structure containing the last received request
-rcv_message_t message;
-
-//! the sender of the last request
-l4_threadid_t msg_sender = L4_INVALID_ID;
 
 //! Our own logstring
 char LOG_tag[9]="log";
@@ -189,65 +185,88 @@ static void parse_args(int argc, const char**argv){
 
 }
 
-/* answer the last and get a new message via ipc, we use long ipc.
- *
- * We receive up to 1 flexpage, up to 1 string and up to 6 dwords.
- */
-static int get_message(void){
-  int err;
-  
-  message.size.md.strings = 1;
-  message.size.md.dwords = 7;
-  message.string.rcv_size = LOG_BUFFERSIZE;
-  message.string.rcv_str = (l4_umword_t)&message_buffer;
-#if CONFIG_USE_TCPIP
-  message.fpage = channel_get_next_fpage();
-#else
-  message.fpage.fpage = 0;
-#endif
-
-  memset(message_buffer,0,LOG_BUFFERSIZE);
-  while(1){
-  	if(l4_thread_equal(msg_sender, L4_INVALID_ID)){
-		if((err=l4_ipc_wait(&msg_sender,
-                           &message, &message.d0, &message.d1,
-			   L4_IPC_NEVER, &message.result))!=0)
-		    return err;
-		 break;
-	} else {
-		err = l4_ipc_reply_and_wait(
-		        msg_sender, 0, message.d0, 0,
-			&msg_sender, &message, &message.d0, &message.d1,
-			L4_IPC_SEND_TIMEOUT_0,
-			&message.result);
-		if(err & L4_IPC_SETIMEOUT){
-			msg_sender = L4_INVALID_ID;
-		} else
-			break;
-	}
-  }
-  LOGd(CONFIG_LOG_REQUESTS,
-	  "Request from %x.%x: %d strings, size %d, %d dwords, flexpage: %s\n",
-	  msg_sender.id.task, msg_sender.id.lthread,
-	  message.result.md.strings,
-	  message.string.snd_size,
-	  message.result.md.dwords,
-	  message.result.md.fpage_received?"yes":"no");
-  return 0;
+void
+log_outstring_component (CORBA_Object _dice_corba_obj,
+    int flush_flag,
+    const char* string,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+    if (verbose && string && string[0])
+    {
+      char buf[10];
+      sprintf(buf, l4util_idfmt_adjust":", l4util_idstr(*_dice_corba_obj));
+      print_buffered(buf);
+    }
+    print_buffered(string);
+    if(flush_flag ||
+	strstr(message_buffer, "***"))
+	flush_buffer();
 }
 
-static void print_message(void){
-  if(verbose && message_buffer[0]){
-      char buf[10];
-      sprintf(buf, l4util_idfmt_adjust":", l4util_idstr(msg_sender));
-      print_buffered(buf);
-  }
-  print_buffered(message_buffer);
-  if(strstr(message_buffer, "***")) flush_buffer();
+int
+log_channel_open_component (CORBA_Object _dice_corba_obj,
+    l4_snd_fpage_t page,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+#if CONFIG_USE_TCPIP
+    int ret = channel_open(page.fpage, channel);
+    _dice_corba_env->rcv_fpage = channel_get_next_fpage();
+    return ret;
+#else
+    return -1;
+#endif
+}
+
+int
+log_channel_write_component (CORBA_Object _dice_corba_obj,
+    int channel, 
+    unsigned int offset,
+    unsigned int size,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+#if CONFIG_USE_TCPIP
+    return channel_write(channel, offset, size);
+#else
+    return -1;
+#endif
+}
+
+int
+log_channel_flush_component (CORBA_Object _dice_corba_obj,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+#if CONFIG_USE_TCPIP
+    return channel_flush(channel);
+#else
+    return -1;
+#endif
+}
+
+int
+log_channel_close_component (CORBA_Object _dice_corba_obj,
+    int channel,
+    CORBA_Server_Environment *_dice_corba_env)
+{
+#if CONFIG_USE_TCPIP
+    return channel_close(channel);
+#else
+    return -1;
+#endif
+}
+
+static void*
+msg_alloc(unsigned long size)
+{
+    if (size != LOG_BUFFERSIZE)
+	return 0;
+    return message_buffer;
 }
 
 int main(int argc, const char**argv){
   int err;
+  CORBA_Server_Environment env = dice_default_server_environment;
 
   parse_args(argc,argv);
 
@@ -286,68 +305,13 @@ int main(int argc, const char**argv){
     printf("Buffersize: %d\n", buffer_size);
   }
 
-  strcpy(message_buffer+LOG_BUFFERSIZE,"...\n");
-  while(1){
-    err = get_message();
-    if (err == 0    /* no error */
-     || err == 0xE0 /* L4_IPC_REMSGCUT: most probably only the logstring
-		     * is too long, this case is signaled by the appended
-		     * "...\n", see the strcpy line above */
-	){
-	if(message.result.md.fpage_received == 0){
-	    switch(message.d0){
-	    case LOG_COMMAND_LOG:
-		if(message.result.md.strings!=1){
 #if CONFIG_USE_TCPIP
-		  // aw9: Hack for kernel tracebuffer
-		  //      (no fpage mapped)
-		  if ((message.d1 & L4_PAGEMASK) >= 0xc0000000) {
-		    message.d0 = channel_open();
-		    continue;
-		  }
+  env.rcv_fpage = channel_get_next_fpage();
+#else
+  env.rcv_fpage.fpage = 0;
 #endif
-		    message.d0 = -1;
-		    continue;
-		}
-		print_message();
-		if(message.d1) flush_buffer();
-		message.d0 = 0;
-		continue;
-#if CONFIG_USE_TCPIP
-	    case LOG_COMMAND_CHANNEL_WRITE:
-		if(message.result.md.dwords!=4){
-		    message.d0 = -1;
-		    continue;
-		}
-		message.d0 = channel_write();
-		continue;
-	    case LOG_COMMAND_CHANNEL_FLUSH:
-		message.d0 = channel_flush();
-		continue;
-	    case LOG_COMMAND_CHANNEL_CLOSE:
-		message.d0 = channel_close();
-		continue;
-#endif
-	    }
-	} else {
-#if CONFIG_USE_TCPIP
-	    // we received a flexpage. This is an open-request.
-	    message.d0 = channel_open();
-	    continue;
-#endif
-	}
-	/* We have an invalid request. Signal this to the caller. */
-	message.d0 = -1;
-	continue;
-    } // no error during request receive
+  env.malloc = msg_alloc;
 
-    if(err & 0x40){	// ipc aborted, ignore
-	continue;
-    }
-    
-    LOG_Error("Error %#x getting message from %x.%x.\n", err,
-	  msg_sender.id.task, msg_sender.id.lthread);
-    // send no reply
-    msg_sender = L4_INVALID_ID;
-  }
+  strcpy(message_buffer+LOG_BUFFERSIZE,"...\n");
+  log_server_loop (&env);
 }

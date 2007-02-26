@@ -42,11 +42,12 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     file_desc_t file_desc;
     l4_int32_t res;
     l4_uint32_t ds_flags;
-    l4dm_dataspace_t *ds;
+    l4dm_dataspace_t ds;
     l4_addr_t content_addr, addr;
     l4_uint32_t area;
     l4_size_t ds_size;
     void *ret;
+    int temp;
 
     LOGd(_DEBUG,"io backend, fd %d",fd);
 
@@ -67,16 +68,19 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     }
 
     // 3.
+    // XXX: are you crazy ???
+    /*
     ds = (l4dm_dataspace_t *) malloc(sizeof(l4dm_dataspace_t));
-    if (!ds)
+    if (! ds)
     {
         errno = ENOMEM;
         return MAP_FAILED;
     }
+    */
 
     // 4.
     res = l4vfs_mmap1(file_desc.server_id,
-                      ds,
+                      &ds,
                       length,
                       prot,
                       flags,
@@ -91,7 +95,7 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
 
 
     // get size of current dataspace
-    l4dm_mem_size(ds,&ds_size);
+    l4dm_mem_size(&ds, &ds_size);
 
     // 5. map prot to dataspace flags
     ds_flags = L4DM_RO;
@@ -103,9 +107,9 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     // 6.
     if (start == NULL)
     {
-        res = l4rm_area_reserve(ds_size,L4RM_LOG2_ALIGNED,&addr,&area);
+        res = l4rm_area_reserve(ds_size, L4RM_LOG2_ALIGNED, &addr, &area);
 
-        LOGd(_DEBUG,"reserved area with id: %d",area);
+        LOGd(_DEBUG,"reserved area with id: %u", area);
 
         if (res)
         {
@@ -114,14 +118,16 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
             else
                 errno = EACCES;
 
-                return MAP_FAILED;
+            return MAP_FAILED;
         }
 
-        res = l4rm_area_attach(ds,area, length, offset, ds_flags, (void *)&content_addr);
+        res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
+                               (void *)&content_addr);
     }
     else
     {
-        res = l4rm_area_reserve_region((l4_addr_t)start,ds_size,L4RM_LOG2_ALIGNED,&area);
+        res = l4rm_area_reserve_region((l4_addr_t)start, ds_size,
+                                       L4RM_LOG2_ALIGNED, &area);
 
         LOGd(_DEBUG,"reserved area with id: %d",area);
 
@@ -132,10 +138,11 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
             else
                 errno = EACCES;
 
-                return MAP_FAILED;
+            return MAP_FAILED;
         }
 
-        res = l4rm_area_attach(ds,area, length, offset, ds_flags, (void *)&content_addr);
+        res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
+                               (void *)&content_addr);
     }
 
     if (res)
@@ -157,7 +164,10 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     }
 
     // 7. create local status information
-    add_ds2server(ds,file_desc.server_id,area);
+    // fixme: this can fail
+    temp = add_ds2server(&ds, file_desc.server_id, area);
+    assert(temp == 0);  // we don't currently know how to handle to
+                        // small management tables
 
     return ret;
 }
@@ -188,7 +198,7 @@ int msync(void *start, size_t length, int flags)
 
     current = get_ds2server(&ds);
 
-    if (!current)
+    if (! current)
     {
         errno = EFAULT;
         return -1;
@@ -221,6 +231,8 @@ int munmap_normal(ds2server_t *current, void *start, size_t length)
         return -1;
     }
 
+    // fixme: we were probably called by munmap, which already did an
+    //        l4rm_lookup(), maybe we should not do it again ???
     res = l4rm_lookup(start, &map_addr, &map_size, &ds, &offset, &dummy);
 
     if (res != L4RM_REGION_DATASPACE)
@@ -232,7 +244,7 @@ int munmap_normal(ds2server_t *current, void *start, size_t length)
         return -1;
     }
 
-    res = l4vfs_munmap(current->id,&ds,offset,length);
+    res = l4vfs_munmap(current->id, &ds, offset, length);
 
     if (! res)
     {

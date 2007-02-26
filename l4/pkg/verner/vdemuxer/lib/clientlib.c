@@ -63,9 +63,9 @@ __callback_video_connect (dsi_component_t * comp, dsi_socket_ref_t * remote)
   /* call server to connect */
   ret = VideoDemuxerComponentIntern_start_CompressedVideoOut_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
-    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, env.major);
+    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -149,11 +149,11 @@ VideoDemuxerComponentIntern_connect_CompressedVideoOut (l4_threadid_t
   /* call server to connect */
   ret = VideoDemuxerComponentIntern_connect_CompressedVideoOut_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_connect_CompressedVideoOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -195,11 +195,11 @@ VideoDemuxerComponentIntern_disconnect_CompressedVideoOut (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoDemuxerComponentIntern_disconnect_CompressedVideoOut_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_disconnect_CompressedVideoOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -235,9 +235,9 @@ __callback_audio_connect (dsi_component_t * comp, dsi_socket_ref_t * remote)
   /* call server to connect */
   ret = VideoDemuxerComponentIntern_start_CompressedAudioOut_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
-    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, env.major);
+    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -321,11 +321,11 @@ VideoDemuxerComponentIntern_connect_CompressedAudioOut (l4_threadid_t
   /* call server to connect */
   ret = VideoDemuxerComponentIntern_connect_CompressedAudioOut_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_connect_CompressedAudioOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -367,11 +367,11 @@ VideoDemuxerComponentIntern_disconnect_CompressedAudioOut (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoDemuxerComponentIntern_disconnect_CompressedAudioOut_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_disconnect_CompressedAudioOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -403,11 +403,11 @@ VideoDemuxerComponentIntern_setRTparams (l4_threadid_t thread_id,
   int ret = VideoDemuxerComponentIntern_setRTparams_call
     (&thread_id, period, reservation_audio, reservation_video,
      verbose_preemption_ipc, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_setRTparams failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -440,11 +440,11 @@ VideoDemuxerComponentIntern_probeVideoFile (l4_threadid_t thread_id,
   int ret = VideoDemuxerComponentIntern_probeVideoFile_call
     (&thread_id, filename, videoTrackNo, audioTrackNo, videoTracks,
      audioTracks, streaminfo, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_probeVideoFile failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -479,14 +479,14 @@ VideoDemuxerComponentIntern_setVideoFileParam (l4_threadid_t thread_id,
   int ret = VideoDemuxerComponentIntern_setVideoFileParam_call
     (&thread_id, videoFilename, audioFilename, videoTrackNo, audioTrackNo,
      videoPlugin, audioPlugin, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_setVideoFileParam failed (ret %d, exc %d.%d)",
-       ret, env.major, env.repos_id);
-    if ((env.major == CORBA_SYSTEM_EXCEPTION) &&
-	(env.repos_id == CORBA_DICE_EXCEPTION_IPC_ERROR))
-      LOG ("  ipc error: %x partner " l4util_idfmt, env._p.ipc_error,
+       ret, DICE_EXCEPTION_MAJOR(&env), DICE_EXCEPTION_MINOR(&env));
+    if ((DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION) &&
+	(DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR))
+      LOG ("  ipc error: %x partner " l4util_idfmt, DICE_IPC_ERROR(&env),
 	   l4util_idstr (thread_id));
     return -1;
   }
@@ -518,11 +518,11 @@ VideoDemuxerComponentIntern_setSeekPosition (l4_threadid_t thread_id,
   /* check sender id */
   int ret = VideoDemuxerComponentIntern_setSeekPosition_call
     (&thread_id, seekVideo, seekAudio, position, fileoffset, whence, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoDemuxerComponentIntern_setSeekPosition failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;

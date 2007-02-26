@@ -60,7 +60,7 @@ pf_handler(exc_state_t * state);
 void
 pf_handler(exc_state_t * state)
 {
-  LOGl("[PF] %s at 0x%08x, eip 0x%08x", (state->error & 2) ? "write" : "read",
+  LOGl("[PF] %s at 0x%08lx, eip 0x%08lx", (state->error & 2) ? "write" : "read",
        state->addr, state->eip);
   enter_kdebug("PF");
 }

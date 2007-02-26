@@ -17,12 +17,6 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
 
-#ifdef OSKIT
-typedef l4_size_t size_t;
-#undef memcpy
-void *memcpy(void *dest, const void *src, size_t n);
-#endif
-
 void*
 memcpy(void *dst, const void *src, size_t len)
 {

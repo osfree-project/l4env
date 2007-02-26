@@ -8,8 +8,11 @@
 #
 # ============================================================================
 
-L4DIR ?= ../../../../../../..
-include $(L4DIR)/Makeconf.bid.local
+PKGDIR ?= ../../../../..
+L4DIR  ?= $(PKGDIR)/../..
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/Makeconf.bid.local
+include $(L4DIR)/mk/modes.inc
 
 # ============================================================================
 # Activated features
@@ -32,23 +35,8 @@ OBJECT_EXTENSION=o
 # Compiler
 # ============================================================================
 
-CC=$(CC_x86)
 SPECIFIC_CFLAGS=-fPIC 
-CFLAGS=-Wall -O2 -fstrength-reduce -finline-functions -freduce-all-givs -ffast-math -fomit-frame-pointer
-
-GCC_INCDIR := $(shell LANG=C gcc -print-search-dirs|sed -ne 's+^install: \(.*[^/][^/]*\)/\?+\1+p')/include
-ifeq ($(USE_DIETLIBC),y)
-CFLAGS     += -nostdinc \
-              -I$(L4DIR)/include/dietlibc \
-	      -I$(GCC_INCDIR)
-else
-ifeq ($(USE_UCLIBC),y)
-CFLAGS     += -nostdinc \
-              -I$(L4DIR)/include/x86/uclibc \
-	      -I$(L4DIR)/include/uclibc \
-	      -I$(GCC_INCDIR)
-endif
-endif
+CFLAGS=-Wall -O2 -fstrength-reduce -finline-functions -freduce-all-givs -ffast-math -fomit-frame-pointer $(LIBCINCDIR_x86_tiny)
 
 # ============================================================================
 # Assembler

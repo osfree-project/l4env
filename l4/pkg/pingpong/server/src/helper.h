@@ -14,5 +14,9 @@ extern void recv_ping_timeout(l4_timeout_t timeout);
 #define PREFIX(a) sysenter_ ## a
 #include "helper_if.h"
 
+#undef PREFIX
+#define PREFIX(a) kipcalls_ ## a
+#include "helper_if.h"
+
 #endif
 

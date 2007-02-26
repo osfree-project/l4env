@@ -1,0 +1,33 @@
+--- Makefile	2006-06-02 21:51:52.000000000 +0200
++++ Makefile	2006-07-19 17:47:52.736310620 +0200
+@@ -1,25 +1,24 @@
+ 
+-include ../../config.mak
++include ../libavcodec/config.mak
+ 
+ # Overload incdir, postproc include files go in a different directory.
+ incdir=$(prefix)/include/postproc
+ 
+ NAME=postproc
+-SUBDIR=libavcodec/libpostproc
++SUBDIR=libpostproc
+ ifeq ($(BUILD_SHARED),yes)
+ LIBVERSION=$(SPPVERSION)
+ LIBMAJOR=$(SPPMAJOR)
+ endif
+ 
+-STATIC_OBJS=postprocess.o
+-SHARED_OBJS=postprocess_pic.o
++OBJS=postprocess.o
+ 
+ HEADERS = postprocess.h
+ 
+-CFLAGS  = $(OPTFLAGS) $(MLIB_INC) -I. -I.. -I$(SRC_PATH)/libavcodec -I../.. $(EXTRA_INC)
++CFLAGS  = $(OPTFLAGS) $(MLIB_INC) -I. -I$(PKGDIR_OBJ)/config -I../libavcodec $(LIBCINCDIR_x86_tiny) $(EXTRA_INC)
+ # -I/usr/X11R6/include/
+ 
+-include $(SRC_PATH)/common.mak
++include ../libavcodec/common.mak
+ 
+ ifeq ($(BUILD_SHARED),yes)
+ postprocess_pic.o: postprocess.c

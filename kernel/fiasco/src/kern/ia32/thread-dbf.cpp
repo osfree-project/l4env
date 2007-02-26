@@ -38,13 +38,13 @@ Thread::handle_double_fault (void)
 	  "EAX=%08x  ESI=%08x  DS=%04x  \n"
 	  "EBX=%08x  EDI=%08x  ES=%04x\n"
 	  "ECX=%08x  EBP=%08x  GS=%04x\n"
-	  "EDX=%08x  ESP=%08x  SS=%04x   ESP0=%08x\n"
+	  "EDX=%08x  ESP=%08x  SS=%04x   ESP0=%08lx\n"
 	  "EFL=%08x  EIP=%08x  CS=%04x\n",
-	  tss->eax,    tss->esi, tss->ds & 0xffff,
-	  tss->ebx,    tss->edi, tss->es & 0xffff,
-	  tss->ecx,    tss->ebp, tss->gs & 0xffff,
-	  tss->edx,    tss->esp, tss->ss & 0xffff, tss->esp0,
-	  tss->eflags, tss->eip, tss->cs & 0xffff);
+	  tss->_eax,    tss->_esi, tss->_ds & 0xffff,
+	  tss->_ebx,    tss->_edi, tss->_es & 0xffff,
+	  tss->_ecx,    tss->_ebp, tss->_gs & 0xffff,
+	  tss->_edx,    tss->_esp, tss->_ss & 0xffff, tss->_esp0,
+	  tss->_eflags, tss->_eip, tss->_cs & 0xffff);
 
   if (may_enter_jdb)
     {
@@ -59,24 +59,24 @@ Thread::handle_double_fault (void)
 	  Trap_state ts;
 
 	  // built a nice trap state the jdb can work with
-	  ts.eax    = tss->eax;
-	  ts.ebx    = tss->ebx;
-	  ts.ecx    = tss->ecx;
-	  ts.edx    = tss->edx;
-	  ts.esi    = tss->esi;
-	  ts.edi    = tss->edi;
-	  ts.ebp    = tss->ebp;
-	  ts.esp    = tss->esp;
-	  ts.cs     = tss->cs;
-	  ts.ds     = tss->ds;
-	  ts.es     = tss->es;
-	  ts.ss     = tss->ss;
-	  ts.fs     = tss->fs;
-	  ts.gs     = tss->gs;
-	  ts.trapno = 8;
-	  ts.err    = 0;
-	  ts.eip    = tss->eip;
-	  ts.eflags = tss->eflags;
+	  ts._eax    = tss->_eax;
+	  ts._ebx    = tss->_ebx;
+	  ts._ecx    = tss->_ecx;
+	  ts._edx    = tss->_edx;
+	  ts._esi    = tss->_esi;
+	  ts._edi    = tss->_edi;
+	  ts._ebp    = tss->_ebp;
+	  ts.sp(tss->_esp);
+	  ts.cs(tss->_cs);
+	  ts._ds     = tss->_ds;
+	  ts._es     = tss->_es;
+	  ts.ss(tss->_ss);
+	  ts._fs     = tss->_fs;
+	  ts._gs     = tss->_gs;
+	  ts._trapno = 8;
+	  ts._err    = 0;
+	  ts.ip(tss->_eip);
+	  ts.flags(tss->_eflags);
 
 	  asm volatile
 	    (

@@ -5,9 +5,9 @@
 library ore
 {
     [uuid(2)]
-    interface ore_notify
+    interface notify
     {
         [oneway]
-        void rx_notify([in] l4ore_handle_t channel);
+        void rx_notify();
     };
 };

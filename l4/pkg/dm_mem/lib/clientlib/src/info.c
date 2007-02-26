@@ -60,7 +60,7 @@ l4dm_mem_info(const l4dm_dataspace_t * ds, l4_size_t * size,
 			        &name, next_id, &_env);
   if (ret)
     return ret;
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     return -L4_EIPC;
   return 0;
 }

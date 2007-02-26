@@ -13,24 +13,21 @@ class Foo
 {
 
 public:  
-#line 39 "inline.cpp"
+#line 49 "inline.cpp"
   // This inline funtion is public only because it is needed by an
   // extern-"C" function.  So we do not want to export it.
   
   inline void 
   bar();
   
-#line 48 "inline.cpp"
+#line 58 "inline.cpp"
   // Try both NOEXPORT and NEEDED.
   
   inline void 
   baz();
 
 private:  
-#line 13 "inline.cpp"
-  // Test dependency-chain resolver
-  
-  
+#line 26 "inline.cpp"
   inline bool 
   private_func();
 };
@@ -40,35 +37,45 @@ class Bar
 {
 
 public:  
-#line 34 "inline.cpp"
+#line 44 "inline.cpp"
   inline void
   public_func();
 
 private:  
-#line 22 "inline.cpp"
+#line 32 "inline.cpp"
   inline bool 
   private_func();
   
-#line 28 "inline.cpp"
+#line 38 "inline.cpp"
   inline void 
   another_private_func();
 };
 
-#line 55 "inline.cpp"
+#line 65 "inline.cpp"
 extern "C" 
 void function(Foo* f);
 
-#line 61 "inline.cpp"
+#line 71 "inline.cpp"
 template <typename T> inline void* xcast(T* t);
 
 //
 // IMPLEMENTATION of inline functions (and needed classes)
 //
 
-
 #line 12 "inline.cpp"
 
 // Test dependency-chain resolver
+
+class Frob
+{
+
+private:  
+#line 20 "inline.cpp"
+  inline bool
+  private_func();
+};
+
+#line 24 "inline.cpp"
 
 
 inline bool 
@@ -76,7 +83,7 @@ Foo::private_func()
 {
 }
 
-#line 20 "inline.cpp"
+#line 30 "inline.cpp"
 
 
 inline bool 
@@ -84,7 +91,7 @@ Bar::private_func()
 {
 }
 
-#line 26 "inline.cpp"
+#line 36 "inline.cpp"
 
 
 inline void 
@@ -92,7 +99,15 @@ Bar::another_private_func()
 {
 }
 
-#line 32 "inline.cpp"
+#line 18 "inline.cpp"
+
+
+inline bool
+Frob::private_func()
+{
+}
+
+#line 42 "inline.cpp"
 
 
 inline void
@@ -100,7 +115,7 @@ Bar::public_func()
 {
 }
 
-#line 60 "inline.cpp"
+#line 70 "inline.cpp"
 
  template <typename T> inline void* xcast(T* t)
 {

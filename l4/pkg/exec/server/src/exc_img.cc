@@ -138,13 +138,13 @@ exc_img_t::load(l4env_infopage_t *env)
 					 &env->image_dm_id, 0,
 					 &img_ds, &size, &_env);
 
-	  if (error || _env.major != CORBA_NO_EXCEPTION)
+	  if (error || DICE_HAS_EXCEPTION(&_env))
 	    img_ds = L4DM_INVALID_DATASPACE;
 
-	  if (_env.major != CORBA_NO_EXCEPTION)
+	  if (DICE_HAS_EXCEPTION(&_env))
 	    {
 	      printf("Exception %d calling file provider "l4util_idfmt"\n",
-		  _env.major, l4util_idstr(env->fprov_id));
+		  DICE_EXCEPTION_MAJOR(&_env), l4util_idstr(env->fprov_id));
 	      return -L4_EINVAL;
 	    }
 

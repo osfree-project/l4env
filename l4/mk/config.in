@@ -1,75 +1,72 @@
 # -*- Shell-script -*-
+# vim:se ft=sh:
 
 mainmenu_name "DROPS Configuration"
 
 mainmenu_option next_comment
-comment 'Target Architectures'
-bool 'x86' BUILD_SYSTEMS_x86_s
-if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
-    define_string BUILD_SYSTEMS_x86 "x86"
-    string " CPU types" CPU_x86 '586'
-    bool '  L4 V2' BUILD_SYSTEMS_x86_l4v2
-    bool '  L4 X0' BUILD_SYSTEMS_x86_l4x0
-    bool '  L4 X2' BUILD_SYSTEMS_x86_l4x2
-    bool '  L4 V4' BUILD_SYSTEMS_x86_l4v4
+comment 'Target Architecture'
+
+choice 'Target Architecture' \
+	"x86              BUILD_ARCH_x86 \
+	 arm              BUILD_ARCH_arm \
+	 amd64            BUILD_ARCH_amd64 \
+	 ppc32            BUILD_ARCH_ppc32" x86
+
+if [ "$BUILD_ARCH_x86" = "y" ] ; then
+  define_string BUILD_ARCH "x86"
+  string " CPU type" CPU '586'
+  choice ' ABI' \
+  	"L4.V2            BUILD_ABI_l4v2 \
+	 L4.X2            BUILD_ABI_l4x2 \
+	 L4.Sec.(V2.emu)' BUILD_ABI_l4secv2emu \
+	 Linux            BUILD_ABI_linux"  L4.V2
+
+  if [ "$BUILD_ABI_l4v2" = "y" ] ; then
+    define_string BUILD_ABI "l4v2"
+  fi
+  if [ "$BUILD_ABI_l4x2" = "y" ] ; then
+    define_string BUILD_ABI "l4x2"
+  fi
+  if [ "$BUILD_ABI_l4secv2emu" = "y" ] ; then
+    define_string BUILD_ABI "l4secv2emu"
+  fi
+  if [ "$BUILD_ABI_linux" = "y" ] ; then
+    define_string BUILD_ABI "linux"
+  fi
 fi
-bool 'arm' BUILD_SYSTEMS_arm_s
-if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
-    define_string BUILD_SYSTEMS_arm "arm"
-    string " CPU types" CPU_arm 'sa'
-    bool '  L4 X0' BUILD_SYSTEMS_arm_l4x0
+
+if [ "$BUILD_ARCH_arm" = "y" ] ; then
+  define_string BUILD_ARCH "arm"
+  string " CPU type" CPU 'sa'
+  define_string BUILD_ABI "l4x0"
 fi
-bool 'amd64' BUILD_SYSTEMS_amd64_s
-if [ "$BUILD_SYSTEMS_amd64_s" = "y" ] ; then
-    define_string BUILD_SYSTEMS_amd64 "amd64"
-    string " CPU types" CPU_amd64 'k8'
-    bool '  L4 V2' BUILD_SYSTEMS_amd64_l4v2
-    bool '  L4 X2' BUILD_SYSTEMS_amd64_l4x2
+
+if [ "$BUILD_ARCH_amd64" = "y" ] ; then
+  define_string BUILD_ARCH "amd64"
+  string " CPU type" CPU 'k8'
+  choice ' ABI' \
+  	"L4.V2           BUILD_ABI_l4v2 \
+	 L4.X2           BUILD_ABI_l4x2 " L4.V2
+  if [ "$BUILD_ABI_l4v2" = "y" ] ; then
+    define_string BUILD_ABI "l4v2"
+  else
+    define_string BUILD_ABI "l4x2"
+  fi
 fi
+
+if [ "$BUILD_ARCH_ppc32" = "y" ] ; then
+  define_string BUILD_ARCH "ppc32"
+  string " CPU type" CPU '750'
+  define_string BUILD_ABI "l4x2"
+fi
+
 endmenu
 
-bool 'Build shared libloaders.s.so' 'BUILD_LOADER'
-if [ "$BUILD_LOADER" = "y" ] ; then
-    define_string BUILD_LOADER_PICS 'libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a liblogserver_capsule.a libsemaphore.a libthread.a libslab.a libgeneric_fprov.a libl4env_err.a libl4env.a libroot.o.a libc_be_l4env_start_stop.a libc_be_minimal_log_io.a libc_be_simple_mem.a libc_be_mmap.a libc_be_mmap_util.a libuclibc_support.a'
-fi
-
-if [ "$USE_UCLIBC" != "y" ]; then
-  bool 'Build system with dietlibc (WIP + EXPERIMENTAL)' USE_DIETLIBC
-fi
-if [ "$USE_DIETLIBC" != "y" ]; then
-  bool 'Build system with uClibc (WIP + EXPERIMENTAL)' USE_UCLIBC
-fi
-if [ "$USE_DIETLIBC" != "y" -a "$USE_UCLIBC" != "y" ]; then
-    bool 'Use roottask instead of RMGR (WIP + EXPERIMENTAL)' USE_ROOTTASK_X86
-else
-  define_bool USE_ROOTTASK_X86 y
-fi
 
 mainmenu_option next_comment
 comment 'Paths and Directories'
 string 'DROPS_STDDIR' DROPS_STDDIR '/home/drops'
 string 'DROPS_INSTDIR' DROPS_INSTDIR '$(DROPS_STDDIR)'
-string 'L4LINUX22_DIR' L4LINUX22_DIR '$(L4DIR)/../linux22'
-define_string L4LINUXDIR '$(error L4LINUXDIR is obsolete, use L4LINUX22_DIR now!)'
-bool 'Linux 2.4 kernel sources available' LINUX24_AVAIL
-if [ "$LINUX24_AVAIL" = "y" ] ; then
-  string 'Path to Linux 2.4 sources' LINUX24_DIR '$(L4DIR)/../linux-2.4.20'
-  define_string LINUX24_INCDIR $LINUX24_DIR/include
-else
-  define_string LINUX24_INCDIR '$(L4DIR)/include/linux-24 $(DROPS_STDDIR)/include/linux-24'
-fi
-bool 'Linux 2.6 kernel sources available' LINUX26_AVAIL
-if [ "$LINUX26_AVAIL" = "y" ]; then
-  string 'Path to Linux 2.6 sources' LINUX26_DIR '$(L4DIR)/../l4linux-2.6'
-  define_string LINUX26_INCDIR $LINUX26_DIR/include
-else
-  define_string LINUX26_INCDIR '$(L4DIR)/include/$(ARCH)/l4/linux-26-headers $(DROPS_STDDIR)/include/$(ARCH)/l4/linux-26-headers $(L4DIR)/include/l4/linux-26-headers $(DROPS_STDDIR)/include/l4/linux-26-headers'
-fi
-
-define_string DDE_LINUX_DIR '$(error DDE_LINUX_DIR is obsolete!)'
-string 'DDE include path (DDE_INCDIR)' DDE_INCDIR '$(L4DIR)/include/$(ARCH)/l4/dde_linux $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux'
-string 'DDE-2.6 include path (DDE26_INCDIR)' DDE26_INCDIR '$(L4DIR)/include/$(ARCH)/l4/dde_linux26 $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux26 $(L4DIR)/include/l4/dde_linux26 $(DROPS_STDDIR)/include/l4/dde_linux26'
-string 'SDL include path (SDL_INCDIR)' SDL_INCDIR '$(L4DIR)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
 endmenu
 
 mainmenu_option next_comment
@@ -84,7 +81,7 @@ if [ "$VERBOSE_SWITCH" = "n" ] ; then
 fi
 bool 'Short messages for compilation' SHOWMESSAGES
 if [ "$SHOWMESSAGES" = "y" ] ; then
-bool 'Colored build-steps' BID_COLORED_PHASES
+    bool 'Colored build-steps' BID_COLORED_PHASES
 fi
 endmenu
 
@@ -92,29 +89,43 @@ mainmenu_option next_comment
 comment 'Compilers and Tools'
 bool 'Use special C-Compilers' BIDc_USE_SPECIAL_CC
 if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
-    string 'HOST_CC' HOST_CC 'gcc'
+    string 'HOST_CC'  HOST_CC  'gcc'
     string 'HOST_CXX' HOST_CXX 'g++'
-    if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
-        string 'CC_x86' CC_x86 '$(SYSTEM_TARGET_x86)gcc'
-        string 'CXX_x86' CXX_x86 '$(SYSTEM_TARGET_x86)g++'
+    if [ "$BUILD_ARCH" = "x86" ] ; then
+        string 'CC'  CC  '$(SYSTEM_TARGET_x86)gcc'
+        string 'CXX' CXX '$(SYSTEM_TARGET_x86)g++'
     fi
-    if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
-        string 'CC_arm' CC_arm '$(SYSTEM_TARGET_arm)gcc'
-        string 'CXX_arm' CXX_arm '$(SYSTEM_TARGET_arm)g++'
+    if [ "$BUILD_ARCH" = "arm" ] ; then
+        string 'CC'  CC  '$(SYSTEM_TARGET_arm)gcc'
+        string 'CXX' CXX '$(SYSTEM_TARGET_arm)g++'
     fi
-    if [ "$BUILD_SYSTEMS_amd64_s" = "y" ] ; then
-        string 'CC_amd64' CC_amd64 '$(SYSTEM_TARGET_amd64)gcc'
-        string 'CXX_amd64' CXX_amd64 '$(SYSTEM_TARGET_amd64)g++'
+    if [ "$BUILD_ARCH" = "amd64" ] ; then
+        string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc-3.4'
+        string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++-3.4'
+    fi
+    if [ "$BUILD_ARCH" = "ppc32" ] ; then
+        string 'CC'  CC  '$(SYSTEM_TARGET_ppc32)gcc'
+        string 'CXX' CXX '$(SYSTEM_TARGET_ppc32)g++'
     fi
 else
-    define_string HOST_CC  'gcc'
-    define_string HOST_CXX 'g++'
-    define_string CC_x86   '$(SYSTEM_TARGET_x86)gcc'
-    define_string CXX_x86  '$(SYSTEM_TARGET_x86)g++'
-    define_string CC_arm   '$(SYSTEM_TARGET_arm)gcc'
-    define_string CXX_arm  '$(SYSTEM_TARGET_arm)g++'
-    define_string CC_amd64 '$(SYSTEM_TARGET_amd64)gcc'
-    define_string CXX_amd64 '$(SYSTEM_TARGET_amd64)g++'
+    define_string HOST_CC   'gcc'
+    define_string HOST_CXX  'g++'
+    if [ "$BUILD_ARCH" = "x86" ] ; then
+      define_string CC  '$(SYSTEM_TARGET_x86)gcc'
+      define_string CXX '$(SYSTEM_TARGET_x86)g++'
+    fi
+    if [ "$BUILD_ARCH" = "arm" ] ; then
+      define_string CC  '$(SYSTEM_TARGET_arm)gcc'
+      define_string CXX '$(SYSTEM_TARGET_arm)g++'
+    fi
+    if [ "$BUILD_ARCH" = "amd64" ] ; then
+      define_string CC  '$(SYSTEM_TARGET_amd64)gcc-3.4'
+      define_string CXX '$(SYSTEM_TARGET_amd64)g++-3.4'
+    fi
+    if [ "$BUILD_ARCH" = "ppc32" ] ; then
+      define_string CC  '$(SYSTEM_TARGET_ppc32)gcc'
+      define_string CXX '$(SYSTEM_TARGET_ppc32)g++'
+    fi
 fi
 comment "Tools"
 string 'YACC' YACC byacc
@@ -125,22 +136,36 @@ bool 'System has ld.so (highly recommended if so)' HAVE_LDSO
 if [ "$HAVE_LDSO" = "y" ] ; then
     bool 'Automatically determine internal gcc preprocessor names' INT_CPP_NAME_SWITCH
     if [ "$INT_CPP_NAME_SWITCH" = "n" ] ; then
-        if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
-          string 'Internal name of x86 gcc preprocessor' INT_CPP_x86_NAME "cpp0"
-          string 'Internal name of x86 g++ preprocessor' INT_CXX_x86_NAME "cpp0"
+        if [ "$BUILD_ARCH" = "x86" ] ; then
+          string 'Internal name of x86 gcc preprocessor' INT_CPP_NAME "cpp0"
+          string 'Internal name of x86 g++ preprocessor' INT_CXX_NAME "cpp0"
 	fi
-        if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
-          string 'Internal name of arm gcc preprocessor' INT_CPP_arm_NAME "cpp0"
-          string 'Internal name of arm g++ preprocessor' INT_CXX_arm_NAME "cpp0"
+        if [ "$BUILD_ARCH" = "arm" ] ; then
+          string 'Internal name of arm gcc preprocessor' INT_CPP_NAME "cpp0"
+          string 'Internal name of arm g++ preprocessor' INT_CXX_NAME "cpp0"
+	fi
+        if [ "$BUILD_ARCH" = "amd64" ] ; then
+          string 'Internal name of amd64 gcc preprocessor' INT_CPP_NAME "cpp0"
+          string 'Internal name of amd64 g++ preprocessor' INT_CXX_NAME "cpp0"
+	fi
+	if [ "$BUILD_ARCH" = "ppc32" ] ; then
+          string 'Internal name of ppc32 gcc preprocessor' INT_CPP_NAME "cpp0"
+          string 'Internal name of ppc32 g++ preprocessor' INT_CXX_NAME "cpp0"
 	fi
     fi
     bool 'Automatically determine internal ld names' INT_LD_NAME_SWITCH
     if [ "$INT_LD_NAME_SWITCH" = "n" ] ; then
-        if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
-          string 'Internal name of x86 gcc/g++ linker' INT_LD_x86_NAME "ld"
+        if [ "$BUILD_ARCH" = "x86" ] ; then
+          string 'Internal name of x86 gcc/g++ linker' INT_LD_NAME "ld"
 	fi
-        if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
-          string 'Internal name of arm gcc/g++ linker' INT_LD_arm_NAME "ld"
+        if [ "$BUILD_ARCH" = "arm" ] ; then
+          string 'Internal name of arm gcc/g++ linker' INT_LD_NAME "ld"
+	fi
+        if [ "$BUILD_ARCH" = "amd64" ] ; then
+          string 'Internal name of amd64 gcc/g++ linker' INT_LD_NAME "ld"
+	fi
+	if [ "$BUILD_ARCH" = "ppc32" ] ; then
+          string 'Internal name of ppc32 gcc/g++ linker' INT_LD_NAME "ld"
 	fi
     fi
 fi
@@ -154,6 +179,45 @@ if [ "$BID_GCC_OMIT_FP" = "y" ] ; then
     define_string BID_CFLAGS_OMIT_FP "-fomit-frame-pointer"
 fi
 bool 'Generate Map-files for binaries' BID_GENERATE_MAPFILE
+bool 'Build doc directories' BID_BUILD_DOC
 
+endmenu
 
+mainmenu_option next_comment
+  comment 'Advanced'
+
+  choice 'LibC to use' \
+	"uclibc           USE_UCLIBC \
+	 dietlibc         USE_DIETLIBC" uclibc
+
+  bool 'Use ldso for dynamic linking' USE_LDSO
+
+  bool 'Build shared libloaders.s.so' 'BUILD_LOADER'
+  if [ "$BUILD_LOADER" = "y" ] ; then
+      define_string BUILD_LOADER_PICS 'libl4util.a libl4util_root.a libsigma0.a libnames.a libloaderif.a libcon.a libl4rm.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a liblogserver_capsule.a libsemaphore.a libthread.a libslab.a libgeneric_fprov.a libl4env_err.a libl4env.a libroot.a libc_be_l4env_start_stop.a libc_be_minimal_log_io.a libc_be_simple_mem.a libc_be_mmap.a libc_be_mmap_util.a libuclibc_support.a librtc.a libl4env-l4lx.a'
+  fi
+
+  bool 'Use system-call entry code in the KIP (absolute)' L4_CALL_SYSCALLS
+  if [ "$L4_CALL_SYSCALLS" = "y" ] ; then
+    define_bool L4_ABS_SYSCALLS "y"
+    define_string  BID_CPPFLAGS_SYSCALLS "-DCONFIG_L4_CALL_SYSCALLS -DCONFIG_L4_ABS_SYSCALLS"
+  fi
+
+  bool 'Enable RELEASE flag' RELEASE_MODE
+
+  string 'Configuration label' CONFIG_LABEL
+
+  mainmenu_option next_comment
+    comment 'Paths'
+
+    define_string LINUX24_INCDIR '$(OBJ_BASE)/include/linux-24 $(DROPS_STDDIR)/include/linux-24'
+    define_string LINUX26_INCDIR '$(OBJ_BASE)/include/$(ARCH)/l4/linux-26-headers $(DROPS_STDDIR)/include/$(ARCH)/l4/linux-26-headers $(OBJ_BASE)/include/l4/linux-26-headers $(DROPS_STDDIR)/include/l4/linux-26-headers'
+
+    string 'DDE-2.4 include path (DDE_INCDIR)' DDE_INCDIR '$(OBJ_BASE)/include/$(ARCH)/l4/dde_linux $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux'
+    string 'DDE-2.6 include path (DDE26_INCDIR)' DDE26_INCDIR '$(OBJ_BASE)/include/$(ARCH)/l4/dde_linux26 $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux26 $(OBJ_BASE)/include/l4/dde_linux26 $(DROPS_STDDIR)/include/l4/dde_linux26'
+    string 'SDL include path (SDL_INCDIR)' SDL_INCDIR '$(OBJ_BASE)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
+    if [ "$BUILD_SYSTEMS_x86_l4secv2emu" = "y" ] ; then
+      string 'Fiasco build directory (FIASCO_DIR)' FIASCO_DIR '$(L4DIR)/kernel/fiasco/build_test/'
+    fi
+  endmenu
 endmenu

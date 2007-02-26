@@ -131,14 +131,14 @@ static __inline__ int __more_kcore(l4_size_t size)
       return error;
     }
 
-  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region %d",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08lx (phys. 0x%08lx) region %d",
        size, kaddr, dm_paddr.addr, kcount);
 
   /* add new region */
   l4la_free(&kpool, (void*)kaddr, size);
 
   /* address info */
-  address_add_region(kaddr, dm_paddr.addr, size);
+  l4dde_add_region(kaddr, dm_paddr.addr, size);
 
   return 0;
 }
@@ -326,14 +326,14 @@ static int __setup_kmem(unsigned int *max, l4_addr_t *addr)
       return error;
     }
 
-  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region 0",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08lx (phys. 0x%08lx) region 0",
        kregion_size, *addr, dm_paddr.addr);
   
   /* add free memory area to region/pool */
   l4la_free(&kpool, (void *) *addr, kregion_size);
 
   /* address info */
-  address_add_region(*addr, dm_paddr.addr, kregion_size);
+  l4dde_add_region(*addr, dm_paddr.addr, kregion_size);
 
   *max = kregion_size * MM_KREGIONS;
   return 0;
@@ -430,7 +430,7 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
   else
     ksize_str = "Byte";
   LOG("Using ...\n"
-      "  %d %s at 0x%08x (vmem)\n"
+      "  %d %s at 0x%08lx (vmem)\n"
       "  %d %s in %d regions (kmem)",
       max_vsize, vsize_str, vaddr, max_ksize, ksize_str, MM_KREGIONS);
 

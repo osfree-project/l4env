@@ -12,7 +12,7 @@ SERVERIDL      = input_listener.idl
 
 PRIVATE_INCDIR = $(PKGDIR)/include \
                  $(PKGDIR)/lib/input/include \
-                 $(L4DIR)/tool/dice/include
+                 $(DICE_INCDIR)
 
 vpath input.c $(PKGDIR)/lib/input/common
 

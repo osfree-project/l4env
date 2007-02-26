@@ -6,7 +6,7 @@ IMPLEMENTATION [debug]:
 #include "mem_layout.h"
 #include "simpleio.h"
 
-IMPLEMENTATION [{ia32,ux}-debug]:
+IMPLEMENTATION [{ia32,ux,amd64}-debug]:
 // Note that we don't want to check for Thread_invalid since we don't want
 // to raise page faults from inside the kernel debugger
 PUBLIC inline
@@ -16,13 +16,16 @@ Thread::is_mapped()
   return Kmem::virt_to_phys((void*)this) != (Address)-1;
 }
 
-IMPLEMENTATION [!{ia32,ux}-debug]:
+IMPLEMENTATION [!{ia32,ux,amd64}-debug]:
 
-PUBLIC inline
+#include "kmem_space.h"
+#include "pagetable.h"
+
+PUBLIC inline NEEDS["kmem_space.h","pagetable.h"]
 int
 Thread::is_mapped()
 { 
-  return !Kmem::virt_to_phys((void*)this).is_null();
+  return !Kmem_space::kdir()->lookup((void*)this,0,0).is_null();
 } 
 
 IMPLEMENTATION [debug]:
@@ -126,12 +129,13 @@ PUBLIC
 void
 Thread::print_state_long (unsigned cut_on_len = 0)
 {
-  static char * const state_names[] = 
+  static char const * const state_names[] = 
     { 
-      "ready", "utcb", "rcv", "poll",
-      "ipc_progr", "snd_progr", "busy", "lipc_ok",
-      "cancel", "dead", "poll_long", "busy_long", "rcvlong_progr",
-      "delayed_deadl", "delayed_ipc", "fpu", "alien", "dealien",
+      "ready",         "utcb",          "rcv",         "poll",
+      "ipc_progr",     "snd_progr",     "busy",        "lipc_ok",
+      "cancel",        "dead",          "poll_long",   "busy_long", 
+      "rcvlong_progr", "delayed_deadl", "delayed_ipc", "fpu", 
+      "alien",         "dealien",       "exc_progr",   "transfer"
     };
 
   Mword i, comma=0, chars=0, bits=state();

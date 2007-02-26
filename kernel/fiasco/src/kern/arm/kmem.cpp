@@ -11,13 +11,7 @@ public:
   template< typename _Ty >
   static _Ty *phys_to_virt( P_ptr<_Ty> p )
   {
-    return (_Ty*)(p.get_unsigned() + (Map_base - Sdram_phys_base));
-  }
-
-  template< typename _Ty >
-  static P_ptr<_Ty> virt_to_phys( _Ty *p )
-  {
-    return (_Ty*)((char*)p - (Map_base - Sdram_phys_base));
+    return (_Ty*)phys_to_pmem(p.get_unsigned());
   }
 
   static Mword *kernel_sp();

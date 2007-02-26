@@ -110,7 +110,7 @@ l4buddy_root* l4buddy_create(void*base_addr, unsigned size){
     root = (l4buddy_root*)((unsigned char*)base_addr+size-overhead);
 
     /* ensure base_addr is a multiple of BUDDY_SIZE */
-    root->base_addr = (unsigned char*)( ((unsigned)base_addr +
+    root->base_addr = (unsigned char*)( ((l4_addr_t)base_addr +
 					 L4BUDDY_BUDDY_MASK) &
 					~L4BUDDY_BUDDY_MASK);
     size-=root->base_addr - (unsigned char*)base_addr;
@@ -210,7 +210,7 @@ extern inline l4buddy_t* new_allocated_buddy(l4buddy_root*root,
     l4buddy_t *b;
 
     LOGd_Enter(LOG_BUDDY_FREE, "index=%d", index);
-    b =(l4buddy_t*)((unsigned)free & ~L4BUDDY_BUDDY_MASK) + index;
+    b =(l4buddy_t*)((l4_addr_t)free & ~L4BUDDY_BUDDY_MASK) + index;
     b->max_free = 0;
     b->left = b->right = 0;
     return b;
@@ -224,7 +224,7 @@ extern inline l4buddy_t* new_allocated_buddy(l4buddy_root*root,
  */
 extern inline l4buddy_t *copy_buddy(l4buddy_t *buddy, int index,
 				    l4buddy_t *free){
-    free = (l4buddy_t*)((unsigned)free & ~L4BUDDY_BUDDY_MASK)+index;
+    free = (l4buddy_t*)((l4_addr_t)free & ~L4BUDDY_BUDDY_MASK)+index;
     *free = *buddy;
     return free;
 }

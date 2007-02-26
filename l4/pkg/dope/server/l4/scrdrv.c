@@ -25,6 +25,7 @@
 #include <l4/env/errno.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sigma0/sigma0.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
@@ -134,19 +135,16 @@ extern short bigmouse_trp;
  *************************/
 
 static int
-vc_map_video_mem(l4_addr_t addr, l4_size_t size,
+vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
                  l4_addr_t *vaddr, l4_offs_t *offset) {
 	int error;
-	l4_addr_t m_addr;
 	l4_uint32_t rg;
-	l4_uint32_t dummy;
-	l4_msgdope_t result;
-	l4_threadid_t my_task_preempter_id, my_task_pager_id;
+	l4_threadid_t my_task_pager_id;
 
 	if (!config_use_l4io) {
-		*offset = addr & ~L4_SUPERPAGEMASK;
-		addr   &= L4_SUPERPAGEMASK;
-		size    = (size + *offset + L4_SUPERPAGESIZE-1) & L4_SUPERPAGEMASK;
+		*offset = paddr & ~L4_SUPERPAGEMASK;
+		paddr  &= L4_SUPERPAGEMASK;
+		size    = l4_round_superpage(size + *offset);
 
 		if ((error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, vaddr, &rg))) {
 			printf("Error %d reserving region size=%dMB for video memory\n",
@@ -156,55 +154,36 @@ vc_map_video_mem(l4_addr_t addr, l4_size_t size,
 		}
 
 		/* get region manager's pager */
-		my_task_preempter_id = my_task_pager_id = L4_INVALID_ID;
-		l4_thread_ex_regs(l4rm_region_mapper_id(), (l4_uint32_t)-1, (l4_uint32_t)-1,
-		                  &my_task_preempter_id, &my_task_pager_id,
-		                  &dummy, &dummy, &dummy);
+		my_task_pager_id = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
 
-		printf("Mapping video memory at 0x%08x to 0x%08x (size=%dMB)\n",
-		       addr, *vaddr, size>>20);
+		printf("Mapping video memory at 0x%08lx to 0x%08lx (size=%dMB)\n",
+		       paddr, *vaddr, size>>20);
 
-		/* check here for curious video buffer, one candidate is VMware */
-		if (addr < 0x80000000) {
-			printf("Video memory address is below 2GB (0x80000000), don't know\n"
-			 "how to map it as device super i/o page.\n");
-			return -L4_EINVAL;
-		}
-
-		for (m_addr = *vaddr; size > 0; size -= L4_SUPERPAGESIZE,
-		     addr += L4_SUPERPAGESIZE, m_addr += L4_SUPERPAGESIZE) {
-			for (;;) {
-
-				/* we could get l4_thread_ex_regs'd ... */
-				error = l4_ipc_call(my_task_pager_id,
-				                    L4_IPC_SHORT_MSG, (addr-0x40000000) | 2, 0,
-				                    L4_IPC_MAPMSG(m_addr, L4_LOG2_SUPERPAGESIZE),
-				                    &dummy, &dummy,
-				                    L4_IPC_NEVER, &result);
-				if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
-					break;
-			}
-			if (error) {
-				printf("Error 0x%02d mapping video memory\n", error);
+		switch (l4sigma0_map_iomem(my_task_pager_id, paddr, *vaddr, size, 1)) {
+			case -2:
+				printf("IPC error mapping video memory\n");
 				enter_kdebug("map_video_mem");
 				return -L4_EINVAL;
-			}
-			if (!l4_ipc_fpage_received(result)) {
-				printf("No fpage received, result=0x%08x\n", result.msgdope);
+			case -3:
+				printf("No fpage received\n");
 				enter_kdebug("map_video_mem");
 				return -L4_EINVAL;
-			}
+			case -4:
+				printf("Video memory address is below 2GB (0x80000000), don't know\n"
+				       "how to map it as device super i/o page.\n");
+				return -L4_EINVAL;
 		}
 	} else {
-		printf("dope: addr=%x size=%dKiB\n", addr, size >> 10);
-		if ((*vaddr = l4io_request_mem_region(addr, size, offset)) == 0)
+		printf("dope: addr=%lx size=%dKiB\n", paddr, size >> 10);
+		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED,
+						      offset)) == 0)
 			Panic("Can't request memory region from l4io.");
 
-		printf("Mapped video memory at %08x to %08x+%06x [%dkB] via L4IO\n",
-		       addr, *vaddr, *offset, size >> 10);
+		printf("Mapped video memory at %08lx to %08lx+%06lx [%dkB] via L4IO\n",
+		       paddr, *vaddr, *offset, size >> 10);
 	}
 
-	printf("mapping: vaddr=0x%x size=%d(0x%x) offset=%d(0x%x)\n",
+	printf("mapping: vaddr=0x%lx size=%d(0x%x) offset=%ld(0x%lx)\n",
 	       *vaddr, size, size, *offset, *offset);
 
 	return 0;
@@ -222,10 +201,8 @@ static long set_screen(long width, long height, long depth) {
 	l4_offs_t gr_voffs;
 
 	if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO) || !(mbi->vbe_mode_info)) {
-		printf("Did not found VBE info block in multiboot info. "
-		       "Perhaps you have\n"
-		       "to upgrade GRUB, RMGR or oskit10_support. GRUB "
-		       "has to set the \n"
+		printf("Did not find VBE info block in multiboot info. "
+		       "GRUB has to set the \n"
 		       "video mode with the vbeset command.\n");
 		enter_kdebug("PANIC");
 		return 0;

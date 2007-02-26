@@ -63,8 +63,7 @@ int fflush(FILE *__stream)
 #ifndef putc
 int putc(int c, FILE *stream)
 {
-  LOG_putchar(c);
-  return c;
+  return LOG_putchar(c);
 }
 #endif
 
@@ -72,15 +71,13 @@ int putc(int c, FILE *stream)
 #undef putchar
 int putchar(int c)
 {
-  LOG_putchar(c);
-  return c;
+  return LOG_putchar(c);
 }
 
 #undef fputc
 int fputc(int c, FILE *stream)
 {
-  LOG_putchar(c);
-  return c;
+  return LOG_putchar(c);
 }
 
 int puts(const char *s)

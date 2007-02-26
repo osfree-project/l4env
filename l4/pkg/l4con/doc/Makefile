@@ -1,5 +1,5 @@
 PKGDIR = ..
-L4DIR  = $(PKGDIR)/../..
+L4DIR  ?= $(PKGDIR)/../..
 
 SRC_DOX_REF = l4con.cfg
 SRC_DOX_INT = l4con-internal.cfg

@@ -12,51 +12,36 @@
 
 #include <stdio.h>
 #include <l4/env/errno.h>
-#ifdef ARCH_x86
 #include <l4/util/rdtsc.h>
-#endif
+#include <l4/sys/kdebug.h>
 
 #include "init.h"
-#ifdef ARCH_x86
 #include "pci.h"
 #include "ati.h"
 #include "ati128.h"
+#include "radeon.h"
 #include "intel.h"
 #include "matrox.h"
 #include "riva.h"
 #include "savage.h"
 #include "vmware.h"
-#endif
 
-unsigned int   hw_vid_mem_addr, hw_vid_mem_size;
-unsigned int   hw_map_vid_mem_addr;
+l4_addr_t      hw_vid_mem_addr, hw_vid_mem_size;
+l4_addr_t      hw_map_vid_mem_addr;
 unsigned short hw_xres, hw_yres;
 unsigned char  hw_bits;
-int            con_hw_use_l4io;
 
 static int init_done = 0;
 
-void
-con_hw_set_l4io(int l4io)
-{
-  con_hw_use_l4io = l4io;
-}
-
 int
 con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
-	    unsigned int vid_mem_addr, unsigned int vid_mem_size,
+	    l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
 	    con_accel_t *accel, l4_uint8_t **map_vid_mem_addr)
 {
   if (init_done)
     return -L4_EINVAL;
 
-#ifdef ARCH_x86
-  /* L4IO is pre-initialized */
-  if (!con_hw_use_l4io)
-    pcibios_init();
-
   l4_calibrate_tsc();
-#endif
 
   hw_vid_mem_addr = vid_mem_addr;
   hw_vid_mem_size = vid_mem_size;
@@ -64,9 +49,9 @@ con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
   hw_yres = yres;
   hw_bits = *bits;
 
-#ifdef ARCH_x86
-  ati_register();
+  radeon_register();
   ati128_register();
+  ati_register();
   intel_register();
   matrox_register();
   riva_register();
@@ -86,8 +71,14 @@ con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
 //      accel->caps &= ~(ACCEL_FAST_CSCS_YV12|ACCEL_FAST_CSCS_YUY2);
       return 0;
     }
-#endif
 
   return -L4_ENOTFOUND;
 }
 
+void
+con_hw_set_l4io(int l4io)
+{
+  con_hw_use_l4io = l4io;
+  if (!l4io)
+    pcibios_init();
+}

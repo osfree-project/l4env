@@ -3,7 +3,7 @@
 
 #include <linux/config.h>
 #ifdef DDE_LINUX
-#include <l4/crtx/ctor.h>
+#include <l4/dde_linux/ctor.h>
 #endif /* DDE_LINUX */
 
 /* These macros are used to mark some functions or 
@@ -99,8 +99,8 @@ extern initcall_t __security_initcall_start, __security_initcall_end;
 	__attribute__((__section__(".initcall" level ".init"))) = fn
 #else /* DDE_LINUX */
 #define __define_initcall(level,fn) \
-	static void __l4dde_initfn_##fn(void) {fn();}; \
-	L4C_CTOR(__l4dde_initfn_##fn, L4CTOR_AFTER_BACKEND)
+	static void l4dde_linux_initcall_##fn(void) {fn();}; \
+	l4dde_initcall(l4dde_linux_initcall_##fn)
 #endif /* DDE_LINUX */
 
 #define core_initcall(fn)		__define_initcall("1",fn)
@@ -118,8 +118,8 @@ extern initcall_t __security_initcall_start, __security_initcall_end;
 	static exitcall_t __exitcall_##fn __exit_call = fn
 #else /* DDE_LINUX */
 #define __exitcall(fn) \
-	static void __l4dde_exitfn_##fn(void) {fn();}; \
-	L4C_DTOR(__l4dde_exitfn_##fn, L4CTOR_AFTER_BACKEND)
+	static void l4dde_linux_exitcall_##fn(void) __attribute__ ((unused)); \
+	static void l4dde_linux_exitcall_##fn(void) {fn();};
 #endif /* DDE_LINUX */
 
 #define console_initcall(fn) \

@@ -1,0 +1,40 @@
+library ipcmon
+{
+	[default_function(ipcmon_pagefault), uuid(0xc00)]
+	interface monitor
+	{
+		/** Allow communication between src and dest.
+		  *
+		  * Stores that communication between these two tasks is allowed.
+		  * No mapping is performed at this point - this is done if a capability
+		  * fault is raised.
+		  *
+		  * \param src  source task
+		  * \param dest destination task
+		  */
+		int allow([in]l4_taskid_t src,
+		          [in]l4_taskid_t dest);
+
+		/** Deny communication between src and dest.
+		  *
+		  * Here, existing mappings are revoked if they have already
+		  * been established.
+		  *
+		  * \param src  source task
+		  * \param dest destination task
+		  */
+		int deny([in]l4_taskid_t src,
+		         [in]l4_taskid_t dest);
+
+		/** Query the current state of a communication channel.
+		  *
+		  * \param src  source task
+		  * \param dest destination task
+		  * 
+		  * \return    0   communication prohibitted
+		  * \return    1   communication allowed
+		  */
+		int query([in]l4_taskid_t src,
+		          [in]l4_taskid_t dest);
+	};
+};

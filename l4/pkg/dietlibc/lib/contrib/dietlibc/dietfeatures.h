@@ -28,15 +28,15 @@
 /* make the startcode, etc. dynamic aware ({con,de}structors) */
 /* #define WANT_DYNAMIC */
 
+/* GDB support in the dynamic linker */
+#define WANT_LD_SO_GDB_SUPPORT
+
 /* do you want smaller or faster string routines? */
 /* #define WANT_FASTER_STRING_ROUTINES */
 
 /* define this to have strncpy zero-fill and not just zero-terminate the
  * string */
 /* #define WANT_FULL_POSIX_COMPAT */
-
-/* read the comment in lib/strncat.c for an explanation */
-#define WANT_NON_COMPLIANT_STRNCAT
 
 /* on i386, Linux has an alternate syscall method since 2002/12/16 */
 /* on my Athlon XP, it is twice as fast, but it's only in kernel 2.5 */
@@ -81,9 +81,10 @@
  * against glibc fail?  This may fail with older binutils. */
 #define WANT_SAFEGUARD
 
-/* this enables an experimental DNS hack of mine.
- * See http://www.fefe.de/ipv6pnpdns.html */
-// #define WANT_IPV6_PLUGPLAY_DNS
+/* This enables zeroconf DNS aka Rendezvous aka Bonjour. */
+/* This code will try zeroconf DNS if you ask for host.local or if you
+ * ask for an unqualified hostname */
+#define WANT_PLUGPLAY_DNS
 
 /* do you want that malloc(0) return a pointer to a "zero-length" object
  * that is realloc-able; means realloc(..,size) gives a NEW object (like a
@@ -95,7 +96,10 @@
  * main but stackgap, which then does alloca(random()) and calls main.
  * The effect is that buffer overflow exploits will no longer be able to
  * know the address of the buffer.  Cost: 62 bytes code on x86. */
-#define WANT_STACKGAP
+/* WARNING: this appears to break with some binutils versions.  Works
+ * for me with binutils 2.15.  The symptom is an error message that
+ * `main' can not be found. */
+/* #define WANT_STACKGAP */
 
 /* stop uncommenting here ;-) */
 #ifndef WANT_FASTER_STRING_ROUTINES

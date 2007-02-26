@@ -1,13 +1,7 @@
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
-#include "l4/sys/types.h"
-
-typedef l4_uint8_t owner_t;		/* an owner is a task number < 256 */
-
-#define O_MAX (255)
-#define O_FREE (0)
-#define O_RESERVED (1)
+#include "l4/sys/consts.h"
 
 #define MODS_MAX 64
 #define CMDLINE_MAX 1024

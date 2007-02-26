@@ -16,7 +16,7 @@ private:
   Irq(Irq&);
  
 protected:
-  int _queued;
+  Smword _queued;
 
 public:
 
@@ -55,10 +55,10 @@ Irq::Irq(unsigned irqnum)
     @return number of IRQs that are still pending.
  */
 PRIVATE inline NEEDS ["atomic.h"]
-int
+Smword
 Irq::consume ()
 {
-  int old;
+  Smword old;
 
   do 
     {

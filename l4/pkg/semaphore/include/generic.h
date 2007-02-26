@@ -48,12 +48,12 @@ l4semaphore_up(l4semaphore_t * sem)
 {
   int old,tmp,ret;
   l4_msgdope_t result;
-#if !(SEMAPHORE_SEND_ONLY_IPC)
+#if !(L4SEMAPHORE_SEND_ONLY_IPC)
   l4_umword_t dummy;
 #endif
 
   /* increment semaphore counter */
-  do 
+  do
     {
       old = sem->counter;
       tmp = old + 1;
@@ -66,8 +66,8 @@ l4semaphore_up(l4semaphore_t * sem)
       /* send message to semaphore thread */
 #if L4SEMAPHORE_SEND_ONLY_IPC
 
-#if L4SEMAPHORE_RESTART_IPC      
-      do 
+#if L4SEMAPHORE_RESTART_IPC
+      do
         {
           ret = l4_ipc_send(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
                             L4SEMAPHORE_RELEASE, (l4_umword_t)sem,
@@ -109,14 +109,14 @@ l4semaphore_up(l4semaphore_t * sem)
 
       if (ret != 0)
 	l4env_perror("L4semaphore: wakeup IPC", ret);
-      
+
     }
 }
 
 /*****************************************************************************
  * decrement semaphore counter, block if semaphore locked
  *****************************************************************************/
-L4_INLINE void 
+L4_INLINE void
 l4semaphore_down(l4semaphore_t * sem)
 {
   int old,tmp,ret;
@@ -142,7 +142,7 @@ l4semaphore_down(l4semaphore_t * sem)
                             L4_IPC_SHORT_MSG, L4SEMAPHORE_BLOCK,
                             (l4_umword_t)sem,
                             L4_IPC_SHORT_MSG, &dummy, &dummy,
-                            L4_IPC_NEVER, &result);      
+                            L4_IPC_NEVER, &result);
         }
       while (ret == L4_IPC_SECANCELED);
 
@@ -150,14 +150,14 @@ l4semaphore_down(l4semaphore_t * sem)
         {
           ret = l4_ipc_receive(l4semaphore_thread_l4_id,
                                L4_IPC_SHORT_MSG, &dummy, &dummy,
-                               L4_IPC_NEVER, &result);      
+                               L4_IPC_NEVER, &result);
         }
 #else
       ret = l4_ipc_call(l4semaphore_thread_l4_id,
 			L4_IPC_SHORT_MSG, L4SEMAPHORE_BLOCK,
 			(l4_umword_t)sem,
 			L4_IPC_SHORT_MSG, &dummy, &dummy,
-			L4_IPC_NEVER, &result);      
+			L4_IPC_NEVER, &result);
 #endif
       if (ret != 0)
 	l4env_perror("L4semaphore: block IPC failed", ret);
@@ -213,7 +213,7 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
   if (tmp < 0)
     {
       int e, m;
-      
+
       l4util_micros2l4to(time*1000, &m, &e);
 
       /* we did not get the semaphore, block */
@@ -226,7 +226,7 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
 	{
           /* we had a timeout, do semaphore_up to compensate */
           l4semaphore_up(sem);
-	  
+
 	  return 1;
 	}
     }

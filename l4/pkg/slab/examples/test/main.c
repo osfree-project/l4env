@@ -4,26 +4,31 @@
  * \file   slab/examples/test/main.c
  * \brief  Slab allocator tests
  *
- * \date   02/05/2003
+ * \date   2006-12-18
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
 /*****************************************************************************/
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2006 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
 /* L4/L4Env includes */
 #include <stdio.h>
+#include <string.h>
 #include <l4/slab/slab.h>
-#include <l4/dm_mem/dm_mem.h>
-#include <l4/l4rm/l4rm.h>
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
+#include <l4/util/list_alloc.h>
 
 /* Log tag */
 char LOG_tag[9] = "slab_te";
+
+/* heap */
+static char backing_store[512*1024] __attribute__ (( aligned(L4_PAGESIZE) ));
+static l4la_free_t *heap;
 
 /*****************************************************************************
  *** simple heap
@@ -34,20 +39,20 @@ char LOG_tag[9] = "slab_te";
 /*****************************************************************************/
 /**
  * \brief  Slab cache grow callback
- * 
+ *
  * \param  cache         Slab cache descriptor
  * \retval data          User data pointer
- *	
+ *
  * \return Pointer to new page
  */
-/*****************************************************************************/ 
-static void * 
+/*****************************************************************************/
+static void *
 __grow_simple(l4slab_cache_t * cache, void ** data)
 {
   void * page;
 
-  // allocate and map page
-  page = l4dm_mem_allocate(L4_PAGESIZE,L4RM_MAP | L4RM_LOG2_ALIGNED);
+  // allocate page
+  page = l4la_alloc(&heap, L4_PAGESIZE, L4_LOG2_PAGESIZE);
   if (page == NULL)
     LOG_Error("__grow_simple: page allocation failed!\n");
 
@@ -59,32 +64,38 @@ __grow_simple(l4slab_cache_t * cache, void ** data)
 /*****************************************************************************/
 /**
  * \brief  Slab cache release callback
- *  
+ *
  * \param cache          Slab cache descriptor
  * \param page           Page address
  * \param data           User data pointer
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __release_simple(l4slab_cache_t * cache, void * page, void * data)
 {
   printf("__release_simple: release page at %p\n",page);
 
   // free page
-  l4dm_mem_release(page);
+  l4la_free(&heap, page, L4_PAGESIZE);
 }
 
 /*****************************************************************************/
 /**
  * \brief Main
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 simple_heap(void)
 {
   l4slab_cache_t slab;
   int ret;
   void * objp;
+
+  // initialize heap
+  printf("simple_heap: heap @ %p\n", backing_store);
+  memset(backing_store, 0, sizeof(backing_store));
+  l4la_init(&heap);
+  l4la_free(&heap, backing_store, sizeof(backing_store));
 
   // initialize slab
   ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow_simple,__release_simple);
@@ -95,28 +106,29 @@ simple_heap(void)
       return;
     }
 
+  printf("simple_heap: after init\n"); l4slab_dump_cache(&slab, 0);
+
   // allocate objects
   objp = l4slab_alloc(&slab);
+
+  printf("simple_heap: after alloc\n"); l4slab_dump_cache(&slab, 0);
 
   printf("simple_heap: got obj at %p\n",objp);
 
   // release object
   l4slab_free(&slab,objp);
-  
+
+  printf("simple_heap: after free\n"); l4slab_dump_cache(&slab, 0);
+
   // destroy slab
   l4slab_destroy(&slab);
+
+  printf("simple_heap: after destroy\n"); l4slab_dump_cache(&slab, 0);
 }
 
 /*****************************************************************************
  *** grow-only heap
  *****************************************************************************/
-
-#define MAX_HEAP_SIZE  (64 * 1024)
-#define INIT_HEAP_SIZE (16 * 1024)
- 
-l4dm_dataspace_t heap_ds;
-l4_addr_t        heap_addr;
-l4_size_t        heap_cur_size;
 
 /*****************************************************************************/
 /**
@@ -124,80 +136,47 @@ l4_size_t        heap_cur_size;
  *
  * \param  cache         Slab cache descriptor
  * \retval data          User data pointer
- *	
+ *
  * \return Pointer to new page
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void *
 __grow(l4slab_cache_t * cache, void ** data)
 {
-  l4_addr_t addr;
-  l4_size_t new_size; 
-  int ret;
+  void *p;
 
-  if ((heap_cur_size + L4_PAGESIZE) > MAX_HEAP_SIZE)
-    {
-      printf("__grow: heap overflow!\n");
-      return NULL;
-    }
+  p = l4la_alloc(&heap, L4_PAGESIZE, L4_LOG2_PAGESIZE);
 
-  // resize dataspace
-  addr = heap_addr + heap_cur_size;
-  new_size = heap_cur_size + L4_PAGESIZE;
-
-  ret = l4dm_mem_resize(&heap_ds,new_size);
-  if (ret < 0)
-    {
-      printf("__grow: resize heap dataspace failed: %s (%d)\n",
-	     l4env_errstr(ret),ret);
-      return NULL;
-    }
-  heap_cur_size = new_size;
-
-  printf("__grow: resized dataspace to %u, added page at %p\n",
-	 new_size,(void *)addr);
+  if (p == NULL)
+    printf("__grow: heap overflow!\n");
+  else
+    printf("__grow: got page at %p\n", p);
 
   // done
-  return (void *)addr;
+  return p;
 }
 
 /*****************************************************************************/
 /**
  * \brief Grow-only heap
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 grow_only_heap(void)
 {
   int ret;
-  void * heap, * page;
+  void * page;
   l4slab_cache_t slab;
   void * objp;
 
-  // allocate heap 
-  ret = l4dm_mem_open(L4DM_DEFAULT_DSM, INIT_HEAP_SIZE, L4_PAGESIZE, 0,
-		      "Heap", &heap_ds);
-  if (ret < 0)
-    {
-      LOG_Error("grow_only_heap: heap allocation failed: %s (%d)",
-                l4env_errstr(ret),ret);
-      return;
-    }
-
-  // attach heap dataspace, already reserve the whole vm area 
-  ret = l4rm_attach(&heap_ds, MAX_HEAP_SIZE, 0, L4DM_RW, &heap);
-  if (ret < 0)
-    {
-      LOG_Error("grow_only_heap: attach heap dataspace failed: %s (%d)",
-                l4env_errstr(ret),ret);
-      l4dm_close(&heap_ds);
-      return;
-    }
-  heap_addr = (l4_addr_t)heap;
-  heap_cur_size = INIT_HEAP_SIZE;
+  // initialize heap
+  printf("simple_heap: heap @ %p\n", backing_store);
+  memset(backing_store, 0, sizeof(backing_store));
+  l4la_init(&heap);
+  l4la_free(&heap, backing_store, sizeof(backing_store));
 
   printf("grow_only_heap: heap at %p, init size %u, max size %u\n",
-	 heap,INIT_HEAP_SIZE,MAX_HEAP_SIZE);
+         heap, sizeof(backing_store) / 2, sizeof(backing_store));
 
   // setup slab cache, no release callback
   ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow,NULL);
@@ -208,15 +187,21 @@ grow_only_heap(void)
       return;
     }
 
-  // add initial pages to slab 
-  page = heap;
-  while (page < (heap + INIT_HEAP_SIZE))
+  // check slab_size
+  if (slab.slab_size != L4_PAGESIZE)
     {
-      l4slab_add_page(&slab,page,NULL);
+      printf("Assumed %d-sized slabs - current size is %d. Aborting...\n",
+             L4_PAGESIZE, slab.slab_size);
+      return;
+    }
+
+  // add initial pages to slab
+  while (l4la_avail(&heap) > sizeof(backing_store) / 2)
+    {
+      page = l4la_alloc(&heap, L4_PAGESIZE, L4_LOG2_PAGESIZE);
+      l4slab_add_slab(&slab,page,NULL);
 
       printf("grow_only_heap: added initial page at %p\n",page);
-      
-      page += L4_PAGESIZE;
     }
 
   do
@@ -225,22 +210,16 @@ grow_only_heap(void)
 
   // destroy slab
   l4slab_destroy(&slab);
-
-  // release heap memory 
-  l4rm_detach((void *)heap_addr);
-  l4dm_close(&heap_ds);
 }
 
 /*****************************************************************************/
 /**
  * \brief Main
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 main(void)
 {
-  LOGL("go..");
-
   // simple heap
   simple_heap();
 
@@ -249,9 +228,7 @@ main(void)
   // grow-only heap
   grow_only_heap();
 
-  printf("\n");
-
-  KDEBUG("done");
+  printf("\nDone.\n");
 
   return 0;
 }

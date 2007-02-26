@@ -203,12 +203,15 @@ num_printf:
 	      flag_in_sign=2;
 	    }
 	}
+	if (flag_long<1) number&=0xffffffff;
 	if (flag_long<0) number&=0xffff;
 	if (flag_long<-1) number&=0xff;
 	if (flag_long>1)
-	  sz += __lltostr(buf+1+sz,sizeof(buf)-5,(unsigned long long) llnumber,base,flag_upcase);
+	  sz += __lltostr(buf+1+sz,sizeof(buf)-5,
+			  (unsigned long long) llnumber,base,flag_upcase);
 	else
-	  sz += __ltostr(buf+1+sz,sizeof(buf)-5,(unsigned long) number,base,flag_upcase);
+	  sz += __ltostr(buf+1+sz,sizeof(buf)-5,
+			 (unsigned long) number,base,flag_upcase);
 
 	s=buf+1;
 

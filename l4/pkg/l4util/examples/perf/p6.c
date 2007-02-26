@@ -14,10 +14,10 @@
 
 unsigned char data_array[1024*1024];
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
   unsigned long long v0=-1, v1=-1;
   
-  rmgr_init();
   printf("perf_p6");
   
   printf("selecting L2-Requests for user+kernel");

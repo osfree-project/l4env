@@ -34,7 +34,7 @@
  *****************************************************************************/
 
 /**
- * Dataspace descriptor slab cache 
+ * Dataspace descriptor slab cache
  */
 l4slab_cache_t dataspace_cache;
 
@@ -50,12 +50,12 @@ static char * dataspace_cache_name = "dataspace";
 /*****************************************************************************/
 /**
  * \brief  Page allocation function for dsmlib
- * 
- * \retval data          Pointer to page area structure 
- *	
+ *
+ * \retval data          Pointer to page area structure
+ *
  * \return Pointer to new page
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void *
 __dsmlib_get_page(void ** data)
 {
@@ -66,11 +66,11 @@ __dsmlib_get_page(void ** data)
 /*****************************************************************************/
 /**
  * \brief Page frelease function for dsmlib
- * 
+ *
  * \param  page          Page address
  * \param  data          Page area address, set by dmphys_dsmlib_get_page
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __dsmlib_free_page(void * page, void * data)
 {
@@ -85,14 +85,14 @@ __dsmlib_free_page(void * page, void * data)
 /*****************************************************************************/
 /**
  * \brief  Initialize dataspace descriptor allocation
- *	
+ *
  * \return 0 on succes, -1 if initialization failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 dmphys_ds_init(void)
 {
-  /* init dataspace descriptor slab cache, 
+  /* init dataspace descriptor slab cache,
    * use default grow/release functions */
   if (l4slab_cache_init(&dataspace_cache, sizeof(dmphys_dataspace_t), 0,
 			dmphys_internal_alloc_grow,
@@ -104,7 +104,7 @@ dmphys_ds_init(void)
   /* initialize dataspace manager library */
   if (dsmlib_init(__dsmlib_get_page, __dsmlib_free_page) < 0)
     return -1;
-  
+
   /* done */
   return 0;
 }
@@ -112,20 +112,20 @@ dmphys_ds_init(void)
 /*****************************************************************************/
 /**
  * \brief Create new dataspace descriptor.
- * 
+ *
  * \param  owner         Dataspace owner
  * \param  name          Dataspace name
  * \param  flags         Flags
- *	
+ *
  * \return Pointer to dataspace descriptor, NULL if creation failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dmphys_dataspace_t *
 dmphys_ds_create(l4_threadid_t owner, const char * name, l4_uint32_t flags)
 {
   dmphys_dataspace_t * ds;
   dsmlib_ds_desc_t * desc;
-  
+
   /* create internal dataspace descriptor */
   ds = l4slab_alloc(&dataspace_cache);
   if (ds == NULL)
@@ -135,10 +135,10 @@ dmphys_ds_create(l4_threadid_t owner, const char * name, l4_uint32_t flags)
     }
 
   /* allocate global dataspace descriptor */
-  desc = dsmlib_create_dataspace(); 
-  if (desc == NULL) 
+  desc = dsmlib_create_dataspace();
+  if (desc == NULL)
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "DMphys: allocating global dataspace descriptor failed!");
       return NULL;
     }
@@ -160,10 +160,10 @@ dmphys_ds_create(l4_threadid_t owner, const char * name, l4_uint32_t flags)
 /*****************************************************************************/
 /**
  * \brief Release dataspace descriptor
- * 
+ *
  * \param  ds            Dataspace descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dmphys_ds_release(dmphys_dataspace_t * ds)
 {
@@ -177,12 +177,12 @@ dmphys_ds_release(dmphys_dataspace_t * ds)
 /*****************************************************************************/
 /**
  * \brief Get dataspace descriptor for dataspace id
- * 
+ *
  * \param  ds_id         Dataspace id
- *	
+ *
  * \return Dataspace descriptor, NULL if dataspace id not exists.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dmphys_dataspace_t *
 dmphys_ds_get(l4_uint32_t ds_id)
 {
@@ -194,7 +194,7 @@ dmphys_ds_get(l4_uint32_t ds_id)
 
   ds = dsmlib_get_dsm_ptr(desc);
   ASSERT((ds != NULL) && (ds->desc == desc));
- 
+
   return ds;
 }
 
@@ -202,22 +202,22 @@ dmphys_ds_get(l4_uint32_t ds_id)
 /**
  * \brief  Get dataspace descriptor for dataspace id, check if caller is the
  *         owner
- * 
+ *
  * \param  ds_id         Dataspace id
  * \param  caller        Caller thread id
  * \retval ds            Dataspace descriptor.
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invalid dataspace id
  *         - -#L4_EPERM   caller is not the owner of the dataspace
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 dmphys_ds_get_check_owner(l4_uint32_t ds_id, l4_threadid_t caller,
 			  dmphys_dataspace_t ** ds)
 {
   dsmlib_ds_desc_t * desc = dsmlib_get_dataspace(ds_id);
-  
+
   *ds = NULL;
   if (desc == NULL)
     return -L4_EINVAL;
@@ -235,24 +235,24 @@ dmphys_ds_get_check_owner(l4_uint32_t ds_id, l4_threadid_t caller,
 
 /*****************************************************************************/
 /**
- * \brief  Get dataspace descriptor for dataspace id, check if caller is a 
+ * \brief  Get dataspace descriptor for dataspace id, check if caller is a
  *         client of the dataspace
- * 
+ *
  * \param  ds_id         Dataspace id
  * \param  caller        Caller thread id
  * \retval ds            Dataspace descriptor
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invalid dataspace id
  *         - -#L4_EPERM   caller is not a client of the dataspace
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 dmphys_ds_get_check_client(l4_uint32_t ds_id, l4_threadid_t caller,
 			   dmphys_dataspace_t ** ds)
 {
   dsmlib_ds_desc_t * desc = dsmlib_get_dataspace(ds_id);
-  
+
   *ds = NULL;
   if (desc == NULL)
     return -L4_EINVAL;
@@ -270,26 +270,26 @@ dmphys_ds_get_check_client(l4_uint32_t ds_id, l4_threadid_t caller,
 
 /*****************************************************************************/
 /**
- * \brief  Get dataspace descriptor for dataspace id, check if caller is 
+ * \brief  Get dataspace descriptor for dataspace id, check if caller is
  *         permitted to perform the requested operations.
- * 
+ *
  * \param  ds_id         Dataspace id
  * \param  caller        Caller thread id
  * \param  rights        Rights bit mask
  * \retval ds            Dataspace descriptor
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invalid dataspace id
- *         - -#L4_EPERM   caller is not permitted to perform the requested 
- *                          operations         
+ *         - -#L4_EPERM   caller is not permitted to perform the requested
+ *                          operations
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-dmphys_ds_get_check_rights(l4_uint32_t ds_id, l4_threadid_t caller, 
+dmphys_ds_get_check_rights(l4_uint32_t ds_id, l4_threadid_t caller,
 			   l4_uint32_t rights, dmphys_dataspace_t ** ds)
 {
   dsmlib_ds_desc_t * desc = dsmlib_get_dataspace(ds_id);
-  
+
   *ds = NULL;
   if (desc == NULL)
     return -L4_EINVAL;
@@ -298,7 +298,7 @@ dmphys_ds_get_check_rights(l4_uint32_t ds_id, l4_threadid_t caller,
   ASSERT((*ds != NULL) && ((*ds)->desc == desc));
 
   /* check if caller has requested rights or is the owner of the dataspace */
-  if (!dsmlib_check_rights(desc, caller, rights) && 
+  if (!dsmlib_check_rights(desc, caller, rights) &&
       !dsmlib_is_owner(desc, caller))
     return -L4_EPERM;
 
@@ -313,11 +313,11 @@ dmphys_ds_get_check_rights(l4_uint32_t ds_id, l4_threadid_t caller,
 /*****************************************************************************/
 /**
  * \brief  Count dataspace iterator function
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  data          Data pointer, counter
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __ds_count_iterator(dmphys_dataspace_t * ds, void * data)
 {
@@ -327,7 +327,7 @@ __ds_count_iterator(dmphys_dataspace_t * ds, void * data)
 /*****************************************************************************/
 /**
  * \brief  Count dataspaces
- * 
+ *
  * \param  owner         Count dataspaces of owner, if set to #L4_INVALID_ID
  *                       count all dataspaces.
  * \param  flags         Flags:
@@ -335,7 +335,7 @@ __ds_count_iterator(dmphys_dataspace_t * ds, void * data)
  *
  * \return Number of dataspaces.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 dmphys_ds_count(l4_threadid_t owner, l4_uint32_t flags)
 {
@@ -350,10 +350,10 @@ dmphys_ds_count(l4_threadid_t owner, l4_uint32_t flags)
 /*****************************************************************************/
 /**
  * \brief  Show dataspace information
- * 
+ *
  * \param  ds            Dataspace descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dmphys_ds_show(dmphys_dataspace_t * ds)
 {
@@ -369,7 +369,7 @@ dmphys_ds_show(dmphys_dataspace_t * ds)
   dsmlib_list_ds_clients(ds->desc);
   LOG_printf("\n");
   if (strlen(ds->pool->name) > 0)
-    LOG_printf("  memory areas (pool %d, \"%s\"):\n", 
+    LOG_printf("  memory areas (pool %d, \"%s\"):\n",
            ds->pool->pool, ds->pool->name);
   else
     LOG_printf("  memory areas (pool %d):\n",

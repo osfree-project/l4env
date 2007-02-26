@@ -132,7 +132,7 @@ int l4vfs_listen(l4_threadid_t server,
 
 int l4vfs_recvfrom(l4_threadid_t server,
                    object_handle_t fd,
-                   l4_int8_t **buf,
+                   char **buf,
                    size_t len,
                    int flags,
                    struct sockaddr *from,
@@ -157,7 +157,7 @@ int l4vfs_recvfrom(l4_threadid_t server,
                                       buf,
                                       &len,
                                       flags,
-                                      (char *) from,
+                                      (char *)from,
                                       &buflen,
                                       fromlen,
                                       &_dice_corba_env);
@@ -166,7 +166,7 @@ int l4vfs_recvfrom(l4_threadid_t server,
 
 int l4vfs_recv(l4_threadid_t server,
                object_handle_t fd,
-               l4_int8_t **buf,
+               char **buf,
                size_t len,
                int flags)
 {
@@ -299,4 +299,62 @@ int l4vfs_setsockopt(l4_threadid_t server,
                                         (char *) optval,
                                         optlen,
                                         &_dice_corba_env);
+}
+
+int l4vfs_getsockopt(l4_threadid_t server,
+                     object_handle_t fd,
+                     int level,
+                     int optname,
+                     const void *optval,
+                     socklen_t *optlen)
+{
+    int buflen;
+    CORBA_Environment _dice_corba_env = dice_default_environment;
+    _dice_corba_env.malloc = (dice_malloc_func)malloc;
+   _dice_corba_env.free = (dice_free_func)free;
+
+    if (optlen)
+    {
+        buflen = *optlen;
+    }
+    else
+    {
+        buflen = 0;
+    }
+    return l4vfs_net_io_getsockopt_call(&server,
+                                        fd,
+                                        level,
+                                        optname,
+                                        (char *) optval,
+                                        &buflen,
+                                        optlen,
+                                        &_dice_corba_env);
+}
+
+int l4vfs_getpeername(l4_threadid_t server,
+                 object_handle_t fd,
+                 struct sockaddr *addr,
+                 socklen_t *addrlen)
+{
+    int buflen;
+    CORBA_Environment _dice_corba_env = dice_default_environment;
+    _dice_corba_env.malloc = (dice_malloc_func)malloc;
+    _dice_corba_env.free = (dice_free_func)free;
+
+    if (addrlen)
+    {
+        buflen = *addrlen;
+    }
+    else
+    {
+        buflen = 0;
+    }
+
+    return l4vfs_net_io_getpeername_call(&server,
+                                    fd,
+                                    (char *) addr,
+                                    &buflen,
+                                    addrlen,
+                                    &_dice_corba_env);
+
 }

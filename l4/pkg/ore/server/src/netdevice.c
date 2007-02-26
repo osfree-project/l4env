@@ -21,20 +21,12 @@
 l4_int32_t list_network_devices(void)
 {
   struct net_device *dev;
-  char mesg[25];
 
   LOGd_Enter(ORE_DEBUG_INIT);
-
+  
   for (dev = dev_base; dev; dev = dev->next)
-    {
-        sprintf(mesg, "Device = %4s, MAC = ", dev->name);
-        LOG_MAC_s(1, mesg, dev->dev_addr);
-/*      LOG("Device: %4s, MAC=%02x:%02x:%02x:%02x:%02x:%02x, base=%u, irq %d",
-          dev->name, dev->dev_addr[0], dev->dev_addr[1], dev->dev_addr[2],
-          dev->dev_addr[3], dev->dev_addr[4], dev->dev_addr[5],
-          (l4_uint32_t)dev->base_addr, dev->irq);
-          */
-    }
+    LOG_printf("Device = %4s, IRQ = %2d, MAC = " mac_fmt "\n",
+               dev->name, dev->irq, mac_str(dev->dev_addr));
 
   return 0;
 }
@@ -75,6 +67,8 @@ l4_int32_t open_network_devices(void)
         }
 
       cnt++;
+
+      xmit_lock_add(dev->name);
 
       LOGd(ORE_DEBUG_INIT,"attaching irq");
       if (dev->irq)

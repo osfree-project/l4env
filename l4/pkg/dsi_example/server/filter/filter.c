@@ -178,16 +178,16 @@ __release_callback(dsi_socket_t * socket, dsi_packet_t * packet)
  * \return 0 on success, -1 if creation failed.
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 dsi_example_filter_open_component(CORBA_Object _dice_corba_obj,
-    l4_int32_t num,
-    const dsi_example_filter_dataspace_t *rcv_ctrl_ds,
-    const dsi_example_filter_dataspace_t *rcv_data_ds,
-    dsi_example_filter_socket_t *rcv_s,
-    dsi_example_filter_socket_t *snd_s,
-    dsi_example_filter_dataspace_t *snd_ctrl_ds,
-    dsi_example_filter_dataspace_t *snd_data_ds,
-    CORBA_Server_Environment *_dice_corba_env)
+                                  long num,
+                                  const dsi_example_filter_dataspace_t *rcv_ctrl_ds,
+                                  const dsi_example_filter_dataspace_t *rcv_data_ds,
+                                  dsi_example_filter_socket_t *rcv_s,
+                                  dsi_example_filter_socket_t *snd_s,
+                                  dsi_example_filter_dataspace_t *snd_ctrl_ds,
+                                  dsi_example_filter_dataspace_t *snd_data_ds,
+                                  CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, rcv_sync_id, snd_sync_id;
@@ -347,11 +347,11 @@ dsi_example_filter_open_component(CORBA_Object _dice_corba_obj,
  * \return 0 on success, -1 if connect failed.
  */
 /*****************************************************************************/ 
-l4_int32_t 
+long
 dsi_example_filter_connect_component(CORBA_Object _dice_corba_obj,
-    const dsi_example_filter_socket_t *local,
-    const dsi_example_filter_socket_t *remote,
-    CORBA_Server_Environment *_dice_corba_env)
+                                     const dsi_example_filter_socket_t *local,
+                                     const dsi_example_filter_socket_t *remote,
+                                     CORBA_Server_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;

@@ -17,9 +17,13 @@
 #ifndef _DM_PHYS___KINFO_H
 #define _DM_PHYS___KINFO_H
 
+#include <l4/sys/kernel.h>
+
 /*****************************************************************************
  *** prototypes
  *****************************************************************************/
+
+EXTERN_C_BEGIN
 
 /* return min. memory address */
 l4_addr_t
@@ -35,5 +39,7 @@ dmphys_kinfo_init_ram_base(void);
 
 /* ram_base variable */
 extern l4_addr_t ram_base;
+
+EXTERN_C_END
 
 #endif /* !_DM_PHYS___KINFO_H */

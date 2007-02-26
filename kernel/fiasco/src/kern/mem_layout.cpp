@@ -7,6 +7,7 @@ class Mem_layout
 public:
   /// reflect symbols in linker script
   static const char load            asm ("_load");
+  static const char image_start	    asm ("_kernel_image_start");
   static const char start           asm ("_start");
   static const char end             asm ("_end");
   static const char ecode           asm ("_ecode");
@@ -19,16 +20,10 @@ public:
   static Mword in_kernel (Address a);
 };
 
-INTERFACE [utcb]:
-
-EXTENSION class Mem_layout
-{
-public:
-  static const char _v2_utcb_start asm ("_v2_utcb_start");
-};
-
-
 IMPLEMENTATION:
+
+#include "config.h"
+#include "l4_types.h"
 
 IMPLEMENT inline
 Mword
@@ -49,4 +44,14 @@ Mword
 Mem_layout::in_kernel_code (Address a)
 {
   return a >= (Address)&start && a < (Address)&ecode;
+}
+
+PUBLIC static inline NEEDS ["l4_types.h", "config.h"]
+unsigned
+Mem_layout::max_threads()
+{
+  unsigned abilimit = L4_uid::max_threads();
+  unsigned memlimit = (Tcbs_end - Tcbs) / Config::thread_block_size;
+
+  return abilimit < memlimit ? abilimit : memlimit;
 }

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEStructType.h
- *    \brief   contains the declaration of the class CBEStructType
+ *  \file    dice/src/be/BEStructType.h
+ *  \brief   contains the declaration of the class CBEStructType
  *
- *    \date    01/15/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/15/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -31,65 +31,92 @@
 #define __DICE_BESTRUCTTYPE_H__
 
 #include "be/BEType.h"
+#include "Attribute-Type.h"
+#include "template.h"
 #include <vector>
-using namespace std;
 
 class CBEContext;
 class CBETypedDeclarator;
 class CFEArrayType;
+class CFEObject;
 class CDeclaratorStackLocation;
 
-/**    \class CBEStructType
- *    \ingroup backend
- *    \brief the back-end struct type
+/** \class CStructMembers
+ *  \ingroup backend
+ *  \brief a special collection class for struct members
+ */
+class CStructMembers : public CSearchableCollection<CBETypedDeclarator, string>
+{
+public:
+    /** \brief constructs struct members collection
+     *  \param src the source vector with the members
+     *  \param pParent the parent of the members
+     */
+    CStructMembers(vector<CBETypedDeclarator*> *src, CObject *pParent);
+    /** \brief copy constructor
+     *  \param src the source to copy from
+     */
+    CStructMembers(CStructMembers &src);
+    /** destroy the collection */
+    ~CStructMembers();
+
+    void Add(CBETypedDeclarator *pMember);
+    void Move(string sName, int nPos);
+    void Move(string sName, string sBeforeHere);
+};
+
+/** \class CBEStructType
+ *  \ingroup backend
+ *  \brief the back-end struct type
  */
 class CBEStructType : public CBEType
 {
 // Constructor
 public:
-    /**    \brief constructor
+    /** \brief constructor
      */
     CBEStructType();
     virtual ~CBEStructType();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEStructType(CBEStructType &src);
 
-    virtual void WriteGetMemberSize(CBEFile *pFile, CBETypedDeclarator *pMember, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
-    virtual bool CreateBackEndSequence(CFEArrayType *pFEType, CBEContext *pContext);
+    virtual void WriteGetMemberSize(CBEFile *pFile, 
+    	CBETypedDeclarator *pMember, 
+	vector<CDeclaratorStackLocation*> *pStack,
+	CBEFunction *pUsingFunc);
+    virtual void CreateBackEndSequence(CFEArrayType *pFEType);
 
 public:
-    virtual void WriteZeroInit(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteZeroInit(CBEFile *pFile);
     virtual int GetSize();
+    virtual int GetMaxSize();
     virtual int GetStringLength();
     virtual CObject* Clone();
-    virtual void RemoveMember(CBETypedDeclarator *pMember);
-    virtual void Write(CBEFile *pFile, CBEContext *pContext);
-    virtual CBETypedDeclarator* GetNextMember(vector<CBETypedDeclarator*>::iterator &iter);
-    virtual vector<CBETypedDeclarator*>::iterator GetFirstMember();
-    virtual void AddMember(CBETypedDeclarator *pMember);
-    virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
+    virtual void Write(CBEFile *pFile);
     virtual bool IsConstructedType();
     virtual int GetMemberCount();
     virtual bool HasTag(string sTag);
-    virtual void WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pContext);
+    virtual void WriteCast(CBEFile * pFile, bool bPointer);
     virtual string GetTag();
-    virtual void WriteDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteGetSize(CBEFile * pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext * pContext);
+    virtual void WriteDeclaration(CBEFile * pFile);
+    virtual void WriteGetSize(CBEFile * pFile, 
+	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
     virtual int GetFixedSize();
     virtual bool IsSimpleType();
-    virtual CBETypedDeclarator* FindMember(string sName);
-    virtual CBETypedDeclarator* FindMemberAttribute(int nAttributeType);
-    virtual CBETypedDeclarator* FindMemberIsAttribute(int nAttributeType, string sAttributeParameter);
+    virtual CBETypedDeclarator* FindMember(
+	vector<CDeclaratorStackLocation*> *pStack,
+	vector<CDeclaratorStackLocation*>::iterator iCurr);
+    virtual CBETypedDeclarator* FindMemberAttribute(ATTR_TYPE nAttributeType);
+    virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType, 
+	string sAttributeParameter);
+    virtual void CreateBackEnd(CFETypeSpec *pFEType);
+    virtual void CreateBackEnd(string sTag, CFEBase *pRefObj);
 
 protected:
-    /** \var vector<CBETypedDeclarator*> m_vMembers
-     *  \brief contains the members of this struct
-     */
-    vector<CBETypedDeclarator*> m_vMembers;
     /** \var string m_sTag
      *  \brief the tag if the source is a tagged struct
      */
@@ -98,6 +125,12 @@ protected:
      *  \brief true if this is a forward declaration
      */
     bool m_bForwardDeclaration;
+
+public:
+    /** \var CStructMembers m_Members
+     *  \brief contains the members of this struct
+     */
+    CStructMembers m_Members;
 };
 
 #endif // !__DICE_BESTRUCTTYPE_H__

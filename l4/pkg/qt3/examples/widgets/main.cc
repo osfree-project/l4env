@@ -40,9 +40,6 @@ public:
 
 int main( int argc, char **argv )
 {
-    // wait a bit for simple_file_server to get ready
-    sleep(2);
-	
     QApplication::setColorSpec( QApplication::CustomColor );
     QApplication a( argc, argv );
 

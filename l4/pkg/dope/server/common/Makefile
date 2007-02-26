@@ -1,11 +1,11 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../..
-SYSTEMS       ?= x86-l4v2 x86-linux x86-l4x0
+SYSTEMS       ?= x86-l4v2 x86-linux
 
 TARGET         = libcommon.a
 INSTALL_TARGET =
-PRIVATE_INCDIR = $(PKGDIR)/server/include \
-                 $(PKGDIR)/include
+PRIVATE_INCDIR = $(PKGDIR_ABS)/server/include \
+                 $(PKGDIR_ABS)/include
 SRC_C          = appman.c     background.c button.c    scale.c       \
                  cache.c      clipping.c   container.c conv_fnt.c    \
                  scheduler.c  fontman.c    frame.c     grid.c        \

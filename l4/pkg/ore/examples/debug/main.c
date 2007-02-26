@@ -16,6 +16,8 @@ l4_ssize_t l4libc_heapsize = 4 * 1024;
 
 int main(int argc, char **argv)
 {
+  l4ore_config c = L4ORE_DEFAULT_CONFIG;
+  strncpy(c.ro_orename, "ORe", 3);
 
   if (argc > 1)
     {
@@ -25,7 +27,7 @@ int main(int argc, char **argv)
 
   printf("Setting debug level to %d\n", debug);
 
-  l4ore_debug(debug);
+  l4ore_debug(&c, debug);
 
   return 0;
 }

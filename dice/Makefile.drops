@@ -1,4 +1,4 @@
-L4DIR= 	../..
+L4DIR= 	../l4
 
 -include $(L4DIR)/mk/Makeconf
 
@@ -11,25 +11,28 @@ $(warning in your shell init script .bashrc, .profile, ...)
 $(error Please fix that error)
 endif
 
+# If we are running in l4check we overwrite the MAKE environment variable for
+# configure. It seems that the l4check make does not cope with the arguments
+# configure is using to run make.
+ifneq ($(L4CHECK_MAKE),)
+CONFMAKE=$(L4CHECK_MAKE)
+else
+CONFMAKE=$(MAKE)
+endif
+
 # the ifeq prevents the warning regarding overiding rules for Makefile
 ifeq ($(wildcard GNUmakefile),)
 GNUmakefile:
 	@echo "Calling bootstrap..."
 	@./bootstrap
 	@echo "Calling configure..."
-	@CC="$(HOST_CC)" CXX="$(HOST_CXX)" ./configure \
+	@CC="$(HOST_CC)" CXX="$(HOST_CXX)" MAKE=$(CONFMAKE) ./configure \
 	  $(if $(DROPS_STDDIR),--prefix=$(DROPS_STDDIR) \
 	  --bindir=$(DROPS_STDDIR)/tool/bin --mandir=$(DROPS_STDDIR)/tool/man)
 endif
 
-all:: GNUmakefile
-	$(MAKE) $@
-
-clean:: GNUmakefile
-	$(MAKE) $@
-
-cleanall:: GNUmakefile
-	$(MAKE) clean
+all clean cleanall:: GNUmakefile
+	$(MAKE) $@ -f GNUmakefile
 
 install:
-	$(MAKE) install
+	$(MAKE) $@ 

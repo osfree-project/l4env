@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BEClass.cpp
- *    \brief   contains the implementation of the class CL4BEClass
+ *  \file    dice/src/be/l4/L4BEClass.cpp
+ *  \brief   contains the implementation of the class CL4BEClass
  *
- *    \date    01/29/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/29/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,12 +26,13 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/L4BEClass.h"
+#include "L4BEClass.h"
+#include "L4BENameFactory.h"
 #include "be/BEAttribute.h"
 #include "be/BEContext.h"
 #include "be/BEHeaderFile.h"
-#include "be/l4/L4BENameFactory.h"
 
+#include "Compiler.h"
 #include "Attribute-Type.h"
 #include "TypeSpec-Type.h"
 
@@ -46,7 +47,6 @@ CL4BEClass::~CL4BEClass()
 
 /** \brief write L4 specific helper functions
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * We have to write the function declaration for user-defined functions.
  * - default_function: is written by server-loop, since it is used there
@@ -55,53 +55,69 @@ CL4BEClass::~CL4BEClass()
  * - error-function-client: void name(l4_msgdope_t, CORBA_Environment*)
  * - error-function-server: void name(l4_msgdope_t, CORBA_Server_Environment*)
  */
-void CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile, CBEContext * pContext)
+void 
+CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile)
 {
     string sEnvName;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT))
         sEnvName = "CORBA_Server_Environment";
     else
         sEnvName = "CORBA_Environment";
+    bool bInitRcv = m_Attributes.Find(ATTR_INIT_RCVSTRING) ||
+        m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
+        m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER);
+    bool bError = m_Attributes.Find(ATTR_ERROR_FUNCTION) ||
+        m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT) ||
+        m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER);
+    if (bInitRcv || bError)
+    {
+        WriteExternCStart(pFile);
+    }
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
     // init-rcvstring
-    if (FindAttribute(ATTR_INIT_RCVSTRING) ||
-        FindAttribute(ATTR_INIT_RCVSTRING_CLIENT) ||
-        FindAttribute(ATTR_INIT_RCVSTRING_SERVER))
+    if (bInitRcv)
     {
         CBEAttribute *pAttr = 0;
         string sFuncName;
-        if ((pAttr = FindAttribute(ATTR_INIT_RCVSTRING)) != NULL)
+        if ((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING)) != 0)
             sFuncName = pAttr->GetString();
-        if (((pAttr = FindAttribute(ATTR_INIT_RCVSTRING_CLIENT)) != NULL) &&
+        if (((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT)) != 0) &&
             pFile->IsOfFileType(FILETYPE_CLIENT))
             sFuncName = pAttr->GetString();
-        if (((pAttr = FindAttribute(ATTR_INIT_RCVSTRING_SERVER)) != NULL) &&
+        if (((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
             pFile->IsOfFileType(FILETYPE_COMPONENT))
             sFuncName = pAttr->GetString();
         if (sFuncName.empty())
-            sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext);
+            sFuncName = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
         else
-            sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext, (void*)&sFuncName);
-        string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-        *pFile << "\tvoid " << sFuncName << "(int, " << sMWord << "*, " << sMWord << "*, " << sEnvName << "*);\n\n";
+            sFuncName = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC, 
+		(void*)&sFuncName);
+        string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+        *pFile << "\tvoid " << sFuncName << "(int, " << sMWord << "*, " 
+	    << sMWord << "*, " << sEnvName << "*);\n\n";
     }
     // error-functions
-    if (FindAttribute(ATTR_ERROR_FUNCTION) ||
-        FindAttribute(ATTR_ERROR_FUNCTION_CLIENT) ||
-        FindAttribute(ATTR_ERROR_FUNCTION_SERVER))
+    if (bError)
     {
         CBEAttribute *pAttr = 0;
         string sFuncName;
-        if ((pAttr = FindAttribute(ATTR_ERROR_FUNCTION)) != NULL)
+        if ((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION)) != 0)
             sFuncName = pAttr->GetString();
-        if (((pAttr = FindAttribute(ATTR_ERROR_FUNCTION_CLIENT)) != NULL) &&
+        if (((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT)) != 0) &&
             pFile->IsOfFileType(FILETYPE_CLIENT))
             sFuncName = pAttr->GetString();
-        if (((pAttr = FindAttribute(ATTR_ERROR_FUNCTION_SERVER)) != NULL) &&
+        if (((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER)) != 0) &&
             pFile->IsOfFileType(FILETYPE_COMPONENT))
             sFuncName = pAttr->GetString();
         if (!sFuncName.empty())
-            *pFile << "\tvoid " << sFuncName << "(l4_msgdope_t, " << sEnvName << "*);\n\n";
+            *pFile << "\tvoid " << sFuncName << "(l4_msgdope_t, " << sEnvName
+		<< "*);\n\n";
+    }
+    if (bInitRcv || bError)
+    {
+        WriteExternCEnd(pFile);
     }
     // call base class
-    CBEClass::WriteHelperFunctions(pFile, pContext);
+    CBEClass::WriteHelperFunctions(pFile);
 }
+

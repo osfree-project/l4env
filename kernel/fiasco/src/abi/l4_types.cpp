@@ -89,7 +89,7 @@ public:
 
   /// Get the L4 UID for the given IRQ.
   static L4_uid irq( unsigned irq );
-  
+
   /// Is this a IRQ ID?
   Mword is_irq() const;
 
@@ -175,14 +175,14 @@ public:
   /**
    * Get the maximum number of threads per task.
    */
-  static unsigned const threads_per_task();
+  static unsigned threads_per_task();
 
   /**
    * Get number of threads in the system.
    * This method only works for v2 and x0 ABI. To get the max_threads
    * value ABI-independently, use Config::max_threads() instead.
    */
-  static Mword const max_threads();
+  static Mword max_threads();
 };
 
 typedef L4_uid Global_id;
@@ -198,7 +198,7 @@ public:
    * Create a send descriptor from its binary representation.
    */
   L4_snd_desc( Mword w = (Mword)-1 );
-  
+
   /**
    * Deceite bit set?
    */
@@ -238,19 +238,30 @@ private:
 /**
  * A L4 flex page.
  *
- * A flex page represents a size aligned 
+ * A flex page represents a size aligned
  * region of an address space.
  */
 class L4_fpage
 {
 public:
+  typedef Mword Raw;
+  typedef Raw Cache_type;
+
+  enum Cacheing
+  {
+    Uncached    = 0x200,
+    Cached      = 0x600,
+    No_change   = 0x000,
+    Caching_opt = 0x200
+  };
+
   /**
    * Create a flexpage with the given parameters.
    * @param grant if not zero the grant bit is to be set.
    * @param write if not zero the write bit is to be set.
    * @param order the size of the flex page is 2^order.
    * @param page the base address of the flex page.
-   */  
+   */
   L4_fpage (Mword grant, Mword write, Mword order, Mword page);
 
   /**
@@ -262,7 +273,7 @@ public:
    *
    * @param order the size of the flex page is 2^order.
    * @param page the base address of the flex page.
-   *   
+   *
    */
 
   L4_fpage( Mword order, Mword page );
@@ -274,7 +285,8 @@ public:
   Mword grant() const;
 
   /**
-   * Set the grant bit according to g.
+   * Set the grant bit according to g.  Overwrites state managed 
+   * by status() members.
    * @param g if not zero the grant bit is to be set.
    */
   void grant (Mword g);
@@ -286,12 +298,13 @@ public:
   Mword write() const;
 
   /**
-   * Set the write bit according to w.
+   * Set the write bit according to w.  Overwrites state managed 
+   * by status() members.
    *
    * @param w if not zero the write bit is to be set.
    */
   void write( Mword w );
-  
+
   /**
    * Get the size part of the flex page.
    * @return the order of the flex page (size part).
@@ -318,17 +331,74 @@ public:
 
   /**
    * Is the flex page the whole address space?
-   * @return not zero, if the flex page covers the 
+   * @return not zero, if the flex page covers the
    *   whole address space.
    */
   Mword is_whole_space() const;
 
   /**
    * Is the flex page valid?
-   * @return not zero if the flex page 
+   * @return not zero if the flex page
    *    contains a value other than 0.
    */
   Mword is_valid() const;
+
+  /**
+   * Get the status flags (Accessed, Dirty, Executed) of the flexpage
+   * (ABI extension).
+   * Only meaningful after calling L4_fpage::status (Mword status).
+   * @return the status flags.
+   */
+  Mword status() const;
+
+  /**
+   * Set the flex page's status flags (ABI extension).
+   * @param status the flex page's base status flags.  Overwrites
+   *               state managed by grant() and write() members.
+   */
+  void status (Mword status);
+
+  /**
+   * Create a flex page from the binary representation.
+   * @param w the binary representation.
+   */
+  L4_fpage(Raw w = 0);
+
+  /**
+   * Get the binary representation of the flex page.
+   * @return this flex page in binary representation.
+   */
+  Raw raw() const;
+
+private:
+
+  Raw _raw;
+
+  enum {
+    /* +- bitsize-12 + 11-9 + 8 +- 7-2 +- 1 -+- 0 -+
+     * | page number |   C  | X | size | W/D | G/A |
+     * +-------------+------+---+------+-----+-----+ */
+    Grant_bit        = 0, ///< G (Grant)
+    Write_bit        = 1, ///< W (Write)
+    Size_shift       = 2,
+    Page_shift       = 0,
+
+    // Extension: bits for returning a flexpage's access status.
+    // (Make sure these flags do not overlap any significant fpage
+    // bits -- but overlapping the Grant and Write bits used in some
+    // APIs is OK.)
+    Referenced_bit   = 0, ///< A (Referenced)
+    Dirty_bit        = 1, ///< D (Dirty)
+    // XXX Executed_bit = 8, ///< X (Executed)
+  };
+
+public:
+  enum {
+    Referenced       = 1 << Referenced_bit,
+    Dirty            = 1 << Dirty_bit,
+    // XXX Executed  = 1 << Executed_bit,
+    Status_mask      = (Referenced | Dirty /* | Executed */ ),
+  };
 };
 
 
@@ -345,9 +415,9 @@ public:
    * The descriptor is for receiving the given flex page by an register only
    * message.
    * @param fp the receive flex page.
-   * @return An L4 receive descriptor for receiving the given flex page 
+   * @return An L4 receive descriptor for receiving the given flex page
    *         as register only message.
-   *  
+   *
    */
   static L4_rcv_desc short_fpage (L4_fpage fp);
 
@@ -396,7 +466,7 @@ public:
 
 private:
   Mword _d;
-  
+
 };
 
 
@@ -497,7 +567,7 @@ public:
   /**
    * Combine two error codes.
    *
-   * This method is for combining two error codes, 
+   * This method is for combining two error codes,
    * this means the binary representations of the codes
    * are or'd together.
    *
@@ -521,7 +591,7 @@ public:
       Remapfailed   =		0x60, ///< Receive mapping failed.
       Semapfailed   =		0x70, ///< Send mapping failed.
       Resndpfto     =		0x80, ///< Receive snd-page-fault timeout.
-      Sesndpfto     =	 	0x90, ///< Send snd-page-fault timeout.
+      Sesndpfto     =		0x90, ///< Send snd-page-fault timeout.
       Rercvpfto     =		0xA0, ///< Receive receive-page-fault timeout.
       Sercvpfto     =		0xB0, ///< Send receive-page-fault timeout.
       Reaborted     =		0xC0, ///< Receive aborted.
@@ -549,7 +619,7 @@ private:
 
   Mword _raw;
 };
-  
+
 
 /**
  * L4 Message Dope.
@@ -575,7 +645,7 @@ public:
     Remapfailed   =		0x60, ///< Receive mapping failed.
     Semapfailed   =		0x70, ///< Send mapping failed.
     Resndpfto     =		0x80, ///< Receive snd-page-fault timeout.
-    Sesndpfto     =	 	0x90, ///< Send snd-page-fault timeout.
+    Sesndpfto     =		0x90, ///< Send snd-page-fault timeout.
     Rercvpfto     =		0xA0, ///< Receive receive-page-fault timeout.
     Sercvpfto     =		0xB0, ///< Send receive-page-fault timeout.
     Reaborted     =		0xC0, ///< Receive aborted.
@@ -595,7 +665,7 @@ public:
    * @param mwords the number of transfered message words.
    * @param strings the number of transferd indirect strings.
    */
-  L4_msgdope( Mword mwords, Mword strings );
+  L4_msgdope( L4_snd_desc snd_desc, Mword mwords, Mword strings );
 
   /**
    * Type conversion constructor
@@ -718,7 +788,7 @@ public:
   /**
    * Combine two message dopes.
    *
-   * This method is for combining two message dopes, 
+   * This method is for combining two message dopes,
    * this means the binary representations of the dopes
    * are or'd together.
    *
@@ -764,7 +834,7 @@ private:
  *
  * Descriptor of indirect strings in V2 and X0 long IPC messages.
  */
-class L4_str_dope 
+class L4_str_dope
 {
 public:
   /// Length of the string to send.
@@ -795,9 +865,9 @@ public:
   /**
    * Create the specified timeout.
    * @param snd_man mantissa of the send timeout.
-   * @param snd_exp exponent of the send timeout 
+   * @param snd_exp exponent of the send timeout
    *        (snd_exp=0: infinite timeout,
-   *        snd_exp>0: t=4^(15-snd_exp)*snd_man, 
+   *        snd_exp>0: t=4^(15-snd_exp)*snd_man,
    *        snd_man=0 & snd_exp!=0: t=0).
    * @param rcv_man mantissa of the receive timeout.
    * @param rcv_exp exponent of the receive timeout (see snd_exp).
@@ -805,8 +875,8 @@ public:
    *        0<snd_pflt<15: t=4^(15-snd_pflt), snd_pflt=15: t=0).
    * @param rcv_pflt receive page fault timeout (see snd_pflt).
    */
-  L4_timeout (Mword snd_man, Mword snd_exp, 
-	      Mword rcv_man, Mword rcv_exp, 
+  L4_timeout (Mword snd_man, Mword snd_exp,
+	      Mword rcv_man, Mword rcv_exp,
 	      Mword snd_pflt, Mword rcv_pflt);
 
   /**
@@ -934,7 +1004,7 @@ private:
     {
       Rcv_exp_mask     = 0xf,
       Rcv_exp_shift    = 0,
-      
+
       Snd_exp_mask     = 0xf0,
       Snd_exp_shift    = 4,
 
@@ -946,7 +1016,7 @@ private:
 
       Snd_man_mask     = 0xff0000,
       Snd_man_shift    = 16,
-      
+
       Rcv_man_mask     = 0xff000000,
       Rcv_man_shift    = 24,
     };
@@ -970,7 +1040,7 @@ public:
   /**
    * Are the params valid?
    * @return true if the raw prepresentation is not (Mword)-1.
-   */ 
+   */
   Mword is_valid() const;
 
   /**
@@ -1071,7 +1141,7 @@ private:
     Mode_shift     = Small_shift + Small_size,
     Mode_size      = 4,
     Mode_mask      = ((1UL << Mode_size) - 1) << Mode_shift,
-    Time_exp_shift = Mode_shift + Mode_size, 
+    Time_exp_shift = Mode_shift + Mode_size,
     Time_exp_size  = 4,
     Time_exp_mask  = ((1UL << Time_exp_size) - 1) << Time_exp_shift,
     Time_man_shift = Time_exp_size + Time_exp_shift,
@@ -1167,7 +1237,7 @@ private:
       Nest_shift         = Chief_shift + Chief_size,
       Nest_size          = 4,
     };
-    
+
   Unsigned64 _raw;
 
 public:
@@ -1186,7 +1256,7 @@ public:
    * Create an L4-V2 UID from the raw 64Bit representation.
    */
   L4_uid (Unsigned64);
-  
+
   /**
    * Create an L4-V2 UID.
    */
@@ -1238,7 +1308,7 @@ private:
       Chief_shift        = Task_shift + Task_size,
       Chief_size         = 8,
     };
-    
+
   Unsigned32 _raw;
 
 public:
@@ -1268,20 +1338,20 @@ public:
 
 //----------------------------------------------------------------------------
 INTERFACE [!utcb]:
-  
-/** 
+
+/**
  * Dummy type, needed to hold code in Thread generic
- */ 
-typedef void Utcb;      
+ */
+typedef void Utcb;
 typedef L4_uid Local_id;
 
 
 //----------------------------------------------------------------------------
 INTERFACE [utcb]:
-  
+
 class Utcb;
 typedef Address Local_id;
-    
+
 
 //----------------------------------------------------------------------------
 IMPLEMENTATION:
@@ -1481,7 +1551,7 @@ Ipc_err::str_error() const
       "Remapfailed", "Semapfailed", "Resndpfto", "Sesndpfto",  "Rercvpfto",
       "Sercvpfto", "Reaborted", "Seaborted", "Remsgcut", "Semsgcut"
     };
-			    
+
   return str [error() >> 4];
 }
 
@@ -1513,23 +1583,23 @@ IMPLEMENT inline void Ipc_err::combine (Ipc_err o)
 //
 
 IMPLEMENT inline
-L4_timeout::L4_timeout (Mword snd_man, Mword snd_exp, 
-			Mword rcv_man, Mword rcv_exp, 
+L4_timeout::L4_timeout (Mword snd_man, Mword snd_exp,
+			Mword rcv_man, Mword rcv_exp,
 			Mword snd_pflt, Mword rcv_pflt)
           : _t (((snd_man << Snd_man_shift) & Snd_man_mask) |
-        	((snd_exp << Snd_exp_shift) & Snd_exp_mask) |
-        	((rcv_man << Rcv_man_shift) & Rcv_man_mask) |
-        	((rcv_exp << Rcv_exp_shift) & Rcv_exp_mask) |
-        	((rcv_pflt << Rcv_pfault_shift) & Rcv_pfault_mask) |
-        	((snd_pflt << Snd_pfault_shift) & Snd_pfault_mask))
+                ((snd_exp << Snd_exp_shift) & Snd_exp_mask) |
+                ((rcv_man << Rcv_man_shift) & Rcv_man_mask) |
+                ((rcv_exp << Rcv_exp_shift) & Rcv_exp_mask) |
+                ((rcv_pflt << Rcv_pfault_shift) & Rcv_pfault_mask) |
+                ((snd_pflt << Snd_pfault_shift) & Snd_pfault_mask))
 {}
- 
+
 IMPLEMENT inline Mword L4_timeout::rcv_exp() const
 { return (_t & Rcv_exp_mask) >> Rcv_exp_shift; }
 
 IMPLEMENT inline void L4_timeout::rcv_exp (Mword w)
 { _t = (_t & ~Rcv_exp_mask) | ((w << Rcv_exp_shift) & Rcv_exp_mask); }
- 
+
 IMPLEMENT inline Mword L4_timeout::snd_exp() const
 { return (_t & Snd_exp_mask) >> Snd_exp_shift; }
 
@@ -1569,13 +1639,13 @@ IMPLEMENT inline L4_uid::L4_uid()
 
 IMPLEMENT inline bool L4_uid::abs_rcv_timeout() const
 { return chief() & Abs_rcv_mask; }
- 
+
 IMPLEMENT inline bool L4_uid::abs_snd_timeout() const
 { return chief() & Abs_snd_mask; }
- 
+
 IMPLEMENT inline bool L4_uid::abs_rcv_clock() const
 { return chief() & Abs_rcv_clock; }
- 
+
 IMPLEMENT inline bool L4_uid::abs_snd_clock() const
 { return chief() & Abs_snd_clock; }
 
@@ -1594,13 +1664,13 @@ L4_uid::preemption_id() const
   return id;
 }
 
-IMPLEMENT inline unsigned const L4_uid::threads_per_task()
+IMPLEMENT inline unsigned L4_uid::threads_per_task()
 { return 1 << Lthread_size; }
- 
+
 IMPLEMENT inline bool L4_uid::operator == (L4_uid o) const
 { return o._raw == _raw; }
 
-IMPLEMENT inline Mword const L4_uid::max_threads()
+IMPLEMENT inline Mword L4_uid::max_threads()
 { return 1 << (Task_size + Lthread_size); }
 
 IMPLEMENT inline Mword L4_uid::irq() const
@@ -1634,10 +1704,10 @@ L4_uid::L4_uid (Task_num task, LThread_num lthread)
       : _raw ((((Unsigned64) task    << Task_shift)    & Task_mask) |
               (((Unsigned64) lthread << Lthread_shift) & Lthread_mask))
 {}
-  
+
 IMPLEMENT inline
 L4_uid::L4_uid (Task_num task, LThread_num lthread, unsigned site,
-                Task_num chief, unsigned nest, unsigned version) 
+                Task_num chief, unsigned nest, unsigned version)
   : _raw ((((Unsigned64) task    << Task_shift)         & Task_mask)        |
 	  (((Unsigned64) lthread << Lthread_shift)      & Lthread_mask)     |
 	  (((Unsigned64) site    << Site_shift)         & Site_mask)        |
@@ -1669,7 +1739,7 @@ L4_uid::version (unsigned w)
 
 IMPLEMENT inline
 LThread_num
-L4_uid::lthread() const  
+L4_uid::lthread() const
 {
   // both casts (_raw and Lthread_mask) to unsigned are hints for gcc
   return ((unsigned) _raw & (unsigned) Lthread_mask) >> Lthread_shift;
@@ -1727,7 +1797,7 @@ L4_uid::site (unsigned w)
 {
   _raw = (_raw & ~Site_mask) | (((Unsigned64) w << Site_shift) & Site_mask);
 }
- 
+
 IMPLEMENT inline
 unsigned
 L4_uid::nest() const
@@ -1748,7 +1818,7 @@ L4_uid::gthread() const
 {
   // both casts (_raw and {LTHREAD,TASK}_MASK) to unsigned are hints for gcc
   return (((unsigned) _raw & (unsigned) Lthread_mask) >> Lthread_shift) |
-         (((unsigned) _raw & (unsigned) Task_mask   ) >> (Task_shift - 
+         (((unsigned) _raw & (unsigned) Task_mask   ) >> (Task_shift -
 							  Lthread_size));
 }
 
@@ -1766,7 +1836,7 @@ L4_uid::L4_uid (Task_num task, LThread_num lthread)
               (((Unsigned32) lthread << Lthread_shift) & Lthread_mask))
 {}
 
-IMPLEMENT inline 
+IMPLEMENT inline
 L4_uid::L4_uid (Task_num task, LThread_num lthread, unsigned /*site*/,
 	        Task_num chief, unsigned /*nest*/, unsigned version)
       : _raw ((((Unsigned32) task    << Task_shift)    & Task_mask)    |
@@ -1833,7 +1903,7 @@ L4_uid::chief (Task_num w)
   _raw = (_raw & ~Chief_mask) |
          (((Unsigned32) w << Chief_shift) & Chief_mask);
 }
- 
+
 IMPLEMENT inline
 GThread_num
 L4_uid::gthread() const
@@ -1858,7 +1928,7 @@ L4_uid::L4_uid (Address addr, Address tcb_base, Address tcb_size)
 IMPLEMENT inline L4_snd_desc::L4_snd_desc( Mword w )
   : _d(w)
 {}
-  
+
 IMPLEMENT inline Mword L4_snd_desc::deceite() const
 { return _d & 1; }
 
@@ -1879,6 +1949,109 @@ IMPLEMENT inline void *L4_snd_desc::msg() const
 
 PUBLIC inline Mword L4_snd_desc::raw() const
 { return _d; }
+
+//
+// L4_fpage implementation
+//
+IMPLEMENT inline
+Mword
+L4_fpage::is_valid() const
+{ return _raw; }
+
+IMPLEMENT inline
+L4_fpage::L4_fpage(Raw raw)
+  : _raw(raw)
+{}
+
+IMPLEMENT inline
+L4_fpage::L4_fpage(Mword grant, Mword write, Mword size, Mword page)
+  : _raw((grant ? (1<<Grant_bit) : 0)
+	 | (write ? (1<<Write_bit) : 0)
+	 | ((size << Size_shift) & Size_mask)
+	 | ((page << Page_shift) & Page_mask))
+{}
+
+IMPLEMENT inline
+L4_fpage::L4_fpage(Mword size, Mword page)
+  : _raw(((size << Size_shift) & Size_mask)
+	 | ((page << Page_shift)
+	    & Page_mask))
+{}
+
+IMPLEMENT inline
+Mword
+L4_fpage::grant() const
+{ return _raw & (1<<Grant_bit); }
+
+IMPLEMENT inline
+Mword
+L4_fpage::write() const
+{ return _raw & (1<<Write_bit); }
+
+IMPLEMENT inline
+Mword
+L4_fpage::size() const
+{ return (_raw & Size_mask) >> Size_shift; }
+
+IMPLEMENT inline
+Mword
+L4_fpage::page() const
+{ return (_raw & Page_mask) >> Page_shift; }
+
+IMPLEMENT inline
+void
+L4_fpage::grant(Mword w)
+{
+  if(w)
+    _raw |= (1<<Grant_bit);
+  else
+    _raw &= ~(1<<Grant_bit);
+}
+
+IMPLEMENT inline
+void
+L4_fpage::write(Mword w)
+{
+  if(w)
+    _raw |= (1<<Write_bit);
+  else
+    _raw &= ~(1<<Write_bit);
+}
+
+IMPLEMENT inline
+void
+L4_fpage::size(Mword w)
+{ _raw = (_raw & ~Size_mask) | ((w<<Size_shift) & Size_mask); }
+
+IMPLEMENT inline
+void
+L4_fpage::page(Mword w)
+{ _raw = (_raw & ~Page_mask) | ((w<<Page_shift) & Page_mask); }
+
+IMPLEMENT inline
+void 
+L4_fpage::status (Mword status)
+{ _raw = (_raw & ~Status_mask) | status; }
+
+IMPLEMENT inline
+Mword 
+L4_fpage::status() const
+{ return _raw & Status_mask; }
+
+IMPLEMENT inline
+L4_fpage::Raw
+L4_fpage::raw() const
+{ return _raw; }
+
+IMPLEMENT inline
+Mword
+L4_fpage::is_whole_space() const
+{ return (_raw >> 2) == Whole_space; }
+
+PUBLIC inline
+L4_fpage::Cache_type
+L4_fpage::cache_type() const
+{ return _raw & Cache_type_mask; }
 
 //
 // L4_rcv_desc implementation
@@ -1905,7 +2078,7 @@ IMPLEMENT inline L4_fpage L4_rcv_desc::fpage() const
 
 IMPLEMENT inline Mword L4_rcv_desc::is_register_ipc() const
 { return (_d & ~1) == 0; }
-  
+
 IMPLEMENT inline Mword L4_rcv_desc::has_receive() const
 { return _d != (Mword)-1; }
 
@@ -1918,9 +2091,10 @@ PUBLIC inline Mword L4_rcv_desc::raw() const
 //
 
 IMPLEMENT inline
-L4_msgdope::L4_msgdope (Mword mwords, Mword strings)
+L4_msgdope::L4_msgdope (L4_snd_desc send_desc, Mword mwords, Mword strings)
   : _raw( ((strings << Strings_shift) & Strings_mask)
-	  |((mwords << Mwords_shift) & Mwords_mask) )
+	  |((mwords << Mwords_shift) & Mwords_mask)
+	  |(send_desc.raw() & (1<<Fpage_bit)))
 {}
 
 IMPLEMENT inline
@@ -1986,7 +2160,7 @@ L4_msgdope::str_error() const
       "Remapfailed", "Semapfailed", "Resndpfto", "Sesndpfto",  "Rercvpfto",
       "Sercvpfto", "Reaborted", "Seaborted", "Remsgcut", "Semsgcut"
     };
-		    
+
   return str[error() >> 4];
 }
 

@@ -21,5 +21,5 @@ print_module_name(const char *name, const char *alt_name)
   while (c1 > name && c2-c1 < 56)
     c1--;
 
-  printf("%*.*s", c2-c1, c2-c1, c1);
+  printf("%.*s", (unsigned)(c2-c1), c1);
 }

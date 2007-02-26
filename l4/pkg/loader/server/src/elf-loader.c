@@ -18,18 +18,19 @@
 #include <l4/env/env.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/exec/exec.h>
+#include <l4/util/elf.h>
 
 #include "app.h"
 #include "dm-if.h"
-#include "elf.h"
 #include "elf-loader.h"
 #include "fprov-if.h"
 
+//#define DEBUG
 const char * const interp = "libld-l4.s.so";
 
 static int
 elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
-	l4_mword_t *save_phnum, l4_addr_t *save_phdr)
+	l4_uint32_t *save_phnum, l4_addr_t *save_phdr)
 {
   Elf32_Ehdr *ehdr = (Elf32_Ehdr*)image;
   Elf32_Phdr *phdr;
@@ -51,7 +52,7 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
   for (i=0; i<ehdr->e_phnum; i++)
     {
       Elf32_Phdr *ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
- 
+
       if (ph->p_type == PT_PHDR ||
 	  ph->p_type == PT_LOAD ||
 	  ph->p_type == PT_INTERP ||
@@ -66,7 +67,9 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 	  l4_addr_t beg  = l4_trunc_page(ph->p_vaddr);
 	  l4_addr_t end  = l4_round_page(ph->p_vaddr+ph->p_memsz);
 	  l4_size_t size = end - beg;
-	  app_msg(app, "sec%02d %08x-%08x (%s)", i, beg, end, name);
+#ifdef DEBUG
+	  app_msg(app, "sec%02d %08lx-%08lx (%s)", i, beg, end, name);
+#endif
 
 	  if (ph->p_type == PT_PHDR)
 	    {
@@ -88,8 +91,10 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 		{
 		  l4_size_t new_size, add_beg, add_end;
 
-		  app_msg(app, "Merge %08x-%08x / %08x-%08x",
+#ifdef DEBUG
+		  app_msg(app, "Merge %08lx-%08lx / %08lx-%08lx",
 			        beg, end, sec_beg, sec_end);
+#endif
 
 		  add_beg  = beg < sec_beg ? sec_beg - beg : 0;
 		  add_end  = end > sec_end ? end - sec_end : 0;
@@ -146,6 +151,9 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 			   | (ph->p_flags & PF_W ? L4_DSTYPE_WRITE   : 0)
 			   | (ph->p_flags & PF_X ? L4_DSTYPE_EXECUTE : 0);
 
+	  if (app->flags & APP_ALL_WRITBLE)
+	    l4exc->info.type |= L4_DSTYPE_WRITE;
+
 	  if ((error = l4rm_attach(&l4exc->ds, l4exc->size, 0,
 				   L4RM_MAP|L4DM_RW, &map_addr)) < 0)
 	    {
@@ -193,10 +201,10 @@ next_iter:
       if ((error = app_attach_ds_to_pager(app,
 					  &l4exc->ds, l4exc->addr,
 					  l4exc->size, l4exc->info.type,
-				    	  l4exc->info.type & L4_DSTYPE_WRITE
+					  l4exc->info.type & L4_DSTYPE_WRITE
 						  ? L4DM_RW
-				     		  : L4DM_RO,
-					  /*attach=*/0, 
+						  : L4DM_RO,
+					  /*attach=*/0,
 					  "program section", &aa)))
 	return error;
     }
@@ -217,6 +225,7 @@ elf_map_binary(app_t *app)
   return elf_map(app, app->image, /*base=*/0,
 		 &env->entry_2nd, &env->phnum, &env->phdr);
 }
+
 
 /** Load the libld-l4.s.so interpreter.
  * \param app		application
@@ -243,7 +252,93 @@ elf_map_ldso(app_t *app, l4_addr_t app_addr)
   app_msg(app, "Loading ldso");
   if ((error = elf_map(app, addr, /*base=*/app_addr, &env->entry_1st, 0, 0)))
     return error;
- 
+
   junk_ds(&ds, addr);
+  return 0;
+}
+
+/**
+ * \param img     Pointer to binary image in memory
+ * \param size    Size of image
+ * \param env     L4Env info page
+ *
+ * \return 0                 Image is ELF for given architecture
+ *         -ELF_INTERPRETER  Found an interpreter section.
+ *
+ *         -L4_EINVAL        Invalid input data,
+ *                             or invalid interpreter detected
+ *         -ELF_BADFORMAT    Image is not ELF for given arch
+ *         -ELF_CORRUPT      Image is corrupt
+ */
+int
+elf_check_ftype(const l4_addr_t img, const l4_size_t size,
+                const l4env_infopage_t *env)
+{
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img;
+  Elf32_Phdr *phdr;
+  Elf32_Phdr *ph;
+  int i, j;
+
+  if (!ehdr)
+    return -L4_EINVAL;
+
+  /* access ELF header */
+  if (size < sizeof(Elf32_Ehdr))
+    return -ELF_BADFORMAT;
+
+  /* sanity check for valid ELF header */
+  if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) ||
+      (ehdr->e_ident[EI_MAG1] != ELFMAG1) ||
+      (ehdr->e_ident[EI_MAG2] != ELFMAG2) ||
+      (ehdr->e_ident[EI_MAG3] != ELFMAG3))
+    return -ELF_BADFORMAT;
+
+  if ((ehdr->e_ident[EI_CLASS] != env->ver_info.arch_class) ||
+      (ehdr->e_ident[EI_DATA]  != env->ver_info.arch_data)  ||
+      (ehdr->e_machine         != env->ver_info.arch))
+    return -ELF_BADFORMAT;
+
+  /* some more ELF sanity checks */
+  if (size < ehdr->e_phoff + sizeof(Elf32_Phdr))
+    return -ELF_CORRUPT;
+
+  /* ELF sanity check */
+  if (size < ehdr->e_phoff + ehdr->e_phnum*ehdr->e_phentsize - 1)
+    /* not enough space for all program sections */
+    return -ELF_CORRUPT;
+
+  /* ELF sanity check */
+  if (size < ehdr->e_shoff + sizeof(Elf32_Shdr))
+    return -ELF_CORRUPT;
+
+  /* ELF sanity check */
+  if (size < ehdr->e_shoff + ehdr->e_shnum*ehdr->e_shentsize - 1)
+    return -ELF_CORRUPT;
+
+  /* Check interpreter */
+  phdr = (Elf32_Phdr*)(img + ehdr->e_phoff);
+  if (!phdr)
+    return -ELF_CORRUPT;
+
+  for (i = 0, j = 0; i < ehdr->e_phnum; i++)
+    {
+      ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
+
+      if (ph->p_type == PT_INTERP)
+	{
+	  const char *interp = (const char*)(img + ph->p_offset);
+
+	  if (strcmp(interp, "libld-l4.s.so"))
+	    {
+	      printf("Invalid interpreter found: %s", interp);
+	      return -L4_EINVAL;
+	    }
+
+	  /* Indicate that we have found an interpreter section. */
+	  return -ELF_INTERPRETER;
+	}
+    }
+
+
   return 0;
 }

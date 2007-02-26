@@ -9,8 +9,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __DIETLIBC_INCLUDE_VOLUMES_H_
-#define __DIETLIBC_INCLUDE_VOLUMES_H_
+#ifndef __L4VFS_INCLUDE_VOLUMES_H_
+#define __L4VFS_INCLUDE_VOLUMES_H_
 
 #include <l4/sys/compiler.h>
 #include <l4/l4vfs/types.h>

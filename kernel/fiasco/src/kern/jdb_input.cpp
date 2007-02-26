@@ -86,7 +86,7 @@ Jdb_input_task_addr::action(void *&args, char const *&fmt, int &next_char)
 	{
 	  next_char = first_char;
 	  args = &addr;
-	  fmt  = "%8x";
+	  fmt  = L4_ADDR_INPUT_FMT;
 	  return Jdb_module::EXTRA_INPUT_WITH_NEXTCHAR;
 	}
       else if (first_char != KEY_RETURN && first_char != ' ')

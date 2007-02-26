@@ -1,4 +1,4 @@
-INTERFACE [16550-ia32]:
+INTERFACE [16550-{ia32,amd64}]:
 
 EXTENSION class Uart
 {
@@ -79,7 +79,6 @@ private:
 
   Address port;
   int _irq;
-
 };
 
 
@@ -90,7 +89,7 @@ IMPLEMENTATION[16550]:
 
 
 IMPLEMENT
-Uart::Uart() : port((Address)-1), _irq(-1)
+Uart::Uart() : port(~0U), _irq(-1)
 {}
 
 IMPLEMENT
@@ -204,25 +203,26 @@ bool Uart::valid()
 }
 
 IMPLEMENT
-bool Uart::startup(Address _port, int __irq )
+bool Uart::startup(Address _port, int __irq)
 {
   port = _port;
   _irq  = __irq;
-  
+ 
   Proc::Status o = Proc::cli_save();
 
   if (!valid())
     {
       Proc::sti_restore(o);
+      fail();
       return false;
     }
 
-  ier( Base_ier_bits );/* disable all rs-232 interrupts */
-  mcr( 0x0b );         /* out2, rts, and dtr enabled */
-  fcr( 1 );            /* enable fifo */
-  fcr( 0x07 );         /* clear rcv xmit fifo */
-  fcr( 1 );            /* enable fifo */
-  lcr( 0 );            /* clear line control register */
+  ier(Base_ier_bits);/* disable all rs-232 interrupts */
+  mcr(0x0b);         /* out2, rts, and dtr enabled */
+  fcr(1);            /* enable fifo */
+  fcr(0x07);         /* clear rcv xmit fifo */
+  fcr(1);            /* enable fifo */
+  lcr(0);            /* clear line control register */
 
   /* clearall interrupts */
   /*read*/ msr(); /* IRQID 0*/
@@ -240,10 +240,10 @@ IMPLEMENT
 void Uart::shutdown()
 {
   Proc::Status o = Proc::cli_save();
-  mcr( 0x06 );
-  fcr( 0 );
-  lcr( 0 );
-  ier( 0 );
+  mcr(0x06);
+  fcr(0);
+  lcr(0);
+  ier(0);
   Proc::sti_restore(o);
 }
   
@@ -331,7 +331,7 @@ int Uart::char_avail() const
 
 
 IMPLEMENT inline
-int const Uart::irq() const
+int Uart::irq() const
 {
   return _irq;
 }
@@ -343,7 +343,7 @@ void Uart::disable_rcv_irq()
 }
 
 
-IMPLEMENTATION [16550-ia32]:
+IMPLEMENTATION [16550-{ia32,amd64}]:
 
 IMPLEMENT inline NEEDS[Uart::ier]
 void Uart::enable_rcv_irq()

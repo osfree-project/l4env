@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/BEObject.h
- *    \brief   contains the declaration of the class CBEObject
+ *  \brief   contains the declaration of the class CBEObject
  *
  *    \date    02/13/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -32,7 +32,6 @@
 
 #include "Object.h"
 #include <string>
-using namespace std;
 
 class CBERoot;
 class CBETarget;
@@ -41,13 +40,14 @@ class CBEStructType;
 class CBEUnionType;
 class CBEFile;
 class CFEBase;
-class CBEContext;
 class CBEHeaderFile;
 class CBEImplementationFile;
 
+#include "BECreateException.h"
+
 /** \class CBEObject
  *    \ingroup backend
- *    \brief The back-end base class
+ *  \brief The back-end base class
  *
  * This class is the base class for all classes of the back-end. It
  * implements several features, each back-end class might use.
@@ -58,13 +58,13 @@ class CBEObject : public CObject
 // standard constructor/destructor
 public:
     /** constructs a back-end base object
-     *    \param pParent the parent object of this one */
+     *  \param pParent the parent object of this one */
     CBEObject(CObject* pParent = 0);
     virtual ~CBEObject();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CBEObject(CBEObject &src);
 
@@ -77,8 +77,8 @@ public:
     virtual string GetTargetImplementationFileName();
 
 protected:
-    virtual void SetTargetFileName(CFEBase *pFEObject, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEBase* pFEObject);
+    virtual void SetTargetFileName(CFEBase *pFEObject);
+    virtual void CreateBackEnd(CFEBase* pFEObject);
 
 protected:
     /** \var string m_sTargetHeader
@@ -89,10 +89,6 @@ protected:
      *  \brief contains the calculated target file name  for the implementation file
      */
     string m_sTargetImplementation;
-    /** \var string m_sTargetTestsuite
-     *  \brief contains the calculated target file name  for the test-suite file
-     */
-    string m_sTargetTestsuite;
 };
 
 #endif // !__DICE_FE_BEOBJECT_H__

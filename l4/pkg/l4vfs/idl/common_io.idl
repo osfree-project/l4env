@@ -1,4 +1,4 @@
-/* -*- c -*- */ 
+/* -*- c -*- */
 /**
  * \file   l4vfs/idl/common_io.idl
  * \brief  
@@ -19,24 +19,28 @@ import <l4/l4vfs/types.h>
 library l4vfs
 {
     /**
-     * @brief Collection of some basic functions common for many other interfaces
+     * @brief Collection of some basic functions common for many other
+     *        interfaces
      */
     [uuid(51), abstract]
     interface common_io
     {
         [allow_reply_only]
         l4vfs_ssize_t read([in] object_handle_t handle,
-                           [out, size_is(count), ref, prealloc] char **buf,
+                           [out, size_is(count), ref, prealloc_client,
+			   prealloc_server] char **buf,
                            [in, out] l4vfs_size_t *count);
         [allow_reply_only]
         l4vfs_ssize_t write([in] object_handle_t handle,
-                            [in, prealloc, ref, size_is(count)] char *buf,
+                            [in, /*prealloc_server,*/ ref, size_is(count),
+                             max_is(L4VFS_WRITE_RCVBUF_SIZE)] char *buf,
                             [in, out] l4vfs_size_t *count);
         l4_int32_t    close([in] object_handle_t handle);
 
         l4_int32_t    ioctl([in] object_handle_t handle,
                             [in] int cmd,
-                            [in, out, prealloc, ref, size_is(count)] char **arg,
+                            [in, out, prealloc_client, ref, size_is(count)]
+			    char **arg,
                             [in, out] l4vfs_size_t *count );
 
         l4_int32_t    fcntl([in] object_handle_t handle,

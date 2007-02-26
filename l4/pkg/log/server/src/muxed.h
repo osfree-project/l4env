@@ -36,9 +36,9 @@ struct muxed_header {
 };
 
 extern l4_fpage_t channel_get_next_fpage(void);
-extern int channel_open(void);
-extern int channel_write(void);
-extern int channel_flush(void);
-extern int channel_close(void);
+extern int channel_open(l4_fpage_t page, int channel);
+extern int channel_write(int id, unsigned int offset, unsigned int size);
+extern int channel_flush(int id);
+extern int channel_close(int id);
 
 #endif /* __LOG_SERVER_SRC_MUXED_H */

@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEBinaryExpression.cpp
- *    \brief   contains the implementation of the class CFEBinaryExpression
+ *  \brief   contains the implementation of the class CFEBinaryExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -58,7 +58,7 @@ CFEBinaryExpression::~CFEBinaryExpression()
 }
 
 /** returns the integer value of this expression
- *    \return the integer value of this expression
+ *  \return the integer value of this expression
  * Depending of the operator, the values of the two operands are combined and the result
  * of this operation returned.
  */
@@ -127,10 +127,10 @@ long CFEBinaryExpression::GetIntValue()
 }
 
 /** checks the type of this expression
- *    \param nType the type to check for
- *    \return true if this expression is of the requested type
+ *  \param nType the type to check for
+ *  \return true if this expression is of the requested type
  */
-bool CFEBinaryExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEBinaryExpression::IsOfType(unsigned int nType)
 {
     switch (GetOperator())
     {
@@ -190,7 +190,7 @@ bool CFEBinaryExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /** returns the second operand
- *    \return the second operand
+ *  \return the second operand
  */
 CFEExpression *CFEBinaryExpression::GetOperand2()
 {
@@ -198,88 +198,11 @@ CFEExpression *CFEBinaryExpression::GetOperand2()
 }
 
 /** creates a copy of this object
- *    \return a reference to the new object
+ *  \return a reference to the new object
  */
 CObject *CFEBinaryExpression::Clone()
 {
     return new CFEBinaryExpression(*this);
-}
-
-/** serialize this object
- *    \param pFile the file to serialize from/to
- */
-void CFEBinaryExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<binary_expression>\n");
-      pFile->IncIndent();
-      GetOperand()->Serialize(pFile);
-      pFile->PrintIndent("<operator>");
-      switch (GetOperator())
-        {
-        case EXPR_MUL:
-        pFile->Print("*");
-        break;
-        case EXPR_DIV:
-        pFile->Print("/");
-        break;
-        case EXPR_MOD:
-        pFile->Print("%");
-        break;
-        case EXPR_PLUS:
-        pFile->Print("+");
-        break;
-        case EXPR_MINUS:
-        pFile->Print("-");
-        break;
-        case EXPR_LSHIFT:
-        pFile->Print("<<");
-        break;
-        case EXPR_RSHIFT:
-        pFile->Print(">>");
-        break;
-        case EXPR_LT:
-        pFile->Print("<");
-        break;
-        case EXPR_GT:
-        pFile->Print(">");
-        break;
-        case EXPR_LTEQU:
-        pFile->Print("<=");
-        break;
-        case EXPR_GTEQU:
-        pFile->Print(">=");
-        break;
-        case EXPR_EQUALS:
-        pFile->Print("==");
-        break;
-        case EXPR_NOTEQUAL:
-        pFile->Print("!=");
-        break;
-        case EXPR_BITAND:
-        pFile->Print("&");
-        break;
-        case EXPR_BITXOR:
-        pFile->Print("^");
-        break;
-        case EXPR_BITOR:
-        pFile->Print("|");
-        break;
-        case EXPR_LOGAND:
-        pFile->Print("&&");
-        break;
-        case EXPR_LOGOR:
-        pFile->Print("||");
-        break;
-        default:
-        break;
-        }
-      pFile->Print("</operator>\n");
-      GetOperand2()->Serialize(pFile);
-      pFile->DecIndent();
-      pFile->PrintIndent("</binary_expression>\n");
-      }
 }
 
 /** \brief print the object to a string

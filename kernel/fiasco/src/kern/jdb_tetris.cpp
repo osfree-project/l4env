@@ -206,11 +206,14 @@ void show_tile (void)
  */
 class Jdb_tetris_m 
   : public Jdb_module
-{};
+{
+public:
+  Jdb_tetris_m() FIASCO_INIT;
+};
 
 static Jdb_tetris_m jdb_tetris_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-PUBLIC
+IMPLEMENT
 Jdb_tetris_m::Jdb_tetris_m()
   : Jdb_module("MISC")
 {}
@@ -307,14 +310,14 @@ Jdb_tetris_m::action( int, void *&, char const *&, int & )
 }
 
 PUBLIC
-int const
+int
 Jdb_tetris_m::num_cmds() const
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_tetris_m::cmds() const
 {
   static Cmd cs[] =

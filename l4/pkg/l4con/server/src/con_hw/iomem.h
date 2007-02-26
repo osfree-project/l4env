@@ -13,10 +13,10 @@
 #ifndef __IOMEM_H_
 #define __IOMEM_H_
 
-extern int map_io_mem(l4_addr_t addr, l4_size_t size,
-		      const char *id, l4_addr_t *vaddr);
+int  map_io_mem(l4_addr_t addr, l4_size_t size, int cacheable,
+		const char *id, l4_addr_t *vaddr);
 
-extern void unmap_io_mem(l4_addr_t addr, l4_size_t size,
-		         const char *id, l4_addr_t vaddr);
+void unmap_io_mem(l4_addr_t addr, l4_size_t size,
+		  const char *id, l4_addr_t vaddr);
 
 #endif

@@ -1,4 +1,4 @@
-INTERFACE [abs_syscalls,rel_syscalls]:
+INTERFACE [abs_syscalls]:
 
 #include "initcalls.h"
 
@@ -9,7 +9,11 @@ public:
   static void init() FIASCO_INIT;
 };
 
-IMPLEMENTATION [abs_syscalls,rel_syscalls]:
+IMPLEMENTATION [abs_syscalls]:
+
+#include "static_init.h"
 
 #include <feature.h>
 KIP_KERNEL_FEATURE("kip_syscalls");
+
+STATIC_INITIALIZE(Sys_call_page);

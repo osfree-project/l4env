@@ -21,6 +21,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/omega0/client.h>
 
+#include <l4/dde_linux/ctor.h>
+
 /** Configuration for Linux header file usage */
 #ifndef DDE_LINUX
 # define DDE_LINUX
@@ -49,6 +51,21 @@ int l4dde_mm_kmem_avail(void);
 /** Return begin and end of kmem regions
  */
 int l4dde_mm_kmem_region(unsigned num, l4_addr_t *start, l4_addr_t *end);
+
+/** Address conversion region addition.
+ *
+ * \param  va    virtual start address
+ * \param  pa    physical start address
+ * \param  size  region size
+ */
+void l4dde_add_region(l4_addr_t va, l4_addr_t pa, l4_size_t size);
+
+/** Address conversion region removal.
+ *
+ * \param  va    virtual start address
+ * \param  size  region size
+ */
+void l4dde_remove_region(l4_addr_t va, l4_size_t size);
 
 /** Initialize time module.
  *
@@ -114,6 +131,8 @@ extern int l4dde_set_deferred_irq_handler(unsigned int irq,
                                           void *dev_def_id);
 
 int l4dde_pci_init(void);
+
+int l4dde_keventd_init(void);
 
 /** Initalize process module
  *

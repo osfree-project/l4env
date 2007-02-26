@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEWaitFunction.h
- *    \brief   contains the declaration of the class CL4BEWaitFunction
+ *  \brief   contains the declaration of the class CL4BEWaitFunction
  *
  *    \date    06/01/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -47,21 +47,18 @@ public:
     virtual ~CL4BEWaitFunction();
 
 public: // Public methods
-    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
-    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
 
 protected: // Protected methods
-    virtual bool HasVariableSizedParameters(int nDirection = DIRECTION_IN | DIRECTION_OUT);
-    virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteVariableInitialization(CBEFile* pFile,  CBEContext* pContext);
-    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
-    virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-
-protected:
+    virtual bool HasVariableSizedParameters(
+	int nDirection = DIRECTION_IN | DIRECTION_OUT);
+    virtual void WriteIPCErrorCheck(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteVariableInitialization(CBEFile* pFile);
+    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile);
+    virtual void WriteIPC(CBEFile *pFile);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
 };
 
 #endif

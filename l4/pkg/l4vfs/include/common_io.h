@@ -20,7 +20,7 @@ EXTERN_C_BEGIN
 
 ssize_t l4vfs_read(l4_threadid_t server,
                    object_handle_t fd,
-                   l4_int8_t **buf,
+                   char **buf,
                    size_t *count);
 
 ssize_t l4vfs_write(l4_threadid_t server,
@@ -39,8 +39,8 @@ int     l4vfs_ioctl(l4_threadid_t server,
 
 int     l4vfs_fcntl(l4_threadid_t server,
                     object_handle_t fd,
-                    l4_int32_t cmd,
-                    l4_int32_t *arg);
+                    int cmd,
+                    long *arg);
 
 EXTERN_C_END
 

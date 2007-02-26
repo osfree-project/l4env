@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/l4/L4BESndFunction.cpp
- *    \brief   contains the implementation of the class CL4BESndFunction
+ *  \file    dice/src/be/l4/L4BESndFunction.cpp
+ *  \brief   contains the implementation of the class CL4BESndFunction
  *
- *    \date    06/01/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    06/01/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,16 +30,20 @@
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/L4BEClassFactory.h"
 #include "be/BEContext.h"
-#include "be/BEOpcodeType.h"
+#include "be/BEFile.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BEDeclarator.h"
 #include "be/BEMarshaller.h"
+#include "be/BEMsgBuffer.h"
 #include "be/BEClient.h"
-#include "be/l4/L4BEMsgBufferType.h"
+#include "be/BEUserDefinedType.h"
+#include "be/BETrace.h"
 #include "be/l4/L4BESizes.h"
-#include "be/l4/L4BEIPC.h"
-
-#include "TypeSpec-Type.h"
+#include "be/l4/v2/L4V2BEIPC.h"
+#include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
+#include "Compiler.h"
+#include <cassert>
 
 CL4BESndFunction::CL4BESndFunction()
 {
@@ -50,32 +54,50 @@ CL4BESndFunction::~CL4BESndFunction()
 {
 }
 
-/** \brief writes the variable declaration
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
+/** \brief initialize the instance of this class
+ *  \param pFEOperation the front-end operation to use as reference
+ *  \return true if successful
+ *
+ * For L4 we need result dope for IPC
  */
-void CL4BESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+void
+CL4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation)
 {
-    // first call base class
-    CBESndFunction::WriteVariableDeclaration(pFile, pContext);
+    CBESndFunction::CreateBackEnd(pFEOperation);
 
-    // write result variable
-    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    pFile->PrintIndent("l4_msgdope_t %s = { msgdope: 0 };\n", sResult.c_str());
+    // add local variables
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
+    try
+    {
+	AddLocalVariable(sDope, sResult, 0, 
+	    string("{ msgdope: 0 }"));
+    }
+    catch (CBECreateException *e)
+    {
+	e->Print();
+	delete e;
+
+	string exc = string(__func__);
+	exc += " failed, because variable \"" + sResult + 
+	    "\" could not be created.";
+	throw new CBECreateException(exc);
+    }
 }
 
 /** \brief writes the invocation code
  *  \param pFile the file tow rite to
- *  \param pContext the context of the write opeation
  */
-void CL4BESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+void CL4BESndFunction::WriteInvocation(CBEFile * pFile)
 {
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
     // after marshalling set the message dope
-    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SEND, GetSendDirection(), pContext);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+	    GetSendDirection());
     // invocate
-    if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+    if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
     {
         // sometimes it's possible to abort a call of a client.
         // but the client wants his call made, so we try until
@@ -84,57 +106,64 @@ void CL4BESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
         *pFile << "\t{\n";
         pFile->IncIndent();
     }
-    WriteIPC(pFile, pContext);
-    if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+    WriteIPC(pFile);
+    if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
     {
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
         // now check if call has been canceled
-        string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+        string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
         pFile->DecIndent();
         *pFile << "\t} while ((L4_IPC_ERROR(" << sResult <<
             ") == L4_IPC_SEABORTED) ||\n";
         *pFile << "\t         (L4_IPC_ERROR(" << sResult <<
             ") == L4_IPC_SECANCELED));\n";
     }
-    WriteIPCErrorCheck(pFile, pContext);
+    WriteIPCErrorCheck(pFile);
 }
 
 /** \brief writes the IPC error check
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  *
  * \todo write IPC error checking
  */
-void CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext)
+void 
+CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile)
 {
-    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pDecl = *iterCE;
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    CBETypedDeclarator *pEnv = GetEnvironment();
+    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
 
-    *pFile << "\tif (L4_IPC_IS_ERROR(" << sResult << "))\n" <<
-              "\t{\n";
+    *pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n" 
+	<< "\t{\n";
     pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
-    *pFile << "\tCORBA_exception_set(";
+    string sSetFunc;
+    if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
+	"CORBA_Server_Environment")
+	sSetFunc = "CORBA_server_exception_set";
+    else
+	sSetFunc = "CORBA_exception_set";
+    *pFile << "\t" << sSetFunc << "(";
     if (pDecl->GetStars() == 0)
         *pFile << "&";
-    pDecl->WriteName(pFile, pContext);
+    pDecl->WriteName(pFile);
     *pFile << ",\n";
     pFile->IncIndent();
     *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
               "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
               "\t0);\n";
     pFile->DecIndent();
-    // env.ipc_error = L4_IPC_ERROR(result);
-    *pFile << "\t";
-    pDecl->WriteName(pFile, pContext);
-    if (pDecl->GetStars())
-        *pFile << "->";
-    else
-        *pFile << ".";
-    *pFile << "_p.ipc_error = L4_IPC_ERROR(" << sResult << ");\n";
+    // DICE_IPC_ERROR(env) = L4_IPC_ERROR(result);
+    string sEnv;
+    if (pDecl->GetStars() == 0)
+	sEnv = "&";
+    sEnv += pDecl->GetName();
+    *pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" 
+	<< sResult << ");\n";
     // return
-    WriteReturn(pFile, pContext);
+    WriteReturn(pFile);
     // close }
     pFile->DecIndent();
     *pFile << "\t}\n";
@@ -142,44 +171,29 @@ void CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext
 
 /** \brief init message buffer size dope
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CL4BESndFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void
+CL4BESndFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    CBESndFunction::WriteVariableInitialization(pFile, pContext);
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    CBESndFunction::WriteVariableInitialization(pFile);
+    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SIZE, 0, pContext);
-}
-
-/** \brief decides whether two parameters should be exchanged during sort
- *  \param pPrecessor the 1st parameter
- *  \param pSuccessor the 2nd parameter
- *    \param pContext the context of the sorting
- *  \return true if parameters pPrecessor is smaller than pSuccessor
- */
-bool
-CL4BESndFunction::DoExchangeParameters(CBETypedDeclarator * pPrecessor,
-    CBETypedDeclarator * pSuccessor,
-    CBEContext *pContext)
-{
-    if (!(pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
-        pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
-        return true;
-    // if first is flexpage and second is not, we prohibit an exchange
-    // explicetly
-    if ( pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE) &&
-        !pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
-        return false;
-    return CBESndFunction::DoExchangeParameters(pPrecessor, pSuccessor, pContext);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
+	    GetSendDirection());
 }
 
 /** \brief write the IPC code
  *  \param pFile the file to write to
- *  \param pContext the context of the write operation
  */
-void CL4BESndFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
+void CL4BESndFunction::WriteIPC(CBEFile *pFile)
 {
-    assert(m_pComm);
-    m_pComm->WriteSend(pFile, this, pContext);
+    assert(m_pTrace);
+    m_pTrace->BeforeCall(pFile, this);
+    
+    CBECommunication *pComm = GetCommunication();
+    assert(pComm);
+    pComm->WriteSend(pFile, this);
+
+    m_pTrace->AfterCall(pFile, this);
 }
+

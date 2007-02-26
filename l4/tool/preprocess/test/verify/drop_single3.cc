@@ -28,3 +28,12 @@ Gen_foo::foo( int y )
   // just return y
   return y;
 }
+
+#line 53 "dropsection.cpp"
+
+int
+Gen_foo::tust( int y )
+{
+  // just return y
+  return y;
+}

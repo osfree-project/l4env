@@ -15,11 +15,13 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/l4_macros.h>
 #include <l4/util/util.h>
 #include <l4/rmgr/proto.h>
-#ifdef ARCH_x86
+#if defined ARCH_x86 | defined ARCH_amd64
 #include <l4/util/port_io.h>
 #endif
+#include <l4/sigma0/sigma0.h>
 
 #include "bootquota.h"
 #include "memmap.h"
@@ -45,6 +47,8 @@
 #include "task.h"
 #include "region.h"
 #include "vm.h"
+#include "macros.h"
+#include "kinfo.h"
 
 static int verbose;
 static int no_symbols;			/* 1=don't load module symbols */
@@ -54,12 +58,8 @@ static int fiasco_lines;		/* found fiasco lines */
 static int configfile;			/* found config file */
 static int memdump;
 
-extern l4util_mb_info_t _mbi;
-
        l4util_mb_info_t *mb_ptr;	/* is written by crt */
 static l4util_mb_info_t *mb_info;
-static char *mb_cmdline;
-static char *mb_mod_names;		/* module cmdlines */
 static l4util_mb_vbe_ctrl_t *mb_vbe_ctrl; /* VESA contr. info  */
 static l4util_mb_vbe_mode_t *mb_vbe_mode; /* VESA mode info  */
 static l4util_mb_mod_t *mb_mod;		/* multiboot modules  */
@@ -78,6 +78,39 @@ static char *config_end;
 
 extern void reset_malloc(void);
 
+#ifndef SIGMA0_REQ_MAGIC
+#error Update your sigma0/libsigma0
+#endif
+
+/*
+ * Map the KIP to the given address 'to_addr'
+ */
+static l4_kernel_info_t *
+map_kip(l4_addr_t to_addr)
+{
+  l4_msgdope_t result;
+  l4_snd_fpage_t sfpage;
+  int error;
+  l4_kernel_info_t *k = (l4_kernel_info_t *)to_addr;
+
+  l4_fpage_unmap(l4_fpage((l4_umword_t)k, L4_LOG2_PAGESIZE, 0, 0),
+		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+
+  error = l4_ipc_call(my_pager,
+		      L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0,
+		      L4_IPC_MAPMSG((l4_umword_t)k, L4_LOG2_PAGESIZE),
+			&sfpage.snd_base, &sfpage.fpage.fpage,
+		      L4_IPC_NEVER, &result);
+
+  if (error)
+    boot_panic("can't map KIP: IPC error 0x%02x", error);
+
+  if (k->magic != L4_KERNEL_INFO_MAGIC)
+    boot_panic("invalid KIP magic %08x", k->magic);
+
+  return k;
+}
+
 /* find the corresponding module for a name */
 void
 find_module(int *cfg_mod, char* cfg_name)
@@ -87,7 +120,7 @@ find_module(int *cfg_mod, char* cfg_name)
 
   for (i = first_task_module; i < mb_info->mods_count; i++)
     {
-      if (!(n = (char *) mb_mod[i].cmdline))
+      if (!(n = L4_CHAR_PTR mb_mod[i].cmdline))
 	{
 	  boot_warning("cmdlines unsupported, can't find modname %s\n", 
 		       cfg_name);
@@ -129,7 +162,7 @@ check_module(unsigned cfg_mod, char *cfg_name)
   if (cfg_mod < 1)
     boot_error("no boot module associated with modname %s", cfg_name);
 
-  else if (!(n = (char *)mb_mod[cfg_mod].cmdline))
+  else if (!(n = L4_CHAR_PTR mb_mod[cfg_mod].cmdline))
     boot_error("cmdlines unsupported, can't verify modname %s", cfg_name);
 
   else if (!strstr(n, cfg_name))
@@ -154,6 +187,8 @@ free_module_image(unsigned mod_no)
 
   /* for sanity/security */
   memset((void*)beg, 0, end-beg);
+
+  region_free(beg, end);
 }
 
 static void
@@ -163,8 +198,8 @@ configure(void)
     {
       char *start, *end;
 
-      start = (char *) mb_mod[config_module].mod_start;
-      end   = (char *) mb_mod[config_module].mod_end;
+      start = L4_CHAR_PTR mb_mod[config_module].mod_start;
+      end   = L4_CHAR_PTR mb_mod[config_module].mod_end;
 
       if (strncmp(start, "#!rmgr", 6)
           && strncmp(start, "#!roottask", 10))
@@ -217,7 +252,7 @@ configure(void)
       if (small_space_size > 64)
 	{
 	  small_space_size = 0;
-	  boot_error(" small_space_size 0x%08x too large", s);
+	  boot_error(" small_space_size 0x"l4_addr_fmt" too large", s);
 	}
       else
 	{
@@ -302,192 +337,108 @@ setup_task(l4_threadid_t t)
 }
 
 /**
- * Fiasco UX has no Bootstrap.
- *
- * We have to copy the MBI structure for ourself.
- */
-static void
-init_noloader(void)
-{
-  int i;
-
-  l4_version = VERSION_FIASCO;
-
-  mb_info = (l4util_mb_info_t*)(&_mbi);
-
-  /* copy multiboot info structure */
-  memcpy(mb_info, mb_ptr, sizeof(l4util_mb_info_t));
-
-  mb_cmdline = (char*)(mb_info + 1);
-
-  /* copy roottask command line, if available */
-  if (((l4util_mb_mod_t*)mb_info->mods_addr)[1].cmdline)
-    {
-      /* Setup RMGR cmdline */
-      sprintf (mb_cmdline, "%s",
-	       (char *)((l4util_mb_mod_t*)mb_info->mods_addr)[1].cmdline);
-      mb_info->cmdline = (l4_addr_t) mb_cmdline;
-    }
-  else
-    *mb_cmdline = 0;
-
-  if (mb_info->flags & L4UTIL_MB_VIDEO_INFO)
-    {
-      /* copy extended VIDEO information, if available */
-      mb_vbe_mode = (l4util_mb_vbe_mode_t*)(mb_cmdline + strlen(mb_cmdline));
-      if (mb_info->vbe_mode_info)
-	{
-	  memcpy(mb_vbe_mode, (void*)(mb_info->vbe_mode_info),
-		 sizeof(l4util_mb_vbe_mode_t));
-	  mb_info->vbe_mode_info = (l4_addr_t)mb_vbe_mode;
-	}
-
-      /* copy VBE controller info structure */
-      mb_vbe_ctrl = (l4util_mb_vbe_ctrl_t*)(mb_vbe_mode + 1);
-      if (mb_info->vbe_ctrl_info)
-	{
-	  memcpy(mb_vbe_ctrl, (void*)(mb_info->vbe_ctrl_info),
-		 sizeof(l4util_mb_vbe_ctrl_t));
-	  mb_info->vbe_ctrl_info = (l4_addr_t)mb_vbe_ctrl;
-	}
-    }
-
-  /* copy module description */
-  mb_mod = (l4util_mb_mod_t*)(mb_vbe_ctrl + 1);
-  for (i=2; i<mb_info->mods_count; i++)
-    {
-      memcpy(mb_mod+(i-2), ((l4util_mb_mod_t*)mb_info->mods_addr)+i,
-	     sizeof(l4util_mb_mod_t));
-    }
-  mb_info->mods_addr = (l4_addr_t)mb_mod;
-  mb_info->mods_count = mb_info->mods_count-2;
-
-  /* copy command lines of modules */
-  mb_mod_names = (char*)(mb_mod + mb_info->mods_count);
-  for (i=0; i<mb_info->mods_count; i++)
-    {
-      char * name = (char *) mb_mod[i].cmdline;
-
-      strcpy(mb_mod_names, name ? name : "[unknown]");
-      if (name)
-        mb_mod[i].cmdline = (l4_addr_t)mb_mod_names;
-      else
-	mb_mod[i].cmdline = 0;
-      mb_mod_names  = (char*)(mb_mod_names + strlen(mb_mod_names) + 1);
-    }
-}
-
-/**
  * set configuration to default values and parse command line.
  */
 static void
 init_config(void)
 {
   /* init multiboot info structures provided by bootstrap */
-  if (!ux_running)
-    {
-      mb_info      = &_mbi;
-      mb_vbe_ctrl  = (l4util_mb_vbe_ctrl_t*)mb_info->vbe_ctrl_info;
-      mb_vbe_mode  = (l4util_mb_vbe_mode_t*)mb_info->vbe_mode_info;
-      mb_mod       = (l4util_mb_mod_t*)mb_info->mods_addr;
-      mb_mod_names = (char*)mb_mod[0].cmdline;
-    }
+  kip = map_kip(0x1000);
+
+  if (kip->version >> 24 == 0x87)
+    l4_version = VERSION_FIASCO;
+
+  if (kip->user_ptr)
+    mb_info = (l4util_mb_info_t*)kip->user_ptr;
+  else
+    boot_panic("no multiboot info found");
+
+  mb_vbe_ctrl  = L4_MB_VBE_CTRL_PTR mb_info->vbe_ctrl_info;
+  mb_vbe_mode  = L4_MB_VBE_MODE_PTR mb_info->vbe_mode_info;
+  mb_mod       = L4_MB_MOD_PTR mb_info->mods_addr;
 
   /* set mem size */
   mem_upper = mb_info->mem_upper;
   mem_lower = mb_info->mem_lower & ~3; // round down to next 4k boundary
-  mem_high  = (mb_info->mem_upper + 1024) << 10;
+  mem_high  = root_kinfo_mem_high()-RAM_BASE;
   mem_high  = l4_trunc_page(mem_high); // round down to next 4k boundary
 
   if (mem_lower > 0x9F000 >> 10)
     mem_lower = 0x9F000 >> 10;
-  if (mem_high > MEM_MAX)
+  if (MEM_MAX && mem_high > MEM_MAX)
     mem_high = MEM_MAX;
 
   quiet = 0;
   verbose = 0;
+  first_task_module = 3; // 0 is fiasco, 1 is sigma0, 2 is roottask
 
-  /* determine the position of the Fiasco lines, Fiasco symbols, the config
-   * file and the first loadable module.
-   * Attention: boot_module 0 is the kernel. */
-  first_task_module = 0;
+  char *cmdl = (char*)mb_mod[first_task_module-1].cmdline;
 
-  if (mb_info->flags & L4UTIL_MB_CMDLINE)
+  if (1 || verbose)
+    printf("  Command line found: \"%s\"\n", cmdl);
+
+  /* skip module name */
+  while (*cmdl && !isspace(*cmdl))
+    cmdl++;
+
+  while (*cmdl)
     {
-      char *cmdl = (char *)mb_info->cmdline;
+      while (isspace(*cmdl))
+	cmdl++;
 
-      if (verbose)
-	printf("  Command line found: \"%s\"\n", cmdl);
+      if (strstr(cmdl, "-quiet") == cmdl)
+	quiet = 1;
+      else if (strstr(cmdl, "-verbose") == cmdl)
+	verbose = 1;
+      else if (strstr(cmdl, "-memdump") == cmdl)
+	memdump = 1;
+      /* give debug information */
+      else if (strstr(cmdl, "-nopentium") == cmdl)
+	no_pentium = 1;
+      /* don't extract  symbols information from modules */
+      else if (strstr(cmdl, "-nosymbols") == cmdl)
+	no_symbols = 1;
+      /* don't extract lines information from modules */
+      else if (strstr(cmdl, "-nolines") == cmdl)
+	no_lines = 1;
+      /* we got fiasco symbols as module */
+      else if (strstr(cmdl, "-symbols") == cmdl)
+	{
+	  fiasco_symbols = 1;
+	  symbols_module = first_task_module++;
+	}
+      /* we got fiasco lines as module */
+      else if (strstr(cmdl, "-lines") == cmdl)
+	{
+	  fiasco_lines = 1;
+	  lines_module = first_task_module++;
+	}
+      /*  we got config as loaded module */
+      else if (strstr(cmdl, "-configfile") == cmdl)
+	{
+	  configfile = 1;
+	  config_module = first_task_module++;
+	}
+      else if (strstr(cmdl, "-- ") == cmdl)
+	{
+	  cmdl += 3;
+	  break; /* '--' means end of parameter processing */
+	}
+      else if (*cmdl != '-')
+	break; /* Non parameter follows -> configuration data */
 
-      /* skip module name */
+      /* Advance to next whitespace */
       while (*cmdl && !isspace(*cmdl))
-        cmdl++;
+	cmdl++;
+    }
 
-      while (*cmdl)
-	{
-	  while (isspace(*cmdl))
-	    cmdl++;
-
-	  if (strstr(cmdl, "l4_version=") == cmdl)
-	    {
-	      l4_version = strtoul((strstr((char *)
-				   mb_info->cmdline, "l4_version=")
-				   + strlen("l4_version=")), NULL, 10);
-	    }
-	  else if (strstr(cmdl, "-quiet") == cmdl)
-	    quiet = 1;
-	  else if (strstr(cmdl, "-verbose") == cmdl)
-	    verbose = 1;
-	  else if (strstr(cmdl, "-memdump") == cmdl)
-	    memdump = 1;
-	  /* give debug information */
-	  else if (strstr(cmdl, "-nopentium") == cmdl)
-	    no_pentium = 1;
-	  /* don't extract  symbols information from modules */
-	  else if (strstr(cmdl, "-nosymbols") == cmdl)
-	    no_symbols = 1;
-	  /* don't extract lines information from modules */
-	  else if (strstr(cmdl, "-nolines") == cmdl)
-	    no_lines = 1;
-	  /* we got fiasco symbols as module */
-	  else if (strstr(cmdl, "-symbols") == cmdl)
-	    {
-	      fiasco_symbols = 1;
-              symbols_module = first_task_module++;
-	    }
-	  /* we got fiasco lines as module */
-	  else if (strstr(cmdl, "-lines") == cmdl)
-	    {
-	      fiasco_lines = 1;
-	      lines_module = first_task_module++;
-	    }
-	  /*  we got config as loaded module */
-	  else if (strstr(cmdl, "-configfile") == cmdl)
-	    {
-	      configfile = 1;
-	      config_module = first_task_module++;
-	    }
-	  else if (strstr(cmdl, "-- ") == cmdl)
-	    {
-	      cmdl += 3;
-	      break; /* '--' means end of parameter processing */
-	    }
-	  else if (*cmdl != '-')
-	    break; /* Non parameter follows -> configuration data */
-
-	  /* Advance to next whitespace */
-	  while (*cmdl && !isspace(*cmdl))
-	    cmdl++;
-	}
-
-      /* Everything else is configuration */
-      if (*cmdl)
-	{
-	  config_start = cmdl;
-	  config_end = config_start + strlen(config_start);
-	  if (verbose)
-	    printf("  Cmdline configuration: \"%s\"\n", cmdl);
-	}
+  /* Everything else is configuration */
+  if (*cmdl)
+    {
+      config_start = cmdl;
+      config_end = config_start + strlen(config_start);
+      if (verbose)
+	printf("  Cmdline configuration: \"%s\"\n", cmdl);
     }
 
   /* first_task_module now points to the first loadable module */
@@ -532,7 +483,7 @@ init_quota(void)
 static void
 init_irq(void)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) | defined(ARCH_amd64)
   int i;
   l4_umword_t code;
 
@@ -616,29 +567,29 @@ pagein_4MB_memory(void)
 #ifdef ARCH_x86
 		 + L4_SUPERPAGESIZE
 #endif
-       ; address - ram_base < MEM_MAX;
+
+#ifdef ARCH_amd64
+		 + 2*L4_SUPERPAGESIZE
+#endif
+       ;
+       MEM_MAX ? address - ram_base < MEM_MAX : address != MEM_MAX;
        address += L4_SUPERPAGESIZE)
     {
-      if (address & (L4_SUPERPAGESIZE-1))
-	{
-	  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-			      address | 1, 0,
-			      L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-			      &sfpage.snd_base, &sfpage.fpage.fpage,
-			      L4_IPC_NEVER, &result);
-	}
-      else
-	{
-	  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-			      address | 1, L4_LOG2_SUPERPAGESIZE << 2,
-			      L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-			      &sfpage.snd_base, &sfpage.fpage.fpage,
-			      L4_IPC_NEVER, &result);
-	}
-      /* XXX should i check for errors? */
+      // new
+      error = l4_ipc_call(my_pager,
+			  L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_RAM,
+			    l4_fpage(address, 
+				     (address & (L4_SUPERPAGESIZE-1))
+					? L4_LOG2_PAGESIZE
+					: L4_LOG2_SUPERPAGESIZE,
+				      0, 0).fpage,
+			  L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
+			    &sfpage.snd_base, &sfpage.fpage.fpage,
+	    		  L4_IPC_NEVER, &result);
+      /* XXX should we check for errors? */
 
       if (!l4_ipc_fpage_received(result))
-	    continue;
+	continue;
 
       if (!(l4_ipc_is_fpage_writable(sfpage.fpage)))
 	  boot_panic("received not writable flexpage at %x", address);
@@ -681,44 +632,41 @@ pagein_4MB_memory(void)
 static void
 pagein_4KB_memory(void)
 {
-  l4_msgdope_t result;
-  l4_snd_fpage_t sfpage;
-  int error;
+  l4_addr_t base;
 
   for (;;)
     {
-      error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-			  0xfffffffc, 0,
-			  L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-			  &sfpage.snd_base, &sfpage.fpage.fpage,
-			  L4_IPC_NEVER, &result);
+      switch (l4sigma0_map_anypage(my_pager, 0, L4_WHOLE_ADDRESS_SPACE, &base))
+	{
+	case -2:
+	  boot_panic("can't map memory pages: (IPC error)");
+	  return;
 
-      if (error)
-	boot_panic("can't map memory pages: (IPC error 0x%02x)", error);
+	case -3:
+	  /* no more pages from sigma0 */
+	  return;
 
-      if (! sfpage.fpage.fpage)
-	break; /* no more pages from sigma0 */
-
-      if (sfpage.snd_base >= MEM_MAX + ram_base)
+	}
+      if (MEM_MAX && base >= MEM_MAX + (unsigned long)ram_base)
+	/* cannot handle this page */
 	continue;
 
       /* set mem_high to new value */
-      if (mem_high < sfpage.snd_base - ram_base + L4_PAGESIZE)
-	mem_high = sfpage.snd_base - ram_base + L4_PAGESIZE;
+      if (mem_high < base - ram_base + L4_PAGESIZE)
+	mem_high = base - ram_base + L4_PAGESIZE;
 
-      if (memmap_owner_page(sfpage.snd_base) == O_FREE)
+      if (memmap_owner_page(base) == O_FREE)
 	{
-	  boot_warning("got page 0x%08x twice!\n",
-		 sfpage.snd_base);
+	  boot_warning("got page 0x"l4_addr_fmt" twice!\n", base);
 	  continue;
 	}
 
-      memmap_free_page(sfpage.snd_base, O_RESERVED);
+      memmap_free_page(base, O_RESERVED);
       free_size += L4_PAGESIZE;
     }
 }
 
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
 /**
  * page in BIOS data area page explicitly.  the BIOS area will be
  * marked "reserved" and special-cased in the pager() in memmap.c
@@ -740,8 +688,6 @@ pagein_bios_memory(void)
     boot_panic("can't map BIOS area (IPC error 0x%02x)", error);
 
   region_add(sfpage.snd_base, 1U << sfpage.fpage.fp.size, -1, "BIOS area");
-  printf("  [%08x-%08x) added BIOS area\n",
-      sfpage.snd_base, 1U << sfpage.fpage.fp.size);
 }
 
 /**
@@ -764,7 +710,8 @@ pagein_adapter_memory(void)
        address +=  L4_PAGESIZE)
     {
       error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-			  address, 0,
+			  SIGMA0_REQ_FPAGE_IOMEM_CACHED, 
+			  l4_fpage(address, L4_LOG2_PAGESIZE, 0, 0).fpage, 
 			  L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
 			  &sfpage.snd_base, &sfpage.fpage.fpage,
 			  L4_IPC_NEVER, &result);
@@ -775,8 +722,6 @@ pagein_adapter_memory(void)
     }
 
   region_add(adapter_space_start, adapter_space_end, -1, "Adapter Space Area");
-  printf("  [%08x-%08x) added adapter space\n",
-      adapter_space_start, adapter_space_end);
 }
 #endif
 
@@ -795,15 +740,17 @@ reserve_module_memory(void)
   if (!mb_info->mods_count)
     return;
 
-  if (ux_running)
+  unsigned i = 3;
+  mod_range_start = ~0UL;
+  mod_range_end = 0;
+
+  for (; i < mb_info->mods_count; ++i)
     {
-      mod_range_start = mb_mod[mb_info->mods_count-1].mod_start;
-      mod_range_end   = mb_mod[0].mod_end;
-    }
-  else
-    {
-      mod_range_start = mb_mod[0].mod_start;
-      mod_range_end   = mb_mod[mb_info->mods_count-1].mod_end;
+      if (mb_mod[i].mod_start < mod_range_start)
+	mod_range_start = mb_mod[i].mod_start;
+
+      if (mb_mod[i].mod_end > mod_range_end)
+	mod_range_end = mb_mod[i].mod_end;
     }
 
   for (a = l4_trunc_page(mod_range_start); a < mod_range_end; a += L4_PAGESIZE)
@@ -811,7 +758,8 @@ reserve_module_memory(void)
       /* check if we really can touch the memory */
       if (a >= mem_high + ram_base)
 	{
-	  boot_panic("can't reserve memory at %08x for boot modules. ", a);
+	  boot_panic("can't reserve memory at "l4_addr_fmt
+	      	     " for boot modules. ", a);
 
 	  printf("  The RAM at this address is owned by the kernel.\n");
 	  if (l4_version == VERSION_FIASCO)
@@ -827,9 +775,7 @@ reserve_module_memory(void)
       l4_touch_rw((void *)a, 4);
     }
 
-  region_add(mod_range_start, l4_round_page(mod_range_end), -1, "Boot Modules");
-  printf("  [%08x-%08x] reserved for boot modules\n",
-         mod_range_start, l4_round_page(mod_range_end));
+  region_add(mod_range_start, mod_range_end, -1, "Boot Modules");
 }
 
 /**
@@ -851,8 +797,7 @@ reserve_rmgr_memory(void)
       l4_touch_rw((void *)a, 4);
     }
 
-  region_add(start, l4_round_page(end), -1, "Roottask");
-  printf("  [%08x-%08x] reserved for Roottask\n", start, l4_round_page(end));
+  region_add(start, end, -1, "Roottask");
 }
 
 
@@ -863,7 +808,7 @@ reserve_rmgr_memory(void)
 static void
 reserve_symbols_memory(void)
 {
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
   l4_addr_t start = mb_mod[symbols_module].mod_start;
   l4_addr_t end   = mb_mod[symbols_module].mod_end;
   l4_addr_t size  = end - start;
@@ -890,8 +835,6 @@ reserve_symbols_memory(void)
   fiasco_register_symbols(tid, address, size);
 
   region_add(address, address+size, -1, "Fiasco Symbols");
-  printf("  [%08x-%08x] reserved for Fiasco symbols\n",
-      address, address+size);
 #else
   printf("Loading Fiasco symbols not supported.\n");
 #endif
@@ -906,7 +849,7 @@ reserve_symbols_memory(void)
 static void
 reserve_lines_memory(void)
 {
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
   l4_addr_t start = mb_mod[lines_module].mod_start;
   l4_addr_t end   = mb_mod[lines_module].mod_end;
   l4_addr_t size  = end - start;
@@ -933,8 +876,6 @@ reserve_lines_memory(void)
   fiasco_register_lines(tid, address, size);
 
   region_add(address, address+size, -1, "Fiasco Lines");
-  printf("  [%08x-%08x] reserved for Fiasco lines\n",
-      address, address+size);
 #else
   printf("Loading of Fiasco Lines not supported.\n");
 #endif
@@ -942,29 +883,13 @@ reserve_lines_memory(void)
   free_module_image(lines_module);
 }
 
+
 static void
 check_for_ux(void)
 {
-  l4_msgdope_t result;
-  l4_snd_fpage_t sfpage;
-  int error;
   const char *version_str;
 
-  kip = (l4_kernel_info_t *) 0x2000;
-  l4_fpage_unmap(l4_fpage((l4_umword_t) kip, L4_LOG2_PAGESIZE, 0, 0),
-		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-
-  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-		      1, 1,
-		      L4_IPC_MAPMSG((l4_umword_t) kip, L4_LOG2_PAGESIZE),
-		      &sfpage.snd_base, &sfpage.fpage.fpage,
-		      L4_IPC_NEVER, &result);
-
-  if (error)
-    boot_panic("can't map KIP: IPC error 0x%02x", error);
-
-  if (kip->magic != L4_KERNEL_INFO_MAGIC)
-    boot_panic("invalid KIP magic %08x", kip->magic);
+  kip = map_kip(0x1000);
 
   version_str = (const char*)
 		    ((l4_addr_t)kip + (kip->offset_version_strings << 4));
@@ -992,31 +917,12 @@ check_for_ux(void)
 static void
 reserve_KIP(void)
 {
-  l4_msgdope_t result;
-  l4_snd_fpage_t sfpage;
-  int error;
-
-  kip = (l4_kernel_info_t *) 0x1000;
-  l4_fpage_unmap(l4_fpage((l4_umword_t) kip, L4_LOG2_PAGESIZE, 0, 0),
-		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-
-  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-		      1, 1,
-		      L4_IPC_MAPMSG((l4_umword_t) kip, L4_LOG2_PAGESIZE),
-		      &sfpage.snd_base, &sfpage.fpage.fpage,
-		      L4_IPC_NEVER, &result);
-
-  if (error)
-    boot_panic("can't map KIP: IPC error 0x%02x", error);
-
-  if (kip->magic != L4_KERNEL_INFO_MAGIC)
-    boot_panic("invalid KIP magic %08x", kip->magic);
+  kip = map_kip(0x1000+ram_base);
 
   memmap_set_page((l4_umword_t) kip, O_RESERVED);
   reserved_size += L4_PAGESIZE;
 
-  region_add((l4_addr_t)kip, ((l4_addr_t)kip)+L4_PAGESIZE, -1, "KIP");
-  printf("  [%08x-%08x) reserved for KIP\n", 0x1000, 0x2000);
+  region_add((l4_addr_t)kip, (l4_addr_t)kip + L4_PAGESIZE, -1, "KIP");
 }
 
 /**
@@ -1029,18 +935,19 @@ reserve_task_memory (l4_addr_t start, l4_addr_t end, int task_no, int mod_no)
   l4_addr_t address;
   int region_no;
 
-  printf("[%08x-%08x]", start, end);
+  printf("["l4_addr_fmt"-"l4_addr_fmt"]", start, end);
 
   for (address = l4_trunc_page(start); address < end; address += L4_PAGESIZE)
     {
       // XXX this check is also done by memmap_alloc_page
       if (!quota_check_mem(task_no, address, L4_PAGESIZE))
-        boot_panic("can't allocate page at 0x%08x: not in quota", address);
+        boot_panic("can't allocate page at 0x"l4_addr_fmt": not in quota", 
+	           address);
 
       if (!memmap_alloc_page(address, task_no))
 	{
 	  printf("\nRoottask: cannot load binary "
-		 "because address at %08x not free\n", address);
+		 "because address at "l4_addr_fmt" not free\n", address);
 
 	  if ((region_no = (region_overlaps(start, end))))
 	    {
@@ -1052,14 +959,14 @@ reserve_task_memory (l4_addr_t start, l4_addr_t end, int task_no, int mod_no)
 	      region_print(region_no);
 	    }
 	  else
-	    printf("  for unkown reason\n");
+	      printf("  for unkown reason\n");
 
-	  boot_panic("can't allocate page at 0x%08x: owned by #%02x",
+	  boot_panic("can't allocate page at 0x"l4_addr_fmt": owned by #%02x",
 	      address, memmap_owner_page(address));
 	}
     }
 
-  region_add(start, l4_round_page(end), task_no,
+  region_add(start, end, task_no,
 	     (char*)get_module_name(&mb_mod[mod_no], "task"));
 }
 
@@ -1069,16 +976,10 @@ reserve_task_memory (l4_addr_t start, l4_addr_t end, int task_no, int mod_no)
 static void
 free_high_ram(void)
 {
-#ifdef ARCH_x86
-  l4_addr_t address;
-
-  for (address = 0x8000; address < 0x10000;
-       address += L4_SUPERPAGESIZE/0x10000) /* scaled by 0x10000**-1 to
-					       prevent overflow */
-    {
-      memmap_free_superpage(address * 0x10000, O_RESERVED);
-    }
-#endif
+  l4_addr_t page;
+  for (page = l4_round_superpage(mem_high+ram_base) >> L4_SUPERPAGESHIFT;
+      page < SUPERPAGE_MAX; page++)
+    memmap_free_superpage(page << L4_SUPERPAGESHIFT, O_RESERVED);
 }
 
 /**
@@ -1088,15 +989,17 @@ static void
 free_unused_memory(void)
 {
   l4_addr_t address;
+  const l4_addr_t free_beg = l4_round_page(__memmap + mem_high/L4_PAGESIZE);
+  const l4_addr_t free_end = l4_round_page(&_end);
 
-  for (address  = l4_round_page(__memmap + mem_high/L4_PAGESIZE);
-       address  < l4_round_page(&_end);
-       address += L4_PAGESIZE)
+  for (address  = free_beg; address < free_end; address += L4_PAGESIZE)
     {
       memset((void*)address, 0, L4_PAGESIZE);
       if (!memmap_free_page(address, O_RESERVED))
-	printf ("Error freeing __memmap at %08x", address);
+	printf ("ROOT: Error freeing __memmap at "l4_addr_fmt"\n", address);
     }
+
+  region_free(free_beg, free_end);
 }
 
 /**
@@ -1114,13 +1017,13 @@ init_memmap(void)
 
   if (!no_pentium)
     pagein_4MB_memory();
-#ifdef ARCH_x86
+#if defined ARCH_x86 | ARCH_amd64
   /* page in special memory regions XXX the order is important */
   pagein_bios_memory();
   pagein_adapter_memory();
 #endif
   pagein_4KB_memory();
-
+  
   /* reserve special memory regions */
   reserve_module_memory();
   reserve_rmgr_memory();
@@ -1133,9 +1036,9 @@ init_memmap(void)
   free_high_ram();
 
   printf("\n"
-	 "  %6ldkB (%4ldMB) total RAM (reported by bootloader)\n"
-	 "  %6ldkB (%4ldMB) received RAM from Sigma0\n"
-	 "  %6ldkB (%4ldMB) reserved RAM for RMGR\n",
+	 " %7ldkB (%4ldMB) total RAM (reported by bootloader)\n"
+	 " %7ldkB (%4ldMB) received RAM from Sigma0\n"
+	 " %7ldkB (%4ldMB) reserved RAM for RMGR\n",
 	 (unsigned long)mb_info->mem_upper  + mb_info->mem_lower,
 	 (unsigned long)(mb_info->mem_upper + mb_info->mem_lower) / (1<<10),
 	 (unsigned long)(free_size    +(1<<10)-1) / (1<<10),
@@ -1164,7 +1067,8 @@ init_iomap(void)
   l4_msgdope_t result;
   l4_fpage_t fp;
   int error;
-  unsigned p, ignore;
+  unsigned p;
+  l4_umword_t ignore;
 
   /* initialize the IO space to "reserved" */
   iomap_init();
@@ -1220,6 +1124,7 @@ find_free_page(unsigned task_no)
   if (a - ram_base >= mem_high)
     return 0;
 
+  memset((void*)a, 0, L4_PAGESIZE);
   return a;
 }
 
@@ -1255,7 +1160,7 @@ memmap_alloc_range(l4_addr_t start, l4_addr_t end, unsigned task_no)
   {
     if (!quota_check_mem(task_no, address, L4_PAGESIZE))
       {
-	boot_error("can't allocate page at 0x%08x "
+	boot_error("can't allocate page at 0x"l4_addr_fmt" "
 	       "for task %x (not in quota)\n"
 	       "       skipping rest of module\n",
 		address, task_no);
@@ -1264,7 +1169,7 @@ memmap_alloc_range(l4_addr_t start, l4_addr_t end, unsigned task_no)
 
     if (!memmap_alloc_page(address, task_no))
       {
-	boot_error("can't allocate page at 0x%08x "
+	boot_error("can't allocate page at 0x"l4_addr_fmt" "
 	       "for this task (owned by 0x%x)\n"
 	       "       skipping rest of module",
 		address, memmap_owner_page(address));
@@ -1307,19 +1212,19 @@ add_boot_modules(l4util_mb_mod_t *m, l4_addr_t *address,
       /* copy module command line */
       if (m[copy_mod_no].cmdline)
 	{
-	  l4_size_t len = strlen((char *) (m[copy_mod_no].cmdline)) + 1;
-          char *string = (char *) alloc_from_page(address, len);
+	  l4_size_t len = strlen(L4_CHAR_PTR (m[copy_mod_no].cmdline)) + 1;
+          char *string = L4_CHAR_PTR alloc_from_page(address, len);
 
 	    if (!string)
 	      {
 		 boot_warning("can't pass command line --> disabling \"%s\"\n",
-			     (char *) (m[copy_mod_no].cmdline));
+			     L4_CHAR_PTR (m[copy_mod_no].cmdline));
 
 		 m[copy_mod_no].cmdline = 0;
 		 continue;
 	       }
 
-	   strcpy(string, (char *) (m[copy_mod_no].cmdline));
+	   strcpy(string, L4_CHAR_PTR (m[copy_mod_no].cmdline));
 	   m[copy_mod_no].cmdline = (l4_addr_t) string;
 	}
 
@@ -1337,23 +1242,18 @@ add_boot_modules(l4util_mb_mod_t *m, l4_addr_t *address,
  * copy multi boot info structure for loaded tasks.
  */
 static l4util_mb_info_t*
-copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
+copy_mbi(l4_addr_t *tramp_page,
+	 unsigned task_no, const char *name, unsigned *mod_no)
 {
-  l4_addr_t address, save_address;
+  l4_addr_t save_address;
   l4util_mb_info_t *mbi;
   l4util_mb_vbe_mode_t *mbi_vbe_mode;
   l4util_mb_vbe_ctrl_t *mbi_vbe_ctrl;
   l4util_mb_mod_t *m;
   unsigned mods_cnt;
 
-  /* pass multiboot info to new task in extra page */
-  address = find_free_page(task_no);
-
-  if (!address)
-    boot_error("can't allocate page");
-
   /* copy mb_info */
-  mbi = (l4util_mb_info_t*) alloc_from_page(&address,
+  mbi = (l4util_mb_info_t*) alloc_from_page(tramp_page,
 					    sizeof(l4util_mb_info_t));
   if (!mbi)
     boot_panic("can't pass MBI info");
@@ -1363,19 +1263,19 @@ copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
   /* copy mb_info->mb_vbe_mode and mb_info->mb_vbe_ctrl */
   if (mb_info->flags & L4UTIL_MB_VIDEO_INFO)
     {
-      save_address = address;
+      save_address = *tramp_page;
       mbi_vbe_mode = 
-	(l4util_mb_vbe_mode_t*)alloc_from_page(&address,
+	(l4util_mb_vbe_mode_t*)alloc_from_page(tramp_page,
 					       sizeof(l4util_mb_vbe_mode_t));
       mbi_vbe_ctrl =
-	(l4util_mb_vbe_ctrl_t*)alloc_from_page(&address,
+	(l4util_mb_vbe_ctrl_t*)alloc_from_page(tramp_page,
 					       sizeof(l4util_mb_vbe_ctrl_t));
 
       if (!mbi_vbe_mode || !mbi_vbe_ctrl)
 	{
 	   boot_warning("can't pass VBE video info --> disabling\n ");
 	   mbi->flags &= ~L4UTIL_MB_VIDEO_INFO;
-	   address = save_address;
+	   *tramp_page = save_address;
 	}
       else
 	{
@@ -1393,12 +1293,10 @@ copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
 	char *string;
 	l4_size_t len = strlen(name) + 1;
 
-	string = (char*) alloc_from_page(&address, len);
-
-	if (!string)
+	if (!(string = (char*) alloc_from_page(tramp_page, len)))
 	  {
 	    boot_warning("can't pass command line --> disabling\n");
-	   mbi->flags &= ~L4UTIL_MB_CMDLINE;
+ 	    mbi->flags &= ~L4UTIL_MB_CMDLINE;
 	  }
 	else
 	  {
@@ -1418,7 +1316,7 @@ copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
   if (mods_cnt)
     {
       m =
-	(l4util_mb_mod_t*)alloc_from_page(&address, 
+	(l4util_mb_mod_t*)alloc_from_page(tramp_page, 
 					  mods_cnt * sizeof(l4util_mb_mod_t));
       if (!m)
 	{
@@ -1427,7 +1325,7 @@ copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
 	}
 
       mbi->mods_addr = (l4_addr_t) m;
-      mbi->mods_count = add_boot_modules(m, &address, (*mod_no)+1, task_no);
+      mbi->mods_count = add_boot_modules(m, tramp_page, (*mod_no)+1, task_no);
       mbi->flags |= L4UTIL_MB_MODS;
 
       *mod_no += mbi->mods_count;
@@ -1437,81 +1335,50 @@ copy_mbi(unsigned task_no, const char *name, unsigned *mod_no)
 }
 
 /**
- * extract symbols and lines from the roottask image copy.
- *
- * Note that the copy of the roottask image resides after the module data.
- * It is not marked in any way as we just read it here and can then
- * forget about it.
- *
- * Note2, this is a copy because the debugging info is in the BSS and
- * therefore overwritten when we come here. The registration could be done
- * in bootstrap but it sould be avoided to put more code there.
- */
-static void
-init_roottask_debug_info(void)
-{
-  if (mb_info->flags & L4UTIL_MB_ELF_SHDR)
-    {
-      l4_umword_t from_sym=0, to_sym=0;
-      l4_umword_t from_lin=0, to_lin=0;
-
-      /* XXX this is wrong because we have no rootttask image currently XXX */
-      extract_symbols_from_mbinfo(mb_info, 4, &from_sym, &to_sym);
-      extract_lines_from_mbinfo(mb_info, 4, &from_lin, &to_lin);
-      if (from_sym)
-	printf("Symbols at [%08x-%08x] (%dkB)",
-	    from_sym, to_sym, (to_sym-from_sym)/1024);
-      if (from_lin)
-	printf("%slines at [%08x-%08x] (%dkB)",
-	    from_sym ? ", " : "",
-	    from_lin, to_lin, (to_lin-from_lin)/1024);
-      if (from_sym || from_sym)
-	putchar('\n');
-    }
-}
-
-/**
  * setup stack and trampoline page before starting task.
  */
 static void
-setup_stack_page(l4_taskid_t t, l4_umword_t* entry, l4_umword_t* *sp)
+setup_stack_page(l4_addr_t *tramp_page,
+		 l4_taskid_t t, l4_addr_t *entry, l4_umword_t **sp)
 {
-  if ((!(*sp = (l4_umword_t *) find_free_page(t.id.task))))
-    boot_panic("can't allocate stack page");
+  l4_size_t s = (l4_addr_t)task_trampoline_end - (l4_addr_t)task_trampoline;
+  void     *a = alloc_from_page(tramp_page, s);
 
-  *sp = (l4_umword_t *) (0x100 + (l4_addr_t) *sp);
+  if (!a)
+    boot_panic("can't allocate trampoline code");
 
   /* copy task_trampoline PIC code to new task's stack */
-  *sp -= 1 + ((l4_addr_t) task_trampoline_end - (l4_addr_t) task_trampoline)
-             / sizeof(**sp);
-  memcpy(*sp, task_trampoline,
-         (l4_addr_t) task_trampoline_end - (l4_addr_t) task_trampoline);
-  *entry = (l4_umword_t) *sp;
+  memcpy(a, task_trampoline, s);
+  *entry = (l4_addr_t)a;
+
+  if (l4_round_page(*tramp_page) - *tramp_page < 0x80)
+    boot_panic("can't allocate stack");
+
+  *sp = (l4_umword_t*)l4_round_page(*tramp_page);
 }
 
 /**
  * extract symbols and lines as debug information.
  */
 static void
-setup_symbols_and_lines(exec_task_t e, l4_threadid_t t)
+setup_symbols_and_lines(l4_addr_t mod_start, l4_threadid_t t)
 {
   l4_umword_t from_sym = 0, to_sym = 0;
   l4_umword_t from_lin = 0, to_lin = 0;
 
   if (!no_symbols)
-    extract_symbols_from_image((l4_addr_t)e.mod_start, t.id.task,
-                               &from_sym, &to_sym);
+    extract_symbols_from_image(mod_start, t.id.task, &from_sym, &to_sym);
 
   if (!no_lines)
-    extract_lines_from_image((l4_addr_t)e.mod_start, t.id.task,
-                             &from_lin, &to_lin);
+    extract_lines_from_image(mod_start, t.id.task, &from_lin, &to_lin);
+
   if (from_sym || from_lin)
     printf("     ");
   if (from_sym)
-    printf("symbols at [%08x-%08x] (%dkB)",
+    printf("symbols at ["l4_addr_fmt"-"l4_addr_fmt"] (%ldkB)",
 	from_sym, to_sym, (to_sym-from_sym)/1024);
   if (from_lin)
-    printf("%slines at [%08x-%08x] (%dkB)",
+    printf("%slines at ["l4_addr_fmt"-"l4_addr_fmt"] (%ldkB)",
 	from_sym ? ", " : "",
 	from_lin, to_lin, (to_lin-from_lin)/1024);
   if (from_sym || from_lin)
@@ -1533,8 +1400,6 @@ alloc_exec_read_exec(void *handle, l4_addr_t file_ofs, l4_size_t file_size,
     return 0;
   if (! (section_type & (EXEC_SECTYPE_ALLOC|EXEC_SECTYPE_LOAD)))
     return 0;
-
-  assert(e->task_no <= O_MAX);
 
   // task wants no 1:1 mapping
   if (offset)
@@ -1573,7 +1438,7 @@ start_tasks(void)
   l4_umword_t *sp = 0;
   l4util_mb_info_t *mbi;
   const char *name, *error_msg;
-  l4_addr_t task_entry, tramp_entry;
+  l4_addr_t task_entry, tramp_entry, tramp_page;
   int exec_ret;
   exec_task_t e;
   unsigned task_no; // number of currently bootet task
@@ -1609,7 +1474,7 @@ start_tasks(void)
       printf("     from [\033[37m%08x\033[m-\033[37m%08x\033[m] to ",
 	     mb_mod[mod_no].mod_start, mb_mod[mod_no].mod_end);
 
-      e.mod_start = (void *)(mb_mod[mod_no].mod_start);
+      e.mod_start = L4_VOID_PTR (mb_mod[mod_no].mod_start);
       e.task_no   = task_no;
       e.mod_no    = mod_no;
       exec_ret    = exec_load_elf(alloc_exec_read, alloc_exec_read_exec,
@@ -1622,28 +1487,35 @@ start_tasks(void)
 	  continue;
 	}
 
-      /* copy mbi for task and all needed modules */
-      mbi = copy_mbi(task_no, name,  &mod_no);
+      /* pass multiboot info and stack of new task in extra page */
+      if (!(tramp_page = find_free_page(task_no)))
+	boot_error("can't allocate page");
 
-      setup_stack_page(t, &tramp_entry, &sp);
-      /* setup stack for task_trampoline() */
-      *--sp = (l4_umword_t) mbi;
-      *--sp = task_entry;
-      *--sp = 0;		/* set SP to final position */
+      else
+	{
+	  /* copy mbi for task and all needed modules */
+	  mbi = copy_mbi(&tramp_page, task_no, name,  &mod_no);
 
-      printf("     entry at \033[37m%08x\033[m via trampoline page code\n",
-	     tramp_entry);
+    	  /* setup stack for task_trampoline() */
+	  setup_stack_page(&tramp_page, t, &tramp_entry, &sp);
+	  *--sp = (l4_umword_t) mbi;
+	  *--sp = task_entry;
+	  *--sp = 0;		/* set SP to final position */
 
-      setup_symbols_and_lines(e, t);
+	  printf("     entry at \033[37m"l4_addr_fmt
+		 "\033[m via trampoline page code\n", tramp_entry);
 
-      /* free the memory that module image occupied
-       * (don't use mod_no here, it's overwritten by copy_mbi!) */
-      free_module_image(e.mod_no);
+	  setup_symbols_and_lines((l4_addr_t)e.mod_start, t);
 
-      t = l4_task_new(t, bootquota_get(task_no)->mcp,
-		      (l4_umword_t) sp, tramp_entry, myself);
+	  /* free the memory that module image occupied
+	   * (don't use mod_no here, it's overwritten by copy_mbi!) */
+	  free_module_image(e.mod_no);
 
-      setup_task(t);
+	  t = l4_task_new(t, bootquota_get(task_no)->mcp,
+			  (l4_umword_t) sp, tramp_entry, myself);
+
+	  setup_task(t);
+	}
     }
 
   putchar('\n');
@@ -1660,9 +1532,6 @@ init(void)
   init_rmgr();
   check_for_ux();
 
-  if (ux_running)
-    init_noloader();
-
   reset_malloc();
   init_config();
   init_memmap();
@@ -1674,7 +1543,7 @@ init(void)
 
   configure();
 
-  init_roottask_debug_info();
+  setup_symbols_and_lines((l4_addr_t)mb_mod[2].mod_start, myself);
   setup_task(myself);
   setup_task(my_pager);
 

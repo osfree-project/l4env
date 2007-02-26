@@ -2,7 +2,7 @@
  * Fiasco Thread Code
  * Shared between UX and native IA32.
  */
-INTERFACE [ia32,ux]:
+INTERFACE [ia32,amd64,ux]:
 
 #include "trap_state.h"
 
@@ -14,7 +14,7 @@ private:
   /**
    * Return code segment used for exception reflection to user mode
    */
-  static Mword const exception_cs();
+  static Mword exception_cs();
 
 protected:
   Idt_entry *_idt;
@@ -24,11 +24,12 @@ protected:
 };
 
 //----------------------------------------------------------------------------
-IMPLEMENTATION [ia32,ux]:
+IMPLEMENTATION [ia32,amd64,ux]:
 
 #include "config.h"
 #include "cpu.h"
 #include "cpu_lock.h"
+#include "gdt.h"
 #include "mem_layout.h"
 #include "logdefs.h"
 #include "paging.h"
@@ -58,8 +59,7 @@ Thread::Thread (Task* task, L4_uid id,
                   Config::default_time_slice),
         Sender            (id, 0),   // select optimized version of constructor
         _preemption       (id),
-        _deadline_timeout (&_preemption),
-	_activation	  (id)
+        _deadline_timeout (&_preemption)
 {
   assert (current() == thread_lock()->lock_owner());
   assert (state() == Thread_invalid);
@@ -74,69 +74,45 @@ Thread::Thread (Task* task, L4_uid id,
   _idt_limit      = 0;
   _recover_jmpbuf = 0;
   _timeout        = 0;
+  _exc_ip         = ~0UL;
 
   *reinterpret_cast<void(**)()> (--_kernel_sp) = user_invoke;
 
   arch_init();
-
   setup_utcb_kernel_addr();
 
+  caps_init (current_thread());
   _pager = _ext_preempter = nil_thread;
 
   preemption()->set_receiver (nil_thread);
 
-  if (space_index() == Thread::lookup(thread_lock()->lock_owner())
-      ->space_index())
-    {
-      // same task -> enqueue after creator
-      present_enqueue (Thread::lookup(thread_lock()->lock_owner()));
-    }
-  else
-    enqueue_thread_other_task();
+  present_enqueue();
 
   state_add(Thread_dead);
   
   // ok, we're ready to go!
 }
 
-/** (Re-) Ininialize a thread and make it ready.
-    XXX Contrary to the L4-V2 spec we only cancel IPC if eip != 0xffffffff!
-    @param eip new user instruction pointer.  Set only if != 0xffffffff.
-    @param esp new user stack pointer.  Set only if != 0xffffffff.
-    @param o_eip return current instruction pointer if pointer != 0
-    @param o_esp return current stack pointer if pointer != 0
-    @param o_pager return current pager if pointer != 0
-    @param o_preempter return current internal preempter if pointer != 0
-    @param o_eflags return current eflags register if pointer != 0
-    @return false if !exists(); true otherwise
- */
-PUBLIC
-bool
-Thread::initialize(Address ip, Address sp,
-		   Thread* pager, Receiver* preempter,
-		   Address *o_ip = 0, Address *o_sp = 0,
-		   Thread* *o_pager = 0, Receiver* *o_preempter = 0,
-		   Address *o_flags = 0,
-		   bool no_cancel = 0,
-		   bool alien = 0)
-{
-  assert (current() == thread_lock()->lock_owner());
+IMPLEMENT inline NEEDS[Thread::exception_triggered]
+Mword
+Thread::user_ip() const
+{ return exception_triggered()?_exc_ip:regs()->ip(); }
 
-  if (state() == Thread_invalid)
-    return false;
+IMPLEMENT inline
+Mword
+Thread::user_flags() const
+{ return regs()->flags(); }
 
-  reload_ip_sp_from_utcb();
-
-  Entry_frame *r = regs();
-
-  if (o_pager) *o_pager = _pager;
-  if (o_preempter) *o_preempter = preemption()->receiver();
-  if (o_sp) *o_sp = r->sp();
-  if (o_ip) *o_ip = r->ip();
-  if (o_flags) *o_flags = r->flags();
-
-  if (ip != ~0UL)
+IMPLEMENT inline NEEDS[Thread::exception_triggered]
+void
+Thread::user_ip(Mword ip)
+{ 
+  if (exception_triggered())
+    _exc_ip = ip;
+  else
     {
+      Entry_frame *r = regs();
+      r->ip(ip);
       // We have to consider a special case where we have to leave the kernel
       // with iret instead of sysexit: If the target thread entered the kernel
       // through sysenter, it would leave using sysexit. This is not possible
@@ -151,61 +127,20 @@ Thread::initialize(Address ip, Address sp,
 	{
 	  // this cannot happen in Fiasco UX
 	  extern Mword leave_from_sysenter_by_iret;
-	  Mword **ret_from_disp_syscall = reinterpret_cast<Mword**>(regs())-1;
+	  Mword **ret_from_disp_syscall = reinterpret_cast<Mword**>(r)-1;
 	  r->cs(r->cs() & ~0x80);
 	  *ret_from_disp_syscall = &leave_from_sysenter_by_iret;
 	}
-      r->ip(ip);
-
-      if (alien)
-	state_change (~Thread_dis_alien, Thread_alien);
-      else
-	state_del (Thread_alien);
-
-      if (! (state() & Thread_dead))
-	{
-#if 0
-	  kdb_ke("reseting non-dead thread");
-#endif
-	  if (!no_cancel)
-	    // cancel ongoing IPC or other activity
-	    state_change (~(Thread_ipc_in_progress | Thread_delayed_deadline |
-                          Thread_delayed_ipc), Thread_cancel | Thread_ready);
-	}
-      else
-	state_change (~Thread_dead, Thread_ready);
     }
-
-  if (pager != 0) _pager = pager;
-  if (preempter != 0) preemption()->set_receiver (preempter);
-  if (sp != ~0UL) r->sp(sp);
-
-  return true;
 }
 
-IMPLEMENT inline
-void
-Thread::rcv_startup_msg()
-{}
-
-PRIVATE inline
-void
-Thread::enqueue_thread0_other_task()
-{
-  // other task -> enqueue in front of this task
-  present_enqueue
-    (lookup_first_thread
-     (Thread::lookup (thread_lock()->lock_owner())
-      ->space_index())->present_prev);
-  // that's safe because thread 0 of a task is always present
-}
 
 PRIVATE inline
 int
 Thread::is_privileged_for_debug (Trap_state * /*ts*/)
 {
 #if 0
-  return ((ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U);
+  return ((ts->flags() & EFLAGS_IOPL) == EFLAGS_IOPL_U);
 #else
   return 1;
 #endif
@@ -225,9 +160,53 @@ Thread::is_privileged_for_debug (Trap_state * /*ts*/)
     @param ip pagefault address */
 IMPLEMENT inline NOEXPORT
 Mword
-Thread::pagein_tcb_request (Address eip)
+Thread::pagein_tcb_request (Address ip)
 {
-  return *(Unsigned32*)eip == 0xff218336;
+  return *(Unsigned32*)ip == 0xff218336;
+}
+
+IMPLEMENTATION[ia32,ux]:
+
+IMPLEMENT inline
+Mword 
+Thread::user_sp() const
+{ return regs()->sp(); }
+
+IMPLEMENT inline
+void
+Thread::user_sp(Mword sp)
+{ regs()->sp(sp); }
+
+PRIVATE inline
+int
+Thread::do_trigger_exception(Entry_frame *r)
+{
+  if (!exception_triggered())
+    {
+      extern Mword leave_by_trigger_exception;
+      register Address xip = r->ip();
+      user_ip(reinterpret_cast<Address>(&leave_by_trigger_exception));
+      _exc_ip = xip;
+      r->cs (Gdt::gdt_code_kernel | Gdt::Selector_kernel);
+      return 1;
+    }
+  // else ignore change of IP because triggered exception already pending
+  return 0;
+}
+
+PUBLIC inline NOEXPORT
+void
+Thread::restore_exc_state()
+{
+  Entry_frame *r = regs();
+
+#ifdef CONFIG_PF_UX
+  r->cs (exception_cs() & ~1);
+#else
+  r->cs (exception_cs());
+#endif
+  r->ip (_exc_ip);
+  _exc_ip = ~0UL;
 }
 
 IMPLEMENT inline
@@ -245,7 +224,34 @@ Thread::is_tcb_mapped() const
   return pagefault_if_0;
 }
 
+IMPLEMENTATION[amd64]:
 
+IMPLEMENT inline
+Mword
+Thread::is_tcb_mapped() const
+{
+  // Touch the state to page in the TCB. If we get a pagefault here,
+  // the handler doesn't handle it but returns immediatly after
+  // setting eax to 0xffffffff
+  Mword pagefault_if_0;
+  asm volatile ("xorl %%eax,%%eax		\n\t"
+		"andl $0xffffffff, %%ecx	\n\t"
+		"setnc %%al			\n\t"
+		: "=a" (pagefault_if_0) : "c" (&_state));
+  return pagefault_if_0;
+}
+
+IMPLEMENTATION[ia32,amd64,ux]:
+
+#include "idt.h"
+#include "task.h"
+
+extern "C" FIASCO_FASTCALL
+void
+thread_restore_exc_state()
+{
+  current_thread()->restore_exc_state();
+}
 
 PRIVATE static 
 void
@@ -269,7 +275,15 @@ int
 Thread::handle_slow_trap (Trap_state *ts)
 { 
   Address ip;
-  int from_user = ts->cs & 3;
+  int from_user = ts->cs() & 3;
+
+  // XXX We might be forced to raise an excepton. In this case, our return
+  // CS:IP points to leave_by_trigger_exception() which will trigger the
+  // exception just before returning to userland. But if we were inside an
+  // IPC while we was ex-regs'd, we will generate the 'exception after the
+  // syscall' _before_ we leave the kernel.
+  if (ts->_trapno == 13 && (ts->_err & 6) == 6)
+    goto check_exception;
 
   if (EXPECT_FALSE (gdb_trap_recover))
     goto generic_debug;		// we're in the GDB stub or in jdb 
@@ -280,24 +294,24 @@ Thread::handle_slow_trap (Trap_state *ts)
   if (!check_trap13_kernel (ts, from_user))
     return 0;
 
-  if (EXPECT_FALSE (! from_user))
+  if (EXPECT_FALSE (!from_user))
     {
       // small space faults can be raised in kernel mode, too (long IPC)
-      if (ts->trapno == 13 && (ts->err & 0xfffff) == 0 && 
+      if (ts->_trapno == 13 && (ts->_err & 0xfffff) == 0 && 
 	  handle_smas_gp_fault ())
 	goto success;
 
       // get also here if a pagefault was not handled by the user level pager
-      if (ts->trapno == 14)
-	goto pf_in_kernel;
+      if (ts->_trapno == 14)
+	goto check_exception;
 
       goto generic_debug;      // we were in kernel mode -- nothing to emulate
     }
 
-  if (EXPECT_FALSE (ts->trapno == 2) )
+  if (EXPECT_FALSE (ts->_trapno == 2))
     goto generic_debug;        // NMI always enters kernel debugger
 
-  if (EXPECT_FALSE (ts->trapno == 0xffffffff))
+  if (EXPECT_FALSE (ts->_trapno == 0xffffffff))
     goto generic_debug;        // debugger interrupt
 
   check_f00f_bug (ts);
@@ -323,17 +337,20 @@ Thread::handle_slow_trap (Trap_state *ts)
   _recover_jmpbuf = &pf_recovery;
   ip = ts->ip();
 
-  if (handle_io_page_fault (ts, ip, from_user))
-    goto success;
+  switch (handle_io_page_fault (ts, ip, from_user))
+    {
+    case 1: goto success;
+    case 2: goto fail;
+    }
 
   // check for "invalid opcode" exception
-  if (EXPECT_FALSE (Config::Kip_syscalls && ts->trapno == 6))
+  if (EXPECT_FALSE (Config::Kip_syscalls && ts->_trapno == 6))
     {
       // Check "lock; nop" opcode
-      if (space()->peek ((Unsigned16*) ip, from_user) == 0x90f0)
+      if (mem_space()->peek ((Unsigned16*) ip, from_user) == 0x90f0)
         {
-          cas ((Address*)(&ts->eip), ip, ip + 2);// step behind the opcode
-	  ts->eax = space()->kip_address();
+	  ts->consume_instruction(2);
+	  ts->value(task()->map_kip());
           goto success;
         }
     }
@@ -342,7 +359,7 @@ Thread::handle_slow_trap (Trap_state *ts)
   handle_sysenter_trap (ts, ip, from_user);
 
   // check for general protection exception
-  if (ts->trapno == 13 && (ts->err & 0xffff) == 0)
+  if (ts->_trapno == 13 && (ts->_err & 0xffff) == 0)
     {
       // find out if we are a privileged task
       bool is_privileged = trap_is_privileged (ts);
@@ -350,19 +367,20 @@ Thread::handle_slow_trap (Trap_state *ts)
       // check for "lidt (%eax)"
       if (EXPECT_FALSE
 	  (ip < Kmem::mem_user_max - 4 &&
-	   (space()->peek ((Mword*) ip, from_user) & 0xffffff) == 0x18010f))
+	   (mem_space()->peek((Mword*) ip, from_user) & 0xffffff) == 0x18010f))
 	{
           // emulate "lidt (%eax)"
 
           // read descriptor
-          if (ts->eax >= Kmem::mem_user_max - 6)
+          if (ts->value() >= Kmem::mem_user_max - 6)
             goto fail;
 
-          Idt_entry *idt = space()->peek((Idt_entry**)(ts->eax+2), from_user);
+          Idt_entry *idt = mem_space()->peek((Idt_entry**)(ts->value() + 2), 
+	      					       from_user);
   	  Unsigned16 limit = Config::backward_compatibility
-	    ? 255 : space()->peek ((Unsigned16*) ts->eax, from_user);
+	    ? 255 : mem_space()->peek ((Unsigned16*) ts->value(), from_user);
 
-          if (reinterpret_cast<Address>(idt) >= Kmem::mem_user_max-limit-1)
+          if ((Address)idt >= (Address)Kmem::mem_user_max-limit-1)
             goto fail;
 
           // OK; store descriptor
@@ -370,7 +388,8 @@ Thread::handle_slow_trap (Trap_state *ts)
           _idt_limit = (limit + 1) / sizeof(Idt_entry);
 
           // consume instruction and continue
-          cas ((Address*)(&ts->eip), ip, ip + 3); // ignore errors
+	  ts->consume_instruction(3);
+          // ignore errors
           goto success;
         }
 
@@ -382,13 +401,14 @@ Thread::handle_slow_trap (Trap_state *ts)
       if (EXPECT_FALSE
 	  (is_privileged
 	   && (ip < Kmem::mem_user_max - 2)
-	   && (space()->peek ((Unsigned16*) ip, from_user)) == 0x300f
-	   && (Cpu::features() & FEAT_MSR)))
+	   && (mem_space()->peek ((Unsigned16*) ip, from_user)) == 0x300f
+	   && (Cpu::can_wrmsr())))
         {
 	  do_wrmsr_in_kernel (ts);
 
           // consume instruction and continue
-          cas ((Address*)(&ts->eip), ip, ip + 2); // ignore errors
+	  ts->consume_instruction(2);
+          // ignore errors
           goto success;
         }
 
@@ -396,43 +416,31 @@ Thread::handle_slow_trap (Trap_state *ts)
       if (EXPECT_FALSE
 	  (is_privileged
 	   && (ip < Kmem::mem_user_max - 2)
-	   && (space()->peek ((Unsigned16*) ip, from_user)) == 0x320f
-	   && (Cpu::features() & FEAT_MSR)))
+	   && (mem_space()->peek ((Unsigned16*) ip, from_user)) == 0x320f
+	   && (Cpu::can_wrmsr())))
         {
 	  do_rdmsr_in_kernel (ts);
 
           // consume instruction and continue
-          cas ((Address*)(&ts->eip), ip, ip + 2); // ignore errors
+	  ts->consume_instruction(2);
+          // ignore errors
           goto success;
         }
-
-      // check for "hlt" -> deliver L4 version
-      if (is_privileged
-	  && (ip < Kmem::mem_user_max - 1)
-	  && (space()->peek ((Unsigned8*) ip, from_user) == 0xf4))
-	{
-          // FIXME: What version should Fiasco deliver?
-	  ts->eax = 0x00010000;
-
-	  // consume instruction and continue
-          cas ((Address*)(&ts->eip), ip, ip + 1); // ignore errors
-          goto success;
-	}
 
       if (handle_smas_gp_fault ())
 	goto success;
     }
 
-pf_in_kernel:
+check_exception:
 
   // send exception IPC if requested
-  if (snd_exception(ts))
+  if (send_exception(ts))
     goto success;
 
   // let's see if we have a trampoline to invoke
-  if (ts->trapno < 0x20 && ts->trapno < _idt_limit)
+  if (ts->_trapno < 0x20 && ts->_trapno < _idt_limit)
     {
-      Idt_entry e = space()->peek (_idt + ts->trapno, 1);
+      Idt_entry e = mem_space()->peek (_idt + ts->_trapno, 1);
 
       if (Config::backward_compatibility // backward compat.: don't check
           || (   (e.word_count() & 0xe0) == 0x00
@@ -441,9 +449,9 @@ pf_in_kernel:
           Address handler = e.offset();
 
           if ((handler || !Config::backward_compatibility) //bw compat.: != 0?
-              && handler < Kmem::mem_user_max // in user space?
-              && ts->esp <= Kmem::mem_user_max
-              && ts->esp > 5 * sizeof (Mword)) // enough space on user stack?
+              && handler  <  Kmem::mem_user_max // in user space?
+              && ts->sp() <= Kmem::mem_user_max
+              && ts->sp() > 5 * sizeof (Mword)) // enough space on user stack?
             {
 	      // OK, reflect the trap to user mode
 	      if (!raise_exception (ts, handler))
@@ -460,7 +468,7 @@ pf_in_kernel:
 
   // backward compatibility cruft: check for those insane "int3" debug
   // messaging command sequences
-  if ((ts->trapno == 3) && is_privileged_for_debug (ts))
+  if (ts->_trapno == 3 && is_privileged_for_debug (ts))
     {
       if (int3_handler && int3_handler(ts))
 	goto success;
@@ -470,14 +478,14 @@ pf_in_kernel:
 
   // privileged tasks also may invoke the kernel debugger with a debug
   // exception
-  if ((ts->trapno == 1) && is_privileged_for_debug (ts))
+  if (ts->_trapno == 1 && is_privileged_for_debug (ts))
     goto generic_debug;
 
 fail:
   // can't handle trap -- kill the thread
-  WARN ("%x.%x (tcb=%08x) killed:\n"
-	"\033[1mUnhandled trap\033[m\n",
-	d_taskno(), d_threadno(), (unsigned) this);
+  WARN ("%x.%x (tcb="L4_PTR_FMT") killed:\n"
+	"\033[1mUnhandled trap \033[m\n",
+	d_taskno(), d_threadno(), (Address) this);
 
 fail_nomsg:
   if (Config::warn_level >= Warning)
@@ -558,7 +566,7 @@ thread_page_fault (Address pfa, Mword error_code, Address ip, Mword flags,
 	{
       	  // No error -- just enable interrupts.
 	  Proc::sti();
-	} 
+	}
       else 
 	{
        	  // Error: We interrupted a cli'd kernel context touching kernel space
@@ -595,7 +603,7 @@ Thread::raise_exception (Trap_state *ts, Address handler)
     if (!(state() & Thread_ready) || (state() & Thread_cancel))
       return false;
 
-    switch (ts->trapno)
+    switch (ts->_trapno)
       {
         case 0xe:
           fault_addr = true;
@@ -608,22 +616,22 @@ Thread::raise_exception (Trap_state *ts, Address handler)
           error_code = true;
       }
 
-    ts->esp -= sizeof (Mword) * (error_code ? 4 : 3);
-    ts->eip  = handler;
+    ts->sp(ts->sp() - sizeof(Mword) * (error_code ? 4 : 3));
+    ts->ip(handler);
   }
 
-  space()->poke_user (sp - 1, (Mword)ts->flags());
-  space()->poke_user (sp - 2, (Mword)exception_cs());
-  space()->poke_user (sp - 3, (Mword)ip);
+  mem_space()->poke_user (sp - 1, (Mword)ts->flags());
+  mem_space()->poke_user (sp - 2, (Mword)exception_cs());
+  mem_space()->poke_user (sp - 3, (Mword)ip);
 
   if (error_code)
-    space()->poke_user (sp - 4, (Mword)ts->err);
+    mem_space()->poke_user (sp - 4, (Mword)ts->_err);
   if (fault_addr)
-    space()->poke_user (sp - 5, (Mword)ts->cr2);
+    mem_space()->poke_user (sp - 5, (Mword)ts->_cr2);
 
   /* reset single trap flag to mirror cpu correctly */
-  if (ts->trapno == 1)
-    ts->eflags &= ~EFLAGS_TF;
+  if (ts->_trapno == 1)
+    ts->flags(ts->flags() & ~EFLAGS_TF);
 
   return true;
 }
@@ -652,12 +660,12 @@ thread_timer_interrupt (Address ip)
 #if defined(CONFIG_IA32) && defined(CONFIG_PROFILE)
   cpu_lock.lock();
 #endif
-  (void)ip;
 
   Timer::acknowledge();
   Timer::update_system_clock();
 
   LOG_TIMER_IRQ (Config::scheduler_irq_vector);
+  (void)ip;
 
   current_thread()->handle_timer_interrupt();
 
@@ -690,17 +698,17 @@ Thread::handle_sigma0_page_fault (Address pfa)
       size = Config::PAGE_SIZE;
     }
 
-  return space()->v_insert (pfa, pfa, size,
-                            Space::Page_writable |
-                            Space::Page_user_accessible)
-                         != Space::Insert_err_nomem;
+  return mem_space()->v_insert (pfa, pfa, size,
+				Mem_space::Page_writable |
+				Mem_space::Page_user_accessible)
+    != Mem_space::Insert_err_nomem;
 }
 
 IMPLEMENT inline NEEDS ["config.h", "space.h", "std_macros.h"]
 Mword
 Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error_code)
 {
-  Space *remote = receiver()->space();
+  Mem_space *remote = receiver()->mem_space();
   
   // If the remote address space has a mapping for the page fault address and
   // it is writable or we didn't want to write to it, then we can simply copy
@@ -709,8 +717,8 @@ Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error_code)
   
   if (EXPECT_TRUE (remote->mapped (remote_pfa, (error_code & PF_ERR_WRITE))))
     {
-      //careful: for SMAS current_space() != space()
-      current_space()->remote_update (pfa, remote, remote_pfa, 1);
+      //careful: for SMAS current_mem_space() != space()
+      current_mem_space()->remote_update (pfa, remote, remote_pfa, 1);
 
       // It's OK if the PF occurs again: This can happen if we're
       // preempted after the call to remote_update() above.  (This code
@@ -727,7 +735,7 @@ Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error_code)
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[{ia32,ux}-!io]: 
+IMPLEMENTATION[{ia32,amd64,ux}-!io]: 
 
 PRIVATE inline
 bool
@@ -735,36 +743,6 @@ Thread::get_ioport(Address /*eip*/, Trap_state * /*ts*/,
                    unsigned * /*port*/, unsigned * /*size*/)
 {
   return false;
-}
-
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [syscall_iter]:
-
-PRIVATE inline
-void
-Thread::enqueue_thread_other_task()
-{
-  if (id().lthread())
-    {
-      // other task and non-first thread
-      // --> enqueue in the destination address space after the first
-      //     thread
-      present_enqueue (lookup_first_thread(space()->id()));
-    }
-  else
-    enqueue_thread0_other_task();
-}
-
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [!syscall_iter]:
-
-PRIVATE inline
-void
-Thread::enqueue_thread_other_task()
-{
-  enqueue_thread0_other_task();
 }
 
 
@@ -787,20 +765,20 @@ int
 Thread::tls_setup_emu(Trap_state *ts, Address *desc_addr, int *size,
 		      unsigned *entry_number, Thread **t)
 {
-  if (ts->edx != 0)
+  if (ts->_edx != 0)
     return 1;
 
-  *desc_addr    = ts->eax;
-  *size         = ts->ebx;
-  *entry_number = ts->ecx;
+  *desc_addr    = ts->_eax;
+  *size         = ts->_ebx;
+  *entry_number = ts->_ecx;
 
   // In any case, jump over the instruction
-  ts->eip += 3;
+  ts->ip(ts->ip() + 3);
 
-  *t = lookup(L4_uid(((Unsigned64)ts->edi << 32) | ts->esi));
+  *t = id_to_tcb(L4_uid(((Unsigned64)ts->_edi << 32) | ts->_esi));
   if (!*t)
     {
-      WARN("set_tls: non-existing thread %08lx.%08lx", ts->edi, ts->esi);
+      WARN("set_tls: non-existing thread %08lx.%08lx", ts->_edi, ts->_esi);
       return 1;
     }
   if ((*entry_number<<3) + *size > 3*Cpu::Ldt_entry_size)
@@ -824,27 +802,29 @@ Thread::tls_setup_emu(Trap_state *ts, Address *desc_addr, int *size,
  * \return 		0 on success */
 PRIVATE inline NEEDS ["warn.h"]
 int
-Thread::lldt_setup_emu(Trap_state *ts, Space **s, Address *desc_addr,
+Thread::lldt_setup_emu(Trap_state *ts, Mem_space **s, Address *desc_addr,
 		       int *size, unsigned *entry_number, Task_num *task)
 {
-  *desc_addr    = ts->eax;
-  *size         = ts->ebx;
-  *entry_number = ts->ecx;
-  *task         = ts->edx;
+  *desc_addr    = ts->_eax;
+  *size         = ts->_ebx;
+  *entry_number = ts->_ecx;
+  *task         = ts->_edx;
 
   // In any case, jump over the instruction
-  ts->eip += 3;
+  ts->ip(ts->ip() + 3);
 
   // Check if address space exists
-  *s = Space_index(*task).lookup();
-  if (!*s)
+  Space *space = Space_index(*task).lookup();
+  if (!space)
     {
+      *s = 0;
       WARN("set_ldt: non-existing task %x.", *task);
       return 1;
     }
+  *s = space->mem_space();
 
   // Check that only the pager and one itself can set the LDT
-  Thread *t = Thread::lookup(L4_uid(*task, 0));
+  Thread *t = Thread::id_to_tcb(L4_uid(*task, 0));
   if (id().task() != *task && t->_pager->id().task() != id().task())
     {
       WARN("set_ldt: %x.%x is not pager of %x.0.",
@@ -857,8 +837,10 @@ Thread::lldt_setup_emu(Trap_state *ts, Space **s, Address *desc_addr,
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[{ia32,ux}-utcb]: 
+IMPLEMENTATION[{ia32,ux,amd64}-utcb]: 
 
+#include "fpu.h"
+#include "fpu_alloc.h"
 #include "utcb.h"
 
 /** Setup the UTCB pointer of this thread.
@@ -869,23 +851,53 @@ Thread::setup_utcb_kernel_addr()
 {
   Address uaddr = Mem_layout::V2_utcb_addr + id().lthread()*sizeof(Utcb);
   Utcb *ptr     = reinterpret_cast<Utcb *>
-                   (Kmem::phys_to_virt(space()->virt_to_phys(uaddr)));
+                   (Kmem::phys_to_virt(mem_space()->virt_to_phys(uaddr)));
 
   local_id((Local_id)uaddr);
   utcb(ptr);
 
   setup_exception_ipc();
-  setup_lipc_utcb();
 }
 
-IMPLEMENTATION [{ia32,ux}-!lipc]:
+//---------------------------------------------------------------------------
+IMPLEMENTATION[(ia32 || amd64) && utcb]:
 
-PRIVATE inline
+PUBLIC inline NEEDS["fpu.h", "fpu_alloc.h"]
 void
-Thread::setup_lipc_utcb()
+Thread::transfer_fpu(Thread *to)
+{
+  if (to->fpu_state()->state_buffer())
+    Fpu_alloc::free_state(to->fpu_state());
+
+  to->fpu_state()->state_buffer(fpu_state()->state_buffer());
+  fpu_state()->state_buffer(0);
+
+  Fpu::disable(); // it will be reanabled in switch_fpu
+
+  if (Fpu::owner() == to)
+    {
+      Fpu::set_owner(0);
+      to->state_change_dirty (~Thread_fpu_owner, 0);
+    }
+  else if (Fpu::owner() == this)
+    {
+      state_change_dirty (~Thread_fpu_owner, 0);
+      to->state_change_dirty (~0U, Thread_fpu_owner);
+      Fpu::set_owner(to);
+    }
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[ux && utcb]:
+
+PUBLIC inline
+void
+Thread::transfer_fpu(Thread *)
 {}
 
-IMPLEMENTATION [{ia32,ux}-!exc_ipc]:
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [{ia32,amd64,ux}-!exc_ipc]:
 
 PRIVATE inline
 void
@@ -894,7 +906,7 @@ Thread::setup_exception_ipc()
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[{ia32,ux}-!utcb]: 
+IMPLEMENTATION[{ia32,amd64,ux}-!utcb]: 
 
 /** Dummy function to hold code in thread-ia32-ux-v2x0 generic.
  */
@@ -907,16 +919,83 @@ Thread::setup_utcb_kernel_addr()
 //---------------------------------------------------------------------------
 IMPLEMENTATION [{ia32,ux}-exc_ipc]:
 
+PRIVATE static inline
+void
+Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
+  Mword       s  = snd->utcb()->snd_size;
+  Unsigned32  cs = ts->cs();
+
+  if (EXPECT_FALSE(rcv->exception_triggered()))
+    {
+      // triggered exception pending
+      Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 12 ? 12 : s);
+      if (EXPECT_TRUE(s > 12))
+	rcv->_exc_ip = snd->utcb()->values[12];
+      if (EXPECT_TRUE(s > 14))
+	ts->flags(snd->utcb()->values[14]);
+      if (EXPECT_TRUE(s > 15))
+	ts->sp(snd->utcb()->values[15]);
+    }
+  else
+    Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 16 ? 16 : s);
+
+  if (snd->utcb()->status & Utcb::Transfer_fpu)
+    snd->transfer_fpu(rcv);
+
+  // sanitize eflags
+  // XXX: ia32 in here!
+  if (!rcv->trap_is_privileged(0))
+    ts->flags((ts->flags() & ~(EFLAGS_IOPL | EFLAGS_NT)) | EFLAGS_IF);
+
+  // don't allow to overwrite the code selector!
+  ts->cs(cs);
+
+  rcv->state_del(Thread_in_exception);
+}
+
+PRIVATE static inline
+void
+Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
+  Mword        r = rcv->utcb()->rcv_size;
+
+  {
+    Lock_guard <Cpu_lock> guard (&cpu_lock);
+    if (EXPECT_FALSE(snd->exception_triggered()))
+      {
+	Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 12 ? 12 : r);
+	if (EXPECT_TRUE(r > 12))
+	  rcv->utcb()->values[12] = snd->_exc_ip;
+	if (EXPECT_TRUE(r > 14))
+	  rcv->utcb()->values[14] = ts->flags();
+	if (EXPECT_TRUE(r > 15))
+	  rcv->utcb()->values[15] = ts->sp();
+      }
+    else
+      Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 16 ? 16 : r);
+
+    if (rcv->utcb()->status & Utcb::Inherit_fpu)
+	snd->transfer_fpu(rcv);
+
+  }
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [{ia32,ux,amd64}-exc_ipc]:
+
+
 PUBLIC inline
 int
-Thread::snd_exception(Trap_state *ts)
+Thread::send_exception(Trap_state *ts)
 {
-  if (//ts->trapno != 1 && ts->trapno != 3 &&
+  if (//ts->_trapno != 1 && ts->_trapno != 3 &&
       _pager != kernel_thread &&
-      _pager->utcb()->status)
+      _pager->utcb()->status & Utcb::Handle_exception)
     {
-
-      if (ts->trapno == 3)
+      if (ts->_trapno == 3)
 	{
 	  if (!(state() & Thread_alien))
 	    return 0;
@@ -927,21 +1006,39 @@ Thread::snd_exception(Trap_state *ts)
 	    }
 	}
 
-      state_del(Thread_cancel);
+      state_change(~Thread_cancel, Thread_in_exception);
+
       Proc::sti();		// enable interrupts, we're sending IPC
-      exception(ts);
+      Ipc_err err = exception(ts);
+
+      if (err.has_error() && err.error() == Ipc_err::Enot_existent)
+	return 0;
+
       return 1;      // We did it
     }
   return 0;
 }
 
-PRIVATE 
+PRIVATE
 Ipc_err
 Thread::exception(Trap_state *ts)
 {
   Sys_ipc_frame r;
   L4_timeout timeout( L4_timeout::Never );
   Thread *handler = _pager; // _exception_handler;
+
+  if (! revalidate(handler))
+    {
+      WARN ("Denying %x.%x to send exception message (ip=" L4_PTR_FMT
+	    ", trap=" L4_PTR_FMT ") to %x.%x",
+	    id().task(), id().lthread(), ts->ip(), ts->_trapno, 
+	    handler ? handler->id().task() : L4_uid (L4_uid::Invalid).task(),
+	    handler ? handler->id().lthread() 
+	            : L4_uid (L4_uid::Invalid).lthread());
+
+      return Ipc_err(Ipc_err::Enot_existent);
+    }
+
   void *old_utcb_handler = _utcb_handler;
   _utcb_handler = ts;
 
@@ -950,48 +1047,43 @@ Thread::exception(Trap_state *ts)
   r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
   r.set_msg_word(2, 0); // nop in V2
   r.snd_desc(0);
-  r.rcv_desc(0);
-
-  prepare_receive(handler, &r);
+  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage(0,0,L4_fpage::Whole_space,0)));
 
   Ipc_err ret (0);
 
-  Ipc_err err = do_send(handler, timeout, &r);
+  Proc::cli();
+
+  Ipc_err err = do_ipc(true, handler,
+                       true, handler,
+                       timeout, &r);
+  Proc::sti();
 
   if (EXPECT_FALSE(err.has_error()))
     {
       if (Config::conservative)
-	{
-	  printf (" page fault send error = 0x%lx\n", err.raw());
-	  kdb_ke ("snd to pager failed");
-	}
-      
-      // skipped receive operation
-      state_del(Thread_ipc_receiving_mask);
+        {
+          printf(" exception fault %s error = 0x%lx\n",
+                 err.snd_error() ? "send" : "rcv",
+                 err.raw());
+          if(err.snd_error())
+            {
+              kdb_ke("snd to pager failed");
+            }
+          else
+            {
+              kdb_ke("rcv from pager failed");
+            }
+        }
+      if(err.snd_error()
+         && (err.error() == Ipc_err::Enot_existent))
+        ret = (state() & Thread_cancel)
+          ? Ipc_err (0)
+          : err;
 
-      if (err.error() == Ipc_err::Enot_existent)
-	ret = (state() & Thread_cancel)
-	  ? Ipc_err (0) // retry user insn after thread_ex_regs
-	  : err;
-      // else ret = 0 -- that's the default, and it means: retry
+      state_del(Thread_in_exception);
     }
-  else
-    {
-      err = do_receive(handler, timeout, &r);
-
-      if (EXPECT_FALSE(err.has_error()))
-	{
-	  if (Config::conservative)
-	    {
-	      printf("page fault rcv error = 0x%lx\n", err.raw());
-	      kdb_ke("rcv from pager failed");
-	    }
-	}
-      // else ret = 0 -- that's the default, and it means: retry
-
-      if (r.msg_word(0) == 1)
-	state_add(Thread_dis_alien);
-    }
+   else if (r.msg_word(0) == 1)
+     state_add(Thread_dis_alien);
 
   // restore original utcb_handler
   _utcb_handler = old_utcb_handler;
@@ -1007,13 +1099,43 @@ Thread::setup_exception_ipc()
 }
 
 
+
+// used by the assembler shortcut
+// uargh, crap preprocess it dont like the asm directive and
+// the fastcall macro at the function definition
+PUBLIC static inline
+void 
+Thread::switch_exception_context(Thread *sender, Thread* receiver, Mword ctx_switch)
+//  asm("switch_exception_context_label") 
+{
+  
+#ifdef CONFIG_EXCEPTION_IPC
+  sender->copy_utcb_to(receiver);
+#endif
+
+#ifdef CONFIG_HANDLE_SEGMENTS
+  if(EXPECT_FALSE(!ctx_switch))
+    return;
+
+  sender->store_segments();
+  receiver->switch_gdt_tls();
+  receiver->load_segments();
+#endif
+  (void)ctx_switch;
+}
+
+extern "C"  FIASCO_FASTCALL
+void
+switch_exception_context_wrapper(Thread *sender, Thread* receiver, Mword ctx_switch)
+{
+  Thread::switch_exception_context(sender, receiver, ctx_switch);
+}
+
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux}-!exc_ipc]:
+IMPLEMENTATION [{ia32,amd64,ux}-!exc_ipc]:
 
 PUBLIC inline
 int
-Thread::snd_exception(Trap_state *) const
-{
-  return 0;
-}
+Thread::send_exception(Trap_state *) const
+{ return 0; }
 

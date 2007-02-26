@@ -50,7 +50,7 @@ l4rm_detach(const void * map_addr)
   l4rm_region_desc_t * r;
   l4dm_dataspace_t ds;
 
-  LOGdL(DEBUG_DETACH, "detach region at 0x%08x", addr);
+  LOGdL(DEBUG_DETACH, "detach region at 0x"l4_addr_fmt, addr);
 
   /* lock region list */
   l4rm_lock_region_list();
@@ -65,9 +65,9 @@ l4rm_detach(const void * map_addr)
     }
   ds = r->data.ds.ds;
 
-  LOGdL(DEBUG_DETACH, "DS %u at "l4util_idfmt", offset 0x%x",
+  LOGdL(DEBUG_DETACH, "DS %u at "l4util_idfmt", offset 0x%lx",
         ds.id, l4util_idstr(ds.manager), r->data.ds.offs);
-  LOGdL(DEBUG_DETACH, "region <%08x,%08x>, area 0x%05x",
+  LOGdL(DEBUG_DETACH, "region <"l4_addr_fmt","l4_addr_fmt">, area 0x%05x",
         r->start, r->end, REGION_AREA(r));
 
   /* unmap region */

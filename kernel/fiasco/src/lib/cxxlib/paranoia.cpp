@@ -1,12 +1,11 @@
 INTERFACE:
 
-#include <stddef.h>
+#include <cstddef>
 
 IMPLEMENTATION:
 
-#include <stdlib.h>
-#include <stdio.h>
-
+#include <cstdio>
+#include <cstdlib>
 #include "panic.h"
 #include "types.h"
 
@@ -32,3 +31,9 @@ void operator delete(void *)
   panic("operator delete (aka __builtin_delete) called from "L4_PTR_FMT,
       L4_PTR_ARG(__builtin_return_address(0)));
 }
+
+extern "C" void __div0(void)
+{
+  panic("__div0");
+}
+

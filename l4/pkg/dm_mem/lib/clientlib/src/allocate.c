@@ -74,7 +74,7 @@ __allocate(l4_size_t size, l4_uint32_t flags, const char * name,
   size = l4_round_page(size);
 
   LOGdL(DEBUG_ALLOCATE, "allocate 0x%x at "l4util_idfmt,
-        size, l4util_idstr(dsm_id));
+        (unsigned)size, l4util_idstr(dsm_id));
 
   /* allocate memory */
   ret = l4dm_mem_open(dsm_id, size, DMMEM_ALLOCATE_ALIGN, flags, name, ds);
@@ -98,7 +98,7 @@ __allocate(l4_size_t size, l4_uint32_t flags, const char * name,
       return NULL;
     }
 
-  LOGdL(DEBUG_ALLOCATE, "attached to 0x%08x", (l4_addr_t)ptr);
+  LOGdL(DEBUG_ALLOCATE, "attached to 0x"l4_addr_fmt, (l4_addr_t)ptr);
 
   /* done */
   return ptr;
@@ -121,21 +121,21 @@ __release(const void * ptr)
   l4_size_t ds_map_size;
   l4_threadid_t dummy;
 
-  LOGdL(DEBUG_RELEASE, "free at 0x%08x", (l4_addr_t)ptr);
+  LOGdL(DEBUG_RELEASE, "free at 0x"l4_addr_fmt, (l4_addr_t)ptr);
 
   /* lookup dataspace */
   ret = l4rm_lookup(ptr, &ds_map_addr, &ds_map_size, &ds, &ds_offs, &dummy);
   if (ret < 0)
     {
-      LOGdL(DEBUG_ERRORS, "libdm_mem: no dataspace attached at 0x%08x (%d)!",
-	    (l4_addr_t)ptr, ret);
+      LOGdL(DEBUG_ERRORS, "libdm_mem: no dataspace attached at 0x"l4_addr_fmt
+	    " (%d)!", (l4_addr_t)ptr, ret);
       return;
     }
 
   if (ret != L4RM_REGION_DATASPACE)
     {
       LOGdL(DEBUG_ERRORS, "trying to free non-dataspace " \
-            "region at addr 0x%08x (type %d)", (l4_addr_t)ptr, ret);
+            "region at addr 0x"l4_addr_fmt" (type %d)", (l4_addr_t)ptr, ret);
       return;
     }
 

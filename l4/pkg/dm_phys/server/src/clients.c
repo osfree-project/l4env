@@ -47,35 +47,35 @@
  *         - -#L4_ENOMEM  out of memory allocating client descriptor
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_share_component(CORBA_Object _dice_corba_obj,
-                                l4_uint32_t ds_id,
-                                const l4_threadid_t *client,
-                                l4_uint32_t flags,
-                                CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_share_component (CORBA_Object _dice_corba_obj,
+                                 unsigned long ds_id,
+                                 const l4_threadid_t *client,
+                                 unsigned long flags,
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
   l4_uint32_t rights = flags & L4DM_RIGHTS_MASK;
   int ret;
-  
-  LOGdL(DEBUG_SHARE, 
-        "ds %u, caller "l4util_idfmt", client "l4util_idfmt", rights 0x%02x", 
+
+  LOGdL(DEBUG_SHARE,
+        "ds %lu, caller "l4util_idfmt", client "l4util_idfmt", rights 0x%02x",
         ds_id, l4util_idstr(*_dice_corba_obj), l4util_idstr(*client), rights);
-  
+
   /* get dataspace descriptor, caller must have also the rights */
   ret = dmphys_ds_get_check_rights(ds_id, *_dice_corba_obj, rights, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
 	     ds_id, l4util_idstr(*_dice_corba_obj));
       else
 	{
-	  LOG_printf("ds %u, owner "l4util_idfmt", caller "l4util_idfmt
-	         ", rights 0x%02x, client "l4util_idfmt", rights 0x%02x\n", 
+	  LOG_printf("ds %lu, owner "l4util_idfmt", caller "l4util_idfmt
+	         ", rights 0x%02x, client "l4util_idfmt", rights 0x%02x\n",
                  ds_id, l4util_idstr(dsmlib_get_owner(ds->desc)),
-		 l4util_idstr(*_dice_corba_obj), 
+		 l4util_idstr(*_dice_corba_obj),
                  dmphys_ds_get_rights(ds, *_dice_corba_obj),
                  l4util_idstr(*client), rights);
 	  LOGL("DMphys: bad permissions!");
@@ -90,7 +90,7 @@ if_l4dm_generic_share_component(CORBA_Object _dice_corba_obj,
   if (ret < 0)
     {
 #if DEBUG_ERRORS
-      LOG_printf("ds %u, caller "l4util_idfmt", client "l4util_idfmt \
+      LOG_printf("ds %lu, caller "l4util_idfmt", client "l4util_idfmt \
              ", rights 0x%02x\n", ds_id, l4util_idstr(*_dice_corba_obj),
              l4util_idstr(*client), rights);
       LOGL("DMphys: add client failed: %d!", ret);
@@ -123,12 +123,12 @@ if_l4dm_generic_share_component(CORBA_Object _dice_corba_obj,
  * remove the client from dataspace client list. 
  */
 /*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
-                                 l4_uint32_t ds_id,
-                                 const l4_threadid_t *client,
-                                 l4_uint32_t flags,
-                                 CORBA_Server_Environment *_dice_corba_env)
+long
+if_l4dm_generic_revoke_component (CORBA_Object _dice_corba_obj,
+                                  unsigned long ds_id,
+                                  const l4_threadid_t *client,
+                                  unsigned long flags,
+                                  CORBA_Server_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
   l4_uint32_t rights = flags & L4DM_RIGHTS_MASK;
@@ -142,11 +142,11 @@ if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	LOGL("DMphys: invalid dataspace %d, caller "l4util_idfmt,
+	LOGL("DMphys: invalid dataspace %ld, caller "l4util_idfmt,
              ds_id, l4util_idstr(*_dice_corba_obj));
       else
 	{
-	  LOG_printf("ds %u, caller "l4util_idfmt", rights 0x%02x, " \
+	  LOG_printf("ds %lu, caller "l4util_idfmt", rights 0x%02x, " \
                  "client "l4util_idfmt", rights 0x%02x\n",
                  ds_id, l4util_idstr(*_dice_corba_obj),
                  dmphys_ds_get_rights(ds, *_dice_corba_obj),
@@ -160,7 +160,7 @@ if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
   /* get old rights */
   old_rights = dmphys_ds_get_rights(ds,*client);
 
-  LOGdL(DEBUG_REVOKE, "ds %u, caller "l4util_idfmt", client "l4util_idfmt", " \
+  LOGdL(DEBUG_REVOKE, "ds %lu, caller "l4util_idfmt", client "l4util_idfmt", " \
         "revoke 0x%02x, has 0x%02x", ds_id, l4util_idstr(*_dice_corba_obj), 
         l4util_idstr(*client), rights, old_rights);
   
@@ -210,16 +210,17 @@ if_l4dm_generic_revoke_component(CORBA_Object _dice_corba_obj,
  * \param  ds_id              Dataspace id
  * \param  flags              Flags => access rights
  * \param  _dice_corba_env    Server environment
- *	
+ *
  * \return 0 if caller has the requested rights, error code otherwise:
  *         - -#L4_EINVAL  invalid dataspace id
  *         - -#L4_EPERM   requested operations not allowed
  */
-/*****************************************************************************/ 
-l4_int32_t 
-if_l4dm_generic_check_rights_component(CORBA_Object _dice_corba_obj,
-                                       l4_uint32_t ds_id, l4_uint32_t flags,
-                                       CORBA_Server_Environment *_dice_corba_env)
+/*****************************************************************************/
+long
+if_l4dm_generic_check_rights_component (CORBA_Object _dice_corba_obj,
+                                        unsigned long ds_id,
+                                        unsigned long flags,
+                                        CORBA_Server_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
   l4_uint32_t rights = flags & L4DM_RIGHTS_MASK;
@@ -228,10 +229,10 @@ if_l4dm_generic_check_rights_component(CORBA_Object _dice_corba_obj,
   /* check rights */
   ret = dmphys_ds_get_check_rights(ds_id, *_dice_corba_obj, rights, &ds);
   if (ret == -L4_EINVAL)
-    LOGdL(DEBUG_ERRORS, 
-          "DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+    LOGdL(DEBUG_ERRORS,
+          "DMphys: invalid dataspace id, id %lu, caller "l4util_idfmt,
 	  ds_id, l4util_idstr(*_dice_corba_obj));
-  
+
   /* done */
   return ret;
 }

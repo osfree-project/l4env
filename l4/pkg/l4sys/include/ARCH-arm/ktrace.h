@@ -78,7 +78,7 @@ typedef struct
 /**
  * Return tracebuffer status.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return Pointer to tracebuffer status struct.
  */
 L4_INLINE l4_tracebuffer_status_t *
@@ -87,7 +87,7 @@ fiasco_tbuf_get_status(void);
 /**
  * Return the physical address of the tracebuffer status struct.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return physical address of status struct.
  */
 L4_INLINE l4_addr_t
@@ -98,7 +98,7 @@ fiasco_tbuf_get_status_phys(void);
  * \ingroup api_calls_fiasco
  *
  * \param  text   Logging text
- * \return Pointer to tracebuffer entry 
+ * \return Pointer to tracebuffer entry
  */
 L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text);
@@ -112,21 +112,21 @@ fiasco_tbuf_log(const char *text);
  * \param  v1     first value
  * \param  v2     second value
  * \param  v3     third value
- * \return Pointer to tracebuffer entry 
+ * \return Pointer to tracebuffer entry
  */
 L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3);
 
 /**
  * Clear tracebuffer.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_clear(void);
 
 /**
  * Dump tracebuffer to kernel console.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_dump(void);
@@ -139,33 +139,31 @@ L4_INLINE l4_tracebuffer_status_t *
 fiasco_tbuf_get_status(void)
 {
   /* Not implemented */
-  return (l4_tracebuffer_status_t *)NULL;
+  return (l4_tracebuffer_status_t *)__KDEBUG_ARM_PARAM_1(29, 0);
 }
 
 L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text)
 {
-  /* Not implemented */
-  return 0;
+  return __KDEBUG_ARM_PARAM_2(29, 1, text);
 }
 
 L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3)
 {
-  /* Not implemented */
-  return 0;
+  return __KDEBUG_ARM_PARAM_5(29, 4, text, v1, v2, v3);
 }
 
 L4_INLINE void
 fiasco_tbuf_clear(void)
 {
-  /* Not implemented */
+  __KDEBUG_ARM_PARAM_1(29, 2);
 }
 
 L4_INLINE void
 fiasco_tbuf_dump(void)
 {
-  /* Not implemented */
+  __KDEBUG_ARM_PARAM_1(29, 3);
 }
 
 #endif

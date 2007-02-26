@@ -110,10 +110,3 @@ void liblinux_check_netif_rx(struct net_device *dev, int value)
 		printk("%s: netifrx() returns %d\n", dev->name, value);
 	}
 }
-
-/** RETURN TYPE OF INET_ADDR */
-unsigned liblinux_inet_addr_type(unsigned int addr)
-{
-	return inet_addr_type(addr);
-}
-

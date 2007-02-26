@@ -1,0 +1,6 @@
+This is a replacement for the original l4linux-fileprovider of presenter. 
+This one makes use of l4vfs.
+
+NOTE:
+If you need presenter_exec, make sure the path in the .pres-file is correct in
+both l4linux and in the l4vfs.

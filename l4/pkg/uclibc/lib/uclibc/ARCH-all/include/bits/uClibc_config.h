@@ -19,8 +19,10 @@
 #undef __TARGET_e1__
 #undef __TARGET_frv__
 #undef __TARGET_h8300__
+#undef __TARGET_hppa__
 #define __TARGET_i386__ 1
 #undef __TARGET_i960__
+#undef __TARGET_ia64__
 #undef __TARGET_m68k__
 #undef __TARGET_microblaze__
 #undef __TARGET_mips__
@@ -31,14 +33,15 @@
 #undef __TARGET_sh64__
 #undef __TARGET_sparc__
 #undef __TARGET_v850__
+#undef __TARGET_vax__
 #undef __TARGET_x86_64__
 
 /*
  * Target Architecture Features and Options
  */
-#define __HAVE_ELF__ 1
-#define __ARCH_SUPPORTS_LITTLE_ENDIAN__ 1
 #define __TARGET_ARCH__ "i386"
+#undef __ARCH_SUPPORTS_BIG_ENDIAN__
+#define __ARCH_SUPPORTS_LITTLE_ENDIAN__ 1
 #undef __CONFIG_GENERIC_386__
 #undef __CONFIG_386__
 #undef __CONFIG_486__
@@ -60,6 +63,7 @@
 #undef __ARCH_BIG_ENDIAN__
 #undef __ARCH_HAS_NO_MMU__
 #define __ARCH_HAS_MMU__ 1
+#define __ARCH_USE_MMU__ 1
 #define __UCLIBC_HAS_FLOATS__ 1
 /* FM3: For arm. Does not influence x86. */
 #define __UCLIBC_HAS_SOFT_FLOAT__ 1
@@ -74,8 +78,8 @@
  */
 #undef __HAVE_NO_PIC__
 #define __DOPIC__ 1
-#undef __HAVE_NO_SHARED__
-#define __HAVE_SHARED__ 1
+#define __HAVE_NO_SHARED__
+#undef __HAVE_SHARED__
 #undef __ARCH_HAS_NO_LDSO__
 #undef __BUILD_UCLIBC_LDSO__
 #undef __DL_FINI_CRT_COMPAT__
@@ -107,6 +111,7 @@
  */
 #undef __UCLIBC_HAS_IPV6__
 #undef __UCLIBC_HAS_RPC__
+#undef __UCLIBC_USE_NETLINK__
 
 /*
  * String and Stdio Support
@@ -118,7 +123,7 @@
 #define __UCLIBC_HAS_CTYPE_UNSAFE__ 1
 #undef __UCLIBC_HAS_CTYPE_CHECKED__
 #undef __UCLIBC_HAS_CTYPE_ENFORCED__
-#undef __UCLIBC_HAS_WCHAR__
+#define __UCLIBC_HAS_WCHAR__ 1
 #undef __UCLIBC_HAS_LOCALE__
 #undef __UCLIBC_HAS_HEXADECIMAL_FLOATS__
 #undef __UCLIBC_HAS_GLIBC_CUSTOM_PRINTF__

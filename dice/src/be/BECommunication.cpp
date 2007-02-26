@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BECommunication.cpp
- * \brief   contains the implementation of the class CBECommunication
+ *  \file    dice/src/be/BECommunication.cpp
+ *  \brief   contains the implementation of the class CBECommunication
  *
- *    \date    08/13/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    08/13/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -38,114 +38,11 @@ CBECommunication::~CBECommunication()
 {
 }
 
-/** \brief check if the property is fulfilled for this communication
- *  \param pFunction the function using the communication
- *  \param nProperty the property to check
- *  \param pContext the omnipresent context
- *  \return true if the property if fulfilled
+/** \brief add local variable needed by the communication layer to the function
+ *  \param pFunction the function to add the variables to
+ *  \return true if successful
  */
-bool CBECommunication::CheckProperty(CBEFunction *pFunction,
-    int nProperty,
-    CBEContext *pContext)
+bool CBECommunication::AddLocalVariable(CBEFunction* /*pFunction*/)
 {
-    return false;
-}
-
-/** \brief writes a send with an immediate wait
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteCall(CBEFile *pFile,
-    CBEFunction* pFunction,
-    CBEContext *pContext)
-{
-}
-
-/** \brief writes a closed wait
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteReceive(CBEFile *pFile,
-    CBEFunction* pFunction,
-    CBEContext *pContext)
-{
-}
-
-/** \brief writes a send with an immediate wait
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteReplyAndWait(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
-{
-}
-
-/** \brief writes a wait
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteWait(CBEFile* pFile,
-    CBEFunction *pFunction,
-    CBEContext* pContext)
-{
-}
-
-/** \brief writes a send
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteSend(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
-{
-}
-
-/** \brief writes a reply
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteReply(CBEFile* pFile,
-    CBEFunction* pFunction,
-    CBEContext* pContext)
-{
-}
-
-/** \brief writes the initialization
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteInitialization(CBEFile *pFile,
-    CBEFunction *pFunction,
-    CBEContext *pContext)
-{
-}
-
-/** \brief writes the assigning of a local name to a communication port
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteBind(CBEFile *pFile,
-    CBEFunction *pFunction,
-    CBEContext *pContext)
-{
-}
-
-/** \brief writes the initialization
- *  \param pFile the file to write to
- *  \param pFunction the funtion to write for
- *  \param pContext the context of the writing
- */
-void CBECommunication::WriteCleanup(CBEFile *pFile,
-    CBEFunction *pFunction,
-    CBEContext *pContext)
-{
+    return true;
 }

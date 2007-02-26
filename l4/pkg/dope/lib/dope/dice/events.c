@@ -14,13 +14,104 @@
  */
 
 #include "dopeapp-server.h"
+#include "dopeapp-client.h"
 #include "dopestd.h"
 #include "dopelib.h"
 #include "events.h"
 #include "sync.h"
 #include "app_struct.h"
+#include "misc.h"
 
-extern void dopelib_usleep(int);
+
+/*** UTILITIY: CONVERT DOPE EVENT TO IDL TYPE ***/
+static void dope_event__to__dope_event_u(dope_event *ev, dope_event_u *ev_u) {
+
+	switch (ev->type) {
+
+		case EVENT_TYPE_COMMAND:
+			ev_u->type = 1;
+			ev_u->_u.command.cmd = ev->command.cmd;
+			break;
+
+		case EVENT_TYPE_MOTION:
+			ev_u->type = 2;
+			ev_u->_u.motion.rel_x = ev->motion.rel_x;
+			ev_u->_u.motion.rel_y = ev->motion.rel_y;
+			ev_u->_u.motion.abs_x = ev->motion.abs_x;
+			ev_u->_u.motion.abs_y = ev->motion.abs_y;
+			break;
+
+		case EVENT_TYPE_PRESS:
+			ev_u->type = 3;
+			ev_u->_u.press.code = ev->press.code;
+			break;
+
+		case EVENT_TYPE_RELEASE:
+			ev_u->type = 4;
+			ev_u->_u.release.code = ev->release.code;
+			break;
+
+		case EVENT_TYPE_KEYREPEAT:
+			ev_u->type = 5;
+			ev_u->_u.keyrepeat.code = ev->keyrepeat.code;
+			break;
+
+		default:
+			ev_u->type = 0;
+	}
+}
+
+
+/*** UTILITY: CONVERT EVENT IDL TYPE TO DOPE EVENT ***
+ *
+ * \param ev_u  source dope event union
+ * \param cmd   destination buffer for command string
+ * \param ev    destination buffer for dope_event
+ */
+static void dope_event_u__to__dope_event(const dope_event_u *ev_u,
+                                         char *cmd, dope_event *ev) {
+	switch (ev_u->type) {
+
+		/* command event */
+		case 1:
+			ev->type = EVENT_TYPE_COMMAND;
+			ev->command.cmd = cmd;
+			strncpy(cmd, ev_u->_u.command.cmd, EVENT_CMD_SIZE);
+			break;
+
+		/* motion event */
+		case 2:
+			ev->type = EVENT_TYPE_MOTION;
+			ev->motion.rel_x = ev_u->_u.motion.rel_x;
+			ev->motion.rel_y = ev_u->_u.motion.rel_y;
+			ev->motion.abs_x = ev_u->_u.motion.abs_x;
+			ev->motion.abs_y = ev_u->_u.motion.abs_y;
+			break;
+
+		/* press event */
+		case 3:
+			ev->type = EVENT_TYPE_PRESS;
+			ev->press.code = ev_u->_u.press.code;
+			break;
+
+		/* release event */
+		case 4:
+			ev->type = EVENT_TYPE_RELEASE;
+			ev->release.code = ev_u->_u.release.code;
+			break;
+
+		/* keyrepeat event */
+		case 5:
+			ev->type = EVENT_TYPE_KEYREPEAT;
+			ev->keyrepeat.code = ev_u->_u.keyrepeat.code;
+			break;
+
+		/* undefined event */
+		default:
+			ev->type = EVENT_TYPE_UNDEFINED;
+			break;
+	}
+}
 
 
 int dopelib_init_eventqueue(int id) {
@@ -33,14 +124,15 @@ long dopeapp_listener_event_component(CORBA_Object _dice_corba_obj,
                                       const dope_event_u *e,
                                       const char* bindarg,
                                       CORBA_Server_Environment *_dice_corba_env) {
+
 	struct dopelib_app *app = dopelib_apps[(int)_dice_corba_env->user_data];
 	long first = app->first;
 	dope_event *event = &app->event_queue[first];
 
 	/* do not handle events for non-initialized event queue */
 	if (!app->queue_sem) {
-		printf("dopeapp_listener_event_component: event queue for app_id=%d no initialized\n",
-		       (int)app->app_id);
+		printf("%s: event queue for app_id=%d no initialized\n",
+		       __FUNCTION__, (int)app->app_id);
 		return -1;
 	}
 
@@ -48,46 +140,7 @@ long dopeapp_listener_event_component(CORBA_Object _dice_corba_obj,
 
 	strncpy(app->bindarg_queue[first], bindarg, 250);
 
-	switch (e->_d) {
-
-	/* command event */
-	case 1:
-		event->type = EVENT_TYPE_COMMAND;
-		strncpy(&app->bindcmd_queue[first][0], e->_u.command.cmd, EVENT_CMD_SIZE);
-		break;
-		
-	/* motion event */
-	case 2:
-		event->type = EVENT_TYPE_MOTION;
-		event->motion.rel_x = e->_u.motion.rel_x;
-		event->motion.rel_y = e->_u.motion.rel_y;
-		event->motion.abs_x = e->_u.motion.abs_x;
-		event->motion.abs_y = e->_u.motion.abs_y;
-		break;
-
-	/* press event */
-	case 3:
-		event->type = EVENT_TYPE_PRESS;
-		event->press.code = e->_u.press.code;
-		break;
-		
-	/* release event */
-	case 4:
-		event->type = EVENT_TYPE_RELEASE;
-		event->release.code = e->_u.release.code;
-		break;
-
-	/* keyrepeat event */
-	case 5:
-		event->type = EVENT_TYPE_KEYREPEAT;
-		event->keyrepeat.code = e->_u.keyrepeat.code;
-		break;
-
-	/* undefined event */
-	default:
-		event->type = EVENT_TYPE_UNDEFINED;
-		break;
-	}
+	dope_event_u__to__dope_event(e, &app->bindcmd_queue[first][0], event);
 
 	/* signal incoming event */
 	if (app->queue_sem) dopelib_sem_post(app->queue_sem);
@@ -117,4 +170,26 @@ void dopelib_wait_event(int id, dope_event **e_out,char **bindarg_out) {
 	/* fill out the results of the function */
 	if (bindarg_out) *bindarg_out = &app->bindarg_queue[curr][0];
 	if (e_out) *e_out = &app->event_queue[curr];
+}
+
+
+void dope_inject_event(long app_id, dope_event *ev,
+                       void (*callback)(dope_event *,void *), void *arg) {
+
+	char buf[128];
+	CORBA_Environment env = dice_default_environment;
+
+	/* convert dope_event to idl-compatible event union */
+	dope_event_u ev_u;
+	dope_event__to__dope_event_u(ev, &ev_u);
+
+	dopelib_callback_to_bindarg(callback, arg, buf, sizeof(buf));
+
+	/* submit event to local listener server */
+	dopeapp_listener_event_call(&dopelib_apps[app_id]->listener,
+	                            &ev_u, buf, &env);
+
+	if (DICE_IS_EXCEPTION(&env, CORBA_SYSTEM_EXCEPTION) &&
+	    (DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR))
+	    printf ("IPC Error at client: 0x%02x\n", DICE_IPC_ERROR(&env));
 }

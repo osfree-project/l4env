@@ -69,6 +69,52 @@ void wrb(char c)
 }
 
 //-----------------------------------------------------------------------------
+IMPLEMENTATION [arm-integrator]:
+
+enum {
+  Cache_flush_area = 0xe0000000,
+};
+
+static
+void
+map_hw(void *pd)
+{
+  // map the cache flush area
+  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
+  // map UART
+  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false);
+  // map Timer
+  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false);
+  // map Pic
+  map_1mb(pd, Mem_layout::Pic_map_base, Mem_layout::Pic_phys_base, false);
+  // map Integrator hdr
+  map_1mb(pd, Mem_layout::Integrator_map_base, Mem_layout::Integrator_phys_base, false);
+}
+
+static inline
+void wrb(char c)
+{
+  *((volatile Unsigned8*)(Mem_layout::Uart_phys_base)) = c;
+}
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm-realview]:
+
+enum {
+  Cache_flush_area = 0xe0000000,
+};
+
+static
+void
+map_hw(void *pd)
+{
+  // map the cache flush area
+  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
+  // map devices
+  map_1mb(pd, Mem_layout::Devices_map_base, Mem_layout::Devices_phys_base, false);
+}
+
+//-----------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
 #include "kmem_space.h"
@@ -128,12 +174,12 @@ extern "C" int bootstrap_main()
   Address va, pa;
   // map sdram linear from 0xf0000000
   for (va = Mem_layout::Map_base, pa = Mem_layout::Sdram_phys_base;
-       va < Mem_layout::Map_base + Max_ram_size; va+=0x100000, pa+=0x100000) 
+       va < Mem_layout::Map_base + (4 << 20); va+=0x100000, pa+=0x100000) 
     map_1mb(page_dir, va, pa, true);
 
   // map sdram 1:1
   for (va = Mem_layout::Sdram_phys_base;
-       va < Mem_layout::Sdram_phys_base + Max_ram_size; va+=0x100000) 
+       va < Mem_layout::Sdram_phys_base + (4<<20); va+=0x100000) 
     map_1mb(page_dir, va, va, true);
 
 
@@ -141,6 +187,7 @@ extern "C" int bootstrap_main()
 
   unsigned domains      = 0x55555555; // client for all domains
   unsigned control      = 0x0100f;
+  //unsigned control      = 0x00063;
 
   Mmu<Cache_flush_area, true>::flush_cache();
 

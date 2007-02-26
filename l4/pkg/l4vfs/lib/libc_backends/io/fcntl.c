@@ -97,6 +97,6 @@ int fcntl( int fd, int cmd, ... )
         ret = l4vfs_fcntl(fdesc.server_id,
                           fdesc.object_handle,
                           cmd,
-                          (l4_int32_t *) &arg );
+                          &arg);
     return ret;
 }

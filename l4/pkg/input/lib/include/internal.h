@@ -36,6 +36,7 @@ int  l4input_internal_i8042_init(void);
 int  l4input_internal_input_init(void);
 int  l4input_internal_serio_init(void);
 int  l4input_internal_pcspkr_init(void);
+int  l4input_internal_proxy_init(int prio);
 
 void l4input_internal_atkbd_exit(void);
 void l4input_internal_psmouse_exit(void);
@@ -43,6 +44,7 @@ void l4input_internal_i8042_exit(void);
 void l4input_internal_input_exit(void);
 void l4input_internal_serio_exit(void);
 void l4input_internal_pcspkr_exit(void);
+void l4input_internal_proxy_exit(void);
 
 #endif
 

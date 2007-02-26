@@ -23,7 +23,7 @@ PUBLIC
 static int
 Jdb::is_valid_task(Task_num task)
 {
-  return task == 0 || lookup_space(task) != 0;
+  return task == Config::kernel_taskno || lookup_space(task) != 0;
 }
 
 class Jdb_tid_ext : public Jdb_prompt_ext
@@ -52,33 +52,20 @@ Jdb_tid_ext::update()
 
 static Jdb_tid_ext jdb_tid_ext INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [arm]:
-
 #include "space_index.h"
-#include "space.h"
+#include "kernel_task.h"
 
 PUBLIC static
 Space*
 Jdb::lookup_space(Task_num task)
 {
-  return task == 0 ? Space::kernel_space() : Space_index(task).lookup();
+  return task == Config::kernel_taskno
+    			? Kernel_task::kernel_task()
+			: Space_index(task).lookup();
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!arm]:
-
-#include "space_index.h"
-
-PUBLIC static
-Space*
-Jdb::lookup_space(Task_num task)
-{
-  return task == 0 ? (Space*)Kmem::dir() : Space_index(task).lookup();
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!ia32]:
+IMPLEMENTATION [!{ia32,amd64}]:
 
 #include "mem_layout.h"
 

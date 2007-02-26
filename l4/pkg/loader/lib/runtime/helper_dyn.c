@@ -2,8 +2,6 @@
 /**
  * \file   l4rm/lib/src/helper_dyn.c
  * \brief  Support functions to use l4rm with dynamic linking.
- *         We don't want to link the OSKit into the shared libloader.s
- *         library so we define here some standard libc functions.
  *
  * \date   06/15/2001
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -163,26 +161,3 @@ strchr(const char *s, int c)
       s++;
     }
 }
-
-#ifdef USE_OSKIT
-#include <l4/crtx/crt0.h>
-#include <l4/generic_ts/generic_ts.h>
-void _exit(int code);
-void _exit(int code)
-{
-  if (code)
-    printf("\nExiting with %d\n", code);
-  else
-    printf("Main function returned.\n");
-
-  if (! l4ts_connected())
-  {
-    printf("SIMPLE_TS not found -- cannot send exit event");
-    crt0_sys_destruction();
-    l4_sleep_forever();
-  }
-
-  crt0_sys_destruction();
-  l4ts_exit();
-}
-#endif

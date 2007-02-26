@@ -1,59 +1,28 @@
-PKGDIR	= ../../../..
 
-include ../config.mak
+include ../../config.mak
 
-ifeq ($(SHARED_PP),yes)
-SPPLIB = libpostproc.so
-SPPVERSION = 0.0.1
+# Overload incdir, postproc include files go in a different directory.
+incdir=$(prefix)/include/postproc
+
+NAME=postproc
+SUBDIR=libavcodec/libpostproc
+ifeq ($(BUILD_SHARED),yes)
+LIBVERSION=$(SPPVERSION)
+LIBMAJOR=$(SPPMAJOR)
 endif
-PPLIB = libpostproc.a
 
-PPOBJS=postprocess.o
-SPPOBJS=postprocess_pic.o
+STATIC_OBJS=postprocess.o
+SHARED_OBJS=postprocess_pic.o
 
-CFLAGS  = $(OPTFLAGS) $(MLIB_INC) -I. -I.. $(EXTRA_INC)
+HEADERS = postprocess.h
+
+CFLAGS  = $(OPTFLAGS) $(MLIB_INC) -I. -I.. -I$(SRC_PATH)/libavcodec -I../.. $(EXTRA_INC)
 # -I/usr/X11R6/include/
 
-.SUFFIXES: .c .o
+include $(SRC_PATH)/common.mak
 
-# .PHONY: all clean
-
-.c.o:
-	$(CC) -c $(CFLAGS) -I.. -I../.. -o $@ $<
-
-all:    $(SWSLIB) $(PPLIB) $(SPPLIB)
-
-clean:
-	rm -f *.o *.a *~ *.so
-
-distclean:
-	rm -f Makefile.bak *.o *.a *~ *.so .depend
-
-dep:    depend
-
-depend:
-	$(CC) -MM $(CFLAGS) postprocess.c 1>.depend
-
-ifeq ($(SHARED_PP),yes)
+ifeq ($(BUILD_SHARED),yes)
 postprocess_pic.o: postprocess.c
 	$(CC) -c $(CFLAGS) -fomit-frame-pointer -fPIC -DPIC -I.. -I../.. -o $@ $<
-
-$(SPPLIB): $(SPPOBJS)
-	$(CC) -shared -Wl,-soname,$(SPPLIB).0 \
-	-o $(SPPLIB) $(SPPOBJS)
 endif
 
-$(PPLIB): $(PPOBJS)
-	rm -f $@
-	$(AR) rc $@ $(PPOBJS)
-	$(RANLIB) $@
-
-install: all
-
-
-#
-# include dependency files if they exist
-#
-ifneq ($(wildcard .depend),)
-include .depend
-endif

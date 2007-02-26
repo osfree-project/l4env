@@ -1,4 +1,4 @@
-/* -*- c -*- */ 
+/* -*- c -*- */
 /**
  * \file   l4vfs/idl/net_io.idl
  * \brief  
@@ -36,17 +36,20 @@ library l4vfs
          */
         [allow_reply_only]
         int accept     ([in] object_handle_t handle,
-                        [in, out, size_is(addrlen), max_is(16)] char addr[],
+                        [in, out, size_is(addrlen),
+                         max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
                         [in, out] int *addrlen,
                         [out] int *actual_len);
 
         int bind       ([in] object_handle_t handle,
-                        [in, size_is(addrlen), max_is(16)] char addr[],
+                        [in, size_is(addrlen),
+                         max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
                         [in] int addrlen);
 
         [allow_reply_only]
         int connect    ([in] object_handle_t handle,
-                        [in, size_is(addrlen), max_is(16)] char addr[],
+                        [in, size_is(addrlen),
+                         max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
                         [in] int addrlen);
 
         int listen     ([in] object_handle_t handle,
@@ -63,7 +66,9 @@ library l4vfs
          */
         [allow_reply_only]
         int recvfrom   ([in] object_handle_t handle,
-                        [out,  size_is(len), ref, prealloc] char **buf,
+                        [out,  size_is(len), ref, prealloc_client, 
+			 prealloc_server, max_is(L4VFS_WRITE_RCVBUF_SIZE)]
+			 char **buf,
                         [in, out] int *len,
                         [in] int flags,
                         [in, out, size_is(fromlen), max_is(128)] char from[],
@@ -72,22 +77,27 @@ library l4vfs
 
         [allow_reply_only]
         int recv       ([in] object_handle_t handle,
-                        [out, size_is(len), ref, prealloc] char **buf,
+                        [out, size_is(len), ref, prealloc_client,
+			 prealloc_server, max_is(L4VFS_WRITE_RCVBUF_SIZE)]
+			 char **buf,
                         [in,out] int *len,
                         [in] int flags);
 
         [allow_reply_only]
         int send       ([in] object_handle_t handle,
-                        [in, ref, size_is(len)] char *msg,
+                        [in, ref, size_is(len),
+                         max_is(L4VFS_WRITE_RCVBUF_SIZE)] char *msg,
                         [in] int len,
                         [in] int flags);
 
         [allow_reply_only]
         int sendto     ([in] object_handle_t handle,
-                        [in, ref, size_is(len)] char *msg,
+                        [in, ref, size_is(len),
+                         max_is(L4VFS_WRITE_RCVBUF_SIZE)] char *msg,
                         [in] int len,
                         [in] int flags,
-                        [in, ref, size_is(tolen)] char *to,
+                        [in, ref, size_is(tolen),
+                         max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char *to,
                         [in] int tolen);
 
         /*
@@ -104,9 +114,11 @@ library l4vfs
          */
         [allow_reply_only]
         int sendmsg    ([in] object_handle_t handle,
-                        [in, size_is(msg_namelen), max_is(8192)] char msg_name[],
+                        [in, size_is(msg_namelen),
+                         max_is(8192)] char msg_name[],
                         [in] int msg_namelen,
-                        [in, ref, size_is(msg_iov_size)] char *msg_iov,
+                        [in, ref, size_is(msg_iov_size),
+                         max_is(L4VFS_WRITE_RCVBUF_SIZE)] char *msg_iov,
                         [in] int msg_iovlen,
                         [in] int msg_iov_size,
                         [in, ref, size_is(msg_controllen)] char *msg_control,
@@ -131,11 +143,25 @@ library l4vfs
                         [in, ref, size_is(optlen)] char *optval,
                         [in] int optlen);
 
+        int getsockopt ([in] object_handle_t s,
+                        [in] int level,
+                        [in] int optname,
+                        [in, out, ref, size_is(optlen),
+                         max_is(4096)] char *optval,
+                        [in, out] int *optlen,
+                        [out] int *actual_optlen);
+
         int socketpair ([in] int domain,
                         [in] int type,
                         [in] int protocol,
-			[out] object_handle_t *handle0,
-			[out] object_handle_t *handle1);
+                        [out] object_handle_t *handle0,
+                        [out] object_handle_t *handle1);
 
-   };
+        int getpeername([in] object_handle_t handle,
+                        [in, out, size_is(addrlen),
+                         max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
+                        [in, out] int *addrlen,
+                        [out] int *actual_len);
+
+    };
 };

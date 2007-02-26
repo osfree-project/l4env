@@ -1,6 +1,6 @@
 /**
  * \file   l4vfs/term_server/lib/vt100/init.c
- * \brief  vt100 initialization 
+ * \brief  vt100 initialization
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
@@ -17,6 +17,9 @@
 #include <string.h>
 
 #include "lib.h"
+#include "keymap.h"
+
+keymap_t * vt100_keymap = &vt100_keymap_us;
 
 /* init. a termstate, does not malloc term->spec,
  * but term->text and term->attrib.
@@ -85,4 +88,20 @@ int init_termstate(termstate_t * term, int w, int h, int hist)
     memset(term->attrib, term->attrib_mode, term->w * term->virt_h);
 
     return 0;
+}
+
+void vt100_set_keymap(char * keymap)
+{
+    if (keymap == NULL || strncmp(keymap, "us", 2) == 0)
+    {
+        vt100_keymap = &vt100_keymap_us;
+    }
+    else if (strncmp(keymap, "de", 2) == 0)
+    {
+        vt100_keymap = &vt100_keymap_de;
+    }
+    else  // provide a default mapping
+    {
+        vt100_keymap = &vt100_keymap_us;
+    }
 }

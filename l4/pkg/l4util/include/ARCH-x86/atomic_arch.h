@@ -82,15 +82,6 @@ l4util_cmpxchg32(volatile l4_uint32_t * dest,
   return tmp == cmp_val;
 }
 
-#define __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG
-L4_INLINE int
-l4util_cmpxchg(volatile l4_umword_t * dest,
-               l4_umword_t cmp_val, l4_umword_t new_val)
-{
-  return l4util_cmpxchg32((l4_uint32_t *)dest,
-                          (l4_uint32_t)cmp_val, (l4_uint32_t)new_val);
-}
-
 /* atomic compare and exchange 16 bit value */
 #define __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG16
 L4_INLINE int
@@ -137,6 +128,15 @@ l4util_cmpxchg8(volatile l4_uint8_t * dest,
      );
 
   return tmp == cmp_val;
+}
+
+#define __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG
+L4_INLINE int
+l4util_cmpxchg(volatile l4_umword_t * dest,
+               l4_umword_t cmp_val, l4_umword_t new_val)
+{
+  return l4util_cmpxchg32((l4_uint32_t *)dest,
+                          (l4_uint32_t)cmp_val, (l4_uint32_t)new_val);
 }
 
 /* atomic exchange 32 bit value */
@@ -374,6 +374,15 @@ l4util_atomic_add(volatile long *dest, long val)
   __asm__ __volatile__("addl %1, %0	\n"
                        : "=m" (*dest)
                        : "ri" (val), "m" (*dest));
+}
+
+#define __L4UTIL_ATOMIC_HAVE_ARCH_INC
+L4_INLINE void
+l4util_atomic_inc(volatile long *dest)
+{
+  __asm__ __volatile__("incl %0"
+                       : "=m" (*dest)
+                       : "m" (*dest));
 }
 
 #endif /* ! __L4UTIL__INCLUDE__ARCH_X86__ATOMIC_ARCH_H__ */

@@ -37,16 +37,16 @@ const int l4thread_max_threads = 4;
  *			- -L4_EIO       error reading file
  *			- -L4_EINVAL    error passing the dataspace to client
  */
-l4_int32_t
-l4fprov_file_open_component(CORBA_Object obj,
-                            const char* name,
-                            const l4_threadid_t *dm,
-                            l4_uint32_t flags,
-                            l4dm_dataspace_t *ds,
-                            l4_uint32_t *size,
-                            CORBA_Server_Environment *env)
+long
+l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
+                             const char* fname,
+                             const l4_threadid_t *dm_id,
+                             unsigned long flags,
+                             l4dm_dataspace_t *ds,
+                             l4_size_t *size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
-  return dm_open(name, flags, ds, size);
+  return dm_open(fname, flags, *dm_id, *_dice_corba_obj, ds, size);
 }
 
 

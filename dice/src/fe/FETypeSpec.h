@@ -44,7 +44,7 @@ class CFETypeSpec : public CFEInterfaceComponent
 public:
     /** simple constructor for type spec object
      *  \param nType the type of the type spec */
-    CFETypeSpec(TYPESPEC_TYPE nType = TYPE_NONE);
+    CFETypeSpec(unsigned int nType = TYPE_NONE);
     virtual ~CFETypeSpec();
 
 protected:
@@ -55,17 +55,16 @@ protected:
 
 // operations
 public:
-    virtual bool CheckConsistency();
     static bool IsConstructedType(CFETypeSpec *pType);
     static bool IsPointerType(CFETypeSpec * pType);
-    virtual TYPESPEC_TYPE GetType();
+    virtual unsigned int GetType();
 
 // attributes
 protected:
-    /** \var TYPESPEC_TYPE m_nType
+    /** \var unsigned int m_nType
      *  \brief which type is represented
      */
-    TYPESPEC_TYPE m_nType;
+    unsigned int m_nType;
 };
 
 #endif /* __DICE_FE_FETYPESPEC_H__ */

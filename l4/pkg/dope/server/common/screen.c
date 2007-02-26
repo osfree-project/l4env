@@ -441,25 +441,34 @@ static void scr_set_gfx(SCREEN *scr, GFX_CONTAINER *ds) {
 
 /*** SET ACTIVE WINDOW ***/
 static void scr_set_act_win(SCREEN *scr, WIDGET *w) {
-	s32 app_id;
 	WINDOW *new = (WINDOW *)w, *old;
 	BUTTON *b;
+	char *new_txt = "";
 	
 	if (new == (WINDOW *)scr->sd->active_win) return;
-	
+
 	if (new) {
 		if (new->win->get_staytop(new)) return;
 		new->gen->inc_ref((WIDGET *)new);
 		new->win->set_state(new, 1);
 	}
+
 	if ((old = (WINDOW *)scr->sd->active_win)) {
 		old->win->set_state(old, 0);
 		old->gen->dec_ref((WIDGET *)old);
 	}
+
 	scr->sd->active_win = (WIDGET *)new;
-	app_id = new->gen->get_app_id((WIDGET *)new);
+
+	/* use title of new focused application for menu bar */
+	if (new) {
+		int app_id = new->gen->get_app_id((WIDGET *)new);
+		new_txt    = appman->get_app_name(app_id);
+	}
+
+	/* set new text in menu bar */
 	if ((b = scr->sd->menubutton)) {
-		b->but->set_text(b, appman->get_app_name(app_id));
+		b->but->set_text(b, new_txt);
 		b->gen->update((WIDGET *)b);
 	}
 }
@@ -539,10 +548,8 @@ static void scr_remove(SCREEN *scr, WIDGET *win) {
 		userstate->idle();
 
 	/* is the window the currently active one? */
-	if (scr->sd->active_win == win) {
-		win->gen->dec_ref(win);
-		scr->sd->active_win = NULL;
-	}
+	if (scr->sd->active_win == win)
+		scr_set_act_win(scr, NULL);
 
 	/* remove window from window list */
 	unchain_window(scr, win);
@@ -671,15 +678,26 @@ static SCREEN *create(void) {
 static void forget_children(int app_id) {
 	SCREEN *cs = first_scr;
 	while (cs) {
-		WIDGET *cw = cs->sd->first_win;
+		WIDGET *cw;
+		SCREEN *ns;
+
 		cs->gen->lock(cs);
-		while (cw) {
+
+		/* check if active win belongs to the application */
+		if (cs->sd->active_win
+		 && (cs->sd->active_win->gen->get_app_id(cs->sd->active_win) == app_id))
+			scr_set_act_win(cs, NULL);
+
+		for (cw = cs->sd->first_win; cw; ) {
+			WIDGET *nw = cw->gen->get_next(cw);
 			if (cw->gen->get_app_id(cw) == app_id)
 				cs->scr->remove(cs, cw);
-			cw = cw->gen->get_next(cw);
+			cw = nw;
 		}
+
+		ns = cs->sd->next;
 		cs->gen->unlock(cs);
-		cs = cs->sd->next;
+		cs = ns;
 	}
 }
 

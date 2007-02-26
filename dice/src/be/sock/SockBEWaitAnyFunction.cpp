@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBEWaitAnyFunction.cpp
- *    \brief   contains the implementation of the class CSockBEWaitAnyFunction
+ *  \brief   contains the implementation of the class CSockBEWaitAnyFunction
  *
  *    \date    11/28/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -29,10 +29,14 @@
 #include "be/sock/SockBEWaitAnyFunction.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
-#include "be/BEMsgBufferType.h"
 #include "be/BEType.h"
 #include "be/BEDeclarator.h"
+#include "be/BEMsgBuffer.h"
+#include "be/BEClassFactory.h"
 #include "be/sock/BESocket.h"
+#include "Compiler.h"
+#include "TypeSpec-Type.h"
+#include <cassert>
 
 CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CBEWaitAnyFunction(bOpenWait, bReply)
@@ -44,7 +48,7 @@ CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(CSockBEWaitAnyFunction & src)
 {
 }
 
-/**    \brief destructor of target class */
+/** \brief destructor of target class */
 CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
 {
 
@@ -52,44 +56,64 @@ CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
 
 /** \brief writes the message invocation
  *  \param pFile the file to write to
- *  \param pContext the context of the write
  *
  * The socket has to be open already.
  */
 void
-CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 {
     // wait for new request
-    assert(m_pComm);
+    CBECommunication *pComm = GetCommunication();
+    assert(pComm);
     if (m_bReply)
-        m_pComm->WriteReplyAndWait(pFile, this, pContext);
+        pComm->WriteReplyAndWait(pFile, this);
     else
-        m_pComm->WriteWait(pFile, this, pContext);
+        pComm->WriteWait(pFile, this);
 }
 
-/** \brief writes additional variable declarations
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- */
-void CSockBEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
-{
-    CBEWaitAnyFunction::WriteVariableDeclaration(pFile, pContext);
-    pFile->PrintIndent("int dice_ret_size;\n");
-    string sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", sObj.c_str());
-}
-
-/** \brief remove references from message buffer
+/** \brief initializes this instance of the class
  *  \param pFEInterface the front-end interface to use as reference
- *  \param pContext the context of the create process
- *  \return true on success
+ *  \return true if successful
  */
-bool CSockBEWaitAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext)
+void
+CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
 {
-    if (!CBEWaitAnyFunction::AddMessageBuffer(pFEInterface, pContext))
-        return false;
-    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
-    return true;
+    CBEWaitAnyFunction::CreateBackEnd(pFEInterface);
+
+    // add local variables
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
+    CBEType *pType = pCF->GetNewType(TYPE_INTEGER);
+    pType->SetParent(pVariable);
+    AddLocalVariable(pVariable);
+    try
+    {
+	pType->CreateBackEnd(false, 4, TYPE_INTEGER);
+	pVariable->CreateBackEnd(pType, string("dice_ret_size"));
+    }
+    catch (CBECreateException *e)
+    {
+	m_LocalVariables.Remove(pVariable);
+        delete pVariable; // deletes pType too
+        throw;
+    }
+    delete pType; // has been cloned by typed decl.
+
+    pVariable = pCF->GetNewTypedDeclarator();
+    AddLocalVariable(pVariable);
+    try
+    {
+	pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 
+	    0);
+    }
+    catch (CBECreateException *e)
+    {
+	m_LocalVariables.Remove(pVariable);
+        delete pVariable;
+        throw;
+    }
+    string sInit = "sizeof(*" + 
+	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+    pVariable->SetDefaultInitString(sInit);
 }
+

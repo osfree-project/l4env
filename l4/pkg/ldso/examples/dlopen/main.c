@@ -43,7 +43,7 @@ main(int argc, char** argv)
 	  printf("Error %d attaching ds\n", error);
 	  exit(-1);
 	}
-      printf("%02d: Attached 4kB region to %08x\n", i, (l4_addr_t)addr);
+      printf("%02d: Attached 4kB region to %08lx\n", i, (l4_addr_t)addr);
       memset(addr, i, L4_PAGESIZE);
     }
 

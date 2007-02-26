@@ -71,7 +71,7 @@ private:
 //---------------------------------------------------------------------------
 IMPLEMENTATION [sa1100]:
 
-#include "assert.h"
+#include <cassert>
 #include "processor.h"
 
 PRIVATE INLINE static Address Uart::_utcr0( Address a ) 
@@ -297,7 +297,7 @@ int Uart::char_avail() const
 
 
 IMPLEMENT inline
-int const Uart::irq() const
+int Uart::irq() const
 {
   return (int)_irq;
 }

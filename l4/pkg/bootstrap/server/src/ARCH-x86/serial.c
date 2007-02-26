@@ -126,6 +126,7 @@ com_cons_init(int com_port)
     case 2: ser_io_base = 0x2f8; break;
     case 3: ser_io_base = 0x3e8; break;
     case 4: ser_io_base = 0x2e8; break;
+   default: ser_io_base = com_port; break;
     }
 
   /* Silently fail if serial port is not available */

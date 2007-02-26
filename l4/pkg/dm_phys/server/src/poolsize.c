@@ -40,19 +40,19 @@
  *         - -#L4_EINVAL  invalid memory pool
  */
 /*****************************************************************************/ 
-l4_int32_t
-if_l4dm_memphys_dmphys_poolsize_component(CORBA_Object _dice_corba_obj,
-                                          l4_uint32_t pool,
-                                          l4_uint32_t * size,
-                                          l4_uint32_t * free,
-                                          CORBA_Server_Environment * _dice_corba_env)
+long
+if_l4dm_memphys_dmphys_poolsize_component (CORBA_Object _dice_corba_obj,
+                                           unsigned long pool,
+                                           l4_size_t *size,
+                                           l4_size_t *free,
+                                           CORBA_Server_Environment *_dice_corba_env)
 {
   page_pool_t * p = dmphys_get_page_pool(pool);
   
   /* sanity checks */
   if (p == NULL)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: invalid page pool (%d)", pool);
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid page pool (%ld)", pool);
       return -L4_EINVAL;
     }
 

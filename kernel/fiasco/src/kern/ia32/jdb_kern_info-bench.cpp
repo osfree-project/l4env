@@ -14,7 +14,6 @@ class Jdb_kern_info_bench : public Jdb_kern_info_module
 
 static Jdb_kern_info_bench k_a INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
 
-
 PUBLIC
 Jdb_kern_info_bench::Jdb_kern_info_bench()
   : Jdb_kern_info_module('b', "Benchmark privileged instructions")
@@ -36,7 +35,7 @@ Jdb_kern_info_bench::show_time(Unsigned64 time, Unsigned32 rounds,
 
 #define inst_invlpg							\
   asm volatile ("invlpg %0" 						\
-		: : "m" (*(char*)Mem_layout::Jdb_adapter_page))
+		: : "m" (*(char*)Mem_layout::Kmem_tmp_page_1))
 
 #define inst_read_cr3							\
   asm volatile ("movl %%cr3,%0"						\
@@ -103,7 +102,7 @@ Jdb_kern_info_bench::show()
   // we need a cached, non-global mapping for measuring the time to load
   // TLB entries
   Address phys = Kmem::virt_to_phys((void*)Mem_layout::Tbuf_status_page);
-  Kmem::map_devpage_4k(phys, Mem_layout::Jdb_bench_page, true, false);
+  Kmem::map_phys_page(phys, Mem_layout::Jdb_bench_page, true, false);
 
     {
       time = Cpu::rdtsc();
@@ -121,6 +120,7 @@ Jdb_kern_info_bench::show()
   cr0 = Cpu::get_cr0();
   BENCH("clts",			inst_clts,         200000);
   BENCH("cli + sti",		inst_cli_sti,      200000);
+  Proc::cli();
   BENCH("set CR0.ts",		inst_set_cr0_ts,   200000);
   Cpu::set_cr0(cr0);
   pic = Io::in8(0x21);
@@ -185,25 +185,36 @@ Jdb_kern_info_bench::show()
       Idt::set_writable(true);
       gdt->get_raw(Gdt::gdt_code_user/8, &low, &high);
       gdt->set_raw(Gdt::gdt_code_user/8, 0x0000FFFF, 0x00CFFB00);
-      asm volatile ("push %c3			\n\t"
-		    "push %c3+4			\n\t"
-		    "mov  %%esp, %%edi		\n\t"
+      asm volatile ("pushf			\n\t"
+		    "push %c3			\n\t" // save IDT entry low
+		    "push %c3+4			\n\t" // save IDT entry high
+		    "push %%ds			\n\t"
+		    "push %%es			\n\t" 
+		    "push %%fs			\n\t" 
+		    "push %%gs			\n\t" 
+		    "mov  %%esp, %%edi		\n\t" // save esp
+		    "andl $0xffffffc0, %%esp	\n\t" // cache line align esp
 		    "movl $(%c4*256+0xfceb00cd), %c2 \n\t"
-		    "mov  $1f, %%eax		\n\t"
+		    "mov  $1f, %%eax		\n\t" // '1: int 0x1f; jmp 1b'
 		    "and  $0x0000ffff, %%eax	\n\t"
 		    "or   $0x00080000, %%eax	\n\t"
-		    "mov  %%eax, %c3		\n\t"
+		    "mov  %%eax, %c3		\n\t" // change IDT entry low
 		    "mov  $1f, %%eax		\n\t"
 		    "and  $0xffff0000, %%eax	\n\t"
 		    "or   $0x0000ee00, %%eax	\n\t"
-		    "mov  %%eax, %c3+4		\n\t"
-		    "mov  (%%ecx), %%ebx	\n\t"
-		    "mov  %%edi, (%%ecx)	\n\t"
-		    "push $%c5			\n\t"
-		    "push $0			\n\t"
-		    "push $0x00003000		\n\t"
-		    "push $%c6			\n\t"
-		    "push $%c2			\n\t"
+		    "mov  %%eax, %c3+4		\n\t" // change IDT entry high
+		    "mov  (%%ecx), %%ebx	\n\t" // save kernel esp
+		    "push $%c5			\n\t" // user ss
+		    "push $0			\n\t" // user esp
+		    "push $0x3082		\n\t" // user eflags (IOPL3)
+		    "push $%c6			\n\t" // user cs
+		    "push $%c2			\n\t" // user eip
+		    "mov  %%esp, (%%ecx)	\n\t" // change kernel esp
+		    "mov  $%c5, %%eax		\n\t"
+		    "mov  %%eax, %%ds		\n\t" // ensure dpl3 at ds
+		    "mov  %%eax, %%es		\n\t" // ensure dpl3 at es
+		    "mov  %%eax, %%fs		\n\t" // ensure dpl3 at fs
+		    "mov  %%eax, %%gs		\n\t" // enusre dpl3 at gs
 
 		    "rdtsc			\n\t"
 		    "mov  %%eax, %%esi		\n\t"
@@ -217,23 +228,25 @@ Jdb_kern_info_bench::show()
 
 		    "2:				\n\t"
 		    "rdtsc			\n\t"
+		    "mov  %%edi, %%esp		\n\t" // restore esp
 		    "sub  %%esi, %%eax		\n\t"
-		    "mov  %%ss, %%edx		\n\t"
-		    "mov  %%edx, %%ds		\n\t"
-		    "mov  %%edx, %%es		\n\t"
+		    "pop  %%gs			\n\t"
+		    "pop  %%fs			\n\t"
+		    "pop  %%es			\n\t"
+		    "pop  %%ds			\n\t"
 		    "sub  %%edx, %%edx		\n\t"
-		    "mov  %%edi, %%esp		\n\t"
-		    "mov  %%ebx, (%%ecx)	\n\t"
-		    "pop  %c3+4			\n\t"
-		    "pop  %c3			\n\t"
+		    "mov  %%ebx, (%%ecx)	\n\t" // restore kernel esp
+		    "pop  %c3+4			\n\t" // restore IDT entry high
+		    "pop  %c3			\n\t" // restore IDT entry low
+		    "popf			\n\t"
 
-		    : "=A"(time), "=c"(dummy)
+		    : "=A"(time),"=c"(dummy)
 		    : "i"(Mem_layout::Tbuf_status_page + Config::PAGE_SIZE-4),
 		      "i"(Mem_layout::Idt + (0x1f<<3)),
 		      "i"(0x1f),
 		      "i"(Gdt::gdt_data_user | Gdt::Selector_user),
 		      "i"(Gdt::gdt_code_user | Gdt::Selector_user),
-		      "c"(Kmem::kernel_esp())
+		      "c"((Address)Kmem::kernel_sp())
 		    : "ebx", "esi", "edi", "memory");
       Idt::set_writable(false);
       gdt->set_raw(Gdt::gdt_code_user/8, low, high);
@@ -244,12 +257,15 @@ Jdb_kern_info_bench::show()
       // Set Sysenter MSR, write "sysenter" to the last two bytes of the
       // Tbuf status page (which is accessible from usermode) and do "sysexit ;
       // sysenter". Gdt doesn't care us since sysexit loads a flat segment.
-      asm volatile ("mov  $0x176, %%ecx		\n\t"
+      // The sysenter esp also doesn't care us since we don't access esp
+      // inside the measurement loop.
+      asm volatile ("pushf			\n\t"
+		    "mov  $0x176, %%ecx		\n\t"
 		    "rdmsr			\n\t"
-		    "mov  %%eax, %%ebx		\n\t"
+		    "mov  %%eax, %%ebx		\n\t" // save sysenter eip
 		    "mov  $1f, %%eax		\n\t"
-		    "wrmsr			\n\t"
-		    "mov  %%esp, %%edi		\n\t"
+		    "wrmsr			\n\t" // change sysenter eip
+		    "mov  %%esp, %%edi		\n\t" // save esp
 		    "movw $0x340f, %c1		\n\t"
 		    "rdtsc			\n\t"
 		    "mov  %%eax, %%esi		\n\t"
@@ -270,16 +286,86 @@ Jdb_kern_info_bench::show()
 		    "sub  %%edx, %%edx		\n\t"
 		    "wrmsr			\n\t"
 
-		    "# workaround VMware bug	\n\t"
-		    "mov  %%ds, %%eax		\n\t"
-		    "mov  %%eax, %%es		\n\t"
 		    "mov  %%esi, %%eax		\n\t"
 		    "neg  %%eax			\n\t"
-		    "mov  %%edi, %%esp		\n\t"
+		    "mov  %%edi, %%esp		\n\t" // restore esp
+		    "popf			\n\t"
 		    : "=A"(time)
 		    : "i"(Mem_layout::Tbuf_status_page + Config::PAGE_SIZE-2)
 		    : "ebx", "ecx", "esi", "edi", "memory");
       show_time(time, 200000, "sysenter + sysexit");
+    }
+  if (Cpu::have_sysenter())
+    {
+      // Set Sysenter MSR, write "sysenter" to the last two bytes of the
+      // Tbuf status page (which is accessible from usermode) and do "iret ;
+      // sysenter".
+      asm volatile ("pushf			\n\t"
+		    "push %%ebp			\n\t"
+		    "push %%ds			\n\t"
+		    "push %%es			\n\t"
+		    "push %%fs			\n\t"
+		    "push %%gs			\n\t"
+		    "mov  $0x176, %%ecx		\n\t"
+		    "rdmsr			\n\t"
+		    "mov  %%eax, %%ebx		\n\t" // save sysenter eip
+		    "mov  $1f, %%eax		\n\t"
+		    "wrmsr			\n\t" // change sysenter eip
+		    "mov  %%esp, %%edi		\n\t" // save esp
+		    "andl $0xffffffc0, %%esp	\n\t" // cache line align esp
+		    "movw $0x340f, %c1		\n\t" // 'sysenter'
+		    "push $%c3			\n\t" // user ss
+		    "push $0			\n\t" // user esp
+		    "push $0x3082		\n\t" // user flags
+		    "push $%c2			\n\t" // user cs
+		    "push $%c1			\n\t" // user eip
+		    "mov  $0x175, %%ecx		\n\t"
+		    "rdmsr			\n\t"
+		    "mov  %%eax, %%ebp		\n\t" // save sysenter esp
+		    "mov  %%esp, %%eax		\n\t"
+		    "wrmsr			\n\t" // change sysenter esp
+		    "mov  $%c3, %%eax		\n\t"
+		    "mov  %%eax, %%ds		\n\t" // ensure dpl3 at ds
+		    "mov  %%eax, %%es		\n\t" // ensure dpl3 at es
+		    "mov  %%eax, %%fs		\n\t" // ensure dpl3 at fs
+		    "mov  %%eax, %%gs		\n\t" // ensure dpl3 at gs
+
+		    "rdtsc			\n\t"
+		    "mov  %%eax, %%esi		\n\t"
+		    "movl $200001, %%eax	\n\t"
+
+		    ".align 8			\n\t"
+		    "1:				\n\t"
+		    "dec  %%eax			\n\t"
+		    "jz   2f			\n\t"
+		    "iret			\n\t"
+
+		    "2:				\n\t"
+		    "rdtsc			\n\t"
+		    "sub  %%eax, %%esi		\n\t"
+		    "sub  %%edx, %%edx		\n\t"
+		    "mov  $0x176, %%ecx		\n\t"
+		    "mov  %%ebx, %%eax		\n\t"
+		    "wrmsr			\n\t" // restore sysenter eip
+		    "mov  $0x175, %%ecx		\n\t"
+		    "mov  %%ebp, %%eax		\n\t"
+		    "wrmsr			\n\t" // restore sysenter esp
+
+		    "mov  %%edi, %%esp		\n\t" // restore esp
+		    "pop  %%gs			\n\t"
+		    "pop  %%fs			\n\t"
+		    "pop  %%es			\n\t"
+		    "pop  %%ds			\n\t"
+		    "mov  %%esi, %%eax		\n\t"
+		    "neg  %%eax			\n\t"
+		    "pop  %%ebp			\n\t"
+		    "popf			\n\t"
+		    : "=A"(time)
+		    : "i"(Mem_layout::Tbuf_status_page + Config::PAGE_SIZE-2),
+		      "i"(Gdt::gdt_code_user | Gdt::Selector_user),
+		      "i"(Gdt::gdt_data_user | Gdt::Selector_user)
+		    : "ebx", "ecx", "esi", "edi", "memory");
+      show_time(time, 200000, "sysenter + iret");
     }
   if (Cpu::ext_amd_features() & FEATA_SYSCALL)
     {
@@ -291,17 +377,18 @@ Jdb_kern_info_bench::show()
       Timer::disable();
       Proc::sti();
       Proc::irq_chance();
-      asm volatile ("push %%ebp			\n\t"
+      asm volatile ("pushf			\n\t"
+		    "push %%ebp			\n\t"
 		    "mov  $0xC0000080, %%ecx	\n\t"
 		    "sub  %%edx, %%edx		\n\t"
-		    "movl $1, %%eax		\n\t"
+		    "movl $1, %%eax		\n\t" // enable syscall
 		    "wrmsr			\n\t"
 		    "mov  $0xC0000081, %%ecx	\n\t"
 		    "rdmsr			\n\t"
-		    "mov  %%eax, %%ebx		\n\t"
+		    "mov  %%eax, %%ebx		\n\t" // save IA32_STAR
 		    "mov  %%edx, %%ebp		\n\t"
-		    "mov  $1f, %%eax		\n\t"
-		    "mov  $0x00180008, %%edx	\n\t"
+		    "mov  $1f, %%eax		\n\t" // syscall eip
+		    "mov  $0x00180008, %%edx	\n\t" // syscall cs+ss
 		    "wrmsr			\n\t"
 		    "mov  %%esp, %%edi		\n\t"
 		    "movw $0x050f, %c1		\n\t"
@@ -323,15 +410,14 @@ Jdb_kern_info_bench::show()
 		    "mov  $0xC0000081, %%ecx	\n\t"
 		    "mov  %%ebx, %%eax		\n\t"
 		    "mov  %%ebp, %%edx		\n\t"
-		    "wrmsr			\n\t"
+		    "wrmsr			\n\t" // restore IA32_STAR
 
-		    "# workaround VMware bug	\n\t"
-		    "mov  %%ds, %%eax		\n\t"
-		    "mov  %%eax, %%es		\n\t"
 		    "mov  %%esi, %%eax		\n\t"
 		    "neg  %%eax			\n\t"
 		    "mov  %%edi, %%esp		\n\t"
 		    "pop  %%ebp			\n\t"
+		    "sub  %%edx, %%edx		\n\t"
+		    "popf			\n\t"
 		    : "=A"(time)
 		    : "i"(Mem_layout::Tbuf_status_page + Config::PAGE_SIZE-2)
 		    : "ebx", "ecx", "esi", "edi", "memory");

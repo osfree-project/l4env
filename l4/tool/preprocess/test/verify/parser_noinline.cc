@@ -3,6 +3,20 @@
 #include "parser_noinline.h"
 #include "parser_noinline_i.h"
 
+#line 40 "parser.cpp"
+
+// Try to initialize a nested structure object.
+struct Foo::Bar some_bar = { 1 };
+#line 79 "parser.cpp"
+
+void find_this ();
+#line 85 "parser.cpp"
+
+#ifdef HEILIGE_WEIHNACHT
+#line 87 "parser.cpp"
+static void present_this ();
+#line 88 "parser.cpp"
+#endif
 
 #line 18 "parser.cpp"
 
@@ -13,6 +27,7 @@ int bar()
 #line 22 "parser.cpp"
 
 // Try multiline NEEDS
+
 
 int baz()
 {}
@@ -25,10 +40,6 @@ somefunc(unsigned (*func1)(),
 	 unsigned (*func2)())
 {
 }
-#line 40 "parser.cpp"
-
-// Try to initialize a nested structure object.
-struct Foo::Bar some_bar = { 1 };
 
 #line 43 "parser.cpp"
 
@@ -62,13 +73,3 @@ Foo::alreadythere()
 int 
 Foo::alsoalreadythere()
 {}
-#line 79 "parser.cpp"
-
-void find_this ();
-#line 85 "parser.cpp"
-
-#ifdef HEILIGE_WEIHNACHT
-#line 87 "parser.cpp"
-static void present_this ();
-#line 88 "parser.cpp"
-#endif

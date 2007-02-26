@@ -564,6 +564,35 @@ l4rm_area_release(l4_uint32_t area);
 int
 l4rm_area_release_addr(const void * ptr);
 
+/*****************************************************************************/
+/**
+ * \brief   Store a user-defined pointer for region
+ * \ingroup api_vm
+ *
+ * \param   addr  addr inside region
+ * \param   ptr   user pointer
+ *
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL  invalid address, address belongs to no used region
+ */
+/*****************************************************************************/
+int
+l4rm_set_userptr(const void * addr, void * ptr);
+
+/*****************************************************************************/
+/**
+ * \brief   Read user-defined pointer for region
+ * \ingroup api_vm
+ *
+ * \param   addr  addr inside region
+ *
+ * \return  stored user pointer or 0 if none
+ */
+/*****************************************************************************/
+void *
+l4rm_get_userptr(const void * addr);
+
+
 /*****************************************************************************
  *** lookup regions
  *****************************************************************************/

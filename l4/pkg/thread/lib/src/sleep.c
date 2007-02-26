@@ -97,8 +97,6 @@ __do_sleep(l4_uint32_t t)
   l4_uint32_t to_e,to_m;
   l4_timeout_t to;
   int error;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
 
   if (t == (l4_uint32_t)-1)
     to = L4_IPC_NEVER;
@@ -116,8 +114,7 @@ __do_sleep(l4_uint32_t t)
     }
   
   /* do wait */
-  error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
-                         &dummy, &dummy, to, &result);
+  error = l4_ipc_sleep(to);
 
   if (error != L4_IPC_RETIMEOUT)
     LOG_Error("l4thread: sleep canceled!");

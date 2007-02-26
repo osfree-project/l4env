@@ -20,7 +20,7 @@ int * __tls_location (volatile int *tls_key, int tls_field[], int tls_used[])
 	  LOG("No free key for tls available");
 	  exit(-1);
 	}
-      if (!l4util_cmpxchg(tls_key, -1, key))
+      if (!l4util_cmpxchg32(tls_key, -1, key))
 	/* someone else was faster allocating a key */
 	l4thread_data_release_key(key);
     }
@@ -38,7 +38,7 @@ int * __tls_location (volatile int *tls_key, int tls_field[], int tls_used[])
 	      exit(-1);
 	    }
 	}
-      while (l4util_bts(bit, tls_used));
+      while (l4util_bts(bit, (volatile l4_umword_t *)tls_used));
       
       l4thread_data_set_current(*tls_key, tls_field + bit);
     }

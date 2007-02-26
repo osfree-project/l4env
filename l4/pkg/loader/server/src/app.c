@@ -17,9 +17,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
-#ifdef OSKIT
-#include <malloc.h>
-#endif
 
 #include <l4/sys/consts.h>
 #include <l4/env/errno.h>
@@ -33,17 +30,15 @@
 #include <l4/util/stack.h>
 #include <l4/util/macros.h>
 #include <l4/util/memdesc.h>
-#include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/generic_ts/generic_ts.h>
 #include <l4/loader/loader.h>
-
-#ifdef ARCH_x86
-#include "elf.h"
-#else
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
+#ifdef IPCMON
+#include <l4/ipcmon/ipcmon.h>
 #endif
+
 #include "elf-loader.h"
 #include "fprov-if.h"
 #include "dm-if.h"
@@ -56,7 +51,7 @@
 
 /** \addtogroup constants Address Space Constants
  * These constants define where some special modules are mapped into
- * the address space of the target application. 
+ * the address space of the target application.
  * \note These pages are \b not direct mapped, even in applications which
  *       where created with the direct_mapped option!! L4Linux 2.2 is not
  *       an issue because it starts at the end of its binary image (_end) for
@@ -65,7 +60,7 @@
 /** position of L4 environment infopage in target app's address space. */
 #define APP_ADDR_ENVPAGE	0x00007000
 /** position of initial stack in target application's address space. */
-#define APP_ADDR_STACK		0x00008000
+#define APP_ADDR_STACK		0x00009000
 /** position of libloader.s.so in target application's address space. */
 #define APP_ADDR_LIBLOADER	0x00010000
 /** position of libld-l4.s.so in target application's address space. */
@@ -85,7 +80,7 @@ extern int use_events;				/**< use events server. */
  *
  * \param tid		L4 thread ID
  * \return		task descriptor
- * 			NULL if not found */
+ *			NULL if not found */
 app_t*
 task_to_app(l4_threadid_t tid)
 {
@@ -130,27 +125,27 @@ dump_l4env_infopage(app_t *app)
 {
   int i, j, k, pos=0;
   l4env_infopage_t *env = app->env;
-  
-  static char *type_names_on[] = 
+
+  static char *type_names_on[] =
     {"r", "w", "x", " reloc", " link", " page", " reserve", " share",
       " beg", " end", " errlink", " startup" };
   static char *type_names_off[] =
     {"-", "-", "-", "", "", "", "", "", "", "", "", "" };
-  
+
   app_msg(app, "Dumping sections of environment page");
-  
+
   for (i=0; i<env->section_num; i++)
     {
       l4exec_section_t *l4exc = env->section + i;
       char pos_str[8]="   ";
-      
+
       if (l4exc->info.type & L4_DSTYPE_OBJ_BEGIN)
 	{
 	  sprintf(pos_str, "%3d", pos);
 	  pos++;
 	}
-      
-      printf("  %s ds %3d: %08x-%08x ",
+
+      printf("  %s ds %3d: %08lx-%08lx ",
 	   pos_str, l4exc->ds.id, l4exc->addr, l4exc->addr+l4exc->size);
       for (j=1, k=0; j<=L4_DSTYPE_STARTUP; j<<=1, k++)
 	{
@@ -167,12 +162,12 @@ dump_l4env_infopage(app_t *app)
  *
  * \retval new_app	pointer to new app descriptor
  * \return		0 on success
- * 			-L4_ENOMEM if no descriptors available */
+ *			-L4_ENOMEM if no descriptors available */
 int
 create_app_desc(app_t **new_app)
 {
   int counter;
-  
+
   for (counter=MAX_APP; counter; app_next_free=0)
     {
       while ((app_next_free<MAX_APP) && counter--)
@@ -185,15 +180,15 @@ create_app_desc(app_t **new_app)
 	      a->env          = (l4env_infopage_t*)1; /* mark as allocated */
 	      a->tid          = L4_INVALID_ID;	/* tid still unknown */
 	      a->hi_first_msg = is_fiasco();	/* highlight first message */
-	      a->last_pf      = 0xffffffff;
-	      a->last_pf_eip  = 0xffffffff;
+	      a->last_pf      = ~0U;
+	      a->last_pf_eip  = ~0U;
 	      *new_app = a;
 	      return 0;
 	    }
 	  app_next_free++;
 	}
     }
-  
+
   printf("Can't handle more than %d simultaneous applications\n", MAX_APP);
   return -L4_ENOMEM;
 }
@@ -205,15 +200,15 @@ create_app_desc(app_t **new_app)
  * \param app		application descriptor
  * \retval new_app_area	new application area descriptor
  * \return		0 on success
- * 			-L4_ENOMEM on failure */
+ *			-L4_ENOMEM on failure */
 static app_area_t*
 create_app_area_desc(app_t *app)
 {
   app_area_t *aa;
-  
+
   if (app->app_area_next_free >= MAX_APP_AREA)
     {
-      printf("Can't handle more than %d sections per application\n", 
+      printf("Can't handle more than %d sections per application\n",
 	      MAX_APP_AREA);
       return 0;
     }
@@ -234,9 +229,9 @@ list_app_areas(app_t *app)
     {
       aa = app->app_area + i;
       if (aa->flags & APP_AREA_VALID)
-	app_msg(app, "  %08x-%08x => %08x-%08x",
-		aa->beg.app,  aa->beg.app+aa->size, 
-	 	aa->beg.here, aa->beg.here+aa->size);
+	app_msg(app, "  %08lx-%08lx => %08lx-%08lx",
+		aa->beg.app,  aa->beg.app+aa->size,
+		aa->beg.here, aa->beg.here+aa->size);
     }
 }
 
@@ -246,7 +241,7 @@ sanity_check_app_area(app_t *app, app_area_t **check_aa)
 {
   int i;
   app_area_t *aa;
- 
+
   /* check for overlap */
   for (i=0; i<app->app_area_next_free; i++)
     {
@@ -255,7 +250,7 @@ sanity_check_app_area(app_t *app, app_area_t **check_aa)
 	  && (*check_aa)->beg.app                     <  aa->beg.app+aa->size
 	  && (*check_aa)->beg.app+(*check_aa)->size-1 >= aa->beg.app)
 	{
-	  app_msg(app, "app_area (%08x-%08x) overlaps:",
+	  app_msg(app, "app_area (%08lx-%08lx) overlaps:",
 	         (*check_aa)->beg.app, (*check_aa)->beg.app+(*check_aa)->size);
 	  list_app_areas(app);
 	  return -L4_EINVAL;
@@ -270,13 +265,13 @@ sanity_check_app_area(app_t *app, app_area_t **check_aa)
  * sigma0 applications because in l4env-style applications, we let
  * the region manager manager decide where a region lives. */
 static l4_addr_t
-app_find_free_virtual_area(app_t *app, l4_size_t size, 
+app_find_free_virtual_area(app_t *app, l4_size_t size,
 			   l4_addr_t low, l4_addr_t high)
 {
   int i;
   app_area_t *aa;
   l4_addr_t addr;
- 
+
   addr = 0x00100000;	/* begin at 1MB */
   if (low > addr)
     addr = low;
@@ -295,11 +290,11 @@ app_find_free_virtual_area(app_t *app, l4_size_t size,
 	  i=0;
 	}
     }
-  
+
   /* we went through. Our address may be after the last area. */
   if (addr >= 0xC0000000 || addr >= high)
     return 0;
-  
+
   return addr;
 }
 
@@ -316,8 +311,8 @@ app_list_addr (app_t *app)
   for (i=0; i<app->app_area_next_free; i++)
     {
       aa = app->app_area + i;
-      printf("  %08x-%08x => %08x-%08x (%s)\n", 
-	  aa->beg.app,  aa->beg.app+aa->size, 
+      printf("  %08lx-%08lx => %08lx-%08lx (%s)\n",
+	  aa->beg.app,  aa->beg.app+aa->size,
 	  aa->beg.here, aa->beg.here+aa->size, aa->dbg_name);
     }
 }
@@ -327,15 +322,15 @@ app_list_addr (app_t *app)
  * \param app		application
  * \param ds		dataspace to attach
  * \param addr		start address of dataspace inside application.
- * 			If L4_MAX_ADDRESS, then do not make the dataspace
- * 			accessible from the application but only register
- * 			to allow smoothly shutdown of dataspace on exit
- * 			of the application.
+ *			If L4_MAX_ADDRESS, then do not make the dataspace
+ *			accessible from the application but only register
+ *			to allow smoothly shutdown of dataspace on exit
+ *			of the application.
  * \param size		size of dataspace
  * \param type		type
  * \param rights	rights for the pager
  * \param attach	only used for MMIO emulation: if set to 1 this
- * 			dataspace should be attached to our address space
+ *			dataspace should be attached to our address space
  * \param dbg_name	name of application area for debugging purposes
  * \retval aa		application area */
 int
@@ -346,7 +341,7 @@ app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
   int error;
   l4_addr_t sec_end;
   app_area_t *new_aa;
- 
+
   if (!(new_aa = create_app_area_desc(app)))
     return -L4_ENOMEM;
 
@@ -389,17 +384,17 @@ app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
 #endif
 
   *aa = new_aa;
-  
+
   return 0;
 }
 
 /** Attach a section which should be paged by the loader pager.
- * 
+ *
  * \param l4exc_start	first l4exec_section
  * \param env		L4 environment infopage
  * \param app		application
  * \return		0 on success
- * 			-L4_ENOMEM if no app descriptor is available */
+ *			-L4_ENOMEM if no app descriptor is available */
 static int
 app_attach_section_to_pager(l4exec_section_t *l4exc_start,
 			    l4env_infopage_t *env, app_t *app)
@@ -407,16 +402,16 @@ app_attach_section_to_pager(l4exec_section_t *l4exc_start,
   int error;
   l4exec_section_t *l4exc;
   l4exec_section_t *l4exc_stop = env->section + env->section_num;
- 
+
   for (l4exc=l4exc_start; l4exc<l4exc_stop; l4exc++)
     {
       app_area_t *aa;
-      l4_uint32_t rights = (l4exc->info.type & L4_DSTYPE_WRITE) 
+      l4_uint32_t rights = (l4exc->info.type & L4_DSTYPE_WRITE)
 			   ? L4DM_RW : L4DM_RO;
-      
+
       /* make section pageable */
-      if ((error = app_attach_ds_to_pager(app, &l4exc->ds, l4exc->addr, 
-					  l4exc->size, l4exc->info.type, 
+      if ((error = app_attach_ds_to_pager(app, &l4exc->ds, l4exc->addr,
+					  l4exc->size, l4exc->info.type,
 					  rights, /*attach=*/1,
 					  "program section", &aa)))
 	return error;
@@ -437,13 +432,13 @@ app_attach_section_to_pager(l4exec_section_t *l4exc_start,
 /** Go through all sections of the infopage and try to attach the section to
  * our address space so the pager thread can page the section. We only attach
  * sections which are
- * 
+ *
  *   (1) relocated (L4_DSTYPE_RELOCME bit is cleared)
  *   (2) are not yet attached (L4_DSTYPE_PAGEME bit is set)
- *   
+ *
  * \param app		application descriptor
- * \return		0 on success 
- * 			-L4_ENOMEM if no app descriptor is available */
+ * \return		0 on success
+ *			-L4_ENOMEM if no app descriptor is available */
 static int
 app_attach_sections_to_pager(app_t *app)
 {
@@ -451,11 +446,11 @@ app_attach_sections_to_pager(app_t *app)
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
   l4exec_section_t *l4exc_stop = env->section + env->section_num;
-  
+
 #ifdef DEBUG_RESERVEAREA
   app_msg(app, "Scanning %d sections for attach", env->section_num);
 #endif
-      
+
   for (l4exc = env->section; l4exc<l4exc_stop; l4exc++)
     if (l4exc->info.type & L4_DSTYPE_OBJ_BEGIN)
       if ((!(l4exc->info.type & L4_DSTYPE_RELOCME)) &&
@@ -464,14 +459,15 @@ app_attach_sections_to_pager(app_t *app)
 	  if ((error = app_attach_section_to_pager(l4exc, env, app)))
 	    return error;
 	}
-  
+
   return 0;
 }
 
+#ifndef USE_LDSO
 /** We must attach the libloader.s.so sections to the pager since the
  * region manager cannot page itself.
  *
- * \param app		application descriptor 
+ * \param app		application descriptor
  * \return		0 on success */
 static int
 app_attach_startup_sections_to_pager(app_t *app)
@@ -480,7 +476,7 @@ app_attach_startup_sections_to_pager(app_t *app)
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
   l4exec_section_t *l4exc_stop = env->section + env->section_num;
-  
+
 #ifdef DEBUG_RESERVEAREA
   app_msg(app, "Scanning %d sections for attach startup", env->section_num);
 #endif
@@ -500,13 +496,14 @@ app_attach_startup_sections_to_pager(app_t *app)
 	    return error;
 	}
     }
-  
+
   return 0;
 }
+#endif
 
 /** Create dataspace of anonymous memory mapped into the new application.
  * The dataspace is also mapped into this application.
- * 
+ *
  * \param app		application descriptor
  * \param app_addr	virtual address of dataspace in application
  *			may be L4_MAX_ADDRESS of area is not pageable to
@@ -528,13 +525,13 @@ app_create_ds(app_t *app, l4_addr_t app_addr, l4_size_t size,
 
   /* make dataspace pageable */
   if ((error = app_attach_ds_to_pager(app, &ds, app_addr, size,
-				      L4_DSTYPE_READ | L4_DSTYPE_WRITE, 
+				      L4_DSTYPE_READ | L4_DSTYPE_WRITE,
 				      L4DM_RW, /*attach=*/0, dbg_name,
 				      ret_aa)))
     return error;
 
   (*ret_aa)->beg.here = here;
-  
+
   return 0;
 }
 
@@ -551,8 +548,8 @@ app_share_sections_with_client(app_t *app, l4_threadid_t client)
   for (l4exc=app->env->section; l4exc<l4exc_stop; l4exc++)
     {
       if (!(l4exc->info.type & L4_DSTYPE_APP_IS_OWNER))
-	{ 
-	  l4_uint32_t rights = l4exc->info.type & L4_DSTYPE_WRITE 
+	{
+	  l4_uint32_t rights = l4exc->info.type & L4_DSTYPE_WRITE
 				  ? L4DM_RW : L4DM_RO;
 	  l4dm_share(&l4exc->ds, client, rights);
 	}
@@ -583,6 +580,10 @@ app_publish_lines(app_t *app)
 static void
 app_publish_lines_symbols(app_t *app)
 {
+#ifdef USE_LDSO
+  app->flags &= ~APP_SYMBOLS;
+  app->flags &= ~APP_LINES;
+#else
   if (app->flags & APP_SYMBOLS)
     {
       if (exec_if_get_symbols(app))
@@ -601,11 +602,12 @@ app_publish_lines_symbols(app_t *app)
 	app->flags &= ~APP_LINES;
       else
 	{
-	  /* tell Fiasco where the symbols are. If error, ignore it */
+	  /* tell Fiasco where the lines are. If error, ignore it */
 	  app_publish_lines(app);
 	  l4dm_transfer(&app->ds_lines, app->tid);
 	}
     }
+#endif
 }
 
 /** Retire symbolic debug information of an application from Fiasco. */
@@ -639,9 +641,9 @@ app_create_infopage(app_t *app)
 {
   int error;
   app_area_t *aa;
- 
+
   /* create infopage */
-  if ((error = app_create_ds(app, APP_ADDR_ENVPAGE, L4_PAGESIZE, 
+  if ((error = app_create_ds(app, APP_ADDR_ENVPAGE, L4_PAGESIZE,
 			     &aa, "infopage")))
     return error;
 
@@ -722,7 +724,7 @@ init_infopage(l4env_infopage_t *env)
 
 /** allocate space from a "page" _downwards_. */
 static int
-alloc_from_tramp_page(l4_size_t size, 
+alloc_from_tramp_page(l4_size_t size,
 		      app_addr_t *tramp_page, l4_addr_t *tramp_page_addr)
 {
   l4_addr_t new_pageptr = (*tramp_page_addr - size) & ~3;
@@ -741,12 +743,12 @@ alloc_from_tramp_page(l4_size_t size,
  * \param ct		config task descriptor
  * \param app		application descriptor
  * \param fprov_id	file provider
- * \param tramp_page	address of trampoline page in our / application's 
- * 			address space
+ * \param tramp_page	address of trampoline page in our / application's
+ *			address space
  * \param tramp_page_addr address in our address space
  * \param mbi		pointer to mbi
  * \return		0 on success
- * 			-L4_ENOMEM if not enough space in page */
+ *			-L4_ENOMEM if not enough space in page */
 static int
 load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	     app_addr_t *tramp_page, l4_addr_t *tramp_page_addr,
@@ -757,7 +759,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
       int mods_count = ct->next_module-ct->module;
       l4util_mb_mod_t *mod;
       cfg_module_t *ct_mod = ct->module;
-      
+
       if (!(mod = (l4util_mb_mod_t*)
 	    alloc_from_tramp_page(mods_count*sizeof(l4util_mb_mod_t),
 				  tramp_page, tramp_page_addr)))
@@ -780,22 +782,22 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 
 	  app_msg(app, "Loading module \"%s\"", ct_mod->fname);
 
-	  /* Request module file image from file provider. If application 
-	   * should be loaded direct mapped, load the image contiguous. 
-	   * Therefore the physical address of the first byte is equal to 
+	  /* Request module file image from file provider. If application
+	   * should be loaded direct mapped, load the image contiguous.
+	   * Therefore the physical address of the first byte is equal to
 	   * the physical address of the whole dataspace.
 	   *
 	   * We don't attach the module to our address space since we do
 	   * nothing with app modules. These dataspaces get paged by the
 	   * application's region manager. */
-	  if ((error = load_file(ct_mod->fname, fprov_id, 
+	  if ((error = load_file(ct_mod->fname, fprov_id,
 				 app->env->memserv_id,
-				 cfg_modpath, /*contiguous=*/ 
+				 cfg_modpath, /*contiguous=*/
 				 app->flags & APP_DIRECTMAP ? 1 : 0,
 				 0 /*don't attach to our address space*/,
 				 &file_size, &ds)))
 	    {
-	      app_msg(app, "Error %d (%s) loading module \"%s\"", 
+	      app_msg(app, "Error %d (%s) loading module \"%s\"",
 			   error, l4env_errstr(error), ct_mod->fname);
 	      return error;
 	    }
@@ -809,12 +811,12 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	       * not necessary mapped one-by-one. */
 	      l4_addr_t addr;
 
-	      if (!(addr = app_find_free_virtual_area(app, mod_size, 
+	      if (!(addr = app_find_free_virtual_area(app, mod_size,
 						ct_mod->low, ct_mod->high)))
 		{
 		  app_msg(app, "Couldn't find a free vm area of size %08x"
-			       " in [%08x-%08x] for module \"%s\"", 
-			       mod_size, ct_mod->low, ct_mod->high, 
+			       " in [%08lx-%08lx] for module \"%s\"",
+			       mod_size, ct_mod->low, ct_mod->high,
 			       ct_mod->fname);
 		  app_list_addr(app);
 		  return -L4_EINVAL;
@@ -828,7 +830,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	      /* Application is direct mapped so address of boot module should
 	       * be direct mapped too. Obtain the start-address of the module
 	       * from the dataspace manager. */
-	      if ((error = phys_ds(&ds, file_size, 
+	      if ((error = phys_ds(&ds, file_size,
 				   (l4_addr_t*)&mod->mod_start))<0)
 		return error;
 
@@ -840,7 +842,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	       * the application */
 	      l4_addr_t addr;
 
-	      if (!(addr = app_find_free_virtual_area(app, mod_size, 
+	      if (!(addr = app_find_free_virtual_area(app, mod_size,
 						      0, L4_MAX_ADDRESS)))
 		{
 		  app_msg(app, "Couldn't find a free vm area of size %08x"
@@ -848,25 +850,25 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 		  app_list_addr(app);
 		  return -L4_EINVAL;
 		}
-      
+
 	      mod->mod_start = addr;
 	      mod->mod_end   = addr + mod_size;
 	    }
 
-	  app_msg(app, "Mapped module to %08x-%08x", 
+	  app_msg(app, "Mapped module to %08x-%08x",
 	      mod->mod_start, mod->mod_end);
-  
+
 	  if (app->flags & APP_MODE_SIGMA0)
 	    {
 	      /* sigma0-style: make module accessible from application
 	       * -- paged by application pager.
 	       * XXX We could page modules by the applications region manager
 	       * but we don't pass the L4env infopage to the application so
-	       * the application doesn't know the datatspace id of the 
+	       * the application doesn't know the datatspace id of the
 	       * module. */
-	      if ((error = 
+	      if ((error =
 		    app_attach_ds_to_pager(app, &ds, mod->mod_start, mod_size,
-					   L4_DSTYPE_READ | L4_DSTYPE_WRITE, 
+					   L4_DSTYPE_READ | L4_DSTYPE_WRITE,
 					   L4DM_RW, /*attach=*/0,
 					   "boot module", &aa)))
 		return error;
@@ -902,7 +904,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 		  l4exc->info.type |= L4_DSTYPE_RELOCME | L4_DSTYPE_PAGEME;
 		  l4exc->addr = 0;
 		  /* HACK! The module address is the offset of the program
-		   * section inside the L4 environment infopage so the 
+		   * section inside the L4 environment infopage so the
 		   * libloader knows that the real module address is the
 		   * address of the relocated module */
 		  mod->mod_start = (l4_addr_t)(l4exc - env->section);
@@ -923,7 +925,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	    {
 	      char *args;
 	      int args_len = strlen(ct_mod->args) + 1;
-	      if (!(args = (char*)alloc_from_tramp_page(args_len, 
+	      if (!(args = (char*)alloc_from_tramp_page(args_len,
 							tramp_page,
 						        tramp_page_addr)))
 		{
@@ -982,7 +984,7 @@ load_vbe_info(app_t *app,
 					  tramp_page, &tmp_tramp_page_addr))
 	      )
 	    {
-    	      *vbe_mode = *((l4util_mb_vbe_mode_t*)
+	      *vbe_mode = *((l4util_mb_vbe_mode_t*)
 			     l4env_multiboot_info->vbe_mode_info);
 	      *vbe_ctrl = *((l4util_mb_vbe_ctrl_t*)
 			     l4env_multiboot_info->vbe_ctrl_info);
@@ -995,14 +997,14 @@ load_vbe_info(app_t *app,
 	    {
 	      app_msg(app, "Can't pass VBE video info to trampoline page \
 			   (needs %d bytes)",
-     			   sizeof(l4util_mb_vbe_ctrl_t)+
+			   sizeof(l4util_mb_vbe_ctrl_t)+
 			   sizeof(l4util_mb_vbe_mode_t));
-    	    }
+	    }
 	}
     }
 }
 
-/** Create multiboot info at stack page. 
+/** Create multiboot info at stack page.
  * Load boot modules.
  *
  * \param ct		config task descriptor
@@ -1012,9 +1014,9 @@ load_vbe_info(app_t *app,
  * \param fprov_id	file provider
  * \param multiboot_info pointer to mbi
  * \return		0 on success
- * 			-L4_ENOMEM if not enough space in page */
+ *			-L4_ENOMEM if not enough space in page */
 static int
-app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page, 
+app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
 		   l4_addr_t *tramp_page_addr, l4_threadid_t fprov_id,
 		   l4util_mb_info_t **multiboot_info)
 {
@@ -1058,7 +1060,7 @@ app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
       app_msg(app, "No space left for command line in trampoline page");
       return -L4_ENOMEM;
     }
-  
+
   mbi->flags  |= L4UTIL_MB_CMDLINE;
   mbi->cmdline = HERE_TO_APP(args, *tramp_page);
   strcpy(args, ct->task.fname);
@@ -1073,7 +1075,7 @@ app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
   load_vbe_info(app, tramp_page, tramp_page_addr, mbi);
 
   /* load applications modules */
-  if ((error = load_modules(ct, app, fprov_id, 
+  if ((error = load_modules(ct, app, fprov_id,
 			    tramp_page, tramp_page_addr, mbi)) < 0)
     return error;
 
@@ -1153,14 +1155,14 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
   /* make physical memory accessible from application */
   if ((error = app_attach_ds_to_pager(app, &ds, addr, size,
 				      L4_DSTYPE_READ | L4_DSTYPE_WRITE,
-				      L4DM_RW, /*attach=*/1, 
+				      L4DM_RW, /*attach=*/1,
 				      "phys memory", &aa)))
     return error;
 
   if (cfg_flags & CFG_M_NOSUPERPAGES)
     aa->flags |= APP_AREA_NOSUP;
 
-  app_msg(app, "Reserved %08x memory at %08x-%08x",
+  app_msg(app, "Reserved %08x memory at %08lx-%08lx",
 	      size, aa->beg.app, aa->beg.app+aa->size);
 
   return 0;
@@ -1228,26 +1230,29 @@ app_start_static(cfg_task_t *ct, app_t *app)
 	  l4exec_section_t *l4exc = env->section + i;
 	  l4_addr_t addr;
 	  l4_size_t psize;
-	  
+
 	  if ((error = l4dm_mem_ds_phys_addr(&l4exc->ds, 0, L4DM_WHOLE_DS,
 					     &addr, &psize)))
 	    {
 	      app_msg(app, "Error %d requesting physical address of ds %d",
-		  	   error, l4exc->ds.id);
+			   error, l4exc->ds.id);
 	      return -L4_EINVAL;
 	    }
 
-	  app_msg(app, "Relocating section %08x-%08x to %08x",
+	  app_msg(app, "Relocating section %08lx-%08lx to %08lx",
 		       l4exc->addr, l4exc->addr+l4exc->size, addr);
-	  
+
 	  l4exc->addr = addr;
 	  l4exc->info.type &= ~L4_DSTYPE_RELOCME;
 	  relink = 1;
 	}
     }
-  
+
   if (relink)
     {
+#ifdef USE_LDSO
+      enter_kdebug("relink static not supported");
+#else
       if ((error = exec_if_link(app)))
 	return error;
 
@@ -1255,16 +1260,17 @@ app_start_static(cfg_task_t *ct, app_t *app)
       if ((error = app_attach_sections_to_pager(app)))
 	{
 	  app_msg(app, "Error %d (%s) attaching sections",
-   	      error, l4env_errstr(error));
-       	  return error;
+	      error, l4env_errstr(error));
+	  return error;
 	}
+#endif
     }
 
   app_publish_lines_symbols(app);
-  
+
   /* create trampoline page */
   snprintf(dbg_name, sizeof(dbg_name), "tramp %s", app->name);
-  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size, 
+  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size,
 			     &tramp_page_aa, dbg_name)))
     return error;
 
@@ -1276,22 +1282,22 @@ app_start_static(cfg_task_t *ct, app_t *app)
   /* reserve physical memory regions */
   for (ct_mem=ct->mem; ct_mem<ct->next_mem; ct_mem++)
     {
-      if ((error = app_create_phys_memory(app, ct_mem->size, 
+      if ((error = app_create_phys_memory(app, ct_mem->size,
 					  ct_mem->flags, ct_mem->pool)))
 	return error;
     }
 
   /* create boot info, load boot modules */
-  if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr, 
+  if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr,
 				  app->env->fprov_id, &mbi)))
     return error;
 
   /* allocate stack */
   if (!(esp = alloc_from_tramp_page(0x400, &tramp_page, &tramp_page_addr)))
     {
-      app_msg(app, 
+      app_msg(app,
 	     "No space left for stack in trampoline page "
-	     "(have %d bytes, need %d bytes)",
+	     "(have %ld bytes, need %d bytes)",
 	     tramp_page_addr - tramp_page.here, 0x400);
       return -L4_ENOMEM;
     }
@@ -1310,7 +1316,11 @@ app_start_static(cfg_task_t *ct, app_t *app)
   app->eip = HERE_TO_APP(esp, tramp_page);
 
   /* put function parameters for task_trampoline to stack */
-  l4util_stack_push_mword(&esp, 0); /* env dummy for task_trampoline() */
+  if (ct->flags & CFG_F_L4ENV_BINARY)
+    l4util_stack_push_mword(&esp, ~L4UTIL_MB_VALID);
+  else
+    l4util_stack_push_mword(&esp, L4UTIL_MB_VALID);
+  l4util_stack_push_mword(&esp, APP_ADDR_ENVPAGE); /* env dummy for task_trampoline() */
   l4util_stack_push_mword(&esp, HERE_TO_APP(mbi, tramp_page));
   l4util_stack_push_mword(&esp, env->entry_2nd);
   l4util_stack_push_mword(&esp, 0); /* fake return address */
@@ -1318,19 +1328,63 @@ app_start_static(cfg_task_t *ct, app_t *app)
   /* adapt application's stack pointer */
   app->esp = HERE_TO_APP(esp, tramp_page);
 
+  if (ct->flags & CFG_F_L4ENV_BINARY)
+    app_share_sections_with_client(app, app->tid); /* thread x.0 */
+
   return 0;
 }
+
+#ifdef IPCMON
+static int app_setup_caps(app_t *app)
+{
+  if (l4_is_invalid_id(app->caphandler))
+    return 0;
+
+  cfg_cap_t *c = app->caplist;
+  while (c)
+    {
+      l4_taskid_t dest;
+      cfg_cap_t *h = c;
+
+      if (!cfg_lookup_name(c->dest, &dest))
+	app_msg(app, "no task with name '%s' for caps", c->dest);
+      else
+        {
+	  if (c->type == CAP_TYPE_ALLOW)
+	    l4ipcmon_allow(app->caphandler, app->tid, dest);
+	  else
+	    l4ipcmon_deny(app->caphandler, app->tid, dest);
+	}
+
+      c = c->next;
+      free(h->dest); // allocated with strdup
+      free(h);
+    }
+
+  return L4_TASK_NEW_IPC_MONITOR;
+}
+#else
+static int app_setup_caps(app_t *app)
+{
+  printf("Capability support not supported.\n");
+
+  return 0;
+}
+#endif
 
 static int
 app_cont_static(app_t *app)
 {
   int error;
+  int create_flag = app_setup_caps(app);
 
-  app_msg(app, "Entry at %08x => %08x", app->eip, app->env->entry_2nd);
+  app_msg(app, "Entry at %08lx => %08lx", app->eip, app->env->entry_2nd);
 
   /* request task creating at task server */
-  if ((error = l4ts_create_task(&app->tid, app->eip, app->esp, app->mcp,
-				&app_pager_id, app->prio, app->fname, 0)))
+  if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
+                                 app->mcp | create_flag,
+                                 &app_pager_id, &app->caphandler,
+                                 app->prio, app->fname, 0)))
     {
       int ferror;
 
@@ -1359,7 +1413,8 @@ app_cont_static(app_t *app)
   app_msg(app, "Started");
   return 0;
 }
-  
+
+#ifndef USE_LDSO
 /** Start app the new way.
  *
  * \param ct		config task descriptor
@@ -1380,14 +1435,14 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
    * (usually libloader.s containing the region manager). */
   if ((error = app_attach_startup_sections_to_pager(app)))
     {
-      app_msg(app, "Error %d (%s) attaching sections", 
+      app_msg(app, "Error %d (%s) attaching sections",
 		   error, l4env_errstr(error));
       return error;
     }
 
   /* create stack (also contains multiboot_info) */
   snprintf(dbg_name, sizeof(dbg_name), "tramp %s", app->name);
-  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size, 
+  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size,
 			     &tramp_page_aa, dbg_name)))
     return error;
 
@@ -1395,19 +1450,19 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
   env->stack_low  = tramp_page.app;
   env->stack_high = tramp_page.app  + env->stack_size;
   tramp_page_addr = tramp_page.here + env->stack_size;
-  
+
   /* create boot info, load boot modules */
   if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr,
 				  app->env->fprov_id, &mbi)))
     return error;
 
   env->addr_mb_info = HERE_TO_APP(mbi, tramp_page);
-  
+
   /* allocate stack */
   if (!(esp = alloc_from_tramp_page(0x400, &tramp_page, &tramp_page_addr)))
     {
       app_msg(app, "No space left for stack in trampoline page "
-	     "(have %d bytes, need %d bytes)",
+	     "(have %ld bytes, need %d bytes)",
 	     tramp_page_addr - tramp_page.here, 0x400);
       return -L4_ENOMEM;
     }
@@ -1430,18 +1485,26 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
 
   return 0;
 }
+#endif
 
 static int
 app_cont_libloader(app_t *app)
 {
+#ifdef USE_LDSO
+  enter_kdebug("loader: app_cont_libloader");
+  return 1;
+#else
   l4_msgdope_t result;
   l4_umword_t dw0, dw1;
   int error;
+  int create_flag = app_setup_caps(app);
 
-  app_msg(app, "Starting at l4loader_init (%08x)", app->env->entry_1st);
+  app_msg(app, "Starting at l4loader_init (%08lx)", app->env->entry_1st);
 
-  if ((error = l4ts_create_task(&app->tid, app->eip, app->esp, app->mcp, 
-				&app_pager_id, app->prio, app->fname, 0)))
+  if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
+                                 app->mcp | create_flag,
+                                 &app_pager_id, &app->caphandler,
+                                 app->prio, app->fname, 0)))
     {
       int ferror;
 
@@ -1475,7 +1538,7 @@ app_cont_libloader(app_t *app)
 	}
       else if (dw0 != L4LOADER_COMPLETE)
 	{
-	  app_msg(app, "What? Got %08x from started application...", dw0);
+	  app_msg(app, "What? Got %08lx from started application...", dw0);
 	  enter_kdebug("start_app");
 	}
       else
@@ -1488,7 +1551,7 @@ app_cont_libloader(app_t *app)
 
   app_publish_lines_symbols(app);
 
-  app_msg(app, "Continue at l4env_init (%08x, libloader.s.so)",
+  app_msg(app, "Continue at l4env_init (%08lx, libloader.s.so)",
 		app->env->entry_2nd);
 
   if (app->flags & APP_SHOW_AREAS)
@@ -1503,6 +1566,7 @@ app_cont_libloader(app_t *app)
 		   L4_IPC_NEVER, &result);
 
   return 0;
+#endif
 }
 
 static int
@@ -1523,9 +1587,11 @@ app_start_interp(cfg_task_t *ct, app_t *app)
   if (error)
     return error;
 
+  env->stack_size = 4*L4_PAGESIZE;
+
   /* create trampoline page */
   snprintf(dbg_name, sizeof(dbg_name), "tramp %s", app->name);
-  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size, 
+  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size,
 			     &tramp_page_aa, dbg_name)))
     return error;
 
@@ -1535,7 +1601,7 @@ app_start_interp(cfg_task_t *ct, app_t *app)
   tramp_page_addr = tramp_page.here + env->stack_size;
 
   /* create boot info, load boot modules */
-  if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr, 
+  if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr,
 				  app->env->fprov_id, &mbi)))
     return error;
 
@@ -1544,9 +1610,9 @@ app_start_interp(cfg_task_t *ct, app_t *app)
   /* allocate stack */
   if (!(esp = alloc_from_tramp_page(0x400, &tramp_page, &tramp_page_addr)))
     {
-      app_msg(app, 
+      app_msg(app,
 	     "No space left for stack in trampoline page "
-	     "(have %d bytes, need %d bytes)",
+	     "(have %ld bytes, need %d bytes)",
 	     tramp_page_addr - tramp_page.here, 0x400);
       return -L4_ENOMEM;
     }
@@ -1569,6 +1635,7 @@ app_start_interp(cfg_task_t *ct, app_t *app)
     return error;
 
   /* put function parameters for task_trampoline to stack */
+  l4util_stack_push_mword(&esp, L4UTIL_MB_VALID);
   l4util_stack_push_mword(&esp, APP_ADDR_ENVPAGE);
   l4util_stack_push_mword(&esp, HERE_TO_APP(mbi, tramp_page));
   l4util_stack_push_mword(&esp, env->entry_1st);
@@ -1592,12 +1659,15 @@ static int
 app_cont_interp(app_t *app)
 {
   int error;
+  int create_flag = app_setup_caps(app);
 
-  app_msg(app, "Starting %s at %08x via %08x", 
+  app_msg(app, "Starting %s at %08lx via %08lx",
 	       interp, app->env->entry_1st, app->eip);
 
-  if ((error = l4ts_create_task(&app->tid, app->eip, app->esp, app->mcp, 
-				&app_pager_id, app->prio, app->fname, 0)))
+  if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
+                                 app->mcp | create_flag,
+                                 &app_pager_id, &app->caphandler,
+                                 app->prio, app->fname, 0)))
     {
       int ferror;
 
@@ -1651,15 +1721,19 @@ app_cleanup_extern(app_t *app)
 static int
 app_cleanup_intern(app_t *app)
 {
+#ifndef USE_LDSO
   int error;
+#endif
   app_area_t *aa;
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
 
   /* free program sections at exec server */
+#ifndef USE_LDSO
   if ((error = exec_if_close(app)))
     return error;
-  
+#endif
+
   /* go through the app_area list and omit all envpage program sections
    * from killing ds which are already killed by exec layer. Nevertheless,
    * detach the section from our address space. */
@@ -1670,7 +1744,7 @@ app_cleanup_intern(app_t *app)
 	  if (l4_trunc_page(aa->beg.app) == l4_trunc_page(l4exc->addr) &&
 	      (l4exc->info.type & L4_DSTYPE_EXEC_IS_OWNER))
 	    {
-    	      /* don't kill again */
+	      /* don't kill again */
 	      aa->ds = L4DM_INVALID_DATASPACE;
 	      break;
 	    }
@@ -1691,6 +1765,9 @@ app_cleanup_intern(app_t *app)
   app_unpublish_symbols(app);
   app_unpublish_lines(app);
 
+  app->caphandler = L4_INVALID_ID;
+  app->caplist    = NULL;
+
   /* mark app descriptor as free */
   app->tid = L4_INVALID_ID;
   free((void*)app->fname);  /* created with strdup */
@@ -1699,11 +1776,11 @@ app_cleanup_intern(app_t *app)
   return 0;
 }
 
-/** Start the application. 
+/** Start the application.
  *
- * \param ct		config task descriptor 
+ * \param ct		config task descriptor
  * \param owner		the owner of the task (for transfering the ownership
- * 			of the task ID)
+ *			of the task ID)
  * \retval ret_val	created application descriptor
  * \return		0 on success */
 static int
@@ -1748,13 +1825,14 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
       app->flags |= APP_DIRECTMAP;
       open_flags |= L4EXEC_DIRECT_MAP;
     }
-  app->flags |= ct->flags & CFG_F_REBOOT_ABLE    ? APP_REBOOTABLE : 0;
-  app->flags |= ct->flags & CFG_F_NO_VGA         ? APP_NOVGA      : 0;
-  app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0   : 0;
-  app->flags |= ct->flags & CFG_F_ALLOW_CLI      ? APP_ALLOW_CLI  : 0;
-  app->flags |= ct->flags & CFG_F_SHOW_APP_AREAS ? APP_SHOW_AREAS : 0;
-  app->flags |= ct->flags & CFG_F_STOP           ? APP_STOP       : 0;
-  app->flags |= ct->flags & CFG_F_NOSUPERPAGES   ? APP_NOSUPER    : 0;
+  app->flags |= ct->flags & CFG_F_REBOOT_ABLE    ? APP_REBOOTABLE  : 0;
+  app->flags |= ct->flags & CFG_F_NO_VGA         ? APP_NOVGA       : 0;
+  app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0    : 0;
+  app->flags |= ct->flags & CFG_F_ALLOW_CLI      ? APP_ALLOW_CLI   : 0;
+  app->flags |= ct->flags & CFG_F_SHOW_APP_AREAS ? APP_SHOW_AREAS  : 0;
+  app->flags |= ct->flags & CFG_F_STOP           ? APP_STOP        : 0;
+  app->flags |= ct->flags & CFG_F_NOSUPERPAGES   ? APP_NOSUPER     : 0;
+  app->flags |= ct->flags & CFG_F_ALL_WRITABLE   ? APP_ALL_WRITBLE : 0;
   if (cfg_fiasco_symbols)
     {
       app->flags |= APP_SYMBOLS;
@@ -1766,7 +1844,9 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
       open_flags |= L4EXEC_LOAD_LINES;
     }
 
-  app->owner = owner;
+  app->owner      = owner;
+  app->caphandler = ct->caphandler;
+  app->caplist    = ct->caplist;
 
   if (ct->flags & CFG_F_INTERPRETER)
     {
@@ -1787,18 +1867,22 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
       return error;
     }
 
+#ifndef USE_LDSO
   /* open file image and separate sections */
   if (!(error = exec_if_open(app, ct->task.fname, &ct->ds_image, open_flags)))
     {
       if (env->entry_1st == L4_MAX_ADDRESS)
 	{
 	  /* Application is not linked against libloader.s -- Plan B */
-	  app_msg(app, "Starting sigma0-style application");
+	  if (ct->flags & CFG_F_L4ENV_BINARY)
+	    app_msg(app, "Starting static l4env-style application");
+	  else
+	    app_msg(app, "Starting sigma0-style application");
 	  app->flags |= APP_MODE_SIGMA0;
 	  if (   (error = app_create_tid(app))
 	      || (error = app_start_static(ct, app)))
 	    ;
-	  
+
 	}
       else
 	{
@@ -1810,6 +1894,24 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
 	    ;
 	}
     }
+#else
+
+  if (ct->flags & CFG_F_L4ENV_BINARY)
+    app_msg(app, "Starting static l4env-style application");
+  else
+    app_msg(app, "Starting sigma0-style application");
+  app->flags |= APP_MODE_SIGMA0;
+
+  app->image    = ct->image;
+  app->sz_image = ct->sz_image;
+  app->ds_image = ct->ds_image;
+
+  elf_map_binary(app);
+  junk_ds(&app->ds_image, app->image);
+  if (   (error = app_create_tid(app))
+      || (error = app_start_static(ct, app)))
+    ;
+#endif
 
   /* save task id for the client which sent the open() request */
   ct->task_id = app->tid;
@@ -1839,7 +1941,7 @@ int
 app_boot(cfg_task_t *ct, l4_taskid_t owner)
 {
   int error;
-  app_t *app;
+  app_t *app = 0;
 
   error = app_init(ct, owner, &app);
   if (!app)
@@ -1866,7 +1968,7 @@ app_boot(cfg_task_t *ct, l4_taskid_t owner)
  *
  * \param task_id	L4 task id or 0 to kill all tasks
  * \return		0 on success
- * 			-L4_ENOTFOUND if no proper task was not found */
+ *			-L4_ENOTFOUND if no proper task was not found */
 int
 app_kill(l4_taskid_t task_id)
 {
@@ -1884,7 +1986,7 @@ app_kill(l4_taskid_t task_id)
       if (app->env && l4_thread_equal(task_id, app->tid))
 	return app_cleanup_intern(app);
     }
-  
+
   return -L4_ENOTFOUND;
 }
 
@@ -1892,7 +1994,7 @@ app_kill(l4_taskid_t task_id)
  *
  * \param task_id	L4 task id or 0 to dump all tasks
  * \return		0 on success
- * 			-L4_ENOTFOUND if no proper task was not found */
+ *			-L4_ENOTFOUND if no proper task was not found */
 int
 app_dump(unsigned long task_id)
 {
@@ -1925,10 +2027,10 @@ app_dump(unsigned long task_id)
  * \param client	Client to transfer the ownership to
  * \retval fname	application name
  * \return		0 on success
- * 			-L4_ENOTFOUND if no proper task was not found */
+ *			-L4_ENOTFOUND if no proper task was not found */
 int
-app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds, 
-	l4_threadid_t client, char **fname)
+app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
+         l4_threadid_t client, char **fname)
 {
   int i, error;
 
@@ -1967,7 +2069,7 @@ app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
 
       /* transfer ownership of dataspace to client */
       l4dm_transfer(l4env_ds, client);
-      
+
       return 0;
     }
   else
@@ -1979,7 +2081,7 @@ app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
 	    {
 	      l4_addr_t l4env_addr;
 	      app_t *app = app_array + i;
-	      
+
 	      if ((error = create_ds(app_dsm_id, L4_PAGESIZE,
 				     &l4env_addr, l4env_ds,
 				     "l4loader_info ds")))
@@ -1987,14 +2089,15 @@ app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
 		  printf("Error %d creating 4k dataspace for l4env\n", error);
 		  return error;
 		}
-	      
+
 	      /* copy application's L4 infopage information */
 	      memcpy((void*)l4env_addr, app->env, sizeof(l4env_infopage_t));
+
 	      *fname = (char*)app->fname;
-	      
+
 	      /* detach dataspace */
 	      l4rm_detach((void *)l4env_addr);
-	      
+
 	      /* transfer ownership of dataspace to client */
 	      l4dm_transfer(l4env_ds, client);
 

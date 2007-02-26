@@ -20,7 +20,7 @@ ROLE = lib.mk
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
 INSTALLDIR_LIB		?= $(DROPS_STDDIR)/lib/$(subst -,/,$(SYSTEM))
-INSTALLDIR_LIB_LOCAL	?= $(L4DIR)/lib/$(subst -,/,$(SYSTEM))
+INSTALLDIR_LIB_LOCAL	?= $(OBJ_BASE)/lib/$(subst -,/,$(SYSTEM))
 INSTALLFILE_LIB		?= $(INSTALL) -m 644 $(1) $(2)
 INSTALLFILE_LIB_LOCAL	?= $(LN) -sf $(call absfilename,$(1)) $(2)
 
@@ -38,19 +38,17 @@ include $(L4DIR)/mk/binary.inc
 
 ifneq ($(SYSTEM),) # if we a system, really build
 
-TARGET_STANDARD := $(TARGET) $(TARGET_$(OSYSTEM))
-
-TARGET_PROFILE := $(patsubst %.a,%.pr.a,\
+TARGET_LIB      := $(TARGET) $(TARGET_$(OSYSTEM))
+TARGET_SHARED   := $(filter %.s.so,$(TARGET_LIB))
+TARGET_STANDARD := $(filter-out %s.so,$(TARGET_LIB))
+TARGET_PROFILE  := $(patsubst %.a,%.pr.a,\
 			$(filter $(BUILD_PROFILE),$(TARGET_STANDARD)))
-TARGET_SHARED := $(patsubst %.a,%.s.so,\
-			$(filter $(BUILD_SHARED),$(TARGET_STANDARD)))
-TARGET_PROFILE_SHARED := $(patsubst %.a,%.s.so,\
-			$(filter $(BUILD_SHARED),$(TARGET_PROFILE)))
-TARGET_PIC := $(patsubst %.a,%.p.a,\
+TARGET_PROFILE_SHARED := $(filter %.s.so,$(TARGET_PROFILE))
+TARGET_PIC      := $(patsubst %.a,%.p.a,\
 			$(filter $(BUILD_PIC),$(TARGET_STANDARD)))
 TARGET_PROFILE_PIC := $(patsubst %.a,%.p.a,\
 			$(filter $(BUILD_PIC),$(TARGET_PROFILE)))
-TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_SHARED) $(TARGET_PIC)
+TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_PIC)
 TARGET	+= $(TARGET_PROFILE) $(TARGET_PROFILE_SHARED) $(TARGET_PROFILE_PIC)
 
 # define some variables different for lib.mk and prog.mk
@@ -77,9 +75,9 @@ $(filter-out %.s.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 LD_GCC_PREFIX:=-Wl,
 
 # shared lib
-$(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(LIBDEPS)
+$(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(CRTP) $(LIBDEPS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRT0) $(OBJS) $(subst $(LD_GCC_PREFIX),,$(LDFLAGS)) $(call findfile,construction.s.o,$(L4LIBDIR))
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRTP) $(OBJS) $(subst $(LD_GCC_PREFIX),,$(LDFLAGS))
 	@$(BUILT_MESSAGE)
 
 # build an object file (which looks like a lib to a later link-call), which
@@ -92,7 +90,7 @@ $(filter %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS) $(LIBDEPS)
 
 endif	# architecture is defined, really build
 
-.PHONY: all clean cleanall config help install oldconfig reloc txtconfig
+.PHONY: all clean cleanall config help install oldconfig txtconfig
 -include $(DEPSVAR)
 help::
 	@echo "  all            - compile and install the libraries locally"

@@ -1,5 +1,5 @@
-#ifndef _ASMARM_SOCKET_H
-#define _ASMARM_SOCKET_H
+#ifndef _ASM_SOCKET_H
+#define _ASM_SOCKET_H
 
 /* For setsockopt(2) */
 #define SOL_SOCKET	1

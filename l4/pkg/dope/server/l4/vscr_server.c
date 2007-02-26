@@ -108,13 +108,13 @@ static void vscreen_server_thread(void *arg) {
  *
  * \return 0 on success
  */
-static int start(VSCREEN *vscr_widget) {
+static int start(THREAD *tid, VSCREEN *vscr_widget) {
 	int wait_cnt = 0;
 	int wait_max = 10; /* wait 10 iterations for the server thread to come up */
 	int result;
 
 	thread_started = 0;
-	result = thread->start_thread(NULL, &vscreen_server_thread, (void *)vscr_widget);
+	result = thread->start_thread(tid, &vscreen_server_thread, (void *)vscr_widget);
 
 	if (result != 0) return result;
 	

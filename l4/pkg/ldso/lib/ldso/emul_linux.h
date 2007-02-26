@@ -12,9 +12,21 @@
 #ifndef _EMUL_LINUX_H
 #define _EMUL_LINUX_H
 
-#define MMAP_START	0x00100000
-#define MMAP_END	0x06000000
+#include <l4/sys/l4int.h>
 
-void mmap_list_regions(void);
+#define MMAP_START	0xA0000000
+#define MMAP_END	0xA8000000
+
+#if (__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || __GNUC__ > 3
+#define HIDDEN __attribute__((visibility("hidden")))
+#else
+#define HIDDEN
+#endif
+
+void      _dl_seek(int fd, unsigned pos) HIDDEN;
+void*     _dl_alloc_pages(l4_size_t size, l4_addr_t *phys,
+			  const char *name) HIDDEN;
+void      _dl_free_pages(void *addr, l4_size_t size) HIDDEN;
+void      _dl_mmap_list_regions(int only_unseen);
 
 #endif

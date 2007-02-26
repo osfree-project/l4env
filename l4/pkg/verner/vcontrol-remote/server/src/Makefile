@@ -15,7 +15,8 @@ TARGET =	vrcontrol
 SYSTEMS =	x86-l4v2
 
 # include configuration
--include $(PKGDIR)/../Makeconf.bid.local
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/../Makeconf.bid.local
 DEFAULT_RELOC = $(VCONTROL_RELOC)
 
 VPATH += $(PKGDIR)/../common
@@ -33,11 +34,11 @@ PRIVATE_INCDIR  =  \
 		  $(PKGDIR)/../common \
 		  $(PKGDIR)/../include \
 		  $(PKGDIR)/../plugins/import $(PKGDIR)/../plugins/codec \
-                  $(PKGDIR)/../config \
+                  $(PKGDIR_OBJ)/../config \
 		  $(PKGDIR)/../vcontrol/src
 
 # include prog role
 include $(L4DIR)/mk/prog.mk
 
 # depend on configuration files
-$(TARGET): $(PKGDIR)/../Makeconf.bid.local
+Makefile.inc: $(PKGDIR_OBJ)/../Makeconf.bid.local

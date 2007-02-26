@@ -333,6 +333,15 @@ l4_ipc_receive(l4_threadid_t src,
   return L4_IPC_ERROR(*result);
 }
 
+L4_INLINE int
+l4_ipc_sleep(l4_timeout_t timeout)
+{
+  l4_umword_t dummy;
+  l4_msgdope_t result;
+  return l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
+                        timeout,  &result);
+}
+
 /*----------------------------------------------------------------------------
  * 3 words in registers
  *--------------------------------------------------------------------------*/
@@ -515,7 +524,7 @@ l4_ipc_wait_w3(l4_threadid_t *src,
                l4_timeout_t timeout,
                l4_msgdope_t *result)
 {
-  register l4_umword_t _res      asm("r0");
+  register l4_umword_t _res      asm("r0") = 0;
   register l4_umword_t _snd_desc asm("r1") = ~0U;
   register l4_umword_t _rcv_desc asm("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
   register l4_umword_t _timeout  asm("r3") = timeout.raw;
@@ -542,6 +551,7 @@ l4_ipc_wait_w3(l4_threadid_t *src,
      "=r"(_w2)
      : 
      "i"(L4_SYSCALL_IPC),
+     "0"(_res),
      "1"(_snd_desc),
      "2"(_rcv_desc),
      "3"(_timeout)

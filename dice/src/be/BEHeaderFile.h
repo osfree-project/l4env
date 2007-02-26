@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEHeaderFile.h
- *    \brief   contains the declaration of the class CBEHeaderFile
+ *  \file    dice/src/be/BEHeaderFile.h
+ *  \brief   contains the declaration of the class CBEHeaderFile
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,7 +32,6 @@
 
 #include "be/BEFile.h"
 #include <vector>
-using namespace std;
 
 class CFEFile;
 class CFELibrary;
@@ -54,7 +53,7 @@ public:
     /** \brief constructor
      */
     CBEHeaderFile();
-    virtual ~CBEHeaderFile();
+    ~CBEHeaderFile();
 
 protected:
     /** \brief copy constructor
@@ -63,63 +62,57 @@ protected:
     CBEHeaderFile(CBEHeaderFile &src);
 
 public:
-    virtual void Write(CBEContext *pContext);
+    virtual void Write(void);
 
-    virtual CBETypedef* GetNextTypedef(vector<CBETypedef*>::iterator &iter);
-    virtual vector<CBETypedef*>::iterator GetFirstTypedef();
-    virtual void AddTypedef(CBETypedef *pTypedef);
-    virtual void RemoveTypedef(CBETypedef *pTypedef);
-    virtual CBETypedef* FindTypedef(string sTypeName);
-
-    virtual CBEConstant* GetNextConstant(vector<CBEConstant*>::iterator &iter);
-    virtual vector<CBEConstant*>::iterator GetFirstConstant();
-    virtual void AddConstant(CBEConstant *pConstant);
-    virtual void RemoveConstant(CBEConstant *pConstant);
-
-    virtual void AddTaggedType(CBEType *pTaggedType);
-    virtual void RemoveTaggedType(CBEType *pTaggedType);
-    virtual vector<CBEType*>::iterator GetFirstTaggedType();
-    virtual CBEType* GetNextTaggedType(vector<CBEType*>::iterator &iter);
-    virtual CBEType *FindTaggedType(string sTypeName);
-
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, 
-	CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, 
-	CBEContext *pContext);
-    virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
-    virtual string GetIncludeFileName();
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);
+    virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
 
     virtual int GetSourceLineEnd();
 
+    /** \brief tries to match file names
+     *  \param sName the name to match
+     *  \return true if name matches file name
+     */
+    bool Match(string sName)
+    { return GetFileName() == sName; }
+    /** \brief returns the file name used in include statements
+     *  \return the file name used in include statements
+     */
+    string GetIncludeFileName(void)
+    { return m_sIncludeName; }
+
 protected:
-    virtual void WriteTaggedType(CBEType *pType, CBEContext *pContext);
-    virtual void WriteTypedef(CBETypedef* pTypedef, CBEContext *pContext);
-    virtual void WriteConstant(CBEConstant *pConstant, CBEContext *pContext);
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEContext *pContext);
-    virtual void WriteClass(CBEClass *pClass, CBEContext *pContext);
-    virtual void WriteFunction(CBEFunction *pFunction, CBEContext *pContext);
-    virtual void WriteDefaultIncludes(CBEContext * pContext);
+    virtual void WriteTaggedType(CBEType *pType);
+    virtual void WriteTypedef(CBETypedef* pTypedef);
+    virtual void WriteConstant(CBEConstant *pConstant);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace);
+    virtual void WriteClass(CBEClass *pClass);
+    virtual void WriteFunction(CBEFunction *pFunction);
+    virtual void WriteDefaultIncludes(void);
 
     void CreateOrderedElementList(void);
 
 protected:
-    /** \var vector<CBEConstant*> m_vConstants
-     *  \brief contains the constant declarators of the header file
-     */
-    vector<CBEConstant*> m_vConstants;
-    /** \var vector<CBETypedef*> m_vTypedefs
-     *  \brief contains the type definitions of the header file
-     */
-    vector<CBETypedef*> m_vTypedefs;
-    /** \var vector<CBEType*> m_vTaggedTypes
-     *  \brief contains the tagged types of the header files (types without typedef)
-     */
-    vector<CBEType*> m_vTaggedTypes;
     /** \var string m_sIncludeName
      *  \brief the file name used in include statements
      */
     string m_sIncludeName;
+
+public:
+    /** \var CCollection<CBEConstant> m_Constants
+     *  \brief contains the constant declarators of the header file
+     */
+    CCollection<CBEConstant> m_Constants;
+    /** \var CSearchableCollection<CBETypedef, string> m_Typedefs
+     *  \brief contains the type definitions of the header file
+     */
+    CSearchableCollection<CBETypedef, string> m_Typedefs;
+    /** \var CSearchableCollection<CBEType, string> m_TaggedTypes
+     *  \brief contains the tagged types of the header files (types without typedef)
+     */
+    CSearchableCollection<CBEType, string> m_TaggedTypes;
 };
 
 #endif // !__DICE_BEHEADERFILE_H__

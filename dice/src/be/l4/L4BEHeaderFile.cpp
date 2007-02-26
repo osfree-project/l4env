@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/l4/L4BEHeaderFile.cpp
- *    \brief   contains the implementation of the class CL4BEHeaderFile
+ *  \brief   contains the implementation of the class CL4BEHeaderFile
  *
  *    \date    03/25/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,6 +31,7 @@
 #include "be/BEContext.h"
 #include "be/BEClient.h"
 #include "TypeSpec-Type.h"
+#include "Compiler.h"
 
 CL4BEHeaderFile::CL4BEHeaderFile()
 {
@@ -49,7 +50,6 @@ CL4BEHeaderFile::~CL4BEHeaderFile()
 }
 
 /** \brief write the function declaration for the init-recv string function
- *  \param pContext the context of the write operation
  *
  * This test for the global init-rcvstring option which was set with
  * -finit-rcvstring. There may also be init-rcvstring functions with
@@ -58,9 +58,9 @@ CL4BEHeaderFile::~CL4BEHeaderFile()
  * The init-rcvstring function is:
  * void name(int, l4_umword_t*, l4_umword_t*, CORBA_Environment);
  */
-void CL4BEHeaderFile::WriteHelperFunctions(CBEContext * pContext)
+void CL4BEHeaderFile::WriteHelperFunctions()
 {
-    if (pContext->IsOptionSet(PROGRAM_INIT_RCVSTRING))
+    if (CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
     {
         string sEnvType;
         if (IsOfFileType(FILETYPE_COMPONENT))
@@ -72,20 +72,24 @@ void CL4BEHeaderFile::WriteHelperFunctions(CBEContext * pContext)
          */
         if (GetFunctionCount() == 0)
         {
-            Print("#ifdef __cplusplus\n");
-            Print("extern \"C\" {\n");
-            Print("#endif\n\n");
+	    m_file << "#ifdef __cplusplus\n";
+	    m_file << "extern \"C\" {\n";
+	    m_file << "#endif\n\n";
         }
-        string sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext);
-        string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-        PrintIndent("void %s(int, %s*, %s*, %s*);\n\n", sFuncName.c_str(),
-                sMWord.c_str(), sMWord.c_str(), sEnvType.c_str());
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+        string sFuncName = pNF->GetString(
+	    CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
+        string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	PrintIndent();
+	m_file << "void " << sFuncName << "(int, " << sMWord << "*, "
+	    << sMWord << "*, " << sEnvType << "*);\n\n";
         if (GetFunctionCount() == 0)
         {
-            Print("#ifdef __cplusplus\n");
-            Print("}\n");
-            Print("#endif\n\n");
+	    m_file << "#ifdef __cplusplus\n";
+	    m_file << "}\n";
+	    m_file << "#endif\n\n";
         }
     }
-    CBEHeaderFile::WriteHelperFunctions(pContext);
+    CBEHeaderFile::WriteHelperFunctions();
 }
+

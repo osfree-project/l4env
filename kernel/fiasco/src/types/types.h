@@ -17,14 +17,11 @@ a nonull_static_cast( b p )
 
 #endif
 
-/// OBSOLETE IA-32 64bit type
-typedef struct { Unsigned32 low, high; } l4_low_high_t;
-
 typedef struct { Address start, end; } Mem_region;
 
 /// standard size type
 ///typedef mword_t size_t;
-typedef signed int ssize_t;
+///typedef signed int ssize_t;
 
 /// momentary only used in UX since there the kernel has a different
 /// address space than user mode applications

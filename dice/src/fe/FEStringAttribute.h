@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEStringAttribute.h
- *    \brief   contains the declaration of the class CFEStringAttribute
+ *  \brief   contains the declaration of the class CFEStringAttribute
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -31,11 +31,10 @@
 
 #include "fe/FEAttribute.h"
 #include <string>
-using namespace std;
 
 /**    \class CFEStringAttribute
  *    \ingroup frontend
- *    \brief represents all attributes, which contain a string information
+ *  \brief represents all attributes, which contain a string information
  */
 class CFEStringAttribute : public CFEAttribute
 {
@@ -50,21 +49,20 @@ public:
     virtual ~CFEStringAttribute();
 
 protected:
-    /**    \brief copy constrcutor
-     *    \param src the source to copy from
+    /** \brief copy constrcutor
+     *  \param src the source to copy from
      */
     CFEStringAttribute(CFEStringAttribute & src);
 
 // Operations
 public:
-    virtual void Serialize(CFile *pFile);
     virtual CObject* Clone();
     virtual string GetString();
 
 // attributes
 protected:
     /**    \var string m_String
-     *    \brief the string
+     *  \brief the string
      */
     string m_String;
 };

@@ -4,7 +4,6 @@ INTERFACE:
 
 #include "kern_types.h" // P_ptr
 
-
 class Mapped_allocator
 {
 public:
@@ -16,8 +15,19 @@ public:
 
   virtual void *unaligned_alloc(int pages) = 0;
   virtual void unaligned_free(int pages, void *p) = 0;
+
+  virtual void dump() const {}
 private:
   static Mapped_allocator *_alloc;
+};
+
+class Mapped_alloc_reaper
+{
+  size_t (*_reap)(bool desperate);
+  Mapped_alloc_reaper* _next;
+
+private:
+  static Mapped_alloc_reaper* mem_reapers;
 };
 
 
@@ -27,7 +37,11 @@ IMPLEMENTATION:
 
 #include "mem_layout.h"
 
-Mapped_allocator *Mapped_allocator::_alloc;
+// 
+// class Mapped_allocator
+// 
+
+Mapped_allocator* Mapped_allocator::_alloc;
 
 PUBLIC static
 Mapped_allocator *
@@ -48,7 +62,44 @@ PUBLIC inline NEEDS["mem_layout.h"]
 void Mapped_allocator::free_phys(size_t s, P_ptr<void> p)
 {
   void *va = (void*)Mem_layout::phys_to_pmem(p.get_unsigned());
-  if(va)
+  if((unsigned long)va != ~0UL)
     free(s, va);
 }
 
+// 
+// class Mapped_alloc_reaper
+// 
+
+#include "atomic.h"
+#include "warn.h"
+
+Mapped_alloc_reaper* Mapped_alloc_reaper::mem_reapers;
+
+PUBLIC inline NEEDS["atomic.h"]
+Mapped_alloc_reaper::Mapped_alloc_reaper (size_t (*reap)(bool desperate))
+  : _reap (reap)
+{
+  do {
+    _next = mem_reapers;
+  } while (! cas (&mem_reapers, _next, this));
+}
+
+PUBLIC static
+size_t
+Mapped_alloc_reaper::morecore (bool desperate = false)
+{
+  size_t freed = 0;
+
+  for (Mapped_alloc_reaper* reaper = mem_reapers;
+       reaper;
+       reaper = reaper->_next)
+    {
+      freed += reaper->_reap(desperate);
+    }
+
+  if (desperate)
+    WARN ("morecore freed %lu bytes of memory", 
+	  static_cast<unsigned long>(freed));
+
+  return freed;
+}

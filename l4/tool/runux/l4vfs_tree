@@ -1,0 +1,27 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l loader \
+	-l simple_ts \
+	-l bmodfs \
+        -d ${L4PATH}/vc_plain \
+        -d ${L4PATH}/libloader.s.so \
+	-l l4dope-ux \
+        -l "name_server -e" \
+        -l l4vfs_log \
+        -l simple_file_server \
+        -d "/home/mp26/boot/ascii/bambi_godzila bambi_vs_godzilla.vt" \
+        -d "/home/mp26/boot/ascii/Mr_Pumpkin Mr_Pumpkin.vt" \
+        -l vc_server \
+        -l "fstab -c /server                                \
+                  -c /server/log -v10   -b/ -m/server/log   \
+                  -c /server/vc  -v1000 -b/ -m/server/vc    \
+                  -c /server/sfs -v14   -b/ -m/server/sfs " \
+        -l "l4vfs_tree --stdout /server/log/L4VFStree -e vt:${L4PATH}/vc_plain:filetype_vt" \
+	"$@"

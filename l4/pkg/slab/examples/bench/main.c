@@ -44,7 +44,7 @@ typedef struct
 /**
  * \brief Slab benchmark
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 bench_slab(void)
 {
@@ -54,7 +54,7 @@ bench_slab(void)
   l4_uint64_t start,end,time;
   int num;
   static alloc_t alloc[ROUNDS];
-  
+
   /* allocate slab memory */
   mem = l4dm_mem_allocate(MEM_SIZE,L4RM_MAP | L4RM_LOG2_ALIGNED);
   if (mem == NULL)
@@ -73,12 +73,20 @@ bench_slab(void)
       return;
     }
 
+  /* check slab_size */
+  if (slab.slab_size != L4_PAGESIZE)
+    {
+      printf("Assumed %d-sized slabs - current size is %d. Aborting...\n",
+             L4_PAGESIZE, slab.slab_size);
+      return;
+    }
+
   /* add memory */
   page = mem + MEM_SIZE;
   while (page > mem)
     {
       page -= L4_PAGESIZE;
-      l4slab_add_page(&slab,page,NULL);
+      l4slab_add_slab(&slab,page,NULL);
     }
   //l4slab_dump_cache(&slab,0);
 
@@ -104,7 +112,7 @@ bench_slab(void)
     }
   printf("l4slab: alloc %u cycles average\n",(unsigned)(time / num));
 
-  /* do benchamrk, free */
+  /* do benchmark, free */
   num = 0;
   while (num < ROUNDS)
     {
@@ -131,7 +139,7 @@ bench_slab(void)
     {
       ptr = l4slab_alloc(&slab);
       if (ptr != NULL)
-	num++;
+        num++;
     }
   while (ptr != NULL);
 
@@ -150,8 +158,8 @@ bench_slab(void)
 /**
  * \brief OSKit malloc benchamrk
  */
-/*****************************************************************************/ 
-static void 
+/*****************************************************************************/
+static void
 bench_malloc(void)
 {
   l4_uint64_t start,end,time;
@@ -170,7 +178,7 @@ bench_malloc(void)
       alloc[num].cycles_alloc = (int)(end - start);
       num++;
     }
-	 
+
   time = 0;
   num = 0;
   while (num < ROUNDS)
@@ -201,14 +209,14 @@ bench_malloc(void)
       time += alloc[num].cycles_free;
       num++;
     }
-  printf("OSKit malloc: free %u cycles average\n",(unsigned)(time / num));  
+  printf("OSKit malloc: free %u cycles average\n",(unsigned)(time / num));
 
   num = 0;
   do
     {
       ptr = malloc(OBJ_SIZE);
       if (ptr != NULL)
-	num++;
+        num++;
     }
   while (ptr != NULL);
 
@@ -219,7 +227,7 @@ bench_malloc(void)
 /**
  * \brief Main
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 main(void)
 {

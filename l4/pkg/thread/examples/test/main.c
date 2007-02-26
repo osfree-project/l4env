@@ -50,14 +50,14 @@ void test_fn1(void * data)
   l4_threadid_t dummy;
 
   esp = l4util_stack_get_sp();
-  LOG("stack pointer at 0x%08x",esp);
+  LOG("stack pointer at 0x%08lx",esp);
 
   ret = l4thread_get_stack(l4thread_myself(), &low, &high);
   if (ret < 0)
     Panic("l4thread_get_stack_current failed: %s (%d)", 
           l4env_errstr(ret), ret);
 
-  LOG("stack at 0x%08x-0x%08x", low, high);
+  LOG("stack at 0x%08lx-0x%08lx", low, high);
 
   ret = l4rm_lookup((void *)esp, &ds_map_addr, &ds_map_size,
                     &ds, &offs, &dummy);
@@ -67,7 +67,7 @@ void test_fn1(void * data)
   if (ret != L4RM_REGION_DATASPACE)
     Panic("invalid region type %d!", ret);
 
-  printf("  ds %u at "l4util_idfmt", offset 0x%08x, mapped to 0x%08x-0x%08x\n",
+  printf("  ds %u at "l4util_idfmt", offset 0x%08lx, mapped to 0x%08lx-0x%08lx\n",
 	 ds.id, l4util_idstr(ds.manager), offs,
 	 ds_map_addr,ds_map_addr + ds_map_size);
 

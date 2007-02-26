@@ -1,0 +1,31 @@
+#include <l4/sys/types.h>
+#include <l4/dm_generic/types.h>
+#include <l4/ore/ore-types.h>
+
+library ore
+{
+    [uuid(1)]
+    interface manager
+    {
+        /* open a connection to ORe 
+         *
+         * \param device_name           device name
+         * \param mac                   MAC address
+         * \param config                initial connection configuration
+         */
+        l4ore_handle_t open([in, string] char     *device_name,        
+                            [out] unsigned char    mac[6],
+                            [in,out] l4ore_config *config);
+
+        /* Close a connection.
+         *
+         * \param handle        connection handle
+         */
+        void close([in] l4ore_handle_t handle);
+
+        /* configure connection */
+        void configure([in] l4ore_handle_t channel,
+                       [in] l4ore_config   new_conf,
+                       [out] l4ore_config *old_conf);
+    };
+};

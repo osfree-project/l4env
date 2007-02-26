@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 /**
@@ -26,13 +26,13 @@
 
 /**
  * The size of the FFT is 2^nbits. If inverse is TRUE, inverse FFT is
- * done 
+ * done
  */
-int fft_init(FFTContext *s, int nbits, int inverse)
+int ff_fft_init(FFTContext *s, int nbits, int inverse)
 {
     int i, j, m, n;
     float alpha, c1, s1, s2;
-    
+
     s->nbits = nbits;
     n = 1 << nbits;
 
@@ -45,7 +45,7 @@ int fft_init(FFTContext *s, int nbits, int inverse)
     s->inverse = inverse;
 
     s2 = inverse ? 1.0 : -1.0;
-        
+
     for(i=0;i<(n/2);i++) {
         alpha = 2 * M_PI * (float)i / (float)n;
         c1 = cos(alpha);
@@ -53,16 +53,16 @@ int fft_init(FFTContext *s, int nbits, int inverse)
         s->exptab[i].re = c1;
         s->exptab[i].im = s1;
     }
-    s->fft_calc = fft_calc_c;
+    s->fft_calc = ff_fft_calc_c;
     s->exptab1 = NULL;
 
     /* compute constant table for HAVE_SSE version */
-#if (defined(HAVE_MMX) && defined(HAVE_BUILTIN_VECTOR)) || defined(HAVE_ALTIVEC)
+#if (defined(HAVE_MMX) && (defined(HAVE_BUILTIN_VECTOR) || defined(HAVE_MM3DNOW))) || defined(HAVE_ALTIVEC)
     {
         int has_vectors = 0;
 
 #if defined(HAVE_MMX)
-        has_vectors = mm_support() & MM_SSE;
+        has_vectors = mm_support() & (MM_3DNOW | MM_3DNOWEXT | MM_SSE | MM_SSE2);
 #endif
 #if defined(HAVE_ALTIVEC) && !defined(ALTIVEC_USE_REFERENCE_C_CODE)
         has_vectors = mm_support() & MM_ALTIVEC;
@@ -70,7 +70,7 @@ int fft_init(FFTContext *s, int nbits, int inverse)
         if (has_vectors) {
             int np, nblocks, np2, l;
             FFTComplex *q;
-            
+
             np = 1 << nbits;
             nblocks = np >> 3;
             np2 = np >> 1;
@@ -94,9 +94,25 @@ int fft_init(FFTContext *s, int nbits, int inverse)
             } while (nblocks != 0);
             av_freep(&s->exptab);
 #if defined(HAVE_MMX)
-            s->fft_calc = fft_calc_sse;
-#else
-            s->fft_calc = fft_calc_altivec;
+#ifdef HAVE_MM3DNOW
+            if (has_vectors & MM_3DNOWEXT)
+                /* 3DNowEx for Athlon(XP) */
+                s->fft_calc = ff_fft_calc_3dn2;
+            else if (has_vectors & MM_3DNOW)
+                /* 3DNow! for K6-2/3 */
+                s->fft_calc = ff_fft_calc_3dn;
+#endif
+#ifdef HAVE_BUILTIN_VECTOR
+            if (has_vectors & MM_SSE2)
+                /* SSE for P4/K8 */
+                s->fft_calc = ff_fft_calc_sse;
+            else if ((has_vectors & MM_SSE) &&
+                     s->fft_calc == ff_fft_calc_c)
+                /* SSE for P3 */
+                s->fft_calc = ff_fft_calc_sse;
+#endif
+#else /* HAVE_MMX */
+            s->fft_calc = ff_fft_calc_altivec;
 #endif
         }
     }
@@ -142,15 +158,15 @@ int fft_init(FFTContext *s, int nbits, int inverse)
 }
 
 /**
- * Do a complex FFT with the parameters defined in fft_init(). The
+ * Do a complex FFT with the parameters defined in ff_fft_init(). The
  * input data must be permuted before with s->revtab table. No
- * 1.0/sqrt(n) normalization is done.  
+ * 1.0/sqrt(n) normalization is done.
  */
-void fft_calc_c(FFTContext *s, FFTComplex *z)
+void ff_fft_calc_c(FFTContext *s, FFTComplex *z)
 {
     int ln = s->nbits;
-    int	j, np, np2;
-    int	nblocks, nloops;
+    int j, np, np2;
+    int nblocks, nloops;
     register FFTComplex *p, *q;
     FFTComplex *exptab = s->exptab;
     int l;
@@ -163,29 +179,29 @@ void fft_calc_c(FFTContext *s, FFTComplex *z)
     p=&z[0];
     j=(np >> 1);
     do {
-        BF(p[0].re, p[0].im, p[1].re, p[1].im, 
+        BF(p[0].re, p[0].im, p[1].re, p[1].im,
            p[0].re, p[0].im, p[1].re, p[1].im);
         p+=2;
     } while (--j != 0);
 
     /* pass 1 */
 
-    
+
     p=&z[0];
     j=np >> 2;
     if (s->inverse) {
         do {
-            BF(p[0].re, p[0].im, p[2].re, p[2].im, 
+            BF(p[0].re, p[0].im, p[2].re, p[2].im,
                p[0].re, p[0].im, p[2].re, p[2].im);
-            BF(p[1].re, p[1].im, p[3].re, p[3].im, 
+            BF(p[1].re, p[1].im, p[3].re, p[3].im,
                p[1].re, p[1].im, -p[3].im, p[3].re);
             p+=4;
         } while (--j != 0);
     } else {
         do {
-            BF(p[0].re, p[0].im, p[2].re, p[2].im, 
+            BF(p[0].re, p[0].im, p[2].re, p[2].im,
                p[0].re, p[0].im, p[2].re, p[2].im);
-            BF(p[1].re, p[1].im, p[3].re, p[3].im, 
+            BF(p[1].re, p[1].im, p[3].re, p[3].im,
                p[1].re, p[1].im, p[3].im, -p[3].re);
             p+=4;
         } while (--j != 0);
@@ -201,7 +217,7 @@ void fft_calc_c(FFTContext *s, FFTComplex *z)
         for (j = 0; j < nblocks; ++j) {
             BF(p->re, p->im, q->re, q->im,
                p->re, p->im, q->re, q->im);
-            
+
             p++;
             q++;
             for(l = nblocks; l < np2; l += nblocks) {
@@ -221,14 +237,14 @@ void fft_calc_c(FFTContext *s, FFTComplex *z)
 }
 
 /**
- * Do the permutation needed BEFORE calling fft_calc()
+ * Do the permutation needed BEFORE calling ff_fft_calc()
  */
-void fft_permute(FFTContext *s, FFTComplex *z)
+void ff_fft_permute(FFTContext *s, FFTComplex *z)
 {
     int j, k, np;
     FFTComplex tmp;
     const uint16_t *revtab = s->revtab;
-    
+
     /* reverse */
     np = 1 << s->nbits;
     for(j=0;j<np;j++) {
@@ -241,7 +257,7 @@ void fft_permute(FFTContext *s, FFTComplex *z)
     }
 }
 
-void fft_end(FFTContext *s)
+void ff_fft_end(FFTContext *s)
 {
     av_freep(&s->revtab);
     av_freep(&s->exptab);

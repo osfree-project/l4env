@@ -52,16 +52,20 @@ static int LogStat;                 /* status bits, set by openlog() */
 static int LogFacility = LOG_USER;  /* default facility code */
 static volatile int LogMask = 0xff; /* mask of priorities to be logged */
 
-char LOG_tag[LOG_TAG_SIZE];
+static char old_LOG_tag[LOG_TAG_SIZE];
 
 /* currently do nothing */
 void closelog(void)
 {
-    memset(&LOG_tag,0,LOG_TAG_SIZE);
+    /* restore old name */
+    memcpy(LOG_tag, old_LOG_tag, LOG_TAG_SIZE);
 }
 
 void openlog(const char *ident, int option, int facility)
 {
+    /* save old name */
+    memcpy(old_LOG_tag, LOG_tag, LOG_TAG_SIZE);
+
     strncpy(LOG_tag,ident,LOG_TAG_SIZE);
     LOG_tag[LOG_TAG_SIZE-1] = 0;
     LogStat = option;

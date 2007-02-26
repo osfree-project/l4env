@@ -184,10 +184,10 @@ __pool_config(int pool, char * str)
 
 #if DEBUG_ARGS
   if (name != NULL)
-    LOG_printf(" size 0x%08x, low 0x%08x, high 0x%08x, name \'%s\'\n",
+    LOG_printf(" size 0x%08x, low 0x%08lx, high 0x%08lx, name \'%s\'\n",
            size, low, high, name);
   else
-    LOG_printf(" size 0x%08x, low 0x%08x, high 0x%08x\n", size, low, high);
+    LOG_printf(" size 0x%08x, low 0x%08lx, high 0x%08lx\n", size, low, high);
 #endif
 
   /* set pool memory area */
@@ -229,16 +229,16 @@ __reserve(char * str)
 
   if (low >= high)
     {
-      LOG_Error("DMphys: invalid memory range for reserve (0x%08x-0x%08x)!",
+      LOG_Error("DMphys: invalid memory range for reserve (0x%08lx-0x%08lx)!",
                 low, high);
       return;
     }
 
-  LOGdL(DEBUG_ARGS, "reserve 0x%08x-0x%08x", low, high);
+  LOGdL(DEBUG_ARGS, "reserve 0x%08lx-0x%08lx", low, high);
 
   /* reserve */
   if (dmphys_memmap_reserve(low, high - low) < 0)
-    LOG_Error("DMphys: reserve memory area 0x%08x-0x%08x failed!", low, high);
+    LOG_Error("DMphys: reserve memory area 0x%08lx-0x%08lx failed!", low, high);
     
   /* done */
 }
@@ -447,11 +447,11 @@ main(int argc, char **argv)
       Panic("DMphys: can't register at nameserver");
       return -1;
     }
-  
+
   /* start thread waiting for exit events */
   if (using_events)
     init_events();
-  
+
   /* start server loop */
   if_l4dm_memphys_server_loop(NULL);
 

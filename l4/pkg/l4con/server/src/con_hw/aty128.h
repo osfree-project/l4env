@@ -549,7 +549,7 @@
 
 #define PMI_PMSCR_REG				0x60
 
-extern unsigned int ati128_regbase;
+extern l4_addr_t ati128_regbase;
 
 static inline void 
 aty_st_8(int regindex, unsigned char val)

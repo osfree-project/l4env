@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/CCParser.h
- *    \brief   contains the declaration of the class CCParser
+ *  \brief   contains the declaration of the class CCParser
  *
  *    \date    Sun Jul 27 2003
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -52,7 +52,8 @@ protected:
 public:
     virtual ~CCParser();
 
-    virtual bool Parse(void *scan_buffer, string sFilename, int nIDL, bool bVerbose, bool bPreProcessOnly = false);
+    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL,
+	bool bPreProcessOnly = false);
     virtual unsigned char Import(string sFilename); // used by parser
 
     friend class CParser;

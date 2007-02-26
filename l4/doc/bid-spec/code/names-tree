@@ -4,6 +4,8 @@ pkg/
      |   +- demo/
      |   +- lister/
      +- include/
+     +- doc/
+     +- idl/
      +- lib/
      |   +- src/
      +- man/

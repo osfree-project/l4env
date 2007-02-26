@@ -19,9 +19,9 @@
  *\ingroup clientapi
  */
 typedef struct omega0_irqdesc_struct_t{
-  unsigned	num	:16;
-  unsigned	shared:1;
-  unsigned	reserved:15;
+  l4_umword_t num      :16;
+  l4_umword_t shared   :1;
+  l4_umword_t reserved :15;
 } omega0_irqdesc_struct_t;
 
 /*!\brief Omega0 IRQ descriptor
@@ -29,7 +29,7 @@ typedef struct omega0_irqdesc_struct_t{
  */
 typedef union omega0_irqdesc_t{
   omega0_irqdesc_struct_t s;
-  unsigned i;
+  l4_umword_t i;
 } omega0_irqdesc_t;
 
 
@@ -51,7 +51,7 @@ typedef struct omega0_request_struct_t{
  */
 typedef union omega0_request_t{
   omega0_request_struct_t s;
-  unsigned i;
+  l4_umword_t i;
 } omega0_request_t;
 
 /*!\brief Omega0 alien handler type

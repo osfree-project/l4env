@@ -90,9 +90,9 @@ avlt_alloc_init(void)
  * \return index of node in node table, -1 if invalid pointer.
  */
 /*****************************************************************************/ 
-unsigned int
+l4_addr_t
 avlt_node_index(avlt_t * node)
 {
   /* we don't use a staic table anymore, return address */
-  return (unsigned int)node;
+  return (l4_addr_t)node;
 }

@@ -42,6 +42,7 @@ inline int bar();
 #line 23 "parser.cpp"
 // Try multiline NEEDS
 
+
 inline int baz();
 
 #line 29 "parser.cpp"
@@ -51,7 +52,7 @@ somefunc(unsigned (*func1)(),
 	 unsigned (*func2)());
 
 //
-// IMPLEMENTATION includes follow (for use by inline functions)
+// IMPLEMENTATION includes follow (for use by inline functions/templates)
 //
 
 #line 16 "parser.cpp"
@@ -78,6 +79,7 @@ inline int bar()
 #line 22 "parser.cpp"
 
 // Try multiline NEEDS
+
 
 inline int baz()
 {}

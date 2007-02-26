@@ -93,9 +93,9 @@ __events_init_and_wait(void)
        * synchronize the manipulation of dm_phys data structures */
       ret = if_l4dm_generic_close_all_call(&dmphys_service_id, &tid,
                                            L4DM_SAME_TASK, &_env);
-      if (ret || (_env.major != CORBA_NO_EXCEPTION))
+      if (ret || DICE_HAS_EXCEPTION(&_env))
         LOG_Error("handle exit event: call to service thread failed " \
-                  "(ret %d, exc %d)!", ret,_env.major);
+                  "(ret %d, exc %d)!", ret, DICE_EXCEPTION_MAJOR(&_env));
     }
 }
 

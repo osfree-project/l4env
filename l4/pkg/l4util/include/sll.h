@@ -1,5 +1,5 @@
-#ifndef SLL_H
-#define SLL_H
+#ifndef __L4UTIL__SLL_H__
+#define __L4UTIL__SLL_H__
 
 #include <stdlib.h>
 
@@ -25,10 +25,10 @@ list_append(slist_t *list, slist_t *new_node);
 static inline slist_t*
 list_remove(slist_t *list, slist_t *node);
 
-static inline void    
+static inline void
 list_free_entry(slist_t **list);
 
-static inline unsigned char  
+static inline unsigned char
 list_is_empty(slist_t *list);
 
 static inline slist_t*
@@ -40,7 +40,7 @@ list_add(slist_t *list, slist_t *new_node);
 static inline void
 list_insert_after(slist_t *after, slist_t *new_node);
 
-static inline int 
+static inline int
 list_elements(slist_t *head);
 
 /*
@@ -59,14 +59,14 @@ static inline slist_t*
 list_new_entry(void *data)
 {
   slist_t *sll;
-  
+
   sll=(slist_t *) malloc(sizeof(slist_t));
   if (!sll)
     return ((slist_t *) NULL);
 
   sll->data=data;
   sll->next=NULL;
-  
+
   return (sll);
 }
 
@@ -82,14 +82,14 @@ list_new_entry(void *data)
  *  the new list
  *
  */
-static inline slist_t* 
+static inline slist_t*
 list_append(slist_t *head, slist_t *new_node)
 {
   slist_t *ret = head;
   if (!head)
     return new_node;
- 
-  while (head->next) 
+
+  while (head->next)
     head = head->next;
   head->next = new_node;
   return ret;
@@ -107,7 +107,7 @@ list_append(slist_t *head, slist_t *new_node)
  *  the new list
  *
  */
-static inline slist_t* 
+static inline slist_t*
 list_add(slist_t *head, slist_t *new_node)
 {
   if (!new_node)
@@ -128,7 +128,7 @@ list_add(slist_t *head, slist_t *new_node)
  *  the new list
  *
  */
-static inline void 
+static inline void
 list_insert_after(slist_t *after, slist_t *new_node)
 {
   if (!new_node)
@@ -152,7 +152,7 @@ list_insert_after(slist_t *after, slist_t *new_node)
  *  FALSE   if not empty
  *
  */
-static inline unsigned char 
+static inline unsigned char
 list_is_empty(slist_t *list)
 {
   return ((list) ? 0 : 1);
@@ -170,7 +170,7 @@ list_is_empty(slist_t *list)
  *  none
  *
  */
-static inline slist_t* 
+static inline slist_t*
 list_remove(slist_t *head, slist_t *node)
 {
   slist_t *ret = head;
@@ -207,7 +207,7 @@ list_remove(slist_t *head, slist_t *node)
  *  none
  *
  */
-static inline void 
+static inline void
 list_free_entry(slist_t **list)
 {
   if (*list)
@@ -234,7 +234,7 @@ static inline slist_t*
 list_get_at(slist_t *list, int n)
 {
   int j=0;
-  
+
   while (list)
     {
       j++;
@@ -242,7 +242,7 @@ list_get_at(slist_t *list, int n)
 	return (list);
       list = list->next;
     }
-  
+
   return ((slist_t *) NULL);
 }
 
@@ -257,12 +257,12 @@ list_get_at(slist_t *list, int n)
  *  number of node/s
  *
  */
-static inline int 
+static inline int
 list_elements(slist_t *head)
 {
-    register int n;
-    for (n=0; head; head=head->next) n++;
-    return (n);
+  register int n;
+  for (n=0; head; head=head->next) n++;
+  return (n);
 }
 
-#endif  /* SLL_H */
+#endif  /* __L4UTIL__SLL_H__ */

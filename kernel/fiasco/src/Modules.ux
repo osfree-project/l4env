@@ -18,15 +18,11 @@ ifeq ("$(CONFIG_JDB)","y")
   PREPROCESS_PARTS	+= debug log
 endif
 
-ifeq ("$(CONFIG_KIP_SYSCALLS)","y")
-  ifeq ("$(CONFIG_KIP_SYSCALLS_ABS)","y")
-    PREPROCESS_PARTS    += abs_syscalls  
-  endif
-  ifeq ("$(CONFIG_KIP_SYSCALLS_REL)","y")
-    PREPROCESS_PARTS    += rel_syscalls  
-  endif
-  PREPROCESS_PARTS      += auto_map_kip
+ifeq ("$(CONFIG_TASK_CAPS)","y")
+  PREPROCESS_PARTS      += caps
 endif
+
+PREPROCESS_PARTS      += abs_syscalls auto_map_kip
 
 ifeq ("$(CONFIG_PERF_CNT)","y")
   PREPROCESS_PARTS	+= perf_cnt
@@ -34,23 +30,8 @@ endif
 ifeq ("$(CONFIG_EXCEPTION_IPC)","y")
   PREPROCESS_PARTS	+= utcb exc_ipc
 endif
-ifeq ("$(CONFIG_SYSCALL_ITER)","y")
-  PREPROCESS_PARTS	+= syscall_iter
-endif
 ifeq ("$(CONFIG_HANDLE_SEGMENTS)","y")
   PREPROCESS_PARTS	+= segments
-endif
-
-ifeq ("$(CONFIG_LOCAL_IPC)","y")
-  PREPROCESS_PARTS      += utcb lipc
-endif
-
-ifeq ("$(CONFIG_ACTIVATION_IPC)","y")
-  PREPROCESS_PARTS	+= act_ipc
-endif
-
-ifeq ("$(CONFIG_ENDPOINTS)","y")
-  PREPROCESS_PARTS	+= endpoints
 endif
 
 ifeq ("$(CONFIG_CONTEXT_4K)","y")
@@ -68,14 +49,12 @@ PRIVATE_INCDIR 		+= types/$(CONFIG_XARCH) types
 ABI			:= libabi.a
 VPATH			+= abi/$(CONFIG_XARCH) abi 
 
-ifeq ("$(CONFIG_ENDPOINTS)","y")
-VPATH                   += kern/xe kern/xe/abi
-endif
 
 INTERFACES_ABI		:= kip l4_types utcb
 
-kip_IMPL		:= kip kip-ia32 kip-ia32-debug
-l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit l4_types-debug
+kip_IMPL		:= kip kip-ia32 kip-debug kip-ia32-debug
+l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit \
+			   l4_types-debug l4_types-caps
 utcb_IMPL		:= utcb-ia32-ux
 
 #
@@ -91,7 +70,10 @@ INTERFACES_JABI		:= jdb_ktrace
 DRIVERS			:= libdrivers.a
 VPATH			+= drivers/$(CONFIG_XARCH) drivers
 PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
-INTERFACES_DRIVERS	:= mux_console console filter_console
+INTERFACES_DRIVERS	:= mux_console console filter_console processor \
+			   delayloop
+
+processor_IMPL		:= processor processor-ux
 
 #
 # KERNEL subsystem
@@ -106,6 +88,11 @@ ifeq ("$(CONFIG_UX_CON)","y")
   VPATH			+= drivers/ux
 endif
 
+ifeq ("$(CONFIG_UX_NET)","y")
+  KERNEL_EXTRA		+= ux_net
+  VPATH			+= drivers/ux
+endif
+
 # KERNEL modules.  
 
 # Important: The following list must be roughly sorted according to
@@ -114,24 +101,24 @@ endif
 # modules that _directly_ precede M and that M does not include).
 
 INTERFACES_KERNEL	:= simpleio kernel_console panic warn list_alloc  \
-			   mem_layout globals loader kip_init		  \
+			   mem_layout globals loader vhw kip_init	  \
 			   boot_info cmdline config jdb_symbol		  \
 			   tb_entry perf_cnt jdb_tbuf x86desc		  \
-			   emulation pic usermode cpu cpu_lock region	  \
-			   kmem mapped_alloc mem_unit	  \
+			   emulation pic usermode cpu trampoline cpu_lock \
+			   region entry_frame kmem mapped_alloc mem_unit  \
 			   kmem_alloc slab_cache_anon kmem_slab_simple	  \
 			   vmem_alloc paging kmem_slab fpu_state fpu	  \
 			   sched_context switch_lock timer timeout	  \
-			   context helping_lock space_index mapdb	  \
-			   trampoline space map_util hostproc task	  \
+			   cap_space mem_space space context helping_lock \
+			   cap_space_alloc space_index mapdb map_util	  \
+			   hostproc task kernel_task                      \
 			   thread_lock preemption timeslice_timeout	  \
-			   activation					  \
 			   ipc_timeout deadline_timeout thread_state	  \
 			   sender receiver thread			  \
 			   kernel_thread dirq	  			  \
 			   banner fpu_alloc irq main kern_types		  \
-			   entry_frame startup irq_alloc libc_support	  \
-			   jdb_dbinfo allocators jdb fb utcb_init	  \
+			   startup irq_alloc libc_support		  \
+			   jdb_dbinfo allocators jdb fb net utcb_init	  \
 			   jdb_core jdb_module jdb_table         	  \
 			   jdb_thread_list jdb_input jdb_dump		  \
 			   jdb_lines jdb_tcb jdb_prompt_module jdb_bt	  \
@@ -148,20 +135,15 @@ INTERFACES_KERNEL	:= simpleio kernel_console panic warn list_alloc  \
 			   jdb_halt_thread  jdb_tetris                    \
 			   jdb_kern_info_kip jdb_kern_info_region         \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_config  \
-			   vkey jdb_thread_names jdb_utcb
+			   vkey jdb_thread_names jdb_utcb		  \
+			   jdb_entry_frame kdb_ke
 
 
-ifeq ("$(CONFIG_ENDPOINTS)","y")
-INTERFACES_KERNEL	+= task_allocator endpoint kpage_allocable \
-                           allocator page \
-                           capability  task_container \
-                           free_list capability_table shadow_entry
-endif
 
-boot_info_IMPL		:= boot_info boot_info-ia32-ux boot_info-ux
+boot_info_IMPL		:= boot_info boot_info-ia32-amd64-ux boot_info-ux
 config_IMPL		:= config config-ia32-ux config-ux 
 context_IMPL		:= context context-ia32-ux context-ux
-cpu_IMPL		:= cpu-ia32-common cpu-ux
+cpu_IMPL		:= cpu-common cpu-ia32-ux cpu-ux
 cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
 dirq_IMPL		:= dirq dirq-ia32-ux
 entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux                   \
@@ -175,42 +157,45 @@ jdb_tcb_IMPL		:= jdb_tcb-ia32-ux
 jdb_utcb_IMPL		:= jdb_utcb-ia32-ux
 jdb_bp_IMPL		:= jdb_bp-ia32-ux jdb_bp-ux
 jdb_bt_IMPL		:= jdb_bt-ia32-ux
+jdb_entry_frame_IMPL	:= jdb_entry_frame-ia32-ux
 jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-ux                    \
 			   jdb_kern_info-ia32-ux
 jdb_misc_IMPL		:= jdb_misc-ia32-ux
-jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux
+jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux-arm
+jdb_screen_IMPL		:= jdb_screen jdb_screen-ia32-ux-arm
+jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-ia32-ux
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-ux
-kip_init_IMPL		:= kip_init-ia32-ux kip_init-ux
+kip_init_IMPL		:= kip_init-ia32-amd64-ux kip_init-ux
 kmem_IMPL		:= kmem-ia32-ux kmem-ux
-kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-ux
+kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-amd64-ux
 main_IMPL		:= main-ia32-ux main-ux
 mapdb_IMPL		:= mapdb-ia32-ux mapdb
+map_util_IMPL		:= map_util map_util-mem map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-ux
+mem_space_IMPL		:= mem_space mem_space-user mem_space-ia32-ux \
+			   mem_space-ux 
 mem_unit_IMPL		:= mem_unit-ux
 paging_IMPL		:= paging paging-ia32-ux
 perf_cnt_IMPL		:= perf_cnt perf_cnt-ia32-ux
 pic_IMPL		:= pic pic-ux
 pmem_alloc_IMPL		:= pmem_alloc pmem_alloc-ia32-ux
-space_IMPL		:= space space-user space-ia32-ux space-ux 
-sys_call_page_IMPL	:= sys_call_page sys_call_page-abs-ux                \
-			   sys_call_page-rel-ia32-ux
+space_IMPL		:= space space-caps space-ux 
+sys_call_page_IMPL	:= sys_call_page sys_call_page-abs-ux
 task_IMPL		:= task task-ux
 tb_entry_IMPL		:= tb_entry tb_entry-ia32-ux
 terminate_IMPL		:= terminate-ux
 thread_IMPL		:= thread thread-ia32-ux thread-ux thread-syscall    \
-			   thread-ipc thread-msg thread-msg-ux               \
+			   thread-syscall-ia32-ux thread-ipc thread-msg      \
+			   thread-msg-ux                                     \
 			   thread-pagefault thread-list thread-log           \
-			   thread-debug thread-ia32-ux-lipc
-timer_IMPL 		:= timer timer-ia32-ux timer-ux
+			   thread-debug thread-lookup
+timer_IMPL 		:= timer timer-ia32-amd64-ux timer-ux
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
-vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-ux vmem_alloc-ux
+vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-amd64-ux \
+			   vmem_alloc-ia32-ux vmem_alloc-ux
 
 ASSRC_KERNEL		:= entry-ia32-ux.S entry-ux.S sighandler.S \
 			   shortcut-ia32-ux.S
-
-ifeq ($(CONFIG_LOCAL_IPC),y)
-  ASSRC_KERNEL          += local_ipc-ia32-ux.S
-endif
 
 NOOPT			+= $(filter jdb%,\
 			     $(foreach in,$(INTERFACES_KERNEL), \

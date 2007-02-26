@@ -34,6 +34,9 @@ typedef union {
 #define L4_FPAGE_RW		1
 #define L4_FPAGE_MAP		0
 #define L4_FPAGE_GRANT		1
+#define L4_FPAGE_CACHE_OPT      (0x200)
+#define L4_FPAGE_CACHE_ENABLE   (L4_FPAGE_CACHE_OPT | 0x400)
+#define L4_FPAGE_CACHE_DISABLE  L4_FPAGE_CACHE_OPT
 
 typedef struct {
   l4_umword_t snd_base;

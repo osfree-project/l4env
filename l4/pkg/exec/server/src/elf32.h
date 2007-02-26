@@ -13,7 +13,7 @@
 #ifndef __ELF32_H_
 #define __ELF32_H_
 
-#include <l4/exec/elf.h>
+#include <l4/util/elf.h>
 
 #include "exc.h"
 #include "exc_obj.h"

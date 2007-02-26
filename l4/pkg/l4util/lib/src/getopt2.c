@@ -84,6 +84,6 @@ l4util_mbi_to_argv(l4_mword_t flag, l4util_mb_info_t *mbi)
 {
   if (flag == L4UTIL_MB_VALID
       && mbi && (mbi->flags & L4UTIL_MB_CMDLINE))
-    arg_init((char*) mbi->cmdline);
+    arg_init((char*)(l4_addr_t)mbi->cmdline);
 }
 

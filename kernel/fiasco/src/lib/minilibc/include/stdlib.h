@@ -8,7 +8,6 @@ __BEGIN_DECLS
 
 int atexit(void (*function)(void));
 
-double strtod(const char *nptr, char **endptr);
 long int strtol(const char *nptr, char **endptr, int base);
 unsigned long int strtoul(const char *nptr, char **endptr, int base);
 

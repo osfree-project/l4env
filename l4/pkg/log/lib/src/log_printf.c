@@ -115,7 +115,7 @@ int LOG_vprintf(const char*format, LOG_va_list list)
       int i;
 
       lock_buffer();
-      /* use external _doprnt from the oskit */
+
       global_buffer.printed = 0;
       LOG_doprnt(format, list, 16, printchar, (char *)&global_buffer);
       i = global_buffer.printed;

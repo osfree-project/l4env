@@ -267,13 +267,13 @@ vmwareInitFIFO(void)
 {
   unsigned mmioPhysBase = vmwareReadReg(SVGA_REG_MEM_START);
   unsigned mmioSize = vmwareReadReg(SVGA_REG_MEM_SIZE) & ~3;
-  unsigned mmioVirtBase;
-  
-  if (map_io_mem(mmioPhysBase, mmioSize, "ctrl", &mmioVirtBase) < 0)
+  l4_addr_t mmioVirtBase;
+
+  if (map_io_mem(mmioPhysBase, mmioSize, 0, "ctrl", &mmioVirtBase) < 0)
     return -L4_EINVAL;
-  
+
   vm_fifo = (unsigned*)mmioVirtBase;
-  
+
   vm_fifo[SVGA_FIFO_MIN]      = 4 * sizeof(unsigned);
   vm_fifo[SVGA_FIFO_MAX]      = mmioSize;
   vm_fifo[SVGA_FIFO_NEXT_CMD] = 4 * sizeof(unsigned);
@@ -348,7 +348,9 @@ static int
 vmware_probe(unsigned int bus, unsigned int devfn, 
 	     const struct pci_device_id *dev, con_accel_t *accel)
 {
-  unsigned int addr, size, id;
+  l4_addr_t addr;
+  l4_size_t size;
+  unsigned id;
 
   printf("Found VMware %04x (PCI %02x/%02x)", dev->device, bus, devfn);
 
@@ -401,11 +403,11 @@ vmware_probe(unsigned int bus, unsigned int devfn,
   hw_vid_mem_addr = vmwareReadReg(SVGA_REG_FB_START);
   hw_vid_mem_size = vmwareReadReg(SVGA_REG_FB_MAX_SIZE);
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, 
-		"video", &hw_map_vid_mem_addr)<0)
+  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size,
+		1, "video", (l4_addr_t *)&hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 
-  hw_map_vid_mem_addr += vmwareReadReg(SVGA_REG_FB_OFFSET);              
+  hw_map_vid_mem_addr += vmwareReadReg(SVGA_REG_FB_OFFSET);
 
   return 0;
 }

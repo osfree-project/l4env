@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 #PKGNAME		= dietlibc
 TARGET		= $(shell find . -name \*.h -printf "%P ") \
 		  cassert cstdio cstdlib cctype cstddef csetjmp climits csetjmp \
-		  cstring
+		  cstring cstdarg
 
 INSTALL_INC_PREFIX=$(PKGNAME)
 

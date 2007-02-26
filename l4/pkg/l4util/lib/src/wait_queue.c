@@ -58,9 +58,12 @@ extern inline void __wq_suspend_thread(l4_threadid_t wakeup_thread)
 #endif
 
       error = l4_ipc_receive(wakeup_thread,&wq_msg,
-#ifdef ARCH_x86
+#if defined ARCH_x86
 				  &wq_msg.new_wait.lh.low,
 				  &wq_msg.new_wait.lh.high,
+#elif defined ARCH_amd64
+				  (l4_umword_t*)&wq_msg.new_wait.raw,
+				  0,
 #else /* strange v2/x0adapt vs. x0-native check */
 				  &wq_msg.new_wait.raw,
 				  0,
@@ -129,9 +132,12 @@ extern inline void __wq_wakeup_thread(l4_threadid_t tid,
   wq_msg.magic = WQ_WAKEUP_MAGIC;
 
   error = l4_ipc_send(tid,&wq_msg,
-#ifdef ARCH_x86
+#if defined ARCH_x86
 			   wq_msg.new_wait.lh.low,
 			   wq_msg.new_wait.lh.high,
+#elif defined ARCH_amd64
+			   wq_msg.new_wait.raw,
+			   0,
 #else
 			   wq_msg.new_wait.raw,
 			   0,
@@ -160,7 +166,7 @@ extern inline void __wq_wakeup_thread(l4_threadid_t tid,
  *****************************************************************************/
 inline void l4_wq_lock(l4_wait_queue_t *wq)
 {
-  unsigned flags;
+  l4_umword_t flags;
   l4_wait_queue_entry_t wqe;
   l4_threadid_t wakeup_thread;
 
@@ -235,7 +241,7 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
  *****************************************************************************/
 inline void l4_wq_unlock(l4_wait_queue_t *wq)
 {
-  unsigned flags;
+  l4_umword_t flags;
   l4_threadid_t tid;
 
   l4util_flags_save(&flags);
@@ -279,7 +285,7 @@ inline void l4_wq_unlock(l4_wait_queue_t *wq)
  *****************************************************************************/
 inline void l4_wq_remove_myself(l4_wait_queue_t *wq)
 {
-  unsigned flags;
+  l4_umword_t flags;
   l4_threadid_t me = l4_myself();
   l4_wait_queue_entry_t *wqe,*last;
 

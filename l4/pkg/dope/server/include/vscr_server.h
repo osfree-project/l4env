@@ -20,7 +20,7 @@
 #include "vscreen.h"
 
 struct vscr_server_services {
-	int (*start) (VSCREEN *);
+	int (*start) (THREAD *, VSCREEN *);
 };
 
 

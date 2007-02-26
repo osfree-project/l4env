@@ -1,4 +1,5 @@
 # -*- Makefile -*-
+# vim:set ft=make:
 # DROPS (Dresden Realtime OPerating System) Component
 #
 # Makefile-Include for compiling templates (prog.mk, lib.mk)
@@ -40,9 +41,9 @@ DROPSCONF		?=
 DROPSCONF_TITLE		?= DROPS Configuration Tool
 DROPSCONF_DEFCONFIG	?= defconfig
 DROPSCONF_CONFIG_IN	?= config.in
-DROPSCONF_CONFIG	?= .config
-DROPSCONF_CONFIG_H	?= config.h
-DROPSCONF_CONFIG_MK	?= Makeconf.bid.local
+DROPSCONF_CONFIG	?= $(OBJ_DIR)/.config
+DROPSCONF_CONFIG_H	?= $(OBJ_DIR)/config.h
+DROPSCONF_CONFIG_MK	?= $(OBJ_DIR)/Makeconf.bid.local
 DROPSCONF_DONTINC_MK	?=
 DROPSCONF_MACRO		?= CONFIG_H_INCLUDED
 DROPSCONF_HELPFILE	?= config.help
@@ -68,8 +69,10 @@ ifneq ($(DROPSCONF),)
 
 $(DROPSCONF_CONFIG_H): $(DROPSCONF_CONFIG)
 
-$(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG):
+$(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG): $(DROPSCONF_CONFIG_IN)
 	@$(GEN_MESSAGE)
+	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG))
+	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG_H))
 	$(VERBOSE)true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) \
 	  $(if $(VERBOSE),>/dev/null,) || \
 	  ( echo -e "\nError: Some defaults for config options are missing." ; \

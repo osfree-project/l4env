@@ -27,11 +27,15 @@ struct scheduler_services {
 	 * \param period  period length in milliseconds
 	 * \return        0 on success
 	 */
-	s32  (*add)              (WIDGET *w, u32 period);
+	s32  (*add) (WIDGET *w, u32 period);
 
 
 	/*** STOP REAL-TIME REDRAW OF SPECIFIED WIDGET ***/
-	void (*remove)           (WIDGET *w);
+	void (*remove) (WIDGET *w);
+
+
+	/*** STOP REAL-TIME REDRAW OF ALL WIDGETS OF SPECIFIED APPLICATION ***/
+	void (*release_app) (int app_id);
 
 
 	/*** REGISTER SYNCHRONISATION MUTEX ***
@@ -40,7 +44,7 @@ struct scheduler_services {
 	 * this semaphore. This mechanism can be used to provide
 	 * redraw-synchronisation with a client application.
 	 */
-	void (*set_sync_mutex)   (WIDGET *w, MUTEX *);
+	void (*set_sync_mutex) (WIDGET *w, MUTEX *);
 
 
 	/*** MAINLOOP OF DOpE ***

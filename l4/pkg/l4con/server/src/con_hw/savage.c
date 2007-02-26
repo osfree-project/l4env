@@ -482,7 +482,8 @@ savage_probe(unsigned int bus, unsigned int devfn,
 
   printf("Found %s rev 0x%02x (PCI %02x/%02x)\n", b->name, rev, bus, devfn);
 
-  if (map_io_mem(addr0, hw_vid_mem_size, "video", &hw_map_vid_mem_addr)<0)
+  if (map_io_mem(addr0, hw_vid_mem_size, 1, "video",
+	         (l4_addr_t *)&hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 
   if (S3_SAVAGE3D_SERIES(b->chip))
@@ -490,7 +491,7 @@ savage_probe(unsigned int bus, unsigned int devfn,
   else
     addr1 = addr0 + SAVAGE_NEWMMIO_REGBASE_S4;
 
-  if (map_io_mem(addr1, SAVAGE_NEWMMIO_REGSIZE, "ctrl", &savage_mmio)<0)
+  if (map_io_mem(addr1, SAVAGE_NEWMMIO_REGSIZE, 0, "ctrl", &savage_mmio)<0)
     return -L4_ENOTFOUND;
 
   savage_chip = b->chip;

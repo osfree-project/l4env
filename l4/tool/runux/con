@@ -1,6 +1,7 @@
 #! /bin/bash
 
-[ -n "$UXRES" ] || UXRES=640x480@16
+#[ -n "$UXRES" ] || UXRES=640x480@16
+#[ -n "$UXRES" ] || UXRES=320x240@16
 
 . ${0%/*}/generic.inc
 

@@ -14,6 +14,7 @@ extern size_t pr_scale;
 
 IMPLEMENTATION:
 
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -40,7 +41,7 @@ perror(const char *s)
   panic (s);
 }
 
-ssize_t 
+/*ssize_t*/ size_t
 write(int, const char *buf, size_t size)
 {
   for (size_t i=0; i<size; i++)

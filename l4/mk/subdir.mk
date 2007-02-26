@@ -28,13 +28,13 @@ clean cleanall scrub::
 	$(VERBOSE)set -e; $(foreach d,$(TARGET), test -f $d/broken || \
 	    if [ -f $d/Makefile ] ; then PWD=$(PWD)/$d $(MAKE) -C $d $@ $(MKFLAGS) $(MKFLAGS_$(d)); fi; )
 
-install oldconfig reloc txtconfig relink::
+install oldconfig txtconfig relink::
 	$(VERBOSE)set -e; $(foreach d,$(TARGET), test -f $d/broken -o -f $d/obsolete || \
 	    if [ -f $d/Makefile ] ; then PWD=$(PWD)/$d $(MAKE) -C $d $@ $(MKFLAGS) $(MKFLAGS_$(d)); fi; )
 
 # first the subdir-targets (this is were "all" will be build, e.g. in lib
 # or server.
-$(SUBDIR_TARGET):
+$(filter-out ptest,$(SUBDIR_TARGET)):
 	$(VERBOSE)test -f $@/broken -o -f $@/obsolete ||		\
 	    if [ -f $@/Makefile ] ; then PWD=$(PWD)/$@ $(MAKE) -C $@ $(MKFLAGS) ; fi
 # Second, the rules for going down into sub-pkgs with "lib" and "server"
@@ -67,7 +67,6 @@ help::
 	@echo "  cleanall       - call cleanall recursively"
 	@echo "  install        - build subdirs, install recursively then"
 	@echo "  oldconfig      - call oldconfig recursively"
-	@echo "  reloc          - call reloc recursively"
 	@echo "  txtconfig      - call txtconfig recursively"
 
-.PHONY: $(TARGET) all clean cleanall help install oldconfig reloc txtconfig
+.PHONY: $(TARGET) all clean cleanall help install oldconfig txtconfig

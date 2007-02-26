@@ -24,6 +24,11 @@ help:
 	@echo "  doc            - doxygen HTML documentation into docs/"
 	@echo "  TAGS tags      - create tags files"
 
+
+Makefile: $(srcdir)/templates/Makefile.builddir.templ
+	perl -p -i -e '$$s = "$(srcdir)"; s/\@SRCDIR\@/$$s/' \
+			< $< >$@
+
 ifneq ($(MAKECMDGOALS),help)
 
 ifeq ($(srcdir),NOT_SET)
@@ -147,16 +152,16 @@ endif # _modules_read_
 
 .PHONY: create-sources
 create-sources: $(MODULES_FILE) globalconfig.out .Modules.deps 
-	$(MAKE) srcdir=$(srcdir) -f $(srcdir)/Makefile.sub1 
+	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub1 
 auto/stamp-%.ready: $(MODULES_FILE) globalconfig.out .Modules.deps 
-	$(MAKE) srcdir=$(srcdir) -f $(srcdir)/Makefile.sub1 $@
+	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub1 $@
 
 #
 # Makefile.sub2: Create everything else.
 #
 all doc DEPS DEPS.ps DEPS.a4.ps DEPS.tred.ps TAGS tags %.o %_t: \
   $(MODULES_FILE) .Modules.deps create-sources globalconfig.h
-	$(MAKE) srcdir=$(srcdir) -f $(srcdir)/Makefile.sub2 $@
+	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub2 $@
 
 # Divert any target we do not explicitly mention in this Makefile to
 # Makefile.sub2.  (Unfortunately 1, this does not work for file
@@ -165,11 +170,11 @@ all doc DEPS DEPS.ps DEPS.a4.ps DEPS.tred.ps TAGS tags %.o %_t: \
 # create-sources" manually.)
 .DEFAULT: 
 	$(MAKE) create-sources
-	$(MAKE) srcdir=$(srcdir) -f $(srcdir)/Makefile.sub2 $@
+	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub2 $@
 
 # Well, we need to provide some empty rules for some targets to
 # prevent the above catch-all from running amok.
-Makeconf.local Makerules.local $(srcdir)/Makeconf.local: ; 
+Makerules.local $(srcdir)/Makeconf.local $(objbase)/Makeconf.local : ;
 
 %: %.o				# delete implicit rule
 
@@ -180,7 +185,12 @@ endif # ! config xconfig menuconfig oldconfig
 auto:
 	test -e auto || mkdir auto
 
-rules.out: $(srcdir)/rules.cml
+$(srcdir)/rules.isg:
+	@echo "symbols"                                      >> $@
+	@echo "arm_isg_options  'ISG Specific options' text" >> $@
+	@echo "."                                            >> $@
+
+rules.out: $(srcdir)/rules.cml $(srcdir)/rules.isg
 	@echo =============================================
 	@echo rules.out was outdated, do \'make menuconfig\'
 	@echo to see if there are new config options!
@@ -233,7 +243,7 @@ clean: $(foreach subsys, $(SUBSYSTEMS), clean-$(subsys))
 cleanall: clean $(foreach subsys, $(SUBSYSTEMS), cleanall-$(subsys))
 	$(foreach subdir, $(SUBDIRS), $(RM) $(subdir)/{.,}*.d)
 	$(RM) rules.out
-	$(RM) {.,}*.d *~ globalconfig.{h,h.old} Circular
+	$(RM) {.,}*.d {.,}*.d.new *~ globalconfig.{h,h.old} Circular
 	$(RM) .Modules.deps
 
 mrproper: cleanall
@@ -244,8 +254,8 @@ endif # clean, cleanall, mrproper
 
 .PHONY: update
 update:
-	cd $(srcdir)/.. && cvs -q update
-	cd $(L4DIR)/tool/preprocess && cvs -q update
+	cd $(srcdir)/.. && cvs -q update -dP
+	cd $(L4DIR)/tool/preprocess && cvs -q update -dP
 
 endif # srcdir != NOT_SET
 

@@ -5,7 +5,7 @@
 #include <l4/util/port_io.h>
 #include <l4/util/irq.h>
 #include <l4/util/rdtsc.h>
-#include <l4/util/kip.h>
+#include <l4/sigma0/kip.h>
 #include <stdio.h>
 
 l4_uint32_t l4_scaler_tsc_to_ns;
@@ -40,7 +40,7 @@ l4_tsc_init (int constraint)
        * we don't need to do port i/o. If we're unable to get the information
        * there, measure it ourselves.
        */
-      l4_kernel_info_t *kip = l4util_kip_map();
+      l4_kernel_info_t *kip = l4sigma0_kip_map(L4_INVALID_ID);
 
       if (kip)
 	{
@@ -48,8 +48,8 @@ l4_tsc_init (int constraint)
 	      && kip->frequency_cpu 
 	      && kip->frequency_cpu < 50000000 /* sanity check*/)
 	    {
-	      l4_scaler_tsc_linux = muldiv(1<<30, 4000, kip->frequency_cpu);
-	      l4_scaler_ns_to_tsc = muldiv(1<<27, kip->frequency_cpu, 1000000);
+	      l4_scaler_tsc_linux = muldiv(1U<<30, 4000, kip->frequency_cpu);
+	      l4_scaler_ns_to_tsc = muldiv(1U<<27, kip->frequency_cpu, 1000000);
 
 	      /* l4_scaler_ns_to_tsc = (2^32 * Hz) / (32 * 1.000.000.000) */
 	    }
@@ -67,7 +67,7 @@ l4_tsc_init (int constraint)
       const unsigned calibrate_time  = 50000 /*us*/ + 1;
       const unsigned calibrate_latch = clock_tick_rate / 20; /* 20Hz = 50ms */
 
-      l4_uint32_t flags, dummy;
+      l4_umword_t flags;
       l4_uint64_t tsc_start, tsc_end;
       register l4_uint32_t count;
 
@@ -109,10 +109,7 @@ l4_tsc_init (int constraint)
       if ((tsc_end & 0xffffffffL) <= calibrate_time)
 	goto bad_ctc;
 
-      asm ("divl %2"
-	  :"=a" (l4_scaler_tsc_linux), "=d" (dummy)
-	  :"r" ((l4_uint32_t)tsc_end),  "0" (0), "1" (calibrate_time));
-
+      l4_scaler_tsc_linux = muldiv(1U<<30, 1U<<2, (l4_uint32_t)tsc_end);
       l4_scaler_ns_to_tsc = muldiv(((1ULL<<32)/1000ULL), (l4_uint32_t)tsc_end,
 			     	   calibrate_time * (1<<5));
     }

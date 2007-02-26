@@ -23,9 +23,10 @@ static l4_threadid_t server_id = L4_INVALID_ID;
 
 typedef void* (*malloc_t)(unsigned long);
 #define my_default_environment \
-  { CORBA_NO_EXCEPTION, 0, { param: 0}, L4_IPC_NEVER_INITIALIZER, \
-    { fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
-    (malloc_t)malloc, free }
+  { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+      { param: 0}, L4_IPC_NEVER_INITIALIZER, \
+      { fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
+      (malloc_t)malloc, free }
 
 static void l4cpu_reserve_set_preempter(l4_threadid_t thread,
 					l4_threadid_t preempter){
@@ -33,8 +34,9 @@ static void l4cpu_reserve_set_preempter(l4_threadid_t thread,
     l4_umword_t dummy;
 
     pager = L4_INVALID_ID;
-    l4_thread_ex_regs(thread, -1, -1, &preempter, &pager,
-		      &dummy, &dummy, &dummy);
+    l4_thread_ex_regs_flags(thread, -1, -1, &preempter, &pager,
+		            &dummy, &dummy, &dummy,
+                            L4_THREAD_EX_REGS_NO_CANCEL);
 }
 
 static int server_init(void){

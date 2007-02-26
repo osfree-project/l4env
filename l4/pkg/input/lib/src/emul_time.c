@@ -26,7 +26,6 @@
 
 /* Can be initialized with the value taken from l4io. */
 unsigned long l4input_hz = 100;
-unsigned long abc;
 
 extern unsigned long HZ __attribute__ ((weak));
 extern unsigned long jiffies;

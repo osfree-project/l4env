@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/IncludeStatement.h
- *    \brief   contains the declaration of the class CIncludeStatement
+ *  \file    dice/src/IncludeStatement.h
+ *  \brief   contains the declaration of the class CIncludeStatement
  *
- *    \date    10/22/2004
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/22/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,103 +32,74 @@
 
 #include "Object.h"
 #include <string>
-using namespace std;
 
-/** \class IncludeFile
+/** \class CIncludeStatement
  *  \ingroup base
  *  \brief helper class to manage included files
  */
 class CIncludeStatement : public CObject
 {
+    /** hidden empty constructor */
+    CIncludeStatement()
+    { }
+
 public:
     /** default constructor */
-    CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bPrivate, string sFileName);
+    CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bPrivate, bool bImport,
+	string sFileName, string sFromFile, string sPath, int nLineNb);
     /** copy constructor
      * \param src the source to copy from
      */
-    CIncludeStatement(CIncludeStatement &src);
+    CIncludeStatement(const CIncludeStatement &src);
     /** destroys the object */
     ~CIncludeStatement();
 
-public: // Methods
-    virtual CObject* Clone();
-    virtual bool IsIDLFile();
-    virtual bool IsStdInclude();
-    virtual bool IsPrivate();
-    virtual void SetPrivate(bool bPrivate);
-    virtual string GetIncludedFileName();
+    /** \brief creates a copy of this object
+     *  \return reference to new instance
+     */
+    CObject* Clone(void)
+    { return new CIncludeStatement(*this); }
 
-protected: // Members
-    /** \var bool bIDLFile
+    /** \brief tries to make a simple match
+     *  \param sName the file name to match against
+     *  \return true if filenames match
+     */
+    bool Match(string sName)
+    { return m_sFilename == sName; }
+
+    /** \var bool m_bIDLFile
      *  \brief true if this is an IDL file
      */
     bool m_bIDLFile;
-    /** \var bool bIsStandardInclude
-     *  \brief true if this is included as a standard include file (using '<' and '>')
+    /** \var bool m_bStandard
+     *  \brief true if this is included as a standard include file \
+     *         (using "<" and ">")
      */
-    bool m_bIsStandardInclude;
-    /** \var bool bPrivate
+    bool m_bStandard;
+    /** \var bool m_bPrivate
      *  \brief true if this include statement should not appear in target file
      */
     bool m_bPrivate;
-    /** \var string sFileName
+    /** \var bool m_bImport
+     *  \brief true if this is an import statement
+     */
+    bool m_bImport;
+    /** \var string m_sFilename
      *  \brief the name of the file to include
      */
-    string m_sFileName;
+    string m_sFilename;
+    /** \var string m_sFromFile
+     *  \brief the name of the file with the include statement
+     */
+    string m_sFromFile;
+    /** \var string m_sPath
+     *  \brief path on which the file was opened
+     */
+    string m_sPath;
+    /** \var int m_nLineNb
+     *  \brief line number of the include statement
+     */
+    unsigned int m_nLineNb;
 };
-
-/** \brief creates a copy of this object
- *  \return reference to new instance
- */
-inline CObject*
-CIncludeStatement::Clone(void)
-{
-    return new CIncludeStatement(*this);
-}
-
-/** \brief return value of m_bIDLFile
- *  \return value of m_bIDLFile
- */
-inline bool
-CIncludeStatement::IsIDLFile()
-{
-    return m_bIDLFile;
-}
-
-/** \brief return value of m_bIsStandardInclude
- *  \return value of m_bIsStandardInclude
- */
-inline bool
-CIncludeStatement::IsStdInclude()
-{
-    return m_bIsStandardInclude;
-}
-
-/** \brief return value of m_bPrivate
- *  \return value of m_bPrivate
- */
-inline bool
-CIncludeStatement::IsPrivate()
-{
-    return m_bPrivate;
-}
-
-/** \brief sets the value of m_bPrivate
- *  \param bPrivate the new value of m_bPrivate
- */
-inline void
-CIncludeStatement::SetPrivate(bool bPrivate)
-{
-    m_bPrivate = bPrivate;
-}
-
-/** \brief returns value of m_sFileName
- *  \return value of m_sFileName
- */
-inline string
-CIncludeStatement::GetIncludedFileName()
-{
-    return m_sFileName;
-}
 
 #endif                // __DICE_INCLUDESTATEMENT_H__

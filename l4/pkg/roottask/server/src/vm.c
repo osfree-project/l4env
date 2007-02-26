@@ -13,6 +13,14 @@
 
 #define VM_MAX 32
 
+typedef struct
+{
+  unsigned  task;
+  l4_addr_t vm_start;
+  l4_addr_t vm_end;
+  l4_addr_t offset;
+} __vm_t;
+
 static __vm_t __vm[VM_MAX];
 static int size = 0;
 
@@ -23,6 +31,7 @@ vm_add(unsigned task, l4_addr_t vm_start, l4_addr_t vm_end,
   if (size == VM_MAX)
     {
       printf("WARNING: no space for vm region.");
+      return;
     }
 
   __vm[size].task = task;
@@ -30,7 +39,6 @@ vm_add(unsigned task, l4_addr_t vm_start, l4_addr_t vm_end,
   __vm[size].vm_end = vm_end;
   __vm[size].offset = offset;
   size++;
-
   return;
 }
 
@@ -42,8 +50,8 @@ vm_find(unsigned task, l4_addr_t addr)
   for (i = 0; i < size; i++)
     {
       if (__vm[i].vm_start <= addr && __vm[i].vm_end > addr &&
-	  __vm[i].task == task)
-	return i;
+  	  __vm[i].task == task)
+    	return i;
     }
 
   return -1;
@@ -52,7 +60,7 @@ vm_find(unsigned task, l4_addr_t addr)
 l4_addr_t
 vm_get_offset(int i)
 {
-  printf("vm: %x, %x, %x, %x\n", __vm[i].task, __vm[i].vm_start,
+  printf("vm: %x, %lx, %lx, %lx\n", __vm[i].task, __vm[i].vm_start,
          __vm[i].vm_end, __vm[i].offset);
   return __vm[i].offset;
 }

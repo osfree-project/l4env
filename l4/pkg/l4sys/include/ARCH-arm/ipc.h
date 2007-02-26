@@ -150,6 +150,9 @@ l4_ipc_receive(l4_threadid_t src,
                l4_timeout_t timeout, 
                l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_sleep(l4_timeout_t timeout);
+
 /*----------------------------------------------------------------------------
  * 3 words in registers
  *--------------------------------------------------------------------------*/

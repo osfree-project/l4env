@@ -407,7 +407,7 @@ void vis_refresh_histogram(rt_mon_histogram_t *hist, const wins_t *wins)
 	{
 	    y = hist->data[x] / scale;
 	}
-	
+
         if (xselection == x)
         {
             vfb_vbar_rgb(wins->vscr, wins->w, wins->h, x, 0, wins->h - y - 1,

@@ -4,7 +4,7 @@
 PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
-SYSTEMS = x86-l4v2 x86-l4x0
+SYSTEMS = x86-l4v2
 TARGET	= omega0_ex_delay
 SRC_C	= main.c pit.c pic.c serial.c
 MODE	= sigma0

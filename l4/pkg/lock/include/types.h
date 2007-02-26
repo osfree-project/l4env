@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file  lock/include/l4/lock/types.h
+ * \file  lock/include/types.h
  * \brief L4 lock data types.
  *
  * \date   12/30/2000

@@ -2,7 +2,7 @@
 PKGDIR         ?= ../..
 L4DIR          ?= $(PKGDIR)/../..
 
-SYSTEMS         = x86-l4v2 x86-l4x0
+SYSTEMS         = x86-l4v2
 
 PRIVATE_INCDIR  =+ $(PKGDIR)/examples/common   \
                    $(PKGDIR)/examples/dope_mon \
@@ -18,6 +18,8 @@ MODE            = l4env_minimal
 
 LIBS           += -lrt_mon_mon -lrt_mon_client -ll4dope -lvscreen \
                   -lvfb_drawing -lparsecmdline
+
+DEPENDS_PKGS    = libvfb
 
 include $(L4DIR)/mk/prog.mk
 

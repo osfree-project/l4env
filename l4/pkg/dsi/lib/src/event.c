@@ -352,7 +352,7 @@ __event_thread(void * data)
   l4_threadid_t me = l4thread_l4_id(l4thread_myself());
   l4_threadid_t src;
   int ret,error,reply;
-  l4_uint32_t dw0,dw1;
+  l4_umword_t dw0,dw1;
   l4_msgdope_t result;
   int cmd;
 
@@ -365,7 +365,7 @@ __event_thread(void * data)
 			     L4_IPC_NEVER,&result);
       while (!ret)
 	{
-	  LOGdL(DEBUG_EVENT,"request: dw0 0x%08x, dw1 %d",dw0,dw1);
+	  LOGdL(DEBUG_EVENT,"request: dw0 0x%08lx, dw1 %ld", dw0, dw1);
 
 	  reply = 1;
 	  cmd = dw0 & ~EVENT_MASK;
@@ -394,7 +394,7 @@ __event_thread(void * data)
 
 	    default:
 	      /* invalid request */
-	      LOG_Error("DSI: event signalling thread: invalid request 0x%08x",
+	      LOG_Error("DSI: event signalling thread: invalid request 0x%08lx",
                         dw0);
 	      error = -L4_EINVAL;
 	    }
@@ -437,13 +437,14 @@ __event_thread(void * data)
 int 
 dsi_event_set(dsi_socketid_t socket_id, l4_uint32_t events)
 {
-  int ret,error,dummy;
+  int ret, error;
+  l4_umword_t dummy;
   l4_msgdope_t result;
 
   /* call signalling thread */
   ret = l4_ipc_call(dsi_component_event_id,L4_IPC_SHORT_MSG,
 			 EVENT_SET | (events & EVENT_MASK),socket_id,
-			 L4_IPC_SHORT_MSG,&error,&dummy,
+			 L4_IPC_SHORT_MSG,(l4_umword_t *)&error,&dummy,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
@@ -493,13 +494,14 @@ int
 dsi_event_reset(l4_threadid_t event_thread, dsi_socketid_t socket_id,
 		l4_uint32_t events)
 {
-  int ret,error,dummy;
+  int ret,error;
+  l4_umword_t dummy;
   l4_msgdope_t result;
 
   /* call component */
   ret = l4_ipc_call(event_thread,L4_IPC_SHORT_MSG,
 			 EVENT_RESET | (events & EVENT_MASK),socket_id,
-			 L4_IPC_SHORT_MSG,&error,&dummy,
+			 L4_IPC_SHORT_MSG,(l4_umword_t *)&error,&dummy,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
@@ -542,7 +544,8 @@ dsi_event_wait(l4_threadid_t event_thread, dsi_socketid_t socket_id,
   /* call component */
   ret = l4_ipc_call(event_thread,L4_IPC_SHORT_MSG,
 			 EVENT_WAIT | (events & EVENT_MASK),socket_id,
-			 L4_IPC_SHORT_MSG,&error,&mask,
+			 L4_IPC_SHORT_MSG,(l4_umword_t *)&error,
+			 (l4_umword_t *)&mask,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {

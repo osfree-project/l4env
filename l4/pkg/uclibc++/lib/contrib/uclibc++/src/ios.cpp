@@ -29,7 +29,7 @@ namespace std{
 
 
 #ifdef __UCLIBCXX_SUPPORT_CDIR__
-	_UCXXEXPORT int ios_base::Init::init_cnt = 0;	//Needed to ensure the static value is created
+	_UCXXLOCAL int ios_base::Init::init_cnt = 0;	//Needed to ensure the static value is created
 
 //Create buffers first
 #ifdef __UCLIBCXX_SUPPORT_COUT__

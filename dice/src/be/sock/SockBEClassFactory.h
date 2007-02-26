@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/be/sock/SockBEClassFactory.h
- *    \brief   contains the declaration of the class CBEClassFactory
+ *  \brief   contains the declaration of the class CBEClassFactory
  *
  *    \date    01/10/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -30,16 +30,15 @@
 #ifndef SOCKBECLASSFACTORY_H
 #define SOCKBECLASSFACTORY_H
 
-#include "be/BEClassFactory.h"
+#include <be/BEClassFactory.h>
 
 class CSockBEClassFactory : public CBEClassFactory
 {
 // Constructor
 public:
-    /**    \brief constructor
-     *    \param bVerbose true if class should print status output
+    /** \brief constructor
      */
-    CSockBEClassFactory(bool bVerbose = false);
+    CSockBEClassFactory();
     virtual ~CSockBEClassFactory();
 
     virtual CBECallFunction * GetNewCallFunction();
@@ -50,13 +49,7 @@ public:
     virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBECommunication * GetNewCommunication();
     virtual CBEWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
-    virtual CBEDispatchFunction* GetNewDispatchFunction();
-
-protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
-     */
-    CSockBEClassFactory(CSockBEClassFactory &src);
+    virtual CBESndFunction * GetNewSndFunction();
 };
 
 #endif

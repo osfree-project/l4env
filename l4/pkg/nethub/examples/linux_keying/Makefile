@@ -14,7 +14,7 @@ L4LIBS		= -lnethub \
 PRIVATE_INCDIR   = $(L4INCDIR)
 PRIVATE_LIBDIR   = $(L4LIBDIR)
 
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 
 SRC_CC		= main.cc
 

@@ -1,0 +1,6 @@
+3. Incorporate cooperation with events
+
+4. IPC abortion and SIGSTOP: we use thread_ex_regs() there. For SIGSTOP
+   we want to have all IPC aborted.
+
+5. sigsuspend(), sigtimedwait()

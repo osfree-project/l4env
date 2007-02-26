@@ -1,0 +1,288 @@
+/* -*- c -*- */
+/**
+\mainpage L4 Roottask Reference Manual
+
+\section content Contents
+
+- \ref intro
+- \ref use
+
+\section intro Introduction
+
+Roottask is a simple system resource manager for the L4 microkernel.  It
+also functions as an easy-to-use system bootstrapper.  It is invoked
+at boot time from a boot loader (see \ref booting ).
+
+Roottask acts as a pager for the tasks it starts.  It emulates the sigma0
+protocol for them (L4 Reference Manual, Appendix B).  Moreover, it
+manages the following system resources: main memory, irq lines and L4
+task numbers.  Client tasks can request access to these resources
+using a proprietary protocol, the supervisor protocol (see \ref rmgr_api ).
+
+
+\section use Usage
+
+Roottask can be configured by specifying configuration directives either
+on the command line or in a configuration file.  Which alternative is
+used depends on the following command line argument:
+
+<dl>
+<dt><tt>-[no]symbols</tt></dt>
+<dd>Use the module loaded next after Sigma0 as symbol table for Fiasco.</dd>
+
+<dt><tt>-[no]lines</tt></dt>
+<dd>Use the module loaded next after Symbols (or Sigma0 if no Symbols) as
+Lines table for Fiasco.</dd>
+
+<dt><tt>-configfile</tt></dt>
+<dd>Use the configuration file loaded as the first boot module after the L4
+kernel (and after Sigma0, if <tt>-sigma0</tt> is also used) to find
+configuration directives.
+
+If this parameter is not specified, configuration directives are taken
+directly from the command line instead.
+</dd>
+
+<dt><tt>-nopentium</tt></dt>
+<dd>Assume we are running on L4 486 even if we actually run on
+L4/Pentium.
+
+RMGR tries to detect the L4 version during startup to find out about the
+services the L4 kernel and its servers provide. At the moment the only
+difference that must be handled is the 4MB page extension of L4/Pentium. All
+other L4/Pentium specific features are no-ops at L4/486 and therefore don't
+need any special treatment. If we use L4/pentium but want to be able to
+simulate L4/486 within respect to 4MB page tables, <tt>-nopentium</tt> forces
+RMGR to think it is running on L4/486. 
+</dd>
+
+<dt><tt>-quiet</tt></dt>
+<dd>Hush.</dd>
+
+<dt><tt>-verbose</tt></dt>
+<dd>Print verbose output while processing modules.</dd>
+
+<dt><tt>-memdump</tt></dt>
+<dd>Dump the memory (regions and owners) after startup.</dd>
+</dl>
+
+See section Configuration for information on configuration directives.
+
+\section booting Booting
+
+Roottask is compatible with the Multiboot standard proposal.  It should be
+started as a boot kernel using a Multiboot-compliant boot loader like GRUB.
+The L4 \htmlonly &mu; \endhtmlonly-kernel should be loaded as the first boot
+module, and the Rottask config file (if required) as the second boot module.
+Any boot servers intended to be started by Roottask at boot time should be
+loaded as further boot modules.
+
+Here is a sample GRUB configuration file (menu.lst) which accomplishes
+this:
+
+\verbatim
+# Bootstrap is the kernel and straps all modules
+kernel= (fd0)/bootstrap -serial
+# L4 must be the first boot module
+module= (fd0)/fiasco
+# Sigma0 must come after L4 (as 2nd module)
+module= (fd0)/sigma0
+# Now its time for roottask
+module= (fd0)/roottask 
+# Here, the actual programs may start
+module= (fd0)/pingpong
+\endverbatim
+
+After having been loaded in this way, the boot loader will first
+activate an bootstrap initialization routine which first initializes L4's
+boot configuration table according to section 2.9 of the L4 Reference
+Manual.  (This renders previous methods of patching the boot table
+before booting in the boot image on disk obsolete.)  Roottask makes sure
+it will be the first user task running under L4 (the <em>booter task</em>
+or <em>root task</em> in L4-speak).
+
+Once running under L4, Roottasl parses its configuration data (if supplied)
+and then starts the executable images loaded as further boot modules as child
+tasks.
+
+Except for the Roottask configuration file (and modules intended to be passed
+to sub-tasks as parameters), all boot modules (including the L4 \htmlonly &mu;
+\endhtmlonly-kernel) must be ELF binaries linked to the absolute RAM address
+they should be loaded into.  They don't have to be multiboot-compliant
+(Roottask doesn't interpret multiboot data structures imbedded into them) but
+they <em>will</em> be started in a multiboot-compliant way, enabling them to
+make use of a <tt>multiboot_info</tt> data structure containing a command
+line, the machine's RAM size, and a list of multiboot modules (loaded by the
+boot loader and passed on by RMGR using the <tt>module</tt> option described
+below).
+
+\subsection config Configuration
+
+The configuration data can be specified on RMGR's command line or
+in a configuration file (see \ref use).
+
+When using a configuration file, the first line of the file should
+contain only the following text:
+
+\verbatim
+#!rmgr
+\endverbatim
+
+or
+
+\verbatim
+#!roottask
+\endverbatim
+
+In the configuration text, whitespace and newlines are ignored, as is
+text between the comment character, &quot;<tt>#</tt>&quot;, and the end of the
+line.  Here is the configuration syntax:
+
+\htmlonly
+<pre class="fragment">
+<var>file</var> := [ <var>globalconstraint</var> ] <var>rule</var>*
+
+<var>globalconstraint</var> := <tt>log_mcp</tt> <var>number</var> 
+	| <tt>boot_mcp</tt> <var>number</var> 
+	| <tt>boot_prio</tt> <var>number</var>
+
+<var>rule</var> := <var>taskspec</var> <var>constraint</var>* <var>modules</var>
+	| <var>smallsizerule</var>
+	| <var>flag</var>
+
+<var>smallsizerule</var> := <tt>small_space_size</tt> <var>number</var>
+
+<var>flag</var> := <tt>bootwait</tt>
+	| <tt>debug</tt>
+	| <tt>debug_log</tt> <var>log_options</var> 
+
+<var>log_options</var> := <var>number</var> <var>number</var>
+	     | <var>verbose_option</var>+
+
+<var>verbose_option</var>: <var>task_proto</var>
+	     | <tt>task_alloc</tt>
+	     | <tt>task_get</tt>
+	     | <tt>task_free</tt>
+	     | <tt>task_create</tt>
+	     | <tt>task_delete</tt>
+	     | <tt>task_create_with_prio</tt>	
+	     | <tt>mem_proto</tt>
+	     | <tt>mem_free</tt>
+	     | <tt>mem_free_fp</tt>
+	     | <tt>irq_proto</tt>
+	     | <tt>irq_get</tt>
+	     | <tt>irq_free</tt>
+	     | <tt>rmgr_proto</tt>
+	     | <tt>rmgr_rmgr_ping</tt>
+	     | <tt>log</tt>
+	     | <tt>kdeug</tt>
+
+<var>modules</var> := <var>module</var>*
+	| <tt>attached</tt> <var>number</var> <tt>modules</tt>
+
+<var>module</var> := <tt>module</tt> ( <tt>modname</tt> <var>string</var> )*
+
+<var>taskspec</var> := <tt>task</tt>
+	| <tt>task</tt> <tt>modname</tt> <var>string</var>
+	| <tt>task</tt> <tt>rmgr</tt>
+	| <tt>task</tt> <tt>sigma0</tt>
+	| <tt>task</tt> <var>number</var>
+
+<var>constraint</var> := <tt>child</tt> <var>numconstraint</var>+
+	| <tt>memory</tt> <var>numconstraint</var>+
+	| <tt>high_memory</tt> <var>numconstraint</var>+
+	| <tt>mem_offset</tt> <var>number</var>
+	| <tt>irq</tt> ( <var>numconstraint</var>+ | <tt>mask</tt> <var>number</var> )
+	| <tt>small</tt>L <var>numconstraint</var>+
+	| <tt>log_mcp</tt> <var>number</var>
+	| <tt>boot_mcp</tt> <var>number</var>
+	| <tt>boot_prio</tt> <var>number</var>
+	| <tt>boot_small</tt> <var>number</var>
+	| <tt>allow_cli</tt>
+
+<var>numconstraint</var> := <tt>max</tt> <var>number</var>
+	| <tt>in</tt> <tt>[</tt> <var>number</var> <tt>,</tt> <var>number</var> <tt>]</tt>
+
+<var>number</var> := <tt>0x</tt> [0-9a-fA-F]+ | [0-9]+
+
+</pre>
+\endhtmlonly
+
+********************************
+
+The configuration text consists of a sequence of directives.
+
+The sequence of <tt>task</tt> directives corresponds to the sequence of
+bootstrap tasks loaded as boot modules.  Alternatively, the <tt>modname</tt>
+parameter can be used to select a module by its name: It selects the first
+module containign <var>string</var> in the &quot;<tt>module=</tt>&quot; specification.
+The <tt>task</tt> directive can also be qualified by an explicit task number
+or by one of the task specifiers <tt>rmgr</tt> or <tt>sigma0</tt>.
+
+For each task, directives can be given to constrain the set of system
+resources the task can request from Roottask.  For subtasks (<tt>child</tt>)
+and memory, these constraints are the maximal number of units that can be
+acquired and the numeric range the units must be part of.  For IRQ lines, it
+is additionally possible to specify a mask which exactly defines which IRQs
+can be requested.  Also, certain bootstrap parameters can be specified.
+
+All constraints specified for a given resource type are logically
+AND'd, i.e., all constraints must be true for a resource address to be
+requestable for the corresponding task.
+
+Tasks can also be passed a list of multiboot modules, to be specified
+using one or more <tt>module</tt> options.
+
+The <tt>small_space_size</tt> directive defines the minimal size of the
+system's small address spaces.  If not specified, the system will run
+with only large address spaces.
+
+The <tt>bootwait</tt> directive can be used to cause Roottask to pause before
+actually starting to serve the bootstrapped tasks.  It can be used to review
+the console messages printed by Roottask before they scroll off the screen.
+
+The <tt>verbose</tt>, <tt>debug</tt>, and <tt>debug_log</tt> directives can be
+used to modify Roottask's logging and debugging behaviour: <tt>verbose</tt>
+enables logging of all run-time error messages to the console, <tt>debug</tt>
+enables an invokation of the L4 kernel debugger on run-time errors, and
+<tt>debug_log</tt> allows to define which protocol should be logged.  For
+further information, UTSL.
+
+<var>String</var>s are <tt>"</tt>- or <tt>'</tt>-separated literals (which
+cannot contain the separation character).  <var>Number</var>s can be given
+in decimal, hexadecimal or octal format (using C syntax).
+
+Here is an example configuration file:
+
+\verbatim
+#!roottask
+
+task modname "glinux"
+child max 512 in [10, 531]
+memory max 0x01000000 in [0, 0x01000000]
+irq mask 0xffffffe7
+
+\endverbatim
+
+\section bugs Bugs
+
+Currently, I/O flexpages cannot be constrained.
+
+This manual page:
+
+<ul>
+<li>should explain what state is managed for each resource type</li>
+</ul>
+
+\section see See Also
+
+<a href="http://www.gnu.org/software/grub/">GRUB, the Grand Unified Bootloader</a>
+
+<a href="http://www.gnu.org/software/grub/manual/multiboot/">Multiboot
+Specification</a>
+
+<a href="http://l4hq.org/docs/manuals/">L4 Reference Manuals</a>
+
+<a href="http://tudos.org/l4env/docu.xml">Guidelines for Developing OS Servers on Top of L4</a>
+
+**/

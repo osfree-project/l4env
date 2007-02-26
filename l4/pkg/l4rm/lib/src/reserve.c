@@ -18,6 +18,7 @@
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
+#include <l4/util/l4_macros.h>
 
 /* private includes */
 #include <l4/l4rm/l4rm.h>
@@ -63,7 +64,8 @@ l4rm_do_reserve(l4_addr_t * addr, l4_size_t size, l4_uint32_t flags,
   int ret;
   l4rm_region_desc_t * r;
 
-  LOGdL(DEBUG_REGION_RESERVE, "addr 0x%08x, size 0x%08x", *addr, size);
+  LOGdL(DEBUG_REGION_RESERVE, "addr 0x"l4_addr_fmt", size 0x%lx",
+        *addr, (l4_addr_t)size);
 
   /* allocate and setup new region descriptor */
   r = l4rm_region_desc_alloc();
@@ -92,8 +94,8 @@ l4rm_do_reserve(l4_addr_t * addr, l4_size_t size, l4_uint32_t flags,
   *addr = r->start;
   *area = REGION_AREA(r);
   
-  LOGdL(DEBUG_REGION_RESERVE, "got area 0x%08x-0x%08x, area id 0x%05x",
-        r->start, r->end, *area);
+  LOGdL(DEBUG_REGION_RESERVE, "got area 0x"l4_addr_fmt"-0x"l4_addr_fmt
+        ", area id 0x%05x", r->start, r->end, *area);
 
   /* done */
   return 0;

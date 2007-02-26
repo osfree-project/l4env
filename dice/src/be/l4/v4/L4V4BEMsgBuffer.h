@@ -27,33 +27,62 @@
 #ifndef L4V4MSGBUFFER_H
 #define L4V4MSGBUFFER_H
 
-#include <be/l4/L4BEClientMsgBuffer.h>
+#include <be/l4/L4BEMsgBuffer.h>
 
 /** \class CL4V4BEMsgBuffer
- *    \ingroup backend
- *    \brief is the V4 specific message buffer
+ *  \ingroup backend
+ *  \brief is the V4 specific message buffer
  */
-class CL4V4BEMsgBuffer : public CL4BEClientMsgBuffer
+class CL4V4BEMsgBuffer : public CL4BEMsgBuffer
 {
 public:
     /** creates an object of this class */
     CL4V4BEMsgBuffer();
-
     virtual ~CL4V4BEMsgBuffer();
 
 protected:
-    /**    \brief copy constructor
-     *    \param src the source to copy from
+    /** \brief copy constructor
+     *  \param src the source to copy from
      */
     CL4V4BEMsgBuffer(CL4V4BEMsgBuffer &src);
 
 public:
-    virtual CObject* Clone();
-    virtual void InitCounts(CBEClass* pClass,  CBEContext* pContext);
-    virtual void InitCounts(CBEFunction* pFunction,  CBEContext* pContext);
-    virtual CFETypeSpec* GetMsgBufferType(CFEInterface* pFEInterface,  CFEDeclarator* &pFEDeclarator,  CBEContext* pContext);
-    virtual CFETypeSpec* GetMsgBufferType(CFEOperation* pFEOperation,  CFEDeclarator* &pFEDeclarator,  CBEContext* pContext);
+    /** \brief creates a copy of this instance
+     *  \return a reference to the copy
+     */
+    virtual CObject* Clone()
+    { return new CL4V4BEMsgBuffer(*this); }
+    virtual int GetPayloadOffset();
+    virtual bool Sort(CBEStructType *pStruct);
 
+    virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
+    virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
+
+    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
+	int nType, int nDirection);
+
+protected:
+    virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
+	CBEStructType *pStruct, int nDirection);
+    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	
+	int nDirection);
+    virtual bool WriteRefstringInitialization(CBEFile *pFile, int nDirection);
+    virtual void WriteRefstringInitParameter(CBEFile *pFile,
+	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
+	int nDirection);
+    virtual bool WriteRefstringInitFunction(CBEFile *pFile,
+	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, int nDirection);
+    
+    virtual bool AddMsgTagMember(CBEFunction *pFunction,
+	CBEStructType *pStruct, int nDirection);
+    virtual bool AddOpcodeMember(CBEFunction *pFunction,
+	CBEStructType *pStruct, int nDirection);
+
+    CBETypedDeclarator* GetMsgTagVariable(void);
+    virtual void CheckConvertStruct(CBEStructType *pStruct);
+    virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
+	vector<CBETypedDeclarator*>::iterator iter);
+    virtual void ConvertMember(CBETypedDeclarator* pMember);
 };
 
 #endif

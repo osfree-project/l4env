@@ -14,14 +14,14 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#if defined(__APPLE__) || defined(__BEOS__)
+#if defined(__BEOS__) || defined(__INNOTEK_LIBC__)
 typedef int socklen_t;
 #endif
 #ifndef __BEOS__
@@ -57,34 +57,26 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
     struct sockaddr_in dest_addr;
     char hostname[1024], *q;
     int port, fd = -1;
-    TCPContext *s;
-    const char *p;
+    TCPContext *s = NULL;
     fd_set wfds;
     int fd_max, ret;
     struct timeval tv;
     socklen_t optlen;
-    
+    char proto[1024],path[1024],tmp[1024];  // PETR: protocol and path strings
+
+    url_split(proto, sizeof(proto), NULL, 0, hostname, sizeof(hostname),
+      &port, path, sizeof(path), uri);  // PETR: use url_split
+    if (strcmp(proto,"tcp")) goto fail; // PETR: check protocol
+    if ((q = strchr(hostname,'@'))) { strcpy(tmp,q+1); strcpy(hostname,tmp); } // PETR: take only the part after '@' for tcp protocol
+
     s = av_malloc(sizeof(TCPContext));
     if (!s)
         return -ENOMEM;
     h->priv_data = s;
-    p = uri;
-    if (!strstart(p, "tcp://", &p))
-        goto fail;
-    q = hostname;
-    while (*p != ':' && *p != '/' && *p != '\0') {
-        if ((q - hostname) < sizeof(hostname) - 1)
-            *q++ = *p;
-        p++;
-    }
-    *q = '\0';
-    if (*p != ':')
-        goto fail;
-    p++;
-    port = strtoul(p, (char **)&p, 10);
+
     if (port <= 0 || port >= 65536)
         goto fail;
-    
+
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(port);
     if (resolve_host(&dest_addr.sin_addr, hostname) < 0)
@@ -94,9 +86,9 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
     if (fd < 0)
         goto fail;
     fcntl(fd, F_SETFL, O_NONBLOCK);
-    
+
  redo:
-    ret = connect(fd, (struct sockaddr *)&dest_addr, 
+    ret = connect(fd, (struct sockaddr *)&dest_addr,
                   sizeof(dest_addr));
     if (ret < 0) {
         if (errno == EINTR)
@@ -119,7 +111,7 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
             if (ret > 0 && FD_ISSET(fd, &wfds))
                 break;
         }
-        
+
         /* test error */
         optlen = sizeof(ret);
         getsockopt (fd, SOL_SOCKET, SO_ERROR, &ret, &optlen);
@@ -130,7 +122,7 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
     return 0;
 
  fail:
-    ret = -EIO;
+    ret = AVERROR_IO;
  fail1:
     if (fd >= 0)
         close(fd);
@@ -141,12 +133,11 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
 static int tcp_read(URLContext *h, uint8_t *buf, int size)
 {
     TCPContext *s = h->priv_data;
-    int size1, len, fd_max;
+    int len, fd_max, ret;
     fd_set rfds;
     struct timeval tv;
 
-    size1 = size;
-    while (size > 0) {
+    for (;;) {
         if (url_interrupt_cb())
             return -EINTR;
         fd_max = s->fd;
@@ -154,34 +145,31 @@ static int tcp_read(URLContext *h, uint8_t *buf, int size)
         FD_SET(s->fd, &rfds);
         tv.tv_sec = 0;
         tv.tv_usec = 100 * 1000;
-        select(fd_max + 1, &rfds, NULL, NULL, &tv);
+        ret = select(fd_max + 1, &rfds, NULL, NULL, &tv);
+        if (ret > 0 && FD_ISSET(s->fd, &rfds)) {
 #ifdef __BEOS__
-        len = recv(s->fd, buf, size, 0);
+            len = recv(s->fd, buf, size, 0);
 #else
-        len = read(s->fd, buf, size);
+            len = read(s->fd, buf, size);
 #endif
-        if (len < 0) {
-            if (errno != EINTR && errno != EAGAIN)
+            if (len < 0) {
+                if (errno != EINTR && errno != EAGAIN)
 #ifdef __BEOS__
-                return errno;
+                    return errno;
 #else
-                return -errno;
+                    return -errno;
 #endif
-            else
-                continue;
-        } else if (len == 0) {
-            break;
+            } else return len;
+        } else if (ret < 0) {
+            return -1;
         }
-        size -= len;
-        buf += len;
     }
-    return size1 - size;
 }
 
 static int tcp_write(URLContext *h, uint8_t *buf, int size)
 {
     TCPContext *s = h->priv_data;
-    int ret, size1, fd_max;
+    int ret, size1, fd_max, len;
     fd_set wfds;
     struct timeval tv;
 
@@ -194,20 +182,28 @@ static int tcp_write(URLContext *h, uint8_t *buf, int size)
         FD_SET(s->fd, &wfds);
         tv.tv_sec = 0;
         tv.tv_usec = 100 * 1000;
-        select(fd_max + 1, NULL, &wfds, NULL, &tv);
+        ret = select(fd_max + 1, NULL, &wfds, NULL, &tv);
+        if (ret > 0 && FD_ISSET(s->fd, &wfds)) {
 #ifdef __BEOS__
-        ret = send(s->fd, buf, size, 0);
+            len = send(s->fd, buf, size, 0);
 #else
-        ret = write(s->fd, buf, size);
+            len = write(s->fd, buf, size);
 #endif
-        if (ret < 0 && errno != EINTR && errno != EAGAIN)
+            if (len < 0) {
+                if (errno != EINTR && errno != EAGAIN) {
 #ifdef __BEOS__
-            return errno;
+                    return errno;
 #else
-            return -errno;
+                    return -errno;
 #endif
-        size -= ret;
-        buf += ret;
+                }
+                continue;
+            }
+            size -= len;
+            buf += len;
+        } else if (ret < 0) {
+            return -1;
+        }
     }
     return size1 - size;
 }

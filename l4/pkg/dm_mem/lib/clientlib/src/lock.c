@@ -52,12 +52,12 @@ __lock(const l4dm_dataspace_t * ds, l4_offs_t offset, l4_size_t size)
 
   /* call dataspace manager */
   ret = if_l4dm_mem_lock_call(&(ds->manager), ds->id, offset, size, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_mem: lock dataspace %u at "l4util_idfmt" failed " \
             "(ret %d, exc %d)!", ds->id, l4util_idstr(ds->manager), 
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
@@ -91,12 +91,12 @@ __unlock(const l4dm_dataspace_t * ds, l4_offs_t offset, l4_size_t size)
 
   /* call dataspace manager */
   ret = if_l4dm_mem_unlock_call(&(ds->manager), ds->id, offset, size, &_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, 
             "libdm_mem: unlock dataspace %u at "l4util_idfmt" failed " \
             "(ret %d, exc %d)!", ds->id, l4util_idstr(ds->manager), 
-            ret, _env.major);
+            ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
@@ -139,22 +139,23 @@ __walk_vm(l4_addr_t addr, l4_size_t size, int lock)
   failed = 0;
   while ((left > 0) && !failed)
     {
-      LOGdL(DEBUG_LOCK, "addr 0x%08x, left 0x%08x", a, left);
+      LOGdL(DEBUG_LOCK, "addr 0x"l4_addr_fmt", left 0x"l4_addr_fmt"",
+	    a, (l4_addr_t)left);
       
       /* lookup addr */
       ret = l4rm_lookup((void *)a, &ds_map_addr, &ds_map_size, 
                         &ds, &ds_offs, &dummy);
       if (ret < 0)
 	{
-	  LOGdL(DEBUG_ERRORS, 
-                "libdm_mem: lookup VM addr 0x%08x failed: %d!", addr, ret);
+	  LOGdL(DEBUG_ERRORS, "libdm_mem: lookup VM addr 0x"l4_addr_fmt
+	        " failed: %d!", addr, ret);
 	  failed = ret;
 	}
       
       if (ret != L4RM_REGION_DATASPACE)
         {
           LOGdL(DEBUG_ERRORS, "trying to lock non-dataspace " \
-                "region at addr 0x%08x (type %d)", a, ret);
+                "region at addr 0x"l4_addr_fmt" (type %d)", a, ret);
           failed = -L4_EINVAL;
         }
 
@@ -166,11 +167,11 @@ __walk_vm(l4_addr_t addr, l4_size_t size, int lock)
 	    map_remain = left;
 
 	  LOGdL(DEBUG_LOCK, "ds %u at "l4util_idfmt"\n" \
-                " ds map area 0x%08x-0x%08x, offs 0x%08x\n" \
-                " %s request size 0x%08x",
+                " ds map area 0x"l4_addr_fmt"-0x"l4_addr_fmt", offs 0x"
+		l4_addr_fmt"\n %s request size 0x"l4_addr_fmt,
                 ds.id, l4util_idstr(ds.manager), 
                 ds_map_addr, ds_map_addr + ds_map_size, ds_offs,
-                (lock) ? "lock" : "unlock",map_remain);
+                (lock) ? "lock" : "unlock",(l4_addr_t)map_remain);
 
 	  if (lock)
 	    ret = __lock(&ds, ds_offs, map_remain);
@@ -180,8 +181,9 @@ __walk_vm(l4_addr_t addr, l4_size_t size, int lock)
 	    {
 #if DEBUG_ERRORS
 	      LOG_printf("ds %u at "l4util_idfmt
-		          ", offset 0x%08x, size 0x%08x\n",
-                     ds.id, l4util_idstr(ds.manager), ds_offs, map_remain);
+		          ", offset 0x"l4_addr_fmt", size 0x"l4_addr_fmt"\n",
+                     ds.id, l4util_idstr(ds.manager), ds_offs,
+		     (l4_addr_t)map_remain);
 	      LOGL("libdm_mem: %s failed: %d!", (lock) ? "lock" : "unlock", 
                    ret);
 #endif

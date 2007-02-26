@@ -33,7 +33,7 @@ void Vmem_alloc::init()
   printf("Vmem_alloc::init()\n");
   void *zp = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
   std::memset( zp, 0, Config::PAGE_SIZE );
-  zero_page = P_ptr<void>(Mem_layout::pmem_to_phys((Address)zp));
+  zero_page = Kmem_space::kdir()->lookup(zp,0,0);
   printf("  allocated zero page @%p[phys=%p]\n",
       zp,zero_page.get_raw());
 
@@ -78,7 +78,7 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
 	  kdb_ke("Vmem_alloc: can't alloc new page");
 	  return 0;
 	}
-      page = P_ptr<void>(Mem_layout::pmem_to_phys((Address)vpage));
+      page = Kmem_space::kdir()->lookup(vpage,0,0);
       Mem_unit::inv_dcache(vpage, ((char*)vpage) + Config::PAGE_SIZE);
     } 
   else 

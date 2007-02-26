@@ -23,15 +23,16 @@ public:
   };
 
 protected:
-  static Tb_entry_fit	*tbuf_act;	// current entry
-  static Tb_entry_fit	*tbuf_max;
+  static Tb_entry_fit	*_tbuf_act;	// current entry
+  static Tb_entry_fit	*_tbuf_max;
   static Mword		_entries;	// number of occupied entries
   static Mword		_max_entries;	// maximum number of entries
   static Mword          _filter_enabled;// !=0 if filter is active
-  static Mword		number;		// current event number
-  static Mword		count_mask1;
-  static Mword		count_mask2;
-  static Observer	*observer;
+  static Mword		_number;	// current event number
+  static Mword		_count_mask1;
+  static Mword		_count_mask2;
+  static Observer	*_observer;
+  static Address        _size;		// size of memory area for tbuffer
 };
 
 #ifdef CONFIG_JDB_LOGGING
@@ -63,7 +64,7 @@ protected:
       asm volatile (".globl  patch_"#name"	\n\t"		\
 		    "patch_"#name" = .+1	\n\t"		\
 		    "movb    $0,%0		\n\t"		\
-		    : "=q"(__do_log__) );			\
+		    : "=b"(__do_log__) );			\
       if (EXPECT_FALSE( __do_log__ ))				\
 	{
 
@@ -93,15 +94,16 @@ IMPLEMENTATION:
 #include "observer.h"
 #include "std_macros.h"
 
-Tb_entry_fit   *Jdb_tbuf::tbuf_act;
-Tb_entry_fit   *Jdb_tbuf::tbuf_max;
+Tb_entry_fit   *Jdb_tbuf::_tbuf_act;
+Tb_entry_fit   *Jdb_tbuf::_tbuf_max;
 Mword           Jdb_tbuf::_entries;
 Mword           Jdb_tbuf::_max_entries;
 Mword           Jdb_tbuf::_filter_enabled;
-Mword           Jdb_tbuf::number;
-Mword           Jdb_tbuf::count_mask1;
-Mword           Jdb_tbuf::count_mask2;
-Observer       *Jdb_tbuf::observer;
+Mword           Jdb_tbuf::_number;
+Mword           Jdb_tbuf::_count_mask1;
+Mword           Jdb_tbuf::_count_mask2;
+Observer       *Jdb_tbuf::_observer;
+Address         Jdb_tbuf::_size;
 
 static void direct_log_dummy(Tb_entry*, const char*)
 {}
@@ -109,17 +111,24 @@ static void direct_log_dummy(Tb_entry*, const char*)
 void (*Jdb_tbuf::direct_log_entry)(Tb_entry*, const char*) = &direct_log_dummy;
 
 PUBLIC static inline NEEDS["mem_layout.h"]
-Tracebuffer_status * const
+Tracebuffer_status *
 Jdb_tbuf::status()
 {
   return (Tracebuffer_status*) Mem_layout::Tbuf_status_page;
 }
 
 PROTECTED static inline NEEDS["mem_layout.h"]
-Tb_entry_fit * const
+Tb_entry_fit *
 Jdb_tbuf::buffer()
 {
   return (Tb_entry_fit*)Mem_layout::Tbuf_buffer_area;
+}
+
+PUBLIC static inline
+Address
+Jdb_tbuf::size()
+{
+  return _size;
 }
 
 /** Clear tracebuffer. */
@@ -132,7 +141,7 @@ Jdb_tbuf::clear_tbuf()
   for (i=0; i<_max_entries; i++)
     buffer()[i].clear();
 
-  tbuf_act = buffer();
+  _tbuf_act = buffer();
   _entries = 0;
 }
 
@@ -141,15 +150,17 @@ PUBLIC static
 Tb_entry*
 Jdb_tbuf::new_entry()
 {
-  Tb_entry *tb = tbuf_act;
+  Tb_entry *tb = _tbuf_act;
  
-  if (++tbuf_act >= tbuf_max)
-    tbuf_act = buffer();
+  status()->current = (Address)_tbuf_act;
+
+  if (++_tbuf_act >= _tbuf_max)
+    _tbuf_act = buffer();
 
   if (_entries < _max_entries)
     _entries++;
 
-  tb->number(++number);
+  tb->number(++_number);
   tb->rdtsc();
   tb->rdpmc1();
   tb->rdpmc2();
@@ -162,16 +173,16 @@ PUBLIC static
 void
 Jdb_tbuf::commit_entry()
 {
-  if (EXPECT_FALSE( (number & count_mask2) == 0 ))
+  if (EXPECT_FALSE((_number & _count_mask2) == 0))
     {
-      if (number & count_mask1)
-	status()->version0++;
+      if (_number & _count_mask1)
+	status()->version0++; // 64-bit value!
       else
-	status()->version1++;
+	status()->version1++; // 64-bit value!
 
       // fire the virtual 'buffer full' irq
-      if (observer)
-	observer->notify();
+      if (_observer)
+	_observer->notify();
     }
 }
 
@@ -241,7 +252,7 @@ Jdb_tbuf::unfiltered_lookup(Mword idx)
   if (!event_valid(idx))
     return 0;
 
-  Tb_entry_fit *e = tbuf_act - idx - 1;
+  Tb_entry_fit *e = _tbuf_act - idx - 1;
 
   if (e < buffer())
     e += _max_entries;
@@ -282,7 +293,7 @@ Mword
 Jdb_tbuf::unfiltered_idx(Tb_entry *e)
 {
   Tb_entry_fit *ef = static_cast<Tb_entry_fit*>(e);
-  Mword idx = tbuf_act - ef - 1;
+  Mword idx = _tbuf_act - ef - 1;
 
   if (idx > _max_entries)
     idx += _max_entries;
@@ -308,7 +319,7 @@ Jdb_tbuf::idx(Tb_entry *e)
       ef++;
       if (ef >= buffer() + _max_entries)
 	ef -= _max_entries;
-      if (ef == tbuf_act)
+      if (ef == _tbuf_act)
 	break;
     }
 

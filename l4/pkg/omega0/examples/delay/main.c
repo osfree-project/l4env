@@ -149,7 +149,7 @@ static void measure_delay(void){
     err = irq_request(handle, request);
     t1 = l4_rdtsc();
     if(err<0){
-      LOGl("omega0_request(handle=%d, request=%#x) returned %d",
+      LOGl("omega0_request(handle=%d, request=%#lx) returned %d",
                            handle, request.i, err);
       enter_kdebug("!");
       continue;

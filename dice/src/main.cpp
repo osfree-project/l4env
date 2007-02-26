@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        pCompiler->ShowShortHelp();
+        pCompiler->ShowHelp(true);
     }
 
     delete pCompiler;

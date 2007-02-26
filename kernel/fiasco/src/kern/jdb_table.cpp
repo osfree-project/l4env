@@ -231,16 +231,19 @@ screen:
       switch (c)
 	{
 	case KEY_CURSOR_HOME:
+	case 'H':
 	  crow = absr = min_row;
 	  ccol = absc = min_col;
 	  break;
 	case KEY_CURSOR_END:
+	case 'L':
 	  absr = max_absr;
 	  absc = max_absc;
 	  crow = rows() - 1;
 	  ccol = cols() - 1;
 	  break;
 	case KEY_CURSOR_LEFT:
+	case 'h':
 	  if (ccol > min_col)
 	    {
 	      --ccol;
@@ -258,6 +261,7 @@ screen:
 	    }
 	  break;
 	case KEY_CURSOR_RIGHT:
+	case 'l':
 	  if (ccol + 1 < cols())
 	    {
 	      ++ccol;
@@ -273,6 +277,7 @@ screen:
 	    }
 	  break;
 	case KEY_CURSOR_UP:
+	case 'k':
 	  if (crow > min_row)
 	    {
 	      --crow;
@@ -281,6 +286,7 @@ screen:
 	    }
 	  break;
 	case KEY_CURSOR_DOWN:
+	case 'j':
 	  if (crow + 1 < rows())
 	    {
 	      ++crow;
@@ -289,6 +295,7 @@ screen:
 	    }
 	  break;
 	case KEY_PAGE_UP:
+	case 'K':
 	  if (crow >= drows + min_row)
 	    {
 	      crow -= drows;
@@ -304,6 +311,7 @@ screen:
 	    }
 	  break;
 	case KEY_PAGE_DOWN:
+	case 'J':
 	  if (crow + 1 + drows < rows())
 	    {
 	      crow += drows;

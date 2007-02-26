@@ -57,10 +57,10 @@ __callback_connect_outgoing (dsi_component_t * comp,
   /* call server to connect */
   ret = VideoCoreComponentIntern_start_UncompressedVideoOut_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error ("__callback_connect_outgoing failed (ret %d, exc %d)", ret,
-	       env.major);
+	       DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -144,11 +144,11 @@ VideoCoreComponentIntern_connect_UncompressedVideoOut (l4_threadid_t
   /* call server to connect */
   ret = VideoCoreComponentIntern_connect_UncompressedVideoOut_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_connect_UncompressedVideoOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -191,11 +191,11 @@ VideoCoreComponentIntern_disconnect_UncompressedVideoOut (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoCoreComponentIntern_disconnect_UncompressedVideoOut_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_disconnect_UncompressedVideoOut failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -227,9 +227,9 @@ __callback_connect_incoming (dsi_component_t * comp,
   /* call server to connect */
   ret = VideoCoreComponentIntern_start_CompressedVideoIn_call
     (&thread_id, &comp->socketref, remote, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
-    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, env.major);
+    LOG_Error ("__callback_connect failed (ret %d, exc %d)", ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -313,11 +313,11 @@ VideoCoreComponentIntern_connect_CompressedVideoIn (l4_threadid_t thread_id,
   /* call server to connect */
   ret = VideoCoreComponentIntern_connect_CompressedVideoIn_call
     (&thread_id, ctrl_ds, data_ds, &socket_ref, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_connect_CompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
 
@@ -360,11 +360,11 @@ VideoCoreComponentIntern_disconnect_CompressedVideoIn (l4_threadid_t
   CORBA_Environment env = dice_default_environment;
   int ret = VideoCoreComponentIntern_disconnect_CompressedVideoIn_call
     (&thread_id, close_socket_flag, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_disconnect_CompressedVideoIn failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -397,11 +397,11 @@ VideoCoreComponentIntern_setVideoRTparams (l4_threadid_t thread_id,
   int ret = VideoCoreComponentIntern_setVideoRTparams_call
     (&thread_id, period, reservation_audio, reservation_video,
      verbose_preemption_ipc, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_setVideoRTparams failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -438,11 +438,11 @@ VideoCoreComponentIntern_setVideoPostprocessing (l4_threadid_t thread_id,
   CORBA_Environment env = dice_default_environment;
   int ret = VideoCoreComponentIntern_setVideoPostprocessing_call
     (&thread_id, command, ppName, ppOptions, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
   {
     LOG_Error
       ("VideoCoreComponentIntern_setVideoPostprocessing failed (ret %d, exc %d)",
-       ret, env.major);
+       ret, DICE_EXCEPTION_MAJOR(&env));
     return -1;
   }
   return 0;
@@ -476,7 +476,7 @@ VideoCoreComponentIntern_changeQAPSettings (l4_threadid_t thread_id,
   int ret = VideoCoreComponentIntern_changeQAPSettings_call
     (&thread_id, useQAP, usePPasQAP, setQLevel, currentQLevel, maxQLevel,
      &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
     return -1;
   return 0;
 }
@@ -500,7 +500,26 @@ VideoCoreComponentIntern_setPrediction (l4_threadid_t thread_id,
   CORBA_Environment env = dice_default_environment;
   int ret = VideoCoreComponentIntern_setPrediction_call
     (&thread_id, learnFile, predictFile, &env);
-  if (ret || (env.major != CORBA_NO_EXCEPTION))
+  if (ret || DICE_HAS_EXCEPTION(&env))
+    return -1;
+  return 0;
+}
+
+
+/*****************************************************************************/
+/**
+ * \brief Set simulated machine speed for H.264 slice scheduling
+ * 
+ * \param speed  the machine speed factor (in percent) to simulate
+ */
+/*****************************************************************************/
+l4_int32_t
+VideoCoreComponentIntern_setH264Speed (l4_threadid_t thread_id,
+					l4_int32_t speed)
+{
+  CORBA_Environment env = dice_default_environment;
+  int ret = VideoCoreComponentIntern_setH264Speed_call(&thread_id, speed, &env);
+  if (ret || DICE_HAS_EXCEPTION(&env))
     return -1;
   return 0;
 }

@@ -1,4 +1,4 @@
-INTERFACE [{ia32,ux}-perf_cnt]:
+INTERFACE [{ia32,ux,amd64}-perf_cnt]:
 
 #include "cpu.h"
 #include "types.h"
@@ -59,7 +59,7 @@ class Perf_cnt_p6 : public Perf_cnt_arch {};
 class Perf_cnt_k7 : public Perf_cnt_p6   {};
 class Perf_cnt_p4 : public Perf_cnt_arch {};
 
-IMPLEMENTATION [{ia32,ux}-perf_cnt]:
+IMPLEMENTATION [{ia32,ux,amd64}-perf_cnt]:
 
 #include <cstring>
 #include <cstdio>
@@ -151,7 +151,7 @@ enum
   Perfctr_x86_intel_p5mmx	= 2,
   Perfctr_x86_intel_p6		= 3,
   Perfctr_x86_intel_pii		= 4,
-  Perfctr_x86_intel_piiI	= 5,
+  Perfctr_x86_intel_piii	= 5,
   Perfctr_x86_intel_p4		= 11,	/* model 0 and 1 */
   Perfctr_x86_intel_p4m2	= 12,	/* model 2 */
   Perfctr_x86_intel_p4m3	= 16,	/* model 3 and above */
@@ -389,7 +389,7 @@ static Perf_cnt::Perf_read_fn p6_read_pmc_fns[] =
 
 //--------------------------------------------------------------------
 // AMD K7 (Athlon, K8=Athlon64) has 4 performance counters. All events
-// seem to be symmtetric. Overflow interrupts available.
+// seem to be symmetric. Overflow interrupts available.
 PUBLIC inline NOEXPORT
 Perf_cnt_k7::Perf_cnt_k7()
   : Perf_cnt_p6(Msr_k7_evntsel0, Msr_k7_perfctr0, 4, 1)
@@ -840,7 +840,7 @@ Perf_cnt::init()
 		}
 	      else if (Cpu::model() >= 7)
 		{
-		  perfctr_type  = Perfctr_x86_intel_piiI;
+		  perfctr_type  = Perfctr_x86_intel_piii;
 		  perf_type_str = "PIII";
 		}
 	      else if (Cpu::model() >= 3)

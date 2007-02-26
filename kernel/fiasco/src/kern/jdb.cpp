@@ -10,7 +10,7 @@ class Thread;
 class Jdb_entry_frame 
 {
 public:
-  bool from_user() const;
+  Address_type from_user() const;
   Address ip() const;
 };
 
@@ -55,6 +55,7 @@ public:
   static char  esc_iret[];
   static char  esc_emph[];
   static char  esc_emph2[];
+  static char  esc_mark[];
   
   static bool was_input_error;
   static Thread  *current_active;
@@ -385,7 +386,7 @@ int Jdb::write_ll_ns(Signed64 ns, char *buf, int maxlen, bool sign)
 	  Console* gzip = Kconsole::console()->find_console(Console::GZIP);
 	  Mword _us = uns / 1000UL;
 	  Mword _ns = (uns - 1000UL * (Unsigned64)_us);
-	  len += snprintf(buf, maxlen, "%3lu.%03lu %c ", _us, _ns, 
+	  len += snprintf(buf, maxlen, "%3lu.%03lu %c ", _us, _ns,
 			  gzip && gzip->state() & Console::OUTENABLED
 				? '\265' : Config::char_micro);
 	}
@@ -432,6 +433,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
   switch (c)
     {
     case KEY_CURSOR_LEFT:
+    case 'h':
       if (addx)
 	{
 	  if (*addx > 0)
@@ -452,6 +454,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	return 0;
       break;
     case KEY_CURSOR_RIGHT:
+    case 'l':
       if (addx)
 	{   
 	  if (*addx < cols - 1)
@@ -472,6 +475,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	return 0;
       break;
     case KEY_CURSOR_UP:
+    case 'k':
       if (*addy > 0)
 	(*addy)--;
       else if (*absy > 0)
@@ -481,6 +485,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	}
       break;
     case KEY_CURSOR_DOWN:
+    case 'j':
       if (*addy < lines-1)
 	(*addy)++;
       else if (*absy < max_absy)
@@ -490,6 +495,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	}
       break;
     case KEY_CURSOR_HOME:
+    case 'H':
       *addy = 0;
       if (addx)
 	*addx = 0;
@@ -500,6 +506,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	}
       break;
     case KEY_CURSOR_END:
+    case 'L':
       *addy = lines-1;
       if (addx)
 	*addx = cols - 1;
@@ -510,6 +517,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	}
       break;
     case KEY_PAGE_UP:
+    case 'K':
       if (*absy >= lines)
 	{
 	  *absy -= lines;
@@ -529,6 +537,7 @@ int Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *a
 	}
       break;
     case KEY_PAGE_DOWN:
+    case 'J':
       if (*absy+lines-1 < max_absy)
 	{
 	  *absy += lines;
@@ -560,4 +569,5 @@ IMPLEMENTATION [!ux]:
 char Jdb::esc_emph[]     = "\033[33m";
 char Jdb::esc_emph2[]    = "\033[32m";
 char Jdb::esc_iret[]     = "\033[36m";
+char Jdb::esc_mark[]     = "\033[35;1m";
 

@@ -23,7 +23,8 @@
 
 l4_threadid_t wait_thread;
 
-#define dbg(format, ...)	// printf(format, __VA_ARGS__)
+//#define dbg(format...) printf(format)
+#define dbg(format...)
 
 /** Enqueue entry into list. */
 static void
@@ -126,8 +127,7 @@ __wait_thread(void *ignore)
 	      wait_queue_head_t  *h = (wait_queue_head_t*)dw1;
 	      wait_queue_entry_t *e = (wait_queue_entry_t*)dw2;
 
-	      dbg("enqueue "l4util_idfmt" into queue %08x entry %08x\n",
-		  l4util_idstr(src), dw1, dw2);
+	      dbg("enqueue "l4util_idfmt" into queue %p entry %p\n", l4util_idstr(src), (void*)dw1, (void*)dw2);
 
 	      e->tid  = src;
 	      e->next = 0;
@@ -146,12 +146,12 @@ __wait_thread(void *ignore)
 	    {
 	      /* wakeup */
 	      wait_queue_head_t *h = ((wait_queue_head_t*)dw2);
-	      dbg("wakeup queue %08x\n", dw2);
+	      dbg("wakeup queue %p\n", (void*)dw2);
 	      /* wakeup waiting threads of wait queue */
 	      wakeup(h);
 	      /* dequeue wait queue from main queue */
 	      dequeue_head(&main_queue, h);
-	      dbg("  main=%08x\n", (unsigned)main_queue);
+	      dbg("  main=%p\n", (void*)main_queue);
 	      l4_ipc_send(src, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_NEVER, &result);
 	    }
 	}

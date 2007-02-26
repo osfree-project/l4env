@@ -22,7 +22,7 @@ include $(L4DIR)/mk/Makeconf
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined.
 INSTALLDIR_BIN		?= $(DROPS_STDDIR)/bin/$(subst -,/,$(SYSTEM))
-INSTALLDIR_BIN_LOCAL	?= $(L4DIR)/bin/$(subst -,/,$(SYSTEM))
+INSTALLDIR_BIN_LOCAL	?= $(OBJ_BASE)/bin/$(subst -,/,$(SYSTEM))
 ifeq ($(BID_STRIP_PROGS),y)
 INSTALLFILE_BIN 	?= $(STRIP) --strip-unneeded $(1) -o $(2) && \
 			   chmod 755 $(2)
@@ -51,12 +51,16 @@ TARGET_PROFILE := $(addsuffix .pr,$(filter $(BUILD_PROFILE),$(TARGET)))
 TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_PROFILE)
 
 # define some variables different for lib.mk and prog.mk
+ifeq ($(MODE)$(USE_LDSO),loadery)
+LDFLAGS += -Wl,--dynamic-linker,libld-l4.s.so
+endif
 ifeq ($(BID_GENERATE_MAPFILE),y)
-LDFLAGS+=-Wl,-Map -Wl,$(strip $@).map
+LDFLAGS += -Wl,-Map -Wl,$(strip $@).map
 endif
 LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
-LDFLAGS	+= $(addprefix -T,$(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
+LDFLAGS	+= $(addprefix -T, $(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
+LDFLAGS += -Wl,--warn-common
 
 ifeq ($(notdir $(LDSCRIPT)),main_stat.ld)
 # ld denies -gc-section when linking against shared libraries
@@ -112,7 +116,7 @@ $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)
 endif	# architecture is defined, really build
 
 -include $(DEPSVAR)
-.PHONY: all clean cleanall config help install oldconfig reloc txtconfig
+.PHONY: all clean cleanall config help install oldconfig txtconfig
 help::
 	@echo "  all            - compile and install the binaries"
 ifneq ($(SYSTEM),)
@@ -126,7 +130,6 @@ endif
 ifneq ($(SYSTEM),)
 	@echo "                   to $(INSTALLDIR_LOCAL)"
 endif
-	@echo "  reloc          - build relocatable binaries"
 	@echo "  scrub          - delete backup and temporary files"
 	@echo "  clean          - delete generated object files"
 	@echo "  cleanall       - delete all generated, backup and temporary files"

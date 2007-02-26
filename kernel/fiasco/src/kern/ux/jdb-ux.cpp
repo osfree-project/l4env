@@ -7,6 +7,7 @@ class Trap_state;
 class Thread;
 class Context;
 class Jdb_entry_frame;
+class Mem_space;
 
 class Jdb
 {
@@ -140,14 +141,14 @@ PUBLIC static inline NOEXPORT
 int
 Jdb::int3_extension()
 {
-  Address      addr = entry_frame->eip;
-  Address_type user = entry_frame->cs == 2 ? ADDR_USER : ADDR_KERNEL;
+  Address      addr = entry_frame->ip();
+  Address_type user = entry_frame->cs() == 2 ? ADDR_USER : ADDR_KERNEL;
   Unsigned8    todo = peek ((Unsigned8 *) addr, user);
 
   if (todo == 0x3c && peek ((Unsigned8 *) (addr+1), user) == 13)
     {
       enter_getchar();
-      entry_frame->eax = getchar();
+      entry_frame->_eax = getchar();
       leave_getchar();
       return 1;
     }
@@ -168,7 +169,7 @@ Jdb::int3_extension()
       char c = peek (((Unsigned8 *) addr + 3), user);
 
       if ((c == '#')
-	  ? execute_command_ni((Unsigned8 *) entry_frame->eax)
+	  ? execute_command_ni((Unsigned8 *) entry_frame->_eax)
 	  : execute_command_ni((Unsigned8 *)(addr + 3), len-2))
 	return 1; // => leave Jdb
     }
@@ -233,7 +234,7 @@ Jdb::enter_kdebugger (Trap_state *ts)
   entry_frame = static_cast<Jdb_entry_frame*>(ts);
   t = get_thread();
 
-  switch (entry_frame->trapno)
+  switch (entry_frame->_trapno)
     {
       case 1:
         snprintf (error_buffer, sizeof (error_buffer), "Interception");
@@ -277,7 +278,7 @@ Jdb::enter_kdebugger (Trap_state *ts)
           printf ("\n--%s%.*sESP:%08lx EIP:%08lx\033[m\n",
                       error_buffer, (int)(50 - strlen (error_buffer)),
                       "------------------------------------------------------",
-              entry_frame->_get_esp(), entry_frame->eip);
+              entry_frame->sp(), entry_frame->ip());
           hide_statline = true;
         }
 
@@ -375,7 +376,7 @@ Jdb::virt_to_kvirt(Address virt, Task_num task)
 	      virt <  (Kernel_thread::init_done() 
 					? (Address)&Mem_layout::end
 			      		: (Address)&Mem_layout::initcall_end)
-	      || lookup_space (0)->v_lookup (virt, 0, 0, 0))
+	      || lookup_space (0)->mem_space()->v_lookup (virt, 0, 0, 0))
 	? virt
 	: (Address) -1;
 
@@ -384,7 +385,8 @@ Jdb::virt_to_kvirt(Address virt, Task_num task)
       // but if the task's pagetable has a mapping for it, we can translate
       // task-virtual -> physical -> kernel-virtual address and then access.
     default:
-      return (lookup_space (task)->v_lookup (virt, &phys, &size, 0))
+      return (lookup_space (task)->mem_space()->v_lookup (virt, &phys, 
+							  &size, 0))
 	? (Address) Kmem::phys_to_virt (phys + (virt & (size-1)))
 	: (Address) -1;
      }
@@ -393,7 +395,7 @@ Jdb::virt_to_kvirt(Address virt, Task_num task)
 
 PUBLIC
 static Address
-Jdb::virt_to_kvirt(Address virt, Space* space)
+Jdb::virt_to_kvirt(Address virt, Mem_space* space)
 {
   Address phys;
   Address size;
@@ -408,7 +410,7 @@ Jdb::virt_to_kvirt(Address virt, Space* space)
 	      virt <  (Kernel_thread::init_done() 
 				? (Address)&Mem_layout::end
 				: (Address)&Mem_layout::initcall_end)
-	      || ((Space*) Kmem::dir())->v_lookup (virt, 0, 0, 0))
+	      || lookup_space(0)->mem_space()->v_lookup (virt, 0, 0, 0))
 	? virt
 	: (Address) -1;
     }
@@ -429,92 +431,54 @@ template <typename T>
 T
 Jdb::peek (T const *addr, Address_type user)
 {
-  return current_space()->peek(addr, user);
+  return current_mem_space()->peek(addr, user);
 }
 
-PUBLIC
-static int
-Jdb::peek_task(Address addr, Task_num task)
+PUBLIC static
+int
+Jdb::peek_task(Address virt, Task_num task, Mword *result, int width)
 {
-  Address kvirt = virt_to_kvirt(addr, task);
+  // make sure we don't cross a page boundary
+  if (virt & (width-1))
+    return -1;
 
-  return (kvirt == (Address)-1) ? -1 : *(Unsigned8*)kvirt;
+  Address kvirt = virt_to_kvirt(virt, task);
+  if (kvirt == (Address)-1)
+    return -1;
+
+  switch (width)
+    {
+    case 1: *result = *(Unsigned8*) kvirt; return 0;
+    case 2: *result = *(Unsigned16*)kvirt; return 0;
+    case 4: *result = *(Unsigned32*)kvirt; return 0;
+    }
+
+  assert(false);
+  return -1;
 }
 
-PUBLIC
-static int
-Jdb::peek_task(Address addr, Space* space)
+PUBLIC static
+int
+Jdb::poke_task(Address virt, Task_num task, Mword value, int width)
 {
-  Address kvirt = virt_to_kvirt(addr, space);
+  // make sure we don't cross a page boundary
+  if (virt & (width-1))
+    return -1;
 
-  return (kvirt == (Address)-1) ? -1 : *(Unsigned8*)kvirt;
-}
-
-PUBLIC
-static int
-Jdb::poke_task(Address addr, Task_num task, Unsigned8 value)
-{
-  Address kvirt = virt_to_kvirt(addr, task);
+  Address kvirt = virt_to_kvirt(virt, task);
 
   if (kvirt == (Address)-1)
     return -1;
 
-  *(Unsigned8*)kvirt = value;
-  return 0;
-}
-
-/** read Mword from virtual address specified by task number */
-PUBLIC static
-int
-Jdb::peek_mword_task(Address addr, Task_num task, Mword *result)
-{
-  Mword mword = 0;
-
-  for (Mword u=0; u<sizeof(Mword); u++)
+  switch (width)
     {
-      int c = Jdb::peek_task(addr + u, task);
-      if (c == -1)
-	{
-	  *result = (Mword)-1;
-	  return -1;
-	}
-      // little endian
-      mword |= ((Mword)c) << (8*u);
+    case 1: *(Unsigned8*) kvirt = value; return 0;
+    case 2: *(Unsigned16*)kvirt = value; return 0;
+    case 4: *(Unsigned32*)kvirt = value; return 0;
     }
 
-  *result = mword;
-  return 1;
-}
-
-/** read Address from virtual address specified by task number */
-PUBLIC static
-int
-Jdb::peek_addr_task(Address virt, Task_num task, Address *result)
-{
-  Address addr = 0;
-
-  for (Mword u=0; u<sizeof(Address); u++)
-    {
-      int c = Jdb::peek_task(virt + u, task);
-      if (c == -1)
-	{
-	  *result = (Address)-1;
-	  return -1;
-	}
-      addr |= ((Address)c) << (8*u);
-    }
-
-  *result = addr;
-  return 1;
-}
-
-/** write Mword to virtual address in task specified by task number */
-PUBLIC static
-void
-Jdb::poke_mword_task(Address virt, Task_num task, Mword value)
-{
-  for (Mword u=0; u<sizeof(Mword); u++)
-    Jdb::poke_task(virt + u, task, (value >> (8*u)) & 0xff);
+  assert(false);
+  return -1;
 }
 
 PUBLIC

@@ -18,15 +18,23 @@
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/exec/exec.h>
 #include <l4/util/l4_macros.h>
-#include "dl-syscall.h"
+#include <l4/util/util.h>
+#include <l4/generic_ts/generic_ts.h>
 #include <l4/generic_fprov/generic_fprov-client.h>
 
+#include "dl-syscall.h"
 #include "infopage.h"
 #include "emul_linux.h"
+#include "elf.h"
 
 #define MMAP_ENTRIES	64
 
 #if DEBUG_LEVEL>1
+#define INFO		1
+#else
+#define INFO		0
+#endif
+#if DEBUG_LEVEL>0
 #define DBG		1
 #else
 #define DBG		0
@@ -42,11 +50,12 @@ typedef struct mmap_region_t
   struct mmap_region_t	*next;
 #if DEBUG_LEVEL>0
   char                  name[32];
+  char                  unseen;
 #endif
 } mmap_region_t;
 
 static mmap_region_t	mmap_regions[MMAP_ENTRIES];
-       mmap_region_t	*mmap_region_list;
+static mmap_region_t	*mmap_region_list;
 
 /* We maintain no list here since it seems that only one file is open
  * at one time. */
@@ -131,7 +140,12 @@ mmap_find_free_slot(mmap_region_t *start)
       if (m>=mmap_regions+MMAP_ENTRIES)
 	m = mmap_regions;
       if (!m->size)
-	return m;
+	{
+#if DEBUG_LEVEL>0
+	  m->unseen = 1;
+#endif
+	  return m;
+	}
     }
 
   return 0;
@@ -170,7 +184,7 @@ mmap_delete_list(mmap_region_t *m)
 
 /** Show all mmap regions (for debugging purposes). */
 void
-mmap_list_regions(void)
+_dl_mmap_list_regions(int only_unseen)
 {
 #if DEBUG_LEVEL>0
   mmap_region_t *m;
@@ -182,86 +196,108 @@ mmap_list_regions(void)
     }
 
   for (m=mmap_region_list; m; m=m->next)
-    printf("  %08x-%08x  %s\n", m->addr, m->addr+m->size, m->name);
+    if (!only_unseen || m->unseen)
+      {
+	printf("  "l4_addr_fmt" - "l4_addr_fmt" ds %4d (%4dKB) %s\n", 
+	    m->addr, m->addr+m->size, m->ds.id, m->size/1024, m->name);
+	m->unseen = 0;
+      }
 #endif
 }
 
 /** Map anonymous memory at a free place. */
-static l4_addr_t
-mmap_anonymous(l4_addr_t want_addr, l4_size_t size, int prot)
+static void*
+mmap_anonymous(l4_addr_t want_addr, l4_size_t size, int prot, 
+	       l4_addr_t *phys, const char *name)
 {
   int error;
   l4_addr_t addr;
   mmap_region_t *prev, *m;
 
   size = l4_round_page(size);
-  if (want_addr == ~1U)
+  if (want_addr == ~0U)
     {
       if (!(addr = mmap_find_free_addr(size, &prev)))
 	{
-#if DEBUG_LEVEL>0
-	  printf("No free mmap address size %08x\n", size);
-	  enter_kdebug("stop");
-#endif
-	  return (l4_addr_t)-1;
+	  LOGd(DBG, "No free mmap address size "l4_addr_fmt, (l4_addr_t)size);
+	  return 0;
 	}
     }
   else
     {
       if (!(addr = mmap_test_free_addr(want_addr, size, &prev)))
 	{
-#if DEBUG_LEVEL>0
-	  printf("Address at %08x size %08x not free\n", want_addr, size);
-	  enter_kdebug("stop");
-#endif
-	  return (l4_addr_t)-1;
+	  LOGd(DBG, "Address at "l4_addr_fmt" size "l4_addr_fmt" not free", 
+	      want_addr, (l4_addr_t)size);
+	  return 0;
 	}
     }
   if (!(m = mmap_find_free_slot(prev)))
     {
-#if DEBUG_LEVEL>0
-      printf("No free mmap slot (incease MMAP_ENTRIES)\n");
-      enter_kdebug("stop");
-#endif
-      return (l4_addr_t)-1;
+      LOGd(DBG, "No free mmap slot (incease MMAP_ENTRIES!)");
+      return 0;
     }
   if ((error = l4dm_mem_open(global_env->memserv_id, size,
-			     0, 0, "anon memory", &m->ds)))
+			     0, L4DM_PINNED | (phys ? L4DM_CONTIGUOUS : 0),
+			     "anon memory", &m->ds)))
     {
-#if DEBUG_LEVEL>0
-      printf("Error %d in mmap_open\n", error);
-      enter_kdebug("stop");
-#endif
-      return (l4_addr_t)-1;
+      LOGd(DBG, "Error %d in mmap_open", error);
+      return 0;
+    }
+  if (phys)
+    {
+      l4_addr_t addr;
+      l4_size_t psize;
+      if ((error = l4dm_mem_ds_phys_addr(&m->ds, 0, L4DM_WHOLE_DS, 
+					 &addr, &psize)))
+	{
+	  LOGd(DBG, "Error %d requesting physical addr of ds %d",
+	         error, m->ds.id);
+	  l4dm_close(&m->ds);
+	  return 0;
+	}
+      *phys = addr;
     }
   if ((error = l4dm_map_ds(&m->ds, 0, addr, size, L4DM_RW)))
     {
-#if DEBUG_LEVEL>0
-      printf("Error %d in mmap_map\n", error);
-      enter_kdebug("stop");
-#endif
+      LOGd(DBG, "Error %d in mmap_map", error);
       l4dm_close(&m->ds);
-      return (l4_addr_t)-1;
+      return 0;
     }
-  m->addr    = addr;
-  m->size    = size;
+  m->addr = addr;
+  m->size = size;
 #if DEBUG_LEVEL>0
-  memcpy(m->name, "[anonymous]", sizeof("[anonymous]"));
+    {
+      int i;
+      for (i=0; name[i] && i<sizeof(m->name)-1; i++)
+	m->name[i] = name[i];
+      m->name[i] = '\0';
+    }
 #endif
   memset((void*)addr, 0, size);
   mmap_insert_list(m, prev);
 #if DEBUG_LEVEL>1
-  mmap_list_regions();
+  _dl_mmap_list_regions(0);
 #endif
-  return addr;
+  return (void*)addr;
 }
 
 /** Exit ldso. */
 void
 _dl_exit(int code)
 {
-  outstring("_dl_exit called\n");
+  printf("ldso: Exiting with %d\n", code);
+#if DEBUG_LEVEL>0
   enter_kdebug("stop");
+#endif
+
+  if (! l4ts_connected())
+    {
+      printf("SIMPLE_TS not found -- cannot send exit event");
+      l4_sleep_forever();
+    }
+
+  l4ts_exit();
 }
 
 /** Emulation of sys_mmap(). */
@@ -271,26 +307,30 @@ _dl_mmap(void *start, unsigned size, int prot, int flags, int fd,
 {
   mmap_region_t *m;
 
-  LOGd(DBG, "\033[%dm(%08x-%08x, fd=%d) called from %08x\033[m",
+  LOGd(INFO, "\033[%dm("l4_addr_fmt"-"l4_addr_fmt", fd=%d) called from "
+            l4_addr_fmt"\033[m",
 	    (flags & MAP_ANONYMOUS) ? 33 : 34,
-	    (unsigned)start, (unsigned)start+size, fd,
-	    (unsigned)__builtin_return_address(0));
+	    (l4_addr_t)start, (l4_addr_t)start+size, fd,
+	    (l4_addr_t)__builtin_return_address(0));
 
   if (flags & MAP_ANONYMOUS)
     {
       /* anonymous mmap, map memory */
       if (!(flags & MAP_FIXED))
 	{
-	  LOGd(DBG, "=> anonymous");
-	  return (void*)mmap_anonymous(~1U, size, prot);
+	  void *rc;
+	  LOGd(INFO, "=> anonymous");
+	  rc = mmap_anonymous(~0U, size, prot, 0, "[anonymous]");
+	  return rc ? rc : (void*)-1;
 	}
       else
 	{
-	  LOGd(DBG, "=> anonymous fixed %08x", (unsigned)start);
+	  LOGd(INFO, "=> anonymous fixed "l4_addr_fmt, (l4_addr_t)start);
 	}
     }
 
-  LOGd(DBG, "=> file offset %08x size %08x", offset, size);
+  LOGd(INFO, "=> file offset "l4_addr_fmt" size "l4_addr_fmt, 
+       (l4_addr_t)offset, (l4_addr_t)size);
   if (!(flags & MAP_ANONYMOUS) && (open_fd != fd))
     {
       LOGd(DBG, "MAP_FD but no file open or other file");
@@ -298,7 +338,8 @@ _dl_mmap(void *start, unsigned size, int prot, int flags, int fd,
     }
   if (offset & (~L4_PAGEMASK))
     {
-      LOGd(DBG, "offset (%08x) is not page-aligned", offset);
+      LOGd(DBG, "offset ("l4_addr_fmt") is not page-aligned", 
+	   (l4_addr_t)offset);
       return (void*)-1;
     }
   if (!(flags & MAP_ANONYMOUS) && offset+size > open_size)
@@ -336,32 +377,46 @@ _dl_munmap(void *start, unsigned size)
   addr = l4_trunc_page((l4_addr_t)start);
   size = l4_round_page((l4_addr_t)start+size) - addr;
 
-  LOGd(DBG, "\033[32m(%08x-%08x) called from %08x\033[m",
-	    (unsigned)start, (unsigned)start+size,
-	    (unsigned)__builtin_return_address(0));
+  LOGd(INFO, "\033[32m("l4_addr_fmt"-"l4_addr_fmt") called from "
+            l4_addr_fmt"\033[m",
+	    (l4_addr_t)start, (l4_addr_t)start+size,
+	    (l4_addr_t)__builtin_return_address(0));
 
   if ((m = mmap_find_region(addr, size)))
     {
       if (size == m->size)
 	{
-	  LOGd(DBG, "closing ds");
+	  LOGd(INFO, "closing ds %d", m->ds.id);
 	  l4dm_close(&m->ds);
 	  m->size = 0;
 	  mmap_delete_list(m);
 #if DEBUG_LEVEL>1
-	  mmap_list_regions();
+	  _dl_mmap_list_regions(0);
 #endif
 	  return 0;
 	}
       printf("size != m->size\n");
-      enter_kdebug("stop");
+      _dl_exit(1);
     }
 
 #if DEBUG_LEVEL>1
-  mmap_list_regions();
+  _dl_mmap_list_regions(0);
 #endif
-  LOGd(DBG, "=> failed");
+  LOGd(INFO, "=> failed");
   return -1;
+}
+
+void*
+_dl_alloc_pages(l4_size_t size, l4_addr_t *phys, const char *name)
+{
+  return (void*)mmap_anonymous(~0U, size, 0, phys, name);
+}
+
+void
+_dl_free_pages(void *addr, l4_size_t size)
+{
+  if (addr)
+    _dl_munmap(addr, size);
 }
 
 /** Emulation of sys_open(). Get the whole file image from the file provider.
@@ -369,23 +424,23 @@ _dl_munmap(void *start, unsigned size)
 int
 _dl_open(const char *name, int flags, unsigned mode)
 {
-  CORBA_Environment _env = dice_default_environment;
+  DICE_DECLARE_ENV(env);
   mmap_region_t *m, *prev;
   const char *p, *r;
   char *q;
   static char fname[1024];
   int error;
+  Elf32_Ehdr *e;
 
-  LOGd(DBG, "\033[31m(%s,%x,%x) called from %08x\033[m",
-	     name, flags, mode, (unsigned)__builtin_return_address(0));
+  LOGd(INFO, "\033[31m(%s,%x,%x) called from "l4_addr_fmt"\033[m",
+	     name, flags, mode, (l4_addr_t)__builtin_return_address(0));
 
   if ((p = strstr(name, "/fprov/")))
     name = p+7;
   if (open_fd)
     {
       printf("open_fd != 0\n");
-      enter_kdebug("stop");
-      return -1;
+      _dl_exit(1);
     }
 
   /* first try to open without path */
@@ -402,6 +457,8 @@ _dl_open(const char *name, int flags, unsigned mode)
 	  while (q < fname + sizeof(fname)-1 && *p != ':' && *p != '\0')
 	    *(q++) = *(p++);
 	  p++; /* skip ':' */
+	  if (q < fname + sizeof(fname)-1)
+	    *(q++) = '/';
 	}
       while (q < fname + sizeof(fname)-1 && *r != '\0')
 	*(q++) = *(r++);
@@ -409,18 +466,19 @@ _dl_open(const char *name, int flags, unsigned mode)
       /* get the file image from the file provider. */
       error = l4fprov_file_open_call(&global_env->fprov_id, fname,
 				     &global_env->memserv_id,
-				     0, &open_ds, &open_size, &_env);
-      if (!error && _env.major == CORBA_NO_EXCEPTION)
+				     L4DM_PINNED, &open_ds, &open_size, &env);
+      if (!error && DICE_EXCEPTION_MAJOR(&env) == CORBA_NO_EXCEPTION)
 	{
 	  if (!(open_addr = mmap_find_free_addr(open_size, &prev)))
 	    {
-	      LOGd(DBG, "No free open address size %08x", open_size);
+	      LOGd(DBG, "No free open address size "l4_addr_fmt,
+		        (l4_addr_t)open_size);
 	      l4dm_close(&open_ds);
 	      break;
 	    }
 	  if (!(m = mmap_find_free_slot(prev)))
 	    {
-	      LOGd(DBG, "No free open slot (incease MMAP_ENTRIES)");
+	      LOGd(DBG, "No free open slot (incease MMAP_ENTRIES!)");
 	      l4dm_close(&open_ds);
 	      break;
 	    }
@@ -431,6 +489,17 @@ _dl_open(const char *name, int flags, unsigned mode)
 	      l4dm_close(&open_ds);
 	      break;
 	    }
+
+	  e = (Elf32_Ehdr *)open_addr;
+	  /* Check if the read file is actually an ELF file */
+	  if (   e->e_ident[0] != ELFMAG0 || e->e_ident[1] != ELFMAG1
+	      || e->e_ident[2] != ELFMAG2 || e->e_ident[3] != ELFMAG3)
+	    {
+	      printf("Invalid ELF image (char 1-4: %c%c%c%c)\n",
+		     e->e_ident[0], e->e_ident[1], e->e_ident[2], e->e_ident[3]);
+	      break;
+	    }
+
 	  m->addr = open_addr;
 	  m->size = l4_round_page(open_size);
 	  m->ds   = open_ds;
@@ -438,7 +507,8 @@ _dl_open(const char *name, int flags, unsigned mode)
 
 	  open_offs = 0;
 	  open_fd = ++open_fd_magic;
-	  LOGd(DBG, "File at %08x size %08x", open_addr, open_size);
+	  LOGd(INFO, "File at "l4_addr_fmt" size "l4_addr_fmt, 
+	      open_addr, (l4_addr_t)open_size);
 
 	  /* save file name */
 	  for (q=fname; *q!='\0'; q++)
@@ -454,11 +524,11 @@ _dl_open(const char *name, int flags, unsigned mode)
 	  memcpy(m->name, open_fname, sizeof(open_fname));
 #endif
 #if DEBUG_LEVEL>1
-	  mmap_list_regions();
+	  _dl_mmap_list_regions(0);
 #endif
 	  return open_fd;
 	}
-      if (_env.major != CORBA_NO_EXCEPTION)
+      if (DICE_HAS_EXCEPTION(&env))
 	{
 	  LOGd(DBG, "IPC error ");
 	  break;
@@ -479,28 +549,22 @@ _dl_close(int fd)
 {
   mmap_region_t *m;
 
-  LOGd(DBG, "\033[31m(%08x) called\033[m", fd);
+  LOGd(INFO, "\033[31m(%d) called\033[m", fd);
   if (fd != open_fd)
     {
-#if DEBUG_LEVEL>0
-      printf("closing wrong file\n");
-      enter_kdebug("stop");
-#endif
+      LOGd(DBG, "closing wrong file");
       return;
     }
 
   if (!(m = mmap_find_region(open_addr, open_size)))
     {
-#if DEBUG_LEVEL>0
-      printf("open image not found");
-      enter_kdebug("stop");
-#endif
+      LOGd(DBG, "open image not found");
       return;
     }
 
   mmap_delete_list(m);
 #if DEBUG_LEVEL>1
-  mmap_list_regions();
+  _dl_mmap_list_regions(0);
 #endif
   l4dm_close(&open_ds);
   open_fd = 0;
@@ -511,11 +575,16 @@ _dl_close(int fd)
 unsigned
 _dl_read(int fd, void *buf, unsigned count)
 {
-  LOGd(DBG, "(%d) called from %08x",
-      count, (unsigned)__builtin_return_address(0));
+  LOGd(INFO, "(size=%d, addr="l4_addr_fmt") called from "l4_addr_fmt,
+      count, (l4_addr_t)buf, (l4_addr_t)__builtin_return_address(0));
+  if (fd != open_fd)
+    {
+      LOGd(DBG, "file not open");
+      _dl_exit(1);
+    }
   if (open_size == 0)
     {
-      LOGd(DBG, " no file open");
+      LOGd(DBG, "no file open");
       return -1;
     }
   if (open_offs + count > open_size)
@@ -525,11 +594,17 @@ _dl_read(int fd, void *buf, unsigned count)
   return count;
 }
 
+void
+_dl_seek(int fd, unsigned pos)
+{
+  open_offs = pos;
+}
+
 int
 _dl_mprotect(const void *addr, unsigned len, int prot)
 {
-  LOGd(DBG, "(%08x-%08x) called",
-	    (unsigned)addr, (unsigned)addr+len);
+  LOGd(INFO, "("l4_addr_fmt"-"l4_addr_fmt") called",
+	    (l4_addr_t)addr, (l4_addr_t)addr+len);
   return -1;
 }
 

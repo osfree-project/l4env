@@ -16,16 +16,16 @@
 l4_int32_t
 l4vfs_common_io_fcntl_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                l4_int32_t cmd,
-                                l4_int32_t *arg,
+                                int cmd,
+                                long *arg,
                                 CORBA_Server_Environment *_dice_corba_env)
     __attribute__((weak));
 
 l4_int32_t
 l4vfs_common_io_fcntl_component(CORBA_Object _dice_corba_obj,
                                 object_handle_t fd,
-                                l4_int32_t cmd,
-                                l4_int32_t *arg,
+                                int cmd,
+                                long *arg,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
     LOG("weak fcntl; just returning 0");

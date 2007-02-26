@@ -32,7 +32,7 @@
 [<code/-profstart/]
 [<code/-irq0/]
 [<code/-irqcom/|<code/-I-/]
-[<code/-jdb_cmd/<var/=command]
+[<code/-jdb_cmd=/<var/commands/]
 [<code/-always_irqack/]
 <code/ proto=/<var/physical_address/
 
@@ -71,8 +71,8 @@ GDB's console.
 bytes/second.  115200 bytes/second is the default.
 
 <dt/<code/-comport=/<var/n//Will use COMn for serial
-communication. COM2 is the default.  Possible values for <var/n/ are 1
-and 2.
+communication. COM1 is the default.  Possible values for <var/n/ are 1,
+2, 3, and 4. n is used as I/O port if n>4.
 
 <dt/<code/-hercules//Redirect kernel messages to the Hercules (or
 other MGA-compatible) console.
@@ -130,6 +130,9 @@ reserved for kernel use.
 
 <dt/<code/-irqcom/ or <code/-I-//Disable for user tasks the IRQ
 associated with the serial port used for I/O or the kernel debugger.
+
+<dt/<code/-jdb_cmd=/<var/commands//Execute Jdb commands non-interactive at
+startup.
 
 <dt/<code/-always_irqack//IRQs are acknowledged by the kernel. Your
 userland code has to know this!

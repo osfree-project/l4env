@@ -4,7 +4,6 @@ IMPLEMENTATION:
 
 #include "config.h"
 #include "cpu.h"
-#include "idt.h"
 #include "jdb_module.h"
 #include "jdb_tbuf.h"
 #include "jdb_trace.h"
@@ -14,6 +13,16 @@ IMPLEMENTATION:
 
 class Jdb_set_trace : public Jdb_module
 {
+public:
+  enum Mode { Off, Log, Log_to_buf, Trace, Use_c_short_cut, Use_slow_path };
+  
+  Jdb_set_trace() FIASCO_INIT;
+  void ipc_tracing(Mode mode);
+  void next_preiod_tracing(bool enable);
+  void page_fault_tracing(bool enable);
+  void unmap_tracing(bool enable);
+  
+private:
   static char first_char;
   static char second_char;
 };
@@ -21,87 +30,17 @@ class Jdb_set_trace : public Jdb_module
 char Jdb_set_trace::first_char;
 char Jdb_set_trace::second_char;
 
-extern void (*syscall_table[])();
-
-extern "C" void entry_sys_ipc_log (void);
-extern "C" void entry_sys_ipc_c (void);
-extern "C" void entry_sys_ipc (void);
-extern "C" void entry_sys_fast_ipc_log (void);
-extern "C" void entry_sys_fast_ipc_c (void);
-extern "C" void entry_sys_fast_ipc (void);
-
-extern "C" void sys_ipc_wrapper (void);
-extern "C" void sys_ipc_log_wrapper (void);
-extern "C" void sys_ipc_trace_wrapper (void);
-
 extern void jdb_misc_set_log_pf_res (int enable) __attribute__((weak));
 
-static
-void
-Jdb_set_trace::set_ipc_vector()
-{
-  void (*int30_entry)(void);
-  void (*sysenter_entry)(void);
+IMPLEMENTATION[!{ia32,ux,amd64}]:
 
-  if (Jdb_ipc_trace::_trace || Jdb_ipc_trace::_slow_ipc || 
-      Jdb_ipc_trace::_log   || Jdb_nextper_trace::_log)
-    {
-      int30_entry    = entry_sys_ipc_log;
-      sysenter_entry = entry_sys_fast_ipc_log;
-    }
-  else if (!Config::Assembler_ipc_shortcut ||
-           (Config::Jdb_logging && Jdb_ipc_trace::_cshortcut) ||
-	   (Config::Jdb_logging && Jdb_ipc_trace::_cpath))
-    {
-      int30_entry    = entry_sys_ipc_c;
-      sysenter_entry = entry_sys_fast_ipc_c;
-    }
-  else
-    {
-      int30_entry    = entry_sys_ipc;
-      sysenter_entry = entry_sys_fast_ipc;
-    }
-
-  Idt::set_entry (0x30, (Address) int30_entry, true);
-
-  Cpu::set_sysenter(sysenter_entry);
-
-  if (Jdb_ipc_trace::_trace)
-    syscall_table[0] = sys_ipc_trace_wrapper;
-  else if ((Jdb_ipc_trace::_log && !Jdb_ipc_trace::_slow_ipc) ||
-	   Jdb_nextper_trace::_log)            
-    syscall_table[0] = sys_ipc_log_wrapper;
-  else
-    syscall_table[0] = sys_ipc_wrapper;
-}
-
-
-extern "C" void sys_fpage_unmap_wrapper (void);
-extern "C" void sys_fpage_unmap_log_wrapper (void);
-
-static
+PRIVATE inline
 void
 Jdb_set_trace::set_unmap_vector()
-{
-  if (Jdb_unmap_trace::_log)
-    syscall_table[2] = sys_fpage_unmap_log_wrapper;
-  else
-    syscall_table[2] = sys_fpage_unmap_wrapper;
-}
+{}
 
-PUBLIC static FIASCO_NOINLINE
-void
-Jdb_set_trace::set_cpath()
-{
-  Jdb_ipc_trace::_cpath = 0;
-  BEGIN_LOG_EVENT(show_log_context_switch)
-  Jdb_ipc_trace::_cpath = 1;
-  END_LOG_EVENT;
-  BEGIN_LOG_EVENT(show_log_shortcut)
-  Jdb_ipc_trace::_cpath = 1;
-  END_LOG_EVENT;
-  set_ipc_vector();
-}
+
+IMPLEMENTATION:
 
 PUBLIC
 Jdb_module::Action_code
@@ -120,15 +59,13 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	      first_char = ' '; // print status
 	      break;
 	    case '+': // on
-	      Jdb_ipc_trace::_log        = 1;
-	      Jdb_ipc_trace::_log_to_buf = 0;
+	      ipc_tracing(Log);
 	      break;
 	    case '-': // off
-	      Jdb_ipc_trace::_log        = 0;
+	      ipc_tracing(Off);
 	      break;
 	    case '*': // to buffer
-	      Jdb_ipc_trace::_log        = 1;
-	      Jdb_ipc_trace::_log_to_buf = 1;
+	      ipc_tracing(Log_to_buf);
 	      break;
 	    case 'r': // restriction
 	    case 'R': // results on
@@ -142,7 +79,6 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	    default:
 	      return ERROR;
 	    }
-	  set_ipc_vector();
 	  putchar(first_char);
 	}
       else if (args == &second_char)
@@ -188,32 +124,29 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	      break;
 	    case 'S':
 	      if (second_char == '+')
-		Jdb_ipc_trace::_slow_ipc = 1;
+		ipc_tracing(Use_slow_path);
 	      else if (second_char == '-')
-		Jdb_ipc_trace::_slow_ipc = 0;
+		ipc_tracing(Off);
 	      else
 		return ERROR;
-	      set_ipc_vector();
 	      putchar(second_char);
 	      break;
 	    case 'C':
 	      if (second_char == '+')
-		Jdb_ipc_trace::_cshortcut = 1;
+		ipc_tracing(Use_c_short_cut);
 	      else if (second_char == '-')
-		Jdb_ipc_trace::_cshortcut = 0;
+		ipc_tracing(Off);
 	      else
 		return ERROR;
-	      set_ipc_vector();
 	      putchar(second_char);
 	      break;
 	    case 'T':
 	      if (second_char == '+')
-      		Jdb_ipc_trace::_trace = 1;
+		ipc_tracing(Trace);
 	      else if (second_char == '-')
-		Jdb_ipc_trace::_trace = 0;
+		ipc_tracing(Off);
 	      else
 		return ERROR;
-	      set_ipc_vector();
 	      putchar(second_char);
 	      break;
 	    default:
@@ -322,7 +255,7 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	      Jdb_unmap_trace::_log_to_buf = 0;
 	      break;
 	    case '-': // off
-	      Jdb_unmap_trace::_log        = 1;
+	      Jdb_unmap_trace::_log        = 0;
 	      break;
 	    case '*': // to buffer
 	      Jdb_unmap_trace::_log        = 1;
@@ -335,6 +268,7 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	    default:
 	      return ERROR;
 	    }
+	  set_unmap_vector();
 	  putchar(first_char);
 	}
       else if (args == &second_char)
@@ -375,7 +309,7 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
       break;
 
     case 3:
-      // unmap syscall tracing
+      // next period tracing
       if (args == &first_char)
 	{
 	  switch (first_char)
@@ -386,15 +320,14 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 	      break;
 	    case '+': // buffer
 	    case '*': // buffer
-	      Jdb_nextper_trace::_log = 1;
+	      next_preiod_tracing(true);
 	      break;
 	    case '-': // off
-	      Jdb_nextper_trace::_log = 0;
+	      next_preiod_tracing(false);
 	      break;
 	    default:
 	      return ERROR;
 	    }
-	  set_ipc_vector();
 	  putchar(first_char);
 	}
 
@@ -407,7 +340,7 @@ Jdb_set_trace::action(int cmd, void *&args, char const *&fmt, int &)
 }
 
 PUBLIC
-Jdb_module::Cmd const *const
+Jdb_module::Cmd const *
 Jdb_set_trace::cmds() const
 {
   static Cmd cs[] =
@@ -437,13 +370,13 @@ Jdb_set_trace::cmds() const
 }
 
 PUBLIC
-int const
+int
 Jdb_set_trace::num_cmds() const
 {
   return 4;
 }
 
-PUBLIC
+IMPLEMENT
 Jdb_set_trace::Jdb_set_trace()
   : Jdb_module("MONITORING")
 {
@@ -451,8 +384,3 @@ Jdb_set_trace::Jdb_set_trace()
 
 static Jdb_set_trace jdb_set_trace INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-void
-jdb_trace_set_cpath(void)
-{
-  Jdb_set_trace::set_cpath();
-}

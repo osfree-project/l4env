@@ -27,7 +27,7 @@ l4util_sti (void)
  */
 
 void static volatile inline
-l4util_flags_save(unsigned *flags)
+l4util_flags_save(l4_umword_t *flags)
 {
   enter_kdebug("l4util_flags_save");
 }
@@ -35,7 +35,7 @@ l4util_flags_save(unsigned *flags)
 /** Restore processor flags. Can be used to restore the interrupt flag
  *  */
 void static volatile inline
-l4util_flags_restore(unsigned *flags)
+l4util_flags_restore(l4_umword_t *flags)
 {
   enter_kdebug("l4util_flags_restore");
 }

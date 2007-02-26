@@ -570,8 +570,10 @@ static inline void netif_start_queue(struct net_device *dev)
 
 static inline void netif_wake_queue(struct net_device *dev)
 {
-#ifndef __ORE__
 	if (test_and_clear_bit(__LINK_STATE_XOFF, &dev->state))
+#ifdef __ORE__
+        ;
+#else
 		__netif_schedule(dev);
 #endif
 }

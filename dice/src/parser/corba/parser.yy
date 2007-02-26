@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
-using namespace std;
+#include <cassert>
 
 #include "defines.h"
 #include "Compiler.h"
@@ -46,9 +46,9 @@ void corbawarning(const char *fmt, ...);
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
 
-#include "fe/FETaggedStructType.h"
-#include "fe/FETaggedUnionType.h"
-#include "fe/FETaggedEnumType.h"
+#include "fe/FEStructType.h"
+#include "fe/FEIDLUnionType.h"
+#include "fe/FEEnumType.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FEArrayType.h"
@@ -71,6 +71,7 @@ int corbalex(YYSTYPE*);
 #define YYDEBUG    1
 
 // collection for elements
+extern CFEFileComponent *pCurFileComponent;
 
 // error stuff
 extern int errcount;
@@ -104,8 +105,8 @@ int nParseErrorCORBA = 0;
   CFEDeclarator*        _decl;
   CFEAttribute*            _attribute;
   CFEOperation*            _operation;
-  CFETaggedEnumType*    _enum_type;
-  CFETaggedUnionType*    _union_type;
+  CFEEnumType*    _enum_type;
+  CFEUnionType*    _union_type;
   CFEStructType*        _struct_type;
   CFEUnionCase*            _union_case;
   CFESimpleType*        _simple_type;
@@ -303,23 +304,15 @@ definition_list :
 definition :
       type_dcl semicolon
     {
-        if (!CParser::GetCurrentFile())
-        {
-            CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (typedef)");
-            YYABORT;
-        }
-        else
-            CParser::GetCurrentFile()->AddTypedef($1);
+        CFEFile *pFEFile = CParser::GetCurrentFile();
+	assert(pFEFile);
+        pFEFile->m_Typedefs.Add($1);
     }
     | const_dcl semicolon
     {
-        if (!CParser::GetCurrentFile())
-        {
-            CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (const)");
-            YYABORT;
-        }
-        else
-            CParser::GetCurrentFile()->AddConstant($1);
+        CFEFile *pFEFile = CParser::GetCurrentFile();
+	assert(pFEFile);
+        pFEFile->m_Constants.Add($1);
     }
     | except_dcl semicolon
     {
@@ -327,25 +320,17 @@ definition :
     | interface semicolon
     {
         if ($1 != NULL) {
-            if (!CParser::GetCurrentFile())
-            {
-                CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (interface)");
-                YYABORT;
-            }
-            else
-                CParser::GetCurrentFile()->AddInterface($1);
+            CFEFile *pFEFile = CParser::GetCurrentFile();
+	    assert(pFEFile);
+            pFEFile->m_Interfaces.Add($1);
         }
         // else: was forward_dcl
     }
     | module semicolon
     {
-        if (!CParser::GetCurrentFile())
-        {
-            CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (module)");
-            YYABORT;
-        }
-        else
-            CParser::GetCurrentFile()->AddLibrary($1);
+        CFEFile *pFEFile = CParser::GetCurrentFile();
+	assert(pFEFile);
+        pFEFile->m_Libraries.Add($1);
     }
     | value semicolon
     | EOF_TOKEN
@@ -360,28 +345,39 @@ module :
         // check if we can find a library with this name
         CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
         assert(pRoot);
-        $<_library>$ = pRoot->FindLibrary($2);
+	CFELibrary *pFEPrevLib = pRoot->FindLibrary($2);
+	CFELibrary *pFELibrary = new CFELibrary(string($2), NULL, 
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
+	if (pFEPrevLib)
+	    pFEPrevLib->AddSameLibrary(pFELibrary);
+	$<_library>$ = pFELibrary;
+	pFELibrary->SetSourceLine(gLineNumber);
+	// bookkeeping
+	pCurFileComponent = pFELibrary;
     } LBRACE module_element_list rbrace
     {
-        CFEAttribute *tmp = new CFEVersionAttribute(0,0);
-        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-        tmpVA->push_back(tmp);
-        $$ = new CFELibrary(string($2), tmpVA, $5);
-        tmp->SetParent($$);
-        tmp->SetSourceLine(gLineNumber);
-        delete tmpVA;
+    	$$ = $<_library>3;
+	$$->AddComponents($5);
         delete $5;
-        if ($<_library>3 != NULL)
-            $<_library>3->AddSameLibrary($$);
+	$$->SetSourceLineEnd(gLineNumber);
+
+	// bookkeeping
+	if (pCurFileComponent &&
+	    pCurFileComponent->GetParent())
+	{
+	    pCurFileComponent =
+		dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
+	}       
     }
     ;
 
 module_element_list :
       module_element_list module_element
     {
-            if ($2)
-                $1->push_back($2);
-        $$ = $1;
+	if ($2)
+	    $1->push_back($2);
+	$$ = $1;
     }
     | module_element
     {
@@ -425,7 +421,8 @@ interface_dcl    :
             if (*iter) {
                 if (pRoot->FindInterface((*iter)->GetName()) == NULL)
                 {
-                    corbaerror2("Couldn't find base interface name \"%s\".", (*iter)->GetName().c_str());
+                    corbaerror2("Couldn't find base interface name \"%s\".",
+		    (*iter)->GetName().c_str());
                     YYABORT;
                 }
             }
@@ -435,24 +432,42 @@ interface_dcl    :
             corbaerror2("Interface name \"%s\" already exists", $3);
             YYABORT;
         }
-        $<_int>$ = gLineNumber;
+	// create abstract attribute
+        CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
+        pAttr->SetSourceLine(gLineNumber);
+        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
+        tmpVA->push_back(pAttr);
+
+	// create interface
+	CFEInterface *pFEInterface = new CFEInterface(tmpVA, string($3), $4,
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
+        pAttr->SetParent(pFEInterface);
+        delete tmpVA;
+        pFEInterface->SetSourceLine(gLineNumber);
+	$<_interface>$ = pFEInterface;
+
+	// bookkeeping
+	pCurFileComponent = pFEInterface;
     } LBRACE export_list rbrace
     {
         if ($7 == NULL) {
             corbaerror2("no empty interface specification supported.");
             YYABORT;
         }
-        CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
-        pAttr->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-        tmpVA->push_back(pAttr);
-        $$ = new CFEInterface(tmpVA, string($3), $4, $7);
-        // set parent relationship
-        pAttr->SetParent($$);
+        // add elements to interface
+	$$ = $<_interface>5;
+	$$->AddComponents($7);
         delete $7;
-        $$->SetSourceLine($<_int>5);
         $$->SetSourceLineEnd(gLineNumber);
-        delete tmpVA;
+
+	// bookkeeping
+	if (pCurFileComponent &&
+	    pCurFileComponent->GetParent())
+	{
+	    pCurFileComponent =
+		dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
+	}       
     }
     | ABSTRACT INTERFACE ID
     {
@@ -464,24 +479,42 @@ interface_dcl    :
             corbaerror2("Interface name \"%s\" already exists", $3);
             YYABORT;
         }
-        $<_int>$ = gLineNumber;
+	// create abstract attribute
+        CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
+        pAttr->SetSourceLine(gLineNumber);
+        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
+        tmpVA->push_back(pAttr);
+
+	// create interface
+	CFEInterface *pFEInterface = new CFEInterface(tmpVA, string($3), NULL,
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
+        pAttr->SetParent(pFEInterface);
+        delete tmpVA;
+        pFEInterface->SetSourceLine(gLineNumber);
+	$<_interface>$ = pFEInterface;
+
+	// bookkeeping
+	pCurFileComponent = pFEInterface;
     } LBRACE export_list rbrace
     {
         if ($6 == NULL) {
             corbaerror2("no empty interface specification supported.");
             YYABORT;
         }
-        CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
-        pAttr->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-        tmpVA->push_back(pAttr);
-        $$ = new CFEInterface(tmpVA, string($3), NULL, $6);
-        // set parent relationship
-        pAttr->SetParent($$);
+        // add elements to interface
+	$$ = $<_interface>4;
+	$$->AddComponents($6);
         delete $6;
-        $$->SetSourceLine($<_int>4);
         $$->SetSourceLineEnd(gLineNumber);
-        delete tmpVA;
+
+	// bookkeeping
+	if (pCurFileComponent &&
+	    pCurFileComponent->GetParent())
+	{
+	    pCurFileComponent =
+		dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
+	}       
     }
     | INTERFACE ID interface_inheritance_spec
     {
@@ -495,7 +528,8 @@ interface_dcl    :
             {
                 if (!(pRoot->FindInterface((*iter)->GetName())))
                 {
-                    corbaerror2("Couldn't find base interface name \"%s\".", (*iter)->GetName().c_str());
+                    corbaerror2("Couldn't find base interface name \"%s\".", 
+		        (*iter)->GetName().c_str());
                     YYABORT;
                 }
             }
@@ -506,24 +540,34 @@ interface_dcl    :
             corbaerror2("Interface name \"%s\" already exists", $2);
             YYABORT;
         }
-        $<_int>$ = gLineNumber;
+	// create interface
+	CFEInterface *pFEInterface = new CFEInterface(NULL, string($2), $3,
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
+        pFEInterface->SetSourceLine(gLineNumber);
+	$<_interface>$ = pFEInterface;
+
+	// bookkeeping
+	pCurFileComponent = pFEInterface;
     } LBRACE export_list rbrace
     {
         if ($6 == NULL) {
             corbaerror2("no empty interface specification supported.");
             YYABORT;
         }
-        CFEAttribute *pAttr = new CFEVersionAttribute(0,0);
-        pAttr->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-        tmpVA->push_back(pAttr);
-        $$ = new CFEInterface(tmpVA, string($2), $3, $6);
-        // set parent relationship
-        pAttr->SetParent($$);
+        // add elements to interface
+	$$ = $<_interface>4;
+	$$->AddComponents($6);
         delete $6;
-        $$->SetSourceLine($<_int>4);
         $$->SetSourceLineEnd(gLineNumber);
-        delete tmpVA;
+
+	// bookkeeping
+	if (pCurFileComponent &&
+	    pCurFileComponent->GetParent())
+	{
+	    pCurFileComponent =
+		dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
+	}       
     }
     | INTERFACE ID
     {
@@ -535,24 +579,34 @@ interface_dcl    :
             corbaerror2("Interface name \"%s\" already exists", $2);
             YYABORT;
         }
-        $<_int>$ = gLineNumber;
+	// create interface
+	CFEInterface *pFEInterface = new CFEInterface(NULL, string($2), NULL,
+	    pCurFileComponent ? static_cast<CFEBase*>(pCurFileComponent) :
+	    CParser::GetCurrentFile());
+        pFEInterface->SetSourceLine(gLineNumber);
+	$<_interface>$ = pFEInterface;
+
+	// bookkeeping
+	pCurFileComponent = pFEInterface;
     } LBRACE export_list rbrace
     {
         if ($5 == NULL) {
             corbaerror2("no empty interface specification supported.");
             YYABORT;
         }
-        CFEAttribute *pAttr = new CFEVersionAttribute(0,0);
-        pAttr->SetSourceLine(gLineNumber);
-        vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-        tmpVA->push_back(pAttr);
-        $$ = new CFEInterface(tmpVA, string($2), NULL, $5);
-        // set parent relationship
-        pAttr->SetParent($$);
+        // add elements to interface
+	$$ = $<_interface>3;
+	$$->AddComponents($5);
         delete $5;
-        $$->SetSourceLine($<_int>3);
         $$->SetSourceLineEnd(gLineNumber);
-        delete tmpVA;
+
+	// bookkeeping
+	if (pCurFileComponent &&
+	    pCurFileComponent->GetParent())
+	{
+	    pCurFileComponent =
+		dynamic_cast<CFEFileComponent*>(pCurFileComponent->GetParent());
+	}       
     }
     ;
 
@@ -1043,29 +1097,34 @@ type_dcl :
     | struct_type
     {
         // extract the name
-        if (dynamic_cast<CFETaggedStructType*>($1)) {
-            string sTag = ((CFETaggedStructType*)$1)->GetTag();
-            CFEDeclarator *pDecl =  new CFEDeclarator(DECL_IDENTIFIER, "_struct_" + sTag);
-            pDecl->SetSourceLine(gLineNumber);
-            // modify tag, so compiler won't warn
-            vector<CFEDeclarator*> *pDecls = new vector<CFEDeclarator*>();
-            pDecls->push_back(pDecl);
-            // create a new typed decl
-            $$ = new CFETypedDeclarator(TYPEDECL_TYPEDEF, $1, pDecls);
-            $$->SetSourceLine(gLineNumber);
-            $1->SetParent($$);
-            pDecl->SetParent($$);
-            // return
-        } else {
-            corbaerror2("A struct without any declarators is not permitted.");
-            YYABORT;
-        }
+        string sTag = $1->GetTag();
+        CFEDeclarator *pDecl =  new CFEDeclarator(DECL_IDENTIFIER, 
+	    "_struct_" + sTag);
+        pDecl->SetSourceLine(gLineNumber);
+        // modify tag, so compiler won't warn
+        vector<CFEDeclarator*> *pDecls = new vector<CFEDeclarator*>();
+        pDecls->push_back(pDecl);
+        // create a new typed decl
+        $$ = new CFETypedDeclarator(TYPEDECL_TYPEDEF, $1, pDecls);
+        $$->SetSourceLine(gLineNumber);
+        $1->SetParent($$);
+        pDecl->SetParent($$);
+        // return
     }
     | union_type
     {
-        // FIXME
         // extract the name
+        string sTag = $1->GetTag();
+        CFEDeclarator *pDecl =  new CFEDeclarator(DECL_IDENTIFIER, sTag);
+        pDecl->SetSourceLine(gLineNumber);
+        // modify tag, so compiler won't warn
+        vector<CFEDeclarator*> *pDecls = new vector<CFEDeclarator*>();
+        pDecls->push_back(pDecl);
         // create a new typed decl
+        $$ = new CFETypedDeclarator(TYPEDECL_TYPEDEF, $1, pDecls);
+        $$->SetSourceLine(gLineNumber);
+        $1->SetParent($$);
+        pDecl->SetParent($$);
         // return
     }
     | enum_type
@@ -1295,14 +1354,14 @@ object_type :
 struct_type :
       STRUCT ID LBRACE member_list rbrace
     {
-        $$ = new CFETaggedStructType(string($2), $4);
+        $$ = new CFEStructType(string($2), $4);
         if ($4)
             delete $4;
         $$->SetSourceLine(gLineNumber);
     }
     | STRUCT LBRACE member_list RBRACE
     {
-        $$ = new CFEStructType($3);
+        $$ = new CFEStructType(string(), $3);
         $$->SetSourceLine(gLineNumber);
         if ($3)
             delete $3;
@@ -1337,17 +1396,12 @@ member :
 union_type :
       UNION ID SWITCH LPAREN switch_type_spec rparen LBRACE switch_body rbrace
     {
-        CFEUnionType *tmp = new CFEUnionType($5, string(), $8);
-        tmp->SetSourceLine(gLineNumber);
-        // set parent relationship
-        $5->SetParent(tmp);
-        tmp->SetCORBA();
-    if ($8)
-        delete $8;
-        $$ = new CFETaggedUnionType(string($2), tmp);
-        $$->SetSourceLine(gLineNumber);
-        // set parent relationship
-        tmp->SetParent($$);
+	$$ = new CFEIDLUnionType(string($2), $8, $5, string(), string());
+	$$->SetSourceLine(gLineNumber);
+	// set parent relationship
+	$5->SetParent($$);
+	if ($8)
+	    delete $8;
     }
     ;
 
@@ -1370,25 +1424,25 @@ switch_type_spec :
 switch_body :
       switch_body case
     {
-            if ($2)
-                $1->push_back($2);
-        $$ = $1;
+	if ($2)
+	    $1->push_back($2);
+	$$ = $1;
     }
     | case
     {
-        $$ = new vector<CFEUnionCase*>();
-    $$->push_back($1);
+	$$ = new vector<CFEUnionCase*>();
+	$$->push_back($1);
     }
     ;
 
 case :
       case_label_list element_spec semicolon
     {
-        $$ = new CFEUnionCase($2, $1);
-        $$->SetSourceLine(gLineNumber);
-        // set parent relationship
-        $2->SetParent($$);
-    delete $1;
+	$$ = new CFEUnionCase($2, $1);
+	$$->SetSourceLine(gLineNumber);
+	// set parent relationship
+	$2->SetParent($$);
+	delete $1;
     }
     | DEFAULT colon element_spec semicolon
     {
@@ -1408,8 +1462,8 @@ case_label_list :
     }
     | case_label
     {
-        $$ = new vector<CFEExpression*>();
-    $$->push_back($1);
+	$$ = new vector<CFEExpression*>();
+	$$->push_back($1);
     }
     ;
 
@@ -1437,7 +1491,7 @@ element_spec :
 enum_type :
       ENUM ID LBRACE enumerator_list rbrace
     {
-        $$ = new CFETaggedEnumType(string($2), $4);
+        $$ = new CFEEnumType(string($2), $4);
         $$->SetSourceLine(gLineNumber);
         delete $4;
     }
@@ -1569,36 +1623,37 @@ except_dcl :
 op_dcl :
       op_attribute op_type_spec ID parameter_dcls raises_expr context_expr
     {
-        // ignore the context
-    vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-    if ($1)
-        tmpVA->push_back($1);
-        $$ = new CFEOperation($2, string($3), $4, tmpVA, $5);
-        $$->SetSourceLine(gLineNumber);
-        // set parent relationship
-        $2->SetParent($$);
-        if ($1 != 0)
-        $1->SetParent($$);
-        if ($4)
-            delete $4;
-        delete $5;
-    delete $1;
+	// ignore the context
+	vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
+	if ($1)
+	    tmpVA->push_back($1);
+	$$ = new CFEOperation($2, string($3), $4, tmpVA, $5);
+	$$->SetSourceLine(gLineNumber);
+	// set parent relationship
+	$2->SetParent($$);
+	if ($1 != 0)
+	    $1->SetParent($$);
+	if ($4)
+	    delete $4;
+	delete $5;
+	delete $1;
+	delete tmpVA;
     }
     | op_attribute op_type_spec ID parameter_dcls context_expr
     {
-        // ignore the context
-    vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
-    if ($1)
-        tmpVA->push_back($1);
-        $$ = new CFEOperation($2, string($3), $4, tmpVA);
-        $$->SetSourceLine(gLineNumber);
-        // set parent relationship
-        $2->SetParent($$);
-        if ($1 != 0)
-            $1->SetParent($$);
-        if ($4)
-            delete $4;
-    delete tmpVA;
+	// ignore the context
+	vector<CFEAttribute*> *tmpVA = new vector<CFEAttribute*>();
+	if ($1)
+	    tmpVA->push_back($1);
+	$$ = new CFEOperation($2, string($3), $4, tmpVA);
+	$$->SetSourceLine(gLineNumber);
+	// set parent relationship
+	$2->SetParent($$);
+	if ($1 != 0)
+	    $1->SetParent($$);
+	if ($4)
+	    delete $4;
+	delete tmpVA;
     }
     ;
 
@@ -1660,7 +1715,7 @@ param_dcl    :
         $$ = new CFETypedDeclarator(TYPEDECL_PARAM, $2, tmp, $1);
         $$->SetSourceLine(gLineNumber);
         // check if OUT and reference
-        if ($$->FindAttribute(ATTR_OUT) != 0) {
+        if ($$->m_Attributes.Find(ATTR_OUT) != 0) {
             // because CORBA knows no pointers we have to add a reference
             $3->SetStars(1);
         }

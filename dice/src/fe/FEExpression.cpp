@@ -1,6 +1,6 @@
 /**
  *    \file    dice/src/fe/FEExpression.cpp
- *    \brief   contains the implementation of the class CFEExpression
+ *  \brief   contains the implementation of the class CFEExpression
  *
  *    \date    01/31/2001
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
@@ -29,7 +29,6 @@
 #include "fe/FEExpression.h"
 #include "File.h"
 #include <string>
-using namespace std;
 
 CFEExpression::CFEExpression()
 {
@@ -69,7 +68,7 @@ CFEExpression::~CFEExpression()
 }
 
 /** returns a reference to the string
- *    \return a reference to the string
+ *  \return a reference to the string
  */
 string CFEExpression::GetString()
 {
@@ -77,7 +76,7 @@ string CFEExpression::GetString()
 }
 
 /** returns the integer value
- *    \return the integer value (boolean values are casted into integer, string returns 0)
+ *  \return the integer value (boolean values are casted into integer, string returns 0)
  */
 long CFEExpression::GetIntValue()
 {
@@ -105,10 +104,10 @@ long CFEExpression::GetIntValue()
 }
 
 /** checks the type of the expression
- *    \param nType the type to check
- *    \return true if this expression is of the requested type.
+ *  \param nType the type to check
+ *  \return true if this expression is of the requested type.
  */
-bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
+bool CFEExpression::IsOfType(unsigned int nType)
 {
     switch (GetType())
     {
@@ -136,7 +135,7 @@ bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /** returns the type of the expression
- *    \return the type of the expression
+ *  \return the type of the expression
  */
 EXPR_TYPE CFEExpression::GetType()
 {
@@ -144,7 +143,7 @@ EXPR_TYPE CFEExpression::GetType()
 }
 
 /** retrieves the character of this expression
- *    \return the character of this expression
+ *  \return the character of this expression
  */
 char CFEExpression::GetChar()
 {
@@ -152,41 +151,11 @@ char CFEExpression::GetChar()
 }
 
 /** create a copy of this object
- *    \return a reference to the new object
+ *  \return a reference to the new object
  */
 CObject *CFEExpression::Clone()
 {
     return new CFEExpression(*this);
-}
-
-/** serialize this object
- *    \param pFile the file to serialize from/to
- */
-void CFEExpression::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-    {
-        switch (m_nType)
-        {
-        case EXPR_STRING:
-            pFile->PrintIndent("<expression>%s</expression>\n", m_String.c_str());
-            break;
-        case EXPR_CHAR:
-            pFile->PrintIndent("<expression>%c</expression>\n", m_Char);
-            break;
-        case EXPR_NULL:
-            pFile->PrintIndent("<expression>null</expression>\n");
-            break;
-        case EXPR_TRUE:
-            pFile->PrintIndent("<expression>true</expression>\n");
-            break;
-        case EXPR_FALSE:
-            pFile->PrintIndent("<expression>false</expression>\n");
-            break;
-        default:
-            break;
-        }
-    }
 }
 
 /** \brief print the object to a string

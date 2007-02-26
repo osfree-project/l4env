@@ -2,19 +2,19 @@
 PKGDIR       ?= ..
 L4DIR        ?= $(PKGDIR)/../../..
 
-SYSTEMS       = x86-l4v2 x86-l4x0
+SYSTEMS       = x86-l4v2
 
 # fs files
-FILES_DIR     ?= $(PKGDIR)/server/files
-FILES_LST     := $(FILES_DIR)/files.lst
-FILES         := $(shell cat $(FILES_LST))
-FILES_ofs     := $(addsuffix .ofs,$(FILES))
+FILES_DIR     ?= $(PKGDIR_ABS)/server/files
+FILES_LST      = $(FILES_DIR)/files.lst
+FILES          = $(shell cat $(FILES_LST))
+FILES_ofs      = $(addsuffix .ofs,$(FILES))
 
 SRC_C          = main.c basic_io.c resolve.c dirs.c arraylist.c state.c
 
 TARGET         = simple_file_server
 MODE           = l4env_minimal
-DEFAULT_RELOC  = 0x01200000
+DEFAULT_RELOC  = 0x01260000
 OBJS          += $(FILES_ofs)
 LIBS          += -ll4vfs_name_server -ll4vfs_name_space_provider  \
                  -ll4vfs_mmap_object_server-server                \
@@ -23,7 +23,7 @@ LIBS          += -ll4vfs_name_server -ll4vfs_name_space_provider  \
 
 SERVERIDL      = simple_file_server.idl
 
-PRIVATE_INCDIR = $(PKGDIR)/server/OBJ-$(SYSTEM)
+PRIVATE_INCDIR = $(PKGDIR_OBJ)/server/OBJ-$(SYSTEM)
 
 include $(L4DIR)/mk/prog.mk
 

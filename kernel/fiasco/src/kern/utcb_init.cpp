@@ -20,9 +20,12 @@ public:
 
 IMPLEMENTATION [utcb]:
 
+#include <feature.h>
 #include "cpu.h"
 #include "globals.h"
 #include "mem_layout.h"
+
+KIP_KERNEL_FEATURE("utcb");
 
 IMPLEMENTATION [!utcb]:
 

@@ -1,6 +1,8 @@
 #ifndef __BOOTSTRAP__GUNZIP_H__
 #define __BOOTSTRAP__GUNZIP_H__
 
+#include <l4/sys/l4int.h>
+
 typedef enum
 {
   ERR_NONE = 0,
@@ -9,7 +11,7 @@ typedef enum
 
 } grub_error_t;
 
-unsigned long gunzip_upper_mem_linalloc(void);
+l4_addr_t gunzip_upper_mem_linalloc(void);
 #define UPPER_MEM_LINALLOC gunzip_upper_mem_linalloc()
 
 #define RAW_ADDR(x) (x)

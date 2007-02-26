@@ -21,9 +21,12 @@ VERBOSE=	@
 
 TEXFILES=       dev-manual.tex version.tex commands.tex \
 		message-buffer.tex communication-level.tex \
-		functions.tex classes.tex parser.tex
+		functions.tex classes.tex parser.tex \
+		optimizations.tex
 BIBFILES=	dev-manual.bib
-FIGFILES=	images/functions.fig
+FIGFILES=	images/functions.fig images/msgbuf-classes.fig \
+		images/padding1.fig images/padding2.fig \
+		images/padding3.fig
 ALLFILES=	$(TEXFILES) $(BIBFILES) $(FIGFILES)
 EXTRA_DIST=     $(ALLFILES)
 SUFFIXES=       .tex .aux .bbl .toc .pdf .dvi .ps
@@ -88,9 +91,6 @@ all-local:      version.tex  $(manual_PDF)
 if HAS_FIG2DEV
 %.eps:  %.fig
 	$(VERBOSE)${FIG2DEV} -L ps -p dummy $< $*.eps ${NUMB_FIG2DEV}
-
-%.pdf:  %.fig
-	$(VERBOSE)${FIG2DEV} -L pdftex -p dummy $< $*.pdf ${NUMB_FIG2DEV}
 
 endif
 		

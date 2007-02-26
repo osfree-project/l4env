@@ -1,9 +1,9 @@
 /**
  *    \file    dice/src/be/l4/v4/L4V4BEClassFactory.cpp
- *    \brief    contains the implementation of the class CL4V4BEClassFactory
+ *  \brief   contains the implementation of the class CL4V4BEClassFactory
  *
  *    \date    01/06/2004
- *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -28,30 +28,26 @@
 
 #include "L4V4BEClassFactory.h"
 #include "L4V4BEIPC.h"
-#include "L4V4BEMarshaller.h"
 #include "L4V4BESizes.h"
-#include "L4V4BESndFunction.h"
 #include "L4V4BECallFunction.h"
-#include "L4V4BEMsgBufferType.h"
-#include "L4V4BETestMainFunction.h"
-#include "L4V4BETestServerFunction.h"
 #include "L4V4BEMarshalFunction.h"
 #include "L4V4BEWaitAnyFunction.h"
-#include "L4V4BEDispatchFunction.h"
+#include "L4V4BEWaitFunction.h"
+#include "L4V4BESndFunction.h"
+#include "L4V4BEMsgBuffer.h"
+#include "L4V4BETrace.h"
+#include "L4V4BEMarshaller.h"
 #include "L4V4BESrvLoopFunction.h"
 #include "be/BEContext.h"
+#include "Compiler.h"
+#include <iostream>
 
-CL4V4BEClassFactory::CL4V4BEClassFactory(bool bVerbose)
-: CL4BEClassFactory(bVerbose)
+CL4V4BEClassFactory::CL4V4BEClassFactory()
+: CL4BEClassFactory()
 {
 }
 
-CL4V4BEClassFactory::CL4V4BEClassFactory(CL4V4BEClassFactory & src)
-: CL4BEClassFactory(src)
-{
-}
-
-/**    \brief the destructor of this class */
+/** \brief the destructor of this class */
 CL4V4BEClassFactory::~CL4V4BEClassFactory()
 {
 }
@@ -61,19 +57,8 @@ CL4V4BEClassFactory::~CL4V4BEClassFactory()
  */
 CBECommunication* CL4V4BEClassFactory::GetNewCommunication()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEIPC\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V4BEClassFactory: created class CL4V4BEIPC\n");
     return new CL4V4BEIPC();
-}
-
-/** \brief create a new marshaller class
- *  \return a reference to the new instance
- */
-CBEMarshaller* CL4V4BEClassFactory::GetNewMarshaller(CBEContext* pContext)
-{
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEMarshaller\n");
-    return new CL4V4BEMarshaller();
 }
 
 /** \brief creates a new sizes class
@@ -81,8 +66,7 @@ CBEMarshaller* CL4V4BEClassFactory::GetNewMarshaller(CBEContext* pContext)
  */
 CBESizes* CL4V4BEClassFactory::GetNewSizes()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BESizes\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V4BEClassFactory: created class CL4V4BESizes\n");
     return new CL4V4BESizes();
 }
 
@@ -91,50 +75,9 @@ CBESizes* CL4V4BEClassFactory::GetNewSizes()
  */
 CBECallFunction* CL4V4BEClassFactory::GetNewCallFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BECallFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BECallFunction\n");
     return new CL4V4BECallFunction();
-}
-
-/** \brief creates a new send function class
- *  \return a reference to the new instance
- */
-CBESndFunction* CL4V4BEClassFactory::GetNewSndFunction()
-{
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BESndFunction\n");
-    return new CL4V4BESndFunction();
-}
-
-/** \brief creates a new message buffer type class
- *    \param bInterface true if msgbuf for interface, otherwise msgbuf for function
- *  \return a reference to the new instance
- */
-CBEMsgBufferType* CL4V4BEClassFactory::GetNewMessageBufferType(bool bInterface)
-{
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEMsgBufferType\n");
-    return new CL4V4BEMsgBufferType();
-}
-
-/** \brief creates a new instance of the class CBETestMainFunction
- *  \return a reference to the new instance
- */
-CBETestMainFunction *CL4V4BEClassFactory::GetNewTestMainFunction()
-{
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BETestMainFunction\n");
-    return new CL4V4BETestMainFunction();
-}
-
-/**    \brief creates a new instance of the class CBETestServerFunction
- *    \return a reference to the new instance
- */
-CBETestServerFunction *CL4V4BEClassFactory::GetNewTestServerFunction()
-{
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BETestServerFunction\n");
-    return new CL4V4BETestServerFunction();
 }
 
 /** \brief creates a new marshal function
@@ -142,8 +85,8 @@ CBETestServerFunction *CL4V4BEClassFactory::GetNewTestServerFunction()
  */
 CBEMarshalFunction* CL4V4BEClassFactory::GetNewMarshalFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEMarshalFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEMarshalFunction\n");
     return new CL4V4BEMarshalFunction();
 }
 
@@ -152,8 +95,8 @@ CBEMarshalFunction* CL4V4BEClassFactory::GetNewMarshalFunction()
  */
 CBEWaitAnyFunction* CL4V4BEClassFactory::GetNewWaitAnyFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEWaitAnyFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEWaitAnyFunction\n");
     return new CL4V4BEWaitAnyFunction(true, false);
 }
 
@@ -162,8 +105,8 @@ CBEWaitAnyFunction* CL4V4BEClassFactory::GetNewWaitAnyFunction()
  */
 CBEWaitAnyFunction* CL4V4BEClassFactory::GetNewRecvAnyFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEWaitAnyFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEWaitAnyFunction\n");
     return new CL4V4BEWaitAnyFunction(false, false);
 }
 
@@ -172,27 +115,78 @@ CBEWaitAnyFunction* CL4V4BEClassFactory::GetNewRecvAnyFunction()
  */
 CBEWaitAnyFunction *CL4V4BEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEReplyAnyWaitAnyFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEReplyAnyWaitAnyFunction\n");
     return new CL4V4BEWaitAnyFunction(true, true);
 }
 
-/** \brief creates a new dispatch function
+/** \brief creates a new send function
  *  \return a reference to the new instance
  */
-CBEDispatchFunction* CL4V4BEClassFactory::GetNewDispatchFunction()
+CBESndFunction* CL4V4BEClassFactory::GetNewSndFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BEDispatchFunction\n");
-    return new CL4V4BEDispatchFunction();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BESndFunction\n");
+    return new CL4V4BESndFunction();
 }
 
-/** \brief creates a new instance of the class CBESrvLoopFunction
- *  \return a reference to the new instance
+/** \brief creates a new receive function
+ *  \return a reference to the new receive function
  */
-CBESrvLoopFunction *CL4V4BEClassFactory::GetNewSrvLoopFunction()
+CBEWaitFunction * CL4V4BEClassFactory::GetNewRcvFunction()
 {
-    if (m_bVerbose)
-        printf("CL4V4BEClassFactory: created class CL4V4BESrvLoopFunction\n");
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEWaitFunction\n");
+    return new CL4V4BEWaitFunction(false);
+}
+
+/** \brief creates a new wait function
+ *  \return a reference to the new receive function
+ */
+CBEWaitFunction * CL4V4BEClassFactory::GetNewWaitFunction()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created class CL4V4BEWaitFunction\n");
+    return new CL4V4BEWaitFunction(true);
+}
+
+/** \brief creates a new instance of a message buffer
+ *  \return a reference to the newly created instance
+ */
+CBEMsgBuffer* CL4V4BEClassFactory::GetNewMessageBuffer()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created new instance of CL4V4BEMsgBuffer\n");
+    return new CL4V4BEMsgBuffer();
+}
+
+/** \brief creates a new instance of the tracing class
+ *  \return a reference to the newly created instance
+ */
+CBETrace* CL4V4BEClassFactory::GetNewTrace()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created new instance of CL4V4BETrace\n");
+    return new CL4V4BETrace();
+}
+
+/** \brief creates a new instance of a marshaller
+ *  \return a reference to the newly created instance
+ */
+CBEMarshaller* CL4V4BEClassFactory::GetNewMarshaller()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created new instance of CL4V4BEMarshaller\n");
+    return new CL4V4BEMarshaller();
+}
+
+/** \brief creates a new instance of a server loop function
+ *  \return a reference to the newly created instance
+ */
+CBESrvLoopFunction* CL4V4BEClassFactory::GetNewSrvLoopFunction()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4V4BEClassFactory: created new instance of CL4V4BESrvLoopFunction\n");
     return new CL4V4BESrvLoopFunction();
 }
+

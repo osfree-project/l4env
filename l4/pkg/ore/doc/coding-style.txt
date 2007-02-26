@@ -1,0 +1,1 @@
+see dietlibc/doc/coding_style.txt

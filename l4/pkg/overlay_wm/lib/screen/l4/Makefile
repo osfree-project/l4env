@@ -6,6 +6,7 @@ SRC_C          = init.c screen.c map.c
 CLIENTIDL      = overlay.idl
 PRIVATE_INCDIR = $(PKGDIR)/include \
                  $(PKGDIR)/lib/screen/include
+BUILD_PIC      = libl4ovlscreen.a
 
 vpath screen.c $(PKGDIR)/lib/screen/common
 

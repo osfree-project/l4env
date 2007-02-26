@@ -4,8 +4,6 @@
 
 . ${0%/*}/generic.inc
 
-RMGR_ARGS="task modname \"run\""
-
 fiasco \
 	-G $UXRES				\
 	-l names\ --events			\
@@ -14,7 +12,6 @@ fiasco \
 	-l dm_phys\ --events			\
 	-l simple_ts\ --events			\
 	-l fuxfprov -n10			\
-	-l con-ux\ --events			\
-	-l l4exec				\
+	-l con-ux\ --events -n11		\
 	-l loader" --events $L4PATH/run"	\
 	"$@"

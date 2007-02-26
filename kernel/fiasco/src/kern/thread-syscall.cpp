@@ -1,6 +1,5 @@
 INTERFACE:
 
-extern void (*syscall_table[])();
 class Sys_ex_regs_frame;
 
 
@@ -12,6 +11,7 @@ IMPLEMENTATION:
 
 #include "config.h"
 #include "entry_frame.h"
+#include "feature.h"
 #include "irq.h"
 #include "irq_alloc.h"
 #include "logdefs.h"
@@ -24,19 +24,7 @@ IMPLEMENTATION:
 #include "thread.h"
 #include "warn.h"
 
-void (*syscall_table[])() = 
-{ 
-  sys_ipc_wrapper,
-  sys_id_nearest_wrapper,
-  sys_fpage_unmap_wrapper,
-  sys_thread_switch_wrapper,
-  sys_thread_schedule_wrapper,
-  sys_thread_ex_regs_wrapper,
-  sys_task_new_wrapper,
-#ifdef CONFIG_PL0_HACK
-  sys_priv_control_wrapper,
-#endif
-};
+KIP_KERNEL_FEATURE("pagerexregs");
 
 /**
  * L4 system-call thread_switch.
@@ -70,7 +58,7 @@ Thread::sys_thread_switch()
     }
   else
     {
-      Thread *t = lookup (regs->dst());
+      Thread *t = lookup (regs->dst(), space());
 
       if (t && t != this && (t->state() & Thread_ready))
         {
@@ -94,13 +82,8 @@ Thread::sys_thread_switch()
   regs->ret (0);			// Success
 }
 
-extern "C"
-void
-sys_thread_switch_wrapper()
-{
-  Proc::sti();
-  current_thread()->sys_thread_switch();
-}
+extern "C" void sys_thread_switch_wrapper()
+{ Proc::sti(); current_thread()->sys_thread_switch(); }
 
 /*
  * Return current timesharing parameters
@@ -180,13 +163,8 @@ Thread::set_schedule_param (L4_sched_param param, unsigned short const id)
  */
 PRIVATE inline
 void
-Thread::set_preempter (L4_uid const preempter)
+Thread::set_preempter (Thread* p)
 {
-  if (EXPECT_FALSE (preempter.is_invalid()))
-    return;
-
-  Thread *p = lookup (preempter);
-
   if (p && p->exists())
     _ext_preempter = p;
 }
@@ -306,6 +284,62 @@ Thread::end_periodic()
   return 0;
 }
 
+
+PRIVATE inline
+bool
+Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
+				      L4_uid *dst_id, Thread **dst,
+				      Task **dst_task, Thread **dst_thread0)
+{
+  // inter-task ex-regs: also consider the task number
+  if (EXPECT_TRUE(!regs->task()
+	|| regs->task() == id().task()))
+    return true;		// local ex_regs
+
+  *dst_thread0 = lookup (L4_uid (regs->task(), 0), space());
+
+  if (!*dst_thread0)
+    return false;		// error
+
+  (*dst_thread0)->thread_lock()->lock();
+
+  // thread 0 of a task must be created with l4_task_new() ...
+  if (! (*dst_thread0)->exists())
+    {
+      (*dst_thread0)->thread_lock()->clear();
+      return false;		// error
+    }
+
+  // now we own the lock of thread 0 of the target task
+
+  // take thread 0 of target as the ID template
+  *dst_id = (*dst_thread0)->id();
+  dst_id->lthread(regs->lthread());
+
+  // Are we the pager of dst_id (just check address spaces)?
+  Thread *dst_check = *dst = id_to_tcb(*dst_id);
+
+  // if dst_check->_pager is nil (i.e. the destination thread does not
+  // exist), we check the pager of thread0 of that address space
+  if (!dst_check || !dst_check->_pager || !(*dst)->in_present_list())
+    dst_check = *dst_thread0;
+
+  if (dst_check->_pager->id().task() != id().task()
+#ifdef CONFIG_TASK_CAPS
+      && dst_check->_cap_handler->id().task() != id().task()
+#endif
+      )
+    {
+      WARN("Security violation: Not fault handler of %x.", dst_id->task());
+      (*dst_thread0)->thread_lock()->clear();
+      regs->old_eflags (~0U);
+      return false;		// error
+    }
+
+  *dst_task = (*dst_thread0)->task();
+  return true;			// success
+}
+
 /** L4 system call lthread_ex_regs.  */
 IMPLEMENT inline NOEXPORT ALWAYS_INLINE
 void
@@ -315,12 +349,11 @@ Thread::sys_thread_ex_regs()
   L4_uid dst_id  = id();
   dst_id.lthread (regs->lthread());
   Task *dst_task = _task;
-  Thread *dst    = lookup (dst_id), *dst_thread0 = 0;
+  Thread *dst    = lookup (dst_id, space()), *dst_thread0 = 0;
 
-  if (EXPECT_FALSE(handle_inter_task_ex_regs(regs, &dst_id, &dst,
-					     &dst_task, &dst_thread0)))
+  if (EXPECT_FALSE(! ex_regs_permission_inter_task(regs, &dst_id, &dst,
+						   &dst_task, &dst_thread0)))
     {
-      printf("failed\n");
       LOG_THREAD_EX_REGS_FAILED;
       return;
     }
@@ -344,7 +377,7 @@ Thread::sys_thread_ex_regs()
 
   // o_pager and o_preempter don't need to be initialized since they are
   // only evaluated if new_thread is false
-  Thread *o_pager;
+  Thread *o_pager, *o_cap_handler;
   Receiver *o_preempter;
   Mword o_flags;
 
@@ -357,35 +390,41 @@ Thread::sys_thread_ex_regs()
   // register parameters that have been passed to us to ``old'' values
   // (i.e., all zeroes)
   Mword o_ip, o_sp;
-  if (dst->initialize(regs->ip(), regs->sp(), 
-		      lookup (regs->pager()),
-		      lookup (regs->preempter()),
-		      new_thread ? 0 : & o_ip, & o_sp, 
-		      new_thread ? 0 : & o_pager, 
-		      new_thread ? 0 : & o_preempter, 
+  if (dst->initialize(regs->ip(), regs->sp(),
+		      lookup (regs->pager(), space()),
+		      lookup (regs->preempter(), space()),
+		      lookup (regs->cap_handler(utcb()), space()),
+		      new_thread ? 0 : & o_ip, & o_sp,
+		      new_thread ? 0 : & o_pager,
+		      new_thread ? 0 : & o_preempter,
+		      new_thread ? 0 : & o_cap_handler,
 		      new_thread ? 0 : & o_flags,
 		      regs->no_cancel(),
-		      regs->alien()))
+		      regs->alien(),
+		      regs->trigger_exception()))
     {
       if (new_thread)
 	{
 	  regs->old_eflags(0);
-	  goto fine;
+	}
+      else
+	{
+	  regs->old_sp        (o_sp);
+	  regs->old_ip        (o_ip >= Mem_layout::User_max ? ~0UL : o_ip);
+	  regs->old_pager     (o_pager ? o_pager->id() : L4_uid::Invalid);
+	  regs->old_preempter (o_preempter
+			       ? Thread::lookup (context_of (o_preempter))->id()
+			       : L4_uid::Invalid);
+	  regs->old_cap_handler (o_cap_handler 
+				   ? o_cap_handler->id() : L4_uid::Invalid,
+				 utcb());
+	  regs->old_eflags    (o_flags);
 	}
 
-      regs->old_sp        (o_sp);
-      regs->old_ip        (o_ip);
-      regs->old_pager     (o_pager ? o_pager->id() : L4_uid::Invalid);
-      regs->old_preempter (o_preempter
-                           ? Thread::lookup (context_of (o_preempter))->id()
-                           : L4_uid::Invalid);
-      regs->old_eflags    (o_flags);
-      goto fine;
     }
+  else
+    regs->old_eflags (~0U);	// error
 
-  regs->old_eflags (~0U);       // error
-
- fine:
   dst->thread_lock()->clear();
 }
 
@@ -396,7 +435,35 @@ Thread::sys_fpage_unmap()
 {
   Sys_unmap_frame *regs = sys_frame_cast<Sys_unmap_frame>(this->regs());
  
-  fpage_unmap (space(), regs->fpage(), regs->self_unmap(), regs->downgrade());
+  unsigned what = 0;
+
+  if (! regs->no_unmap())
+    {
+      if (regs->downgrade())
+	what |= Unmap_w;
+      else
+	what |= Unmap_w | Unmap_r;
+    }
+
+  if (regs->reset_references())
+    what |= Unmap_referenced | Unmap_dirty;
+
+  unsigned status = 0;
+
+  if (what)
+    {
+      unsigned flushed_rights = 
+	fpage_unmap (space(), regs->fpage(), regs->self_unmap(), 
+		     regs->self_unmap() ? 0 : regs->restricted(), what);
+
+      if (flushed_rights & Unmap_referenced)
+	status |= L4_fpage::Referenced;
+      
+      if (flushed_rights & Unmap_dirty)    
+	status |= L4_fpage::Dirty;
+    }
+
+  regs->ret (status);
 }
 
 /** L4 system call id_nearest.  */
@@ -445,7 +512,7 @@ Thread::sys_id_nearest()
 
       if (dst_task == chief_index()
 	  || Space_index_util::chief(dst_task) == chief_index()
-	  || Space_index_util::chief(dst_task) == space_index()) 
+	  || Space_index_util::chief(dst_task) == space_index())
 	{
 	  ret = L4_NC_SAME_CLAN;
 	  break;
@@ -476,16 +543,16 @@ Thread::sys_id_nearest()
     {
       *dst_id_long = partner->id();
       return partner->chief() == me->chief() ?
-        0 : (L4_IPC_REDIRECT_MASK 
-             | ((partner->chief() == me->space()) ? 
+        0 : (L4_IPC_REDIRECT_MASK
+             | ((partner->chief() == me->space()) ?
                 L4_IPC_SRC_MASK : 0));
     }
-  
+
   /* non-existent thread which would belong to our clan? */
   if (me->chief() == dst_id_long->id.chief())
     return 0;
 
-  /* target hasn't yet been assiged to a clan -- so it belongs to the 
+  /* target hasn't yet been assiged to a clan -- so it belongs to the
      outermost clan */
   if (me->nest() > 0)
     {
@@ -507,8 +574,8 @@ Thread::sys_thread_schedule()
 {
   Sys_thread_schedule_frame *regs = sys_frame_cast
  <Sys_thread_schedule_frame>(this->regs());
- 
-  Thread *dst = lookup (regs->dst());
+
+  Thread *dst = lookup (regs->dst(), space());
 
   if (EXPECT_FALSE (!dst))
     {
@@ -571,7 +638,7 @@ Thread::sys_thread_schedule()
             return;
 
          case 7:                       // change realtime timeslice
-           regs->old_param (dst->set_schedule_param (regs->param(), 
+           regs->old_param (dst->set_schedule_param (regs->param(),
 						     regs->param().small()));
            return;
 
@@ -589,7 +656,7 @@ Thread::sys_thread_schedule()
     update_consumed_time();
 
   // Set preempter
-  dst->set_preempter (regs->preempter());
+  dst->set_preempter (lookup (regs->preempter(), space()));
 
   // Setup return parameters
   regs->old_param     (param);
@@ -636,17 +703,17 @@ Thread::sys_task_new()
 	  // The subtask's address space has already been deleted by
 	  // kill_task().
 	}
-      
+
       if (!regs->has_pager())
 	{
 	  //
 	  // do not create a new task -- transfer ownership
 	  //
 	  L4_uid e = regs->new_chief();
-	  
+
 	  if (! si.set_chief(space_index(), Space_index(e.task())))
 	    break;		// someone else was faster
-	  
+
 	  id.lthread(0);
 	  id.chief(si.chief());
 	  reset_nest (id);
@@ -661,43 +728,49 @@ Thread::sys_task_new()
 	  regs->new_taskid(id);
 	  return;
 	}
-      
+
       //
       // create the task
       //
       task = new Task(taskno);
-      if (! task) 
+      if (! task)
 	break;
-      
+
       if (si.lookup() != task)
 	{
 	  // someone else has been faster that in creating this task!
-	  
+
 	  delete task;
 	  continue;		// try again
 	}
 
+      Thread* cap_handler = lookup (regs->cap_handler(utcb()), space());
+
       CNT_TASK_CREATE;
       task->initialize();
+      setup_task_caps (task, regs, cap_handler ? cap_handler->space() : 0);
 
       id.lthread(0);
       id.chief(space_index());
       update_nest (id);
-  
+
       //
       // create the first thread of the task
       //
-      Thread *t = lookup (id);
-      
+      Thread *t = id_to_tcb (id);
+
       Lock_guard <Thread_lock> guard (t->thread_lock());
-      
+
       check (new (id) Thread (task, id, sched()->prio(),
                               mcp() < regs->mcp() ? mcp() : regs->mcp())
 	     == t);
-      
-      check(t->initialize(regs->ip(), regs->sp(), lookup (regs->pager()), 0, 
-	    0, 0, 0, 0, 0, 0, regs->alien()));
-      
+
+      check(t->initialize(regs->ip(), regs->sp(), 
+			  lookup (regs->pager(), space()),
+			  0, cap_handler,
+			  0, 0, 0, 0, 0, 0, 0,
+			  regs->alien(), regs->trigger_exception()));
+
       return;
     }
 
@@ -706,7 +779,7 @@ Thread::sys_task_new()
   // return (Mword)-1;		// spec says return value is undefined!
 }
 
-// these wrappers must come last in the source so that the real sys-call 
+// these wrappers must come last in the source so that the real sys-call
 // implementations can be inlined by g++
 
 extern "C" void sys_fpage_unmap_wrapper()
@@ -735,15 +808,17 @@ IMPLEMENTATION [v2]:
 
 PRIVATE inline NOEXPORT
 void
-Thread::reset_nest (L4_uid id)
+Thread::reset_nest (L4_uid& id)
 { id.nest (0); }
 
 PRIVATE inline NOEXPORT
 void
-Thread::inc_nest (L4_uid id)
+Thread::inc_nest (L4_uid& id)
 { id.nest (id.nest() + 1); }
 
-PRIVATE inline NOEXPORT void Thread::update_nest (L4_uid id)
+PRIVATE inline NOEXPORT 
+void 
+Thread::update_nest (L4_uid& id)
 {
   id.nest ((nest() == 0 && space_index() == Config::boot_taskno)
 	   ? 0 : nest() + 1);
@@ -757,85 +832,19 @@ IMPLEMENTATION [x0]:
 
 PRIVATE inline NOEXPORT
 void
-Thread::reset_nest (L4_uid)
+Thread::reset_nest (L4_uid&)
 {}
 
 PRIVATE inline NOEXPORT
 void
-Thread::inc_nest (L4_uid)
+Thread::inc_nest (L4_uid&)
 {}
 
 PRIVATE inline NOEXPORT
 void
-Thread::update_nest (L4_uid)
+Thread::update_nest (L4_uid&)
 {}
 
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!syscall_iter]:
-
-PRIVATE inline ALWAYS_INLINE
-int
-Thread::handle_inter_task_ex_regs(Sys_ex_regs_frame *,
-				  L4_uid *, Thread **, Task **, Thread **)
-{
-  return 0;
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [syscall_iter]:
-
-#include <feature.h>
-KIP_KERNEL_FEATURE("pagerexregs");
-
-PRIVATE inline ALWAYS_INLINE
-int
-Thread::handle_inter_task_ex_regs(Sys_ex_regs_frame *regs,
-				  L4_uid *dst_id, Thread **dst,
-				  Task **dst_task, Thread **dst_thread0)
-{
-  // inter-task ex-regs: also consider the task number
-  if (EXPECT_TRUE(!regs->task()))
-    return 0; // local ex_regs
-
-  *dst_thread0 = lookup (L4_uid (regs->task(), 0));
-
-  if (!*dst_thread0)
-    return 1; // error
-
-  (*dst_thread0)->thread_lock()->lock();
-
-  // thread 0 of a task must be created with l4_task_new() ...
-  if (! (*dst_thread0)->exists())
-    {
-      (*dst_thread0)->thread_lock()->clear();
-      return 1; // error
-    }
-
-  // now we own the lock of thread 0 of the target task
-
-  // take thread 0 of target as the ID template
-  *dst_id = (*dst_thread0)->id();
-  dst_id->lthread(regs->lthread());
-
-  // Are we the pager of dst_id (just check address spaces)?
-  Thread *dst_check = *dst = lookup(*dst_id);
-
-  // if dst_check->_pager is nil (i.e. the destination thread does not
-  // exist), we check the pager of thread0 of that address space
-  if (!dst_check || !dst_check->_pager || !(*dst)->in_present_list())
-    dst_check = *dst_thread0;
-
-  if (dst_check->_pager->id().task() != id().task())
-    {
-      WARN("Security violation: Not pager of %x.", dst_id->task());
-      regs->old_eflags (~0U);
-      return 1; // error
-    }
-
-  *dst_task = (*dst_thread0)->task();
-  return 0; // success
-}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION[arm]:
@@ -853,7 +862,7 @@ Thread::round_quantum (Unsigned64 quantum)
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32,ux,amd64]:
 
 #include "mod32.h"
 

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEOperation.h
- *    \brief   contains the declaration of the class CFEOperation
+ *  \file    dice/src/fe/FEOperation.h
+ *  \brief   contains the declaration of the class CFEOperation
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -30,20 +30,20 @@
 #ifndef __DICE_FE_FEOPERATION_H__
 #define __DICE_FE_FEOPERATION_H__
 
-#include "fe/FEInterfaceComponent.h"
+#include "FEInterfaceComponent.h"
+#include "FEAttribute.h"
 #include "Attribute-Type.h" // needed for ATTR_TYPE
+#include "template.h"
 #include <string>
 #include <vector>
-using namespace std;
 
 class CFEIdentifier;
 class CFETypeSpec;
 class CFETypedDeclarator;
-class CFEAttribute;
 
-/**    \class CFEOperation
- *    \ingroup frontend
- *    \brief the description of a function in an interface
+/** \class CFEOperation
+ *  \ingroup frontend
+ *  \brief the description of a function in an interface
  *
  * This class is used to represent the functions of an interface. Do not mix with
  * CFEFunction.
@@ -69,34 +69,23 @@ public:
 
 protected:
     /** \brief copy constructor
-     *    \param src the source to copy from
+     *  \param src the source to copy from
      */
     CFEOperation(CFEOperation &src);
 
 // operations
 public:
-    virtual CFEIdentifier* GetNextRaisesDeclarator(vector<CFEIdentifier*>::iterator &iter);
-    virtual vector<CFEIdentifier*>::iterator GetFirstRaisesDeclarator();
-    virtual void Serialize(CFile *pFile);
-    virtual void Dump();
-    virtual CObject* Clone();
-    virtual void RemoveParameter(CFETypedDeclarator *pParam);
-    virtual void AddAttribute(CFEAttribute *pNewAttr);
-    virtual void RemoveAttribute(ATTR_TYPE eAttrType);
-    virtual void AddParameter(CFETypedDeclarator* pParam, bool bStart = false);
-    virtual bool CheckConsistency();
-    virtual CFEAttribute* FindAttribute(ATTR_TYPE eAttrType);
+    /** creates a copy of this object
+     *  \return a copy of this object
+     */
+    virtual CObject* Clone()
+    { return new CFEOperation(*this); }
 
-    virtual CFETypedDeclarator* FindParameter(string sName);
-    virtual CFEAttribute* GetNextAttribute(vector<CFEAttribute*>::iterator &iter);
-    virtual vector<CFEAttribute*>::iterator GetFirstAttribute();
-    virtual CFETypedDeclarator* GetNextParameter(vector<CFETypedDeclarator*>::iterator &iter);
-    virtual vector<CFETypedDeclarator*>::iterator GetFirstParameter();
-    virtual string GetName();
-    virtual CFETypeSpec* GetReturnType();
+    virtual void Accept(CVisitor&);
+    CFETypedDeclarator *FindParameter(string sName);
 
-protected:
-    virtual bool CheckAttributeParameters(CFETypedDeclarator *pParameter, ATTR_TYPE nAttribute, const char* sAttribute);
+    string GetName();
+    CFETypeSpec* GetReturnType();
 
 // attributes
 protected:
@@ -104,22 +93,24 @@ protected:
      *  \brief return type of the function
      */
     CFETypeSpec *m_pReturnType;
-    /** \var vector<CFEAttribute*> m_vOpAttributes
-     *  \brief the attributes of the function
-     */
-    vector<CFEAttribute*> m_vOpAttributes;
     /** \var string m_sOpName
      *  \brief the name of the function
      */
     string m_sOpName;
-    /** \var vector<CFETypedDeclarator*> m_vOpParameters
+
+public:
+    /** \var CSearchableCollection<CFEAttribute> m_Attributes
+     *  \brief the attributes of the function
+     */
+    CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
+    /** \var CSearchableCollection<CFETypedDeclarator> m_Parameters
      *  \brief the parameters of the function
      */
-    vector<CFETypedDeclarator*> m_vOpParameters;
-    /** \var vector<CFEIdentifier*> m_vRaisesDeclarators
+    CSearchableCollection<CFETypedDeclarator, string> m_Parameters;
+    /** \var CCollection<CFEIdentifier> m_RaisesDeclarators
      *  \brief the exception, which can be raised by the function
      */
-    vector<CFEIdentifier*> m_vRaisesDeclarators;
+    CCollection<CFEIdentifier> m_RaisesDeclarators;
 };
 
 #endif /* __DICE_FE_FEOPERATION_H__ */

@@ -1,6 +1,8 @@
 include/alloca.h
 include/assert.h
+include/atomic.h
 include/byteswap.h
+include/complex.h
 include/ctype.h
 include/dlfcn.h
 include/dirent.h
@@ -13,6 +15,8 @@ include/getopt.h
 include/grp.h
 include/inttypes.h
 include/langinfo.h
+include/libc-internal.h
+include/libc-symbols.h
 include/libgen.h
 include/libintl.h
 include/limits.h
@@ -23,9 +27,11 @@ include/memory.h
 include/netdb.h
 include/nl_types.h
 include/paths.h
+include/poll.h
 include/printf.h
 include/pwd.h
 include/resolv.h
+include/semaphore.h
 include/setjmp.h
 include/shadow.h
 include/signal.h
@@ -38,8 +44,11 @@ include/strings.h
 include/syslog.h
 include/termios.h
 include/time.h
-include/unistd.h
 include/ucontext.h
+include/unistd.h
+include/utime.h
+include/wchar.h
+include/wctype.h
 include/arpa/inet.h
 include/arpa/nameser.h
 include/arpa/nameser_compat.h
@@ -50,37 +59,45 @@ include/net/route.h
 include/netinet/ether.h
 include/netinet/if_ether.h
 include/netinet/in.h
+include/netinet/tcp.h
 include/rpc/netdb.h
 include/sys/bitypes.h
 include/sys/cdefs.h
 include/sys/dir.h
+include/sys/fcntl.h
 include/sys/file.h
 include/sys/ioctl.h
 include/sys/ipc.h
 include/sys/mman.h
 include/sys/mount.h
 include/sys/param.h
+include/sys/poll.h
 include/sys/resource.h
 include/sys/select.h
 include/sys/socket.h
+include/sys/soundcard.h
 include/sys/shm.h
 include/sys/stat.h
+include/sys/statfs.h
 include/sys/syslog.h
 include/sys/sysmacros.h
 include/sys/time.h
+include/sys/timeb.h
 include/sys/times.h
 include/sys/ttydefaults.h
 include/sys/types.h
 include/sys/utsname.h
 include/sys/uio.h
 include/sys/un.h
+include/sys/vfs.h
 include/sys/wait.h
-libc/inet/addr.c				inet_aton__FN
-libc/inet/addr.c				inet_addr__FN
-libc/inet/addr.c				inet_ntoa__FN
-libc/inet/addr.c				inet_makeaddr__FN
-libc/inet/addr.c				inet_lnaof__FN
-libc/inet/addr.c				inet_netof__FN
+libc/inet/addr.c
+libc/inet/inet_aton.c
+libc/inet/inet_addr.c
+libc/inet/inet_ntoa.c
+libc/inet/inet_makeaddr.c
+libc/inet/inet_lnaof.c
+libc/inet/inet_netof.c
 libc/inet/getnetent.c
 libc/inet/getnetbynm.c
 libc/inet/getnetbyad.c
@@ -95,57 +112,67 @@ libc/inet/in6_addr.c
 libc/inet/ether_addr.c
 libc/inet/ntohl.c
 libc/inet/ntop.c
-libc/inet/resolv.c				encodea__FN
-libc/inet/resolv.c				decodea__FN
-libc/inet/resolv.c				encoded__FN
-libc/inet/resolv.c				decoded__FN
-libc/inet/resolv.c				lengthd__FN
-libc/inet/resolv.c				encodeh__FN
-libc/inet/resolv.c				decodeh__FN
-libc/inet/resolv.c				encodep__FN
-libc/inet/resolv.c				decodep__FN
-libc/inet/resolv.c				encodeq__FN
-libc/inet/resolv.c				decodeq__FN
-libc/inet/resolv.c				lengthq__FN
-libc/inet/resolv.c				formquery__FN
-libc/inet/resolv.c				dnslookup__FN
-libc/inet/resolv.c				resolveaddress__FN
-libc/inet/resolv.c				opennameservers__FN
-libc/inet/resolv.c				closenameservers__FN
-libc/inet/resolv.c				resolvename__FN
-libc/inet/resolv.c				gethostbyname__FN
-libc/inet/resolv.c				res_init__FN
-libc/inet/resolv.c				res_query__FN
-libc/inet/resolv.c				gethostbyaddr__FN
-libc/inet/resolv.c				read_etc_hosts_r__FN
-libc/inet/resolv.c				get_hosts_byname_r__FN
-libc/inet/resolv.c				get_hosts_byaddr_r__FN
-libc/inet/resolv.c				gethostbyname2__FN
-libc/inet/resolv.c				gethostent__FN
-libc/inet/resolv.c				gethostbyname_r__FN
-libc/inet/resolv.c				gethostbyname2_r__FN
-libc/inet/resolv.c				gethostbyaddr_r__FN
-libc/inet/resolv.c				res_comp__FN
-libc/inet/resolv.c				ns_name__FN
-libc/pwd_grp/pwd_grp.c				getpwuid__FN
-libc/pwd_grp/pwd_grp.c				getpwuid_r__FN
-libc/pwd_grp/pwd_grp.c				__parsepwent__FN
-libc/pwd_grp/pwd_grp.c				__parsegrent__FN
-libc/pwd_grp/pwd_grp.c				__pgsreader__FN
+libc/inet/resolv.c
+libc/inet/encodea.c
+libc/inet/decodea.c
+libc/inet/encoded.c
+libc/inet/decoded.c
+libc/inet/lengthd.c
+libc/inet/encodeh.c
+libc/inet/decodeh.c
+libc/inet/encodep.c
+libc/inet/decodep.c
+libc/inet/encodeq.c
+libc/inet/decodeq.c
+libc/inet/lengthq.c
+libc/inet/formquery.c
+libc/inet/dnslookup.c
+libc/inet/resolveaddress.c
+libc/inet/opennameservers.c
+libc/inet/closenameservers.c
+libc/inet/resolvename.c
+libc/inet/gethostbyname.c
+libc/inet/res_init.c
+libc/inet/res_query.c
+libc/inet/gethostbyaddr.c
+libc/inet/read_etc_hosts_r.c
+libc/inet/get_hosts_byname_r.c
+libc/inet/get_hosts_byaddr_r.c
+libc/inet/gethostbyname2.c
+libc/inet/gethostent.c
+libc/inet/gethostbyname_r.c
+libc/inet/gethostbyname2_r.c
+libc/inet/gethostbyaddr_r.c
+libc/inet/res_comp.c
+libc/inet/ns_name.c
+libc/pwd_grp/pwd_grp.c
+libc/pwd_grp/getpwuid.c
+libc/pwd_grp/getpwuid_r.c
+libc/pwd_grp/getpwnam.c
+libc/pwd_grp/getpwnam_r.c
+libc/pwd_grp/getpwent.c
+libc/pwd_grp/getpwent_r.c
+libc/pwd_grp/pwd_grp_internal.c
+libc/pwd_grp/__parsepwent.c
+libc/pwd_grp/__parsegrent.c
+libc/pwd_grp/__pgsreader.c
 libc/unistd/getopt.c
+libc/unistd/getopt_int.h
 libc/signal/sigaddset.c
 libc/signal/sigandset.c
 libc/signal/sigdelset.c
 libc/signal/sigempty.c
 libc/signal/sigfillset.c
-libc/signal/sigempty.c
 libc/signal/sigismem.c
 libc/signal/sigsetops.c
 libc/signal/sigsetops.h
-libc/stdlib/atexit.c				atexit__FN
-libc/stdlib/atexit.c				onexit__FN
-libc/stdlib/atexit.c				__exit_handler__FN
-libc/stdlib/atexit.c				exit__FN
+libc/stdlib/_atexit.c
+libc/stdlib/atexit.c
+libc/stdlib/__cxa_atexit.c
+libc/stdlib/onexit.c
+libc/stdlib/__exit_handler.c
+libc/stdlib/div.c
+libc/stdlib/exit.c
 libc/stdlib/getenv.c
 libc/stdlib/malloc/calloc.c
 libc/stdlib/malloc/free.c
@@ -154,32 +181,41 @@ libc/stdlib/malloc/heap_alloc.c
 libc/stdlib/malloc/heap_alloc_at.c
 libc/stdlib/malloc/heap_free.c
 libc/stdlib/malloc/malloc.c
+libc/stdlib/malloc/malloc.h
 libc/stdlib/malloc/memalign.c
 libc/stdlib/malloc/realloc.c
+libc/stdlib/mblen.c
+libc/stdlib/mbstowcs.c
 libc/stdlib/posix_memalign.c
 libc/stdlib/rand.c
 libc/stdlib/random.c
 libc/stdlib/random_r.c
-libc/stdlib/stdlib.c				abs__FN
-libc/stdlib/stdlib.c				labs__FN
-libc/stdlib/stdlib.c				atoi__FN
-libc/stdlib/stdlib.c				atol__FN
-libc/stdlib/stdlib.c				strtol__FN
-libc/stdlib/stdlib.c				strtoul__FN
-libc/stdlib/stdlib.c				_stdlib_strto_l__FN
-libc/stdlib/stdlib.c				qsort__FN
-libc/stdlib/stdlib.c				bsearch__FN
-libc/stdlib/stdlib.c				llabs__FN
-libc/stdlib/stdlib.c				atoll__FN
-libc/stdlib/stdlib.c				strtoll__FN
-libc/stdlib/stdlib.c				strtoull__FN
-libc/stdlib/stdlib.c				_stdlib_strto_ll__FN
-libc/stdlib/stdlib.c				atof__FN
-libc/stdlib/strtod.c				strtod__FN
-libc/stdlib/strtod.c				strtof__FN
-libc/stdlib/strtod.c				strtold__FN
-libc/stdlib/strtod.c				__strtofpmax__FN
-libc/stdlib/strtod.c				__fp_range_check__FN
+libc/stdlib/realpath.c
+libc/stdlib/setenv.c
+libc/stdlib/stdlib.c
+libc/stdlib/abs.c
+libc/stdlib/labs.c
+libc/stdlib/atoi.c
+libc/stdlib/atol.c
+libc/stdlib/strtol.c
+libc/stdlib/strtoul.c
+libc/stdlib/_stdlib_mb_cur_max.c
+libc/stdlib/_stdlib_strto_l.c
+libc/stdlib/qsort.c
+libc/stdlib/bsearch.c
+libc/stdlib/llabs.c
+libc/stdlib/atoll.c
+libc/stdlib/strtoll.c
+libc/stdlib/strtoull.c
+libc/stdlib/_stdlib_strto_ll.c
+libc/stdlib/atof.c
+libc/stdlib/_strtod.c
+libc/stdlib/strtod.c
+libc/stdlib/strtof.c
+libc/stdlib/strtold.c
+libc/stdlib/wcstombs.c
+libc/stdlib/__strtofpmax.c
+libc/stdlib/__fp_range_check.c
 libc/stdio/_adjust_pos.c
 libc/stdio/_cs_funcs.c
 libc/stdio/_fopen.c
@@ -212,14 +248,15 @@ libc/stdio/fflush.c				fflush__DO_UNLOCKED
 libc/stdio/fgetc.c
 libc/stdio/fgetc.c				fgetc__DO_UNLOCKED
 libc/stdio/fgetpos.c
-libc/stdio/fgetpos.c				fgetpos64__DO_LARGEFILE
+libc/stdio/fgetpos64.c
 libc/stdio/fgets.c
 libc/stdio/fgets.c				fgets__DO_UNLOCKED
 libc/stdio/fileno.c
 libc/stdio/fileno.c				fileno__DO_UNLOCKED
 libc/stdio/fopen.c
+libc/stdio/fopen64.c
 libc/stdio/freopen.c
-libc/stdio/freopen.c				freopen64__DO_LARGEFILE
+libc/stdio/freopen64.c
 libc/stdio/fputs.c
 libc/stdio/fputs.c				fputs__DO_UNLOCKED
 libc/stdio/fputc.c
@@ -228,11 +265,11 @@ libc/stdio/fprintf.c
 libc/stdio/fread.c
 libc/stdio/fread.c				fread__DO_UNLOCKED
 libc/stdio/fseeko.c
-libc/stdio/fseeko.c				fseeko64__DO_LARGEFILE
+libc/stdio/fseeko64.c
 libc/stdio/fsetpos.c
-libc/stdio/fsetpos.c				fsetpos64__DO_LARGEFILE
+libc/stdio/fsetpos64.c
 libc/stdio/ftello.c
-libc/stdio/ftello.c				ftello64__DO_LARGEFILE
+libc/stdio/ftello64.c
 libc/stdio/fwrite.c
 libc/stdio/fwrite.c				fwrite__DO_UNLOCKED
 libc/stdio/perror.c
@@ -242,85 +279,89 @@ libc/stdio/putchar.c				putchar__DO_UNLOCKED
 libc/stdio/puts.c
 libc/stdio/remove.c
 libc/stdio/rewind.c
-libc/stdio/scanf.c				vfscanf__FN
-libc/stdio/scanf.c				__scan_cookie__FN
-libc/stdio/scanf.c				__psfs_parse_spec__FN
-libc/stdio/scanf.c				__psfs_do_numeric__FN
-libc/stdio/scanf.c				scanf__FN
-libc/stdio/scanf.c				sscanf__FN
-libc/stdio/scanf.c				fscanf__FN
-libc/stdio/scanf.c				vscanf__FN
-libc/stdio/scanf.c				vsscanf__FN
+libc/stdio/_scanf.c
+libc/stdio/vfscanf.c
+libc/stdio/__scan_cookie.c
+libc/stdio/__psfs_parse_spec.c
+libc/stdio/__psfs_do_numeric.c
+libc/stdio/scanf.c
+libc/stdio/sscanf.c
+libc/stdio/fscanf.c
+libc/stdio/vscanf.c
+libc/stdio/vsscanf.c
 libc/stdio/setvbuf.c
 libc/stdio/snprintf.c
 libc/stdio/sprintf.c
 libc/stdio/ungetc.c
 libc/stdio/vasprintf.c
 libc/stdio/vdprintf.c
-libc/stdio/vfprintf.c				vfprintf__FN
-libc/stdio/vfprintf.c				_ppfs_init__FN
-libc/stdio/vfprintf.c				_ppfs_prepargs__FN
-libc/stdio/vfprintf.c				_ppfs_setargs__FN
-libc/stdio/vfprintf.c				_ppfs_parsespec__FN
-libc/stdio/vfprintf.c				_register_printf_function__FN
-libc/stdio/vfprintf.c				_parse_printf_format__FN
+libc/stdio/_vfprintf.c
+libc/stdio/vfprintf.c
+libc/stdio/_ppfs_init.c
+libc/stdio/_ppfs_prepargs.c
+libc/stdio/_ppfs_setargs.c
+libc/stdio/_ppfs_parsespec.c
+libc/stdio/_register_printf_function.c
+libc/stdio/_parse_printf_format.c
 libc/stdio/vsnprintf.c
 libc/stdio/vsprintf.c
 libc/stdio/vprintf.c
-libc/string/wstring.c				basename__FN
-libc/string/wstring.c				dirname__FN
-libc/string/wstring.c				ffs__FN
-libc/string/wstring.c				memccpy__FN
-libc/string/wstring.c				stpcpy__FN
-libc/string/wstring.c				stpncpy__FN
-libc/string/wstring.c				strcasecmp__FN
-libc/string/wstring.c				strcasestr__FN
-libc/string/wstring.c				strdup__FN
-libc/string/wstring.c				strerror__FN
-libc/string/wstring.c				__xpg_strerror_r__FN
-libc/string/wstring.c				_string_syserrmsgs__FN
-libc/string/wstring.c				__glibc_strerror_r__FN
-libc/string/wstring.c				_string_syssigmsgs__FN
-libc/string/wstring.c				sys_siglist__FN
-libc/string/wstring.c				strsignal__FN
-libc/string/wstring.c				psignal__FN
-libc/string/wstring.c				__xpg_basename__FN
-libc/string/wstring.c				strlcat__FN
-libc/string/wstring.c				strlcpy__FN
-libc/string/wstring.c				sys_errlist__FN
-libc/string/wstring.c				strpbrk__FN
-libc/string/wstring.c				strndup__FN
-libc/string/wstring.c                           strncasecmp__FN
-libc/string/wstring.c				strtok__FN
+libc/string/_string.h
+libc/string/_syserrmsg.h
+libc/string/basename.c
+libc/string/dirname.c
+libc/string/ffs.c
+libc/string/memccpy.c
+libc/string/stpcpy.c
+libc/string/stpncpy.c
+libc/string/strcasecmp.c
+libc/string/strcasestr.c
+libc/string/strdup.c
+libc/string/strerror.c
+libc/string/__xpg_strerror_r.c
+libc/string/_string_syserrmsgs.c
+libc/string/__glibc_strerror_r.c
+libc/string/_string_syssigmsgs.c
+libc/string/sys_siglist.c
+libc/string/strsignal.c
+libc/string/psignal.c
+libc/string/__xpg_basename.c
+libc/string/strlcat.c
+libc/string/strlcpy.c
+libc/string/sys_errlist.c
+libc/string/strpbrk.c
+libc/string/strndup.c
+libc/string/strncasecmp.c
+libc/string/strtok.c
 libc/misc/assert/__assert.c
-libc/misc/ctype/ctype.c				isalnum__FN
-libc/misc/ctype/ctype.c				isalpha__FN
-libc/misc/ctype/ctype.c				isascii__FN
-libc/misc/ctype/ctype.c				iscntrl__FN
-libc/misc/ctype/ctype.c				isdigit__FN
-libc/misc/ctype/ctype.c				isgraph__FN
-libc/misc/ctype/ctype.c				islower__FN
-libc/misc/ctype/ctype.c				isprint__FN
-libc/misc/ctype/ctype.c				ispunct__FN
-libc/misc/ctype/ctype.c				isspace__FN
-libc/misc/ctype/ctype.c				isupper__FN
-libc/misc/ctype/ctype.c				isxdigit__FN
-libc/misc/ctype/ctype.c				toascii__FN
-libc/misc/ctype/ctype.c				tolower__FN
-libc/misc/ctype/ctype.c				toupper__FN
-libc/misc/ctype/ctype.c				isblank__FN
-libc/misc/ctype/ctype.c				isxlower__FN
-libc/misc/ctype/ctype.c				isxupper__FN
-libc/misc/ctype/ctype.c				__C_ctype_b__FN
-libc/misc/ctype/ctype.c				__C_ctype_tolower__FN
-libc/misc/ctype/ctype.c				__C_ctype_toupper__FN
-libc/misc/ctype/ctype.c				__ctype_b_loc__FN
-libc/misc/ctype/ctype.c				__ctype_tolower_loc__FN
-libc/misc/ctype/ctype.c				__ctype_toupper_loc__FN
-libc/misc/ctype/ctype.c				__ctype_assert__FN
-libc/misc/ctype/ctype.c				isctype__FN
+libc/misc/ctype/ctype.c
+libc/misc/ctype/isalnum.c
+libc/misc/ctype/isalpha.c
+libc/misc/ctype/isascii.c
+libc/misc/ctype/iscntrl.c
+libc/misc/ctype/isdigit.c
+libc/misc/ctype/isgraph.c
+libc/misc/ctype/islower.c
+libc/misc/ctype/isprint.c
+libc/misc/ctype/ispunct.c
+libc/misc/ctype/isspace.c
+libc/misc/ctype/isupper.c
+libc/misc/ctype/isxdigit.c
+libc/misc/ctype/toascii.c
+libc/misc/ctype/tolower.c
+libc/misc/ctype/toupper.c
+libc/misc/ctype/isblank.c
+libc/misc/ctype/isxlower.c
+libc/misc/ctype/isxupper.c
+libc/misc/ctype/__C_ctype_b.c
+libc/misc/ctype/__C_ctype_tolower.c
+libc/misc/ctype/__C_ctype_toupper.c
+libc/misc/ctype/__ctype_b_loc.c
+libc/misc/ctype/__ctype_tolower_loc.c
+libc/misc/ctype/__ctype_toupper_loc.c
+libc/misc/ctype/__ctype_assert.c
+libc/misc/ctype/isctype.c
 libc/misc/dirent/alphasort.c
-libc/misc/dirent/alphasort64.c
 libc/misc/dirent/alphasort64.c
 libc/misc/dirent/closedir.c
 libc/misc/dirent/dirfd.c
@@ -335,35 +376,50 @@ libc/misc/dirent/scandir.c
 libc/misc/dirent/seekdir.c
 libc/misc/dirent/telldir.c
 libc/misc/dirent/scandir64.c
-libc/misc/locale/locale.c                       nl_langinfo__FN
-libc/misc/locale/locale.c                       setlocale__FN
+libc/misc/locale/locale.c
+libc/misc/locale/localeconv.c
+libc/misc/locale/nl_langinfo.c
+libc/misc/locale/setlocale.c
 libc/misc/internals/errno.c
-libc/misc/time/time.c                           asctime__FN
-libc/misc/time/time.c                           asctime_r__FN
-libc/misc/time/time.c                           ctime__FN
-libc/misc/time/time.c                           ctime_r__FN
-libc/misc/time/time.c                           gmtime__FN
-libc/misc/time/time.c                           gmtime_r__FN
-libc/misc/time/time.c                           localtime__FN
-libc/misc/time/time.c                           localtime_r__FN
-libc/misc/time/time.c                           mktime__FN
-libc/misc/time/time.c                           strftime__FN
-libc/misc/time/time.c                           strptime__FN
-libc/misc/time/time.c                           tzset__FN
-libc/misc/time/time.c                           _time_t2tm__FN
-libc/misc/time/time.c                           __time_tm__FN
-libc/misc/time/time.c                           _time_mktime__FN
-libc/misc/time/time.c                           dysize__FN
-libc/misc/time/time.c                           timegm__FN
-libc/misc/time/time.c                           _time_mktime_tzi__FN
-libc/misc/time/time.c                           _time_localtime_tzi__FN
-libc/misc/time/time.c                           difftime__FN
+libc/misc/time/time.c
+libc/misc/time/asctime.c
+libc/misc/time/asctime_r.c
+libc/misc/time/ctime.c
+libc/misc/time/ctime_r.c
+libc/misc/time/gmtime.c
+libc/misc/time/gmtime_r.c
+libc/misc/time/localtime.c
+libc/misc/time/localtime_r.c
+libc/misc/time/mktime.c
+libc/misc/time/strftime.c
+libc/misc/time/strptime.c
+libc/misc/time/tzset.c
+libc/misc/time/_time_t2tm.c
+libc/misc/time/__time_tm.c
+libc/misc/time/_time_mktime.c
+libc/misc/time/dysize.c
+libc/misc/time/timegm.c
+libc/misc/time/_time_mktime_tzi.c
+libc/misc/time/_time_localtime_tzi.c
+libc/misc/time/difftime.c
+libc/misc/wchar/mbrlen.c
+libc/misc/wchar/mbrtowc.c
+libc/misc/wchar/mbsnrtowcs.c
+libc/misc/wchar/mbsrtowcs.c
+libc/misc/wchar/wchar.c
+libc/misc/wchar/wcrtomb.c
+libc/misc/wchar/wcsnrtombs.c
+libc/misc/wchar/wcsrtombs.c
 libc/sysdeps/linux/common/longjmp.c
 libc/sysdeps/linux/common/getcwd.c
+libc/sysdeps/linux/common/bits/cmathcalls.h
 libc/sysdeps/linux/common/bits/dlfcn.h
 libc/sysdeps/linux/common/bits/ipc.h
 libc/sysdeps/linux/common/bits/shm.h
+libc/sysdeps/linux/common/bits/statfs.h
+libc/sysdeps/linux/common/bits/wchar.h
 libc/sysdeps/linux/common/bits/uClibc_stdio.h
+libc/sysdeps/linux/common/bits/uClibc_uwchar.h
 libc/termios/kernel_termios.h
 libc/termios/tcgetattr.c
 libc/termios/tcsetattr.c

@@ -83,7 +83,7 @@ static int __io_mapping(l4io_info_t **addr)
     *addr = &io_info;
 
   /* request io info page */
-  rfp = l4_fpage((l4_uint32_t)*addr, L4_LOG2_PAGESIZE, 0, 0);
+  rfp = l4_fpage((l4_umword_t)*addr, L4_LOG2_PAGESIZE, 0, 0);
 
   /* XXX who'll get this page afterwards? */
   l4_fpage_unmap(rfp, L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
@@ -127,12 +127,12 @@ static int __io_mapping(l4io_info_t **addr)
     }
 
   LOGd(CONFIG_LOG_INFOPAGE_MAPPING,
-       "magic: %08x (%c%c%c%c)",
+       "magic: %08lx (%c%c%c%c)",
        (*addr)->magic,
-       ((*addr)->magic) >> 24,
-       ((*addr)->magic) >> 16 & 0xff,
-       ((*addr)->magic) >> 8 & 0xff,
-       ((*addr)->magic) & 0xff);
+       (char)(((*addr)->magic) >> 24),
+       (char)(((*addr)->magic) >> 16 & 0xff),
+       (char)(((*addr)->magic) >> 8 & 0xff),
+       (char)(((*addr)->magic) & 0xff));
 
   return 0;
 }
@@ -166,7 +166,7 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t type)
 
   /* check sanity of param */
   if (!io_info_addr ||
-      (((l4_uint32_t)*io_info_addr & ~L4_PAGEMASK) && (*io_info_addr != (void*)-1)))
+      (((l4_umword_t)*io_info_addr & ~L4_PAGEMASK) && (*io_info_addr != (void*)-1)))
     return -L4_EINVAL;
 
   /* query for io @ names */

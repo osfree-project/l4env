@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libfoo_dyn.s.so
 MODE		= l4env
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2
 OBJS		= foo.s.o
 
 include $(L4DIR)/mk/lib.mk

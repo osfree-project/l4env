@@ -4,6 +4,8 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= logcon
 LIBS		= -u putchar -u puts -lcontxt -lcon -lconstream-server
 DEFAULT_RELOC	= 0x00300000
+SERVERIDL	= log.idl
+IDL_PKGDIR	= $(PKGDIR_OBJ)/../log
 
 SRC_C		= main.c
 

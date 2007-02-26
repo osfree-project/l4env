@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  * Creative YUV (CYUV) Video Decoder
  *   by Mike Melanson (melanson@pcisys.net)
@@ -24,10 +24,10 @@
  */
 
 /**
- * @file cyuv.c 
+ * @file cyuv.c
  * Creative YUV (CYUV) Video Decoder.
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +51,9 @@ static int cyuv_decode_init(AVCodecContext *avctx)
 
     s->avctx = avctx;
     s->width = avctx->width;
+    /* width needs to be divisible by 4 for this codec to work */
+    if (s->width & 0x3)
+        return -1;
     s->height = avctx->height;
     avctx->pix_fmt = PIX_FMT_YUV411P;
     avctx->has_b_frames = 0;
@@ -58,7 +61,7 @@ static int cyuv_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int cyuv_decode_frame(AVCodecContext *avctx, 
+static int cyuv_decode_frame(AVCodecContext *avctx,
                              void *data, int *data_size,
                              uint8_t *buf, int buf_size)
 {
@@ -81,14 +84,12 @@ static int cyuv_decode_frame(AVCodecContext *avctx,
     unsigned char cur_byte;
     int pixel_groups;
 
-    *data_size = 0;
-
     /* sanity check the buffer size: A buffer has 3x16-bytes tables
      * followed by (height) lines each with 3 bytes to represent groups
      * of 4 pixels. Thus, the total size of the buffer ought to be:
      *    (3 * 16) + height * (width * 3 / 4) */
     if (buf_size != 48 + s->height * (s->width * 3 / 4)) {
-      printf ("ffmpeg: cyuv: got a buffer with %d bytes when %d were expected\n",
+      av_log(avctx, AV_LOG_ERROR, "ffmpeg: cyuv: got a buffer with %d bytes when %d were expected\n",
         buf_size,
         48 + s->height * (s->width * 3 / 4));
       return -1;
@@ -100,9 +101,10 @@ static int cyuv_decode_frame(AVCodecContext *avctx,
     if(s->frame.data[0])
         avctx->release_buffer(avctx, &s->frame);
 
+    s->frame.buffer_hints = FF_BUFFER_HINTS_VALID;
     s->frame.reference = 0;
     if(avctx->get_buffer(avctx, &s->frame) < 0) {
-        printf( "get_buffer() failed\n");
+        av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return -1;
     }
 
@@ -112,7 +114,7 @@ static int cyuv_decode_frame(AVCodecContext *avctx,
 
     /* iterate through each line in the height */
     for (y_ptr = 0, u_ptr = 0, v_ptr = 0;
-         y_ptr < (s->height * s->frame.linesize[0]); 
+         y_ptr < (s->height * s->frame.linesize[0]);
          y_ptr += s->frame.linesize[0] - s->width,
          u_ptr += s->frame.linesize[1] - s->width / 4,
          v_ptr += s->frame.linesize[2] - s->width / 4) {
@@ -180,7 +182,7 @@ AVCodec cyuv_decoder = {
     NULL,
     cyuv_decode_end,
     cyuv_decode_frame,
-    0,
+    CODEC_CAP_DR1,
     NULL
 };
 

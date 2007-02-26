@@ -69,16 +69,3 @@ CFEAttribute *CFEPtrDefaultAttribute::GetPtrAttribute()
 {
     return m_pPtrAttr;
 }
-
-/** serialize this object
- *  \param pFile the file to serialize to/from
- */
-void CFEPtrDefaultAttribute::Serialize(CFile * pFile)
-{
-    if (pFile->IsStoring())
-      {
-      pFile->PrintIndent("<attribute>ptr_default(\n");
-      GetPtrAttribute()->Serialize(pFile);
-      pFile->PrintIndent(")</attribute>\n");
-      }
-}

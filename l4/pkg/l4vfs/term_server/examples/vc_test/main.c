@@ -48,10 +48,10 @@ char LOG_tag[9]="vc_test";
 //#define SIMPLE_TEST
 //#define PRINT_TEST
 //#define MOVE_TEST
-//#define ANIMATION_TEST
+#define ANIMATION_TEST
 //#define CURSOR_TEST
 //#define CUR_STORE_TEST
-#define FOPEN_TEST
+//#define FOPEN_TEST
 
 void *CORBA_alloc(unsigned long size)
 {
@@ -221,11 +221,11 @@ int main(int argc, char* argv[])
     ret2 = open("/test3/vc0", O_WRONLY);
     LOG("opened vc0: in: %d, out: %d, errno=%d", ret, ret2, errno);
 
-    file = fopen("/server/Mr_Pumpkin", "r");
+/*    file = fopen("/server/Mr_Pumpkin", "r");
     if (file != NULL)
         LOG("fopened Mr_Pumpkin: %p", file);
     else
-        LOG("failed to open Mr_Pumpkin.");
+        LOG("failed to open Mr_Pumpkin.");*/
     
 #ifdef SIMPLE_TEST
     printf("Hello World!\n");

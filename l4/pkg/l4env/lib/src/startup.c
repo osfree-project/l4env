@@ -1,14 +1,14 @@
 /* $Id$ */
 /**
- * \file   l4env/lib/src/startup.c  
+ * \file   l4env/lib/src/startup.c
  * \brief  Task startup (static version).
  *
  * \date   09/11/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *         Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
- * L4Env task startup code, basic OSKit 1.0 support.
- * Version for static linking (used by tftp, exec, loader, ...) */
+ * L4Env task startup code.
+ * Version for static linking */
 
 /* (c) 2003 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
@@ -35,8 +35,8 @@
 #include <l4/exec/exec.h>
 
 /* binary test/data segments from linker script */
-extern char _prog_img_start;
-extern char _prog_img_end;
+extern l4_uint8_t _prog_img_start __attribute__((weak));
+extern l4_uint8_t _prog_img_end   __attribute__((weak));
 
 /* exported symbols */
 l4util_mb_info_t *l4env_multiboot_info;
@@ -91,19 +91,20 @@ __setup_fixed(void)
       int i;
 
 #ifdef DEBUG
-      printf("Startup: Found %d sections\n", l4env_infopage->section_num);
+      LOG_printf("Startup: Found %d sections\n", l4env_infopage->section_num);
 #endif
       /* Attach all sections passed from the loader */
       for (i=0; i<l4env_infopage->section_num; i++)
 	{
 	  fixed[num_fixed].addr = l4env_infopage->section[i].addr;
 	  fixed[num_fixed].size = l4env_infopage->section[i].size;
-	  fixed_type[num_fixed] = 
+	  fixed_type[num_fixed] =
 	    l4dm_is_invalid_ds(l4env_infopage->section[i].ds)
 	       ? L4RM_REGION_PAGER
 	       : L4RM_REGION_DATASPACE;
 #ifdef DEBUG
-	  printf("  %08x-%08x at "l4util_idfmt" type %04x\n",
+	  LOG_printf("  "l4_addr_fmt"-"l4_addr_fmt" at "l4util_idfmt
+	             " type %04x\n",
 	      fixed[num_fixed].addr,
 	      fixed[num_fixed].addr+fixed[num_fixed].size,
 	      l4util_idstr(l4env_infopage->section[i].ds.manager),
@@ -128,11 +129,20 @@ __setup_fixed(void)
   else
     {
       /* program text and data sections */
-      fixed[num_fixed].addr = l4_trunc_page(&_prog_img_start);
-      fixed[num_fixed].size = l4_round_page(&_prog_img_end)
-			    - l4_trunc_page(&_prog_img_start);
-      fixed_type[num_fixed] = L4RM_REGION_PAGER;
-      num_fixed++;
+      if (&_prog_img_start && &_prog_img_end)
+	{
+	  fixed[num_fixed].addr = l4_trunc_page(&_prog_img_start);
+	  fixed[num_fixed].size = l4_round_page(&_prog_img_end)
+				   - l4_trunc_page(&_prog_img_start);
+	  fixed_type[num_fixed] = L4RM_REGION_PAGER;
+	  num_fixed++;
+	}
+      else
+	{
+	  /* can only happen if we are not linked using main_stat.ld nor
+	   * main_dyn.ld */
+	  LOG_printf("Warning: _prog_img_start/_prog_img_end not defined!\n");
+	}
 
       /* RMGR/Loader trampoline page */
       fixed[num_fixed].addr = l4_trunc_page(crt0_tramppage);
@@ -150,11 +160,13 @@ __setup_fixed(void)
 	}
     }
 
+#ifndef ARCH_arm
   /* adapter area (BIOS, graphics memory) */
   fixed[num_fixed].addr = 0xA0000;
   fixed[num_fixed].size = 0x100000 - 0xA0000;
   fixed_type[num_fixed] = L4RM_REGION_PAGER;
   num_fixed++;
+#endif
 
   /* areas where our modules (e.g. files for memfs) live */
   if (l4env_multiboot_info->flags & L4UTIL_MB_MODS)
@@ -162,17 +174,17 @@ __setup_fixed(void)
       l4_umword_t i;
       l4util_mb_mod_t *m;
 
-      m = (l4util_mb_mod_t*) (l4env_multiboot_info->mods_addr);
+      m = (l4util_mb_mod_t*)(l4_addr_t) (l4env_multiboot_info->mods_addr);
 
       for (i=0; i<l4env_multiboot_info->mods_count; i++,m++)
 	{
-     	  l4_addr_t addr     = l4_trunc_page(m->mod_start);
+	  l4_addr_t addr     = l4_trunc_page(m->mod_start);
 	  l4_addr_t end_addr = l4_round_page(m->mod_end);
 	  l4_addr_t size     = end_addr - addr;
 
 	  if (num_fixed == MAX_FIXED)
 	    {
-	      printf("Startup: too many modules!\n");
+	      LOG_printf("Startup: too many modules!\n");
 	      enter_kdebug("PANIC");
 	      return;
 	    }
@@ -198,7 +210,12 @@ __main(void)
 {
   int ret, i, j;
   l4_umword_t dummy;
-  l4_threadid_t preempter,pager;
+  l4_threadid_t preempter, pager;
+  l4_addr_t stack_low, stack_high;
+
+#if defined(ARCH_x86) && defined(__PIC__)
+  l4sys_fixup_abs_syscalls();
+#endif
 
   if (crt0_multiboot_flag == ~(L4UTIL_MB_VALID))
     {
@@ -209,7 +226,7 @@ __main(void)
   /* parse command line and initialize l4util_argc/l4util_argv */
   l4util_mbi_to_argv(crt0_multiboot_flag, crt0_multiboot_info);
 
-  /* set pointer to multiboot info */  
+  /* set pointer to multiboot info */
   l4env_multiboot_info = (l4util_mb_info_t*) crt0_multiboot_info;
 
   /* Setup the LOG tag in the log library */
@@ -227,7 +244,7 @@ __main(void)
   /* init region mapper */
   if ((ret = l4rm_init(1, fixed, num_fixed)) < 0)
     {
-      printf("Startup: setup region mapper failed (%d)!\n",ret);
+      LOG_printf("Startup: setup region mapper failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
 
@@ -242,11 +259,12 @@ __main(void)
 						   fixed_type[i], 0,
 						   L4_INVALID_ID)) < 0)
 	    {
-	      printf("Startup: setup region 0x%08x-0x%08x failed (%d)!\n",
+	      LOG_printf("Startup: setup region "l4_addr_fmt"-"l4_addr_fmt
+		         " failed (%d)!\n",
 		  fixed[i].addr, fixed[i].addr + fixed[i].size, ret);
-    	      l4rm_show_region_list();
-    	      enter_kdebug("PANIC");
-    	    }
+	      l4rm_show_region_list();
+	      enter_kdebug("PANIC");
+	    }
 	}
       else
 	{
@@ -255,7 +273,7 @@ __main(void)
 	      j++;
 	      if (j >= l4env_infopage->section_num)
 		{
-		  printf("Startup: did not found dataspace\n");
+		  LOG_printf("Startup: did not find dataspace\n");
 		  enter_kdebug("PANIC");
 		}
 	    }
@@ -266,7 +284,8 @@ __main(void)
 		  l4env_infopage->section[j].info.type & L4_DSTYPE_WRITE
 		    ? L4DM_RW : L4DM_RO)))
 	    {
-	      printf("Startup: attach ds 0x%08x-0x%08x failed (%d)!\n",
+	      LOG_printf("Startup: attach ds "l4_addr_fmt"-"l4_addr_fmt
+		         " failed (%d)!\n",
 		  fixed[i].addr, fixed[i].addr + fixed[i].size, ret);
 	      enter_kdebug("PANIC");
 	    }
@@ -277,18 +296,28 @@ __main(void)
   /* init thread lib */
   l4thread_init();
 
-  /* setup region mapper tcb */
-  if ((ret = l4thread_setup(l4_myself(), ".rm", (l4_addr_t)&crt0_stack_low,
-					(l4_addr_t)&crt0_stack_high)) < 0)
+  if (l4env_infopage)
     {
-      printf("Startup: setup region mapper tcb failed (%d)!\n",ret);
+      stack_low  = l4env_infopage->stack_low;
+      stack_high = l4env_infopage->stack_high;
+    }
+  else
+    {
+      stack_low  = (l4_addr_t)&crt0_stack_low;
+      stack_high = (l4_addr_t)&crt0_stack_high;
+    }
+
+  /* setup region mapper tcb */
+  if ((ret = l4thread_setup(l4_myself(), ".rm", stack_low, stack_high)) < 0)
+    {
+      LOG_printf("Startup: setup region mapper tcb failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
 
   /* init semaphore lib */
   if ((ret = l4semaphore_init()) < 0)
     {
-      printf("Startup: semaphore lib initialization failed (%d)!\n",ret);
+      LOG_printf("Startup: semaphore lib initialization failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
 
@@ -301,7 +330,7 @@ __main(void)
 			          L4THREAD_CREATE_ASYNC |
 			            L4THREAD_CREATE_SETUP)) < 0)
     {
-      printf("Startup: create main thread failed (%d)!\n",ret);
+      LOG_printf("Startup: create main thread failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
 
@@ -311,7 +340,7 @@ __main(void)
 
 /**
  * \brief  Return pointer to L4 environment page
- *	
+ *
  * \return NULL
  *
  * Since this is a sigma0-style L4 task, it has no L4 environment infopage

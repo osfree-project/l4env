@@ -14,24 +14,23 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
- 
+
 /**
  * @file raw.c
  * Raw Video Codec
  */
- 
+
 #include "avcodec.h"
 
 typedef struct RawVideoContext {
     unsigned char * buffer;  /* block of memory for holding one frame */
-    unsigned char * p;       /* current position in buffer */
     int             length;  /* number of bytes in buffer */
     AVFrame pic;             ///< AVCodecContext.coded_frame
 } RawVideoContext;
 
-typedef struct PixleFormatTag {
+typedef struct PixelFormatTag {
     int pix_fmt;
     unsigned int fourcc;
 } PixelFormatTag;
@@ -46,8 +45,9 @@ const PixelFormatTag pixelFormatTags[] = {
     { PIX_FMT_GRAY8,   MKTAG(' ', ' ', 'Y', '8') },
 
 
-    { PIX_FMT_YUV422,  MKTAG('Y', '4', '2', '2') }, /* Packed formats */
-    { PIX_FMT_YUV422,  MKTAG('U', 'Y', 'V', 'Y') },
+    { PIX_FMT_YUV422,  MKTAG('Y', 'U', 'Y', '2') }, /* Packed formats */
+    { PIX_FMT_YUV422,  MKTAG('Y', '4', '2', '2') },
+    { PIX_FMT_UYVY422, MKTAG('U', 'Y', 'V', 'Y') },
     { PIX_FMT_GRAY8,   MKTAG('G', 'R', 'E', 'Y') },
 
     { -1, 0 },
@@ -64,13 +64,13 @@ static int findPixelFormat(unsigned int fourcc)
     return PIX_FMT_YUV420P;
 }
 
-static unsigned int findFourCC(int fmt)
+unsigned int avcodec_pix_fmt_to_codec_tag(enum PixelFormat fmt)
 {
     const PixelFormatTag * tags = pixelFormatTags;
     while (tags->pix_fmt >= 0) {
         if (tags->pix_fmt == fmt)
-	    return tags->fourcc;
-	tags++; 
+            return tags->fourcc;
+        tags++;
     }
     return 0;
 }
@@ -83,56 +83,69 @@ static int raw_init_decoder(AVCodecContext *avctx)
 
     if (avctx->codec_tag)
         avctx->pix_fmt = findPixelFormat(avctx->codec_tag);
-    
+    else if (avctx->bits_per_sample){
+        switch(avctx->bits_per_sample){
+        case  8: avctx->pix_fmt= PIX_FMT_PAL8  ; break;
+        case 15: avctx->pix_fmt= PIX_FMT_RGB555; break;
+        case 16: avctx->pix_fmt= PIX_FMT_RGB565; break;
+        case 24: avctx->pix_fmt= PIX_FMT_BGR24 ; break;
+        case 32: avctx->pix_fmt= PIX_FMT_RGBA32; break;
+        }
+    }
+
     context->length = avpicture_get_size(avctx->pix_fmt, avctx->width, avctx->height);
     context->buffer = av_malloc(context->length);
-    context->p      = context->buffer;
     context->pic.pict_type = FF_I_TYPE;
     context->pic.key_frame = 1;
-    
+
     avctx->coded_frame= &context->pic;
-    
+
     if (!context->buffer)
         return -1;
-   
+
     return 0;
 }
 
+static void flip(AVCodecContext *avctx, AVPicture * picture){
+    if(!avctx->codec_tag && avctx->bits_per_sample && picture->linesize[2]==0){
+        picture->data[0] += picture->linesize[0] * (avctx->height-1);
+        picture->linesize[0] *= -1;
+    }
+}
+
 static int raw_decode(AVCodecContext *avctx,
-			    void *data, int *data_size,
-			    uint8_t *buf, int buf_size)
+                            void *data, int *data_size,
+                            uint8_t *buf, int buf_size)
 {
     RawVideoContext *context = avctx->priv_data;
-    int bytesNeeded;
 
+    AVFrame * frame = (AVFrame *) data;
     AVPicture * picture = (AVPicture *) data;
 
-    /* Early out without copy if packet size == frame size */
-    if (buf_size == context->length  &&  context->p == context->buffer) {
-        avpicture_fill(picture, buf, avctx->pix_fmt, avctx->width, avctx->height);
-        *data_size = sizeof(AVPicture);
-        return buf_size;
+    frame->interlaced_frame = avctx->coded_frame->interlaced_frame;
+    frame->top_field_first = avctx->coded_frame->top_field_first;
+
+    if(buf_size < context->length - (avctx->pix_fmt==PIX_FMT_PAL8 ? 256*4 : 0))
+        return -1;
+
+    avpicture_fill(picture, buf, avctx->pix_fmt, avctx->width, avctx->height);
+    if(avctx->pix_fmt==PIX_FMT_PAL8 && buf_size < context->length){
+        frame->data[1]= context->buffer;
+    }
+    if (avctx->palctrl && avctx->palctrl->palette_changed) {
+        memcpy(frame->data[1], avctx->palctrl->palette, AVPALETTE_SIZE);
+        avctx->palctrl->palette_changed = 0;
     }
 
-    bytesNeeded = context->length - (context->p - context->buffer);
-    if (buf_size < bytesNeeded) {
-        memcpy(context->p, buf, buf_size);
-        context->p += buf_size;
-        *data_size = 0;
-        return buf_size;
-    }
-
-    memcpy(context->p, buf, bytesNeeded);
-    context->p = context->buffer;
-    avpicture_fill(picture, context->buffer, avctx->pix_fmt, avctx->width, avctx->height);
+    flip(avctx, picture);
     *data_size = sizeof(AVPicture);
-    return bytesNeeded;
+    return buf_size;
 }
 
 static int raw_close_decoder(AVCodecContext *avctx)
 {
     RawVideoContext *context = avctx->priv_data;
-    
+
     av_freep(&context->buffer);
     return 0;
 }
@@ -144,17 +157,19 @@ static int raw_init_encoder(AVCodecContext *avctx)
     avctx->coded_frame = (AVFrame *)avctx->priv_data;
     avctx->coded_frame->pict_type = FF_I_TYPE;
     avctx->coded_frame->key_frame = 1;
-    avctx->codec_tag = findFourCC(avctx->pix_fmt);
+    if(!avctx->codec_tag)
+        avctx->codec_tag = avcodec_pix_fmt_to_codec_tag(avctx->pix_fmt);
     return 0;
 }
 
 static int raw_encode(AVCodecContext *avctx,
-			    unsigned char *frame, int buf_size, void *data)
+                            unsigned char *frame, int buf_size, void *data)
 {
     return avpicture_layout((AVPicture *)data, avctx->pix_fmt, avctx->width,
                                                avctx->height, frame, buf_size);
 }
 
+#ifdef CONFIG_RAWVIDEO_ENCODER
 AVCodec rawvideo_encoder = {
     "rawvideo",
     CODEC_TYPE_VIDEO,
@@ -163,6 +178,7 @@ AVCodec rawvideo_encoder = {
     raw_init_encoder,
     raw_encode,
 };
+#endif // CONFIG_RAWVIDEO_ENCODER
 
 AVCodec rawvideo_decoder = {
     "rawvideo",

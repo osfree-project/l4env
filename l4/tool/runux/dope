@@ -11,7 +11,6 @@ fiasco \
 	-l fuxfprov \
 	-l l4dope-ux \
 	-l vscrtest \
-	-l l4exec \
 	-l loader \
 	-n9 "$@"
 

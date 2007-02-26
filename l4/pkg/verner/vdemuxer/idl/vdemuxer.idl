@@ -147,8 +147,8 @@ interface VideoDemuxerComponentIntern
   long probeVideoFile ([in, string] char *filename,
 		       [in] long videoTrackNo,
 		       [in] long audioTrackNo,
-		       [out] long *videoTracks,
-		       [out] long *audioTracks,
+		       [out] l4_int32_t *videoTracks,
+		       [out] l4_int32_t *audioTracks,
 		       [out] stream_info_t * streaminfo);
 
 

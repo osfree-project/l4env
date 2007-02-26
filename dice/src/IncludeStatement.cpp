@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/IncludeStatement.cpp
- *    \brief   contains the implementation of the class CIncludeStatement
+ *  \file    dice/src/IncludeStatement.cpp
+ *  \brief   contains the implementation of the class CIncludeStatement
  *
- *    \date    10/22/2004
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/22/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -26,26 +26,37 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
- #include "IncludeStatement.h"
+#include "IncludeStatement.h"
 
 CIncludeStatement::CIncludeStatement(bool bIDLFile,
     bool bStdInclude,
     bool bPrivate,
-    string sFileName)
-{
-    m_bIDLFile = bIDLFile;
-    m_bIsStandardInclude = bStdInclude;
-    m_bPrivate = bPrivate;
-    m_sFileName = sFileName;
-}
+    bool bImport,
+    string sFileName,
+    string sFromFile,
+    string sPath,
+    int nLineNb)
+: m_bIDLFile(bIDLFile),
+  m_bStandard(bStdInclude),
+  m_bPrivate(bPrivate),
+  m_bImport(bImport),
+  m_sFilename(sFileName),
+  m_sFromFile(sFromFile),
+  m_sPath(sPath),
+  m_nLineNb(nLineNb)
+{ }
 
-CIncludeStatement::CIncludeStatement(CIncludeStatement &src)
-{
-    m_bIDLFile = src.m_bIDLFile;
-    m_bIsStandardInclude = src.m_bIsStandardInclude;
-    m_bPrivate = src.m_bPrivate;
-    m_sFileName = src.m_sFileName;
-}
+CIncludeStatement::CIncludeStatement(const CIncludeStatement &src)
+: CObject(src),
+  m_bIDLFile(src.m_bIDLFile),
+  m_bStandard(src.m_bStandard),
+  m_bPrivate(src.m_bPrivate),
+  m_bImport(src.m_bImport),
+  m_sFilename(src.m_sFilename),
+  m_sFromFile(src.m_sFromFile),
+  m_sPath(src.m_sPath),
+  m_nLineNb(src.m_nLineNb)
+{ }
 
 CIncludeStatement::~CIncludeStatement()
 { }

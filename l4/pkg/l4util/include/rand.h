@@ -12,7 +12,7 @@
 #define L4_RAND_MAX 65535
 
 #include <l4/sys/compiler.h>
-#include <l4/sys/types.h>
+#include <l4/sys/l4int.h>
 
 EXTERN_C_BEGIN
 

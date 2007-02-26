@@ -1,12 +1,12 @@
 /**
  *    \file    dice/src/be/l4/v2/L4V2BEIPC.cpp
- *    \brief   contains the declaration of the class CL4V2BEIPC
+ *    \brief   contains the implementation of the class CL4V2BEIPC
  *
- *    \date    08/13/2003
+ *    \date    04/18/2006
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2006
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,1391 +28,575 @@
 
 #include "L4V2BEIPC.h"
 #include "be/l4/L4BENameFactory.h"
-#include "be/l4/L4BEMsgBufferType.h"
+#include "be/l4/L4BEMsgBuffer.h"
+#include "be/l4/L4BEMarshaller.h"
 #include "be/BEContext.h"
+#include "be/BEFile.h"
 #include "be/BEFunction.h"
-#include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
-#include "be/BEMarshaller.h"
+#include "be/BETypedDeclarator.h"
+
+#include "be/BEMarshalFunction.h"
+#include "be/BEUnmarshalFunction.h"
+#include "be/BECallFunction.h"
+#include "be/BESndFunction.h"
+#include "be/BEReplyFunction.h"
+#include "be/BEWaitFunction.h"
+#include "be/BEWaitAnyFunction.h"
+
+#include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 
+#include <cassert>
 
 CL4V2BEIPC::CL4V2BEIPC()
- : CL4BEIPC()
 {
-
 }
 
-/** destructor for IPC class */
+/** \brief destructor of target class */
 CL4V2BEIPC::~CL4V2BEIPC()
 {
 }
 
-/** \brief write L4 V2 specific call code
+/** \brief write an IPC call
  *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+ *  \param pFunction the function to write it for
  */
-void CL4V2BEIPC::WriteCall(CBEFile * pFile,  CBEFunction * pFunction,  CBEContext * pContext)
+void 
+CL4V2BEIPC::WriteCall(CBEFile *pFile, 
+	CBEFunction* pFunction)
 {
-    if (UseAssembler(pFunction, pContext))
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sTimeout = pNF->GetTimeoutClientVariable();
+    string sScheduling = pNF->GetScheduleClientVariable();
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    int nDirection = pFunction->GetSendDirection();
+    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE); 
+    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+    assert(pMarshaller);
+
+    bool bFlexpage = 
+	pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+    
+    *pFile << "\tl4_ipc_call(*" << sServerID << ",\n";
+    pFile->IncIndent();
+    *pFile << "\t";
+    if (IsShortIPC(pFunction, nDirection))
     {
-        if (IsShortIPC(pFunction, pContext))
-            WriteAsmShortCall(pFile, pFunction, pContext);
-        else
-            WriteAsmLongCall(pFile, pFunction, pContext);
+	if (bFlexpage)
+	    *pFile << "L4_IPC_SHORT_FPAGE";
+	else
+	    *pFile << "L4_IPC_SHORT_MSG";
+        if (bScheduling)
+            *pFile << " | " << sScheduling;
     }
     else
-        CL4BEIPC::WriteCall(pFile, pFunction, pContext);
-}
-
-/** \brief write the assembler version of the short IPC
- *  \param pFile the file to write to
- *  \param pFunction the function to write the call for
- *  \param pContext the context of the write operation
- *
- * This is only called if UseAsmShortIPCShortIPC == true, which means that we have a short IPC
- * in both direction. This allows us some optimizations in the assembler code.
- */
-void CL4V2BEIPC::WriteAsmShortCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext)
-{
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
-
-    CBEDeclarator *pObjName = pFunction->GetObject()->GetDeclarator();
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    int nRcvDir = pFunction->GetReceiveDirection();
-    int nSndDir = pFunction->GetSendDirection();
-    CBETypedDeclarator *pException = pFunction->GetExceptionWord();
-    string sException;
-    if (pException && pException->GetDeclarator())
-        sException = pException->GetDeclarator()->GetName();
-
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-    if (bSymbols)
     {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
-    }
+        if (bFlexpage || bScheduling)
+	    *pFile << "(" << sMWord << "*)((" << sMWord << ")";
 
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
-    {
-        // scheduling (|2)
-        // eax schedule bit
-        // ebx pushed         <- edi                       DW1
-        // ebp pushed         <- 0
-        // ecx timeout
-        // edx opcode | dw0                                DW0
-        // edi dw0 | dw1      -> ebx <- 4(esi)
-        // esi dest           <- 0(esi)
-
-        // no scheduling
-        // eax dw0 | dw1      -> ebx <- 0 (|2)
-        // ebx pushed         <- eax
-        // ebp pushed         <- 0
-        // ecx timeout
-        // edx opcode | dw0
-        // edi dest.lh.high
-        // esi dest.lh.low
-
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
+        if (!pMsgBuffer->HasReference())
+	    *pFile << "&";
+	*pFile << sMsgBuffer;
+	    
+        if (bFlexpage)
+	    *pFile << "|2";
         if (bScheduling)
-        {
-            if (bSendFlexpage)
-                *pFile << "\t\"orl $2,%%%%eax \\n\\t\"\n";
-            *pFile << "\t\"movl %%%%edi,%%%%ebx \\n\\t\"\n";
-            *pFile << "\t\"movl 4(%%%%esi),%%%%edi \\n\\t\"\n";
-            *pFile << "\t\"movl (%%%%esi),%%%%esi \\n\\t\"\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"movl   %%%%eax,%%%%ebx    \\n\\t\"\n");
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"subl   %%%%ebp,%%%%ebp    \\n\\t\"\n");
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent("\"movl   %%%%ebx,%%%%ecx    \\n\\t\"\n");
-        pFile->PrintIndent("\"popl   %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (");
-        int nIndex = 1;
-        if (pFunction->FindAttribute(ATTR_NOEXCEPTIONS))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nRcvDir, true, pContext))
-                pFile->Print("%s", sDummy.c_str());
-        }
-        else
-            *pFile << sException;
-        pFile->Print("),\n");                /* EDX, 1 */
-        pFile->PrintIndent("\"=c\" (");
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nRcvDir, true, pContext))
-            pFile->Print("%s", sDummy.c_str());
-        pFile->Print(")\n");                /* ECX, 2 */
-        pFile->PrintIndent(":\n");
-        nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOOPCODE))
-        {
-            // get send parameter
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                *pFile << "0";
-        }
-        else
-            *pFile << pFunction->GetOpcodeConstName();
-        *pFile << "),\n";
-        if (bScheduling)
-        {
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-            *pFile << "\t\"S\" (" << pObjName->GetName() << "),\n";
-            *pFile << "\t\"D\" (";
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                *pFile << "0";
-            *pFile << "),\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"a\" (");
-            // get send parameter
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-            pFile->Print("),\n");                 /* EAX, 0 => EBX */
-            pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-            pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());          /* EDI    */
-        }
-        pFile->PrintIndent("\"c\" (%s)\n", sTimeout.c_str());                 /* ECX, 2 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        pFile->Print("#else // !__PIC__\n");
-        pFile->Print("#ifdef PROFILE\n");
+            *pFile << "|" << sScheduling;
+        if (bFlexpage || bScheduling)
+	    *pFile << ")";
     }
-    if (bPROF) // is !__PIC__ && PROFILE
-    {
-        // !PIC && PROFILE branch
-        // uses ipc_i386_call_static (l4/sys/lib/src/ipc-profile.c)
-        CL4BEIPC::WriteCall(pFile, pFunction, pContext);
-    }
-    if (!bSymbols)
-        pFile->Print("#else // !PROFILE\n");
-    if (bNPROF) // is !__PIC__ && !PROFILE
-    {
-        // else
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
-        if (bScheduling)
-        {
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"orl $2,%%%%eax       \\n\\t\"\n");
-        }
-        else
-        {
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"subl   %%%%ebp,%%%%ebp    \\n\\t\"\n");
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (");
-        int nIndex = 1;
-        if (pFunction->FindAttribute(ATTR_NOEXCEPTIONS))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nRcvDir, true, pContext))
-                pFile->Print("%s", sDummy.c_str());
-        }
-        else
-            *pFile << sException;
-        pFile->Print("),\n");                /* EDX, 1 */
-        pFile->PrintIndent("\"=b\" (");
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nRcvDir, true, pContext))
-            pFile->Print("%s", sDummy.c_str());
-        pFile->Print("),\n");                /* EBX, 2 */
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                /* ECX, 3 */
-        pFile->PrintIndent(":\n");
-        if (bScheduling)
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-        nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOOPCODE))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-        }
-        else
-            *pFile <<  pFunction->GetOpcodeConstName();
-        *pFile << "),\n";
-        pFile->PrintIndent("\"b\" (");
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-            pFile->Print("0");
-        pFile->Print("),\n");                 /* EBX, 2 */
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());                 /* ECX, 3 */
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-        pFile->PrintIndent("\"D\" (%s->lh.high)\n", pObjName->GetName().c_str());          /* EDI    */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
-}
+    *pFile << ",\n";
 
-/** \brief write the long IPC in assembler
- *  \param pFile the file to write to
- *  \param pFunction the function to write the IPC for
- *  \param pContext the context of the write operation
- */
-void CL4V2BEIPC::WriteAsmLongCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext)
-{
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
-
-    // l4_fpage_t + 2*l4_msgdope_t
-    int nMsgBase = pContext->GetSizes()->GetSizeOfEnvType("l4_fpage_t") +
-                pContext->GetSizes()->GetSizeOfEnvType("l4_msgdope_t")*2;
-
-    vector<CBEDeclarator*>::iterator iterO = pFunction->GetObject()->GetFirstDeclarator();
-    CBEDeclarator *pObjName = *iterO;
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
-
-    bool bSendShortIPC = IsShortIPC(pFunction, pContext, nSndDir);
-    bool bRecvShortIPC = IsShortIPC(pFunction, pContext, nRcvDir);
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    if (bSymbols)
-    {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
-    }
-
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
-    {
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx         \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp         \\n\\t\"\n");
-        if (bSendShortIPC)
-        {
-            pFile->PrintIndent("\"movl 4(%%%%edx),%%%%ebx  \\n\\t\"\n");
-            pFile->PrintIndent("\"movl  (%%%%edx),%%%%edx  \\n\\t\"\n");
-            if (bSendFlexpage)
-            {
-                if (bScheduling)
-                    *pFile << "\t\"orl    $2,%%%%eax     \\n\\t\"\n";
-                else
-                    *pFile << "\t\"movl   $2,%%%%eax     \\n\\t\"\n";
-            }
-            else if (!bScheduling)
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax   \\n\\t\"\n"); // snd msg descr = 0
-            // if (!bSendFlexpage && bScheduling) -> eax keeps the value
-        }
-        else
-        {
-            // if long ipc we can extract the dwords directly from the msg buffer structure in EAX
-            if (bScheduling)
-            {
-                *pFile << "\t\"movl %%%%eax,%%%%edx  \\n\\t\"\n";
-                *pFile << "\t\"andl $0xfffffffc,%%%%edx  \\n\\t\"\n";
-                *pFile << "\t\"movl " << nMsgBase+4 << "(%%%%edx),%%%%ebx  \\n\\t\"\n";
-                *pFile << "\t\"movl " << nMsgBase << "(%%%%edx),%%%%edx  \\n\\t\"\n";
-            }
-            else
-            {
-                *pFile << "\t\"movl " << nMsgBase+4 << "(%%%%eax),%%%%ebx  \\n\\t\"\n";
-                *pFile << "\t\"movl " << nMsgBase << "(%%%%eax),%%%%edx  \\n\\t\"\n";
-            }
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"orl $2,%%%%eax    \\n\\t\"\n");
-        }
-        if (bRecvShortIPC)
-            pFile->PrintIndent("\"subl   %%%%ebp, %%%%ebp  \\n\\t\"\n"); // receive short IPC
-        else
-            pFile->PrintIndent("\"movl   %%%%edi, %%%%ebp  \\n\\t\"\n");
-        pFile->PrintIndent("\"movl 4(%%%%esi),%%%%edi  \\n\\t\"\n");
-        pFile->PrintIndent("\"movl  (%%%%esi),%%%%esi  \\n\\t\"\n");
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");
-        pFile->PrintIndent("\"movl  %%%%ebx,%%%%ecx    \\n\\t\"\n");
-        pFile->PrintIndent("\"popl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());
-        pFile->PrintIndent("\"=d\" (*((%s*)(&(", sMWord.c_str());
-        pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[0])))),\n");
-        pFile->PrintIndent("\"=c\" (*((%s*)(&(", sMWord.c_str());
-        pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[4])))),\n");
-        pFile->PrintIndent("\"=S\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=D\" (%s)\n", sDummy.c_str());
-        pFile->PrintIndent(":\n");
-        // skip this if short IPC
-        if (bSendShortIPC)
-        {
-            // eax gets scheduling bits
-            if (bScheduling)
-            {
-                *pFile << "\"a\" (" << sScheduling << "),\n";
-            }
-            // -> if short IPC we have to set send dwords
-            pFile->PrintIndent("\"1\" (&(");
-            pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_IN, pContext);
-            pFile->Print("[0])),\n");
-        }
-        else
-        {
-            pFile->PrintIndent("\"a\" (");
-            if (bScheduling)
-                *pFile << "(long)(";
-            if (pFunction->GetMessageBuffer()->HasReference())
-                pFile->Print("%s", sMsgBuffer.c_str());
-            else
-                pFile->Print("&%s", sMsgBuffer.c_str());
-            if (bScheduling)
-                *pFile << ")|" << sScheduling;
-            pFile->Print("),\n");
-        }
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());
-        // only if not short IPC we have to hand this to the assembler code
-        if (!bRecvShortIPC)
-        {
-            pFile->PrintIndent("\"D\" (((int)");
-            if (pFunction->GetMessageBuffer()->HasReference())
-                pFile->Print("%s", sMsgBuffer.c_str());
-            else
-                pFile->Print("&%s", sMsgBuffer.c_str());
-            pFile->Print(") & (~L4_IPC_OPEN_IPC)),\n");
-        }
-        pFile->PrintIndent("\"S\" (%s)\n", pObjName->GetName().c_str());
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        pFile->Print("#else // !__PIC__\n");
-        pFile->Print("#ifdef PROFILE\n");
-    }
-    if (bPROF)
-    {
-        // !PIC && PROFILE branch
-        // uses ipc_i386_call_static (l4/sys/lib/src/ipc-profile.c)
-        CL4BEIPC::WriteCall(pFile, pFunction, pContext);
-    }
-    if (!bSymbols)
-        pFile->Print("#else // !PROFILE\n");
-    if (bNPROF)
-    {
-        // else
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl %%%%ebp          \\n\\t\"\n");   /* save ebp, no memory references ("m") after this point */
-        if (bRecvShortIPC)
-            pFile->PrintIndent("\"subl  %%%%ebp,%%%%ebp    \\n\\t\"\n"); /* recv msg descriptor = 0 */
-        else
-            pFile->PrintIndent("\"movl  %%%%ebx, %%%%ebp   \\n\\t\"\n");
-        if (bSendShortIPC)
-        {
-            pFile->PrintIndent("\"movl 4(%%%%edx), %%%%ebx \\n\\t\"\n");   /* dest.lh.high -> edi */
-            pFile->PrintIndent("\"movl  (%%%%edx), %%%%edx \\n\\t\"\n");   /* dest.lh.low  -> esi */
-            if (bSendFlexpage)
-            {
-                if (bScheduling)
-                    *pFile << "\t\"orl    $2,%%%%eax     \\n\\t\"\n";
-                else
-                    *pFile << "\t\"movl   $2,%%%%eax     \\n\\t\"\n";
-            }
-            else if (!bScheduling)
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax   \\n\\t\"\n"); // snd msg descr = 0
-        }
-        else
-        {
-            // extract dwords directly from msg buffer
-            if (bScheduling)
-            {
-                *pFile << "\t\"movl %%%%eax,%%%%edx  \\n\\t\"\n";
-                *pFile << "\t\"andl $0xfffffffc,%%%%edx  \\n\\t\"\n";
-                *pFile << "\t\"movl " << nMsgBase+4 << "(%%%%edx),%%%%ebx  \\n\\t\"\n";
-                *pFile << "\t\"movl " << nMsgBase << "(%%%%edx),%%%%edx  \\n\\t\"\n";
-            }
-            else
-            {
-                pFile->PrintIndent("\"movl %d(%%%%eax), %%%%ebx \\n\\t\"\n", nMsgBase+4);   /* dest.lh.high -> edi */
-                pFile->PrintIndent("\"movl %d(%%%%eax), %%%%edx \\n\\t\"\n", nMsgBase);   /* dest.lh.low  -> esi */
-            }
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"orl $2, %%%%eax \\n\\t\"\n");
-        }
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");   /* restore ebp, no memory references ("m") before this point */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());               /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (*((%s*)(&(", sMWord.c_str());
-        pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[0])))),\n");           /* EDX, 1 */
-        pFile->PrintIndent("\"=b\" (*((%s*)(&(", sMWord.c_str());
-        pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_OUT, pContext);
-        pFile->Print("[4])))),\n");           /* EBX, 2 */
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                 /* EDI, 3 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        if (bSendShortIPC)
-        {
-            // eax gets scheduling bits
-            if (bScheduling)
-            {
-                *pFile << "\"a\" (" << sScheduling << "),\n";
-            }
-            // dwords in message buffer
-            pFile->PrintIndent("\"d\" (&(", sMWord.c_str());
-            pFunction->GetMessageBuffer()->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_IN, pContext);
-            pFile->Print("[0])),\n");             /* EDX, 1 */
-        }
-        else
-        {
-            pFile->PrintIndent("\"a\" (");
-            if (bScheduling)
-                *pFile << "(" << sMWord << ")(";
-            if (pFunction->GetMessageBuffer()->HasReference())
-                pFile->Print("%s", sMsgBuffer.c_str());
-            else
-                pFile->Print("&%s", sMsgBuffer.c_str());
-            if (bScheduling)
-                *pFile << ")|" << sScheduling;
-            pFile->Print("),\n");           /* EAX, 0 */
-        }
-        if (!bRecvShortIPC)
-        {
-            pFile->PrintIndent("\"b\" (((int)");
-            if (pFunction->GetMessageBuffer()->HasReference())
-                pFile->Print("%s", sMsgBuffer.c_str());
-            else
-                pFile->Print("&%s", sMsgBuffer.c_str());
-            pFile->Print(") & (~L4_IPC_OPEN_IPC)),\n"); /* EDI, 3 rcv msg -> ebp */
-        }
-        pFile->PrintIndent("\"c\" (%s)\n", sTimeout.c_str());                /* timeout, 5 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
-}
-
-/** \brief test if we could write assembler code for the IPC
- *  \param pFunction the function to write the IPC for
- *  \param pContext the context of the write operation
- *  \return true if assembler should be written
- *
- * We may write assembler if the optimization level is larger than 1 and
- * if we are not forced to write C bindings.
- */
-bool CL4V2BEIPC::UseAssembler(CBEFunction* pFunction,  CBEContext* pContext)
-{
-    if (pContext->IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
-        return false;
-    // test position size
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    bool bReturn = pMarshaller->TestPositionSize(pFunction, 4, pFunction->GetReceiveDirection(), false, false, 2/* must fit 2 registers */, pContext);
-    delete pMarshaller;
-    // return
-    return bReturn;
-}
-
-/** \brief writes the send IPC code
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
- */
-void CL4V2BEIPC::WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
-{
-    if (UseAssembler(pFunction, pContext))
-    {
-        if (IsShortIPC(pFunction, pContext, pFunction->GetSendDirection()))
-            WriteAsmShortSend(pFile, pFunction, pContext);
-        else
-            WriteAsmLongSend(pFile, pFunction, pContext);
-    }
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+	
+    nDirection = pFunction->GetReceiveDirection();
+    if (IsShortIPC(pFunction, nDirection))
+	*pFile << "\tL4_IPC_SHORT_MSG,\n";
     else
-        CL4BEIPC::WriteSend(pFile, pFunction, pContext);
+    {
+	*pFile << "\t";
+        if (!pMsgBuffer->HasReference())
+	    *pFile << "&";
+	*pFile << sMsgBuffer << ",\n";
+    }
+
+    string sDummy = pNF->GetDummyVariable();
+    *pFile << "\t";
+    // if no member for this direction can be found, use dummy
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+
+    pFile->DecIndent();
 }
 
-/** \brief writes the assembler short send IPC code
+/** \brief write an IPC receive operation
  *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+ *  \param pFunction the function to write it for
  */
-void CL4V2BEIPC::WriteAsmShortSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void 
+CL4V2BEIPC::WriteReceive(CBEFile* pFile,  
+	CBEFunction* pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sTimeout;
+    if (pFunction->IsComponentSide())
+        sTimeout = pNF->GetTimeoutServerVariable();
+    else
+        sTimeout = pNF->GetTimeoutClientVariable();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+    assert(pMarshaller);
+    int nDirection = pFunction->GetReceiveDirection();
 
-    vector<CBEDeclarator*>::iterator iterO = pFunction->GetObject()->GetFirstDeclarator();
-    CBEDeclarator *pObjName = *iterO;
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    int nSndDir = pFunction->GetSendDirection();
+    *pFile << "\t" << "l4_ipc_receive(*(l4_threadid_t*)" << sServerID << ",\n";
+    pFile->IncIndent();
 
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-    if (bSymbols)
+    if (IsShortIPC(pFunction, nDirection))
+	*pFile << "\tL4_IPC_SHORT_MSG,\n";
+    else
     {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
+	*pFile << "\t";
+        if (!pMsgBuffer->HasReference())
+	    *pFile << "&";
+	*pFile << sMsgBuffer << ",\n";
     }
 
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
-    {
+    string sDummy = pNF->GetDummyVariable();
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
 
-        // scheduling
-        // eax: scheduling bit
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest             -> EDI/ESI
-        // EDI: dw0 | dw1        -> ebx
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
-        // no scheduling
-        // eax: dw0 | dw1        -> ebx (set 0)
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
-        if (bScheduling)
-        {
-            if (bSendFlexpage)
-                *pFile << "\t\"orl $2,%%%%eax \\n\\t\"\n";
-            *pFile << "\t\"movl %%%%edi,%%%%ebx \\n\\t\"\n";
-            *pFile << "\t\"movl 4(%%%%esi),%%%%edi \\n\\t\"\n";
-            *pFile << "\t\"movl (%%%%esi),%%%%esi \\n\\t\"\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"movl   %%%%eax,%%%%ebx    \\n\\t\"\n");
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"movl   $-1,%%%%ebp    \\n\\t\"\n"); // no receive
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent("\"popl   %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());
-        pFile->PrintIndent(":\n");
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOOPCODE))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                *pFile << "0";
-        }
-        else
-            *pFile << pFunction->GetOpcodeConstName();
-        *pFile  << "),\n";
-        if (bScheduling)
-        {
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-            *pFile << "\t\"S\" (" << pObjName->GetName() << "),\n";
-            pFile->PrintIndent("\"D\" (");
-            // get send parameter
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-            pFile->Print("),\n");                 /* EDI, 0 => EBX */
-        }
-        else
-        {
-            pFile->PrintIndent("\"a\" (");
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-            pFile->Print("),\n");                 /* EAX, 0 => EBX */
-            pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-            pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());          /* EDI    */
-        }
-        pFile->PrintIndent("\"c\" (%s)\n", sTimeout.c_str());                 /* ECX, 2 */
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        pFile->Print("#else // !__PIC__\n");
-        pFile->Print("#ifdef PROFILE\n");
-    }
-    if (bPROF)
-        CL4BEIPC::WriteSend(pFile, pFunction, pContext);
-    if (!bSymbols)
-        *pFile << "#else // !PROFILE\n";
-    if (bNPROF) // is !__PIC__ && !PROFILE
-    {
-
-        // scheduling
-        // eax: scheduling bit
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax:
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
-        if (bScheduling)
-        {
-            if (bSendFlexpage)
-                *pFile << "\t\"orl $2,%%%%eax  \\n\\t\"\n";
-        }
-        else
-        {
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"movl   $-1,%%%%ebp    \\n\\t\"\n"); // no receive
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=b\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                /* ECX, 3 */
-        pFile->PrintIndent(":\n");
-        if (bScheduling)
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOOPCODE))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-        }
-        else
-            *pFile << pFunction->GetOpcodeConstName();
-        *pFile << "),\n";
-        pFile->PrintIndent("\"b\" (");
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-            pFile->Print("0");
-        pFile->Print("),\n");                 /* EBX, 2 */
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());                 /* ECX, 3 */
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-        pFile->PrintIndent("\"D\" (%s->lh.high)\n", pObjName->GetName().c_str());          /* EDI    */
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
+    pFile->DecIndent();
 }
 
-/** \brief writes the assembler long send IPC code
+/** \brief write an IPC wait operation
  *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+ *  \param pFunction the function to write it for
  */
-void CL4V2BEIPC::WriteAsmLongSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void 
+CL4V2BEIPC::WriteWait(CBEFile* pFile, 
+	CBEFunction *pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sTimeout;
+    if (pFunction->IsComponentSide())
+        sTimeout = pNF->GetTimeoutServerVariable();
+    else
+        sTimeout = pNF->GetTimeoutClientVariable();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    int nDirection = pFunction->GetReceiveDirection();
+    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+    assert(pMarshaller);
 
-    // l4_fpage_t + 2*l4_msgdope_t
-    int nMsgBase = pContext->GetSizes()->GetSizeOfEnvType("l4_fpage_t") +
-                pContext->GetSizes()->GetSizeOfEnvType("l4_msgdope_t")*2;
-
-    CBEDeclarator *pObjName = pFunction->GetObject()->GetDeclarator();
-    int nSndDir = pFunction->GetSendDirection();
-
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-    bool bVarBuf = pFunction->GetMessageBuffer()->HasReference();
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    if (bSymbols)
+    *pFile << "\tl4_ipc_wait( (l4_threadid_t*)" << sServerID << ",\n";
+    pFile->IncIndent();
+    if (IsShortIPC(pFunction, nDirection))
+	*pFile << "\tL4_IPC_SHORT_MSG,\n";
+    else
     {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
+	*pFile << "\t";
+        if (!pMsgBuffer->HasReference())
+	    *pFile << "&";
+	*pFile << sMsgBuffer << ",\n";
     }
 
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
+    string sDummy = pNF->GetDummyVariable();
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    pFile->DecIndent();
+}
+
+/** \brief write an IPC reply and receive operation
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write it for
+ *  \param bSendFlexpage true if a flexpage should be send (false, if the \
+ *         message buffer should determine this)
+ *  \param bSendShortIPC true if a short IPC should be send (false, if \
+ *         message buffer should determine this)
+ */
+void 
+CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile, 
+	CBEFunction* pFunction, 
+	bool bSendFlexpage, 
+	bool bSendShortIPC)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sTimeout;
+    if (pFunction->IsComponentSide())
+        sTimeout = pNF->GetTimeoutServerVariable();
+    else
+        sTimeout = pNF->GetTimeoutClientVariable();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+    assert(pMarshaller);
+    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE); 
+    string sScheduling = pNF->GetScheduleServerVariable();
+
+    *pFile << "\tl4_ipc_reply_and_wait(*" << sServerID << ",\n";
+    pFile->IncIndent();
+    *pFile << "\t";
+    if (bSendShortIPC)
     {
-
-        // scheduling
-        // eax: scheduling bit | msgbuf
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: msgbuf
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax: msgbuf
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx:
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx         \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp         \\n\\t\"\n");
-        // if long ipc we can extract the dwords directly from the msg buffer structure in EAX
-        if (bScheduling)
-        {
-            *pFile << "\t\"movl " << nMsgBase+4 << "(%%%%edx),%%%%ebx \\n\\t\"\n";
-            *pFile << "\t\"movl " << nMsgBase << "(%%%%edx),%%%%edx \\n\\t\"\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"movl %d(%%%%eax),%%%%ebx  \\n\\t\"\n", nMsgBase+4);
-            pFile->PrintIndent("\"movl %d(%%%%eax),%%%%edx  \\n\\t\"\n", nMsgBase);
-        }
+	*pFile << "(const void*)(";
+	if (bSendFlexpage && bScheduling)
+	    *pFile << "(unsigned)";
         if (bSendFlexpage)
-            *pFile << "\t\"orl $2,%%%%eax    \\n\\t\"\n";
-        pFile->PrintIndent("\"movl   $-1, %%%%ebp  \\n\\t\"\n"); // receive short IPC
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");
-        pFile->PrintIndent("\"movl  %%%%ebx,%%%%ecx    \\n\\t\"\n");
-        pFile->PrintIndent("\"popl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=S\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=D\" (%s)\n", sDummy.c_str());
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"a\" (");
+            *pFile << "L4_IPC_SHORT_FPAGE";
+	else
+	    *pFile << "L4_IPC_SHORT_MSG";
         if (bScheduling)
-            *pFile << "(unsigned long)(";
-        if (!bVarBuf)
+            *pFile << " | " << sScheduling;
+	*pFile << ")";
+    }
+    else
+    {
+        if (bSendFlexpage || bScheduling)
+            *pFile << "(" << sMWord << "*)((" << sMWord << ")";
+        *pFile << sMsgBuffer;
+        if (bSendFlexpage)
+	    *pFile << "|2";
+	if (bScheduling)
+	    *pFile << "|" << sScheduling;
+	if (bSendFlexpage || bScheduling)
+	    *pFile << ")";
+    }
+    *pFile << ",\n";
+
+    int nDirection = pFunction->GetSendDirection();
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+
+    *pFile << "\t" << sServerID << ",\n";
+    *pFile << "\t" << sMsgBuffer << ",\n";
+
+    nDirection = pFunction->GetReceiveDirection();
+    string sDummy = pNF->GetDummyVariable();
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    true, false))
+	*pFile << "&" << sDummy;
+    *pFile << ",\n";
+
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+
+    pFile->DecIndent();
+}
+
+/** \brief write an IPC send operation
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write it for
+ */
+void 
+CL4V2BEIPC::WriteSend(CBEFile* pFile, 
+	CBEFunction* pFunction)
+{
+    int nDirection = pFunction->GetSendDirection();
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable();
+    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+    string sTimeout;
+    if (pFunction->IsComponentSide())
+        sTimeout = pNF->GetTimeoutServerVariable();
+    else
+        sTimeout = pNF->GetTimeoutClientVariable();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+    string sScheduling = pNF->GetScheduleClientVariable();
+    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
+    CL4BEMarshaller *pMarshaller = 
+	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+    assert(pMarshaller);
+
+    *pFile << "\tl4_ipc_send(*" << sServerID << ",\n";
+    pFile->IncIndent();
+    *pFile << "\t";
+    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
+
+    bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
+
+    if (IsShortIPC(pFunction, nDirection))
+    {
+	if (bFlexpage)
+	    *pFile << "L4_IPC_SHORT_FPAGE";
+	else
+	    *pFile << "L4_IPC_SHORT_MSG";
+        if (bScheduling)
+            *pFile << "|" << sScheduling;
+    }
+    else
+    {
+        if (bFlexpage || bScheduling)
+	    *pFile << "(" << sMWord << "*)((" << sMWord << ")";
+
+        if (!pMsgBuffer->HasReference())
             *pFile << "&";
         *pFile << sMsgBuffer;
-        if (bScheduling)
-            *pFile << ")|" << sScheduling;
-        *pFile << "),\n";
-        if (bScheduling)
-            *pFile << "\t\"d\" (" << ((bVarBuf) ? "" : "&") << sMsgBuffer << "),\n";
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());
-        pFile->PrintIndent("\"D\" (%s->lh.high)\n", pObjName->GetName().c_str());
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        pFile->Print("#else // !__PIC__\n");
-        pFile->Print("#ifdef PROFILE\n");
-    }
-    if (bPROF)
-        CL4BEIPC::WriteSend(pFile, pFunction, pContext);
-    if (!bSymbols)
-        *pFile << "#else // !PROFILE\n";
-    if (bNPROF)
-    {
 
-        // scheduling
-        // eax: scheduling bit | msgbuf
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax: msgbuf
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: opcode | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl %%%%ebp          \\n\\t\"\n");   /* save ebp, no memory references ("m") after this point */
-        pFile->PrintIndent("\"movl  $-1,%%%%ebp    \\n\\t\"\n"); /* recv msg descriptor = 0 */
-        if (bSendFlexpage)
-            pFile->PrintIndent("\"orl $2, %%%%eax \\n\\t\"\n");
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");   /* restore ebp, no memory references ("m") before this point */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());               /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());           /* EDX, 1 */
-        pFile->PrintIndent("\"=b\" (%s),\n", sDummy.c_str());           /* EBX, 2 */
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                 /* EDI, 3 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        pFile->PrintIndent("\"a\" (");
+        if (bFlexpage)
+	    *pFile << "|2";
         if (bScheduling)
-            *pFile << "(" << sMWord << ")(";
-        *pFile << ((bVarBuf) ? "" : "&") << sMsgBuffer;
-        if (bScheduling)
-            *pFile << ")|" << sScheduling;
-        pFile->Print("),\n");           /* EAX, 0 */
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOOPCODE))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-        }
-        else
-            *pFile << pFunction->GetOpcodeConstName();
-        *pFile << "),\n";
-        *pFile << "\t\"b\" (";
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-            pFile->Print("0");
-        *pFile << "),\n";
-        pFile->PrintIndent("\"c\" (%s)\n", sTimeout.c_str());                /* timeout, 5 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
+            *pFile << "|" << sScheduling;
+        if (bFlexpage || bScheduling)
+            *pFile << ")";
     }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
+    *pFile << ",\n";
+
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+    *pFile << "\t";
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
+	    false, false))
+	*pFile << "0";
+    *pFile << ",\n";
+
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+
+    pFile->DecIndent();
 }
 
-
-/** \brief writes the reply IPC code
+/** \brief write an IPC reply operation
  *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+ *  \param pFunction the function to write it for
+ *
+ * In the generic L4 case this is a send operation. We have to be careful
+ * though with ASM code, which can push parameters directly into registers,
+ * since the parameters for reply (exception) are not the same as for send
+ * (opcode).
  */
-void CL4V2BEIPC::WriteReply(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+void 
+CL4V2BEIPC::WriteReply(CBEFile* pFile, 
+	CBEFunction* pFunction)
 {
-    if (UseAssembler(pFunction, pContext))
-    {
-        if (IsShortIPC(pFunction, pContext, pFunction->GetSendDirection()))
-            WriteAsmShortReply(pFile, pFunction, pContext);
-        else
-            WriteAsmLongReply(pFile, pFunction, pContext);
-    }
-    else
-        CL4BEIPC::WriteReply(pFile, pFunction, pContext);
+    WriteSend(pFile, pFunction);
 }
 
-/** \brief writes the assembler short reply IPC code
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+/** \brief determine if we should use assembler for the IPCs
+ *  \param pFunction the function to write the call for
+ *  \return true if assembler code should be written
+ *
+ * This implementation currently always returns false, because assembler code
+ * is always ABI specific.
  */
-void CL4V2BEIPC::WriteAsmShortReply(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
+bool 
+CL4V2BEIPC::UseAssembler(CBEFunction *)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
-    CBETypedDeclarator *pException = pFunction->GetExceptionWord();
-    string sException;
-    if (pException && pException->GetDeclarator())
-        sException = pException->GetDeclarator()->GetName();
+    return false;
+}
 
-    CBEDeclarator *pObjName = pFunction->GetObject()->GetDeclarator();
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
+/** \brief helper function to test for short IPC
+ *  \param pFunction the function to test
+ *  \param nDirection the direction to test
+ *  \return true if the function uses short IPC in the specified direction
+ *
+ * This is a simple helper function, which just delegates the call to the
+ * function's message buffer.
+ */
+bool 
+CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction, 
+	int nDirection)
+{
+    if (nDirection == 0)
+       	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
+    	    IsShortIPC(pFunction, pFunction->GetReceiveDirection());
+
+    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+    return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nDirection);
+}
+
+/** \brief add local variables required in functions
+ *  \param pFunction the function to add the local variables to
+ *  \return true if successful
+ */
+bool 
+CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
+{
     int nSndDir = pFunction->GetSendDirection();
 
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-    if (bSymbols)
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    assert(pFunction);
+
+    // temp offset and offset variable
+    if (dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+        dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
+        dynamic_cast<CBEReplyFunction*>(pFunction) ||
+        dynamic_cast<CBESndFunction*>(pFunction) ||
+        dynamic_cast<CBEWaitFunction*>(pFunction))
     {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
+        // check for temp
+        if (pFunction->HasVariableSizedParameters(nSndDir) ||
+            pFunction->HasArrayParameters(nSndDir))
+        {
+	    try
+	    {
+		string sTmpVar = pNF->GetTempOffsetVariable();
+		pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 
+		    0);
+		CBETypedDeclarator *pVariable = 
+		    pFunction->m_LocalVariables.Find(sTmpVar);
+		pVariable->AddLanguageProperty(string("attribute"),
+		    string("__attribute__ ((unused))"));
+
+		string sOffsetVar = pNF->GetOffsetVariable();
+		pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, 
+		    sOffsetVar, 0);
+		pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
+		pVariable->AddLanguageProperty(string("attribute"),
+		    string("__attribute__ ((unused))"));
+	    }
+	    catch (CBECreateException *e)
+	    {
+		e->Print();
+		delete e;
+		return false;
+	    }
+        }
     }
 
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
+    // Dummy Variable
+    if (dynamic_cast<CBECallFunction*>(pFunction) ||
+        dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
+        dynamic_cast<CBEWaitFunction*>(pFunction) ||
+        dynamic_cast<CBEReplyFunction*>(pFunction) ||
+        dynamic_cast<CBESndFunction*>(pFunction))
     {
-        //      IN:                                     -> OUT
-        // eax: scheduling | 0  ( |2 : flexpage)           result
-        // ebx: dw1
-        // ebp: -1 (no recv)
-        // ecx: timeout                                    - (dummy)
-        // edx: dw0 (exception | result)                   - (dummy)
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // scheduling
-        // eax: scheduling bit
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception | dw0
-        // ESI: dest             -> EDI/ESI
-        // EDI: dw0 | dw1        -> ebx
-
-        // no scheduling
-        // eax: dw0 | dw1        -> ebx (set 0)
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
-        if (bScheduling)
+	// depends on the availability of enough members for registers or
+	// parameters of IPC call
+	CL4BEMsgBuffer *pMsgBuffer = dynamic_cast<CL4BEMsgBuffer*>
+	    (pFunction->GetMessageBuffer());
+	assert(pMsgBuffer);
+	int nRcvDir = pFunction->GetReceiveDirection();
+	// interface functions use generic struct, instead of using dummys
+	bool bUseDummy = dynamic_cast<CBEOperationFunction*>(pFunction) &&
+	    !pMsgBuffer->HasWordMembers(pFunction, nRcvDir);
+        // should not depend on DEFINES
+	bool bUseAssembler = UseAssembler(pFunction);
+        if (bUseAssembler || bUseDummy)
         {
-            if (bSendFlexpage)
-                *pFile << "\t\"orl $2,%%%%eax \\n\\t\"\n";
-            *pFile << "\t\"movl %%%%edi,%%%%ebx \\n\\t\"\n";
-            *pFile << "\t\"movl 4(%%%%esi),%%%%edi \\n\\t\"\n";
-            *pFile << "\t\"movl (%%%%esi),%%%%esi \\n\\t\"\n";
+            string sDummy = pNF->GetDummyVariable();
+	    try
+	    {
+		pFunction->AddLocalVariable(TYPE_MWORD, false, 0, sDummy, 
+		    0);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		e->Print();
+		delete e;
+                return false;
+	    }
+            CBETypedDeclarator *pVariable = 
+		pFunction->m_LocalVariables.Find(sDummy);
+            pVariable->AddLanguageProperty(string("attribute"), 
+		    string("__attribute__ ((unused))"));
+            pVariable->AddLanguageProperty(string("defined"), 
+		    string("__PIC__"));
+            pVariable->AddLanguageProperty(string("notdefined"), 
+		    string("PROFILE"));
         }
-        else
-        {
-            pFile->PrintIndent("\"movl   %%%%eax,%%%%ebx    \\n\\t\"\n");
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"movl   $-1,%%%%ebp    \\n\\t\"\n"); // no receive
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent("\"popl   %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());
-        pFile->PrintIndent(":\n");
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOEXCEPTIONS))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                *pFile << "0";
-        }
-        else
-            *pFile << sException;
-        *pFile << "),\n";
-        if (bScheduling)
-        {
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-            *pFile << "\t\"S\" (" << pObjName->GetName() << "),\n";
-            *pFile << "\t\"D\" (";
-            // get send parameter
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                *pFile << "0";
-            *pFile << "),\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"a\" (");
-            // get send parameter
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-                pFile->Print("0");
-            pFile->Print("),\n");                 /* EAX, 0 => EBX */
-            pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-            pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());          /* EDI    */
-        }
-        pFile->PrintIndent("\"c\" (%s)\n", sTimeout.c_str());                 /* ECX, 2 */
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        *pFile << "#else // !__PIC__\n";
-        *pFile << "#ifdef PROFILE\n";
     }
-    if (bPROF)
-        CL4BEIPC::WriteSend(pFile, pFunction, pContext);
-    if (!bSymbols)
-        *pFile << "#else // !PROFILE\n";
-    if (bNPROF) // is !__PIC__ && !PROFILE
-    {
 
-        // scheduling
-        // eax: scheduling bit
-        // ebx: dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax:
-        // ebx: dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebp          \\n\\t\"\n"); // save ebp no memory references ("m") after this point
-        if (bScheduling)
-        {
-            if (bSendFlexpage)
-                *pFile << "\t\"orl $2,%%%%eax  \\n\\t\"\n";
-        }
-        else
-        {
-            if (bSendFlexpage)
-                pFile->PrintIndent("\"movl $2,%%%%eax       \\n\\t\"\n");
-            else
-                pFile->PrintIndent("\"subl   %%%%eax,%%%%eax    \\n\\t\"\n");
-        }
-        pFile->PrintIndent("\"movl   $-1,%%%%ebp    \\n\\t\"\n"); // no receive
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl   %%%%ebp          \\n\\t\"\n"); // restore ebp, no memory references ("m") before this point
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());                /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=b\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                /* ECX, 3 */
-        pFile->PrintIndent(":\n");
-        if (bScheduling)
-            *pFile << "\t\"a\" (" << sScheduling << "),\n";
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOEXCEPTIONS))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                *pFile << "0";
-        }
-        else
-            *pFile << sException;
-        *pFile << "),\n";
-        pFile->PrintIndent("\"b\" (");
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-            pFile->Print("0");
-        pFile->Print("),\n");                 /* EBX, 2 */
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());                 /* ECX, 3 */
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());          /* ESI    */
-        pFile->PrintIndent("\"D\" (%s->lh.high)\n", pObjName->GetName().c_str());          /* EDI    */
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
+    return true;
 }
 
-/** \brief writes the assembler long send IPC code
+/** \brief writes the initialization
  *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param pContext the context of the write operation
+ *  \param pFunction the funtion to write for
  */
-void CL4V2BEIPC::WriteAsmLongReply(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext)
-{
-    CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-    string sResult = pNF->GetResultName(pContext);
-    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
-    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-    string sDummy = pNF->GetDummyVariable(pContext);
-    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); /* OR further attributes */
-    string sScheduling = pContext->GetNameFactory()->GetScheduleClientVariable(pContext);
-    CBETypedDeclarator *pException = pFunction->GetExceptionWord();
-    string sException;
-    if (pException && pException->GetDeclarator())
-        sException = pException->GetDeclarator()->GetName();
+void
+CL4V2BEIPC::WriteInitialization(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
 
-    // l4_fpage_t + 2*l4_msgdope_t
-    int nMsgBase = pContext->GetSizes()->GetSizeOfEnvType("l4_fpage_t") +
-                pContext->GetSizes()->GetSizeOfEnvType("l4_msgdope_t")*2;
+/** \brief writes the assigning of a local name to a communication port
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V2BEIPC::WriteBind(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
 
-    vector<CBEDeclarator*>::iterator iterO = pFunction->GetObject()->GetFirstDeclarator();
-    CBEDeclarator *pObjName = *iterO;
-    int nSndDir = pFunction->GetSendDirection();
+/** \brief writes the initialization
+ *  \param pFile the file to write to
+ *  \param pFunction the funtion to write for
+ */
+void
+CL4V2BEIPC::WriteCleanup(CBEFile* /*pFile*/, 
+    CBEFunction* /*pFunction*/)
+{}
 
-    bool bSendFlexpage = pFunction->GetMessageBuffer()->GetCount(TYPE_FLEXPAGE, nSndDir) > 0;
-    bool bVarBuf = pFunction->GetMessageBuffer()->HasReference();
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-
-    // to increase the confusing code:
-    // if we have PROGRAM_USE_SYMBOLS set, we test for __PIC__ and PROFILE
-    // then we write the three parts bPIC, bPROF, bNPROF if they are set
-    bool bPIC = true;
-    bool bPROF = true;
-    bool bNPROF = true;
-    bool bSymbols = pContext->IsOptionSet(PROGRAM_USE_SYMBOLS);
-    if (bSymbols)
-    {
-        bPIC = pContext->HasSymbol("__PIC__");
-        bPROF = pContext->HasSymbol("PROFILE") && !bPIC;
-        bNPROF = !bPROF && !bPIC;
-    }
-
-    if (!bSymbols)
-        pFile->Print("#ifdef __PIC__\n");
-    if (bPIC)
-    {
-
-        // scheduling
-        // eax: scheduling bit | msgbuf
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: msgbuf
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax: msgbuf
-        // ebx: pushed
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx:
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // PIC branch
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl  %%%%ebx         \\n\\t\"\n");
-        pFile->PrintIndent("\"pushl  %%%%ebp         \\n\\t\"\n");
-        // if long ipc we can extract the dwords directly from the msg buffer structure in EAX
-        if (bScheduling)
-        {
-            *pFile << "\t\"movl " << nMsgBase+4 << "(%%%%edx),%%%%ebx \\n\\t\"\n";
-            *pFile << "\t\"movl " << nMsgBase << "(%%%%edx),%%%%edx \\n\\t\"\n";
-        }
-        else
-        {
-            pFile->PrintIndent("\"movl %d(%%%%eax),%%%%ebx  \\n\\t\"\n", nMsgBase+4);
-            pFile->PrintIndent("\"movl %d(%%%%eax),%%%%edx  \\n\\t\"\n", nMsgBase);
-        }
-        if (bSendFlexpage)
-            *pFile << "\t\"orl $2,%%%%eax    \\n\\t\"\n";
-        pFile->PrintIndent("\"movl   $-1, %%%%ebp  \\n\\t\"\n"); // receive short IPC
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");
-        pFile->PrintIndent("\"movl  %%%%ebx,%%%%ecx    \\n\\t\"\n");
-        pFile->PrintIndent("\"popl  %%%%ebx          \\n\\t\"\n");
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=c\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=S\" (%s),\n", sDummy.c_str());
-        pFile->PrintIndent("\"=D\" (%s)\n", sDummy.c_str());
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"a\" (");
-        if (bScheduling)
-            *pFile << "(" << sMWord << ")(";
-        *pFile << ((bVarBuf) ? "" : "&") << sMsgBuffer;
-        if (bScheduling)
-            *pFile << ")|" << sScheduling;
-        pFile->Print("),\n");
-        if (bScheduling)
-            *pFile << "\t\"d\" (" << ((bVarBuf) ? "" : "&") << sMsgBuffer << "),\n";
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());
-        pFile->PrintIndent("\"D\" (%s->lh.high)\n", pObjName->GetName().c_str());
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    } // PIC
-    if (!bSymbols)
-    {
-        pFile->Print("#else // !__PIC__\n");
-        pFile->Print("#ifndef PROFILE\n");
-    }
-    if (bNPROF)
-    {
-
-        // scheduling
-        // eax: msgbuf | scheduling bit
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        // no scheduling
-        // eax: msgbuf
-        // ebx: dw0 | dw1
-        // ebp: pushed           -> -1
-        // ecx: timeout
-        // edx: exception | dw0
-        // ESI: dest.lh.low
-        // EDI: dest.lh.high
-
-        pFile->PrintIndent("asm volatile(\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("\"pushl %%%%ebp          \\n\\t\"\n");   /* save ebp, no memory references ("m") after this point */
-        if (bSendFlexpage)
-            pFile->PrintIndent("\"orl $2, %%%%eax \\n\\t\"\n");
-        pFile->PrintIndent("\"movl  $-1,%%%%ebp    \\n\\t\"\n"); /* recv msg descriptor = 0 */
-        pFile->PrintIndent("IPC_SYSENTER\n");
-        pFile->PrintIndent("\"popl  %%%%ebp          \\n\\t\"\n");   /* restore ebp, no memory references ("m") before this point */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"=a\" (%s),\n", sResult.c_str());               /* EAX, 0 */
-        pFile->PrintIndent("\"=d\" (%s),\n", sDummy.c_str());           /* EDX, 1 */
-        pFile->PrintIndent("\"=b\" (%s),\n", sDummy.c_str());           /* EBX, 2 */
-        pFile->PrintIndent("\"=c\" (%s)\n", sDummy.c_str());                 /* EDI, 3 */
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"S\" (%s->lh.low),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        pFile->PrintIndent("\"D\" (%s->lh.high),\n", pObjName->GetName().c_str());                   /* dest, 4  */
-        pFile->PrintIndent("\"a\" (");
-        if (bScheduling)
-            *pFile << "(" << sMWord << ")(";
-        *pFile << ((bVarBuf) ? "" : "&") << sMsgBuffer;
-        if (bScheduling)
-            *pFile << ")|" << sScheduling;
-        pFile->Print("),\n");           /* EAX, 0 */
-        pFile->PrintIndent("\"c\" (%s),\n", sTimeout.c_str());                /* timeout, 5 */
-        int nIndex = 1;
-        *pFile << "\t\"d\" (";
-        if (pFunction->FindAttribute(ATTR_NOEXCEPTIONS))
-        {
-            if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex++, 4, nSndDir, false, pContext))
-                *pFile << "0";
-        }
-        else
-            *pFile << sException;
-        *pFile << "),\n";
-        *pFile << "\t\"b\" (";
-        if (!pMarshaller->MarshalToPosition(pFile, pFunction, nIndex, 4, nSndDir, false, pContext))
-            *pFile << "0";
-        *pFile << ")\n";
-        pFile->PrintIndent(":\n");
-        pFile->PrintIndent("\"memory\"\n");
-        pFile->DecIndent();
-        pFile->PrintIndent(");\n");
-    }
-    if (!bSymbols)
-    {
-        pFile->Print("#endif // PROFILE\n");
-        pFile->Print("#endif // __PIC__\n");
-    }
-}

@@ -35,10 +35,10 @@
 #define VT100_INSMODE_INSERT    1
 
 // origin mode
-// SCROLL - line numbers relative to currently 
+// SCROLL - line numbers relative to currently
 //          defined scrolling region
 #define VT100_ORIGIN_SCROLL     0
-// GLOBAL - line numbers relative to the whole 
+// GLOBAL - line numbers relative to the whole
 //          terminal
 #define VT100_ORIGIN_GLOBAL     1
 
@@ -71,10 +71,10 @@
  *  |               |
  *  |               |
  *  +---------------+   phys_off --> first line of phys
- *  |    ^          |   
- *  |    |          |   
+ *  |    ^          |
+ *  |    |          |
  *  |<---X--------->|   cursor is always within phys
- *  |    |          |   
+ *  |    |          |
  *  |    v          |
  *  +---------------+   phys_off + phys_h - 1 --> Last line of phys
  *  .               .     = PHYS_END
@@ -109,7 +109,7 @@ typedef struct termstate_s
     int           __ctrl;           // ctrl pressed
     int           __keydown;        // any key pressed
     int           returns;          // counter for returns in buffer
-    
+
     int           w;                // terminal width
     int           virt_h;           // virtual terminal height
     int           phys_h;           // physical terminal height
@@ -133,7 +133,7 @@ typedef struct termstate_s
 
     int           tabs[MAX_TABS];   // an array to store all the tabulators set
     int           tab_last;         // last tab in the array
-    
+
     l4semaphore_t termsem;          // protects the term struct
     l4semaphore_t keybufsem;        // protects the keybuffer
     l4semaphore_t keysem;           // this semaphore is used for a
@@ -182,6 +182,10 @@ int         vt100_tcgetattr( termstate_t *term, struct termios *termios_p );
 int         vt100_tcsetattr( termstate_t *term, struct termios *termios_p );
 // function to supply current window size
 int         vt100_getwinsize( termstate_t *term, struct winsize *win );
+
+// 'de', 'us'
+void vt100_set_keymap(char * keymap);
+
 
 /* Must be provided externally, i.e. if you implement a special output
  * lib, e.g. for dope or con, you must provide these functions.

@@ -1,4 +1,5 @@
 # -*- Makefile -*-
+# vim:set ft=make:
 #
 # DROPS (Dresden Realtime OPerating System) Component
 #
@@ -30,7 +31,7 @@
 # Clean-rules are defined here.
 #
 
-.general.d:	$(L4DIR)/mk/binary.inc
+$(OBJ_DIR)/.general.d:	$(L4DIR)/mk/binary.inc
 # our default Makefile-name in the OBJ-Subdirs
 BID_OBJ_Makefile ?= Makefile
 
@@ -88,47 +89,53 @@ SYSTEM_TO_ARCH = $(shell echo $(1)|$(SED) -e 's/[_-].*//')
 SYSTEM_TO_CPU = $(shell echo $(1)|$(SED) -ne 's/[^-_]*_\([^-]*\).*/\1/p')
 SYSTEM_TO_L4API = $(shell echo $(1)|$(SED) -ne 's/.*-\(.*\)/\1/p')
 
-$(foreach sys,$(TARGET_SYSTEMS),OBJ-$(sys)/$(BID_OBJ_Makefile)):OBJ-%/$(BID_OBJ_Makefile):.general.d
-	$(VERBOSE)install -d $(dir $@)
-	$(VERBOSE)echo 'L4DIR=$(call DIR_FROM_SUB,$(L4DIR))'>$@
-	$(VERBOSE)echo 'PKGDIR=$(call DIR_FROM_SUB,$(PKGDIR))'>>$@
-	$(VERBOSE)echo 'MAKECONFLOCAL=../Makeconf.local'>>$@
-	$(VERBOSE)echo 'OSYSTEM=$(call BID_ORIG_SYSTEM,$*,$(SYSTEMS))'>>$@
-	$(VERBOSE)echo 'SYSTEM=$*'>>$@
-	$(VERBOSE)echo 'ARCH=$(call SYSTEM_TO_ARCH,$*)'>>$@
-	$(VERBOSE)echo 'CPU=$(call SYSTEM_TO_CPU,$*)'>>$@
-	$(VERBOSE)echo 'L4API=$(call SYSTEM_TO_L4API,$*)'>>$@
-	$(VERBOSE)echo 'vpath %.c ..'>>$@
-	$(VERBOSE)echo 'vpath %.cc ..'>>$@
-	$(VERBOSE)echo 'vpath %.S ..'>>$@
-	$(VERBOSE)echo 'vpath %.y ..'>>$@
-	$(VERBOSE)echo 'vpath %.l ..'>>$@
-	$(VERBOSE)echo 'vpath %.ld ..'>>$@
-	$(VERBOSE)echo 'vpath %.dpe ..'>>$@
-	$(VERBOSE)echo '.general.d: ../$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
-	$(VERBOSE)echo 'include ../$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
-	$(VERBOSE)echo 'include $$(L4DIR)/mk/$(ROLE)'>>$@
+$(foreach sys,$(TARGET_SYSTEMS),$(OBJ_DIR)/OBJ-$(sys)/$(BID_OBJ_Makefile)):$(OBJ_DIR)/OBJ-%/$(BID_OBJ_Makefile):$(OBJ_DIR)/.general.d
+	@install -d $(dir $@)
+	@echo 'L4DIR=$(L4DIR_ABS)'>$@
+	@echo 'OBJ_BASE=$(OBJ_BASE)'>>$@
+	@echo 'OBJ_DIR=$(OBJ_DIR)'>>$@
+	@echo 'SRC_DIR=$(SRC_DIR)'>>$@
+	@echo 'PKGDIR=$(PKGDIR_ABS)'>>$@
+	@echo 'PKGDIR_ABS=$(PKGDIR_ABS)'>>$@
+	@echo 'PKGDIR_OBJ=$(PKGDIR_OBJ)'>>$@
+	@echo 'MAKECONFLOCAL=$(SRC_DIR)/Makeconf.local'>>$@
+	@echo 'OSYSTEM=$(call BID_ORIG_SYSTEM,$*,$(SYSTEMS))'>>$@
+	@echo 'SYSTEM=$*'>>$@
+	@echo 'ARCH=$(call SYSTEM_TO_ARCH,$*)'>>$@
+	@echo 'CPU=$(call SYSTEM_TO_CPU,$*)'>>$@
+	@echo 'L4API=$(call SYSTEM_TO_L4API,$*)'>>$@
+	@echo 'vpath %.c $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.cc $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.cpp $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.S $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.y $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.l $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.ld $(VPATH_SRC_BASE)'>>$@
+	@echo 'vpath %.dpe $(VPATH_SRC_BASE)'>>$@
+	@echo '.general.d: $(SRC_DIR)/$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
+	@echo 'include $(SRC_DIR)/$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
+	@echo 'include $$(L4DIR)/mk/$(ROLE)'>>$@
 
-install relink reloc scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
-                                          OBJ-$(arch)/$(BID_OBJ_Makefile))
+install relink scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
+                                          $(OBJ_DIR)/OBJ-$(arch)/$(BID_OBJ_Makefile))
 	$(if $(TARGET_SYSTEMS),  $(VERBOSE)set -e ; \
 	    for d in $(TARGET_SYSTEMS) ; do \
-	    	PWD=$(PWD)/OBJ-$$d $(MAKE) -C OBJ-$$d -f $(BID_OBJ_Makefile) \
+	    	PWD=$OBJ-$$d $(MAKE) -C $(OBJ_DIR)/OBJ-$$d -f $(BID_OBJ_Makefile) \
 			$@ ; done )
 
-all:: $(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch))
-.PHONY: $(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch))
-$(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch)):%:%/$(BID_OBJ_Makefile)
-	$(VERBOSE)PWD=$(PWD)/$@ $(MAKE) -C $@ -f $(BID_OBJ_Makefile)
+all:: $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch))
+.PHONY: $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch))
+$(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)):%:%/$(BID_OBJ_Makefile)
+	$(VERBOSE)PWD=$@ $(MAKE) $(PL_j) -C $@ -f $(BID_OBJ_Makefile)
 
 clean::
-	$(if $(wildcard OBJ-*), $(VERBOSE)set -e ; \
-	    for d in $(wildcard OBJ-*) ; do \
-	        PWD=$(PWD)/OBJ-$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
+	$(if $(wildcard $(OBJ_DIR)/OBJ-*), $(VERBOSE)set -e ; \
+	    for d in $(wildcard $(OBJ_DIR)/OBJ-*) ; do \
+	        PWD=OBJ-$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
 	    done )
 
 cleanall::
-	$(VERBOSE)$(RM) -r $(wildcard OBJ-* .general.d)
+	$(VERBOSE)$(RM) -r $(wildcard $(OBJ_DIR))
 
 .PHONY: $(TARGET_SYSTEMS)
 
@@ -141,19 +148,20 @@ else
 
 all::		$(TARGET)
 
-L4INCDIR ?=	$(addprefix $(L4DIR)/include/$(ARCH)/,$(L4API)) \
+L4INCDIR ?=	$(addprefix $(OBJ_BASE)/include/$(ARCH)/,$(L4API)) \
                 $(addprefix $(DROPS_STDDIR)/include/$(ARCH)/,$(L4API)) \
-                $(addprefix $(L4DIR)/include/,$(L4API)) \
+                $(addprefix $(OBJ_BASE)/include/,$(L4API)) \
                 $(addprefix $(DROPS_STDDIR)/include/,$(L4API)) \
-                $(L4DIR)/include/$(ARCH) \
+                $(OBJ_BASE)/include/$(ARCH) \
                 $(DROPS_STDDIR)/include/$(ARCH) \
-                $(L4DIR)/include \
+		$(DICE_INCDIR) \
+                $(OBJ_BASE)/include \
                 $(DROPS_STDDIR)/include
-L4LIBDIR ?=	$(addprefix $(L4DIR)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
+L4LIBDIR ?=	$(addprefix $(OBJ_BASE)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
                 $(addprefix $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
-                $(L4DIR)/lib/$(ARCH)_$(CPU) \
+                $(OBJ_BASE)/lib/$(ARCH)_$(CPU) \
                 $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU) \
-                $(L4DIR)/lib \
+                $(OBJ_BASE)/lib \
                 $(DROPS_STDDIR)/lib
 
 L4LINUX22_DIR ?= $(L4DIR)/../linux22
@@ -207,6 +215,7 @@ LIBCLIBDIR ?= $(call BID_mode_var,LIBCLIBDIR)
 LIBCLIBS   ?= $(call BID_mode_var,LIBCLIBS)
 L4LIBS     ?= $(call BID_mode_var,L4LIBS)
 CRT0	   ?= $(call BID_mode_var,CRT0)
+CRTP       ?= $(if $(filter $(CRT0_DEFAULT),$(CRT0)),$(CRTP_DEFAULT),$(CRT0))
 CRTN	   ?= $(call BID_mode_var,CRTN)
 LDSCRIPT   ?= $(call BID_mode_var,LDSCRIPT)
 
@@ -217,15 +226,28 @@ LDSCRIPT   ?= $(call BID_mode_var,LDSCRIPT)
 LIBS	+= $(strip $(LIBS_$(OSYSTEM)) $(LIBS_$@) $(LIBS_$@_$(OSYSTEM)))
 
 
-LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@)  $(LDFLAGS_$@_$(OSYSTEM)))
+LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@) $(LDFLAGS_$@_$(OSYSTEM)))
 
 OPTS	?= -g -O2 -fno-strict-aliasing $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)
 
+#
+# These are some special defines for the X2 sources from Pistachio.
+# 
+DEFINES_x86-l4x2 += -DL4_ARCH_IA32 -D__L4_ARCH__=ia32
+DEFINES_arm-l4x2 += -DL4_ARCH_ARM -D__L4_ARCH__=arm
+DEFINES_amd64-l4x2 += -DL4_ARCH_AMD64 -D__L4_ARCH__=amd64
+DEFINES_ppc32-l4x2 += -DL4_ARCH_POWERPC -D__L4_ARCH__=powerpc
+DEFINES_ppc64-l4x2 += -DL4_ARCH_POWERPC64 -D__L4_ARCH__=powerpc64
+DEFINES_ia64-l4x2 += -DL4_ARCH_IA64 -D__L4_ARCH__=ia64
+DEFINES_alpha-l4x2 += -DL4_ARCH_ALPHA -D__L4_ARCH__=alpha
+
 $(CLIENTIDL:.idl=-client.o): CFLAGS += -ffunction-sections
 CFLAGS	+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)
 CFLAGS	+= $(CFLAGS_$(OSYSTEM)) $(CFLAGS_$(<F)) $(CFLAGS_$(<F)_$(OSYSTEM))
+CFLAGS  += $(CFLAGS_$(L4API))
 CFLAGS	+= $(OPTS) $(WARNINGS)
+CFLAGS  += -fno-common
 DEFINES += $(DEFINES_$(OSYSTEM)) $(DEFINES_$(<F)) $(DEFINES_$(<F)_$(OSYSTEM))
 DEFINES += -DSYSTEM_$(subst -,_,$(SYSTEM)) -DARCH_$(ARCH) -DCPUTYPE_$(CPU) -DL4API_$(L4API)
 ifdef DEBUG
@@ -236,6 +258,7 @@ endif
 
 CPPFLAGS+= $(CPPFLAGS_$(OSYSTEM)) $(CPPFLAGS_$(<F)) $(CPPFLAGS_$(<F)_$(OSYSTEM))
 CPPFLAGS+= $(DEFINES)
+CPPFLAGS+= $(BID_CPPFLAGS_SYSCALLS)
 CPPFLAGS+= $(addprefix -I, $(PRIVATE_INCDIR) $(PRIVATE_INCDIR_$(OSYSTEM)) $(PRIVATE_INCDIR_$@) $(PRIVATE_INCDIR_$@_$(OSYSTEM)))
 CPPFLAGS+= $(if $(CLIENTIDL)$(SERVERIDL)$(addprefix CLIENTIDL_,$(TARGET))$(addprefix SERVERDIL_,$(TARGET)),$(addprefix -I, $(IDL_PATH)))
 ifneq ($(MODE),host)
@@ -245,9 +268,11 @@ CPPFLAGS+= $(LIBCINCDIR)
 
 CXXFLAGS+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)
 CXXFLAGS+= $(CXXFLAGS_$(OSYSTEM)) $(CXXFLAGS_$(@:.o=.cc)) $(CXXFLAGS_$(@:.o=.cc)_$(OSYSTEM))
+CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cpp)) $(CXXFLAGS_$(@:.o=.cpp)_$(OSYSTEM))
 CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
+CXXFLAGS+= -fno-common
 
-ASFLAGS+= $(ASFLAGS_$(OSYSTEM)) $(ASFLAGS_$(@:.o=.S)) $(ASFLAGS_$(@:.o=.S)_$(OSYSTEM))
+ASFLAGS+= $(ASFLAGS_$(ARCH)) $(ASFLAGS_$(@:.o=.S)) $(ASFLAGS_$(@:.o=.S)_$(OSYSTEM))
 OBJS	+= $(strip $(OBJS_$(OSYSTEM)) $(OBJS_$@) $(OBJS_$@_$(OSYSTEM)))
 ALLOBJS	= $(OBJS) $(foreach target,$(TARGET) $(TARGET_$(OSYSTEM)),\
 		$(OBJS_$(target)) $(OBJS_$(target)_$(OSYSTEM)))
@@ -255,8 +280,9 @@ ALLDPI = $(sort $(foreach obj,$(ALLOBJS),$(patsubst %.dpe,%.dpi,\
 		$(DPE_$(obj:.o=.c)))))
 
 # implementation of $(CLIENTIDL) and $(SERVERIDL)
-IDL_TYPE ?= dice
-IDL_PATH ?= $(PKGDIR)/idl/OBJ-$(ARCH)-$(L4API)
+IDL_TYPE   ?= dice
+IDL_PKGDIR ?= $(PKGDIR_OBJ)
+IDL_PATH   ?= $(addsuffix /idl/OBJ-$(ARCH)-$(L4API),$(IDL_PKGDIR))
 ifneq ($(IDL_TYPE), dice)
 ifneq ($(IDL_TYPE), corba)
 $(error IDL_TYPE "$(IDL_TYPE)" not supported.)
@@ -269,9 +295,13 @@ endif
 # variables
 # arg: 1 - target
 IDL_SRC_Cfn = $(CLIENTIDL:.idl=-client.c) $(SERVERIDL:.idl=-server.c)	\
-	      $(foreach inter, $(OSYSTEM) $(1) $(1)_$(OSYSTEM),	\
+	      $(foreach inter, $(OSYSTEM) $(1) $(1)_$(OSYSTEM),		\
 			$(CLIENTIDL_$(inter):.idl=-client.c)		\
 			$(SERVERIDL_$(inter):.idl=-server.c))
+IDL_SRC_CCfn = $(CLIENTIDL:.idl=-client.cc) $(SERVERIDL:.idl=-server.cc) \
+	      $(foreach inter, $(OSYSTEM) $(1) $(1)_$(OSYSTEM),		\
+			$(CLIENTIDL_$(inter):.idl=-client.cc)		\
+			$(SERVERIDL_$(inter):.idl=-server.cc))
 
 # *all* CLIENTIDLs/SERVERIDLs
 # needed for the test if we should include the IDL-Path into vpath
@@ -284,20 +314,24 @@ IDL_ALLSERVERIDL = $(SERVERIDL) $(SERVERIDL_$(OSYSTEM)) 		\
 
 ifneq ($(IDL_ALLCLIENTIDL),)
 vpath %-client.c $(IDL_PATH)
+vpath %-client.cc $(IDL_PATH)
 endif
 ifneq ($(IDL_ALLSERVERIDL),)
 vpath %-server.c $(IDL_PATH)
+vpath %-server.cc $(IDL_PATH)
 endif
 
 
 # a helper function to generate the object-files for a given target
 # arg: 1 - target
 #      2 - infix between the basename and the .o
-targetobjs = $(SRC_C:.c=$(2).o) $(SRC_S:.S=$(2).o) $(SRC_CC:.cc=$(2).o)	\
+targetobjs = $(SRC_C:.c=$(2).o) $(SRC_S:.S=$(2).o)                     	\
+	     $(patsubst %.cc,%$(2).o,$(patsubst %.cpp,%.cc,$(SRC_CC)))	\
 	     $(foreach inter, $(OSYSTEM) $(1) $(1)_$(OSYSTEM),		\
 			$(SRC_C_$(inter):.c=$(2).o)			\
 			$(SRC_S_$(inter):.S=$(2).o)			\
-			$(SRC_CC_$(inter):.cc=$(2).o))			\
+			$(patsubst %.cc,%$(2).o,$(SRC_CC_$(inter):.cpp=.cc)) \
+			$($(SRC_CC_$(inter):.cpp=.cc):%.cc=$(2).o))	\
 	     $(patsubst %.c,%$(2).o,$(call IDL_SRC_Cfn,$(1)))
 
 # The directories our object files will go into. These dirs will be created
@@ -324,10 +358,19 @@ $(BID_OBJ_Makefile).inc: .general.d
 		\nIDL_SRC_C_$(target)=$(call IDL_SRC_Cfn,$(target))))'>>$@_
         # and add them to SRC_C
 	@$(ECHO) -en '$(strip $(foreach target,$(TARGET),		\
-		\nSRC_C_$(target) += $$(IDL_SRC_$(target))))'>>$@_
+		\nSRC_C_$(target) += $$(IDL_SRC_C_$(target))))'>>$@_
         # but set the variables empty for the current rule
 	@$(ECHO) -en '$(strip $(foreach target,$(TARGET),		\
 		\n$(BID_OBJ_Makefile).inc: IDL_SRC_C_$(target)=))'>>$@_
+        # write helper variables containing the IDL-C++-Sources
+	@$(ECHO) -en '$(strip $(foreach target,$(TARGET),		\
+		\nIDL_SRC_CC_$(target)=$(call IDL_SRC_CCfn,$(target))))'>>$@_
+        # and add them to SRC_CC
+	@$(ECHO) -en '$(strip $(foreach target,$(TARGET),		\
+		\nSRC_CC_$(target) += $$(IDL_SRC_CC_$(target))))'>>$@_
+        # but set the variables empty for the current rule
+	@$(ECHO) -en '$(strip $(foreach target,$(TARGET),		\
+		\n$(BID_OBJ_Makefile).inc: IDL_SRC_CC_$(target)=))'>>$@_
         # write the object declaration variables
         # TARGET_{STANDARD, PIC, SHARED} contain the appropriate targets
         # TARGET_PROFILE_{STANDARD, PIC, SHARED} as well
@@ -358,8 +401,8 @@ $(BID_OBJ_Makefile).inc: .general.d
 		))))' >>$@_
         #
         # create the object-dirs
-	$(if $(OBJDIRS), $(VERBOSE)set -e; for d in $(OBJDIRS); do	\
-		$(MKDIR) $$d; done )
+	@$(if $(OBJDIRS), $(VERBOSE)set -e; for d in $(OBJDIRS); do	\
+		[ -d "$$d" ] || $(MKDIR) $$d; done )
 
         #
         # write the object-dependencies for the targets
@@ -369,6 +412,9 @@ $(BID_OBJ_Makefile).inc: .general.d
 	@$(ECHO) -e '$(foreach target,$(TARGET),$(strip			\
 	          \n$$(OBJS_$(target)): .general.d))'			\
 		>> $@_
+        # Using LDSO does not need a RELOC address, so omit the following in
+        # this case
+ifneq ($(MODE)$(USE_LDSO),loadery)
         # in case of a binary, write the link address
         # the dependency to the static file: If DEFAULT_RELOC is set,
         # all targets are made dependent on the STATIC file
@@ -408,8 +454,9 @@ else
 		\nLDFLAGS_$(target)+= -Ttext=$(firstword		\
 			$(DEFAULT_RELOC_$(target)) $(DEFAULT_RELOC))))'	\
 		>>$@_
+endif # STATIC file
 endif
-endif
+endif # MODE == loader && USE_LDSO == y
 	@mv $@_ $@
 
 ifeq ($(filter scrub help,$(MAKECMDGOALS)),)
@@ -497,6 +544,26 @@ endif # HAVE_LDSO empty
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.pr.s.o: %.cc
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
+
+%.o:	%.cpp
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) $(call absfilename,$<) -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
+
+%.s.o:	%.cpp
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
+
+%.pr.o:	%.cpp
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
+
+%.pr.s.o: %.cpp
 	@$(COMP_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)

@@ -14,9 +14,10 @@ typedef struct
 } region_t;
 
 void      region_init(void);
-region_t* get_region(int i);
+region_t* region_get(int i);
 int       region_add(l4_addr_t begin, l4_addr_t end,
 		     int task_no, const char *name);
+void      region_free(l4_addr_t begin, l4_addr_t end);
 int       region_overlaps(l4_addr_t begin, l4_addr_t end);
 int       region_find(l4_addr_t begin, l4_addr_t end);
 void      region_print(int i);

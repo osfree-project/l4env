@@ -17,9 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#ifdef OSKIT
-#include <malloc.h>
-#endif
 
 #include <l4/env/errno.h>
 #include <l4/names/libnames.h>

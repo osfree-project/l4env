@@ -19,11 +19,13 @@ public:
                                         const char * const path,
 					void (*bootstrap_func)());
   static void		irq_prov_shutdown();
+  static unsigned int	get_pid_for_irq_prov(unsigned);
   static void           snd_to_irq( unsigned irq, Mword w1, Mword w2 );
 
   enum {
     IRQ_TIMER = 0,
     IRQ_CON   = 1,
+    IRQ_NET   = 2,
   };
 
 private:
@@ -51,7 +53,7 @@ unsigned int	Pic::pids[Config::Max_num_irqs];
 struct pollfd	Pic::pfd[Config::Max_num_irqs];
 
 IMPLEMENT FIASCO_INIT
-void 
+void
 Pic::init()
 {
   atexit (&irq_prov_shutdown);
@@ -82,7 +84,7 @@ Pic::setup_irq_prov (unsigned irq, const char * const path,
       perror ("tcgetattr");
       return false;
     }
-   
+
   cfmakeraw (&tt);
 
   if (tcsetattr (sockets[0], TCSADRAIN, &tt) < 0)
@@ -95,7 +97,7 @@ Pic::setup_irq_prov (unsigned irq, const char * const path,
 
   switch (pids[irq] = fork())
     {
-      case -1:        
+      case -1:
         return false;
 
       case 0:
@@ -123,9 +125,9 @@ Pic::setup_irq_prov (unsigned irq, const char * const path,
   close (sockets[0]);
   close (sockets[1]);
   bootstrap_func();
-    
+
   _exit (EXIT_FAILURE);
-} 
+}
 
 IMPLEMENT
 void
@@ -137,11 +139,11 @@ Pic::irq_prov_shutdown()
 }
 
 IMPLEMENT
-void Pic::snd_to_irq( unsigned irq, Mword w1, Mword w2 )
+void Pic::snd_to_irq(unsigned irq, Mword w1, Mword w2)
 {
-  Mword buf[2] = {w1,w2};
-  if(pids[irq])
-    write( pfd[irq].fd, buf, sizeof(buf) );
+  Mword buf[2] = {w1, w2};
+  if (pids[irq])
+    write(pfd[irq].fd, buf, sizeof(buf));
 }
 
 IMPLEMENT inline NEEDS [<cassert>, <csignal>, <fcntl.h>, "boot_info.h"]
@@ -160,7 +162,7 @@ Pic::enable_locked (unsigned irq, unsigned /*prio*/)
     return;
 
   pfd[irq].events = POLLIN;
-  
+
   if (irq >= highest_irq)
     highest_irq = irq + 1;
 }
@@ -175,12 +177,17 @@ void
 Pic::acknowledge_locked (unsigned)
 {}
 
+IMPLEMENT inline
+void
+Pic::block_locked (unsigned)
+{}
+
 IMPLEMENT
 int
 Pic::irq_pending()
 {
   unsigned int i;
-  
+
   for (i = 0; i < highest_irq; i++)
     pfd[i].revents = 0;
 
@@ -197,9 +204,9 @@ void
 Pic::eat (unsigned irq)
 {
   char buffer[8];
-  
+
   assert (pfd[irq].events & POLLIN);
-  
+
   while (read (pfd[irq].fd, buffer, sizeof (buffer)) > 0)
     ;
 }
@@ -222,4 +229,11 @@ unsigned int
 Pic::map_irq_to_gate (unsigned irq)
 {
   return 0x20 + irq;
+}
+
+IMPLEMENT
+unsigned int
+Pic::get_pid_for_irq_prov(unsigned irq)
+{
+  return pids[irq];
 }

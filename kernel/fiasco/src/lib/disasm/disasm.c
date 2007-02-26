@@ -26,10 +26,10 @@ my_read_memory(bfd_vma memaddr, bfd_byte *myaddr, unsigned length,
 
   for (i=0; i<length; i++)
     {
-      int c;
-      if ((c = dis_peek_task(memaddr+i, dis_task)) == -1)
+      Mword value;
+      if (dis_peek_task(memaddr+i, dis_task, &value, 1) == -1)
 	return -1;
-      *myaddr++ = c;
+      *myaddr++ = value;
     }
 
   return 0;
@@ -39,7 +39,11 @@ my_read_memory(bfd_vma memaddr, bfd_byte *myaddr, unsigned length,
 static unsigned char
 my_get_data(bfd_vma memaddr)
 {
-  return dis_peek_task(memaddr, dis_task);
+  Mword value;
+  if (dis_peek_task(memaddr, dis_task, &value, 1) == -1)
+    return -1;
+
+  return value;
 }
 
 /* print address (using symbols if possible) */

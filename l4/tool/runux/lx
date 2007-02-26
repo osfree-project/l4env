@@ -19,16 +19,13 @@ gen_loader_appname() {
 fprov_task=9
 rtc_task=10
 blk_task=11
-con_task=12
+ore_task=11
+con_task=11
 
-use_events=0
 events_param=
 
 blk_write="-w"
 
-con_inc() {
-  true $((con_task++))
-}
 fprov_inc() {
   true $((fprov_task++))
 }
@@ -38,22 +35,29 @@ rtc_inc() {
 blk_inc() {
   true $((blk_task++))
 }
+ore_inc() {
+  true $((ore_task++))
+}
+con_inc() {
+  true $((con_task++))
+}
 
 while [ -n "$1" ]; do
   case "$1" in
     --events|-events|-e)
-      use_events=1
       events_param=--events
       EVENTS=(-l events)
       fprov_inc
       rtc_inc
-      con_inc
       blk_inc
+      con_inc
+      ore_inc
       EVENTS=(-l events)
     ;;
     --blk|-blk|-b)
       use_blk=1
       con_inc
+      ore_inc
     ;;
     --block-ro|-bro)
       blk_write=""
@@ -64,6 +68,7 @@ while [ -n "$1" ]; do
       if [ "$use_blk" != "1" ]; then
         use_blk=1
 	con_inc
+	ore_inc
       fi
     ;;
     --loaderapp|--loadapp|-a)
@@ -77,6 +82,15 @@ while [ -n "$1" ]; do
     --mem|-m)
       shift
       UXMEM=$1
+    ;;
+    --net|-n)
+      use_ore=1
+      con_inc
+      con_inc
+      ENABLE_NET=1
+    ;;
+    -s)
+      fiasco_clisti=-s
     ;;
     *)
       if [ -z "$cmd" ]; then
@@ -93,6 +107,10 @@ done
 if [ -n "$use_blk" ];
 then
   BLK=(-l "blk-ux $blk_write -f $BLK_FILE" -n$blk_task)
+fi
+if [ -n "$use_ore" ];
+then
+  ORE=(-l l4io -l ore -n$ore_task)
 fi
 
 gen_loader_appname
@@ -130,6 +148,7 @@ case "$cmd" in
 	echo "--blk, -b                  Use blk-ux (envvar BLK_FILE has the file)"
 	echo "--events, -e               Use events"
 	echo "--mem, -m x                Use that much memory"
+	echo "--net, -n                  Enable network"
 	echo ""
 	case "$cmd" in
 	  help|--help|-h)
@@ -140,10 +159,9 @@ case "$cmd" in
   	;;
 esac
 
-RMGR_ARGS="$RMGR_ARGS task modname \"L4Linux task\""
-
-fiasco -t 32768 \
-	$RES \
+fiasco -t 32768                         \
+	$fiasco_clisti                  \
+	$RES                            \
 	"${EVENTS[@]}"                  \
 	-l names\ $events_param         \
 	"${LOG[@]}"                     \
@@ -152,7 +170,7 @@ fiasco -t 32768 \
 	-l fuxfprov -n$fprov_task       \
 	-l rtc-ux   -n$rtc_task         \
 	"${BLK[@]}"                     \
-	-l l4exec                       \
+	"${ORE[@]}"                     \
 	"${CON[@]}"                     \
 	"${LAUNCHPAD[@]}"		\
 	-l loader" $events_param $RUN $CFGPATH/$LOADERAPP" \

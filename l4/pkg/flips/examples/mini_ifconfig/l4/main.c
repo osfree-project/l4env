@@ -7,6 +7,7 @@
 /*** GENERAL INCLUDES ***/
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <net/if.h>
 #include <netinet/in.h>
 
@@ -23,18 +24,38 @@ char LOG_tag[9] = "minifcfg";
 
 int main(int argc, char **argv) {
 	
+	int i = 2;
+	int last = 1;
+
 	LOG("ifconfig");
-	if (argc < 4) {
-		LOG("usage:\n  ifconfig <ifname> <inaddr> <inmask> [gateway]");
-		LOG("setting default value: lo 127.0.0.1 255.0.0.0 none");
-		ifconfig("lo", "127.0.0.1", "255.0.0.0", NULL);
+	if (argc < 5 || strncmp("-n", argv[1], 2)) {
+		LOG("usage:\n ifconfig -n <ifname> <inaddr> <inmask> [gateway] -n ... -n ...");
+		LOG("No [standard] configurations have been set.");
+		exit(-1);
 	}
 	else
 	{
-	  if (argc < 5)
-		ifconfig(argv[1], argv[2], argv[3], NULL);
-	  else
-		ifconfig(argv[1], argv[2], argv[3], argv[4]);
+		while (i <= argc)
+		{
+			if (i == argc || !strncmp("-n", argv[i], 2))
+		       	{
+				switch( i - last )
+			       	{
+				case 4 :
+					last = i;
+					ifconfig(argv[i - 3], argv[i - 2], argv[i - 1], NULL);
+					break;
+				case 5 :
+					last = i;
+					ifconfig(argv[i - 4], argv[i - 3], argv[i - 2], argv[i - 1]);
+					break;
+				default :
+					LOG("invalid configuration last=%d i=%d argc=%d", last, i, argc); 
+					exit(-1);
+	      			}
+			}
+			i++;
+		}
 	}
 
 	/* register at names just that other programs can sync their startup */

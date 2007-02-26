@@ -1,7 +1,6 @@
 INTERFACE:
 
-#include <stddef.h>		// size_t
-
+#include <cstddef>		// size_t
 #include <flux/x86/types.h>	// vm_offset_t & friends
 #include <flux/x86/multiboot.h> // multiboot_info
 #include <flux/x86/paging.h>	// pd_entry_t
@@ -91,9 +90,10 @@ private:
 
 IMPLEMENTATION:
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 // #include <flux/x86/tss.h>
 // #include <flux/x86/seg.h>
@@ -101,7 +101,6 @@ IMPLEMENTATION:
 // #include <flux/x86/gate_init.h>
 // #include <flux/x86/base_vm.h>
 
-#include <assert.h>
 
 #include "globals.h"
 // #include "entry.h"

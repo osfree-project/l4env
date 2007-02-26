@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/v4/L4V4BESndFunction.h
- *	\brief	contains the declaration of the class CL4V4BESndFunction
+ *    \file    dice/src/be/l4/v4/L4V4BESndFunction.h
+ *    \brief   contains the declaration of the class CL4V4BESndFunction
  *
- *	\date	01/08/2004
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2004
+ *    \date    06/11/2006
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2006
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,18 +34,26 @@
 
 /** \class CL4V4BESndFunction
  *  \ingroup backend
- *  \brief wraps the V4 specifics of the send function
+ *  \brief encapsulates V4 specifics of send function
  */
 class CL4V4BESndFunction : public CL4BESndFunction
 {
 
 public:
-    /** creates an instance of the CL4V4BESndFunciton class */
+    /** creates an instance of this class */
     CL4V4BESndFunction();
     virtual ~CL4V4BESndFunction();
 
 public:
-    virtual int WriteMarshalOpcode(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(int nDirection);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+
+protected:
+    virtual void WriteMarshalling(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteIPCErrorCheck(CBEFile * pFile);
+    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal);
 };
 
 #endif

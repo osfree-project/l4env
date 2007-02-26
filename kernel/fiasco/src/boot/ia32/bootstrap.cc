@@ -10,22 +10,33 @@
 #include "boot_cpu.h"
 #include "boot_paging.h"
 #include "checksum.h"
+#include "config.h"
 #include "globalconfig.h"
 #include "kip.h"
 #include "mem_layout.h"
 #include "multiboot.h"
+#include "panic.h"
+#include "processor.h"
 #include "reset.h"
 
 struct check_sum
 {
   char delimiter[16];
-  unsigned long checksum_ro;
-  unsigned long checksum_rw;
+  Unsigned32 checksum_ro;
+  Unsigned32 checksum_rw;
 } check_sum = {"FIASCOCHECKSUM=", 0, 0};
 
 extern "C" char _start[];
 extern "C" char _end[];
-extern "C" void _exit(int code) __attribute__((noreturn));
+
+extern "C" void exit(int rc) __attribute__((noreturn));
+
+void
+exit(int)
+{
+  for (;;)
+    Proc::pause();
+}
 
 // test if [start1..end1-1] overlaps [start2..end2-1]
 static
@@ -33,13 +44,9 @@ void
 check_overlap (const char *str,
 	       Address start1, Address end1, Address start2, Address end2)
 {
-  if (   (start1 >= start2 && start1 <  end2)
-      || (end1   >  start2 && end1   <= end2))
-    {
-      printf("\nPANIC: kernel [0x%08lx,0x%08lx) overlaps %s [0x%08lx,0x%08lx)", 
-	    start1, end1, str, start2, end2);
-      _exit(1);
-    }
+  if ((start1 >= start2 && start1 < end2) || (end1 > start2 && end1 <= end2))
+    panic("Kernel [0x%08lx,0x%08lx) overlaps %s [0x%08lx,0x%08lx).", 
+	  start1, end1, str, start2, end2);
 }
 
 typedef void (*Start)(Multiboot_info *, unsigned, unsigned) FIASCO_FASTCALL;
@@ -58,23 +65,32 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
 
   // this calculation must fit Kmem::init()!
   mem_max = trunc_page((mbi->mem_upper + 1024) << 10);
-  if (mem_max > 1<<30)
-    mem_max = 1<<30;
+
+  if (Config::old_sigma0_adapter_hack)
+    {
+      // limit memory to 1GB (Sigma0 protocol limitation)
+      if (mem_max > 1<<30)
+	mem_max = 1<<30;
+    }
+
+  // check if mbi->mem_upper contains a bogus value (e.g. >=4096KB)
+  if (mem_max < 4<<20)
+    panic("Need at least 4MB of RAM (mem_upper=%u)", mbi->mem_upper);
+
+  // make sure that we did not forgot to discard an unused header section
+  // (compare "objdump -p kernel.image")
+  if ((Address)_start < Mem_layout::Kernel_image)
+    panic("Fiasco kernel occupies memory below %08x",
+	Mem_layout::Kernel_image);
+
+  if ((Address)&_end - Mem_layout::Kernel_image > 4<<20)
+    panic("Fiasco boot system occupies more than 4MB");
 
   // now do base_paging_init(): sets up paging with one-to-one mapping
   base_paging_init(round_superpage(mem_max));
 
   start = (Start)_start;
   
-  // make sure that we did not forgot to discard an unused header section
-  // (compare "objdump -p kernel.image")
-  if ((unsigned long)_start < Mem_layout::Kernel_image)
-    {
-      printf("\nPANIC: kernel [%p,%p) occupies memory below %08x",
-	   _start, _end, Mem_layout::Kernel_image);
-      _exit(1);
-    }
-
   // check if kernel overwrites something important
   if (mbi->flags & Multiboot_info::Cmdline)
     {
@@ -85,32 +101,28 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
 	  Kip *rki = (Kip*)strtoul(sub+7, 0, 0);
 	  if (rki)
 	    {
-	      Address phys_start = (unsigned long)_start 
+	      Address phys_start = (Address)_start 
 		                   - Mem_layout::Kernel_image;
-	      Address phys_end   = (unsigned long)_end   
+	      Address phys_end   = (Address)_end   
 		                   - Mem_layout::Kernel_image;
 
 	      check_overlap ("VGA/IO", phys_start, phys_end,
 			     0xa0000, 0x100000);
+#if 0 // I think our loader should already check overlaps with sigam0 or ...
 	      check_overlap ("sigma0", phys_start, phys_end,
-			     rki->sigma0_memory.low, rki->sigma0_memory.high);
-	      check_overlap ("rmgr", phys_start, phys_end,
-			     rki->root_memory.low, rki->root_memory.high);
+			     rki->sigma0_memory.start, rki->sigma0_memory.end);
+	      check_overlap ("roottask", phys_start, phys_end,
+			     rki->root_memory.start, rki->root_memory.end);
+#endif
 	    }
 	}
     }
 
   if (Checksum::get_checksum_ro() != check_sum.checksum_ro)
-    {
-      printf("\nPANIC: read-only (text) checksum does not match");
-      _exit(1);
-    }
+    panic("Read-only (text) checksum does not match.");
 
   if (Checksum::get_checksum_rw() != check_sum.checksum_rw)
-    {
-      printf("\nPANIC: read-write (data) checksum does not match");
-      _exit(1);
-    }
+    panic("Read-write (data) checksum does not match.");
 
   start (mbi, flag, check_sum.checksum_ro);
 }

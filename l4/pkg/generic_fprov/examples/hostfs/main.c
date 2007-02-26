@@ -51,13 +51,13 @@ char LOG_tag[9]="hostfs";
  *			- -L4_EIO       error reading file
  *			- -L4_EINVAL    error passing the dataspace to client
  */
-l4_int32_t l4fprov_file_open_component(CORBA_Object obj,
-				       const char* name,
-				       const l4_threadid_t *dm,
-				       l4_uint32_t flags,
-				       l4dm_dataspace_t *ds,
-				       l4_uint32_t *size,
-				       CORBA_Server_Environment *env){
+long l4fprov_file_open_component(CORBA_Object obj,
+				 const char* name,
+				 const l4_threadid_t *dm,
+				 unsigned long flags,
+				 l4dm_dataspace_t *ds,
+				 l4_size_t *size,
+				 CORBA_Server_Environment *env){
     int len;
     int err;
     char *addr;

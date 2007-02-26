@@ -1,13 +1,16 @@
 #!/usr/bin/perl -w
 
+# we use BigInts for handling 64-bit values on IA32 systems
+
 use strict;
 use Getopt::Long;
 use Pod::Usage;
+use Math::BigInt;
 
 my $target       = '';
 my $sym_objdump  = 'nm -nC';
-my $objdump      = 'objdump -drlCj ".text"';
-my $cppfilt      = 'c++filt';
+my $dis_objdump  = 'objdump -drlC';
+my $hdr_objdump  = 'objdump -h';
 my $start_symbol = '_initcall_start';
 my $end_symbol   = '_initcall_end';
 my $kernel       = 'kernel.image';
@@ -43,8 +46,9 @@ sub have_warn_opt {
   return scalar @gr;
 }
 
-$objdump     = $target . $objdump;
-$sym_objdump = $target . $sym_objdump;
+$dis_objdump = $target.$dis_objdump;
+$hdr_objdump = $target.$hdr_objdump;
+$sym_objdump = $target.$sym_objdump;
 
 $werror = 1 if have_warn_opt("error");
 push @ignore_funcs, ("__static_initialization_and_destruction_0") 
@@ -72,21 +76,21 @@ $end   =~ s/^([0-9a-fA-F]+).*$/$1/;
 #print "start of init area: $start\n";
 #print "end if init area  : $end\n";
 
-$start = hex($start);
-$end   = hex($end);
+$start = Math::BigInt->new("0x".$start);
+$end   = Math::BigInt->new("0x".$end);
 
 my %init_syms;
 
 while($_ = shift @symbols) {
   if(/^([0-9a-fA-F]+)\s+[A-Z]\s+(\S+)/) {
-    my $saddr  = $1;
-    my $addr   = hex($1);
+    my $addr   = Math::BigInt->new("0x".$1);
     my $symbol = $2;
-    if( $symbol ne $start_symbol
+    if (   $symbol ne $start_symbol
 	&& $symbol ne $end_symbol
-	&& $addr>=$start
-	&& $addr<$end ) {
-      $init_syms{$symbol} = $addr;
+	&& $addr->bcmp($start) >= 0
+	&& $addr->bcmp($end)   <  0) {
+      $init_syms{$symbol} = 1;
+#      print "$symbol\n";
     }
   }
 }
@@ -94,33 +98,43 @@ while($_ = shift @symbols) {
 while($_ = shift @ARGV) {
   my $file = $_;
 
-  my @dump = split $/, qx{$objdump $file};
-  #my @und  = grep /^\s+U\s+(\S+)\s*$/, @syms;
-  #my @und  = split $/, qx{$objdump $file};
+  # search for sections .text.* in object file
+  my @sections = split $/, qx{$hdr_objdump $file};
+  my $text_sections = '';
+  foreach $_ (@sections) {
+    if (/^\s+[0-9]+\s(\.text[.0-9a-zA-Z_]*)/) {
+      $text_sections = $text_sections." -j ".$1;
+    }
+  }
+
+  # disassemble object file
+  my @dump = split $/, qx{$dis_objdump $text_sections $file};
 
   my $source;
   my $function;
   my $warn;
-  if($werror) {
+  if ($werror) {
     $warn = "error";
   } else {
     $warn = "warning";
   }
 
   foreach $_ (@dump) {
-    if(/^(\S+:[0-9]+)\s*$/) {
+    if (/^(\S+:[0-9]+)\s*$/) {
       $source = $1;
       next;
     }
-    if(/^([0-9a-fA-F]+)\s+<(.*)>:$/) {
+    if (/^([0-9a-fA-F]+)\s+<(.*)>:$/) {
       $function = $2;
+      next;
     }
-    if(/^\s*([0-9a-fA-F]+):\s+\S+\s+(\S+)\s*$/) {
+    if (/^\s*([0-9a-fA-F]+):\s+R_\S+\s+(\S+\(.*\))\S*\s*$/) {
+#      print "$_\n";
       my $sym = $2;
-      if( defined $function
+      if (   defined $function
 	  && $function !~ /^($ignore_funcs)(\(.*\))?$/
-	  && defined $init_syms{$sym} ) {
-	print STDERR $source.": $warn: uses initcall ($sym) from normal text section\n";
+	  && defined $init_syms{$sym}) {
+	print STDERR "$source: $warn: $function uses initcall ($sym) from normal text section\n";
 	$error++ if $werror;
       }
       next;

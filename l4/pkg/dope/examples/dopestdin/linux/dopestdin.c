@@ -30,7 +30,8 @@ int main(int argc,char **argv) {
 	char res[80];
 	long app_id;
 
-	dope_init();
+	if (dope_init()) return -1;
+
 	app_id = dope_init_app("DOpE stdin");
 
 	/* read commands from stdin and sent them to DOpE */

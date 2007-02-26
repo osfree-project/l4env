@@ -3,3 +3,4 @@ Makeconf.local
 .gdbinit
 .emacs-flc
 Makerules.local
+rules.isg

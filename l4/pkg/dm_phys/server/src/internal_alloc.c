@@ -113,7 +113,7 @@ __allocate(page_area_t ** area)
 	{
 	  ASSERT(mem_pool[i].map_addr != -1);
 
-	  LOGdL(DEBUG_INT_ALLOC, "using page %2d at 0x%08x",
+	  LOGdL(DEBUG_INT_ALLOC, "using page %2d at 0x%08lx",
                 i, mem_pool[i].map_addr);
 
 	  page = (void *)mem_pool[i].map_addr;
@@ -158,7 +158,7 @@ __release(void * page, page_area_t * area)
   l4_addr_t addr = (l4_addr_t)page;
   int i;
 
-  LOGdL(DEBUG_INT_ALLOC, "release page at 0x%08x", addr);
+  LOGdL(DEBUG_INT_ALLOC, "release page at 0x%08lx", addr);
 
   if (area != NULL)
     {
@@ -221,7 +221,7 @@ __release(void * page, page_area_t * area)
 	}
 
       if (i == DMPHYS_INT_POOL_INITIAL)
-	LOG_printf("DMphys: not a page from memory pool (0x%08x)", addr);
+	LOG_printf("DMphys: not a page from memory pool (0x%08lx)", addr);
     }
 }
 
@@ -262,7 +262,7 @@ __refill(void)
 	  mem_pool[i].area = pa;
 	  num_free++;
 
-	  LOGdL(DEBUG_INT_ALLOC, "pool page %2d at 0x%08x",
+	  LOGdL(DEBUG_INT_ALLOC, "pool page %2d at 0x%08lx",
                 i, mem_pool[i].map_addr);
 	}
     }
@@ -306,7 +306,7 @@ dmphys_internal_alloc_init(void)
       page = dmphys_sigma0_map_any_page();
       if (page != NULL)
 	{
-	  LOGdL(DEBUG_INT_ALLOC, "got page at 0x%08x", (l4_addr_t)page);
+	  LOGdL(DEBUG_INT_ALLOC, "got page at 0x%08lx", (l4_addr_t)page);
 
 	  mem_pool[i].map_addr = (l4_addr_t)page;
 	  mem_pool[i].available = 1;
@@ -343,7 +343,7 @@ dmphys_internal_alloc_init_reserve(void)
 	{
 	  addr = PHYS_ADDR(mem_pool[i].map_addr);
 	  if (dmphys_memmap_reserve(addr, L4_PAGESIZE) < 0)
-	    Panic("DMphys: reserve page at 0x%08x in memory map failed!",
+	    Panic("DMphys: reserve page at 0x%08lx in memory map failed!",
 		  addr);
 	}
     }
@@ -366,7 +366,7 @@ dmphys_internal_alloc_update_free(void)
       num_freed_areas--;
       pa = freed_areas[num_freed_areas];
 
-      LOGdL(DEBUG_INT_ALLOC, "free area at 0x%08x", AREA_MAP_ADDR(pa));
+      LOGdL(DEBUG_INT_ALLOC, "free area at 0x%08lx", AREA_MAP_ADDR(pa));
 
       dmphys_pages_release(pool, pa);
     }

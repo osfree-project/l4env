@@ -37,7 +37,7 @@ Kern_cnt::get_ctr(int num)
 }
 
 PUBLIC static
-const char * const
+const char *
 Kern_cnt::get_str(Mword num)
 {
   switch (num)

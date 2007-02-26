@@ -1,8 +1,8 @@
 /* $Id$ */
 
 /*!
- * \file	con/include/l4/l4con/l4con_pslim.h
- * \brief	con protocol definitions - pSLIM part
+ * \file	l4con/include/l4con_pslim.h
+ * \brief	console protocol definitions - pSLIM part
  *
  * \date	2001
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>

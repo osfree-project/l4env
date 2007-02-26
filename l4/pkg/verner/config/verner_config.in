@@ -49,6 +49,7 @@ bool 'Support for decoding time prediction' PREDICT_DECODING_TIME
 if [ "$PREDICT_DECODING_TIME" = "y" ]; then
   bool '  Display prediction quality using rt_mon' PREDICT_DECODING_TIME_RTMON
 fi
+bool 'Schedule H.264 slices by visual importance' H264_SLICE_SCHEDULE
 endmenu
 
 mainmenu_option next_comment
@@ -79,15 +80,12 @@ endmenu
 mainmenu_option next_comment
 comment 'Codecs'
 comment 'Do not violate patents! Inform yourself before using them!'
-comment 'Only one XviD Codec is allowed at once!'
-bool 'XviD 0.9.1 (MPEG-4)' BUILD_xvid09
 bool 'XviD 1.0.x (MPEG-4)' BUILD_xvid10
 bool 'Libmpeg2 (MPEG-1/2)' BUILD_libmpeg2
-bool 'Libavcodec (many for audio and video))' BUILD_libavcodec
+bool 'Libavcodec (many codecs for audio and video)' BUILD_libavcodec
 if [ "$BUILD_libavcodec" = "y" ] ; then
     bool '  encoder (no plugins avail)' BUILD_libavcodec_encoder
     bool '  decoder' BUILD_libavcodec_decoder
-    bool '  risky (read help!)' BUILD_libavcodec_risky
 fi
 bool 'Mpg123 (mp3 decoder)' BUILD_mpg123
 bool 'LAME (mp3 encoder)' BUILD_lame

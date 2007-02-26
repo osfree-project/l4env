@@ -1,6 +1,6 @@
 INTERFACE:
 
-#include <stddef.h>
+#include <cstddef>
 #include "l4_types.h"
 
 /**
@@ -34,6 +34,7 @@ public:
       GZIP        =  0x40, ///< gzip+uuencode output and sent to uart console
       BUFFER      =  0x80, ///< ring buffer
       DEBUG       = 0x100, ///< kdb interface
+      FAILED      = 0x200, ///< initialization failed
     };
 
   /**
@@ -126,6 +127,20 @@ void Console::state(Mword new_state)
   _state = new_state;
 }
 
+PUBLIC inline
+bool
+Console::failed() const
+{
+  return _state & FAILED;
+}
+
+PUBLIC inline
+void
+Console::fail()
+{
+  _state |= FAILED;
+}
+
 IMPLEMENT
 void Console::disable_all()
 {
@@ -184,7 +199,7 @@ const char*
 Console::str_attr(Mword bit) const
 {
   static char const * const attr_str[] =
-    { "Direct", "Uart", "UX", "Push", "Gzip", "Buffer", "Kdb" };
+    { "Direct", "Uart", "UX", "Push", "Gzip", "Buffer", "Kdb", "FAILED!" };
 
   return (bit < 2 || bit >= (sizeof(attr_str)/sizeof(attr_str[0]))+2)
     ? "???"

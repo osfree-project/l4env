@@ -27,14 +27,14 @@ __BEGIN_DECLS
 /**
  * \brief Are we connected to the task server?
  * \return		0 on success
- * 			-L4_ENOTFOUND	server not found. */
+ *			-L4_ENOTFOUND	server not found. */
 L4_INLINE int
 l4ts_connected(void);
 
 /**
  * \brief Force connecting to task server.
  * \return		0 on success
- * 			-L4_ENOTFOUND	server not found. */
+ *			-L4_ENOTFOUND	server not found. */
 int
 l4ts_connect(void);
 
@@ -42,12 +42,22 @@ l4ts_connect(void);
  * \brief Allocate a task ID.
  * \retval taskid	allocated task ID.
  * \return		0 on success
- * 			error code otherwise. */
+ *			error code otherwise. */
 int
 l4ts_allocate_task(l4_taskid_t *taskid);
 
 /**
- * \brief Start a previously started task.
+ * \brief Allocate a task ID and become the task's chief.
+ * \retval taskid   allocated task ID
+ * \return          0 on success
+ *                  error code otherwise
+ */
+int
+l4ts_allocate_task2(l4_taskid_t *taskid);
+
+/**
+ * \brief Start a previously allocated task.
+ *
  * \param taskid	ID of the previos allocated task
  * \param entry		Initial instruction pointer
  * \param stack		Initial stack pointer
@@ -55,12 +65,34 @@ l4ts_allocate_task(l4_taskid_t *taskid);
  * \param pager		Pager of first thread
  * \param prio		Priority of first thread
  * \param resname	Module name as specified in the RMGR (subject of
- * 			future changes)
- * \param flags		(unused) */
+ *			future changes)
+ * \param flags		(currently unused)
+ */
 int
 l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
 		 l4_uint32_t mcp, const l4_taskid_t *pager, l4_int32_t prio,
 		 const char *resname, l4_uint32_t flags);
+
+/**
+ * \brief Start a previously allocated task and setup the task's capability
+ *        fault handler.
+ *
+ * \param taskid       ID of the previos allocated task
+ * \param entry        Initial instruction pointer
+ * \param stack        Initial stack pointer
+ * \param mcp          Maximum controlled priority (see L4-Spec)
+ * \param pager        Pager of first thread
+ * \param caphandler   The task's capability handler
+ * \param prio         Priority of first thread
+ * \param resname      Module name as specified in the RMGR (subject of
+ *                     future changes)
+ * \param flags        (currently unused)
+ */
+int
+l4ts_create_task2(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
+                  l4_uint32_t mcp, const l4_taskid_t *pager,
+                  const l4_taskid_t *caphandler, l4_int32_t prio,
+                  const char *resname, l4_uint32_t flags);
 
 /**
  * \brief Free a task number.
@@ -76,7 +108,7 @@ l4ts_free_task(const l4_taskid_t *taskid);
 
 /**
  * \brief Delete a task.
- * \param taskid	ID of the task to kill. 
+ * \param taskid	ID of the task to kill.
  * \param options */
 int
 l4ts_kill_task(l4_taskid_t taskid, l4_uint8_t options);

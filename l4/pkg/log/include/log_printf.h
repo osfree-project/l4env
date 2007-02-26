@@ -15,12 +15,7 @@
 
 #include <stdarg.h>
 
-/* Ugly workaround for the different stdarg versions */
-#ifdef _FLUX_X86_C_STDARG_H_
-typedef __flux_va_list LOG_va_list;
-#else
 typedef va_list LOG_va_list;
-#endif
 
 extern int LOG_vprintf(const char*,LOG_va_list);
 extern int LOG_printf(const char*, ...) 

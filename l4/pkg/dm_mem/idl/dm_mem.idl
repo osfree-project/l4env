@@ -68,7 +68,7 @@ library if_l4dm
        */
       /***********************************************************************/ 
       long size([in] unsigned long ds_id, 
-		[out] unsigned long *size);
+		[out] l4_size_t *size);
 
       /***********************************************************************/
       /**
@@ -109,9 +109,9 @@ library if_l4dm
       /***********************************************************************/ 
       long phys_addr([in] unsigned long ds_id, 
 		     [in] unsigned long offset,
-		     [in] unsigned long size,
+		     [in] l4_size_t size,
 		     [out] unsigned long *paddr, 
-		     [out] unsigned long *psize);
+		     [out] l4_size_t *psize);
 
       /***********************************************************************/
       /**
@@ -183,10 +183,10 @@ library if_l4dm
        */
       /***********************************************************************/ 
       long info([in] unsigned long ds_id,
-	        [out] unsigned long *size,
+	        [out] l4_size_t *size,
 		[out] l4_threadid_t *owner,
-		[out, string, prealloc] char ** name,
-		[out] unsigned long *next_id);
+		[out, string, prealloc_client] char ** name,
+		[out] l4_uint32_t *next_id);
     };
 };
 

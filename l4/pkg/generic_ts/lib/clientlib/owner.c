@@ -31,10 +31,10 @@ l4ts_owner(l4_taskid_t taskid, l4_taskid_t owner)
     return -L4_ENOTFOUND;
 
   if ((error = l4_ts_owner_call(&l4ts_server_id, &taskid, &owner, &_env)) < 0
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
-	   l4util_idstr(l4ts_server_id), error, _env.major);
+	   l4util_idstr(l4ts_server_id), error, DICE_EXCEPTION_MAJOR(&_env));
       return error ? error : -L4_EIPC;
     }
 

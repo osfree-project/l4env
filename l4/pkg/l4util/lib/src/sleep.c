@@ -16,8 +16,6 @@
 void l4_sleep(int ms)
 {
   int error, to_e, to_m;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
   l4_timeout_t to;
 
   if (ms != -1)
@@ -29,9 +27,8 @@ void l4_sleep(int ms)
   else
     to = L4_IPC_NEVER;
 
-  error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
-                              &dummy, &dummy, to, &result);
- 
+  error = l4_ipc_sleep(to);
+
   if (error != L4_IPC_RETIMEOUT)
     printf("l4_sleep(): IPC error %02x\n", error);
 }
@@ -40,16 +37,13 @@ void l4_sleep(int ms)
 void l4_usleep(int us)
 {
   int error, to_e, to_m;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
   l4_timeout_t to;
 
   /* calculate timeout */
   l4util_micros2l4to(us, &to_m, &to_e);
   to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
 
-  error = l4_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,
-                              &dummy, &dummy, to, &result);
+  error = l4_ipc_sleep(to);
  
   if (error != L4_IPC_RETIMEOUT)
     printf("l4_usleep(): IPC error %02x\n", error);

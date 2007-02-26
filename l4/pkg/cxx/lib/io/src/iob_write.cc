@@ -12,7 +12,10 @@
 namespace L4 
 {
 
-  static char hex_chars[] = "0123456789abcdef";
+  IOModifier const hex(16);
+  IOModifier const dec(10);
+
+  static char const hex_chars[] = "0123456789abcdef";
 
   void IOBackend::write(IOModifier m)
   {

@@ -12,16 +12,16 @@
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
@@ -71,7 +71,7 @@ static l4env_err_msg_t err_msg[] =
   { L4_ENOTAVAIL,       "item not available" },
   { L4_ENODEV,          "no such device" },
   { L4_EMFILE,          "too many open files" },
-  { L4_ENOSPC,          "no space left on device"}, 
+  { L4_ENOSPC,          "no space left on device"},
   { L4_ETIME,           "timer expired"},
   { L4_EBADF,           "invalid file descriptor"},
   { L4_ENFILE,          "file table overflow"},
@@ -89,7 +89,7 @@ const char * l4env_err_unknown = "Unknown (unregistered) error";
 /**
  * List of error message tables
  */
-static struct l4env_err_desc descs = 
+static struct l4env_err_desc descs =
 {
   NULL,
   sizeof(err_msg) / sizeof(l4env_err_msg_t),
@@ -102,7 +102,7 @@ static struct l4env_err_desc descs =
 static l4env_err_fn_desc_t * fn_descs = NULL;
 
 /*****************************************************************************/
-/** 
+/**
  * \brief Register an error-function
  * \ingroup errno
  *
@@ -130,13 +130,13 @@ static l4env_err_fn_desc_t * fn_descs = NULL;
  * registerd/used.
  */
 /*****************************************************************************/
-int 
+int
 l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc)
 {
-  if (fn_desc == 0 || fn_desc->fn == 0) 
+  if (fn_desc == 0 || fn_desc->fn == 0)
     return -L4_EINVAL;
 
-  if (fn_desc->unknown_len == -1) 
+  if (fn_desc->unknown_len == -1)
     fn_desc->unknown_len = strlen(fn_desc->unknown);
 
   fn_desc->next = fn_descs;
@@ -146,29 +146,29 @@ l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc)
 }
 
 /*****************************************************************************/
-/** 
+/**
  * \brief  Check if the entries in the given array are unique
  *
  * \retval 0 if all elements in \a arr are unique (unregistered so far)
  * \retval 1 if at least one of the codes in \a arr are already registered
  */
 /*****************************************************************************/
-static int 
-check_unique(int entries, 
+static int
+check_unique(int entries,
 	     l4env_err_msg_t * arr)
 {
   int i;
-  
+
   for (i = 0; i < entries; i++)
-    if (l4env_strerror(arr[i].no) != l4env_err_unknown) 
+    if (l4env_strerror(arr[i].no) != l4env_err_unknown)
       return 1;
 
   return 0;
 }
 
 /*****************************************************************************/
-/** 
- * \brief  Register an error-description structure containing error-codes 
+/**
+ * \brief  Register an error-description structure containing error-codes
  *         and messages
  * \ingroup errno
  *
@@ -186,10 +186,10 @@ check_unique(int entries,
  * array, nor returns any of the registered functions a valid error-string.
  */
 /*****************************************************************************/
-int 
+int
 l4env_err_register_desc(l4env_err_desc_t * desc)
 {
-  if (check_unique(desc->entries, desc->arr)) 
+  if (check_unique(desc->entries, desc->arr))
     return -L4_EUSED;
 
   desc->next = descs.next;
@@ -199,7 +199,7 @@ l4env_err_register_desc(l4env_err_desc_t * desc)
 }
 
 /*****************************************************************************/
-/** 
+/**
  * \brief  Return string describing error code
  * \ingroup errno
  *
@@ -229,23 +229,23 @@ l4env_strerror(int code)
   l4env_err_desc_t * a;
   l4env_err_fn_desc_t * f;
   const char * msg;
-  
-  if (!code) 
+
+  if (!code)
     return "Success";
 
   for (a = &descs; a; a = a->next)
     {
       for (i = 0; i < a->entries; i++)
 	{
-	  if (a->arr[i].no == code) 
+	  if (a->arr[i].no == code)
 	    return a->arr[i].str;
 	}
     }
-  
+
   for (f = fn_descs; f; f = f->next)
     {
       msg = f->fn(code);
-      if (msg && 
+      if (msg &&
 	  (f->unknown == NULL || strncmp(msg, f->unknown, f->unknown_len)))
 	return msg;
     }

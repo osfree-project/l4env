@@ -8,8 +8,8 @@
         <rect>
             <x>0</x>
             <y>0</y>
-            <width>369</width>
-            <height>309</height>
+            <width>455</width>
+            <height>300</height>
         </rect>
     </property>
     <property name="caption">
@@ -152,23 +152,9 @@
                 </widget>
             </hbox>
         </widget>
-        <widget class="Line">
-            <property name="name">
-                <cstring>line1</cstring>
-            </property>
-            <property name="frameShape">
-                <enum>HLine</enum>
-            </property>
-            <property name="frameShadow">
-                <enum>Sunken</enum>
-            </property>
-            <property name="orientation">
-                <enum>Horizontal</enum>
-            </property>
-        </widget>
         <widget class="QLayoutWidget">
             <property name="name">
-                <cstring>layout29</cstring>
+                <cstring>layout6</cstring>
             </property>
             <hbox>
                 <property name="name">
@@ -176,10 +162,10 @@
                 </property>
                 <widget class="QPushButton">
                     <property name="name">
-                        <cstring>ftpclientButton</cstring>
+                        <cstring>sheepButton</cstring>
                     </property>
                     <property name="text">
-                        <string>ftpclient</string>
+                        <string>Sheep</string>
                     </property>
                 </widget>
                 <widget class="QPushButton">
@@ -192,18 +178,26 @@
                 </widget>
                 <widget class="QPushButton">
                     <property name="name">
-                        <cstring>sheepButton</cstring>
-                    </property>
-                    <property name="text">
-                        <string>Sheep</string>
-                    </property>
-                </widget>
-                <widget class="QPushButton">
-                    <property name="name">
                         <cstring>tinyeditButton</cstring>
                     </property>
                     <property name="text">
                         <string>QTinyEditor</string>
+                    </property>
+                </widget>
+                <widget class="QPushButton">
+                    <property name="name">
+                        <cstring>topButton</cstring>
+                    </property>
+                    <property name="text">
+                        <string>Top</string>
+                    </property>
+                </widget>
+                <widget class="QPushButton">
+                    <property name="name">
+                        <cstring>widgetsButton</cstring>
+                    </property>
+                    <property name="text">
+                        <string>Widgets</string>
                     </property>
                 </widget>
                 <spacer>
@@ -218,7 +212,7 @@
                     </property>
                     <property name="sizeHint">
                         <size>
-                            <width>40</width>
+                            <width>87</width>
                             <height>20</height>
                         </size>
                     </property>
@@ -296,12 +290,6 @@
         <slot>runCustomSlot()</slot>
     </connection>
     <connection>
-        <sender>ftpclientButton</sender>
-        <signal>clicked()</signal>
-        <receiver>QRunWindow</receiver>
-        <slot>ftpclientSlot()</slot>
-    </connection>
-    <connection>
         <sender>fileExitAction</sender>
         <signal>activated()</signal>
         <receiver>QRunWindow</receiver>
@@ -355,6 +343,18 @@
         <receiver>QRunWindow</receiver>
         <slot>runCustomSlot()</slot>
     </connection>
+    <connection>
+        <sender>topButton</sender>
+        <signal>clicked()</signal>
+        <receiver>QRunWindow</receiver>
+        <slot>topSlot()</slot>
+    </connection>
+    <connection>
+        <sender>widgetsButton</sender>
+        <signal>clicked()</signal>
+        <receiver>QRunWindow</receiver>
+        <slot>widgetsSlot()</slot>
+    </connection>
 </connections>
 <includes>
     <include location="global" impldecl="in declaration">qtimer.h</include>
@@ -374,17 +374,20 @@
     <slot access="private">fileExit()</slot>
     <slot access="private">helpAbout()</slot>
     <slot access="private">runCustomSlot()</slot>
-    <slot access="private">ftpclientSlot()</slot>
+    <slot access="private">widgetsSlot()</slot>
     <slot access="private">runSuccessSlot( const QString &amp; binary )</slot>
     <slot access="private">runFailedSlot( const QString &amp; binary )</slot>
     <slot access="private">qvvSlot()</slot>
     <slot access="private">sheepSlot()</slot>
     <slot access="private">qtinyeditorSlot()</slot>
     <slot access="private">historySlot( const QString &amp; binary )</slot>
+    <slot access="private" returnType="bool">quitSlot()</slot>
+    <slot access="private">topSlot()</slot>
 </slots>
 <functions>
     <function access="private" specifier="non virtual">init()</function>
     <function access="private">runProgram( const QString binary )</function>
+    <function access="protected">closeEvent( QCloseEvent * e )</function>
 </functions>
 <layoutdefaults spacing="6" margin="11"/>
 </UI>

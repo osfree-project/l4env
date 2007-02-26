@@ -1,4 +1,4 @@
-SRC_DIR = ../../src
+XVID_SRC_DIR = ../../src
 
 SRC_GENERIC = \
  	decoder.c \
