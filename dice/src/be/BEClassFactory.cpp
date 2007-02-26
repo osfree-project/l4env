@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -43,10 +43,10 @@
 #include "be/BESndFunction.h"
 #include "be/BERcvFunction.h"
 #include "be/BEWaitFunction.h"
-#include "be/BEReplyRcvFunction.h"
-#include "be/BEReplyWaitFunction.h"
+#include "be/BEReplyFunction.h"
 #include "be/BECallFunction.h"
 #include "be/BEUnmarshalFunction.h"
+#include "be/BEMarshalFunction.h"
 #include "be/BEComponentFunction.h"
 #include "be/BESwitchCase.h"
 #include "be/BETestFunction.h"
@@ -59,6 +59,7 @@
 #include "be/BEAttribute.h"
 #include "be/BEType.h"
 #include "be/BEOpcodeType.h"
+#include "be/BEReplyCodeType.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BETypedef.h"
 #include "be/BEException.h"
@@ -76,7 +77,9 @@
 #include "be/BENameSpace.h"
 #include "be/BEEnumType.h"
 #include "be/BESizes.h"
-#include "fe/FETypeSpec.h"
+#include "be/BECommunication.h"
+#include "be/BEDispatchFunction.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CBEClassFactory);
 
@@ -184,28 +187,18 @@ CBERcvFunction *CBEClassFactory::GetNewRcvFunction()
 CBEWaitFunction *CBEClassFactory::GetNewWaitFunction()
 {
     if (m_bVerbose)
-	printf("CBEClassFactory: created class CBEWaitFunction\n");
+		printf("CBEClassFactory: created class CBEWaitFunction\n");
     return new CBEWaitFunction();
 }
 
-/**	\brief creates a new instance of the class CBEReplyRcvFunction
+/**	\brief creates a new instance of the class CBEReplyFunction
  *	\return a reference to the new instance
  */
-CBEReplyRcvFunction *CBEClassFactory::GetNewReplyRcvFunction()
+CBEReplyFunction *CBEClassFactory::GetNewReplyFunction()
 {
     if (m_bVerbose)
-	printf("CBEClassFactory: created class CBEReplyRcvFunction\n");
-    return new CBEReplyRcvFunction();
-}
-
-/**	\brief creates a new instance of the class CBEReplyWaitFunction
- *	\return a reference to the new instance
- */
-CBEReplyWaitFunction *CBEClassFactory::GetNewReplyWaitFunction()
-{
-    if (m_bVerbose)
-	printf("CBEClassFactory: created class CBEReplyWaitFunction\n");
-    return new CBEReplyWaitFunction();
+		printf("CBEClassFactory: created class CBEReplyFunction\n");
+    return new CBEReplyFunction();
 }
 
 /**	\brief creates a new instance of the class CBEAttribute
@@ -214,7 +207,7 @@ CBEReplyWaitFunction *CBEClassFactory::GetNewReplyWaitFunction()
 CBEAttribute *CBEClassFactory::GetNewAttribute()
 {
     if (m_bVerbose)
-	printf("CBEClassFactory: created class CBEAttribute\n");
+		printf("CBEClassFactory: created class CBEAttribute\n");
     return new CBEAttribute();
 }
 
@@ -228,6 +221,7 @@ CBEType *CBEClassFactory::GetNewType(int nType)
 {
     switch (nType)
     {
+    case TYPE_ARRAY:
     case TYPE_STRUCT:
     case TYPE_TAGGED_STRUCT:
         if (m_bVerbose)
@@ -255,6 +249,7 @@ CBEType *CBEClassFactory::GetNewType(int nType)
     case TYPE_FLEXPAGE:
     case TYPE_RCV_FLEXPAGE:
     case TYPE_INTEGER:
+	case TYPE_LONG:
     case TYPE_VOID:
     case TYPE_FLOAT:
     case TYPE_DOUBLE:
@@ -276,7 +271,6 @@ CBEType *CBEClassFactory::GetNewType(int nType)
     case TYPE_OBJECT:
     case TYPE_STRING:
     case TYPE_WSTRING:
-    case TYPE_ARRAY:
     case TYPE_REFSTRING:
     default:
         break;
@@ -401,9 +395,19 @@ CBEWaitAnyFunction *CBEClassFactory::GetNewWaitAnyFunction()
  */
 CBEUnmarshalFunction *CBEClassFactory::GetNewUnmarshalFunction()
 {
+	if (m_bVerbose)
+		printf("CBEClassFactory: created class CBEUnmarshalFunction\n");
+	return new CBEUnmarshalFunction();
+}
+
+/**	\brief creates a new instance of the class CBEMarshalFunction
+ *	\return a reference to the new instance
+ */
+CBEMarshalFunction *CBEClassFactory::GetNewMarshalFunction()
+{
     if (m_bVerbose)
-	printf("CBEClassFactory: created class CBEUnmarshalFunction\n");
-    return new CBEUnmarshalFunction();
+		printf("CBEClassFactory: created class CBEMarshalFunction\n");
+    return new CBEMarshalFunction();
 }
 
 /**	\brief creates a new instance of the class CBEOpcodeType
@@ -414,6 +418,16 @@ CBEOpcodeType *CBEClassFactory::GetNewOpcodeType()
     if (m_bVerbose)
 	printf("CBEClassFactory: created class CBEOpcodeType\n");
     return new CBEOpcodeType();
+}
+
+/**	\brief creates a new instance of the class CBEOpcodeType
+ *	\return a reference to the new instance
+ */
+CBEReplyCodeType *CBEClassFactory::GetNewReplyCodeType()
+{
+    if (m_bVerbose)
+		printf("CBEClassFactory: created class CBEReplyCodeType\n");
+    return new CBEReplyCodeType();
 }
 
 /**	\brief creates a new instance of the class CBEComponentFunction
@@ -560,4 +574,24 @@ CBESizes* CBEClassFactory::GetNewSizes()
     if (m_bVerbose)
         printf("CBEClassFactory: create class CBESizes\n");
     return new CBESizes();
+}
+
+/** \brief creates a new instance of the class CBECommunication
+ *  \return a reference to the new instance
+ */
+CBECommunication* CBEClassFactory::GetNewCommunication()
+{
+    if (m_bVerbose)
+        printf("CBEClassFactory: create class CBECommunication\n");
+    return new CBECommunication();
+}
+
+/** \brief creates a new instance of the class CBEDispatchFunction
+ *  \return a reference to the new instance
+ */
+CBEDispatchFunction* CBEClassFactory::GetNewDispatchFunction()
+{
+    if (m_bVerbose)
+        printf("CBEClassFactory: create class CBEDispatchFunction\n");
+    return new CBEDispatchFunction();
 }

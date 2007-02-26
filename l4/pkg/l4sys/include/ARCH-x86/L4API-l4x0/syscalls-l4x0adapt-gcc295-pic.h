@@ -5,7 +5,6 @@
 #ifndef __L4_SYSCALLS_L4X0_GCC295_PIC_H__ 
 #define __L4_SYSCALLS_L4X0_GCC295_PIC_H__ 
 
-#include <l4/sys/xadaption.h>
 
 /*****************************************************************************
  *** L4 flex page unmap
@@ -20,7 +19,7 @@ l4_fpage_unmap(l4_fpage_t fpage,
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(fpage_unmap)
+	  L4_SYSCALL(fpage_unmap)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl  %%ebx  	\n\t"
@@ -48,7 +47,7 @@ l4_myself(void)
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 
 	  FromId32_Esi                  /* my id ESI -> EDI/ESI */
 
@@ -81,7 +80,7 @@ l4_nchief(l4_threadid_t destination,
 
 	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */ 
 
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 
 	  FromId32_Esi                  /* nearest id ESI -> EDI/ESI */
 
@@ -133,7 +132,7 @@ l4_thread_ex_regs(l4_threadid_t destination,
 	  ToId32_EdiEsi                 /* pager id     EDI/ESI -> ESI */
 	  ToId32_EbpEbx                 /* preempter id EBP/EBX -> EBX */ 
 	  
-	  SYS_CALL(lthread_ex_regs)
+	  L4_SYSCALL(lthread_ex_regs)
 
 	  FromId32_Esi                  /* old pager id     ESI -> EDI/ESI */
 	  FromId32_Ebx                  /* old preempter id EBX -> EBP/EBX */
@@ -179,7 +178,7 @@ l4_thread_switch(l4_threadid_t destination)
 
 	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
 
-	  SYS_CALL(thread_switch)
+	  L4_SYSCALL(thread_switch)
 
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
@@ -213,11 +212,15 @@ l4_thread_schedule(l4_threadid_t dest,
 	  "pushl %%ebx		\n\t"	/* save address of preempter */
 	  "movl 4(%%ebx), %%ebp	\n\t"	/* load preempter id */
 	  "movl  (%%ebx), %%ebx	\n\t"
+	  "cmpl $-1,%%eax	\n\t"
+	  "jz   1f		\n\t"	/* don't change if invalid */
+	  "andl $0xfff0ffff, %%eax\n\t"	/* mask bits that must be zero */
+	  "1:			\n\t"
 
 	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
 	  ToId32_EbpEbx                 /* preempter id   EBP/EBX -> EBX */
 
-	  SYS_CALL(thread_schedule)
+	  L4_SYSCALL(thread_schedule)
 
 	  FromId32_Esi                  /* partner id       ESI -> EDI/ESI */
 	  FromId32_Ebx                  /* old preempter id EBX -> EBP/EBX */
@@ -274,7 +277,7 @@ l4_task_new(l4_taskid_t destination,
 	  ToId32_EbpEbx                 /* pager id       EBP/EBX -> EBX */
 	  ToId32_Eax                    /* new chief low      EAX -> EAX */
 
-	  SYS_CALL(task_new)
+	  L4_SYSCALL(task_new)
 
 	  FromId32_Esi                  /* new task ESI -> EDI/ESI */
 

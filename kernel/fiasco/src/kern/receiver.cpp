@@ -1,7 +1,7 @@
 INTERFACE:
 
 #include "context.h"
-#include "timer.h"
+#include "timeout.h"
 
 class Sys_ipc_frame;
 class Sender;
@@ -20,17 +20,18 @@ class Receiver : public Context
   // DATA
   Sender*           _partner;	// IPC partner I'm waiting for/involved with
   Sys_ipc_frame    *_receive_regs; // registers used for receive
-  vm_offset_t       _pagein_request; // sender requests page in of this page
+  Address           _pagein_addr; // sender requests page in of this page
+  Mword             _pagein_error_code;
   Thread*           _pagein_applicant;
   Sender*           _sender_first;
 
 protected:
   // XXX Timeout for both, sender and receiver! In normal case we would have
   // to define own timeouts in Receiver and Sender but because only one
-  // timeout can be set at one timeout we use the same timeout. The timeout
-  // has to be defined here because dirq_t::hit has to be able to reset the
-  // timeout (irq_t::_irq_thread is of type Receiver).
-  timeout_t*          _timeout;
+  // timeout can be set at one time we use the same timeout. The timeout
+  // has to be defined here because Dirq::hit has to be able to reset the
+  // timeout (Irq::_irq_thread is of type Receiver).
+  Timeout *          _timeout;
 };
 
 IMPLEMENTATION:
@@ -47,19 +48,6 @@ IMPLEMENTATION:
 #include "thread_state.h"
 
 // Interface for receivers
-
-// CREATORS
-
-/** Constructor.
-    @param thread_lock the lock used for synchronizing access to this receiver
-    @param space_context the space context 
- */
-PROTECTED
-inline
-Receiver::Receiver(Thread_lock *thread_lock, 
-		   Space_context* space_context)
-  : Context (thread_lock, space_context)
-{}
 
 /** IPC partner (sender).
     @return sender of ongoing or previous IPC operation
@@ -106,16 +94,26 @@ PROTECTED inline
 void
 Receiver::clear_pagein_request()
 {
-  _pagein_request = 0xffffffff;
+  _pagein_addr       = (Address) -1;
+  _pagein_error_code = 0;
 }
 
-/** Return current page-in request.  Returns 0 if there is no page-in request.
+/** Return current page-in address.  Returns -1 if there is no page-in request.
  */
 PROTECTED inline
-vm_offset_t
-Receiver::pagein_request() const
+Address
+Receiver::pagein_addr() const
 {
-  return _pagein_request;
+  return _pagein_addr;
+}
+
+/** Return current page-in error code.  Returns 0 if there is no page-in request.
+ */
+PROTECTED inline
+Mword
+Receiver::pagein_error_code() const
+{
+  return _pagein_error_code;
 }
 
 /** Return current requestor of a page-in. 
@@ -157,12 +155,13 @@ Receiver::receive_regs() const
  */
 PUBLIC inline
 void
-Receiver::set_pagein_request(vm_offset_t address, Thread *notify)
+Receiver::set_pagein_request(Address address, Mword error_code, Thread *notify)
 {
-  assert (address != 0xffffffff);
+  assert (address != (Address) -1);
 
-  _pagein_request = address;
-  _pagein_applicant = notify;
+  _pagein_applicant  = notify;
+  _pagein_addr       = address;
+  _pagein_error_code = error_code;
 
   state_change (~Thread_busy_long, Thread_running);
 }
@@ -272,20 +271,20 @@ PUBLIC inline NEEDS [Receiver::sender_ok, Receiver::set_partner,
 int
 Receiver::ipc_try_lock (Sender* sender)
 {
-  if (EXPECT_FALSE( state () == Thread_invalid) )
+  if (EXPECT_FALSE (state() == Thread_invalid))
     return L4_msgdope::ENOT_EXISTENT;
 
   thread_lock()->lock();
 
-  if (EXPECT_FALSE(! sender_ok (sender)) )
+  if (EXPECT_FALSE (!sender_ok (sender)))
     {
       thread_lock()->clear();
       return -1;
     }
 
   set_partner (sender);
-  receive_regs()->rcv_source( sender->id() );
-  clear_pagein_request ();
+  receive_regs()->rcv_source (sender->id());
+  clear_pagein_request();
 
   return 0;			// OK
 }
@@ -293,7 +292,7 @@ Receiver::ipc_try_lock (Sender* sender)
 /** Unlock a receiver locked with ipc_try_lock(). */
 PUBLIC inline NEEDS ["thread_lock.h", "globals.h"]
 void
-Receiver::ipc_unlock ()
+Receiver::ipc_unlock()
 {
   assert (thread_lock()->lock_owner() == current());
 
@@ -305,7 +304,7 @@ Receiver::ipc_unlock ()
  */
 PUBLIC inline
 Sender**
-Receiver::sender_list ()
+Receiver::sender_list()
 {
   return &_sender_first;
 }
@@ -326,16 +325,16 @@ Receiver::set_partner(Sender* partner)
   _partner = partner;
 }
 
-PROTECTED inline
+PUBLIC inline
 void
-Receiver::set_receive_timeout(timeout_t *t)
+Receiver::set_timeout (Timeout *t)
 {
   _timeout = t;
 }
 
 PUBLIC inline
 void
-Receiver::reset_receive_timeout()
+Receiver::reset_timeout()
 {
   if (_timeout)
     {
@@ -343,4 +342,3 @@ Receiver::reset_receive_timeout()
       _timeout = 0;
     }
 }
-

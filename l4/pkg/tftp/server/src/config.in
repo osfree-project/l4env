@@ -9,5 +9,6 @@ bool '3COM 3c90x Support'	CONFIG_3C90X
 bool '3COM 3x509 Support'	CONFIG_3C509
 bool 'NE2000 Support'		CONFIG_NE2000
 bool 'Realtek 8139 Support'	CONFIG_RTL8139
+bool 'VIA Rhine support'	CONFIG_RHINE
 
 

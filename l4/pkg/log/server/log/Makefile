@@ -12,7 +12,7 @@ SYSTEMS		= x86-l4v2 x86-l4x0
 
 SRC_C		= logserver.c stuff.c flusher.c
 VPATH		= $(PKGDIR)/server/src
-L4LIBS		= -static -lnames -ll4util -lrmgr -llog $(GCCLIB)
+L4LIBS		= -static -lmain -lnames -ll4util -lrmgr -llog $(GCCLIB)
 
 CPPFLAGS 	= -DLOG_TAG='"$(TARGET)"' -DCONFIG_USE_TCPIP=0
 

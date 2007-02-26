@@ -17,10 +17,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#include <syscall-list.h>
 #include <sys/syscall.h>
 #include <asm/unistd.h>
 #include <unistd.h>
+/* Assume GNU as target platform. We need this in dlfcn.h */
+#define __USE_GNU
+#include <dlfcn.h>
 #include "gendep.h"
 
 /*
@@ -47,6 +49,38 @@ __open (const char *fn, int flags, ...)
   return rv;    
 }
 
+typedef FILE* (*fopen_type)(const char*, const char*);
+
+static FILE* real_fopen(const char*path, const char*mode){
+  static fopen_type f_fopen;
+  
+  if(f_fopen==0){
+    f_fopen = (fopen_type)dlsym(RTLD_NEXT, "fopen");
+    if(!f_fopen){
+      fprintf(stderr, "gendep: Cannot resolve fopen()\n");
+      errno=ENOENT;
+      return 0;
+    }
+  }
+  return f_fopen(path, mode);
+}
+
+FILE* __fopen(const char*path, const char*mode){
+  FILE *f;
+  int binmode;
+
+  f = real_fopen(path, mode);
+  if(f){
+    if(strchr(mode, 'w') || strchr(mode, 'a')){
+      binmode=O_WRONLY;
+    } else {
+      binmode=O_RDONLY;
+    }
+    gendep__register_open(path, binmode);
+  }
+  return f;
+}
+
 static int
 real_unlink (const char *fn)
 {
@@ -69,3 +103,4 @@ __unlink (const char *fn)
 
 int open (const char *fn, int flags, ...) __attribute__ ((alias ("__open")));
 int unlink(const char *fn) __attribute__ ((alias ("__unlink")));
+FILE *fopen (const char *path, const char *mode) __attribute__ ((alias ("__fopen")));

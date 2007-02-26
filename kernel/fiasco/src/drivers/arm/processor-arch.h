@@ -9,24 +9,23 @@
 namespace Proc {
   typedef Mword Status;
 
-  FIASCO_INLINE
+  inline
   void stack_pointer( Mword sp )
   {
     asm volatile ( "mov sp, %0 \n" : : "r"(sp) );
   }
 
-  FIASCO_INLINE
+  inline
   void pause()
   {
   }
 
-  FIASCO_INLINE
+  inline
   void halt()
   {
   }
 
-
-  FIASCO_INLINE
+  inline
   void cli()
   {
     asm volatile ( "    mrs    r6, cpsr    \n"
@@ -36,7 +35,7 @@ namespace Proc {
 		   );
   }
   
-  FIASCO_INLINE
+  inline
   Status cli_save()
   {
     Status ret;
@@ -49,9 +48,7 @@ namespace Proc {
     return ret;
   }
 
-  
-
-  FIASCO_INLINE
+  inline
   Status interrupts()
   {
     Status ret;
@@ -61,8 +58,7 @@ namespace Proc {
     return !(ret & 128);
   }
 
-  
-  FIASCO_INLINE
+  inline
   void sti()
   {
     asm volatile ( "    mrs    r6, cpsr    \n"
@@ -72,7 +68,7 @@ namespace Proc {
 		   );
   }
   
-  FIASCO_INLINE
+  inline
   void sti_restore( Status st )
   {
     asm volatile ( "    tst    %0, #128    \n"
@@ -85,13 +81,12 @@ namespace Proc {
 		   );
   }
 
-  FIASCO_INLINE
+  inline
   void irq_chance()
   {
     asm volatile ("nop; nop;" : : : "memory");
   }
 
-  
 };
 
 #endif // PROCESSOR_ARCH_H__

@@ -1,20 +1,23 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/sound/soundcore.c
+ * \file   dde_linux/lib/sound/soundcore.c
+ * \brief  Linux DDE Soundcore
  *
- * \brief	Linux DDE Soundcore
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_envs
  * \defgroup mod_sound Linux DDE Soundcore
  *
  * Linux soundcore emulation.
- *
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -28,7 +31,6 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
 #include "soundcore.h"
@@ -36,10 +38,10 @@
 /** internal sound device/unit structure */
 struct sound_unit
 {
-  int type;			/**< type of device */
-  int num;			/**< device number */
-  struct file_operations *fops;	/**< file operations */
-  struct sound_unit *next;	/**< next in list */
+  int type;                     /**< type of device */
+  int num;                      /**< device number */
+  struct file_operations *fops; /**< file operations */
+  struct sound_unit *next;      /**< next in list */
 };
 
 /** internal lists of sound units */
@@ -56,7 +58,7 @@ static l4lock_t sound_loader_lock = L4LOCK_UNLOCKED;
  * minor number).
  */
 static int __sound_insert_unit(struct sound_unit * s, struct sound_unit **list,
-			       struct file_operations *fops)
+                               struct file_operations *fops)
 {
   int n=0;
 
@@ -68,22 +70,22 @@ static int __sound_insert_unit(struct sound_unit * s, struct sound_unit **list,
     {
       /* Found a hole ? */
       if(*list == NULL || (*list)->num > n)
-	break;
+        break;
       list = &((*list)->next);
       n++;
     }
 
   if(n >= NUM_MAX)
     return -ENOENT;
-		
+
   /* fill it in */
   s->num = n;
   s->fops = fops;
-	
+
   /* link it */
   s->next = *list;
   *list = s;
-	
+
   return n;
 }
 
@@ -96,11 +98,11 @@ static void __sound_remove_unit(struct sound_unit **list, int unit)
     {
       struct sound_unit *p=*list;
       if (p->num == unit)
-	{
-	  *list = p->next;
-	  vfree(p);
-	  return;
-	}
+        {
+          *list = p->next;
+          vfree(p);
+          return;
+        }
       list = &(p->next);
     }
   Error("Sound device %d went missing!\n", unit);
@@ -112,7 +114,7 @@ static struct sound_unit *__look_for_unit(struct sound_unit *s, int unit)
   while(s && s->num <= unit)
     {
       if (s->num == unit)
-	return s;
+        return s;
       s = s->next;
     }
   return NULL;
@@ -123,15 +125,15 @@ static struct sound_unit *__look_for_unit(struct sound_unit *s, int unit)
  * list. Acquires locks as needed
  */
 static int sound_insert_unit(struct sound_unit **list,
-			     struct file_operations *fops, const char *name,
-			     int type)
+                             struct file_operations *fops, const char *name,
+                             int type)
 {
   int r;
   struct sound_unit *s=(struct sound_unit *)vmalloc(sizeof(struct sound_unit));
 
   if(s==NULL)
     return -ENOMEM;
-		
+
   spin_lock(&sound_loader_lock);
   r = __sound_insert_unit(s, list, fops);
   s->type = type;
@@ -162,8 +164,8 @@ static void sound_remove_unit(struct sound_unit **list, int unit)
 /** Register a DSP Device
  * \ingroup mod_sound
  *
- * \param  fops		interface
- * \param  dev		unit number
+ * \param  fops  interface
+ * \param  dev   unit number
  *
  * \return allocated number or negative error value
  *
@@ -192,8 +194,8 @@ int register_sound_dsp(struct file_operations *fops, int dev)
 /** Register a Mixer Device
  * \ingroup mod_sound
  *
- * \param  fops		interface
- * \param  dev		unit number
+ * \param  fops  interface
+ * \param  dev   unit number
  *
  * \return allocated number or negative error value
  *
@@ -221,8 +223,8 @@ int register_sound_mixer(struct file_operations *fops, int dev)
 /** Register a MIDI Device
  * \ingroup mod_sound
  *
- * \param  fops		interface
- * \param  dev		unit number
+ * \param  fops  interface
+ * \param  dev   unit number
  *
  * \return allocated number or negative error value
  */
@@ -251,8 +253,8 @@ int register_sound_midi(struct file_operations *fops, int dev)
 /** Register a Special Sound Node
  * \ingroup mod_sound
  *
- * \param  fops		interface
- * \param  unit		unit number
+ * \param  fops  interface
+ * \param  unit  unit number
  *
  * \return allocated number or negative error value
  *
@@ -283,7 +285,7 @@ int register_sound_special(struct file_operations *fops, int unit)
     case 5:
       name = "unknown5";
       break;
-    case 6:		/* Was once sndstat */
+    case 6:  /* Was once sndstat */
       name = "unknown6";
       break;
     case 7:
@@ -323,8 +325,8 @@ int register_sound_special(struct file_operations *fops, int unit)
 /** Register a synth Device
  * \ingroup mod_sound
  *
- * \param  fops		interface
- * \param  dev		unit number
+ * \param  fops  interface
+ * \param  dev   unit number
  *
  * \return allocated number or negative error value
  *
@@ -342,7 +344,7 @@ int register_sound_synth(struct file_operations *fops, int dev)
 /** Unregister a DSP Device
  * \ingroup mod_sound
  *
- * \param  unit		unit number
+ * \param  unit  unit number
  */
 void unregister_sound_dsp(int unit)
 {
@@ -356,7 +358,7 @@ void unregister_sound_dsp(int unit)
 /** Unregister a Mixer Device
  * \ingroup mod_sound
  *
- * \param  unit		unit number
+ * \param  unit  unit number
  */
 void unregister_sound_mixer(int unit)
 {
@@ -370,7 +372,7 @@ void unregister_sound_mixer(int unit)
 /** Unregister a MIDI Device
  * \ingroup mod_sound
  *
- * \param  unit		unit number
+ * \param  unit  unit number
  */
 void unregister_sound_midi(int unit)
 {
@@ -386,7 +388,7 @@ void unregister_sound_midi(int unit)
 /** Unregister a Special Node
  * \ingroup mod_sound
  *
- * \param  unit		unit number
+ * \param  unit  unit number
  *
  * For now no special nodes are supported. Only OSS/Free (old ISA) and dmasound
  * use this feature.
@@ -397,11 +399,11 @@ void unregister_sound_special(int unit)
   DMSG("unregister special node %d not supported\n", unit);
 #endif
 }
- 
+
 /** Unregister a synth Device
  * \ingroup mod_sound
  *
- * \param  unit		unit number
+ * \param  unit  unit number
  *
  * For now no raw synthesizer nodes are supported. Only wavefront.c uses this
  * feature.
@@ -417,8 +419,8 @@ void unregister_sound_synth(int unit)
 /** Query for device operations structure
  * \ingroup mod_sound
  *
- * \param type		desired device type
- * \param num		desired device number
+ * \param type  desired device type
+ * \param num   desired device number
  *
  * \return fops pointer; NULL on error
  */

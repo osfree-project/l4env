@@ -2,8 +2,7 @@ library test
 {
   interface test
   {
-    long map([in] unsigned long address,
-	[in] unsigned long offset,
+    long map([in] unsigned long offset,
 	[out] fpage *page);
     long check();
   };

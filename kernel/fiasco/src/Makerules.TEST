@@ -1,0 +1,16 @@
+
+$(TEST): $(TEST).image
+	@echo "  ... Building test ELF image"
+	$(LINK_MESSAGE) 
+	$(VERBOSE)$(OBJCOPY) -j ".text" -j ".data" -j ".bss" -S $< $@ 
+
+$(TEST).image: $(srcdir)/test.arm.ld $(OBJ_TEST) $(CXXLIB)  $(MINILIBC)
+	@echo "  ... Building sigma0 image"
+	$(LINK_MESSAGE) 
+	$(VERBOSE)$(LD) -T $^ $(LIBGCC) -o $@ 
+
+clean-TEST:
+		rm -f test
+
+cleanall-TEST:
+		rm -f test

@@ -10,7 +10,7 @@ DEFAULT_RELOC = 0x00930000
 MODE	= sigma0
 SRC_C	= capsule_example.c
 LIBS	= -llogserver_capsule
-L4LIBS	=  -static -lnames -ll4util -lrmgr
+L4LIBS	=  -static -lmain -lnames -ll4util -lrmgr
 
 LOGTAG	= $(addprefix ",$(addsuffix ",$(TARGET)))
 

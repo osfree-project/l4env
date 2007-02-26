@@ -19,14 +19,18 @@
  * improvements that they make and grant CSL redistribution rights.
  */
 
-#include <flux/page.h>
 #include <flux/x86/base_cpu.h>
 #include <flux/x86/base_paging.h>
 #include <assert.h>
 //#include <stdio.h>
 
+#define PAGE_SIZE		(1 << 12)
+#define SUPERPAGE_SIZE		(1 << 22)
+#define SUPERPAGE_MASK		(SUPERPAGE_SIZE - 1)
+#define	superpage_aligned(x)	((((vm_offset_t)(x)) & SUPERPAGE_MASK) == 0)
+
 int pdir_map_range(vm_offset_t pdir_pa, vm_offset_t la, vm_offset_t pa,
-		   vm_size_t size, pt_entry_t mapping_bits)
+		   vm_size_t size, Pt_entry mapping_bits)
 {
   //  printf("pdir_map_range(%p,%p,%p,%08x,%08x)\n",
   //	 (void*)pdir_pa, (void*)la, (void*)pa, size, mapping_bits);
@@ -36,14 +40,15 @@ int pdir_map_range(vm_offset_t pdir_pa, vm_offset_t la, vm_offset_t pa,
 
 	while (size > 0)
 	{
-		pd_entry_t *pde = pdir_find_pde(pdir_pa, la);
+		Pd_entry *pde = pdir_find_pde(pdir_pa, la);
 
 		/* Use a 4MB page if we can.  */
 		if (superpage_aligned(la) && superpage_aligned(pa)
 		    && (size >= SUPERPAGE_SIZE)
 		    && (base_cpuid.feature_flags & CPUF_4MB_PAGES))
 		{
-	
+	                /* a failed assertion here may indicate a memory wrap
+                           around problem */
 			assert(!(*pde & INTEL_PDE_VALID));
 			/* XXX what if an empty page table exists
 			   from previous finer-granularity mappings? */
@@ -54,7 +59,7 @@ int pdir_map_range(vm_offset_t pdir_pa, vm_offset_t la, vm_offset_t pa,
 		}
 		else
 		{
-			pt_entry_t *pte;
+			Pt_entry *pte;
 
 			/* Find the page table, creating one if necessary.  */
 			if (!(*pde & INTEL_PDE_VALID))

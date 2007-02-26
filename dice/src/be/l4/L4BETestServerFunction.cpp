@@ -5,7 +5,7 @@
  *	\date	04/04/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -31,7 +31,7 @@
 #include "be/BEFile.h"
 #include "be/l4/L4BENameFactory.h"
 
-#include "fe/FETypeSpec.h" // needed for TYPE_MWORD
+#include "TypeSpec-Type.h" // needed for TYPE_MWORD
 
 IMPLEMENT_DYNAMIC(CL4BETestServerFunction);
 
@@ -62,7 +62,7 @@ CL4BETestServerFunction::~CL4BETestServerFunction()
 void CL4BETestServerFunction::WriteStartServerLoop(CBEFile * pFile, CBEContext * pContext)
 {
     // print status
-    pFile->PrintIndent("LOG(\"start server %s\\n\");\n",
+    pFile->PrintIndent("LOG(\"start server %s\");\n",
                        (const char *) m_pFunction->GetName());
 
     String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
@@ -72,7 +72,7 @@ void CL4BETestServerFunction::WriteStartServerLoop(CBEFile * pFile, CBEContext *
         String sThread = pContext->GetNameFactory()->GetString(STR_THREAD_ID_VAR, pContext);
         pFile->PrintIndent("%s = l4thread_create(%s, 0, L4THREAD_CREATE_SYNC);\n",
                            (const char *) sThread, (const char *) m_pFunction->GetName());
-        pFile->PrintIndent("%s = l4thread_l4_id(%s);\n", (const char *) sObj, (const char *) sThread);
+        pFile->PrintIndent("*%s = l4thread_l4_id(%s);\n", (const char *) sObj, (const char *) sThread);
     }
     else if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE_TASK))
     {
@@ -81,20 +81,20 @@ void CL4BETestServerFunction::WriteStartServerLoop(CBEFile * pFile, CBEContext *
         // sObj = l4_task_new(server_id, 0, /* id, prio */
         // _my_stack, m_pFunction->GetName(), _my_pager);
         String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-        pFile->PrintIndent("%s = l4_task_new(_server_id, 0, (%s)_my_stack, (%s)%s, _my_pager);\n",
+        pFile->PrintIndent("*%s = l4_task_new(_server_id, 0, (%s)_my_stack, (%s)%s, _my_pager);\n",
                            (const char*)sObj, (const char*)sMWord, (const char*)sMWord,
                            (const char*)m_pFunction->GetName());
-        pFile->PrintIndent("if (l4_is_nil_id(%s))\n", (const char*)sObj);
+        pFile->PrintIndent("if (l4_is_nil_id(*%s))\n", (const char*)sObj);
         pFile->PrintIndent("{\n");
         pFile->IncIndent();
-        pFile->PrintIndent("LOG(\"Creation of server %s failed.\\n\");\n", (const char*)m_pFunction->GetName());
+        pFile->PrintIndent("LOG(\"Creation of server %s failed.\");\n", (const char*)m_pFunction->GetName());
         pFile->PrintIndent("return;\n");
         pFile->DecIndent();
         pFile->PrintIndent("}\n");
         pFile->PrintIndent("else\n");
         pFile->PrintIndent("{\n");
         pFile->IncIndent();
-        pFile->PrintIndent("LOG(\"Created server %s with %%x.%%x\\n\", %s.id.task, %s.id.lthread);\n",
+        pFile->PrintIndent("LOG(\"Created server %s with %%x.%%x\", %s->id.task, %s->id.lthread);\n",
                            (const char*)m_pFunction->GetName(), (const char*)sObj, (const char*)sObj);
         pFile->DecIndent();
         pFile->PrintIndent("}\n");
@@ -120,10 +120,10 @@ void CL4BETestServerFunction::WriteStopServerLoop(CBEFile * pFile, CBEContext * 
     {
         // deactivate server task
         String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-        pFile->PrintIndent("l4_task_new(%s, 0, 0, 0, L4_NIL_ID);\n", (const char*)sObj);
+        pFile->PrintIndent("l4_task_new(*%s, 0, 0, 0, L4_NIL_ID);\n", (const char*)sObj);
     }
     // print status
-    pFile->PrintIndent("LOG(\"server %s stopped\\n\");\n", (const char *) m_pFunction->GetName());
+    pFile->PrintIndent("LOG(\"server %s stopped\");\n", (const char *) m_pFunction->GetName());
 }
 
 /**	\brief intialize the variables for this server test
@@ -173,7 +173,8 @@ void CL4BETestServerFunction::WriteVariableDeclaration(CBEFile * pFile, CBEConte
     }
 
     String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("CORBA_Object %s;\n", (const char *) sObj);
+	pFile->PrintIndent("CORBA_Object_base _%s;\n", (const char *) sObj);
+    pFile->PrintIndent("CORBA_Object %s = &_%s;\n", (const char *) sObj, (const char *) sObj);
 
     String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
     pFile->PrintIndent("CORBA_Environment %s = dice_default_environment;\n", (const char *) sEnv);
@@ -212,7 +213,7 @@ void CL4BETestServerFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CB
  */
 void CL4BETestServerFunction::WriteTestFunction(CBEFile * pFile, CBETestFunction * pFunction, CBEContext * pContext)
 {
-    pFile->PrintIndent("LOG(\"*** %s start ***\\n\");\n", (const char*)pFunction->GetName());
+    pFile->PrintIndent("LOG(\"*** %s start ***\");\n", (const char*)pFunction->GetName());
     CBETestServerFunction::WriteTestFunction(pFile, pFunction, pContext);
-    pFile->PrintIndent("LOG(\"*** %s end ***\\n\\n\");\n", (const char*)pFunction->GetName());
+    pFile->PrintIndent("LOG(\"*** %s end ***\");\n", (const char*)pFunction->GetName());
 }

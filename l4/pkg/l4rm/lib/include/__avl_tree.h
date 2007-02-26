@@ -6,23 +6,14 @@
  *
  * \date   05/27/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4RM___AVL_TREE_H
 #define _L4RM___AVL_TREE_H
 
@@ -67,14 +58,14 @@ typedef void * avlt_data_t;     ///< pointer to region descriptor
  */
 typedef struct avlt
 {
-  avlt_key_t    key;            ///< node search key
-  avlt_data_t   data;           ///< node data
+  avlt_key_t     key;            ///< node search key
+  avlt_data_t    data;           ///< node data
 
   /* internal stuff */
-  l4_uint16_t      flags;          ///< node flags
-  l4_int16_t      b;              ///< balance factor
-  struct avlt * left;           ///< left subtree
-  struct avlt * right;          ///< right subtree
+  l4_uint16_t    flags;          ///< node flags
+  l4_int16_t     b;              ///< balance factor
+  struct avlt *  left;           ///< left subtree
+  struct avlt *  right;          ///< right subtree
 } avlt_t;
 
 /*****************************************************************************

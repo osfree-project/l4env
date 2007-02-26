@@ -1,6 +1,6 @@
 struct {
-	short	width,height;
-	short	pixels[16][16];
+	short   width,height;
+	short   pixels[16][16];
 } smallmouse_trp = {
 	16,16,
 	{

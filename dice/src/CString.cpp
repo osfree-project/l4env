@@ -1,11 +1,11 @@
 /**
- *	\file	dice/src/String.cpp
+ *	\file	dice/src/CString.cpp
  *	\brief	contains the implementation of the class String
  *
  *	\date	04/12/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -122,7 +122,7 @@ void String::Empty()
 void String::Concat(const String & add)
 {
     if (add.m_nSize == 0)
-	return;
+	    return;
     m_sString = (char *) realloc(m_sString, m_nSize + add.m_nSize + 1);	// terminating 0
     strcpy(m_sString + m_nSize, add.m_sString);
     m_nSize += add.m_nSize;
@@ -150,6 +150,46 @@ void String::Concat(char ch)
     m_sString = (char *) realloc(m_sString, m_nSize + 2);	// terminating 0
     m_sString[m_nSize++] = ch;
     m_sString[m_nSize] = 0;
+}
+
+/** \brief adds an integer to the existing string
+ *  \param nValue the integer to add
+ */
+void String::Concat(int nValue)
+{
+    char str[255];
+	snprintf((char*)str, 255, "%d", nValue);
+	Concat(str);
+}
+
+/** \brief adds a double to the existing string
+ *  \param dValue the double value to add
+ */
+void String::Concat(double dValue)
+{
+    char str[1024];
+	snprintf((char*)str, 1024, "%f", dValue);
+	Concat(str);
+}
+
+/** \brief adds a double to the existing string
+ *  \param dValue the double value to add
+ */
+void String::Concat(long double dValue)
+{
+    char str[1024];
+	snprintf((char*)str, 1024, "%Lf", dValue);
+	Concat(str);
+}
+
+/** \brief adds a float to the existing string
+ *  \param fValue the float value to add
+ */
+void String::Concat(float fValue)
+{
+    char str[1024];
+	snprintf((char*)str, 1024, "%f", fValue);
+	Concat(str);
 }
 
 /**	\brief retrieves a character from the string at a given position
@@ -322,14 +362,25 @@ const String & String::operator +=(char ch)
 }
 
 /**	\brief adds one string to the own string
-*	\param str the string to add
-*
-* This implementation only calls Concat
-*/
+ *	\param str the string to add
+ *
+ * This implementation only calls Concat
+ */
 const String & String::operator +=(const char *str)
 {
     Concat(str);
     return *this;
+}
+
+/** \brief adds an integer value to the own string
+ *  \param nValue the integer to add
+ *
+ * This implementation calls Concat
+ */
+const String & String::operator +=(int nValue)
+{
+    Concat(nValue);
+	return *this;
 }
 
 /**	\brief compares antother string with this one
@@ -635,7 +686,7 @@ String String::Mid(int start, int count) const
 */
 String String::SpanIncluding(const char *include) const
 {
-    ASSERT(false);
+    assert(false);
     return *this;
 }
 
@@ -645,7 +696,7 @@ String String::SpanIncluding(const char *include) const
 */
 String String::SpanExcluding(const char *exclude) const
 {
-    ASSERT(false);
+    assert(false);
     return *this;
 }
 
@@ -841,17 +892,23 @@ void String::MakeReverse()
 }
 
 /** \brief replaces one character with another
+ *  \param ch1 the character to be replaced
+ *  \param ch2 the character to replace ch1
+ *  \param start the index to start from
+ *  \return the index of the last replaced character
  *
  * All characters ch1 are replaced with ch2. The first
  */
-int String::Replace(char ch1, char ch2)
+int String::Replace(char ch1, char ch2, int start)
 {
     if (ch1 == ch2)
         return -1;
     if (!m_sString)
         return -1;
+    if (start < 0)
+	    start = 0;
     int nFirstPos = -1;
-    for (int i=0; i < m_nSize; i++)
+    for (int i=start; i < m_nSize; i++)
     {
         if (m_sString[i] == ch1)
         {
@@ -866,12 +923,49 @@ int String::Replace(char ch1, char ch2)
 /** \brief replaces one string with another
  *  \param str1 the replace to search for
  *  \param s2 the string to replace with
+ *  \param start the start index
  *  \return the first position to replace
+ *
+ * To replace all occurences of str1 with s2, we scan the string
+ * for str1, create a new string with the string up to str1, then
+ * cat s2 to it and finally cat everything to the right of the occurence
+ * of str1 to the new string.
  */
-int String::Replace(const char *str1, const char *s2)
+int String::Replace(const char *str1, const char *s2, int start)
 {
-    ASSERT(false);
-    return -1;
+    if (String(str1) == String(s2))
+	    return -1;
+    if (!m_sString)
+	    return -1;
+    if (start < 0)
+	    start = 0;
+    if (start >= m_nSize)
+	    start = m_nSize-1;
+
+    // get memory for new string
+    char *sNew = (char*)malloc(m_nSize + strlen(s2) - strlen(str1) + 1);
+	// check if there is an occurence of str1
+	char *sPos = strstr(&m_sString[start], str1);
+	if (sPos)
+	{
+	    // get position
+		int nPos = sPos - m_sString;
+        // copy parts into new string
+		strncpy(sNew, m_sString, nPos);
+		sNew[nPos] = 0;
+		strcat(sNew, s2);
+		strcat(sNew, &sPos[strlen(str1)]);
+		// replace old with new
+		free(m_sString);
+		m_sString = sNew;
+		m_nSize = strlen(m_sString);
+		// replace following occurences
+		// (dicards other positions)
+		Replace(str1, s2, nPos);
+        // return first occurence
+		return nPos;
+	}
+	return -1;
 }
 
 /** \brief search for characters defined by the first string and replace them with the second parameter
@@ -881,7 +975,7 @@ int String::Replace(const char *str1, const char *s2)
  */
 int String::ReplaceIncluding(const char *str1, char ch2)
 {
-    ASSERT(false);
+    assert(false);
     return -1;
 }
 
@@ -914,7 +1008,7 @@ int String::ReplaceExcluding(const char *str1, char ch2)
  */
 int String::Remove(char ch)
 {
-    ASSERT(false);
+    assert(false);
     return -1;
 }
 
@@ -925,7 +1019,7 @@ int String::Remove(char ch)
  */
 int String::Insert(int index, char ch)
 {
-    ASSERT(false);
+    assert(false);
     return -1;
 }
 
@@ -936,7 +1030,7 @@ int String::Insert(int index, char ch)
  */
 int String::Insert(int index, const char *str)
 {
-    ASSERT(false);
+    assert(false);
     return -1;
 }
 
@@ -947,7 +1041,7 @@ int String::Insert(int index, const char *str)
  */
 int String::Delete(int index, int count)
 {
-    ASSERT(false);
+    assert(false);
     return 0;
 }
 
@@ -955,7 +1049,7 @@ int String::Delete(int index, int count)
  */
 void String::TrimLeft()
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /** \brief remove a specified character from the left of the string
@@ -994,14 +1088,14 @@ void String::TrimLeft(char ch)
  */
 void String::TrimLeft(const char *str)
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /** \brief removes white spaces from the right of the string
  */
 void String::TrimRight()
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /** \brief removes the specified character from the right side of the string
@@ -1042,5 +1136,48 @@ void String::TrimRight(char ch)
  */
 void String::TrimRight(const char *str)
 {
-    ASSERT(false);
+    assert(false);
+}
+
+/** \brief makes an integer from this string
+ *  \return the integer
+ *
+ * If the string is empty -1 is returned. If you use this function you
+ * should be aware that this may happend.
+ */
+int String::ToInt()
+{
+    if (IsEmpty())
+	    return -1;
+    return atoi(m_sString);
+}
+
+/** \brief convert the string into a float
+ *  \return a float value
+ */
+float String::ToFloat()
+{
+    if (IsEmpty())
+	    return 0.0;
+    return (float)atof(m_sString);
+}
+
+/** \brief convert the string into a double
+ *  \return a doubel value
+ */
+double String::ToDouble()
+{
+    if (IsEmpty())
+	    return 0.0;
+    return atof(m_sString);
+}
+
+/** \brief convert the string into a long double
+ *  \return a long double value
+ */
+long double String::ToLongDouble()
+{
+    if (IsEmpty())
+	    return 0.0;
+    return (long double)atof(m_sString);
 }

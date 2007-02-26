@@ -5,12 +5,12 @@
  *	\date	02/20/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -35,7 +35,7 @@
 #include "be/BEMarshaller.h"
 #include "be/BEOpcodeType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BEUnmarshalFunction);
@@ -61,7 +61,7 @@ CL4BEUnmarshalFunction::~CL4BEUnmarshalFunction()
  *  \param pFile the file to write to
  *  \param pContext the context of the write process
  *
- * The unmarshalling function has to parameters, which need dynamically allocated memory.
+ * The unmarshalling function has to init parameters, which need dynamically allocated memory.
  * Such parameters are, for instance, variable size arrays and strings.
  */
 void CL4BEUnmarshalFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
@@ -81,9 +81,9 @@ void CL4BEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffse
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
     if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasReceiveFlexpages())
     {
-        nStartOffset += pMarshaller->Unmarshal(pFile, this, TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
+        nStartOffset += pMarshaller->Unmarshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
     }
-        
+
     if (IsComponentSide())
     {
         // start after opcode
@@ -99,7 +99,7 @@ void CL4BEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffse
         nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     }
     // now unmarshal rest
-    pMarshaller->Unmarshal(pFile, this, -TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
+    pMarshaller->Unmarshal(pFile, this, -TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
     delete pMarshaller;
 }
 
@@ -129,7 +129,7 @@ bool CL4BEUnmarshalFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, C
  *  \return true if the given parameter needs an additional reference
  *
  * All [ref] attributes need an additional reference, because they are pointers, which
- * will be set by teh unmarshal function.
+ * will be set by the unmarshal function.
  */
 bool CL4BEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall)
 {

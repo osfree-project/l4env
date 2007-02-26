@@ -8,6 +8,7 @@ MODE             = host
 DEFINES         += -DSOCKETAPI -DDICE_DEFAULT_PORT=htons\(\(int\)dice_server_param\)
 
 PRIVATE_INCDIR   = $(PKGDIR)/lib/dope/include \
+                   $(PKGDIR)/server/include \
                    $(PKGDIR)/include \
                    $(L4DIR)/tool/dice/include
 

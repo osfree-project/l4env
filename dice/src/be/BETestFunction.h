@@ -5,12 +5,12 @@
  *	\date	03/08/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -75,20 +75,35 @@ protected:
     virtual void WriteFunctionDefinition(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteModulo(CBEFile *pFile, CBEContext *pContext);
+
     virtual void InitGlobalVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, CBEContext * pContext);
     virtual void InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
     virtual void InitGlobalArray(CBEFile *pFile, CBEType *pType, CBEContext *pContext);
+	virtual void InitGlobalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext);
+	virtual void InitGlobalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
     virtual void InitGlobalUnion(CBEFile *pFile, CBEUnionType *pType, CBEContext *pContext);
     virtual void InitGlobalStruct(CBEFile *pFile, CBEStructType *pType, CBEContext *pContext);
     virtual void InitGlobalString(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
-    virtual void InitLocalDeclarator(CBEFile *pFile, CBEDeclarator *pDeclarator, bool bUsePointer, CBEContext *pContext);
-    virtual void InitLocalDeclarator(CBEFile *pFile, CDeclaratorStack *pStack, bool bUsePointer, CBEContext *pContext);
+
+    virtual void InitLocalDeclarator(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
+    virtual void InitLocalArray(CBEFile *pFile, CBEType *pType, CBEContext *pContext);
+	virtual void InitLocalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext);
+	virtual void InitLocalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
+    virtual void InitLocalUnion(CBEFile *pFile, CBEUnionType *pType, CBEContext *pContext);
+    virtual void InitLocalStruct(CBEFile *pFile, CBEStructType *pType, CBEContext *pContext);
+
+	virtual void InitPreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
+	virtual void FreePreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
+
     virtual void CompareDeclarator(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void CompareStruct(CBEFile *pFile, CBEStructType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void CompareArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
+	virtual void CompareConstArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEContext *pContext);
+	virtual void CompareVarArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
     virtual void CompareUnion(CBEFile *pFile, CBEUnionType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void CompareVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, CDeclaratorStack *pStack, CBEContext * pContext);
     virtual void CompareString(CBEFile * pFile, CBEType * pType, CDeclaratorStack * pStack, CBEContext * pContext);
+
     virtual void WriteComparison(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
 	virtual void SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext);

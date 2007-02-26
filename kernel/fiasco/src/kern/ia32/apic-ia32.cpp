@@ -21,13 +21,11 @@ public:
       APIC_K7			// AMD Athlon Model 2
     } Apic_type;
 
-  static bool ignore_invalid_reg_access;
-  
 private:
   Apic();			// default constructors are undefined
   Apic(const Apic&);
   
-  static bool present;
+  static int present;
   static const Address io_base;
   static unsigned timer_divisor;
   static Apic_type type;
@@ -55,6 +53,7 @@ extern unsigned apic_error_cnt;
 #define APIC_SPIV                   0xF0
 #define APIC_ESR                    0x280
 #define APIC_LVTT                   0x320
+#define APIC_LVTTHMR                0x330
 #define APIC_LVTPC                  0x340
 #define APIC_LVT0                   0x350
 #define   SET_APIC_TIMER_BASE(x)      (((x)<<18))
@@ -101,13 +100,14 @@ unsigned apic_spurious_interrupt_cnt;
 unsigned apic_error_cnt;
 unsigned apic_io_base;
 
-bool     Apic::ignore_invalid_reg_access;
-bool     Apic::present;
+int      Apic::present;
 const Address Apic::io_base = Kmem::local_apic_page;
 unsigned Apic::timer_divisor = 1;
 Apic::Apic_type Apic::type = APIC_NONE;
 unsigned Apic::frequency_khz;
 unsigned Apic::max_lvt;
+
+int ignore_invalid_apic_reg_access;
 
 PUBLIC static inline
 unsigned
@@ -275,6 +275,20 @@ Apic::get_maxlvt()
 		: 2;
 }
 
+PUBLIC static
+inline int
+Apic::have_pcint()
+{
+  return (present && (max_lvt >= 4));
+}
+
+PUBLIC static
+inline int
+Apic::have_tsint()
+{
+  return (present && (max_lvt >= 5));
+}
+
 // check if APIC is working (check timer functionality)
 static FIASCO_INIT
 int
@@ -299,7 +313,7 @@ Apic::check_working()
 
 static FIASCO_INIT
 void
-Apic::soft_enable()
+Apic::init_spiv()
 {
   unsigned tmp_val;
   
@@ -315,7 +329,7 @@ Apic::soft_enable()
 // activate APIC error interrupt
 static FIASCO_INIT
 void
-Apic::err_enable()
+Apic::enable_errors()
 {
   if (APIC_INTEGRATED(reg_read(APIC_LVR)))
     {
@@ -347,12 +361,9 @@ Apic::activate_by_io()
 {
   unsigned tmp_val;
 
-  Proc::Status flags = Proc::cli_save();
-
   // mask 8259 interrupts
+  Proc::Status flags = Proc::cli_save();
   Pic::Status old_irqs = Pic::disable_all_save();
-
-  soft_enable();
 
   // set LINT0 to ExtINT, edge triggered
   tmp_val = reg_read(APIC_LVT0);
@@ -366,9 +377,39 @@ Apic::activate_by_io()
   tmp_val |= 0x00000400;
   reg_write(APIC_LVT1, tmp_val);
 
-  Pic::restore_all( old_irqs );
-
   // unmask 8259 interrupts
+  Pic::restore_all(old_irqs);
+  Proc::sti_restore(flags);  
+}
+
+static FIASCO_INIT
+void
+Apic::init_lvt()
+{
+  unsigned tmp_val;
+
+  Proc::Status flags = Proc::cli_save();
+  // mask timer interrupt and set vector to _not_ invalid value
+  tmp_val  = reg_read(APIC_LVTT);
+  tmp_val |= APIC_LVT_MASKED;
+  tmp_val |= 0xff;
+  reg_write(APIC_LVTT, tmp_val);
+  if (have_pcint())
+    {
+      // mask performance interrupt and set vector to a valid value
+      tmp_val  = reg_read(APIC_LVTPC);
+      tmp_val |= APIC_LVT_MASKED;
+      tmp_val |= 0xff;
+      reg_write(APIC_LVTPC, tmp_val);
+    }
+  if (have_tsint())
+    {
+      // mask thermal sensor interrupt and set vector to a valid value
+      tmp_val  = reg_read(APIC_LVTTHMR);
+      tmp_val |= APIC_LVT_MASKED;
+      tmp_val |= 0xff;
+      reg_write(APIC_LVTTHMR, tmp_val);
+    }
   Proc::sti_restore(flags);  
 }
 
@@ -431,21 +472,15 @@ static FIASCO_INIT
 int
 Apic::try_to_activate()
 {
-  activate_by_msr();
-  if (   test_present()
-      && check_working())
+  printf("APIC disabled, re-enabling... ");
+  activate_by_io();
+  if (check_still_getting_irqs())
     {
-      printf("APIC disabled, re-enabling... ");
-      activate_by_io();
-      if (check_still_getting_irqs())
-	{
-	  printf("sucessful!\n");
-	  return 1;
-	}
-      
-      panic("unsuccessful!\n");
+      printf("successful!\n");
+      return 1;
     }
 
+  panic("unsuccessful!\n");
   return 0;
 }
 
@@ -461,13 +496,6 @@ inline int
 Apic::cpu_type()
 {
   return type;
-}
-
-PUBLIC static
-int
-Apic::have_pcint()
-{
-  return (present && (max_lvt >= 4));
 }
 
 PUBLIC static
@@ -536,7 +564,7 @@ apic_error_interrupt(Return_frame *ret_regs)
     {
       // ignore possible invalid access which may happen in
       // jdb::do_dump_memory()
-      if (Apic::ignore_invalid_reg_access)
+      if (ignore_invalid_apic_reg_access)
 	return;
 
       printf("APIC invalid register access error at %08x\n", ret_regs->eip);
@@ -550,20 +578,44 @@ apic_error_interrupt(Return_frame *ret_regs)
 IMPLEMENT
 void Apic::init()
 {
-  if (present = test_cpu())
+  int was_present;
+
+  // check CPU type
+  if ((present = test_cpu()))
     {
-      if ((present = test_present() && check_working()))
+      // check cpu features of cpuid
+      was_present = test_present();
+
+      // activate; this could lead an disabled APIC to appear
+      // set base address of I/O registers to be able to access the registers
+      activate_by_msr();
+
+      // previous test_present() could have failed but we could have it
+      // activated by writing the msr so we have to test again
+      if ((present = test_present()))
 	{
-	  activate_by_msr();
-	  soft_enable();
+	  // determine number of local interrupts
+	  max_lvt = get_maxlvt();
+
+	  // set some interrupt vectors to appropriate values
+	  init_lvt();
+
+	  // initialize APIC_SPIV register
+	  init_spiv();
+
+	  // test if local timer counts down
+	  if ((present = check_working()))
+	    {
+	      if (!was_present)
+		// APIC _was_ not present before writing to msr so we have
+		// to set APIC_LVT0 and APIC_LVT1 to appropriate values
+		present = try_to_activate();
+	    }
 	}
-      else
-	present = try_to_activate();
     }
 
   if (present)
     {
-      max_lvt = get_maxlvt();     // determine number of local interrupts
       apic_io_base = Kmem::local_apic_page;
 
       calibrate_timer();
@@ -572,7 +624,7 @@ void Apic::init()
 	  GET_APIC_VERSION(reg_read(APIC_LVR)),
 	  GET_APIC_ID(reg_read(APIC_ID)));
 
-      err_enable();
+      enable_errors();
     }
   else
     {

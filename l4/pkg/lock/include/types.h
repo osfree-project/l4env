@@ -10,6 +10,12 @@
  * L4 lock data types.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4_LOCK_TYPES_H
 #define _L4_LOCK_TYPES_H
 

@@ -180,11 +180,19 @@ extern __inline void
 fill_gate(struct x86_gate *gate, unsigned offset, unsigned short selector,
 	  unsigned char access, unsigned char word_count)
 {
-	gate->offset_low = offset & 0xffff;
-	gate->selector = selector;
-	gate->word_count = word_count;
-	gate->access = access | ACC_P;
-	gate->offset_high = (offset >> 16) & 0xffff;
+	if ((access & (ACC_TYPE | ACC_A)) == ACC_TASK_GATE) {
+		gate->offset_low  = 0;
+		gate->selector    = offset;
+		gate->word_count  = 0;
+		gate->access      = access | ACC_P;
+		gate->offset_high = 0;
+	} else {
+		gate->offset_low  = offset & 0xffff;
+		gate->selector    = selector;
+		gate->word_count  = word_count;
+		gate->access      = access | ACC_P;
+		gate->offset_high = (offset >> 16) & 0xffff;
+	}
 }
 
 #endif

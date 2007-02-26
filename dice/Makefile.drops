@@ -1,10 +1,6 @@
 L4DIR= 	../..
 
--include $(L4DIR)/Makeconf.local
-
-ifeq ($(DROPS_STDDIR),)
-$(error "DROPS_STDDIR not set. Please set it in $(L4DIR)/Makeconf.local")
-endif
+-include $(L4DIR)/mk/Makeconf
 
 # added this for people with CDPATH set
 ifneq (${CDPATH},)
@@ -15,15 +11,19 @@ $(warning in your shell init script .bashrc, .profile, ...)
 $(error Please fix that error)
 endif
 
-all:
-
--include Makefile
-
 # the ifeq prevents the warning regarding overiding rules for Makefile
 ifeq ($(wildcard Makefile),)
 Makefile:
 	@echo "Calling bootstrap..."
 	@./bootstrap
 	@echo "Calling configure..."
-	@./configure --prefix=$(DROPS_STDDIR)
+	@CC=$(HOST_CC) CXX=$(HOST_CXX) ./configure \
+	  $(if $(DROPS_STDDIR),--prefix=$(DROPS_STDDIR) \
+	  --bindir=$(DROPS_STDDIR)/tool/bin --mandir=$(DROPS_STDDIR)/tool/man)
 endif
+
+all:: Makefile
+	$(MAKE) $@
+
+install:
+	$(MAKE) install

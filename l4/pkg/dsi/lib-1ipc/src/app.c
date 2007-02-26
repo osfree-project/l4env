@@ -175,7 +175,7 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   ret = sender->connect(sender,&receiver->socketref);
   if (ret)
     {
-      Error("DSI: connect sender failed: %s (%d)\n",l4env_errstr(ret),ret);
+      Error("DSI: connect sender failed: %s (%d)",l4env_errstr(ret),ret);
       s->flags = DSI_STREAM_UNUSED;
       return -DSI_ECONNECT;
     }
@@ -183,7 +183,7 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   ret = receiver->connect(receiver,&sender->socketref);
   if (ret)
     {
-      Error("DSI: connect receiver failed: %s (%d)\n",l4env_errstr(ret),ret);
+      Error("DSI: connect receiver failed: %s (%d)",l4env_errstr(ret),ret);
       s->flags = DSI_STREAM_UNUSED;
       return -DSI_ECONNECT;
     }
@@ -244,7 +244,7 @@ dsi_stream_start(dsi_stream_t * stream)
       ret = stream->sender.start(&stream->sender);
       if (ret)
 	{
-	  Error("DSI: start sender failed: %s (%d)\n",
+	  Error("DSI: start sender failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
@@ -277,10 +277,9 @@ dsi_stream_stop(dsi_stream_t * stream)
 	return -L4_EINVAL;
 	    
     /* send stop message to sender */
-#if DEBUG_STREAM
-    INFO("calling sender (%x) to stop...\n",
-	 stream->sender.socket.work_th.id.task);
-#endif
+    LOGdL(DEBUG_STREAM,"calling sender (%x) to stop...",
+          stream->sender.socketref.work_th.id.task);
+
     if (stream->sender.stop != NULL){
 	ret = stream->sender.stop(&stream->sender);
 	if (ret)
@@ -291,15 +290,14 @@ dsi_stream_stop(dsi_stream_t * stream)
     }
 
     /* send stop message to receiver */
-#if DEBUG_STREAM
-    INFO("calling receiver (%x) to stop...\n",
-	 stream->receiver.socket.work_th.id.task);
-#endif
+    LOGdL(DEBUG_STREAM,"calling receiver (%x) to stop...",
+          stream->receiver.socketref.work_th.id.task);
+
     if (stream->receiver.stop != NULL){
 	ret = stream->receiver.stop(&stream->receiver);
 	if (ret)
 	  {
-	    Error("DSI: stop receiver failed: %s (%d)\n",
+	    Error("DSI: stop receiver failed: %s (%d)",
 		  l4env_errstr(ret),ret);
 	    return ret;
 	  }
@@ -342,83 +340,73 @@ dsi_stream_close(dsi_stream_t * stream)
   // we need at least the close functions for the sockets 
   if (stream->sender.close == NULL)
     {
-      Error("DSI: missing send components close function\n");
+      Error("DSI: missing send components close function");
       return -L4_EINVAL;
     }
   if (stream->receiver.close == NULL)
     {
-      Error("DSI: missing receive components close function\n");
+      Error("DSI: missing receive components close function");
       return -L4_EINVAL;
     }
 
   // stop send component
   if (stream->sender.stop != NULL)
     {
-#if DEBUG_STREAM
-      INFO("calling sender (%x) to stop...\n",
-	   stream->sender.socket.work_th.id.task);
-#endif
+      LOGdL(DEBUG_STREAM,"calling sender (%x) to stop...",
+            stream->sender.socketref.work_th.id.task);
+      
       ret = stream->sender.stop(&stream->sender);
       if (ret)
 	{
-	  Error("DSI: stop sender's failed: %s (%d)\n",l4env_errstr(ret),ret);
+	  Error("DSI: stop sender's failed: %s (%d)",l4env_errstr(ret),ret);
 	  error = -DSI_ECOMPONENT;
 	}
-#if DEBUG_STREAM
-      INFO("sender stop returned\n");
-#endif
+      LOGdL(DEBUG_STREAM,"sender stop returned");
     }
 
   // stop receive component
   if (stream->receiver.stop != NULL)
     { 
-#if DEBUG_STREAM
-      INFO("calling receiver (%x) to stop...\n",
-	   stream->receiver.socket.work_th.id.task);
-#endif
+      LOGdL(DEBUG_STREAM,"calling receiver (%x) to stop...",
+            stream->receiver.socketref.work_th.id.task);
+
       ret = stream->receiver.stop(&stream->receiver);
       if (ret)
 	{
-	  Error("DSI: stop receiver's failed: %s (%d)\n",
+	  Error("DSI: stop receiver's failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  error = -DSI_ECOMPONENT;
 	}
-#if DEBUG_STREAM
-      INFO("receiver stop returned\n");
-#endif
+      LOGdL(DEBUG_STREAM,"receiver stop returned");
     }
 
   // close send component 
-#if DEBUG_STREAM
-  INFO("calling sender (%x) to close...\n",
-       stream->sender.socket.work_th.id.task);
-#endif
+  LOGdL(DEBUG_STREAM,"calling sender (%x) to close...",
+        stream->sender.socketref.work_th.id.task);
+
   ret = stream->sender.close(&stream->sender);
   if (ret)
     {    
-      Error("DSI: close sender's socket failed: %s (%d)\n",
+      Error("DSI: close sender's socket failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = -DSI_ECOMPONENT;
     }
-#if DEBUG_STREAM
-      INFO("sender close returned\n");
-#endif
+  LOGdL(DEBUG_STREAM,"sender close returned");
+
 
   // close receive component
-#if DEBUG_STREAM
-  INFO("calling receiver (%x) to close...\n",
-       stream->receiver.socket.work_th.id.task);
-#endif
+  LOGdL(DEBUG_STREAM,"calling receiver (%x) to close...",
+        stream->receiver.socketref.work_th.id.task);
+
   ret = stream->receiver.close(&stream->receiver);
   if (ret)
     {
-      Error("DSI: close receiver's socket failed: %s (%d)\n",
+      Error("DSI: close receiver's socket failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = -DSI_ECOMPONENT;
     }
-#if DEBUG_STREAM
-      INFO("receiver close returned\n");
-#endif
+
+  LOGdL(DEBUG_STREAM,"receiver close returned");
 
   // release stream descriptor 
   stream->flags = DSI_STREAM_UNUSED;

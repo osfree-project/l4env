@@ -10,6 +10,4 @@ SRCDIR="${0%/*}"
 TARGETDIR="`pwd`"
 TOINSTALL="MAINTAINER Makefile idl include lib server examples doc"
 
-for file in $TOINSTALL ; do
-	cp -vir $SRCDIR/$file $TARGETDIR
-done
+tar c -C $SRCDIR -f- --exclude=CVS $TOINSTALL | tar xvf -

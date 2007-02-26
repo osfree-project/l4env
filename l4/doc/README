@@ -1,0 +1,22 @@
+This directory contains various documentation:
+
+l4env-concept/:
+  Design and concept paper of L4Env
+
+bid-spec/:
+  Specification of the Building Infrastructure for DROPS (BID)
+
+bid-tut/:
+  Tutorial on how to build a DROPS package using BID
+
+building-howto/:
+  Tutorial on how to build the DROPS tree
+
+html/:
+  Target directory for the automatically generated documentation of DROPS
+  packages. After updating the docu within a DROPS package, do a make in
+  html/ to update the index page.
+  
+www/:
+  our L4, DROPS and L4Linux webpages, more or less up-to-date
+

@@ -1,31 +1,20 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	generic_io/include/l4/generic_io/types.h
+ * \file   generic_io/include/ARCH-x86/types.h
+ * \brief  L4Env I/O Client API Types
  *
- * \brief	L4Env I/O Client API Types
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
-#ifndef _L4IO_TYPES_H
-#define _L4IO_TYPES_H
+#ifndef __GENERIC_IO_INCLUDE_ARCH_X86_TYPES_H_
+#define __GENERIC_IO_INCLUDE_ARCH_X86_TYPES_H_
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -146,4 +135,4 @@ typedef struct l4io_info l4io_info_t;	/**< io info page type */
 
 #define L4IO_INFO_MAGIC	0x496f6f49	/**< io magic is "IooI" */
 
-#endif /* !_L4IO_TYPES_H */
+#endif

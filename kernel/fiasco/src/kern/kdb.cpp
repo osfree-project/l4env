@@ -23,8 +23,8 @@ IMPLEMENTATION:
 
 #include <flux/x86/base_trap.h>
 
+#include "cmdline.h"
 #include "io.h"
-#include "boot_info.h"
 #include "filter_console.h"
 #include "kernel_console.h"
 #include "kernel_uart.h"
@@ -68,6 +68,19 @@ int Kdb_cons::char_avail() const
   return 0;
 }
 
+PUBLIC
+char const *Kdb_cons::next_attribute( bool restart = false ) const
+{
+  static char const *attribs[] = { "debug", "out", 0 };
+  static unsigned pos = 0;
+  if(restart)
+    pos = 0;
+  if(pos < 2)
+    return attribs[pos++];
+  else
+    return 0;
+}
+
 PUBLIC static 
 Console *const kdb::kdb_console()
 {
@@ -107,7 +120,7 @@ void kdb::disconnect()
   _connected = false;
   Kconsole::console()->unregister_console(kdb_console());
 
-  char const *cmdline = Boot_info::cmdline();
+  char const *cmdline = Cmdline::cmdline();
   if(! strstr(cmdline, " -noserial"))
     {
       Kconsole::console()->register_console(com_console());
@@ -142,7 +155,7 @@ static int uart_getchar()
 PUBLIC static
 void kdb::init()
 {
-  char const *cmdline = Boot_info::cmdline();
+  char const *cmdline = Cmdline::cmdline();
   
   if(strstr(cmdline, " -nokdb") || strstr(cmdline, " -noserial"))
     {

@@ -1,12 +1,8 @@
-ifeq (${L4_DIR},)
-  L4DIR = ../../..
-else
-  L4DIR = ${L4_DIR}
-endif
-include $(L4DIR)/Makeconf
+L4DIR	?= ../../..
+include $(L4DIR)/mk/Makeconf
 
 ALL = html man
-all: $(foreach d, $(ALL), stamp-$(d))
+all:: $(foreach d, $(ALL), stamp-$(d))
 
 DIRS = html man latex
 .PHONY: $(DIRS)
@@ -22,12 +18,16 @@ stamp-%: Doxyfile manpage.dox
 	if [ "$*" = html ]; then \
 	  perl -p -i -e 's/preprocess.html#/#/g' html/preprocess.html; \
 	fi
+	if [ "$*" = man ]; then \
+	  perl -p -i -e 's/preprocess \\- Preprocess - /preprocess \\- /g' \
+	    man/man1/preprocess.1; \
+	fi
 	touch $@
 
 install: stamp-man
-	-$(INSTALL) -d $(L4_INSTALL_DIR)/man/man1
+	-$(INSTALL) -d $(DROPS_STDDIR)/man/man1
 	$(INSTALL) -m 644 man/man1/preprocess.1 \
-	  $(L4_INSTALL_DIR)/man/man1/preprocess.1
+	  $(DROPS_STDDIR)/man/man1/preprocess.1
 
 
 cleanall clean:

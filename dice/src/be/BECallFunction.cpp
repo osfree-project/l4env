@@ -5,7 +5,7 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -36,7 +36,7 @@
 #include "be/BEClient.h"
 #include "be/BEMsgBufferType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 #include "fe/FEOperation.h"
 
@@ -71,7 +71,7 @@ CBECallFunction::~CBECallFunction()
 void CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // declare message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
 	// declare return variable
 	WriteReturnVariableDeclaration(pFile, pContext);
@@ -83,6 +83,8 @@ void CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCo
         pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
         pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
     }
+	// declare local exception variable
+	WriteExceptionWordDeclaration(pFile, false /* do not init variable*/, pContext);
 }
 
 /**	\brief writes the variable initializations of this function
@@ -92,7 +94,7 @@ void CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCo
 void CBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     // init message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
@@ -117,6 +119,11 @@ void CBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CBECallFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
+    // unmarshal exception first
+	nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+	// test for exception and return
+	WriteExceptionCheck(pFile, pContext);
+	// unmarshal return variable
     nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     // now unmarshal rest
     CBEOperationFunction::WriteUnmarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
@@ -217,6 +224,8 @@ int CBECallFunction::GetSize(int nDirection, CBEContext * pContext)
     int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
     if (nDirection & DIRECTION_IN)
         nSize += pContext->GetSizes()->GetOpcodeSize();
+    if (nDirection & DIRECTION_OUT)
+	    nSize += pContext->GetSizes()->GetExceptionSize();
     return nSize;
 }
 
@@ -230,6 +239,8 @@ int CBECallFunction::GetFixedSize(int nDirection, CBEContext *pContext)
     int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
     if (nDirection & DIRECTION_IN)
         nSize += pContext->GetSizes()->GetOpcodeSize();
+    if (nDirection & DIRECTION_OUT)
+	    nSize += pContext->GetSizes()->GetExceptionSize();
     return nSize;
 }
 

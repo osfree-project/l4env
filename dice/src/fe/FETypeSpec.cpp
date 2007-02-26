@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -31,6 +31,7 @@
 #include "fe/FEStructType.h"
 #include "fe/FEUnionType.h"
 #include "fe/FEFile.h"
+#include "fe/FEDeclarator.h"
 
 // needed for Error function
 #include "Compiler.h"
@@ -73,33 +74,77 @@ TYPESPEC_TYPE CFETypeSpec::GetType()
  */
 bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
 {
-    // if type is simple -> return false
-    if (pType->IsKindOf(RUNTIME_CLASS(CFESimpleType)))
-	return false;
-    // if user defined -> follow the definition
-    if (pType->IsKindOf(RUNTIME_CLASS(CFEUserDefinedType)))
-      {
-	  CFEFile *pRoot = pType->GetRoot();
-	  ASSERT(pRoot);
-	  // find type
-	  String sUserName = ((CFEUserDefinedType *) pType)->GetName();
-	  CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(sUserName);
-	  // check if we found the user defined type (if not: panic)
-	  if (!pUserDecl)
-	    {
-		CCompiler::Error("User defined type \"%s\" not defined\n", (const char *) sUserName);
+	// if type is simple -> return false
+	if (pType->IsKindOf(RUNTIME_CLASS(CFESimpleType)))
 		return false;
-	    }
-	  // test the found type
-	  return IsConstructedType(pUserDecl->GetType());
-      }
-    // is constructed -> test for struct and union
-    if (pType->IsKindOf(RUNTIME_CLASS(CFEStructType)))
-	return true;
-    if (pType->IsKindOf(RUNTIME_CLASS(CFEUnionType)))
-	return true;
-    // not a constructed type -> return false
-    return false;
+	// if user defined -> follow the definition
+	if (pType->IsKindOf(RUNTIME_CLASS(CFEUserDefinedType)))
+	{
+		CFEFile *pRoot = pType->GetRoot();
+		assert(pRoot);
+		// find type
+		String sUserName = ((CFEUserDefinedType *) pType)->GetName();
+		CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(sUserName);
+		// check if we found the user defined type (if not: panic)
+		if (!pUserDecl)
+		{
+			// if not found now, this can be an interface
+		    if (pRoot->FindInterface(sUserName))
+			    return true; // is CORBA_Object a constructed type?
+			CCompiler::GccError(pType, 0, "User defined type \"%s\" not defined\n", (const char *) sUserName);
+			return false;
+		}
+		// test the found type
+		return IsConstructedType(pUserDecl->GetType());
+	}
+	// is constructed -> test for struct and union
+	if (pType->IsKindOf(RUNTIME_CLASS(CFEStructType)))
+		return true;
+	if (pType->IsKindOf(RUNTIME_CLASS(CFEUnionType)))
+		return true;
+	// not a constructed type -> return false
+	return false;
+}
+
+/** \brief test if a type is a pointered type
+ *	\param pType the type to test
+ *	\return true if it is a pointered type, false if not
+ *
+ * This function also follows user-defined types
+ */
+bool CFETypeSpec::IsPointerType(CFETypeSpec * pType)
+{
+	// if type is simple -> return false
+	if (pType->IsKindOf(RUNTIME_CLASS(CFESimpleType)))
+		return false;
+	// if user defined -> follow the definition
+	if (pType->IsKindOf(RUNTIME_CLASS(CFEUserDefinedType)))
+	{
+		CFEFile *pRoot = pType->GetRoot();
+		assert(pRoot);
+		// find type
+		String sUserName = ((CFEUserDefinedType *) pType)->GetName();
+		CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(sUserName);
+		// if not found now, this can be an interface
+		if (!pUserDecl)
+		    if (pRoot->FindInterface(sUserName))
+			    pUserDecl = pRoot->FindUserDefinedType(String("CORBA_Object"));
+		// check if we found the user defined type (if not: panic)
+		if (!pUserDecl)
+		{
+			CCompiler::GccError(pType, 0, "User defined type \"%s\" not defined\n", (const char *) sUserName);
+			return false;
+		}
+		// test decls for pointers
+		VectorElement *pIter = pUserDecl->GetFirstDeclarator();
+		CFEDeclarator *pDecl = pUserDecl->GetNextDeclarator(pIter);
+		if (pDecl && (pDecl->GetStars() > 0))
+		    return true;
+		// test the found type
+		return IsPointerType(pUserDecl->GetType());
+	}
+	// not a pointered type -> return false
+	return false;
 }
 
 /** helper function */

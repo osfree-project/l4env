@@ -5,7 +5,7 @@
  *	\date	Sat Jun 1 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,6 +34,8 @@
 
 /** \class CL4BEWaitFunction
  *  \brief implements the L4 specific wait function
+ *
+ * Wait for a specific message from any sender.
  */
 class CL4BEWaitFunction : public CBEWaitFunction
 {

@@ -4,7 +4,7 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = vscrtest
 LIBS             = -ll4dope -lvscreen -lm -ldata
-DEFAULT_RELOC    = 0x00800000
+DEFAULT_RELOC    = 0x00880000
 
 vpath % $(PKGDIR)/examples/vscrtest/common
 

@@ -1,9 +1,9 @@
 PKGDIR		?=	..
 L4DIR		?=	$(PKGDIR)/../../../..
 
-SYSTEMS		 =	x86_586-l4v2
+SYSTEMS		= x86-l4v2 x86-l4x0
 
-IDL		 =	test.idl
+IDL		= test.idl
+IDL_FLAGS	= -fforce-corba-alloc
 
 include $(L4DIR)/mk/idl.mk
-

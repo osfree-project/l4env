@@ -5,7 +5,7 @@
  *	\date	01/14/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -52,7 +52,6 @@ CBEOperationFunction::CBEOperationFunction()
 
 CBEOperationFunction::CBEOperationFunction(CBEOperationFunction & src):CBEFunction(src)
 {
-    m_sOpcodeConstName = src.m_sOpcodeConstName;
     IMPLEMENT_DYNAMIC_BASE(CBEOperationFunction, CBEFunction);
 }
 
@@ -103,10 +102,10 @@ bool CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext
     m_sOpcodeConstName = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
     // set parent
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
-    ASSERT(pFEOperation->GetParentInterface());
+    assert(pRoot);
+    assert(pFEOperation->GetParentInterface());
     m_pClass = pRoot->FindClass(pFEOperation->GetParentInterface()->GetName());
-    ASSERTC(m_pClass);
+    assert(m_pClass);
     // would like to test for class == parent, but this is not the case for
     // switch case: parent = srv-loop function
 

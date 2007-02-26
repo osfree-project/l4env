@@ -1,13 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/sched.c
+ * \file   dde_linux/lib/src/sched.c
+ * \brief  Scheduling
  *
- * \brief	Scheduling
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 */
 #include <l4/sys/syscalls.h>
@@ -22,9 +26,7 @@
 /* local */
 #include "internal.h"
 #include "__config.h"
-#include "__macros.h"
 
-/*****************************************************************************/
 /**
  * \name Scheduling Primitives
  *
@@ -36,7 +38,6 @@
  *
  * <em>This is from kernel/%sched.c</em>
  * @{ */
-/*****************************************************************************/
 
 /** Generic wake up for user contexts */
 static inline int try_to_wake_up(struct task_struct *p, int synchronous)
@@ -49,10 +50,8 @@ static inline int try_to_wake_up(struct task_struct *p, int synchronous)
   return 1;
 }
 
-/*****************************************************************************/
 /** Wake up dedicated user context
  * \ingroup mod_proc */
-/*****************************************************************************/
 inline int wake_up_process(struct task_struct *p)
 {
   return try_to_wake_up(p, 0);
@@ -66,10 +65,8 @@ static void process_timeout(unsigned long __data)
   wake_up_process(p);
 }
 
-/*****************************************************************************/
 /** Schedule process but wake me at least after timeout
  * \ingroup mod_proc */
-/*****************************************************************************/
 signed long schedule_timeout(signed long timeout)
 {
   struct timer_list timer;
@@ -96,12 +93,12 @@ signed long schedule_timeout(signed long timeout)
        * that will tell you if something is gone wrong and where.
        */
       if (timeout < 0)
-	{
-	  Error("schedule_timeout: wrong timeout "
-		 "value %lx", timeout);
-	  current->state = TASK_RUNNING;
-	  goto out;
-	}
+        {
+          Error("schedule_timeout: wrong timeout "
+                "value %lx", timeout);
+          current->state = TASK_RUNNING;
+          goto out;
+        }
     }
 
   expire = timeout + jiffies;
@@ -121,10 +118,8 @@ out:
   return timeout < 0 ? 0 : timeout;
 }
 
-/*****************************************************************************/
 /** Schedule process
  * \ingroup mod_proc */
-/*****************************************************************************/
 void schedule(void)
 {
 
@@ -152,7 +147,7 @@ void schedule(void)
 
 /** Generic wake up for user contexts in wait queues */
 static inline void __wake_up_common(wait_queue_head_t * q, unsigned int mode,
-				    int nr_exclusive, const int sync)
+                                    int nr_exclusive, const int sync)
 {
   struct list_head *tmp, *head;
   struct task_struct *p;
@@ -171,18 +166,16 @@ static inline void __wake_up_common(wait_queue_head_t * q, unsigned int mode,
       p = curr->task;
       state = p->state;
       if (state & mode)
-	{
-	  WQ_NOTE_WAKER(curr);
-	  if (try_to_wake_up(p, sync) && curr->flags && !--nr_exclusive)
-	    break;
-	}
+        {
+          WQ_NOTE_WAKER(curr);
+          if (try_to_wake_up(p, sync) && curr->flags && !--nr_exclusive)
+            break;
+        }
     }
 }
 
-/*****************************************************************************/
 /** Wake up wait queue entries
  * \ingroup mod_proc */
-/*****************************************************************************/
 void __wake_up(wait_queue_head_t * q, unsigned int mode, int nr)
 {
   if (q)
@@ -194,10 +187,8 @@ void __wake_up(wait_queue_head_t * q, unsigned int mode, int nr)
     }
 }
 
-/*****************************************************************************/
 /** Wake up wait queue entries (sync)
  * \ingroup mod_proc */
-/*****************************************************************************/
 void __wake_up_sync(wait_queue_head_t * q, unsigned int mode, int nr)
 {
   if (q)
@@ -209,25 +200,23 @@ void __wake_up_sync(wait_queue_head_t * q, unsigned int mode, int nr)
     }
 }
 
-#define	SLEEP_ON_VAR				\
-	unsigned long flags;			\
-	wait_queue_t wait;			\
-	init_waitqueue_entry(&wait, current);
+#define SLEEP_ON_VAR                         \
+        unsigned long flags;                 \
+        wait_queue_t wait;                   \
+        init_waitqueue_entry(&wait, current);
 
-#define	SLEEP_ON_HEAD					\
-	wq_write_lock_irqsave(&q->lock,flags);		\
-	__add_wait_queue(q, &wait);			\
-	wq_write_unlock(&q->lock);
+#define SLEEP_ON_HEAD                          \
+        wq_write_lock_irqsave(&q->lock,flags); \
+        __add_wait_queue(q, &wait);            \
+        wq_write_unlock(&q->lock);
 
-#define	SLEEP_ON_TAIL						\
-	wq_write_lock_irq(&q->lock);				\
-	__remove_wait_queue(q, &wait);				\
-	wq_write_unlock_irqrestore(&q->lock,flags);
+#define SLEEP_ON_TAIL                              \
+        wq_write_lock_irq(&q->lock);               \
+        __remove_wait_queue(q, &wait);             \
+        wq_write_unlock_irqrestore(&q->lock,flags);
 
-/*****************************************************************************/
 /** Sleep on wait queue (interruptible by signals)
  * \ingroup mod_proc */
-/*****************************************************************************/
 void interruptible_sleep_on(wait_queue_head_t * q)
 {
   SLEEP_ON_VAR current->state = TASK_INTERRUPTIBLE;
@@ -236,10 +225,8 @@ void interruptible_sleep_on(wait_queue_head_t * q)
   SLEEP_ON_TAIL
 }
 
-/*****************************************************************************/
 /** Sleep on wait queue (interruptible by signals and timeout)
  * \ingroup mod_proc */
-/*****************************************************************************/
 long interruptible_sleep_on_timeout(wait_queue_head_t * q, long timeout)
 {
   SLEEP_ON_VAR current->state = TASK_INTERRUPTIBLE;
@@ -248,10 +235,8 @@ long interruptible_sleep_on_timeout(wait_queue_head_t * q, long timeout)
   SLEEP_ON_TAIL return timeout;
 }
 
-/*****************************************************************************/
 /** Sleep on wait queue
  * \ingroup mod_proc */
-/*****************************************************************************/
 void sleep_on(wait_queue_head_t * q)
 {
   SLEEP_ON_VAR current->state = TASK_UNINTERRUPTIBLE;
@@ -260,10 +245,8 @@ void sleep_on(wait_queue_head_t * q)
   SLEEP_ON_TAIL
 }
 
-/*****************************************************************************/
 /** Sleep on wait queue (interruptible by timeout)
  * \ingroup mod_proc */
-/*****************************************************************************/
 long sleep_on_timeout(wait_queue_head_t * q, long timeout)
 {
   SLEEP_ON_VAR current->state = TASK_UNINTERRUPTIBLE;
@@ -272,11 +255,9 @@ long sleep_on_timeout(wait_queue_head_t * q, long timeout)
   SLEEP_ON_TAIL return timeout;
 }
 
-/*****************************************************************************/
 /** Put all the gunge required to become a kernel thread without attached user
  * resources in one place where it belongs. (dummy)
  * \ingroup mod_proc */
-/*****************************************************************************/
 void daemonize(void) {
   DMSG("dde: dummy daemonize() call\n");
 }

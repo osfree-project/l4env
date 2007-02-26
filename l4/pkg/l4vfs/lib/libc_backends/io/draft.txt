@@ -1,0 +1,31 @@
+1. libc clients use fileno (e.g. 0..1024)
+2. libc has table to convert those to structs having (threadid of
+   server, some identifier of the addressed object (server local id |
+   global id)
+3. every operation has to address an object in the server (read,
+   close)
+
+1. 3 = open("xyz", ...)
+2. 3 -> (7.5, 12745.25)
+3. 300 = read(12745.25, *buf. 300) | read(25, *buf. 300)
+
+
+Object_ids (something like inodes) have to be valid and unique
+globally and in time.  So, every object-providing server gets a kind
+of prefix id (here: 12745). The remainder of the object_ids must be
+determined by himself.
+
+Volume_ids are the prefixes server get assigned to be able to
+distinguish between objects on different volumes. A volume is the
+things an object-providing server provides. These id's should not be
+coupled to or be identical with the server's thread-id as these might
+change. A volume (e.g. a partition with a filesystem) might also be
+provided by different server, depending on the setup. It may be
+desirable to get the same object_ids in both cases.
+
+So, in the global name server we need a function to translate the
+volume_id to the actually serving server.
+
+
+The interface-ids for the different interfaces should be unique. This
+can be achieved by manually providing uuid(?) to each interface.

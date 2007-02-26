@@ -159,6 +159,24 @@ Unsigned8 Uart::trb() const
   return inb(TRB);
 }
 
+PRIVATE
+bool Uart::valid()
+{
+  Unsigned8 scratch, scratch2, scratch3;
+
+  scratch = ier();
+  ier(0x00);
+  Io::iodelay();
+
+  scratch2 = ier();
+  ier(0x0f);
+  Io::iodelay();
+
+  scratch3 = ier();
+  ier(scratch);
+
+  return (scratch2 == 0x00 && scratch3 == 0x0f);
+}
 
 
 IMPLEMENT
@@ -166,6 +184,10 @@ bool Uart::startup(Address _port, int __irq)
 {
   port = _port;
   _irq  = __irq;
+
+  if (!valid())
+    return false;
+
   Proc::Status o = Proc::cli_save();
   ier( 0 );    /* disable all rs-232 interrupts */
   mcr( 0x0b ); /* out2, rts, and dtr enabled */

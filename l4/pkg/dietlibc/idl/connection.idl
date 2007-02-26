@@ -1,0 +1,12 @@
+/* -*- c -*- */ 
+import <l4/sys/types.h>
+
+library io
+{
+    [uuid(100)]
+    interface connection
+    {
+        l4_threadid_t init_connection(void);
+        void          close_connection([in] l4_threadid_t server);
+    };
+};

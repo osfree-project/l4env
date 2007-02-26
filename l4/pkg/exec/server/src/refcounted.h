@@ -1,5 +1,17 @@
-#ifndef L4_EXEC_REFERENCE_COUNTED_OBJECT_H
-#define L4_EXEC_REFERENCE_COUNTED_OBJECT_H
+/*!
+ * \file	refcounted.h
+ * \brief	Implementation of reference counter
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __REFCOUNTED_H_
+#define __REFCOUNTED_H_
 
 /** Base class for reference-counted objects.  This implementation is
     similar to the one of RCObject in Scott Meyer's ``More Effective

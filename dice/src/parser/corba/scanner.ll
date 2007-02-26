@@ -1,11 +1,11 @@
 %{
 /*
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -24,32 +24,51 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "fe/stdfe.h"
+#include "fe/FEFile.h"
+#include "fe/FELibrary.h"
+#include "fe/FEInterface.h"
+#include "fe/FEOperation.h"
+#include "fe/FETypedDeclarator.h"
+
+#include "fe/FETaggedStructType.h"
+#include "fe/FETaggedUnionType.h"
+#include "fe/FETaggedEnumType.h"
+#include "fe/FESimpleType.h"
+#include "fe/FEUserDefinedType.h"
+#include "fe/FEArrayType.h"
+
+#include "fe/FEArrayDeclarator.h"
+#include "fe/FEConstDeclarator.h"
+
+#include "fe/FEVersionAttribute.h"
+
+#include "fe/FEConditionalExpression.h"
+#include "fe/FEUserDefinedExpression.h"
+#include "fe/FEUnionCase.h"
+
 #include "parser/corba/parser.h"
 #include "Compiler.h"
 #include "CParser.h"
+#include "CPreProcess.h"
+
+#define YY_DECL int yylex(YYSTYPE* lvalp)
 
 // current linenumber and filename
-int nLineNbCORBA = 1;
-extern int nOldLineNb;
+extern int gLineNumber;
 extern String sInFileName;
 extern String sInPathName;
 extern String sTopLevelInFileName;
-
-extern CFEFile *pCurFile;
 
 // we don't need unput so "remove" additional code
 #define YY_NO_UNPUT
 
 // #include/import special treatment
-int nIncludeLevelCORBA = 0;
-int nStdIncCORBA = 0;
-bool bReadFileForLineCORBA = false;
+int nNewLineNumberCORBA;
+String sNewFileNameCORBA;
+bool bNeedToSetFileCORBA = true;
+extern int corbadebug;
 
-extern int c_inc;
-
-// if we expect a file-name, return one
-bool bExpectFileName = false;
+extern bool bExpectFileName;
 
 // number conversion
 static unsigned int OctToInt(char*);
@@ -65,7 +84,7 @@ static int EscapeToChar(char*);
 /* some rules */
 Id				[a-zA-Z_][a-zA-Z0-9_]*
 Integer			(-)?[1-9][0-9]*
-String			"\""([^\n\"]|("\\\""))*[^\\]"\""
+String			"\""([^\\\n\"]|"\\"[ntvbrfa\\\?\'\"\n])*"\""
 Char_lit		"'"."'"
 Fixed_point		(-)?[0-9]*"."[0-9]*
 
@@ -80,7 +99,7 @@ Escape         (L)?"'""\\"[ntvbrfa\\\?\'\"]"'"
 Oct_char	   (L)?"'""\\"[0-7]{1,3}"'"
 Hex_char	   (L)?"'""\\"(x|X)[a-fA-F0-9]{1,2}"'"
 
-Filename		("<"|"\"")[a-zA-Z0-9_./\\:\-]*(">"|"\"")
+Filename		("\""|"<")("<")?[a-zA-Z0-9_\./\\:\- ]*(">")?("\""|">")
 
 /* Include support */
 %x line
@@ -98,67 +117,119 @@ Filename		("<"|"\"")[a-zA-Z0-9_./\\:\-]*(">"|"\"")
 	 * 4 - return to file (from system header file)
 	 * There can be multiple flags, which are seperated by spaces
 	 */
-"#"             { BEGIN(line); bReadFileForLineCORBA = false; }
+"#"             {
+                    BEGIN(line);
+					sNewFileNameCORBA.Empty();
+					bNeedToSetFileCORBA = true;
+                }
 <line,line2>[ \t]+ /* eat white-spaces */
 <line>[0-9]+    {
-					nOldLineNb = nLineNbCORBA;
-					nLineNbCORBA = atoi(yytext);
+					nNewLineNumberCORBA = atoi(yytext);
 				}
 <line>{Filename} {
 					BEGIN(line2);
    					// check the filename
    					if (strlen (yytext) > 2)
    					{
-    					sInFileName = yytext;
-    					sInFileName.TrimLeft('"');
-    					sInFileName.TrimRight('"');
+    					sNewFileNameCORBA = yytext;
+    					sNewFileNameCORBA.TrimLeft('"');
+    					sNewFileNameCORBA.TrimRight('"');
    					}
    					else
-   						sInFileName = sTopLevelInFileName;
-   					// check extension of file
-   					int iDot = sInFileName.ReverseFind('.');
-   					if (iDot > 0)
-   					{
-   						String sExt = sInFileName.Mid (iDot + 1);
-						sExt.MakeLower();
-   						if ((sExt == "h") || (sExt == "hh"))
-   							c_inc = 1;
-   						else
-   							c_inc = 0;
-   					}
-   					else
-   						c_inc = 0;
-					bReadFileForLineCORBA = true;
+   						sNewFileNameCORBA = sTopLevelInFileName;
+					if (sNewFileNameCORBA == "<stdin>")
+					    sNewFileNameCORBA = sTopLevelInFileName;
+					if (sNewFileNameCORBA == "<built-in>")
+					    sNewFileNameCORBA = sTopLevelInFileName;
+					if (sNewFileNameCORBA == "<command line>")
+					    sNewFileNameCORBA = sTopLevelInFileName;
 				}
 <line2>[1-4]    {
 					// find path file file
 					int nFlags = atoi(yytext);
+					CParser *pParser = CParser::GetCurrentParser();
+					if (corbadebug)
+					    fprintf(stderr, "CORBA: # %d \"%s\" %d found\n", nNewLineNumberCORBA,
+						    (const char*)sNewFileNameCORBA, nFlags);
 					switch(nFlags)
 					{
 					case 1:
-					case 3:
 						{
 							// get path for file
-							CParser *pParser = CParser::GetCurrentParser();
-							String sPath = pParser->FindPathToFile(sInFileName, nOldLineNb);
-                            String sOrigName = pParser->GetOriginalIncludeForFile(sInFileName, nOldLineNb);
-							// should create new CFEFile and set it as current
-							nIncludeLevelCORBA++;
-							CFEFile *pFEFile = new CFEFile(sOrigName, sPath, nIncludeLevelCORBA, (nFlags&2)>0);
-							pCurFile->AddChild(pFEFile);
-							pCurFile = pFEFile;
+							CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+							unsigned char nRet = 2;
+							// comment the following line to allow recursive self-inclusion
+							if (sNewFileNameCORBA != sInFileName)
+								// import this file
+								nRet = pParser->Import(sNewFileNameCORBA);
+							switch (nRet)
+							{
+							case 0:
+							    // error
+							    yyterminate();
+								break;
+							case 1:
+							    // ok, but create file
+							    {
+									String sPath = pPreProcess->FindPathToFile(sNewFileNameCORBA, gLineNumber);
+									String sOrigName = pPreProcess->GetOriginalIncludeForFile(sNewFileNameCORBA, gLineNumber);
+									bool bStdInc = pPreProcess->IsStandardInclude(sNewFileNameCORBA, gLineNumber);
+									// IDL files should be included in the search list of the preprocessor.
+									// nonetheless, we do this additional check, just to make sure...
+
+									// if path is set and origname is empty, then sNewFileNameGccC is with full path
+									// and FindPathToFile returned an include path that matches the beginning of the
+									// string. Now we get the original name by cutting off the beginning of the string,
+									// which is the path
+									// ITS DEACTIVATED BUT THERE
+									if (!sPath.IsEmpty() && sOrigName.IsEmpty())
+										sOrigName = sNewFileNameCORBA.Right(sNewFileNameCORBA.GetLength()-sPath.GetLength());
+									if (sOrigName.IsEmpty())
+										sOrigName = sNewFileNameCORBA;
+									// simply create new CFEFile and set it as current
+									CFEFile *pFEFile = new CFEFile(sOrigName, sPath, gLineNumber, bStdInc);
+									CParser::SetCurrentFile(pFEFile);
+									sInFileName = sNewFileNameCORBA;
+									gLineNumber = nNewLineNumberCORBA;
+								}
+								// fall through
+							case 2:
+							    // ok do nothing
+								break;
+							}
 						}
+						bNeedToSetFileCORBA = false;
 						break;
 					case 2:
-					case 4:
-						// should move current file up by one pos
-						nIncludeLevelCORBA--;
-						if (pCurFile->GetParent() != 0)
-						    pCurFile = (CFEFile*)pCurFile->GetParent();
+					    // check if we have to switch the parsers back
+						// e.g. by sending an EOF (yyterminate)
+						if (pParser->DoEndImport())
+						{
+							return EOF_TOKEN;
+    						bNeedToSetFileCORBA = false;
+						}
+						else
+						    CParser::SetCurrentFileParent();
 						break;
+					case 3:
+					case 4:
+					    break;
 					}
 				}
-<line,line2>("\r")?"\n" { BEGIN(INITIAL); if (!bReadFileForLineCORBA) sInFileName = sTopLevelInFileName; }
+<line,line2>("\r")?"\n" {
+                    BEGIN(INITIAL);
+					if (bNeedToSetFileCORBA)
+					{
+						gLineNumber = nNewLineNumberCORBA;
+						if (sNewFileNameCORBA.IsEmpty())
+							sInFileName = sTopLevelInFileName;
+						else
+							sInFileName = sNewFileNameCORBA;
+						if (corbadebug)
+							fprintf(stderr, "CORBA: # %d \"%s\"\n", gLineNumber, (const char*)sInFileName);
+					}
+                }
+
 
 ","			return COMMA;
 ";"			return SEMICOLON;
@@ -237,60 +308,60 @@ fpage		return FPAGE;
 refstring	return REFSTRING;
 
 {Id}		{
-				corbalval._id = strdup(yytext);
+				lvalp->_id = strdup(yytext);
 				return ID;
 			}
 {Integer}	{
-				corbalval._int = atoi(yytext);
+				lvalp->_int = atoi(yytext);
 				return LIT_INT;
 			}
 L{Char_lit}	{
-				corbalval._chr = yytext[3];
+				lvalp->_chr = yytext[3];
 				return LIT_WCHAR;
 			}
 {Char_lit}	{
-				corbalval._chr = yytext[2];
+				lvalp->_chr = yytext[2];
 				return LIT_CHAR;
 			}
 L{String}	{
-				corbalval._str = new String(&yytext[1]);
-				corbalval._str->TrimRight('\"');
+				lvalp->_str = new String(&yytext[1]);
+				lvalp->_str->TrimRight('\"');
 				return LIT_WSTR;
 			}
 {Float}		{
-				corbalval._flt = atof(yytext);
+				lvalp->_flt = atof(yytext);
 				return LIT_FLOAT;
 			}
 {Fixed_point} {
-				corbalval._flt = atof(yytext);
+				lvalp->_flt = atof(yytext);
 				return LIT_FLOAT;
 			}
 {Hexadec}	{
-				corbalval._int = HexToInt (yytext + 2);	/* strip off the "0x" */
+				lvalp->_int = HexToInt (yytext + 2);	/* strip off the "0x" */
 				return LIT_INT;
 			}
 {Octal}		{
-				 corbalval._int = OctToInt (yytext);	/* first 0 doesn't matter */
+				 lvalp->_int = OctToInt (yytext);	/* first 0 doesn't matter */
 				 return LIT_INT;
 			}
 {Escape}	{
-				 corbalval._chr = EscapeToChar (yytext);
+				 lvalp->_chr = EscapeToChar (yytext);
 				 return LIT_CHAR;
 			}
 {Oct_char}	{
-				 corbalval._chr = OctToChar (yytext);
+				 lvalp->_chr = OctToChar (yytext);
 				 return LIT_CHAR;
 			}
 {Hex_char}	{
-				 corbalval._chr = HexToChar (yytext);
+				 lvalp->_chr = HexToChar (yytext);
 				 return LIT_CHAR;
 			}
 {Filename} {
 				if (bExpectFileName)
 				{
-					corbalval._str = new String (&yytext[1]);
-					corbalval._str->TrimRight('>');
-					corbalval._str->TrimRight('"');
+					lvalp->_str = new String(&yytext[1]);
+					lvalp->_str->TrimRight('"');
+					lvalp->_str->TrimRight('>');
 					return FILENAME;
 				}
 				else
@@ -300,8 +371,8 @@ L{String}	{
 				}
 			}
 {String}	{
-				corbalval._str = new String(&yytext[1]);
-				corbalval._str->TrimRight('\"');
+				lvalp->_str = new String(&yytext[1]);
+				lvalp->_str->TrimRight('\"');
 				return LIT_STR;
 			}
 
@@ -313,34 +384,33 @@ L{String}	{
 						while ((c = yyinput()) == '*') ; // eat up trailing *
 						if (c == '/') break; // found end
 					}
-					if (c == '\n') nLineNbCORBA++;
+					if (c == '\n') gLineNumber++;
 					if (c == EOF) {
-						CCompiler::GccError(pCurFile, nLineNbCORBA, "EOF in comment.");
+						CCompiler::GccError(CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
 						yyterminate();
 						break;
 					}
 				}
 			}
 
-"//".*		/* eat C++ style comments */	
+"//".*		/* eat C++ style comments */
 
 [ \t]*		/* eat whitespace */
 
-("\r")?"\n"	{ ++nLineNbCORBA; }
+("\r")?"\n"	{ ++gLineNumber; }
+"\f"        { ++gLineNumber; }
 
 <<EOF>>     {
-				CParser *pCurrentParser = CParser::GetCurrentParser();
-				if (pCurrentParser->EndImport())
-					yyterminate();
+				yyterminate(); // stops corbaparse()
 			}
 .			{
-				CCompiler::GccWarning(pCurFile, nLineNbCORBA, "Unknown character \"%s\".",yytext);
+				CCompiler::GccWarning(CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\".",yytext);
 			}
 
 %%
 
 // convert hexadecimal numbers to integers
-static unsigned int HexToInt(char *s) 
+static unsigned int HexToInt(char *s)
 {
 	// already removed 0x from beginning
 	unsigned long res = 0, lastres = 0;
@@ -349,21 +419,21 @@ static unsigned int HexToInt(char *s)
 	        (*s >= 'A' && *s <= 'F')) &&
 	       (lastres <= res)) {
 		lastres = res;
-		if (*s >= '0' && *s <= '9') 
+		if (*s >= '0' && *s <= '9')
 			res = res * 16 + *s - '0';
-		else 
+		else
 			res = res * 16 + ((*s & 0x4f) - 'A' + 10);
 		s++;
 	}
 	if (lastres > res)
-		printf("%s:%d: Hexadecimal number overflow.\n",(const char*)sInFileName, nLineNbCORBA);
+		printf("%s:%d: Hexadecimal number overflow.\n",(const char*)sInFileName, gLineNumber);
 	return res;
 }
 
 // convert octal numbers to integers
-static unsigned int OctToInt(char *s) 
+static unsigned int OctToInt(char *s)
 {
-	// already removed leading 0 
+	// already removed leading 0
 	unsigned long res = 0, lastres = 0;
 	while (*s >= '0' && *s < '8' && lastres <= res) {
 		lastres = res;
@@ -371,7 +441,7 @@ static unsigned int OctToInt(char *s)
 		s++;
 	}
 	if (lastres > res)
-		printf("%s:%d: Octal number overflow.\n",(const char*)sInFileName, nLineNbCORBA);
+		printf("%s:%d: Octal number overflow.\n",(const char*)sInFileName, gLineNumber);
 	return res;
 }
 
@@ -442,20 +512,53 @@ static int EscapeToChar(char *s)
 	return 0;
 }
 
-void* SwitchToFileCorba(FILE *fNewFile)
+#ifndef YY_CURRENT_BUFFER_LVALUE
+#define YY_CURRENT_BUFFER_LVALUE YY_CURRENT_BUFFER
+#endif
+
+void* GetCurrentBufferCorba()
 {
-	YY_BUFFER_STATE old_buffer = YY_CURRENT_BUFFER;
-	YY_BUFFER_STATE buffer = yy_create_buffer(fNewFile, YY_BUF_SIZE);
-	yy_switch_to_buffer(buffer);
-	nIncludeLevelCORBA++;
-	return old_buffer;
+	if ( YY_CURRENT_BUFFER )
+	{
+		/* Flush out information for old buffer. */
+		*yy_c_buf_p = yy_hold_char;
+		YY_CURRENT_BUFFER_LVALUE->yy_buf_pos = yy_c_buf_p;
+		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yy_n_chars;
+		if (corbadebug)
+			fprintf(stderr, "GetCurrentBufferCorba: FILE: %p, buffer: %p, pos: %p, chars: %d\n",
+				YY_CURRENT_BUFFER_LVALUE->yy_input_file, YY_CURRENT_BUFFER, yy_c_buf_p, yy_n_chars);
+	}
+	return YY_CURRENT_BUFFER;
 }
 
-void RestoreBufferCorba(void *buffer)
+void RestoreBufferCorba(void *buffer, bool bInit)
 {
-	nIncludeLevelCORBA--;
-	yy_delete_buffer(YY_CURRENT_BUFFER);
-	yy_switch_to_buffer((YY_BUFFER_STATE)buffer);
-	BEGIN(INITIAL);
+    if (buffer)
+	{
+	    if (buffer != YY_CURRENT_BUFFER)
+			yy_switch_to_buffer((YY_BUFFER_STATE)buffer);
+	    else
+		    yy_load_buffer_state();
+	    // check input file
+		if (!yyin)
+		    yyin = ((YY_BUFFER_STATE)buffer)->yy_input_file;
+		if (bInit)
+			BEGIN(INITIAL);
+		else
+		    BEGIN(line2);
+		if (corbadebug)
+			fprintf(stderr, "RestoreBufferCorba: FILE: %p, buffer: %p, pos: %p, chars: %d (chars left: %d) init:%s\n",
+				YY_CURRENT_BUFFER_LVALUE->yy_input_file, YY_CURRENT_BUFFER,
+				yy_c_buf_p, yy_n_chars, yy_n_chars-(int)(yy_c_buf_p-(char*)(YY_CURRENT_BUFFER_LVALUE->yy_ch_buf)),
+				bInit?"true":"false");
+    }
 }
-	
+
+void StartBufferCorba(FILE* fInput)
+{
+    yy_switch_to_buffer( yy_create_buffer(fInput, YY_BUF_SIZE) );
+	if (corbadebug)
+		fprintf(stderr, "StartBufferCorba: FILE: %p, buffer: %p\n",
+			YY_CURRENT_BUFFER_LVALUE->yy_input_file, YY_CURRENT_BUFFER);
+}
+

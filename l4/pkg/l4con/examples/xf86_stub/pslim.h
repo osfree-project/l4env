@@ -1,5 +1,12 @@
-#ifndef _PSLIM_H_
-#define _PSLIM_H_
+/*!
+ * \file	con/examples/xf86_stub/pslim.h
+ * \brief	
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+#ifndef __CON_EXAMPLES_XF86_STUB_PSLIM_H_
+#define __CON_EXAMPLES_XF86_STUB_PSLIM_H_
 
 #include <l4/sys/types.h>
 #include <l4/dm_generic/types.h>

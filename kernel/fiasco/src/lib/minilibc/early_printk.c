@@ -1,5 +1,5 @@
-#ifndef __ERARLY_PRINTK_H__
-#define __ERARLY_PRINTK_H__
+#ifndef EARLY_PRINTK_H__
+#define EARLY_PRINTK_H__
 
 #include <asm/io.h>
 #include <string.h>
@@ -50,4 +50,4 @@ early_printk (const char *str, unsigned len)
   }
 }
 
-#endif /* CONFIG_IA64_EARLY_PRINTK */
+#endif /* EARLY_PRINTK_H__ */

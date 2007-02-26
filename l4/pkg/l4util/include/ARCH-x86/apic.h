@@ -100,6 +100,7 @@ L4_INLINE void apic_timer_disable_irq(void);
 L4_INLINE void apic_timer_enable_irq(void);
 L4_INLINE void apic_timer_assign_irq(unsigned long vector);
 L4_INLINE void apic_timer_set_periodic(void);
+L4_INLINE void apic_timer_set_one_shot(void);
 
 L4_INLINE void apic_perf_disable_irq(void);
 L4_INLINE void apic_perf_enable_irq(void);
@@ -211,6 +212,17 @@ apic_timer_set_periodic(void)
   unsigned long tmp_val;
   tmp_val = apic_read(APIC_LVTT);
   tmp_val |= APIC_LVT_TIMER_PERIODIC;
+  tmp_val |= APIC_LVT_MASKED;
+  apic_write(APIC_LVTT, tmp_val);
+}
+
+
+L4_INLINE void
+apic_timer_set_one_shot(void)
+{
+  unsigned long tmp_val;
+  tmp_val = apic_read(APIC_LVTT);
+  tmp_val &= ~APIC_LVT_TIMER_PERIODIC;
   tmp_val |= APIC_LVT_MASKED;
   apic_write(APIC_LVTT, tmp_val);
 }

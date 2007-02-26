@@ -13,6 +13,7 @@ IMPLEMENTATION:
 #include "pic.h"
 #include "static_init.h"
 #include "timer.h"
+#include "utcb_alloc.h"
 #include "vmem_alloc.h"
 
 static void startup_system() FIASCO_INIT FIASCO_NOINLINE;
@@ -28,9 +29,10 @@ static void startup_system()
   Config::init();
   Kmem::init();
   Vmem_alloc::init();
+  Utcb_alloc::init();
   Idt::init();
   Irq_alloc::init();
-  dirq_t::init();
+  Dirq::init();
   Fpu::init();
   Timer::init();
 }

@@ -8,7 +8,7 @@ IMPLEMENTATION[generic]:
 
 #include "processor.h"
 
-IMPLEMENT
+IMPLEMENT inline
 Cpu_lock::Cpu_lock()
 {}
 

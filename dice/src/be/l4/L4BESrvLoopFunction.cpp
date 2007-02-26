@@ -5,12 +5,12 @@
  *	\date	02/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -39,7 +39,7 @@
 #include "be/BEWaitAnyFunction.h"
 #include "be/BEReplyAnyWaitAnyFunction.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BESrvLoopFunction);
@@ -61,6 +61,23 @@ CL4BESrvLoopFunction::~CL4BESrvLoopFunction()
 
 }
 
+/** \brief write the declaration of the CORBA_Object variable
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CL4BESrvLoopFunction::WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext)
+{
+    if (m_pCorbaObject)
+    {
+	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
+		CBEDeclarator *pName = m_pCorbaObject->GetNextDeclarator(pIter);
+	    pFile->PrintIndent("CORBA_Object_base _%s;\n", (const char*)pName->GetName());
+        pFile->PrintIndent("");
+        m_pCorbaObject->WriteDeclaration(pFile, pContext);
+        pFile->Print(" = &_%s; // is client id\n", (const char*)pName->GetName());
+    }
+}
+
 /**	\brief writes the varaible initialization
  *	\param pFile the file to write to
  *	\param pContext the context of the write operation
@@ -69,6 +86,9 @@ void CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBEConte
 {
     // call base class - initializes opcode
     CBESrvLoopFunction::WriteVariableInitialization(pFile, pContext);
+	// zero msg buffer
+	if (pContext->IsOptionSet(PROGRAM_ZERO_MSGBUF))
+		((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSetZero(pFile, pContext);
     // set the size dope here, so we do not need to set it anywhere else
     ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSizeDopeInit(pFile, pContext);
     // init indirect strings
@@ -102,11 +122,10 @@ bool CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext
         if (pDecl->GetStars() == 0)
             pDecl->IncStars(1);
         // set the call variables
-        SetCallVariable(m_pCorbaEnv, pContext);
         if (m_pWaitAnyFunction)
-            SetCallVariable(m_pWaitAnyFunction, m_pCorbaEnv, pContext);
+			m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
         if (m_pReplyAnyWaitAnyFunction)
-            SetCallVariable(m_pReplyAnyWaitAnyFunction, m_pCorbaEnv, pContext);
+			m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
     }
     return true;
 }
@@ -137,18 +156,4 @@ bool CL4BESrvLoopFunction::DoUseParameterAsEnv(CBEContext * pContext)
     if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasReceiveFlexpages() && (m_pCorbaEnv))
         return true;
     return false;
-}
-
-/** \brief write the L4 specific switch code (add tracing)
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- */
-void CL4BESrvLoopFunction::WriteSwitch(CBEFile * pFile,  CBEContext * pContext)
-{
-    String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-	String sObjectVar = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    if (pContext->IsOptionSet(PROGRAM_TRACE_SERVER))
-        pFile->PrintIndent("LOG(\"opcode %%x received from %%x.%%x\\n\", %s, %s.id.task, %s.id.lthread);\n", 
-		    (const char*)sOpcodeVar, (const char*)sObjectVar, (const char*)sObjectVar);
-	CBESrvLoopFunction::WriteSwitch(pFile, pContext);
 }

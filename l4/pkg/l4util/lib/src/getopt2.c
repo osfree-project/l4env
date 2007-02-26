@@ -1,22 +1,24 @@
-#include <l4/util/string.h>
-#include <l4/util/getopt.h>
+/**
+ * \file   l4util/lib/src/getopt2.c
+ * \brief  initialize argc/argv from multiboot structure
+ *
+ * \author Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-/* extracted from OSKIT */
-#define MULTIBOOT_CMDLINE       (1L<<2)
-struct multiboot_info
-{
-  unsigned	flags;
-  unsigned	dummy[3];
-  char*		cmdline;
-};
-/* end of OSKIT stuff */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
+#include <string.h>
+
+#include <l4/util/mbi_argv.h>
+#include <l4/crtx/crt0.h>
 
 #define MAXARGC 20
 #define MAXENVC 30
 static char argbuf[1024];
-char *_argv[MAXARGC];
-int  _argc = 0;
+
+char *l4util_argv[MAXARGC];
+int  l4util_argc = 0;
 
 #define isspace(c) ((c)==' '||(c)=='\t'||(c)=='\r'||(c)=='\n')
 
@@ -25,17 +27,17 @@ parse_args(char *argbuf)
 {
   char *cp;
 
-  /* make _argc, _argv */
-  _argc = 0;
+  /* make l4util_argc, l4util_argv */
+  l4util_argc = 0;
   cp = argbuf;
-  while (*cp && _argc < MAXARGC-1)
+  while (*cp && l4util_argc < MAXARGC-1)
     {
       while (*cp && isspace(*cp))
 	cp++;
 
       if (*cp)
 	{
-	  _argv[_argc++] = cp;
+	  l4util_argv[l4util_argc++] = cp;
 	  while (*cp && !isspace(*cp))
 	    cp++;
 
@@ -43,10 +45,10 @@ parse_args(char *argbuf)
 	    *cp++ = '\0';
 	}
     }
-  _argv[_argc] = (void*) 0;
-};
+  l4util_argv[l4util_argc] = (void*) 0;
+}
 
-void
+static void
 arg_init(char* cmdline)
 {
   if (cmdline)
@@ -55,14 +57,14 @@ arg_init(char* cmdline)
 	      sizeof(argbuf) < strlen(cmdline) ?
 	      sizeof(argbuf) : 1+strlen(cmdline));
       parse_args(cmdline);
-    };
-};
-
-void _main(struct multiboot_info *mbi, unsigned int flag);
+    }
+}
 
 void 
-_main(struct multiboot_info *mbi, unsigned int flag)
+l4util_mbi_to_argv(l4_mword_t flag, l4util_mb_info_t *mbi)
 {
-  if (flag && mbi && (mbi->flags & MULTIBOOT_CMDLINE))
+  if (flag == L4UTIL_MB_VALID
+      && mbi && (mbi->flags & L4UTIL_MB_CMDLINE))
     arg_init((char*) mbi->cmdline);
-};
+}
+

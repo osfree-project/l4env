@@ -1,0 +1,5 @@
+L4Env Thread Library
+
+This package contains the L4Env thread library. It provides functions
+to manage L4 threads including stack allocation and thread local
+data. For further information see the reference manual in thread/doc.

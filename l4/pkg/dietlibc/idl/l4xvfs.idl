@@ -1,0 +1,55 @@
+/* -*- c -*- */ 
+import <sys/stat.h>
+import <sys/types.h>
+
+import <l4/sys/types.h>
+
+library l4x
+{
+    /* The idea here is to splitt the interface in two part, one providing
+     * core functionality and the other being responsible for establishing
+     * connections and closing them.
+     */
+
+    interface vfs
+    {
+        int     open([in, string] char* name, [in] int flags,
+                     [in, out] int *errno_wrap);
+        ssize_t read([in] int fd,
+                     [out, size_is(count), ref, prealloc] char **buf,
+                     [in, out] size_t *count,
+                     [in, out] int *errno_wrap);
+        ssize_t write([in] int fd,
+                      [in, prealloc, ref, size_is(count)] char *buf,
+                      [in, out] size_t *count,
+                      [in, out] int *errno_wrap);
+        int     close([in] int fd, [in, out] int *errno_wrap);
+        int     fsync([in] int fd, [in, out] int *errno_wrap);
+        off_t   lseek([in] int fd, [in] off_t offset, [in] int whence,
+                      [in, out] int *errno_wrap);
+        int     fstat([in] int fd, [in, out, prealloc] struct stat *buf,
+                      [in, out] int *errno_wrap);
+
+        // these exist to ensure reentrancability
+        /* well, i don't like this asymmetry, having to insert the
+         * connection-ending function to the core functionality, but the
+         * reason is, that for the vfs interface for each client a server
+         * thread/process is started, whereas for the connection interface
+         * there is a single managment server. Of course it is only usefull
+         * to close a specific connection.
+         * This situation has some analogies to construction and
+         * destruction process in object oriented languages, where the
+         * construction takes place without an explicit instance
+         * handed in but the destruction is instance bound.
+         */
+        void    close_connection();
+    };
+
+    interface connection
+    {
+        // these exist to ensure reentrancability
+        l4_threadid_t init_connection();
+        // see above comment, why this is moved.
+        //void          close_connection();
+    };
+};

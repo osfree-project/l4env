@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/time.c
+ * \file   dde_linux/lib/src/time.c
+ * \brief  Time and Timers
  *
- * \brief	Time and Timers
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_time Time and Timer Implementation
  *
@@ -21,7 +26,6 @@
  * - \c jiffies and \c HZ have to be implemented as time base (perhaps using
  * l4io)
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/sys/types.h>
@@ -41,15 +45,12 @@
 /* local */
 #include "internal.h"
 #include "__config.h"
-#include "__macros.h"
 
-/*****************************************************************************/
-/**
- * \name Linux Timer Handling
+/** \name Linux Timer Handling
  *
  * <em>This is from kernel/timer.c</em>
  * @{ */
-/*****************************************************************************/
+
 /** timer list */
 static struct list_head timer_list = LIST_HEAD_INIT(timer_list);
 
@@ -62,12 +63,8 @@ static l4thread_t timer_tid = L4THREAD_INVALID_ID;
 /** initialization flag */
 static int _initialized = 0;
 
-/*****************************************************************************/
-/** Restart Timer Thread
- */
-/*****************************************************************************/
-static inline void
-__restart_timer_thread(void)
+/** Restart Timer Thread */
+static inline void __restart_timer_thread(void)
 {
   l4_threadid_t timer_l4id;
   l4_msgdope_t result;
@@ -86,25 +83,21 @@ __restart_timer_thread(void)
      timerlist_lock */
   do
     {
-      err = l4_i386_ipc_send(timer_l4id,
-			     L4_IPC_SHORT_MSG, 0, 0,
-			     L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+      err = l4_ipc_send(timer_l4id,
+                        L4_IPC_SHORT_MSG, 0, 0,
+                        L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
 
       if (err == L4_IPC_SETIMEOUT)
-	break;
+        break;
 
       if (err)
-	ERROR("IPC error 0x%02x in __restart()", L4_IPC_ERROR(result));
+        ERROR("IPC error 0x%02x in __restart()", L4_IPC_ERROR(result));
     }
   while (err);
 }
 
-/*****************************************************************************/
-/** Adding One-Shot Timer To List Helper
- */
-/*****************************************************************************/
-static inline void
-__internal_add_timer(struct timer_list *timer)
+/** Adding One-Shot Timer To List Helper */
+static inline void __internal_add_timer(struct timer_list *timer)
 {
   /*
    * must be cli-ed when calling this
@@ -144,12 +137,8 @@ __internal_add_timer(struct timer_list *timer)
 #endif
 }
 
-/*****************************************************************************/
-/** Removing One-Shot Timer From List Helper
- */
-/*****************************************************************************/
-static inline int
-__internal_detach_timer(struct timer_list *timer)
+/** Removing One-Shot Timer From List Helper */
+static inline int __internal_detach_timer(struct timer_list *timer)
 {
   /*
    * must be cli-ed when calling this
@@ -161,7 +150,7 @@ __internal_detach_timer(struct timer_list *timer)
   if (!timer_pending(timer))
     {
 #if DEBUG_TIMER
-      DMSG("Oops, attempt to detach not pending timer.\n");
+//      DMSG("Oops, attempt to detach not pending timer.\n");
 #endif
       return 0;
     }
@@ -173,22 +162,19 @@ __internal_detach_timer(struct timer_list *timer)
   {
     struct timer_list *tp = list_entry(tmp, struct timer_list, list);
     DMSG("  [%p] expires %lu, data = %lu\n",
-	   tmp, tp->expires, tp->data);
+           tmp, tp->expires, tp->data);
   }
   DMSG("\n");
 #endif
   return 1;
 }
 
-/*****************************************************************************/
 /** Add One-Shot Timer
  * \ingroup mod_time
  *
- * \param timer		timer reference to be added
+ * \param timer  timer reference to be added
  */
-/*****************************************************************************/
-void
-add_timer(struct timer_list *timer)
+void add_timer(struct timer_list *timer)
 {
   l4lock_lock(&timerlist_lock);
   if (timer_pending(timer))
@@ -201,18 +187,15 @@ bug:
   Error("kernel timer added twice.");
 }
 
-/*****************************************************************************/
 /** Modify One-Shot Timer
  * \ingroup mod_time
  *
- * \param timer		timer reference to be modified
- * \param expires	new expiration time
+ * \param timer    timer reference to be modified
+ * \param expires  new expiration time
  *
  * \return 0 if timer is pending; 1 if modification was okay
  */
-/*****************************************************************************/
-int
-mod_timer(struct timer_list *timer, unsigned long expires)
+int mod_timer(struct timer_list *timer, unsigned long expires)
 {
   int ret;
 
@@ -224,17 +207,14 @@ mod_timer(struct timer_list *timer, unsigned long expires)
   return ret;
 }
 
-/*****************************************************************************/
 /** Delete One-Shot Timer
  * \ingroup mod_time
  *
- * \param timer		timer reference to be removed
+ * \param timer  timer reference to be removed
  *
  * \return 0 if timer is pending; 1 if deletion completed
  */
-/*****************************************************************************/
-int
-del_timer(struct timer_list *timer)
+int del_timer(struct timer_list *timer)
 {
   int ret;
 
@@ -245,20 +225,17 @@ del_timer(struct timer_list *timer)
   return ret;
 }
 
-/*****************************************************************************/
 /** Delete One-Shot Timer (SMP sync)
  * \ingroup mod_time
  *
- * \param timer		timer reference to be removed
+ * \param timer  timer reference to be removed
  *
  * \return 0 if timer is pending; 1 if deletion completed
  *
  * \note In non-SMP Mode, del_timer_sync is a define to del_timer()
  */
-/*****************************************************************************/
 #ifdef CONFIG_SMP
-int
-del_timer_sync(struct timer_list *timer)
+int del_timer_sync(struct timer_list *timer)
 {
   int ret;
 
@@ -270,35 +247,29 @@ del_timer_sync(struct timer_list *timer)
 }
 #endif /* !CONFIG_SMP */
 
-/*****************************************************************************/
 /** Timer Synchronization Dummy
  * \ingroup mod_time
  *
  * However, in non-SMP mode, it is an empty define
  */
-/*****************************************************************************/
 #ifdef CONFIG_SMP
-void
-sync_timers(void)
+void sync_timers(void)
 {
 #warning not implemented
   LOG_Error("Not implemented");
 }
 #endif /* !CONFIG_SMP */
 
-/*****************************************************************************/
 /** Timer Sleep Implementation
  *
- * \param  to		IPC timeout
+ * \param  to  IPC timeout
  *
  * \return 1 on timed out IPC (0 = message received and indicates \c
  * __restart)
  *
  * Has to be called holding the timerlist lock.
  */
-/*****************************************************************************/
-static inline int
-__timer_sleep(l4_timeout_t to)
+static inline int __timer_sleep(l4_timeout_t to)
 {
   l4_threadid_t me;
   l4_threadid_t any;
@@ -314,17 +285,17 @@ __timer_sleep(l4_timeout_t to)
   /* sleep */
   do
     {
-      err = l4_i386_ipc_wait(&any,
-			     L4_IPC_SHORT_MSG, &dummy, &dummy, to, &result);
+      err = l4_ipc_wait(&any,
+                             L4_IPC_SHORT_MSG, &dummy, &dummy, to, &result);
 
       if (err == L4_IPC_RETIMEOUT)
-	break;
+        break;
 
       if (err)
-	{
-	  Error("in IPC (0x%02x)", L4_IPC_ERROR(result));
-	  any = L4_INVALID_ID;
-	}
+        {
+          Error("in IPC (0x%02x)", L4_IPC_ERROR(result));
+          any = L4_INVALID_ID;
+        }
     }
   while (!l4_task_equal(me, any));
 
@@ -336,7 +307,6 @@ __timer_sleep(l4_timeout_t to)
 }
 
 /** @} */
-/*****************************************************************************/
 /** Linux DDE Timer Thread
  *
  * We sleep for the most time: until next timer or L4_IPC_NEVER. If timer
@@ -344,7 +314,6 @@ __timer_sleep(l4_timeout_t to)
  *
  * \todo priorities
  */
-/*****************************************************************************/
 static void dde_timer_thread(void)
 {
   l4_timeout_t to;
@@ -359,6 +328,7 @@ static void dde_timer_thread(void)
   int to_us;
 
   timer_tid = l4thread_myself();
+  l4dde_process_add_worker();
 
   ++local_bh_count(smp_processor_id());
 
@@ -383,42 +353,42 @@ static void dde_timer_thread(void)
 
       /* no timer set? */
       if (curr == head)
-	{
-	  to = L4_IPC_NEVER;
+        {
+          to = L4_IPC_NEVER;
 
-	  /* wait for __restart */
-	  __timer_sleep(to);
-	  continue;
-	}
+          /* wait for __restart */
+          __timer_sleep(to);
+          continue;
+        }
 
       tp = list_entry(curr, struct timer_list, list);
       diff = tp->expires - curr_jiffies;
 
 #if DEBUG_TIMER
       DMSG("timer_loop: jiffies = %lu, tp->expires = %lu, diff = %ld\n",
-	   curr_jiffies, tp->expires, diff);
+           curr_jiffies, tp->expires, diff);
 #endif
 
       /* wait for next timer? */
       if (diff > 0)
-	{
-	  to_us = diff * (1000000 / HZ);
-	  if ((err = micros2l4to(to_us, &to_e, &to_m)))
-	    {
-	      Panic("error on timeout calculation (us = %d)", to_us);
-	      continue;
-	    }
+        {
+          to_us = diff * (1000000 / HZ);
+          if ((err = micros2l4to(to_us, &to_e, &to_m)))
+            {
+              Panic("error on timeout calculation (us = %d)", to_us);
+              continue;
+            }
 #if DEBUG_TIMER
-	  DMSG("timer_loop: to_us = %d, to_e = %d, to_m = %d\n",
-	       to_us, to_e, to_m);
+          DMSG("timer_loop: to_us = %d, to_e = %d, to_m = %d\n",
+               to_us, to_e, to_m);
 #endif
 
-	  to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+          to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
 
-	  /* wait for timeout or __restart */
-	  __timer_sleep(to);
-	  continue;
-	}
+          /* wait for timeout or __restart */
+          __timer_sleep(to);
+          continue;
+        }
 
       /* detach from timer list */
       __internal_detach_timer(tp);
@@ -436,7 +406,7 @@ static void dde_timer_thread(void)
 
 #if DEBUG_TIMER
       DMSG("timer_loop: jiffies = %lu, next = %p (head = %p)\n",
-	   curr_jiffies, head->next, head);
+           curr_jiffies, head->next, head);
 #endif
     }
 
@@ -446,7 +416,6 @@ static void dde_timer_thread(void)
   l4thread_exit();
 }
 
-/*****************************************************************************/
 /** Initialize Timer Thread
  * \ingroup mod_time
  *
@@ -454,14 +423,13 @@ static void dde_timer_thread(void)
  *
  * One timer thread is created on initialization.
  */
-/*****************************************************************************/
 int l4dde_time_init()
 {
   int err;
 
   /* create timer thread */
   err = l4thread_create((l4thread_fn_t) dde_timer_thread,
-			0, L4THREAD_CREATE_SYNC);
+                        0, L4THREAD_CREATE_SYNC);
 
   if (err < 0)
     return err;

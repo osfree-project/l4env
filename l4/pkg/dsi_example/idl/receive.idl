@@ -10,41 +10,37 @@
  */
 /*****************************************************************************/
 
-typedef struct hoto_receive_threadid
-{
-  unsigned long low;
-  unsigned long high;
-} dsi_example_receive_threadid_t;
+import <l4/sys/types.h>
   
 typedef struct dsi_example_receive_socket
 {
   unsigned long socket;
-  dsi_example_receive_threadid_t work_th;
-  dsi_example_receive_threadid_t sync_th;
-  dsi_example_receive_threadid_t event_th;
+  l4_threadid_t work_th;
+  l4_threadid_t sync_th;
+  l4_threadid_t event_th;
 } dsi_example_receive_socket_t;
   
 typedef struct dsi_example_receive_dataspace
 {
   unsigned long id;
-  dsi_example_receive_threadid_t manager;
+  l4_threadid_t manager;
 } dsi_example_receive_dataspace_t;
 
-module dsi_example
+library dsi_example
 {
   interface receive
     {
       /**
        * Open receive socket
        */
-      long open(in dsi_example_receive_dataspace_t ctrl_ds,
-		in dsi_example_receive_dataspace_t data_ds,
-		out dsi_example_receive_socket_t s);
+      long open([in] dsi_example_receive_dataspace_t ctrl_ds,
+		[in] dsi_example_receive_dataspace_t data_ds,
+		[out] dsi_example_receive_socket_t *s);
 
       /**
        * Connect with sender
        */
-      long connect(in dsi_example_receive_socket_t local,
-		   in dsi_example_receive_socket_t remote);
+      long connect([in] dsi_example_receive_socket_t local,
+		   [in] dsi_example_receive_socket_t remote);
     };
 };

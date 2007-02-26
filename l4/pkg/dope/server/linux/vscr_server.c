@@ -1,13 +1,19 @@
 /*
- * \brief	DOpE VScreen server module
- * \date	2002-01-04
- * \author	Norman Feske <no@atari.org>
+ * \brief   DOpE VScreen server module
+ * \date    2002-01-04
+ * \author  Norman Feske <no@atari.org>
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
-#include <stdio.h>	/* !!! should be kicked out !!! */
-
-#include "dope-config.h"
+#include "dopestd.h"
 #include "thread.h"
 #include "timer.h"
 #include "vscreen.h"
@@ -17,7 +23,7 @@
 static struct timer_services  *timer;
 static struct thread_services *thread;
 
-static s16 thread_started=0;
+static s16 thread_started = 0;
 
 int init_vscr_server(struct dope_services *d);
 
@@ -26,11 +32,21 @@ int init_vscr_server(struct dope_services *d);
 /*** VSCREEN WIDGET SERVER ***/
 /*****************************/
 
-
-CORBA_void dope_vscr_waitsync_component(CORBA_Object *_dice_corba_obj,
+void dope_vscr_waitsync_component(CORBA_Object _dice_corba_obj,
                                         CORBA_Environment *_dice_corba_env) {
 	VSCREEN *vs = (VSCREEN *) _dice_corba_env->user_data;
 	vs->vscr->waitsync(vs);
+}
+
+void dope_vscr_refresh_component(CORBA_Object _dice_corba_obj,
+                                 int x,
+                                 int y,
+                                 int w,
+                                 int h,
+                                 CORBA_Environment *_dice_corba_env) {
+
+	VSCREEN *vs = (VSCREEN *) _dice_corba_env->user_data;
+	vs->vscr->refresh(vs,x,y,w,h);
 }
 
 
@@ -41,13 +57,13 @@ static void vscreen_server_thread(void *arg) {
 	int sh;
 	struct sockaddr_in myaddr;
 	int namelen;
-	
+
 	INFO(printf("VScreenServer(thread): entered server thread\n"));
 	INFO(printf("VScreenServer(thread): find free port\n"));
-	
-    myaddr.sin_family = AF_INET;
-    myaddr.sin_port = 0;
-    myaddr.sin_addr.s_addr = INADDR_ANY;
+
+	myaddr.sin_family = AF_INET;
+	myaddr.sin_port = 0;
+	myaddr.sin_addr.s_addr = INADDR_ANY;
 
 	sh = socket (AF_INET, SOCK_STREAM, 0);
 	bind(sh,(struct sockaddr *)&myaddr,sizeof(struct sockaddr_in));
@@ -56,9 +72,9 @@ static void vscreen_server_thread(void *arg) {
 	dice_env.srv_port = myaddr.sin_port;
 	dice_env.user_data = vs;
 	close(sh);
-	
+
 	printf("VScreenServer(thread): got port number %d\n",(int)myaddr.sin_port);
-	
+
 	sprintf(ident_buf,"%d", dice_env.srv_port);
 	vs->vscr->reg_server(vs,ident_buf);
 	thread_started = 1;
@@ -74,7 +90,7 @@ static void vscreen_server_thread(void *arg) {
 
 static THREAD *start(VSCREEN *vscr_widget) {
 	THREAD *new;
-	
+
 	thread_started = 0;
 	new = thread->create_thread(&vscreen_server_thread, (void *)vscr_widget);
 	while (!thread_started && (timer)) timer->usleep(1000);
@@ -99,10 +115,10 @@ static struct vscr_server_services services = {
 
 
 int init_vscr_server(struct dope_services *d) {
-		
+
 	thread = d->get_module("Thread 1.0");
 	timer  = d->get_module("Timer 1.0");
-	
+
 	d->register_module("VScreenServer 1.0",&services);
 	return 1;
 }

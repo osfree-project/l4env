@@ -12,22 +12,6 @@
 #include <l4/sys/types.h>
 #include <l4/sys/compiler.h>
 
-/*
- * IPC parameters
- */
-
-
-/* 
- * Structure used to describe destination and true source if a chief
- * wants to deceit 
- */
-
-typedef struct {
-  l4_threadid_t dest, true_src;
-} l4_ipc_deceit_ids_t;
-
-
-
 /* 
  * Defines used for Parameters 
  */
@@ -50,7 +34,8 @@ typedef struct {
      ( (l4_timeout_t) \
        {to: { rcv_exp, snd_exp, rcv_pflt, snd_pflt, snd_man, rcv_man } } )
 
-#define L4_IPC_NEVER ((l4_timeout_t) {timeout: 0})
+#define L4_IPC_NEVER			((l4_timeout_t) {timeout: 0})
+#define L4_IPC_NEVER_INITIALIZER	{timeout: 0}
 #define L4_IPC_MAPMSG(address, size)  \
      ((void *)(l4_umword_t)( ((address) & L4_PAGEMASK) | ((size) << 2) \
 			 | (unsigned long)L4_IPC_SHORT_FPAGE)) 
@@ -83,70 +68,100 @@ typedef struct {
  */
 
 L4_INLINE int
-l4_i386_ipc_call(l4_threadid_t dest, 
-		 const void *snd_msg, 
-		 l4_umword_t snd_dword0, 
-		 l4_umword_t snd_dword1, 
-		 void *rcv_msg, 
-		 l4_umword_t *rcv_dword0, 
-		 l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result);
+l4_ipc_call   (l4_threadid_t dest, 
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
+L4_INLINE int
+l4_ipc_call_w3(l4_threadid_t dest, 
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1,
+               l4_umword_t snd_dword2,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_umword_t *rcv_dword2,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
 
 L4_INLINE int
-l4_i386_ipc_reply_and_wait(l4_threadid_t dest, 
-			   const void *snd_msg, 
-			   l4_umword_t snd_dword0, 
-			   l4_umword_t snd_dword1, 
-			   l4_threadid_t *src,
-			   void *rcv_msg, 
-			   l4_umword_t *rcv_dword0, 
-			   l4_umword_t *rcv_dword1, 
-			   l4_timeout_t timeout, 
-			   l4_msgdope_t *result);
+l4_ipc_reply_and_wait   (l4_threadid_t dest,
+                         const void *snd_msg,
+                         l4_umword_t snd_dword0,
+                         l4_umword_t snd_dword1,
+                         l4_threadid_t *src,
+                         void *rcv_msg,
+                         l4_umword_t *rcv_dword0,
+                         l4_umword_t *rcv_dword1,
+                         l4_timeout_t timeout,
+                         l4_msgdope_t *result);
+L4_INLINE int
+l4_ipc_reply_and_wait_w3(l4_threadid_t dest,
+                         const void *snd_msg,
+                         l4_umword_t snd_dword0,
+                         l4_umword_t snd_dword1,
+                         l4_umword_t snd_dword2,
+                         l4_threadid_t *src,
+                         void *rcv_msg,
+                         l4_umword_t *rcv_dword0,
+                         l4_umword_t *rcv_dword1,
+                         l4_umword_t *rcv_dword2,
+                         l4_timeout_t timeout,
+                         l4_msgdope_t *result);
 
 L4_INLINE int
-l4_i386_ipc_reply_deceiting_and_wait(const l4_ipc_deceit_ids_t ids,
-				     const void *snd_msg, 
-				     l4_umword_t snd_dword0, 
-				     l4_umword_t snd_dword1,
-				     l4_threadid_t *src,
-				     void *rcv_msg, 
-				     l4_umword_t *rcv_dword0, 
-				     l4_umword_t *rcv_dword1, 
-				     l4_timeout_t timeout, 
-				     l4_msgdope_t *result);
+l4_ipc_send   (l4_threadid_t dest,
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
+L4_INLINE int
+l4_ipc_send_w3(l4_threadid_t dest,
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1,
+               l4_umword_t snd_dword2,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
 
 L4_INLINE int
-l4_i386_ipc_send(l4_threadid_t dest, 
-		 const void *snd_msg,
-		 l4_umword_t snd_dword0, 
-		 l4_umword_t snd_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result);
+l4_ipc_wait   (l4_threadid_t *src,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1, 
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
+L4_INLINE int
+l4_ipc_wait_w3(l4_threadid_t *src,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_umword_t *rcv_dword2,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result);
 
 L4_INLINE int
-l4_i386_ipc_send_deceiting(l4_ipc_deceit_ids_t ids,
-			   const void *snd_msg, 
-			   l4_umword_t snd_dword0, 
-			   l4_umword_t snd_dword1, 
-			   l4_timeout_t timeout, 
-			   l4_msgdope_t *result);
+l4_ipc_receive   (l4_threadid_t src,
+                  void *rcv_msg,
+                  l4_umword_t *rcv_dword0,
+                  l4_umword_t *rcv_dword1,
+                  l4_timeout_t timeout,
+                  l4_msgdope_t *result);
 L4_INLINE int
-l4_i386_ipc_wait(l4_threadid_t *src,
-		 void *rcv_msg, 
-		 l4_umword_t *rcv_dword0, 
-		 l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result);
-
-L4_INLINE int
-l4_i386_ipc_receive(l4_threadid_t src,
-		    void *rcv_msg, 
-		    l4_umword_t *rcv_dword0, 
-		    l4_umword_t *rcv_dword1, 
-		    l4_timeout_t timeout, 
-		    l4_msgdope_t *result);
+l4_ipc_receive_w3(l4_threadid_t src,
+                  void *rcv_msg,
+                  l4_umword_t *rcv_dword0,
+                  l4_umword_t *rcv_dword1,
+                  l4_umword_t *rcv_dword2,
+                  l4_timeout_t timeout,
+                  l4_msgdope_t *result);
 
 
 L4_INLINE int l4_ipc_fpage_received(l4_msgdope_t msgdope);
@@ -156,54 +171,54 @@ L4_INLINE int l4_ipc_is_fpage_writable(l4_fpage_t fp);
 /* IPC bindings for chiefs */
 
 L4_INLINE int
-l4_i386_ipc_chief_wait(l4_threadid_t *src, 
-		       l4_threadid_t *real_dst,
-		       void *rcv_msg, 
-		       l4_umword_t *rcv_dword0, 
-		       l4_umword_t *rcv_dword1, 
-		       l4_timeout_t timeout, 
-		       l4_msgdope_t *result);
+l4_ipc_chief_wait(l4_threadid_t *src, 
+                  l4_threadid_t *real_dst,
+                  void *rcv_msg, 
+                  l4_umword_t *rcv_dword0, 
+                  l4_umword_t *rcv_dword1, 
+                  l4_timeout_t timeout, 
+                  l4_msgdope_t *result);
 L4_INLINE int
-l4_i386_ipc_chief_receive(l4_threadid_t src, 
-			  l4_threadid_t *real_dst,
-			  void *rcv_msg, 
-			  l4_umword_t *rcv_dword0, 
-			  l4_umword_t *rcv_dword1, 
-			  l4_timeout_t timeout, 
-			  l4_msgdope_t *result);
+l4_ipc_chief_receive(l4_threadid_t src, 
+                     l4_threadid_t *real_dst,
+                     void *rcv_msg, 
+                     l4_umword_t *rcv_dword0, 
+                     l4_umword_t *rcv_dword1, 
+                     l4_timeout_t timeout, 
+                     l4_msgdope_t *result);
 L4_INLINE int
-l4_i386_ipc_chief_call(l4_threadid_t dest, 
-		       l4_threadid_t fake_src,
-		       const void *snd_msg, 
-		       l4_umword_t snd_dword0, 
-		       l4_umword_t snd_dword1, 
-		       l4_threadid_t *real_dst,
-		       void *rcv_msg, 
-		       l4_umword_t *rcv_dword0, 
-		       l4_umword_t *rcv_dword1, 
-		       l4_timeout_t timeout, 
-		       l4_msgdope_t *result);
+l4_ipc_chief_call(l4_threadid_t dest, 
+                  l4_threadid_t fake_src,
+                  const void *snd_msg, 
+                  l4_umword_t snd_dword0, 
+                  l4_umword_t snd_dword1, 
+                  l4_threadid_t *real_dst,
+                  void *rcv_msg, 
+                  l4_umword_t *rcv_dword0, 
+                  l4_umword_t *rcv_dword1, 
+                  l4_timeout_t timeout, 
+                  l4_msgdope_t *result);
 L4_INLINE int
-l4_i386_ipc_chief_reply_and_wait(l4_threadid_t dest, 
-				 l4_threadid_t fake_src,
-				 const void *snd_msg, 
-				 l4_umword_t snd_dword0, 
-				 l4_umword_t snd_dword1, 
-				 l4_threadid_t *src,
-				 l4_threadid_t *real_dst,
-				 void *rcv_msg, 
-				 l4_umword_t *rcv_dword0, 
-				 l4_umword_t *rcv_dword1, 
-				 l4_timeout_t timeout, 
-				 l4_msgdope_t *result);
+l4_ipc_chief_reply_and_wait(l4_threadid_t dest, 
+                            l4_threadid_t fake_src,
+                            const void *snd_msg, 
+                            l4_umword_t snd_dword0, 
+                            l4_umword_t snd_dword1, 
+                            l4_threadid_t *src,
+                            l4_threadid_t *real_dst,
+                            void *rcv_msg, 
+                            l4_umword_t *rcv_dword0, 
+                            l4_umword_t *rcv_dword1, 
+                            l4_timeout_t timeout, 
+                            l4_msgdope_t *result);
 L4_INLINE int
-l4_i386_ipc_chief_send(l4_threadid_t dest, 
-		       l4_threadid_t fake_src,
-		       const void *snd_msg, 
-		       l4_umword_t snd_dword0, 
-		       l4_umword_t snd_dword1, 
-		       l4_timeout_t timeout, 
-		       l4_msgdope_t *result);
+l4_ipc_chief_send(l4_threadid_t dest, 
+                  l4_threadid_t fake_src,
+                  const void *snd_msg, 
+                  l4_umword_t snd_dword0, 
+                  l4_umword_t snd_dword1, 
+                  l4_timeout_t timeout, 
+                  l4_msgdope_t *result);
 
 
 
@@ -261,36 +276,11 @@ L4_INLINE int l4_ipc_is_fpage_writable(l4_fpage_t fp)
  * Implementation
  */
 
-#ifndef CONFIG_L4_CALL_SYSCALLS
-
-# ifndef L4X0_IPC_SYSENTER
-# define IPC_SYSENTER \
-  "int    $0x30          \n\t"
-# else
-# define IPC_SYSENTER \
-  "push   %%ecx          \n\t" \
-  "push   %%ebp          \n\t" \
-  "push   $0x1b          \n\t" \
-  "push   $0f            \n\t" \
-  "mov    %%esp,%%ecx    \n\t" \
-  "sysenter              \n\t" \
-  "mov    %%ebp,%%edx    \n\t" \
-  "0:                    \n\t"
-# endif
-
-#else
-
-# ifdef CONFIG_L4_ABS_SYSCALLS
-#   define IPC_SYSENTER \
-  "call __L4_ipc_direct  \n\t"
-# else
-#   define IPC_SYSENTER \
-  "call *__L4_ipc        \n\t"
-# endif
-
-#endif
+#include <l4/sys/ipc-invoke.h>
 
 #define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
+
+#include <l4/sys/xadaption.h>
 
 #  if GCC_VERSION < 295
 #    error gcc >= 2.95 required
@@ -306,7 +296,7 @@ L4_INLINE int l4_ipc_is_fpage_writable(l4_fpage_t fp)
 #    endif
 #  else
 #    ifdef __PIC__
-#      include "ipc-l4x0adapt-gcc295-pic.h"
+#      include "ipc-l4x0adapt-gcc3-pic.h"
 #    else
 #      ifdef PROFILE
 #        error "PROFILE support for X.0 API not supported"
@@ -316,5 +306,5 @@ L4_INLINE int l4_ipc_is_fpage_writable(l4_fpage_t fp)
 #    endif
 #  endif
 
-#endif
+#endif /* __L4_IPC_H__ */
 

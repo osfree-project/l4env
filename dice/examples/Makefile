@@ -1,11 +1,17 @@
 L4DIR	?= ../../..
 
-TARGET	= simple_idl array_idl struct_idl struct2 \
-	  corba_idl function_id string_idl ping \
-	  string1 string2 string3 string4 string5 string6 \
-	  string7 string8 \
-	  andy1 andy2 andy3 andy4 andy5 andy6 \
-	  fpage1 fpage2 pagefault sockets \
-	  l4str l4union sort1 init-rcvstring
+#SINGLES	= simple_idl
+SINGLES = simple_idl arrays structs \
+	  corba_idl function_id strings ping andy \
+	  pagefault sort1
+COUPLES	= init-rcvstring l4str l4union fpage1 fpage2
+
+# name sockets here to avoid testing with fisco-ux
+TARGET	= $(SINGLES) $(COUPLES) sockets
 
 include $(L4DIR)/mk/subdir.mk
+
+test::
+
+-include Makeconf.local
+

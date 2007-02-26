@@ -6,23 +6,13 @@
  *
  * \date   01/28/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -66,22 +56,22 @@ __do_copy(l4dm_dataspace_t * ds,
 	  l4dm_dataspace_t * copy)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
   
   if (ds == NULL)
     return -L4_EINVAL;
 
   /* call dataspace manager */
   if (name != NULL)
-    ret = if_l4dm_generic_copy(ds->manager,ds->id,src_offs,dst_offs,num,
-			       flags,name,(if_l4dm_dataspace_t *)copy,&_exc);
+    ret = if_l4dm_generic_copy_call(&(ds->manager),ds->id,src_offs,dst_offs,num,
+                                    flags,name,copy,&_env);
   else
-    ret = if_l4dm_generic_copy(ds->manager,ds->id,src_offs,dst_offs,num,
-			       flags,"",(if_l4dm_dataspace_t *)copy,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+    ret = if_l4dm_generic_copy_call(&(ds->manager),ds->id,src_offs,dst_offs,num,
+                                    flags,"",copy,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: copy ds %u at %x.%x failed (ret %d, exc %d)",
-	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_exc._type);
+	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_env.amjor);
       if (ret)
         return ret;
       else

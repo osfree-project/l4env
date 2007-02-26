@@ -5,7 +5,7 @@
  *	\date	04/04/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -70,7 +70,7 @@ void CL4BETestMainFunction::WriteVariableInitialization(CBEFile * pFile, CBECont
     pFile->PrintIndent("LOG_init(\"dice_test\");\n");
     // print status
     pFile->Print("\n");
-    pFile->PrintIndent("LOG(\"test started\\n\");\n");
+    pFile->PrintIndent("LOG(\"test started\");\n");
 }
 
 /**	\brief clean up the test application
@@ -79,6 +79,12 @@ void CL4BETestMainFunction::WriteVariableInitialization(CBEFile * pFile, CBECont
  */
 void CL4BETestMainFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-    pFile->PrintIndent("LOG(\"test stopped\\n\");\n");
+    pFile->PrintIndent("LOG(\"test stopped\");\n");
     pFile->Print("\n");
+	if (pContext->IsOptionSet(PROGRAM_TESTSUITE_SHUTDOWN_FIASCO))
+	{
+	    pFile->PrintIndent("LOG_flush();\n");
+		pFile->PrintIndent("l4_sleep(2000);\n");
+	    pFile->PrintIndent("enter_kdebug(\"*#^test stopped\");\n");
+	}
 }

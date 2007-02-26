@@ -1,17 +1,13 @@
 # -*- makefile -*- 
 # IA32 Kernel Makefile
 
-shortcut.o:	$(TCBOFFSET)
-entry.o:	$(TCBOFFSET)
+shortcut-ia32-ux.o:	$(TCBOFFSET)
+entry-ia32.o:		$(TCBOFFSET)
+entry-ia32-ux.o:	$(TCBOFFSET)
 
 # Add future prerequisites somewhere among the list of libraries.
 # You really should not have to add anything in the $(LD) line.
 
 $(KERNEL):	$(srcdir)/kernel.ia32.ld $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(LIBLMM) $(KERNEL_EXTRA_LIBS) $(ABI) $(JABI) libdrivers.a $(CXXLIB) $(LIBKERN) $(MINILIBC) libgluedriverslibc.a
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(LD) -N -T $< -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) $(LIBGCC)
-
-Symbols:	$(KERNEL)
-		$(NM) $(KERNEL) | c++filt | sort > $@.new
-		mv $@.new $@
-		chmod 755 $@
+		$(VERBOSE)$(LD) $(KERNEL_LDFLAGS) -N -T $< -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) $(LIBGCC)

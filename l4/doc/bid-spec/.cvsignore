@@ -10,4 +10,9 @@
 *.lod
 *.ind
 *.ilg
+*.out
+*.title
+.*.d
+bid-spec
+bid-spec.tex
 

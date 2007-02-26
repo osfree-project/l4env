@@ -1,0 +1,438 @@
+\chapter{A Short Reference to Compiler Options}
+
+This chapter will provide you with a short overview about the available
+compiler options. It will also show you what you can do with these 
+options.
+
+Most of the information given here can also be found in the manual
+page available for \dice{}.
+
+\section{Compiler Options}
+There are several compiler options which are roughly grouped
+into general compiler options, preprocessor options, and back-end
+options.
+
+\subsection{Pre-Processing Options (Front-End Options)}
+These options affect the preprocessing of the input files.
+
+\subsubsection{{\tt --corba, -C}}
+Specify that all input IDL files are written using CORBA IDL
+syntax.
+
+\subsubsection{{\tt --preprocess, -P}}
+Passes the arguments given to this option to the preprocessor.
+
+Example: \verb|-P-C|
+
+\subsubsection{{\tt -Wp,}}
+Same as {\tt -P}. {\tt -P} and {\tt -Wp,} are scanned for
+{\tt -I} and {\tt -D}.
+
+\subsubsection{{\tt -I}}
+Provides the preprocessor with include directories to search
+for the files specified with the \verb|#include| and \verb|import|
+directives. (Same as {\tt -P-I}.)
+
+Example: \verb|-I/usr/include|
+
+\subsubsection{{\tt -nostdinc}}
+Passed as is to the preprocessor.
+
+\subsubsection{{\tt -D}}
+Provides the preprocessor with additional symbols. (Same as
+{\tt -P-D}.)
+
+Example: \verb|-DL4API_l4v2|
+
+\subsubsection{{\tt -E}}
+Stop ``compilation'' after preprocessing. The output of the 
+preprocessor is printed to stdout. Consider that the preprocessor
+does not resolve \verb|import| statements and therefore these
+statements will appear in the generated output.
+
+\subsubsection{{\tt -EXML}}
+Stop ``compilation'' after the parsing. The intermediate representation
+(the abstract syntax tree -- if you like) is printed into an XML file. 
+The name of the XML file is the same as the IDL file's with the \verb|idl|
+extension exchanged against the \verb|xml| extension.
+
+\subsubsection{{\tt -M}}
+Print include file tree and stop after doing that.
+
+\subsubsection{{\tt -MM}}
+Print include file tree for files included with '' and stop
+after doing that.
+
+\subsubsection{{\tt -MD}}
+Print include file tree into \verb|.d| files and compile.
+
+\subsubsection{{\tt -MMD}}
+Print include file tree for file included with '' and compile.
+
+\subsubsection{{\tt --with-cpp=<argument>}}
+Specify your own preprocessor. This will override environment
+variable \verb|CPP| and the preprocessor specified with 
+configure.
+
+Example: \verb|--with-cpp=/usr/bin/cpp-3.0|
+
+\subsection{Back-End Options}
+
+\subsubsection{{\tt --client, -c}}
+Create client side code only. Default is to create both client and server side code.
+
+\subsubsection{{\tt --server, -s}}
+Create server side code only. Default is to create both client and server side code.
+
+\subsubsection{{\tt --template, -t}}
+Create server skeleton/template file.
+
+\subsubsection{{\tt --no-opcodes, -n}}
+Do not generate the opcode file. This is useful if you wish to specify the opcodes
+yourself or with the parameter {\tt -fopcodesize}.
+
+\subsubsection{{\tt --filename-prefix, -F}}
+Prefix each file-name of the \dice{} generated files with the given
+string.
+
+Example: \verb|-FRun1| lets the includes of the generated files
+look like this: \verb|#include "Run1<file>-client.h"|.
+
+\subsubsection{{\tt --include-prefix, -p}}
+Prefix each file-name inside the generated include statements
+with the given string, which is interpreted as path.
+
+Example: \verb|-p/tmp/dice| lets all includes be prefixed with
+the string: \verb|#include "/tmp/dice/<file>-client.h"|.
+
+Together with \verb|-F| the generated include statement looks like this
+\verb|#include "/tmp/dice/Run1<file>-client.h"|.
+
+\subsubsection{{\tt --create-inline=<mode>, -i<mode>}}
+Generate client stubs as inline. You may specify a mode for
+inline. Use \verb|static| or \verb|extern|. The mode is optional.
+This will only generate header files, since the implementations
+will appear there.
+
+Example: \verb|-istatic| generates \verb|static inline| functions.
+
+\subsubsection{{\tt -B<argument>}}
+Defines the back-end which is used to generate the
+target code. There are three categories, which define a 
+back end. The first is the {\it target platform}, which is 
+denoted by the {\tt p} suffix to the {\tt -B} option.
+The second is the {\it target kernel interface}, denoted
+by {\tt i}. And last is the {\it target language mapping},
+denoted by {\tt m}.
+
+The target platform can be one of {\tt ia32}, {\tt ia64},
+or {\tt arm}. Currently only {\tt ia32} and {\tt arm} are supported.
+If none of the mentioned
+platforms is chosen, {\tt ia32} is used.
+
+The {\tt arm} platform is currently only supported with the X0
+kernel interface.
+
+Example: \verb|-Bpia32|
+
+The target kernel interface can be one of {\tt v2},
+{\tt x0}, {\tt x0adapt}, {\tt v4}, {\tt sock}, or {\tt cdr}. Currently
+{\tt v4} is not supported and {\tt x0} is not fully tested.
+The kernel interface {\tt x0adapt} uses the X0 kernel interface,
+but presents a V2 interface to the user. The difference between
+the kernel interfaces is in the size of the \verb|l4_threadid_t|
+type. Using {\tt x0adapt} you can continue to use your
+applications written for use with a V2 \verb|l4_threadid_t|
+type on top of an X0 kernel.
+The {\tt x0} kernel interface is badly tested, because there
+currently exists no L4Env for native X0.
+
+Example: \verb|-Bix0adapt|
+
+The target language mapping can be one of {\tt C} or
+{\tt CPP} -- for C++. Currently only {\tt C} is supported.
+
+Example: \verb|-BmC|
+
+\subsubsection{{\tt -O<level>}}
+This option sets the optimization level of the back-end.
+Currently the optimization levels 0, 1, and 2 are implemented.
+
+Optimization level 1 uses \verb|memcpy| to copy arrays to
+the message buffer. Level 0 copies the arrays element by element.
+
+Optimization level 2 will enable the generation of inline assembler
+to invoke the IPC.
+
+If no optimization level is specified, the highest level that
+is currently implemented is chosen.
+
+Example: \verb|-O1|
+
+\subsubsection{{\tt --testsuite, -T}}
+Generates a testsuite for the declared interfaces. The testsuite
+will start an L4 thread with the server, and call all functions
+with random values for the parameters. The \verb|in| parameter
+values are checked at the server for conformance with the values
+set at the client side. The \verb|out| parameter values are set
+in the server implementation function and checked at the client's
+side.
+
+This option will generate the \verb|-template.c| file with 
+implementations of the server function which test the values.
+It will also generate a \verb|-testsuite.c| file which initializes
+the parameters and checks \verb|out| parameters. It also contains
+code to start the server thread and initialize the server loop.
+
+If you wish to write your own test-suite, don't use this
+option, because this option makes \dice{} generate target
+code which is complete and won't use your test functions.
+
+%TODO: thread and task argument
+
+\subsubsection{{\tt --message-passing, -m}}
+Generate message passing functions for RPC functions as well.
+See Section~\ref{sec:message-passing} for more details.
+
+\subsection{General Options}
+This section describes some of the options, which do not fit into one 
+of the above categories.
+
+\subsubsection{{\tt --help}}
+Displays a verbose help screen, showing all of the available
+options.
+
+\subsubsection{{\tt --version}}
+Displays version information, including the build date and the
+user who built this version.
+
+\subsubsection{{\tt --verbose, -v<level>}}
+Displays verbose output. There are several levels of verbosity,
+which are described in table~\ref{tab:verbose}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{|c|l|} \hline
+\it Level & \it Verbose output by: \\ \hline \hline
+1, 2 & only the back-end \\ \hline
+3 & back-end and front-end \\ \hline
+4 & name- and class-factory \\ \hline
+5 & same as 3 and 4 \\ \hline
+6 & same as 5 and 7 \\ \hline
+7 & IDL parser \\ \hline
+\end{tabular}
+\caption{\label{tab:verbose} Verbose levels}
+\end{center}
+\end{table}
+
+\subsubsection{{\tt -f}}
+Specifies additional compiler flags, which are hints for the compiler
+on how to generate code. See section~\ref{sec:comp-flags} for details.
+
+\subsection{Compiler Flags}
+\label{sec:comp-flags}
+The mentioned flags are specified as argument to the {\tt -f} option.
+So the argument {\tt ctypes} is used as {\tt -fctypes}.
+
+\subsubsection{{\tt F} - Filetype}
+This is a ``nested'' option, which itself takes arguments. These arguments
+are described in table~\ref{tab:filetype}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{|l|l|p{6cm}|} \hline
+Argument & Alternative & Meaning \\ \hline \hline
+idlfile & 1 & Generate one client implementation file per input IDL file. \\ \hline
+module & 2 & Generate one client implementation file per specified module. \\ \hline
+interface & 3 & Generate one client implementation file per specified interface. \\ \hline
+function & 4 & Generate one client implementation file per specified function. \\ \hline
+all & 5 & Generate one client implementation file for all IDL files. \\ \hline
+\end{tabular}
+\caption{\label{tab:filetype} Filetype Options}
+\end{center}
+\end{table}
+
+\subsubsection{{\tt ctypes}}
+This option specifies that the generated code should use C types rather than
+CORBA's C types. \verb|long| is used instead of \verb|CORBA_long|.
+CORBA types, which have no C expression, are used as CORBA types.
+
+{\it This option is respected in the Name Factory when generating type names.}
+
+\subsubsection{{\tt l4types}}
+This option specifies that the generated code should use L4 types\footnote{L4 Types
+are type aliases for commonly used C types, which might have different size across
+platforms. The long type is sometimes 16, 32, or 64 bits wide. These types are defined
+in the {\tt l4/sys/l4int.h} header.} rather than
+CORBA C types. \verb|l4_int32_t| is used instead of \verb|CORBA_long|.
+
+This implies that the generated code is used within an L4 environment, which
+knows these types. (L4Env does.)
+
+{\it This option is respected in the Name Factory when generating type names.}
+
+\subsubsection{{\tt opcodesize$=<$size$>$}}
+This is a nested option. It can be used to determine the
+size used by the opcode within the message. Its possible values are shown in
+table~\ref{tab:opcodesize}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{|l|l|l|} \hline
+Argument & Alternative & Meaning \\ \hline \hline
+byte & 1 & uses only 1 byte for the opcode \\ \hline
+short & 2 & uses 2 bytes for the opcode \\ \hline
+long & 4 & uses 4 bytes for the opcode (default) \\ \hline
+longlong & 8 & uses 8 bytes for the opcode \\ \hline
+\end{tabular}
+\caption{\label{tab:opcodesize} Opcode Size Options}
+\end{center}
+\end{table}
+
+\dice{} generated opcodes assume the opcode size of 4 bytes. If you specify
+other sizes than this one, you should also use the {\tt --no-opcode} option,
+so you can specify appropriate opcodes.
+
+\subsubsection{{\tt server-parameter}}
+If you specify the \verb|-fserver-parameter| switch the server
+loop interprets the \verb|void *| parameter as  a pointer to a
+\verb|CORBA_Environment| variable. It then uses the values of the 
+environment to specify a
+receive window for flexpages, timeouts, etc. 
+Without this option the parameter is ignored.
+
+\subsubsection{{\tt no-server-loop}}
+If specified no server loop will be generated. Instead only the
+dispatch function will be generated.
+
+\subsubsection{{\tt init-rcvstring$=<$function-name$>$}}
+Specifies a function to be used to initialize the receive buffers of indirect
+strings. This is the same as the \verb|init-rcvstring| attribute you may specify
+with an interface. If you specify this option, the function is applies to all 
+generated server loops, which have no \verb|init_rcvstring| attribute.
+
+\subsubsection{{\tt force-corba-alloc}}
+\label{sec:force-corba-alloc}
+
+\dice{} uses by default the function \verb|malloc| of
+the \verb|CORBA_Environment| to dynamically allocate 
+the memory for variable-sized receive parameters. To ienforce
+the usage of the \verb|CORBA_alloc|
+function, specify the option {\tt -fforce-corba-alloc}. The usage of
+\verb|CORBA_alloc| implies that there
+have to be potentially two implementations of \verb|CORBA_alloc| --- one
+for the client side and one for the server side. Also consider that
+an implementation of \verb|CORBA_alloc| in a client library may collide with
+a different implementation in another client library.
+If you use the \verb|malloc| member of the \verb|CORBA_Environment|,
+you can assign your implementation of malloc as you wish, e.g.
+\verb|liba_malloc|.
+
+You may detect the usage of malloc using the
+\verb|-Wprealloc| option with \dice{}.
+
+
+\subsubsection{{\tt force-c-bindings}}
+This option enforces the usage of the L4 API C bindings. Otherwise \dice{}
+may decide to generate inline assembler code for IPCs.
+
+\subsubsection{{\tt trace-server=<function>}}
+If specified the generated server code contains tracing code, which prints
+status information to the LOG server.
+
+If specified the $<$function$>$ is used to print the trace messages. The function
+has to have the same signature as the printf function.
+
+\subsubsection{{\tt trace-client=<function>}}
+If specified the generated client code contains tracing code, which prints
+status information to the LOG server.
+
+If specified the $<$function$>$ is used to print the trace messages. The function
+has to have the same signature as the printf function.
+
+\subsubsection{{\tt trace-dump-msgbuf=<function>}}
+This option makes \dice{} generate code which dumps the content of the message
+buffer just before and after each IPC. {\it This may produce an immense amount
+of status output.} 
+
+If specified the $<$function$>$ is used to print the trace messages. The function
+has to have the same signature as the printf function.
+
+\subsubsection{{\tt trace-dump-msgbuf-dwords$=<$number$>$}}
+This option restricts the number of dumped dwords to {\tt number}.
+
+\subsubsection{{\tt trace-function$=<$function$>$}}
+Each of the {\tt trace$-*$} options may be followed by {\tt $=<$function$>$}
+to specify an output function for this class of traces. The specified function
+has to follow the \verb|printf| syntax, which means it has to take as first
+argument an format string and then a variable number of arguments.
+
+To specify one function for all of the options, use {\tt trace-function}.
+The default function is \verb|printf|.
+
+\subsubsection{{\tt zero-msgbuf}}
+This option lets \dice{} generate server code which zeros and then
+re-initializes the message buffer, just before marshalling the return parameter 
+in the \verb|wait| or 
+\verb|reply-and-wait| functions. This provides
+the marshaling code with a clean message buffer.
+
+\subsubsection{{\tt use-symbols} or {\tt use-defines}}
+\dice{} generates IPC code which contains a lot if \verb|#ifdef|
+directives for profiling, frame-buffer use, etc. Since these \verb|#if|
+statements mostly only test for the existence of a symbol, \dice{}
+does a pre-evaluation of the symbols given via the {\tt -D} option,
+and generates code only for the specified options.
+
+This has the advantage that the generated code is smaller, because it
+contains only one code snippet with IPC code (for each function) instead
+of three or four.
+
+This option should only be used if you know that \dice{} is invoked with
+the same set of symbols used to compile the generated code.
+
+\subsubsection{{\tt test-no-success-message}}
+The testsuite generally prints a message if a parameter is transmitted 
+correctly and it prints a message if data is not transmitted correctly.
+With this option only error messages are printed.
+
+\subsubsection{\tt const-as-define}
+Constants are usually printed in the generated header files as const
+declarations (\verb|const <type> <var> = <value>;|). Using this option,
+they are written as define statements (\verb|#define <var> <value>|).
+
+\subsubsection{\tt no-l4dir-include-path}
+To know the CORBA Types, \dice{} imports the file \verb|dice/dice-corba-types.h|
+before parsing the IDL file. The file can (usually) be found in
+the L4 trees include dir. Therefore the L4 include dir has to be
+known to include this file. This directory is automatically added to
+the include search paths. If you do not wish to set this path, then
+use the {\tt no-l4dir-include-path} option. The L4 tree's root is
+determined by the configure switch \verb|--with-l4dir| which defaults
+to \verb|../..|.
+
+\section{Warnings}
+\dice{} will print warnings for different conditions if the respective
+option is given. This section gives an overview of the available warning
+options. All warning options start with \verb|-W|, the following options
+have to be added to \verb|-W|.
+
+\subsubsection{ignore-duplicate-fids}
+This option will print warnings if there exist duplicate function identifiers
+within an interface. This will normally cause an error and compilation 
+abort.
+
+\subsubsection{prealloc}
+Print warnings if the malloc member of the CORBA Environment or the
+\verb|CORBA_alloc| function are used.
+
+\subsubsection{no-maxsize}
+Print warnings if a parameter has no \verb|max_is| attribute assigned
+to assign a maximum size. \dice{} uses heuristics to determine its
+maximum size. Using this option you may detect parameters which may
+need an \verb|max_is| attribute to increase or decrease the memory
+allocate for them.
+
+\subsubsection{all}
+Turns on all of the above warnings.
+

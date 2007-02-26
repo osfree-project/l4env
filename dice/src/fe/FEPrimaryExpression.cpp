@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -25,8 +25,8 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "defines.h"
 #include "fe/FEPrimaryExpression.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEPrimaryExpression)
     
@@ -127,7 +127,8 @@ bool CFEPrimaryExpression::IsOfType(TYPESPEC_TYPE nType)
           return GetOperand()->IsOfType(nType);
           break;
       case EXPR_INT:
-          return (nType == TYPE_INTEGER);
+          return (nType == TYPE_INTEGER)
+		    || (nType == TYPE_LONG);
           break;
       case EXPR_FLOAT:
           return (nType == TYPE_FLOAT || nType == TYPE_DOUBLE || nType == TYPE_LONG_DOUBLE);
@@ -167,25 +168,54 @@ CObject *CFEPrimaryExpression::Clone()
  */
 void CFEPrimaryExpression::Serialize(CFile * pFile)
 {
-    if (pFile->IsStoring())
-      {
-	  switch (m_nType)
-	    {
-	    case EXPR_INT:
-		pFile->PrintIndent("<expression>%d</expression>\n", m_nValue);
-		break;
-	    case EXPR_FLOAT:
-		pFile->PrintIndent("<expression>%f</expression>\n", m_fValue);
-		break;
-	    case EXPR_PAREN:
-		pFile->PrintIndent("<parenthesis_expression>\n");
-		pFile->IncIndent();
-		GetOperand()->Serialize(pFile);
-		pFile->DecIndent();
-		pFile->PrintIndent("</parenthesis_expression>\n");
-		break;
-	    default:
-		break;
-	    }
-      }
+	if (pFile->IsStoring())
+	{
+		switch (m_nType)
+		{
+		case EXPR_INT:
+			pFile->PrintIndent("<expression>%d</expression>\n", m_nValue);
+			break;
+		case EXPR_FLOAT:
+			pFile->PrintIndent("<expression>%f</expression>\n", m_fValue);
+			break;
+		case EXPR_PAREN:
+			pFile->PrintIndent("<parenthesis_expression>\n");
+			pFile->IncIndent();
+			GetOperand()->Serialize(pFile);
+			pFile->DecIndent();
+			pFile->PrintIndent("</parenthesis_expression>\n");
+			break;
+		default:
+			break;
+		}
+	}
 }
+
+/** \brief print the object to a string
+ *  \return a string with the content of the object
+ */
+String CFEPrimaryExpression::ToString()
+{
+    String ret;
+	switch (m_nType)
+	{
+	case EXPR_INT:
+		ret += (int)m_nValue;
+		break;
+	case EXPR_FLOAT:
+	    ret += "float" /* m_fValue */;
+		break;
+	case EXPR_PAREN:
+	    ret += "(";
+		if (GetOperand())
+		    ret += GetOperand()->ToString();
+		else
+		    ret += "(no operand)";
+		ret += ")";
+		break;
+	default:
+		break;
+	}
+    return ret;
+}
+

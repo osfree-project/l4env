@@ -1,5 +1,6 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
+SYSTEMS		= x86-l4v2 x86-l4x0
 TARGET		= libl4exec.a
 MODE		= l4env
 CLIENTIDL	= exec.idl

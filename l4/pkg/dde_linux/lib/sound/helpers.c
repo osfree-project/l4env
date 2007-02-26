@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/sound/helpers.c
+ * \file   dde_linux/lib/sound/helpers.c
+ * \brief  Linux DDE Soundcore Helpers
  *
- * \brief	Linux DDE Soundcore Helpers
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_sound
  * \defgroup mod_sound_helpers Linux DDE Soundcore Helpers
  *
@@ -16,7 +21,6 @@
  * This is a highly sophisticated VFS layer emulation and initialization
  * implementation for <em>Linux DDE Soundcore</em>. *haha*
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -31,7 +35,6 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
 #include "soundcore.h"
@@ -70,11 +73,11 @@ static int snd_open_dev(int type, int num)
   fops = soundcore_req_fops(type, num);
   if (!fops)
     return -L4_ENOTFOUND; /* ENODEV */
-  
+
   devs[type][num].fops = fops;
   file = &devs[type][num].file;
   inode = &devs[type][num].inode;
-  
+
   file->f_mode = FMODE_READ | FMODE_WRITE;
   file->f_flags = O_RDWR;
   file->f_pos = 0;
@@ -116,7 +119,7 @@ int l4dde_snd_open_mixer(int num)
  */
 int l4dde_snd_close(int dev)
 {
-  int ret;
+  int ret=0;
   struct devs *d = (struct devs *) devs;
   struct file_operations* fops = d[dev].fops;
   struct file *file;
@@ -128,9 +131,10 @@ int l4dde_snd_close(int dev)
 
   file = &d[dev].file;
   inode = &d[dev].inode;
-  
+
   /* should always return 0 */
-  ret = fops->release(inode, file);
+  if (fops->release)
+    ret = fops->release(inode, file);
 
 #if DEBUG_SOUND
   DMSG("device closed (%d)\n", ret);
@@ -154,8 +158,11 @@ int l4dde_snd_read(int dev, void *buf, int count)
     return -L4_ESKIPPED;
 
   file = &d[dev].file;
-  
-  ret = fops->read(file, buf, count, &file->f_pos);
+
+  if (fops->read)
+    ret = fops->read(file, buf, count, &file->f_pos);
+  else
+    ret = -L4_EINVAL;
 
 #if DEBUG_SOUND_READ
   DMSG("read from device (%d)\n", ret);
@@ -179,8 +186,11 @@ int l4dde_snd_write(int dev, const void *buf, int count)
     return -L4_ESKIPPED;
 
   file = &d[dev].file;
-  
-  ret = fops->write(file, buf, count, &file->f_pos);
+
+  if (fops->write)
+    ret = fops->write(file, buf, count, &file->f_pos);
+  else
+    ret = -L4_EINVAL;
 
 #if DEBUG_SOUND_WRITE
   DMSG("write on device (%d)\n", ret);
@@ -206,8 +216,11 @@ int l4dde_snd_ioctl(int dev, int req, l4_addr_t arg)
 
   file = &d[dev].file;
   inode = &d[dev].inode;
-  
-  ret = fops->ioctl(inode, file, req, arg);
+
+  if (fops->ioctl)
+    ret = fops->ioctl(inode, file, req, arg);
+  else
+    ret = -L4_EINVAL;
 
 #if DEBUG_SOUND
   DMSG("ioctl on device (%d)\n", ret);

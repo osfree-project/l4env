@@ -7,20 +7,20 @@ INTERFACE:
     it provides a registry that ensures that only one receiver can sign up
     to receive interrupt IPC messages.
  */
-class irq_t : public Irq_alloc, public Sender
+class Irq : public Irq_alloc, public Sender
 {
 
  
 private:
-  irq_t();			// default constructors remain undefined
-  irq_t(irq_t&);
+  Irq();			// default constructors remain undefined
+  Irq(Irq&);
  
 protected:
   int _queued;
 
 public:
 
-  static irq_t *lookup( unsigned irq );
+  static Irq *lookup( unsigned irq );
 
 };
 
@@ -35,9 +35,9 @@ IMPLEMENTATION:
 #include "globals.h"
 
 IMPLEMENT inline
-irq_t *irq_t::lookup( unsigned irq )
+Irq *Irq::lookup( unsigned irq )
 {
-  return static_cast<irq_t*>(Irq_alloc::lookup(irq));
+  return static_cast<Irq*>(Irq_alloc::lookup(irq));
 }
 
 
@@ -46,7 +46,7 @@ irq_t *irq_t::lookup( unsigned irq )
  */
 PUBLIC 
 explicit 
-irq_t::irq_t(unsigned irqnum)
+Irq::Irq(unsigned irqnum)
   : Irq_alloc(irqnum), Sender (L4_uid::irq(irqnum)), _queued (0)
 {}
 
@@ -57,7 +57,7 @@ irq_t::irq_t(unsigned irqnum)
  */
 PRIVATE inline NEEDS ["atomic.h"]
 int
-irq_t::consume ()
+Irq::consume ()
 {
   int o;
 

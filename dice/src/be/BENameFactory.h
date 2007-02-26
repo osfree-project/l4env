@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -102,6 +102,7 @@ public:
     virtual String GetOpcodeConst(CFEOperation * pFEOperation, CBEContext * pContext);
     virtual String GetSrvReturnVariable(CBEContext * pContext);
     virtual String GetOpcodeVariable(CBEContext * pContext);
+    virtual String GetReplyCodeVariable(CBEContext * pContext);
     virtual String GetReturnVariable(CBEContext * pContext);
     virtual String GetTypeDefine(String sTypedefName, CBEContext * pContext);
     virtual String GetHeaderDefine(String sFilename, CBEContext * pContext);
@@ -111,14 +112,16 @@ public:
     virtual String GetFunctionName(CFEOperation * pFEOperation, CBEContext * pContext);
     virtual String GetTypeName(int nType, bool bUnsigned, CBEContext * pContext, int nSize = 0);
     virtual String GetTypeName(CFEBase *pFERefType, String sName, CBEContext *pContext);
-    virtual String GetFileName(CFEBase * pFEBase, CBEContext * pContext);
+    virtual String GetFileName(CFEBase *pFEBase, CBEContext * pContext);
     virtual String GetSwitchVariable();
     virtual String GetFunctionBitMaskConstant();
     virtual String GetInterfaceNumberShiftConstant();
     virtual String GetServerParameterName();
     virtual String GetIncludeFileName(CFEBase * pFEBase, CBEContext * pContext);
+	virtual String GetIncludeFileName(String sBaseName, CBEContext* pContext);
     virtual String GetMessageBufferTypeName(CBEContext *pContext);
     virtual String GetDummyVariable(CBEContext* pContext);
+	virtual String GetExceptionWordVariable(CBEContext *pContext);
 
 protected:
     virtual String GetCTypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize);

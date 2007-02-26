@@ -36,12 +36,8 @@ public:
   ~CL4X0aBEReplyAnyWaitAnyFunction();
 
 protected:
-    virtual void WriteAsmLongFpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmShortFpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

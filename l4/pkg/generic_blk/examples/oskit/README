@@ -1,0 +1,13 @@
+blk_oskit is an example implementation of the generic_blk interface. It uses
+the OSKit linux device drvers.
+
+Usage:
+module = (nd)/boot/blk_oskit [-i|--ide] [-s|--scsi=<driver>] [-d|--device=<device>] [-w|--write]
+  -i|--ide               use IDE driver
+  -s|--scsi=<driver>     use SCSI driver <driver>, currently ncrc8xx and
+                         buslogic are supported
+  -d|--device=<device>   open device <device>, devices are specified by
+                         Linux names, e.g. hda1 for the fist partition of 
+                         an IDE drive
+  -w|--write             open device writeable, default is to open a device
+                         read-only

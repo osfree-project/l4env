@@ -120,7 +120,10 @@ typedef struct
 
   volatile l4_cpu_time_t clock;               ///< L4 system clock (µs)
 
-  l4_uint32_t            reserved3[6];
+  l4_uint32_t            reserved3[2];
+  l4_uint32_t            frequency_cpu;       ///< CPU frequency in kHz
+  l4_uint32_t            frequency_bus;       ///< Bus frequency
+  l4_uint32_t            reserved4[2];
 
   /* System call entries */
   l4_uint32_t            sys_ipc;             ///< ipc syscall entry

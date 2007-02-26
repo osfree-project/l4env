@@ -5,7 +5,7 @@
  *	\date	03/08/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -49,6 +49,9 @@
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "fe/FEFile.h"
+#include "fe/FEExpression.h"
+
+#include "TypeSpec-Type.h"
 
 /** simple test-string for the test-function */
 #define TEST_STRING "This is a teststring for dice."
@@ -98,10 +101,13 @@ bool CBETestFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pC
 {
     // call base class for basic initialization
     if (!CBEFunction::CreateBackEnd(pContext))
+	{
+        VERBOSE("%s failed because base function could not be created\n", __FUNCTION__);
         return false;
+	}
 
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     int nOldType = pContext->GetFunctionType();
 
     // check the attribute
@@ -112,7 +118,7 @@ bool CBETestFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pC
 
     String sFunctionName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
     m_pFunction = pRoot->FindFunction(sFunctionName);
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     // set call parameters
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
@@ -120,7 +126,7 @@ bool CBETestFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pC
     {
         VectorElement *pIterD = pParameter->GetFirstDeclarator();
         CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pIterD);
-        ASSERT(pDecl);
+        assert(pDecl);
         m_pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
     }
 
@@ -192,7 +198,7 @@ void CBETestFunction::WriteFunctionDefinition(CBEFile * pFile, CBEContext * pCon
  */
 void CBETestFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
@@ -223,22 +229,43 @@ void CBETestFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CBEContext
  */
 void CBETestFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    bool bHasVariableSizedParameters = false;
+	int nVariableSizedArrayDimensions = 0;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
     {
         pFile->PrintIndent("");
         pParameter->WriteIndirect(pFile, pContext);
         pFile->Print(";\n");
-        if (pParameter->IsVariableSized())
-            bHasVariableSizedParameters = true;
+
+	    // now check each decl for array dimensions
+		VectorElement *pIDecl = pParameter->GetFirstDeclarator();
+		CBEDeclarator *pDecl;
+		while ((pDecl = pParameter->GetNextDeclarator(pIDecl)) != 0)
+		{
+		    int nArrayDims = pDecl->GetStars();
+		    // get array bounds
+			VectorElement *pIArray = pDecl->GetFirstArrayBound();
+			CBEExpression *pBound;
+			while ((pBound = pDecl->GetNextArrayBound(pIArray)) != 0)
+			{
+			    if (!pBound->IsOfType(EXPR_INT))
+                    nArrayDims++;
+			}
+			// calc max
+			nVariableSizedArrayDimensions = (nArrayDims > nVariableSizedArrayDimensions) ? nArrayDims : nVariableSizedArrayDimensions;
+		}
+		// if type of parameter is array, check that too
+		if (pParameter->GetType()->GetSize() < 0)
+		    nVariableSizedArrayDimensions++;
+		// if array dims
         // if parameter has size attributes, we assume
         // that it is an array of some sort
-        if (pParameter->FindAttribute(ATTR_SIZE_IS) ||
-            pParameter->FindAttribute(ATTR_LENGTH_IS))
-            bHasVariableSizedParameters = true;
+        if ((pParameter->FindAttribute(ATTR_SIZE_IS) ||
+            pParameter->FindAttribute(ATTR_LENGTH_IS)) &&
+			(nVariableSizedArrayDimensions == 0))
+		    nVariableSizedArrayDimensions = 1;
     }
     // write return variable
     if (!m_pFunction->GetReturnType()->IsVoid())
@@ -248,11 +275,15 @@ void CBETestFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCo
         pFile->Print(";\n");
     }
     // for variable sized arrays we need a temporary variable
-    if (bHasVariableSizedParameters)
-    {
+	for (int i=0; i<nVariableSizedArrayDimensions; i++)
+	{
         String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		sTmpVar += i;
         pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
     }
+	// need a "pure" temp var as well
+	String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+	pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
 }
 
  /**	\brief writes the initialization of the parameters
@@ -266,7 +297,7 @@ void CBETestFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCo
  */
 void CBETestFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     // init return variable
     if (!m_pFunction->GetReturnType()->IsVoid())
     {
@@ -289,12 +320,25 @@ void CBETestFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * 
         // init global variables (all)
         m_pParameter = pParameter;
         InitGlobalVariable(pFile, pParameter, pContext);
-        m_pParameter = 0;
         // set local variables (only INs)
         if (!(pParameter->FindAttribute(ATTR_IN)))
             continue;
         InitLocalVariable(pFile, pParameter, pContext);
-        //pParameter->WriteTestInitialization(pFile, pContext);
+        m_pParameter = 0;
+    }
+	// allocate memory for [out, prealloc] variables
+    pIter = m_pFunction->GetFirstSortedParameter();
+    while ((pParameter = m_pFunction->GetNextSortedParameter(pIter)) != 0)
+    {
+        // init global variables (all)
+        m_pParameter = pParameter;
+        // only initialize preallocated out variables
+        if (!(pParameter->FindAttribute(ATTR_OUT) &&
+		      pParameter->FindAttribute(ATTR_PREALLOC)))
+            continue;
+	    // allocate memory
+        InitPreallocVariable(pFile, pParameter, pContext);
+        m_pParameter = 0;
     }
 }
 
@@ -306,7 +350,7 @@ void CBETestFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * 
  */
 void CBETestFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     // get return variable
     String sReturnVar;
     if (!m_pFunction->GetReturnType()->IsVoid())
@@ -325,7 +369,7 @@ void CBETestFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CBETestFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
@@ -336,6 +380,15 @@ void CBETestFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
     if (!m_pFunction->GetReturnType()->IsVoid())
     {
         CompareVariable(pFile, m_pFunction->GetReturnVariable(), pContext);
+    }
+	// free [out, prealloc] variable
+    pIter = m_pFunction->GetFirstParameter();
+    while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
+    {
+        if (!(pParameter->FindAttribute(ATTR_OUT) &&
+		      pParameter->FindAttribute(ATTR_PREALLOC)))
+	        continue;
+	    FreePreallocVariable(pFile, pParameter, pContext);
     }
 }
 
@@ -389,6 +442,8 @@ bool CBETestFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEC
  */
 void CBETestFunction::InitGlobalVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, CBEContext * pContext)
 {
+    if (!m_pFunction)
+	    m_pFunction = pParameter->GetFunction();
     VectorElement *pIter = pParameter->GetFirstDeclarator();
     CBEDeclarator *pDecl;
     while ((pDecl = pParameter->GetNextDeclarator(pIter)) != 0)
@@ -414,8 +469,7 @@ void CBETestFunction::InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBE
         return;
 
     // test if string
-    ASSERT(m_pParameter);
-    bool bIsString = m_pParameter->IsString();
+    assert(m_pParameter);
 
     // get current decl
     CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
@@ -424,40 +478,106 @@ void CBETestFunction::InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBE
         // is first -> test for array
         if (pCurrent->pDeclarator->IsArray())
         {
-            return InitGlobalArray(pFile, pType, pContext);
+		    InitGlobalArray(pFile, pType, pContext);
+            return;
         }
+		// if there are size_is or length_is attribtes and the
+		// decl has stars, then this is a variable sized array
+		if ((pCurrent->pDeclarator->GetStars() > 0) &&
+		    (m_pParameter->FindAttribute(ATTR_SIZE_IS) ||
+			 m_pParameter->FindAttribute(ATTR_LENGTH_IS)))
+		{
+		    InitGlobalArray(pFile, pType, pContext);
+			return;
+		}
+		// since the declarator can also be a member of a struct
+        // check the direct parent of the declarator
+		if (!pCurrent->pDeclarator->GetFunction() &&
+		    pCurrent->pDeclarator->GetStructType() &&
+			(pCurrent->pDeclarator->GetStars() > 0))
+		{
+		    CBETypedDeclarator *pMember = pCurrent->pDeclarator->GetStructType()->FindMember(pCurrent->pDeclarator->GetName());
+			if (pMember &&
+			    (pMember->FindAttribute(ATTR_SIZE_IS) ||
+			     pMember->FindAttribute(ATTR_LENGTH_IS)))
+			{
+				CBETypedDeclarator *pOldParam = m_pParameter;
+				m_pParameter = pMember;
+			    InitGlobalArray(pFile, pType, pContext);
+				m_pParameter = pOldParam;
+				return;
+			}
+		}
         // a string is similar to an array, test for it
-        if (bIsString)
+        if (m_pParameter->IsString())
         {
-            return InitGlobalString(pFile, pType, pContext);
+		    InitGlobalString(pFile, pType, pContext);
+            return;
         }
     }
 
     // test user defined types
+	Vector vBounds(RUNTIME_CLASS(CBEExpression));
     while (pType->IsKindOf(RUNTIME_CLASS(CBEUserDefinedType)))
     {
         // search for original type and replace it
         CBERoot *pRoot = pType->GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         CBETypedef *pUserType = pRoot->FindTypedef(((CBEUserDefinedType *) pType)->GetName());
         // if 0: not defined in IDL files -> use user-provided init function
-        if (pUserType)
+		if (!pUserType || !pUserType->GetType())
+		    break;
+		// assign aliased type
+		pType = pUserType->GetType();
+        // if alias is array?
+        CBEDeclarator *pAlias = pUserType->GetAlias();
+        // check if type has alias (it should, since the alias is
+        // the name of the user defined type) and if it is an array
+		// add the boundaries to the vector.
+        if (pAlias && pAlias->IsArray())
         {
-            if (pUserType->GetType())
-                pType = pUserType->GetType();
+            // add array bounds of alias to temp vector
+            VectorElement *pI = pAlias->GetFirstArrayBound();
+            CBEExpression *pBound;
+            while ((pBound = pAlias->GetNextArrayBound(pI)) != 0)
+            {
+                vBounds.Add(pBound);
+            }
         }
     }
+
+	// test if we added some array bounds from user defined types
+	if (vBounds.GetSize() > 0)
+	{
+	    VectorElement *pI;
+		// add bounds to top declarator
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->AddArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// call MarshalArray
+		InitGlobalArray(pFile, pType, pContext);
+		// remove those array decls again
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->RemoveArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// return (work done)
+		return;
+	}
 
     // test for struct
     if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
     {
-        return InitGlobalStruct(pFile, (CBEStructType*)pType, pContext);
+	    InitGlobalStruct(pFile, (CBEStructType*)pType, pContext);
+        return;
     }
 
     // test for union
     if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
     {
-        return InitGlobalUnion(pFile, (CBEUnionType*)pType, pContext);
+	    InitGlobalUnion(pFile, (CBEUnionType*)pType, pContext);
+        return;
     }
 
     // if this is the size-declarator of a string, it
@@ -475,9 +595,9 @@ void CBETestFunction::InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBE
         m_vDeclaratorStack.Write(pFile, false, true, pContext);
         pFile->Print(" = %d;\n", strlen(TEST_STRING)+1);
     }
-    // if no IS parameter or IS parameter is not string, then use random function
-    if (!pIsParam || (pIsParam && !pIsParam->IsString()))
+	else
     {
+		// if no IS parameter or IS parameter is not string, then use random function
         // init variable
         pFile->PrintIndent("");
         m_vDeclaratorStack.Write(pFile, false, true, pContext);
@@ -500,49 +620,52 @@ void CBETestFunction::InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBE
  */
 void CBETestFunction::WriteModulo(CBEFile *pFile, CBEContext *pContext)
 {
-    // get function
     CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+	String sName = pCurrent->pDeclarator->GetName();
+
+	CBETypedDeclarator *pParameter = 0;
+    // get function
     CBEFunction *pFunction = pCurrent->pDeclarator->GetFunction();
     if (pFunction)
+	{
+	    pParameter = pFunction->FindParameterIsAttribute(ATTR_SIZE_IS, sName);
+        if (!pParameter)
+		    pParameter = pFunction->FindParameterIsAttribute(ATTR_LENGTH_IS, sName);
+	}
+	CBEStructType *pStruct = pCurrent->pDeclarator->GetStructType();
+	if (!pParameter && pStruct)
+	{
+	    pParameter = pStruct->FindMemberIsAttribute(ATTR_SIZE_IS, sName);
+		if (!pParameter)
+		    pParameter = pStruct->FindMemberIsAttribute(ATTR_LENGTH_IS, sName);
+	}
+	if (pParameter)
     {
-        // iterate over parameters
-        VectorElement *pIterP = pFunction->GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = pFunction->GetNextParameter(pIterP)) != 0)
-        {
-            // check if parameter has size attribute
-            CBEAttribute *pSizeAttr = pParameter->FindAttribute(ATTR_SIZE_IS);
-            if (!pSizeAttr)
-                pSizeAttr = pParameter->FindAttribute(ATTR_LENGTH_IS);
-            if (pSizeAttr)
-            {
-                // check if attributes declarator is current
-                VectorElement *pIterA = pSizeAttr->GetFirstIsAttribute();
-                CBEDeclarator *pIsDecl;
-                while ((pIsDecl = pSizeAttr->GetNextIsAttribute(pIterA)) != 0)
-                {
-                    if (pIsDecl->GetName() == pCurrent->pDeclarator->GetName())
-                    {
-                        // get first declarator of parameter
-                        VectorElement *pIterD = pParameter->GetFirstDeclarator();
-                        CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pIterD);
-                        if (!pDecl)
-                            break;
-                        // get max bound of parameter
-                        VectorElement *pIterB = pDecl->GetFirstArrayBound();
-                        CBEExpression *pBound = pDecl->GetNextArrayBound(pIterB);
-                        int nMax = 0;
-                        if (pBound)
-                            nMax = pBound->GetIntValue();
-                        else
-                            nMax = pContext->GetSizes()->GetMaxSizeOfType(pParameter->GetType()->GetFEType());
-                        // and divide modulo
-                        pFile->Print("%%%d", nMax);
-                    }
-                }
-            }
-        }
-    }
+		// get first declarator of parameter
+		VectorElement *pIterD = pParameter->GetFirstDeclarator();
+		CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pIterD);
+		assert(pDecl);
+		// get max bound of parameter
+		int nMax = 1;
+		// if there are multiple bound, they multiply
+		// if one evaluates to 0 (e.g. variable sized),
+		// they all are zero
+		VectorElement *pIterB = pDecl->GetFirstArrayBound();
+		CBEExpression *pBound;
+		while ((pBound = pDecl->GetNextArrayBound(pIterB)) != 0)
+			nMax *= pBound->GetIntValue();
+		// if variable sized, get max size of type
+		if (nMax <= 1)
+		{
+			CBEType *pType = pParameter->GetType();
+			CBEAttribute *pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS);
+			if (pAttr)
+				pType = pAttr->GetAttrType();
+			nMax = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
+		}
+		// and divide modulo
+		pFile->Print("%%%d", nMax);
+	}
 }
 
 /** \brief makes the declarator positive if it's a size declarator
@@ -597,6 +720,107 @@ void CBETestFunction::WriteAbs(CBEFile *pFile, CBEContext *pContext)
 /** \brief inits a global array variable
  *  \param pFile the file to write to
  *  \param pType the base type of the array
+ *  \param pIter the iterator pointing to the current array dimension
+ *  \param nLevel the number of the current array dimension
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitGlobalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext)
+{
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+    // get array bound
+	CBEExpression *pBound = pDecl->GetNextArrayBound(pIter);
+	int nBound = pBound->GetIntValue();
+	// iterate over elements
+	for (int nIndex = 0; nIndex < nBound; nIndex++)
+	{
+	    pCurrent->SetIndex(nIndex, nLevel);
+	    // if more levels, go down
+		if (pIter)
+		    InitGlobalConstArray(pFile, pType, pIter, nLevel+1, pContext);
+		else
+            InitGlobalDeclarator(pFile, pType, pContext);
+	}
+	// reset index, so the nesting of calls works
+	pCurrent->SetIndex(-1, nLevel);
+}
+
+/** \brief inits a global array variable
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array
+ *  \param pIter the iterator pointing to the next array dimension
+ *  \param nLevel the number of the current array dimension
+ *  \param pSizeAttr the attroibute containing the size parameter for the variable sized array
+ *  \param pIAttr the iterator pointing to the next parameter of the size attribute
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitGlobalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext)
+{
+    // get current decl
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+	// if the remaining number of boundaries is equal to the remaining number
+	// of size attribute's parameters, then we use the size parameters
+	// (its a [size_is(len)] int array[<int>])
+	CBEDeclarator *pSizeParam = 0;
+	if (pSizeAttr && (pDecl->GetRemainingNumberOfArrayBounds(pIter) <= pSizeAttr->GetRemainingNumberOfIsAttributes(pIAttr)))
+		pSizeParam = pSizeAttr->GetNextIsAttribute(pIAttr);
+	// get next array dimension
+    CBEExpression *pBound = 0;
+	if (pIter)
+	    pBound = pDecl->GetNextArrayBound(pIter);
+	// if const array dimension, we iterate over it
+	if (pBound && pBound->IsOfType(EXPR_INT) && !pSizeParam)
+	{
+		int nBound = pBound->GetIntValue();
+		// iterate over elements
+		for (int nIndex = 0; nIndex < nBound; nIndex++)
+		{
+		    pCurrent->SetIndex(nIndex, nLevel);
+			// if more levels, go down
+			if (pIter)
+				InitGlobalVarArray(pFile, pType, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+			else
+				InitGlobalDeclarator(pFile, pType, pContext);
+		}
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+	}
+	// otherwise we write the iterations
+	else
+    {
+		// get a temp var
+		String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		// add level
+		sTmpVar += nLevel;
+        // write for loop
+        pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
+		// might be member of a struct, that's why we also pass the stack
+        if (pSizeParam)
+            pSizeParam->WriteGlobalName(pFile, &m_vDeclaratorStack, pContext);
+        pFile->Print("; %s++)\n", (const char*)sTmpVar);
+        pFile->PrintIndent("{\n");
+        pFile->IncIndent();
+
+        // set index to -2 (var size)
+        pCurrent->SetIndex(sTmpVar, nLevel);
+		// if we have more array dimensions, check them as well
+		if (pIter)
+		    InitGlobalVarArray(pFile, pType, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+		else
+			InitGlobalDeclarator(pFile, pType, pContext);
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+
+        // close loop
+        pFile->DecIndent();
+        pFile->PrintIndent("}\n");
+	}
+}
+
+/** \brief inits a global array variable
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array
  *  \param pContext the context of the write operation
  *
  * because the temp variable is of type unsigned the loop to set and initialize the
@@ -612,19 +836,15 @@ void CBETestFunction::InitGlobalArray(CBEFile *pFile, CBEType *pType, CBEContext
     bool bFixedSize = (pDecl->GetSize() >= 0) &&
                       !(m_pParameter->FindAttribute(ATTR_SIZE_IS)) &&
                       !(m_pParameter->FindAttribute(ATTR_LENGTH_IS));
+    // check if somebody is already iterating over array bounds
+	int nLevel = pCurrent->GetUsedIndexCount();
+	// skip array bounds already in use
+	int i = nLevel;
+	VectorElement *pIter = pDecl->GetFirstArrayBound();
+	while (i-- > 0) pDecl->GetNextArrayBound(pIter);
     // if fixed size
     if (bFixedSize)
-    {
-        // for each dimension
-        VectorElement *pIter = pDecl->GetFirstArrayBound();
-        CBEExpression *pBound;
-        while ((pBound = pDecl->GetNextArrayBound(pIter)) != 0)
-        {
-            // now loop for this bound
-            for (pCurrent->nIndex = 0; pCurrent->nIndex < pBound->GetIntValue(); pCurrent->nIndex++)
-                InitGlobalDeclarator(pFile, pType, pContext);
-        }
-    }
+		InitGlobalConstArray(pFile, pType, pIter, nLevel, pContext);
     else
     {
         // set tmp to size
@@ -634,11 +854,6 @@ void CBETestFunction::InitGlobalArray(CBEFile *pFile, CBEType *pType, CBEContext
         //     ...
         // }
 
-        // set tmp var to size
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-
-        // write for loop
-        pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
         // use the global name of the size decl for the initialization
         CBEAttribute *pAttr = m_pParameter->FindAttribute(ATTR_SIZE_IS);
         if (!pAttr)
@@ -651,25 +866,34 @@ void CBETestFunction::InitGlobalArray(CBEFile *pFile, CBEType *pType, CBEContext
                 pAttr = m_pParameter->FindAttribute(ATTR_MAX_IS);
                 if (!pAttr)
                 {
-                    ASSERT(false);
+                    assert(false);
                 }
             }
         }
         VectorElement *pIter = pAttr->GetFirstIsAttribute();
         CBEDeclarator *pSizeParam = pAttr->GetNextIsAttribute(pIter);
-        if (pSizeParam)
-            pSizeParam->WriteGlobalName(pFile, pContext);
-        pFile->Print("; %s++)\n", (const char*)sTmpVar);
-        pFile->PrintIndent("{\n");
-        pFile->IncIndent();
-
-        // set index to -2 (var size)
-        pCurrent->SetIndex(sTmpVar);
-        InitGlobalDeclarator(pFile, pType, pContext);
-
-        // close loop
-        pFile->DecIndent();
-        pFile->PrintIndent("}\n");
+		// allocate memory if the the variable array is a member of a struct,
+		// because global arrays are statically allocated for parameters only
+		if ((m_vDeclaratorStack.GetSize() > 1) &&
+            (pCurrent->pDeclarator->GetArrayDimensionCount() == 0))
+		{
+			pFile->PrintIndent("");
+			m_vDeclaratorStack.Write(pFile, true, true, pContext);
+			pFile->Print(" = ");
+			m_pParameter->GetType()->WriteCast(pFile, true, pContext);
+			pContext->WriteMalloc(pFile, this);
+			pFile->Print("(");
+			if (pSizeParam)
+				pSizeParam->WriteGlobalName(pFile, &m_vDeclaratorStack, pContext);
+			if (m_pParameter->GetType()->GetSize() != 1)
+			{
+			    pFile->Print("*sizeof");
+				m_pParameter->GetType()->WriteCast(pFile, false, pContext);
+			}
+			pFile->Print("); /* glob array */\n");
+		}
+		// assign values
+		InitGlobalVarArray(pFile, pType, pIter, nLevel, pAttr, pAttr->GetFirstIsAttribute(), pContext);
     }
 }
 
@@ -717,7 +941,7 @@ void CBETestFunction::InitGlobalUnion(CBEFile *pFile, CBEUnionType *pType, CBECo
     else
     {
         // marshal switch variable
-        ASSERT(pType->GetSwitchVariable());
+        assert(pType->GetSwitchVariable());
         InitGlobalVariable(pFile, pType->GetSwitchVariable(), pContext);
         // divide this variable modulo the case number
         String sSwitchVar = pType->GetSwitchVariableName();
@@ -782,6 +1006,62 @@ void CBETestFunction::InitGlobalString(CBEFile * pFile, CBEType * pType, CBECont
     pFile->Print(" = \"%s\\0\";\n", TEST_STRING);
 }
 
+/** \brief initializes a preallocated variables
+ *  \param pFile the file to write to
+ *  \param pParameter the parameter to pre-allocate
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitPreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext)
+{
+    CBEType *pType = pParameter->GetType();
+	CBEAttribute *pAttr;
+	if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+	    pType = pAttr->GetAttrType();
+    VectorElement *pIter = pParameter->GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = pParameter->GetNextDeclarator(pIter)) != 0)
+    {
+	    // only the top-level parameters can be preallocated
+		// <var> = (type*)malloc(size);
+		m_vDeclaratorStack.Push(pDecl);
+		pFile->PrintIndent("");
+		m_vDeclaratorStack.Write(pFile, true, false, pContext);
+		pFile->Print(" = ");
+		pType->WriteCast(pFile, true, pContext);
+		pContext->WriteMalloc(pFile, pParameter->GetFunction());
+		pFile->Print("(");
+		pParameter->WriteGetSize(pFile, &m_vDeclaratorStack, pContext);
+		pFile->Print("); /* test */\n");
+		m_vDeclaratorStack.Pop();
+    }
+}
+
+/** \brief frees a preallocated variables
+ *  \param pFile the file to write to
+ *  \param pParameter the parameter to free
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::FreePreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext)
+{
+    CBEType *pType = pParameter->GetType();
+	CBEAttribute *pAttr;
+	if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+	    pType = pAttr->GetAttrType();
+    VectorElement *pIter = pParameter->GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = pParameter->GetNextDeclarator(pIter)) != 0)
+    {
+	    // only the top-level parameters can be preallocated
+		// free(<var>);
+		m_vDeclaratorStack.Push(pDecl);
+		pFile->PrintIndent("");
+		pContext->WriteFree(pFile, pParameter->GetFunction());
+		pFile->Print("(");
+		m_vDeclaratorStack.Write(pFile, true, false, pContext);
+		pFile->Print(");\n");
+		m_vDeclaratorStack.Pop();
+    }
+}
 /** \brief initializes a local variable
  *  \param pFile the file to write to
  *  \param pParameter the parameter to initialize
@@ -794,161 +1074,426 @@ void CBETestFunction::InitGlobalString(CBEFile * pFile, CBEType * pType, CBECont
  */
 void CBETestFunction::InitLocalVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext)
 {
-    if (pParameter->GetType()->IsVoid())
-        return;
-    bool bIsString = (pParameter->IsString()) && !(pParameter->GetType()->IsPointerType());
+    bool bOwnParam = false;
+    if (!m_pParameter)
+	{
+	    m_pParameter = pParameter;
+		bOwnParam = true;
+	}
+    CBEType *pType = pParameter->GetType();
+	CBEAttribute *pAttr;
+	if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+	    pType = pAttr->GetAttrType();
     VectorElement *pIter = pParameter->GetFirstDeclarator();
     CBEDeclarator *pDecl;
     while ((pDecl = pParameter->GetNextDeclarator(pIter)) != 0)
     {
-        // set local variable
-        InitLocalDeclarator(pFile, pDecl, bIsString, pContext);
+        m_vDeclaratorStack.Push(pDecl);
+        InitLocalDeclarator(pFile, pType, pContext);
+        m_vDeclaratorStack.Pop();
+    }
+	if (bOwnParam)
+	    m_pParameter = 0;
+}
+
+/** \brief initializes a single declarator of a local variable
+ *  \param pFile the file to write to
+ *  \param pType the type of the declarator
+ *  \param pContext the context of the initialization
+ *
+ * The declarator itself is taken from the declarator stack. If the declarator is the size
+ * attribute of another parameter, we have to divide the random value modulo the total size of
+ * the array, so the index won't be too large.
+ */
+void CBETestFunction::InitLocalDeclarator(CBEFile * pFile, CBEType * pType, CBEContext * pContext)
+{
+    if (pType->IsVoid())
+        return;
+
+    // test if string
+    assert(m_pParameter);
+	bool bIsString = m_pParameter->IsString() && !m_pParameter->GetType()->IsPointerType();
+
+    // get current decl
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    if (!pCurrent->HasIndex())
+    {
+        // is first -> test for array
+        if (pCurrent->pDeclarator->IsArray())
+        {
+		    InitLocalArray(pFile, pType, pContext);
+            return;
+        }
+		// if there are size_is or length_is attribtes and the
+		// decl has stars, then this is a variable sized array
+		if ((pCurrent->pDeclarator->GetStars() > 0) &&
+		    (m_pParameter->FindAttribute(ATTR_SIZE_IS) ||
+			 m_pParameter->FindAttribute(ATTR_LENGTH_IS)))
+		{
+		    InitLocalArray(pFile, pType, pContext);
+			return;
+		}
+		// since the declarator can also be a member of a struct
+        // check the direct parent of the declarator
+		if (!pCurrent->pDeclarator->GetFunction() &&
+		     pCurrent->pDeclarator->GetStructType() &&
+			(pCurrent->pDeclarator->GetStars() > 0))
+		{
+		    CBETypedDeclarator *pMember = pCurrent->pDeclarator->GetStructType()->FindMember(pCurrent->pDeclarator->GetName());
+			if (pMember &&
+			    (pMember->FindAttribute(ATTR_SIZE_IS) ||
+			     pMember->FindAttribute(ATTR_LENGTH_IS)))
+			{
+				CBETypedDeclarator *pOldParam = m_pParameter;
+				m_pParameter = pMember;
+			    InitLocalArray(pFile, pType, pContext);
+				m_pParameter = pOldParam;
+				return;
+			}
+		}
+    }
+
+    // test user defined types
+	Vector vBounds(RUNTIME_CLASS(CBEExpression));
+    while (pType->IsKindOf(RUNTIME_CLASS(CBEUserDefinedType)))
+    {
+        // search for original type and replace it
+        CBERoot *pRoot = pType->GetRoot();
+        assert(pRoot);
+        CBETypedef *pUserType = pRoot->FindTypedef(((CBEUserDefinedType *) pType)->GetName());
+        // if 0: not defined in IDL files -> use user-provided init function
+        if (!pUserType || !pUserType->GetType())
+		    break;
+	    // assign aliased type
+		pType = pUserType->GetType();
+        // if alias is array?
+        CBEDeclarator *pAlias = pUserType->GetAlias();
+        // check if type has alias (it should, since the alias is
+        // the name of the user defined type)
+        if (pAlias && pAlias->IsArray())
+        {
+            // add array bounds of alias to temp vector
+            VectorElement *pI = pAlias->GetFirstArrayBound();
+            CBEExpression *pBound;
+            while ((pBound = pAlias->GetNextArrayBound(pI)) != 0)
+            {
+                vBounds.Add(pBound);
+            }
+        }
+    }
+
+	// test if user defined type added some array boundaries
+	if (vBounds.GetSize() > 0)
+	{
+	    VectorElement *pI;
+		// add bounds to top declarator
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->AddArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// call MarshalArray
+		InitLocalArray(pFile, pType, pContext);
+		// remove those array decls again
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->RemoveArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// return (work done)
+		return;
+    }
+
+    // test for struct
+    if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
+    {
+	    InitLocalStruct(pFile, (CBEStructType*)pType, pContext);
+        return;
+    }
+
+    // test for union
+    if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
+    {
+	    InitLocalUnion(pFile, (CBEUnionType*)pType, pContext);
+        return;
+    }
+
+    pFile->PrintIndent("");
+    m_vDeclaratorStack.Write(pFile, bIsString, false, pContext);
+    pFile->Print(" = ");
+    m_vDeclaratorStack.Write(pFile, bIsString, true, pContext);
+    pFile->Print(";\n");
+}
+
+/** \brief inits a local array variable
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array
+ *  \param pIter the iterator pointing to the next array boundary
+ *  \param nLevel the number of the current array boundary
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitLocalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext)
+{
+    // get current declarator
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+    // get current boundary
+	CBEExpression *pBound = pDecl->GetNextArrayBound(pIter);
+	int nBound = pBound->GetIntValue();
+	// iterate over elements
+	for (int nIndex = 0; nIndex < nBound; nIndex++)
+	{
+	    pCurrent->SetIndex(nIndex, nLevel);
+		// if there are more levels
+		if (pIter)
+		    InitLocalConstArray(pFile, pType, pIter, nLevel+1, pContext);
+		else
+            InitLocalDeclarator(pFile, pType, pContext);
+	}
+	// reset index, so the nesting of calls works
+	pCurrent->SetIndex(-1, nLevel);
+}
+
+/** \brief inits a local array variable
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array
+ *  \param pIter the iterator pointing to the next array boundary
+ *  \param nLevel the number of the current array boundary
+ *  \param pSizeAttr the size attribute containing the size parameters for var-sized array dimensions
+ *  \param pIAttr the iterator pointing to the next size parameter
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitLocalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext)
+{
+    // get current declarator
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+	// if the remaining number of boundaries is equal to the remaining number
+	// of size attribute's parameters, then we use the size parameters
+	// (its a [size_is(len)] int array[<int>])
+	CBEDeclarator *pSizeParam = 0;
+	if (pSizeAttr && (pDecl->GetRemainingNumberOfArrayBounds(pIter) <= pSizeAttr->GetRemainingNumberOfIsAttributes(pIAttr)))
+		pSizeParam = pSizeAttr->GetNextIsAttribute(pIAttr);
+	// get next array dimension
+    CBEExpression *pBound = 0;
+	if (pIter)
+	    pBound = pDecl->GetNextArrayBound(pIter);
+	// if const array dimension, we iterate over it
+	if (pBound && pBound->IsOfType(EXPR_INT) && !pSizeParam)
+	{
+		int nBound = pBound->GetIntValue();
+		// iterate over elements
+		for (int nIndex = 0; nIndex < nBound; nIndex++)
+		{
+		    pCurrent->SetIndex(nIndex, nLevel);
+			// if more levels, go down
+			if (pIter)
+				InitLocalVarArray(pFile, pType, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+			else
+				InitLocalDeclarator(pFile, pType, pContext);
+		}
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+	}
+	// otherwise we write the iterations
+	else
+    {
+		// get a temp var
+		String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		// add level
+		sTmpVar += nLevel;
+        // write for loop
+        pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
+        if (pSizeParam)
+            pSizeParam->WriteGlobalName(pFile, &m_vDeclaratorStack, pContext);
+        pFile->Print("; %s++)\n", (const char*)sTmpVar);
+        pFile->PrintIndent("{\n");
+        pFile->IncIndent();
+
+        // set index to -2 (var size)
+        pCurrent->SetIndex(sTmpVar, nLevel);
+		// if we have more array dimensions, check them as well
+		if (pIter)
+		    InitLocalVarArray(pFile, pType, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+		else
+			InitLocalDeclarator(pFile, pType, pContext);
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+
+        // close loop
+        pFile->DecIndent();
+        pFile->PrintIndent("}\n");
+	}
+}
+
+/** \brief inits a local array variable
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array
+ *  \param pContext the context of the write operation
+ *
+ * because the temp variable is of type unsigned the loop to set and initialize the
+ * array has to use the condition '>0'. If it would use '>=0' the last test would be
+ * equal to zero and after the next loop the temp var would be decremented, but because
+ * it is unsigned it actually will be a huge number ( larger than zero) => the loop would never
+ * terminate.
+ */
+void CBETestFunction::InitLocalArray(CBEFile *pFile, CBEType *pType, CBEContext *pContext)
+{
+    CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+    bool bFixedSize = (pDecl->GetSize() >= 0) &&
+                      !(m_pParameter->FindAttribute(ATTR_SIZE_IS)) &&
+                      !(m_pParameter->FindAttribute(ATTR_LENGTH_IS));
+    // check if somebody is already iterating over array bounds
+	int nLevel = pCurrent->GetUsedIndexCount();
+	// skip array bound already in use
+	int i = nLevel;
+	VectorElement *pIterBound = pDecl->GetFirstArrayBound();
+	while (i-- > 0) pDecl->GetNextArrayBound(pIterBound);
+    // if fixed size
+    if (bFixedSize)
+	    InitLocalConstArray(pFile, pType, pIterBound, nLevel, pContext);
+    else
+    {
+        // set tmp to size
+        // write iteration code
+        // for (tmp=0; tmp<size; tmp++)
+        // {
+        //     ...
+        // }
+        // use the global name of the size decl for the initialization
+        CBEAttribute *pAttr = m_pParameter->FindAttribute(ATTR_SIZE_IS);
+        if (!pAttr)
+        {
+            // check length_is
+            pAttr = m_pParameter->FindAttribute(ATTR_LENGTH_IS);
+            if (!pAttr)
+            {
+                // check max-is attribute
+                pAttr = m_pParameter->FindAttribute(ATTR_MAX_IS);
+                if (!pAttr)
+                {
+                    assert(false);
+                }
+            }
+        }
+        VectorElement *pIter = pAttr->GetFirstIsAttribute();
+        CBEDeclarator *pSizeParam = pAttr->GetNextIsAttribute(pIter);
+		// allocate memory for local variable if it is a simple pointered array
+		// with only a size or length attribute
+		if (pCurrent->pDeclarator->GetArrayDimensionCount() == 0)
+		{
+			pFile->PrintIndent("");
+			m_vDeclaratorStack.Write(pFile, true, false, pContext);
+			pFile->Print(" = ");
+			m_pParameter->GetType()->WriteCast(pFile, true, pContext);
+			pContext->WriteMalloc(pFile, this);
+			pFile->Print("(");
+			if (pSizeParam)
+				pSizeParam->WriteGlobalName(pFile, &m_vDeclaratorStack, pContext);
+			if (m_pParameter->GetType()->GetSize() != 1)
+			{
+			    pFile->Print("*sizeof");
+				m_pParameter->GetType()->WriteCast(pFile, false, pContext);
+			}
+			pFile->Print("); /* loc array */\n");
+		}
+        // write for loop
+		InitLocalVarArray(pFile, pType, pIterBound, nLevel, pAttr, pAttr->GetFirstIsAttribute(), pContext);
     }
 }
 
-/** \brief writes the initialization for a local variable
+/** \brief initializes a local struct variable
  *  \param pFile the file to write to
- *  \param pDeclarator the declarator to write
- *  \param bUsePointer true if the variable should be a pointer
+ *  \param pType the struct type to initialize
  *  \param pContext the context of the write operation
- *
- * If the array is variable sized, we have to use the size-attribute as number of elements to
- * assign.
  */
-void CBETestFunction::InitLocalDeclarator(CBEFile *pFile, CBEDeclarator *pDeclarator, bool bUsePointer, CBEContext *pContext)
+void CBETestFunction::InitLocalStruct(CBEFile *pFile, CBEStructType *pType, CBEContext *pContext)
 {
-    // create declarator-stack
-    CDeclaratorStack *pStack = new CDeclaratorStack();
-    pStack->Push(pDeclarator);
-    CDeclaratorStackLocation *pStackLoc = pStack->GetTop();
-
-    if (pDeclarator->IsArray())
+    VectorElement *pIter = pType->GetFirstMember();
+    CBETypedDeclarator *pMember;
+    while ((pMember = pType->GetNextMember(pIter)) != 0)
     {
-        CBETypedDeclarator *pParameter = (CBETypedDeclarator*)pDeclarator->GetParent();
-        bool bFixedSize = (pDeclarator->GetSize() >= 0) &&
-                          !(pParameter->FindAttribute(ATTR_SIZE_IS)) &&
-                          !(pParameter->FindAttribute(ATTR_LENGTH_IS));
-        // if fixed size
-        if (bFixedSize)
+        InitLocalVariable(pFile, pMember, pContext);
+    }
+}
+
+/** \brief inits a local union variable
+ *  \param pFile the file to write to
+ *  \param pType the union type to init
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::InitLocalUnion(CBEFile *pFile, CBEUnionType *pType, CBEContext *pContext)
+{
+    if (pType->IsCStyleUnion())
+    {
+        // search for biggest member and set it
+        int nMaxSize = 0, nCurrSize = 0;
+        VectorElement *pIter = pType->GetFirstUnionCase();
+        CBEUnionCase *pCase, *pMaxCase = 0;
+        while ((pCase = pType->GetNextUnionCase(pIter)) != 0)
         {
-            // for each dimension
-            VectorElement *pIter = pDeclarator->GetFirstArrayBound();
-            CBEExpression *pBound;
-            while ((pBound = pDeclarator->GetNextArrayBound(pIter)) != 0)
+            nCurrSize = pCase->GetSize();
+            if (nCurrSize > nMaxSize)
             {
-                // now loop for this bound
-                int nSize = pBound->GetIntValue();
-                for (int i=0; i<nSize; i++)
-                {
-                    pStackLoc->SetIndex(i);
-                    InitLocalDeclarator(pFile, pStack, bUsePointer, pContext);
-                }
+                nMaxSize = nCurrSize;
+                pMaxCase = pCase;
             }
         }
-        else
-        {
-            // set tmp to size
-            // write iteration code
-            // for (tmp=size; tmp > 0; tmp--)
-            // {
-            //     ...
-            // }
-
-            // set tmp var to size
-            String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-            // use the global name of the size decl for the initialization
-            CBEAttribute *pAttr = pParameter->FindAttribute(ATTR_SIZE_IS);
-            if (!pAttr)
-            {
-                // check length_is attribute
-                pAttr = pParameter->FindAttribute(ATTR_LENGTH_IS);
-                if (!pAttr)
-                {
-                    // check max-is attribute
-                    pAttr = pParameter->FindAttribute(ATTR_MAX_IS);
-                    if (!pAttr)
-                    {
-                        ASSERT(false);
-                    }
-                }
-            }
-            VectorElement *pIter = pAttr->GetFirstIsAttribute();
-            CBEDeclarator *pSizeParam = pAttr->GetNextIsAttribute(pIter);
-            // allocate memory for local variable if it is a simple pointered array
-            // with only a size or length attribute
-            if (pStackLoc->pDeclarator->GetArrayDimensionCount() == 0)
-            {
-                if (pContext->IsWarningSet(PROGRAM_WARNING_PREALLOC))
-                {
-                    if (m_pFunction)
-                        CCompiler::Warning("CORBA_alloc is used to allocate memory for %s in %s.",
-                                           (const char*)pStackLoc->pDeclarator->GetName(), (const char*)m_pFunction->GetName());
-                    else
-                        CCompiler::Warning("CORBA_alloc is used to allocate memory for %s.", (const char*)pStackLoc->pDeclarator->GetName());
-                }
-                pFile->PrintIndent("");
-                pStack->Write(pFile, true, false, pContext);
-                pFile->Print(" = ");
-                pParameter->GetType()->WriteCast(pFile, true, pContext);
-				CBETypedDeclarator* pEnv = GetEnvironment();
-				CBEDeclarator *pDecl = 0;
-				if (pEnv)
-				{
-					VectorElement* pIter = pEnv->GetFirstDeclarator();
-					pDecl = pEnv->GetNextDeclarator(pIter);
-				}
-				if (pDecl && !pContext->IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC))
-				{
-				    pFile->Print("(%s", (const char*)pDecl->GetName());
-				    if (pDecl->GetStars())
-					    pFile->Print("->malloc)(");
-				    else
-					    pFile->Print(".malloc)(");
-				}
-				else
-					pFile->Print("CORBA_alloc(");
-                if (pSizeParam)
-                    pSizeParam->WriteGlobalName(pFile, pContext);
-                pFile->Print(");\n");
-            }
-            // write for loop
-            pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
-            if (pSizeParam)
-                pSizeParam->WriteGlobalName(pFile, pContext);
-            pFile->Print("; %s++)\n", (const char*)sTmpVar);
-            pFile->PrintIndent("{\n");
-            pFile->IncIndent();
-
-            // set index to -2 (var size)
-            pStackLoc->SetIndex(sTmpVar);
-            InitLocalDeclarator(pFile, pStack, bUsePointer, pContext);
-
-            // close loop
-            pFile->DecIndent();
-            pFile->PrintIndent("}\n");
-        }
+        // init max case
+        if (pMaxCase)
+            InitLocalVariable(pFile, pMaxCase, pContext);
     }
     else
     {
-        InitLocalDeclarator(pFile, pStack, bUsePointer, pContext);
-    }
-    pStack->Pop();
-    delete pStack;
-}
+        // marshal switch variable
+        assert(pType->GetSwitchVariable());
+        InitLocalVariable(pFile, pType->GetSwitchVariable(), pContext);
+        // divide this variable modulo the case number
+        String sSwitchVar = pType->GetSwitchVariableName();
+        pFile->PrintIndent("");
+        m_vDeclaratorStack.Write(pFile, false, true, pContext);
+        pFile->Print(".%s = ", (const char*)sSwitchVar);
+        m_vDeclaratorStack.Write(pFile, false, true, pContext);
+        pFile->Print(".%s %% %d;\n", (const char*)sSwitchVar, pType->GetUnionCaseCount());
 
-/** \brief writes the intialization code for a declarator regarding an array index
- *  \param pFile the file to write to
- *  \param pStack the declarator stack to contain the decl to write
- *  \param bUsePointer true if the declarator should be a pointer
- *  \param pContext the context of the write operation
- */
-void CBETestFunction::InitLocalDeclarator(CBEFile *pFile, CDeclaratorStack *pStack, bool bUsePointer, CBEContext *pContext)
-{
-    pFile->PrintIndent("");
-    pStack->Write(pFile, bUsePointer, false, pContext);
-    pFile->Print(" = ");
-    pStack->Write(pFile, bUsePointer, true, pContext);
-    pFile->Print(";\n");
+        // write switch statement
+        pFile->PrintIndent("switch(");
+        m_vDeclaratorStack.Write(pFile, false, true, pContext);
+        pFile->Print(".%s)\n", (const char*)sSwitchVar);
+        pFile->PrintIndent("{\n");
+        // add union to stack
+        if (pType->GetUnionName())
+            m_vDeclaratorStack.Push(pType->GetUnionName());
+        // write the cases
+        VectorElement *pIter = pType->GetFirstUnionCase();
+        CBEUnionCase *pCase;
+        while ((pCase = pType->GetNextUnionCase(pIter)) != 0)
+        {
+            if (pCase->IsDefault())
+            {
+                pFile->PrintIndent("default: \n");
+            }
+            else
+            {
+                VectorElement *pIterL = pCase->GetFirstLabel();
+                CBEExpression *pLabel;
+                while ((pLabel = pCase->GetNextLabel(pIterL)) != 0)
+                {
+                    pFile->PrintIndent("case ");
+                    pLabel->Write(pFile, pContext);
+                    pFile->Print(":\n");
+                }
+            }
+            pFile->IncIndent();
+            InitLocalVariable(pFile, pCase, pContext);
+            pFile->PrintIndent("break;\n");
+            pFile->DecIndent();
+        }
+        // close the switch statement
+        pFile->PrintIndent("}\n");
+        // remove union name
+        if (pType->GetUnionName())
+            m_vDeclaratorStack.Pop();
+    }
 }
 
 /** \brief writes the comparison code for the variables
@@ -999,8 +1544,7 @@ void CBETestFunction::CompareDeclarator(CBEFile *pFile, CBEType *pType, CDeclara
 	    return;
 
     // test if string
-    ASSERT(m_pParameter);
-	bool bIsString = m_pParameter->IsString();
+    assert(m_pParameter);
 
     // get current decl
     CDeclaratorStackLocation *pCurrent = pStack->GetTop();
@@ -1009,44 +1553,229 @@ void CBETestFunction::CompareDeclarator(CBEFile *pFile, CBEType *pType, CDeclara
         // is first -> test for array
         if (pCurrent->pDeclarator->IsArray())
         {
-            return CompareArray(pFile, pType, pStack, pContext);
+		    CompareArray(pFile, pType, pStack, pContext);
+            return;
         }
+		// if there are size_is or length_is attribtes and the
+		// decl has stars, then this is a variable sized array
+		if ((pCurrent->pDeclarator->GetStars() > 0) &&
+		    (m_pParameter->FindAttribute(ATTR_SIZE_IS) ||
+			 m_pParameter->FindAttribute(ATTR_LENGTH_IS)))
+		{
+		    CompareArray(pFile, pType, pStack, pContext);
+			return;
+		}
+		// since the declarator can also be a member of a struct
+        // check the direct parent of the declarator
+		if (!pCurrent->pDeclarator->GetFunction() &&
+		     pCurrent->pDeclarator->GetStructType() &&
+			(pCurrent->pDeclarator->GetStars() > 0))
+		{
+		    CBETypedDeclarator *pMember = pCurrent->pDeclarator->GetStructType()->FindMember(pCurrent->pDeclarator->GetName());
+			if (pMember &&
+			    (pMember->FindAttribute(ATTR_SIZE_IS) ||
+			     pMember->FindAttribute(ATTR_LENGTH_IS)))
+			{
+				CBETypedDeclarator *pOldParam = m_pParameter;
+				m_pParameter = pMember;
+			    CompareArray(pFile, pType, pStack, pContext);
+				m_pParameter = pOldParam;
+				return;
+			}
+		}
         // a string is similar to an array, test for it
-        if (bIsString)
+        if (m_pParameter->IsString())
         {
-            return CompareString(pFile, pType, pStack, pContext);
+		    CompareString(pFile, pType, pStack, pContext);
+            return;
         }
     }
 
     // test user defined types
+	Vector vBounds(RUNTIME_CLASS(CBEExpression));
     while (pType->IsKindOf(RUNTIME_CLASS(CBEUserDefinedType)))
     {
         // search for original type and replace it
         CBERoot *pRoot = pType->GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         CBETypedef *pUserType = pRoot->FindTypedef(((CBEUserDefinedType *) pType)->GetName());
         // if 0: not defined in IDL files -> use user-provided init function
-        if (pUserType)
+        if (!pUserType || !pUserType->GetType())
+			break;
+	    // assign the aliased type
+		pType = pUserType->GetType();
+        // if alias is array?
+        CBEDeclarator *pAlias = pUserType->GetAlias();
+        // check if type has alias (it should, since the alias is
+        // the name of the user defined type)
+        if (pAlias && pAlias->IsArray())
         {
-            if (pUserType->GetType())
-                pType = pUserType->GetType();
+            // add array bounds of alias to temp vector
+            VectorElement *pI = pAlias->GetFirstArrayBound();
+            CBEExpression *pBound;
+            while ((pBound = pAlias->GetNextArrayBound(pI)) != 0)
+            {
+                vBounds.Add(pBound);
+            }
         }
     }
+
+	// test if user defined type added some array boundaries
+	// vBounds will only contain something when user defined type has been resolved
+	if (vBounds.GetSize() > 0)
+	{
+	    VectorElement *pI;
+		// add bounds to top declarator
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->AddArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// call MarshalArray
+		CompareArray(pFile, pType, pStack, pContext);
+		// remove those array decls again
+		for (pI = vBounds.GetFirst(); pI; pI = pI->GetNext())
+		{
+			pCurrent->pDeclarator->RemoveArrayBound((CBEExpression*)pI->GetElement());
+		}
+		// return (work done for user defined type with array)
+		return;
+	}
 
     // test for struct
     if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
     {
-        return CompareStruct(pFile, (CBEStructType*)pType, pStack, pContext);
+	    CompareStruct(pFile, (CBEStructType*)pType, pStack, pContext);
+        return;
     }
 
     // test for union
     if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
     {
-        return CompareUnion(pFile, (CBEUnionType*)pType, pStack, pContext);
+	    CompareUnion(pFile, (CBEUnionType*)pType, pStack, pContext);
+        return;
     }
 
     // compare variable
     WriteComparison(pFile, pStack, pContext);
+}
+
+/** \brief writest the test comparison for an array
+ *  \param pFile the file to write to
+ *  \param pType the type of the current delcarator
+ *  \param pStack the declarator stack
+ *  \param pIter the iterator pointing to the next array bounds
+ *  \param nLevel the number of the current array bound
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::CompareConstArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEContext *pContext)
+{
+    // get current declarator
+    CDeclaratorStackLocation *pCurrent = pStack->GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+	// get current array boundary
+	CBEExpression *pBound = pDecl->GetNextArrayBound(pIter);
+	int nBound = pBound->GetIntValue();
+
+	// iterate over elements
+	for (int nIndex = 0; nIndex < nBound; nIndex++)
+	{
+	    pCurrent->SetIndex(nIndex, nLevel);
+		// check if there are more array bounds
+		if (pIter)
+		{
+            CompareConstArray(pFile, pType, pStack, pIter, nLevel+1, pContext);
+		}
+        else
+		{
+		    CompareDeclarator(pFile, pType, pStack, pContext);
+		}
+	}
+	// reset index, so the nesting of calls works
+	pCurrent->SetIndex(-1, nLevel);
+}
+
+/** \brief writest the test comparison for an array
+ *  \param pFile the file to write to
+ *  \param pType the type of the current delcarator
+ *  \param pStack the declarator stack
+ *  \param pIter the iterator pointing to the next array bounds
+ *  \param nLevel the number of the current array bound
+ *  \param pSizeAttr the size_is attribute
+ *  \param pIAttr the iterator pointing to the next size attribute parameter
+ *  \param pContext the context of the write operation
+ */
+void CBETestFunction::CompareVarArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext)
+{
+    // get current declarator
+    CDeclaratorStackLocation *pCurrent = pStack->GetTop();
+    CBEDeclarator *pDecl = pCurrent->pDeclarator;
+	// if the remaining number of boundaries is less or equal to the remaining number
+	// of size attribute's parameters, then we use the size parameters
+	// (its a [size_is(len)] int array[<int>])
+	CBEDeclarator *pSizeParam = 0;
+	if (pSizeAttr && (pDecl->GetRemainingNumberOfArrayBounds(pIter) <= pSizeAttr->GetRemainingNumberOfIsAttributes(pIAttr)))
+		pSizeParam = pSizeAttr->GetNextIsAttribute(pIAttr);
+	// an array without an array bound is a variable sized array with stars
+	CBEExpression *pBound = 0;
+	if (pIter)
+	{
+		// get next array dimension
+		pBound = pDecl->GetNextArrayBound(pIter);
+	}
+	// if const array dimension, we iterate over it
+	if (pBound && pBound->IsOfType(EXPR_INT) && !pSizeParam)
+	{
+		int nBound = pBound->GetIntValue();
+		// iterate over elements
+		for (int nIndex = 0; nIndex < nBound; nIndex++)
+		{
+		    pCurrent->SetIndex(nIndex, nLevel);
+			// if more levels, go down
+			if (pIter)
+			{
+				CompareVarArray(pFile, pType, pStack, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+			}
+			else
+			{
+				CompareDeclarator(pFile, pType, pStack, pContext);
+			}
+		}
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+	}
+	// otherwise we write the iterations
+	else
+    {
+	    assert(pSizeParam);
+		// get a temp var
+		String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		// add level
+		sTmpVar += nLevel;
+        // write for loop
+        pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
+		pSizeParam->WriteGlobalName(pFile, pStack, pContext);
+        pFile->Print("; %s++)\n", (const char*)sTmpVar);
+        pFile->PrintIndent("{\n");
+        pFile->IncIndent();
+
+        // set index to -2 (var size)
+        pCurrent->SetIndex(sTmpVar, nLevel);
+		// if we have more array dimensions, check them as well
+		if (pIter)
+		{
+		    CompareVarArray(pFile, pType, pStack, pIter, nLevel+1, pSizeAttr, pIAttr, pContext);
+		}
+		else
+		{
+			CompareDeclarator(pFile, pType, pStack, pContext);
+		}
+		// reset index, so the nesting of calls works
+		pCurrent->SetIndex(-1, nLevel);
+
+        // close loop
+        pFile->DecIndent();
+        pFile->PrintIndent("}\n");
+	}
 }
 
 /** \brief writest the test comparison for an array
@@ -1063,18 +1792,17 @@ void CBETestFunction::CompareArray(CBEFile *pFile, CBEType *pType, CDeclaratorSt
     bool bFixedSize = (pDecl->GetSize() >= 0) &&
                       !(pParameter->FindAttribute(ATTR_SIZE_IS)) &&
                       !(pParameter->FindAttribute(ATTR_LENGTH_IS));
+    // check if there already is somebody iterating over array bounds
+	int nLevel = pCurrent->GetUsedIndexCount();
+	// skip the already used bounds
+	VectorElement *pIter = pDecl->GetFirstArrayBound();
+    int i = nLevel;
+	while (i-- > 0) pDecl->GetNextArrayBound(pIter);
+
     // if fixed size
     if (bFixedSize)
     {
-        // for each dimension
-        VectorElement *pIter = pDecl->GetFirstArrayBound();
-        CBEExpression *pBound;
-        while ((pBound = pDecl->GetNextArrayBound(pIter)) != 0)
-        {
-            // now loop for this bound
-            for (pCurrent->nIndex = 0; pCurrent->nIndex < pBound->GetIntValue(); pCurrent->nIndex++)
-                CompareDeclarator(pFile, pType, pStack, pContext);
-        }
+	    CompareConstArray(pFile, pType, pStack, pIter, nLevel, pContext);
     }
     else
     {
@@ -1085,11 +1813,6 @@ void CBETestFunction::CompareArray(CBEFile *pFile, CBEType *pType, CDeclaratorSt
         //     ...
         // }
 
-        // set tmp var to size
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-
-        // write for loop
-        pFile->PrintIndent("for (%s = 0; %s < ", (const char*)sTmpVar, (const char*)sTmpVar);
         // use the global name of the size decl for the initialization
         CBEAttribute *pAttr = pParameter->FindAttribute(ATTR_SIZE_IS);
         if (!pAttr)
@@ -1102,25 +1825,11 @@ void CBETestFunction::CompareArray(CBEFile *pFile, CBEType *pType, CDeclaratorSt
                 pAttr = pParameter->FindAttribute(ATTR_MAX_IS);
                 if (!pAttr)
                 {
-                    ASSERT(false);
+                    assert(false);
                 }
             }
         }
-        VectorElement *pIter = pAttr->GetFirstIsAttribute();
-        CBEDeclarator *pSizeParam = pAttr->GetNextIsAttribute(pIter);
-        if (pSizeParam)
-            pSizeParam->WriteGlobalName(pFile, pContext);
-        pFile->Print("; %s++)\n", (const char*)sTmpVar);
-        pFile->PrintIndent("{\n");
-        pFile->IncIndent();
-
-        // set index to -2 (var size)
-        pCurrent->SetIndex(sTmpVar);
-        CompareDeclarator(pFile, pType, pStack, pContext);
-
-        // close loop
-        pFile->DecIndent();
-        pFile->PrintIndent("}\n");
+		CompareVarArray(pFile, pType, pStack, pIter, nLevel, pAttr, pAttr->GetFirstIsAttribute(), pContext);
     }
 }
 
@@ -1165,12 +1874,14 @@ void CBETestFunction::CompareUnion(CBEFile *pFile, CBEUnionType *pType, CDeclara
         }
         // init max case
         if (pMaxCase)
+		{
             CompareVariable(pFile, pMaxCase, pStack, pContext);
+		}
     }
     else
     {
         // marshal switch variable
-        ASSERT(pType->GetSwitchVariable());
+        assert(pType->GetSwitchVariable());
         CompareVariable(pFile, pType->GetSwitchVariable(), pStack, pContext);
 
         // write switch statement
@@ -1233,8 +1944,11 @@ void CBETestFunction::CompareString(CBEFile * pFile, CBEType * pType, CDeclarato
     // write error message
     WriteErrorMessage(pFile, pStack, pContext);
     // else success
-    pFile->PrintIndent("else\n");
-    WriteSuccessMessage(pFile, pStack, pContext);
+	if (!pContext->IsOptionSet(PROGRAM_TESTSUITE_NO_SUCCESS_MESSAGE))
+	{
+		pFile->PrintIndent("else\n");
+		WriteSuccessMessage(pFile, pStack, pContext);
+	}
 }
 
 /** \brief writes the real comparison
@@ -1280,9 +1994,12 @@ void CBETestFunction::WriteComparison(CBEFile *pFile, CDeclaratorStack *pStack, 
     pFile->Print(")\n");
     // write error message
     WriteErrorMessage(pFile, pStack, pContext);
-    // else success message
-    pFile->PrintIndent("else\n");
-    WriteSuccessMessage(pFile, pStack, pContext);
+	if (!pContext->IsOptionSet(PROGRAM_TESTSUITE_NO_SUCCESS_MESSAGE))
+    {
+		// else success message
+		pFile->PrintIndent("else\n");
+		WriteSuccessMessage(pFile, pStack, pContext);
+	}
 }
 
 /** \brief prints the error message for a failed comparison
@@ -1294,7 +2011,7 @@ void CBETestFunction::WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pSta
 {
     // get target name
     String sTargetName;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_SKELETON))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
         sTargetName = " at server side";
     else if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))	// testsuite initiates calls from client
         sTargetName = " at client side";
@@ -1308,13 +2025,26 @@ void CBETestFunction::WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pSta
 		       (const char *) pDecl->GetFunction()->GetName());
     // if struct add members
     pStack->Write(pFile, false, false, pContext);
-//    if (pHead->nIndex >= 0)
-//        pFile->Print(" (element %d)", pHead->nIndex);
-    if (pHead->nIndex == -2)
-        pFile->Print(" (element %%d)");
+    bool bVarArray = false;
+	int nIdxCnt = pHead->GetUsedIndexCount();
+	if (nIdxCnt)
+	{
+	    for (int i=0; i<nIdxCnt; i++)
+		    if (pHead->nIndex[i] == -2)
+			    bVarArray = true;
+    }
+	if (bVarArray)
+	{
+	    pFile->Print(" (element ");
+	    for (int i=0; i<nIdxCnt; i++)
+		    if (pHead->nIndex[i] == -2)
+			    pFile->Print("[%%d]");
+	    pFile->Print(")");
+    }
     pFile->Print("%s\\n\"", (const char *) sTargetName);
-    if (pHead->nIndex == -2)
-        pFile->Print(", %s", (const char*)pHead->sIndex);
+	for (int i=0; i<nIdxCnt; i++)
+		if (pHead->nIndex[i] == -2)
+            pFile->Print(", %s", (const char*)pHead->sIndex[i]);
     pFile->Print(");\n");
 }
 
@@ -1327,7 +2057,7 @@ void CBETestFunction::WriteSuccessMessage(CBEFile *pFile, CDeclaratorStack *pSta
 {
     // get target name
     String sTargetName;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_SKELETON))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
         sTargetName = " at server side";
     else if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))	// testsuite initiates calls from client
         sTargetName = " at client side";
@@ -1339,16 +2069,33 @@ void CBETestFunction::WriteSuccessMessage(CBEFile *pFile, CDeclaratorStack *pSta
     // print error message
     pFile->PrintIndent("\tprintf(\"%s: correct ", (const char *) pDecl->GetFunction()->GetName());
     // test for pointer type
-    bool bUsePointer = !m_pParameter->GetType()->IsPointerType();
+    CBEType *pType = m_pParameter->GetType();
+	CBEAttribute *pAttr;
+	if ((pAttr = m_pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+	    pType = pAttr->GetAttrType();
+    bool bUsePointer = !pType->IsPointerType();
     // if struct add members
     pStack->Write(pFile, bUsePointer, false, pContext);
-//    if (pHead->nIndex >= 0)
-//        pFile->Print(" (element %d)", pHead->nIndex);
-    if (pHead->nIndex == -2)
-        pFile->Print(" (element %%d)");
+    bool bVarArray = false;
+	int nIdxCnt = pHead->GetUsedIndexCount();
+	if (nIdxCnt)
+	{
+	    for (int i=0; i<nIdxCnt; i++)
+		    if (pHead->nIndex[i] == -2)
+			    bVarArray = true;
+    }
+	if (bVarArray)
+	{
+	    pFile->Print(" (element ");
+	    for (int i=0; i<nIdxCnt; i++)
+		    if (pHead->nIndex[i] == -2)
+			    pFile->Print("[%%d]");
+	    pFile->Print(")");
+    }
     pFile->Print("%s\\n\"", (const char *) sTargetName);
-    if (pHead->nIndex == -2)
-        pFile->Print(", %s", (const char*)pHead->sIndex);
+	for (int i=0; i<nIdxCnt; i++)
+		if (pHead->nIndex[i] == -2)
+            pFile->Print(", %s", (const char*)pHead->sIndex[i]);
     pFile->Print(");\n");
 }
 

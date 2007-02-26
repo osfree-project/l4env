@@ -3,11 +3,8 @@
 /* this file defines the construction of the kernel's virtual address
    space */
 
-_tcbs_1            = 0xc0000000;	/* assumption: 256MB-aligned */
-_mappings_1        = 0xe0000000;
-_mappings_end_1    = 0xea000000;	/* XXX old code uses _unused1_1 as
-  				           end-of-region */
-_unused1_1         = _mappings_end_1;	/* assumption: 4MB-aligned */
+_tcbs_1            = 0xd0000000;	/* assumption: 256MB-aligned */
+/*_unused1_1         = _mappings_end_1;	/* assumption: 4MB-aligned */
 _unused2_1         = 0xea400000;	/* assumption: 4MB-aligned */
 _unused3_1         = 0xea800000;	/* assumption: 4MB-aligned */
 _service           = 0xeac00000;	/* assumption: 4MB-aligned */

@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,7 +30,10 @@
 #define __DICE_FE_FEISATTRIBUTE_H__
 
 #include "fe/FEAttribute.h"
-#include "fe/FEDeclarator.h"
+
+class CFEDeclarator;
+class Vector;
+class VectorElement;
 
 /* FIRST_IS, LAST_IS, LENGTH_IS, MIN_IS, MAX_IS, SIZE_IS, SWITCH_IS, IID_IS */
 /**	\class CFEIsAttribute

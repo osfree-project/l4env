@@ -6,10 +6,10 @@
 #endif
 
 int
-l4_i386_ipc_call_static(l4_threadid_t dest, 
-		 const void *snd_msg, l4_umword_t snd_dword0, l4_umword_t snd_dword1, 
-		 void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, l4_msgdope_t *result)
+l4_ipc_call_static(l4_threadid_t dest, 
+		   const void *snd_msg, l4_umword_t snd_dword0, l4_umword_t snd_dword1, 
+		   void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
+		   l4_timeout_t timeout, l4_msgdope_t *result)
 {
   unsigned dummy1;
 
@@ -44,7 +44,7 @@ l4_i386_ipc_call_static(l4_threadid_t dest,
 }
 
 int
-l4_i386_ipc_reply_and_wait_static(l4_threadid_t dest, 
+l4_ipc_reply_and_wait_static(l4_threadid_t dest, 
 			   const void *snd_msg, 
 			   l4_umword_t snd_dword0, l4_umword_t snd_dword1, 
 			   l4_threadid_t *src,
@@ -102,9 +102,9 @@ l4_i386_ipc_reply_and_wait_static(l4_threadid_t dest,
 }
 
 int
-l4_i386_ipc_send_static(l4_threadid_t dest, 
-		 const void *snd_msg, l4_umword_t snd_dword0, l4_umword_t snd_dword1, 
-		 l4_timeout_t timeout, l4_msgdope_t *result)
+l4_ipc_send_static(l4_threadid_t dest, 
+		   const void *snd_msg, l4_umword_t snd_dword0, l4_umword_t snd_dword1, 
+		   l4_timeout_t timeout, l4_msgdope_t *result)
 {
   unsigned dummy1, dummy2, dummy3, dummy4;
 
@@ -137,9 +137,9 @@ l4_i386_ipc_send_static(l4_threadid_t dest,
 };
 
 int
-l4_i386_ipc_wait_static(l4_threadid_t *src,
-		 void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, l4_msgdope_t *result)
+l4_ipc_wait_static(l4_threadid_t *src,
+		   void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
+		   l4_timeout_t timeout, l4_msgdope_t *result)
 {
   unsigned dummy1, dummy2;
 
@@ -173,9 +173,9 @@ l4_i386_ipc_wait_static(l4_threadid_t *src,
 }
 
 extern int
-l4_i386_ipc_receive_static(l4_threadid_t src,
-		    void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
-		    l4_timeout_t timeout, l4_msgdope_t *result)
+l4_ipc_receive_static(l4_threadid_t src,
+		      void *rcv_msg, l4_umword_t *rcv_dword0, l4_umword_t *rcv_dword1, 
+		      l4_timeout_t timeout, l4_msgdope_t *result)
 {
   unsigned dummy1, dummy2;
 

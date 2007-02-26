@@ -1,6 +1,6 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = l4rm
+SRC_DOX_REF = l4rm.cfg
 
 include $(L4DIR)/mk/doc.mk

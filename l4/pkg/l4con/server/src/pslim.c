@@ -1,10 +1,17 @@
 /* $Id$ */
 
-/*	con/server/src/pslim.c
+/**
+ * \file	con/server/src/pslim.c
+ * \brief	implementation of pSLIM protocol
  *
- *	implementation of pslim
- *	originated from gl/driver.c (SVGAlib)
- */
+ * \date	2001
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * 		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <stdlib.h>
 #include <string.h>		/* needed for memmove */
@@ -18,12 +25,12 @@
 #include "con_yuv2rgb/yuv2rgb.h"
 
 /* private types */
-/* offsets in pmap[] and bmap[] */
+/** offsets in pmap[] and bmap[] */
 struct pslim_offset 
 {
-  l4_uint32_t preskip_x;	/* skip pixels at beginning of line */
-  l4_uint32_t preskip_y;	/* skip lines */
-  l4_uint32_t endskip_x;	/* skip pixels at end of line */
+  l4_uint32_t preskip_x;	/**< skip pixels at beginning of line */
+  l4_uint32_t preskip_y;	/**< skip lines */
+  l4_uint32_t endskip_x;	/**< skip pixels at end of line */
 /* word_t endskip_y; */	/* snip lines */
 };
 
@@ -111,7 +118,7 @@ set_rgb24(l4_uint32_t r, l4_uint32_t g, l4_uint32_t b)
 /* clipping */
 
 static inline int
-clip_rect(struct l4con_vc *vc, int from_user, pslim_rect_t *rect)
+clip_rect(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect)
 {
   int max_x = vc->xres;
   int max_y = vc->yres;
@@ -158,7 +165,7 @@ clip_rect(struct l4con_vc *vc, int from_user, pslim_rect_t *rect)
 
 static inline int
 clip_rect_offset(struct l4con_vc *vc, int from_user, 
-		 pslim_rect_t *rect, struct pslim_offset *offset)
+		 l4con_pslim_rect_t *rect, struct pslim_offset *offset)
 {
   int max_x = vc->xres;
   int max_y = vc->yres;
@@ -210,7 +217,7 @@ clip_rect_offset(struct l4con_vc *vc, int from_user,
 
 static inline int
 clip_rect_dxy(struct l4con_vc *vc, int from_user,
-	      pslim_rect_t *rect, l4_int16_t *dx, l4_int16_t *dy)
+	      l4con_pslim_rect_t *rect, l4_int16_t *dx, l4_int16_t *dy)
 {
   int max_x = vc->xres;
   int max_y = vc->yres;
@@ -852,6 +859,7 @@ sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
       pmap  += bytepp * offset->preskip_y *
 		        (w + offset->preskip_x + offset->endskip_x);
     }
+
   
   /* wait for any pending acceleration operation */
   vc->do_sync();
@@ -921,8 +929,8 @@ sw_cscs(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
 
 /* SVGAlib calls this: FILLBOX */
 void
-pslim_fill(struct l4con_vc *vc, int from_user, pslim_rect_t *rect, 
-	   pslim_color_t color)
+pslim_fill(struct l4con_vc *vc, int from_user, 
+	   l4con_pslim_rect_t *rect, l4con_pslim_color_t color)
 {
   if (!clip_rect(vc, from_user, rect))
     /* nothing visible */
@@ -939,8 +947,8 @@ pslim_fill(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
 /* SVGAlib calls this:	ACCEL_PUTBITMAP (mode 2)
 			PBM - images (mode 1)		*/
 void
-pslim_bmap(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
-	   pslim_color_t fgc, pslim_color_t bgc, void* bmap, 
+pslim_bmap(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
+	   l4con_pslim_color_t fgc, l4con_pslim_color_t bgc, void* bmap, 
 	   l4_uint8_t mode)
 {
   struct pslim_offset offset = {0,0,0};
@@ -959,7 +967,7 @@ pslim_bmap(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
 
 /* SVGAlib calls this:	PUTBOX  (and knows about masked boxes!) */
 void
-pslim_set(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
+pslim_set(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
 	  void* pmap)
 {
   struct pslim_offset offset = {0,0,0};
@@ -978,7 +986,7 @@ pslim_set(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
 
 /* SVGAlib calls this:	COPYBOX */
 void
-pslim_copy(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
+pslim_copy(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
 	   l4_int16_t dx, l4_int16_t dy)
 {
   if (!clip_rect_dxy(vc, from_user, rect, &dx, &dy))
@@ -1004,7 +1012,7 @@ pslim_copy(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
  *	PLN_444  4:4:4   full resolution
  */
 void
-pslim_cscs(struct l4con_vc *vc, int from_user, pslim_rect_t *rect,
+pslim_cscs(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
 	   void* y, void* u, void *v, l4_uint8_t mode, l4_uint32_t scale)
 {
   struct pslim_offset offset = {0,0,0};

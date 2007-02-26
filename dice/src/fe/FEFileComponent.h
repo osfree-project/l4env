@@ -5,7 +5,7 @@
  *	\date	02/22/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -31,13 +31,11 @@
 
 #include "fe/FEBase.h"
 
-class CFEFile;
-
 /**	\class CFEFileComponent
  *	\ingroup frontend
  *	\brief describes the file's components (is base class for interface, lib, etc.)
  */
-class CFEFileComponent : public CFEBase  
+class CFEFileComponent : public CFEBase
 {
 DECLARE_DYNAMIC(CFEFileComponent);
 

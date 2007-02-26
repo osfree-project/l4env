@@ -1,21 +1,32 @@
 /*
- * \brief	Landscape effect
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
- * 
- * based on a source code of Andrea Griffini
+ * \brief   Landscape effect
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ *
+ * based on the newvox source code of Andrea Griffini
+ * see http://www.libsdl.org/projects/newvox/
  */
 
-/*** GENERAL INCLUDES ***/
-#include <math.h>
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 /*** DOpE SPECIFIC INCLUDES ***/
-#include "dope-config.h"
+#include "dopestd.h"
 #include <dopelib.h>
 #include <vscreen.h>
 
 /*** LOCAL INCLUDES ***/
 #include "voxel.h"
+
+/*** DECLARATIONS FROM STANDARD MATH LIB ***/
+double sin(double x);
+double cos(double x);
 
 #define KEY_UP    103
 #define KEY_LEFT  105
@@ -234,7 +245,7 @@ static void View(int x0,int y0,float aa) {
     {
 	
 	  for ( col = scr_w; col>0; --col ) {
-	  	*(dst++) = coltab[*(src++)];
+	    *(dst++) = coltab[*(src++)];
 	  }
     }
   }
@@ -242,20 +253,21 @@ static void View(int x0,int y0,float aa) {
 
 
 /*** INITIALISATION OF THE EFFECT - MUST BE CALLED DURING THE START UP ***/
-void voxel_init(void) {
+int voxel_init(void) {
 	
 	/* open window with rt-widget */
 	dope_cmd(app_id, "voxwin=new Window()" );
 	dope_cmd(app_id, "voxvscr=new VScreen()" );
-	dope_cmd(app_id, "voxvscr.setmode(320,200,16)" );
+	dope_cmd(app_id, "voxvscr.setmode(320,200,\"RGB16\")" );
 	dope_cmd(app_id, "voxvscr.set(-framerate 25)" );
 	dope_cmd(app_id, "voxwin.set(-x 500 -y 150 -w 330 -h 227 -fitx yes -fity yes -content voxvscr -background off)" );
 
 	/* map vscreen buffer to local address space */
-	scr_adr = vscr_get_fb( dope_cmd(app_id, "voxvscr.map()") );
+	scr_adr = vscr_get_fb(app_id, "voxvscr");
+	if (!scr_adr) return -1;
 	
 	/* get identifier of VScreen-server */
-	voxvscr_id = vscr_get_server_id(dope_cmd(app_id,"voxvscr.getserver()"));
+	voxvscr_id = vscr_get_server_id(app_id, "voxvscr");
 	
 	/* Set up the first 64 colors to a grayscale */
 	for ( i=0; i<64; i++ ) coltab[i]= ((i&0xfe) << 10) + (i<<5) + (i>>1);
@@ -263,6 +275,7 @@ void voxel_init(void) {
 	/* Compute the height map */
 	ComputeMap();
 	printf("VScrTest(voxel_init): done\n");
+	return 0;
 };
 
 
@@ -272,7 +285,7 @@ void voxel_exec(exec_flag) {
 
 	vscr_server_waitsync(voxvscr_id);
 
-	if (!exec_flag) return;
+	if (!exec_flag || !scr_adr) return;
 
 	/* update position/angle */
 	xpos0+=ss*cos(a); ypos0+=ss*sin(a);

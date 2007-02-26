@@ -6,7 +6,10 @@
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
-
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #ifndef __LOG_LIB_INCLUDE_INTERNAL_H_
 #define __LOG_LIB_INCLUDE_INTERNAL_H_
 
@@ -65,5 +68,12 @@ extern void (*LOG_outstring)(const char*log_message);
 extern void LOG_printf_flush(void);
 extern void LOG_doprnt(register const char*,va_list, int,
 		        void(*)(char*,char), char*);
+
+/* extract filename */
+extern inline const char* LOG_filename(const char* name);
+extern inline const char* LOG_filename(const char* name){
+  char *f = strstr(name, "pkg/");
+  return (f != NULL) ? f+4 : name;
+}
 
 #endif /* __INTERNAL_H_ */

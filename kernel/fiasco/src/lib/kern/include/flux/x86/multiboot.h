@@ -22,6 +22,7 @@
 #define _FLUX_X86_MULTIBOOT_H_
 
 #include <flux/x86/types.h>
+#include <flux/x86/multiboot_vbe.h>
 
 /* For a.out kernel boot images, the following header must appear
    somewhere in the first 8192 bytes of the kernel image file.  */
@@ -126,7 +127,32 @@ struct multiboot_info
 	   Valid only if MULTIBOOT_MEM_MAP is set in flags word above.  */
 	vm_size_t		mmap_count;
 	vm_offset_t		mmap_addr;
+
+	/* Drive Info buffer */
+	unsigned long drives_length;
+	unsigned long drives_addr;
+
+	/* ROM configuration table */
+	unsigned long config_table;
+
+	/* Boot Loader Name */
+	unsigned long boot_loader_name;
+
+	/* APM table */
+	unsigned long apm_table;
+
+	/* Video */
+	unsigned long vbe_control_info;
+	unsigned long vbe_mode_info;
+	unsigned short vbe_mode;
+	unsigned short vbe_interface_seg;
+	unsigned short vbe_interface_off;
+	unsigned short vbe_interface_len;
 };
+
+/*
+ * Flags of the 'flags' parameter in the mbi
+ */
 
 #define MULTIBOOT_MEMORY	(1L<<0)
 #define MULTIBOOT_BOOT_DEVICE	(1L<<1)
@@ -135,6 +161,11 @@ struct multiboot_info
 #define MULTIBOOT_AOUT_SYMS	(1L<<4)
 #define MULTIBOOT_ELF_SHDR	(1L<<5)
 #define MULTIBOOT_MEM_MAP	(1L<<6)
+#define MULTIBOOT_DRIVE_INFO	(1L<<7)
+#define MULTIBOOT_CFG_TABLE	(1L<<8)
+#define MULTIBOOT_BOOT_LD_NAME	(1L<<9)
+#define MULTIBOOT_APM_TABLE	(1L<<10)
+#define MULTIBOOT_VIDEO_INFO	(1L<<11)
 
 /* For use with printf's %b format. */
 #define MULTIBOOT_FLAGS_FORMAT \

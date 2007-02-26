@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/src/jiffies.c
+ * \file   l4io/server/src/jiffies.c
+ * \brief  L4Env l4io I/O Server jiffies Thread
  *
- * \brief	L4Env l4io I/O Server jiffies Thread
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/kernel.h>
@@ -42,18 +31,15 @@
 #include "__macros.h"
 
 
-/*****************************************************************************/
 /*
  * vars
  */
-/*****************************************************************************/
 static unsigned long long volatile *kclock; /**< kernel clock reference
                                              * \ingroup grp_misc */
 /** address of L4 kernel info
  * \ingroup grp_misc */
 static l4_addr_t kernel_info_addr = 0x1000;
 
-/*****************************************************************************/
 /** Get RMGR pager id.
  * 
  * \retval pager         RMGR pager thread id
@@ -61,7 +47,6 @@ static l4_addr_t kernel_info_addr = 0x1000;
  * Return the thread id of the RMGR pager.
  * We asume that we have a flat clan structure and our chief is the RMGR!
  */
-/*****************************************************************************/
 static void __get_rmgr_pager(l4_threadid_t * pager)
 {
   l4_threadid_t my_pager, my_preempter, chief;
@@ -75,18 +60,15 @@ static void __get_rmgr_pager(l4_threadid_t * pager)
   /* get chief */
   l4_nchief(L4_INVALID_ID, &chief);
 
-  pager->lh.low = chief.lh.low;
-  pager->lh.high = chief.lh.high;
+  pager->raw = chief.raw;
 }
 
-/*****************************************************************************/
 /** Map kernel info page.
  *	
  * \return 0 on success, negative error code otherwise
  *
  * Map L4 kernel info page (L4 kernel timer as time base).
  */
-/*****************************************************************************/
 static int __map_kernel_info_page(void)
 {
   l4_threadid_t chief;
@@ -107,7 +89,7 @@ static int __map_kernel_info_page(void)
     }
 
   /* map kernel info page */
-  error = l4_i386_ipc_call(chief,
+  error = l4_ipc_call(chief,
                            L4_IPC_SHORT_MSG, 1, 1,
                            L4_IPC_MAPMSG(kernel_info_addr, L4_LOG2_PAGESIZE),
                            &dummy, &dummy, L4_IPC_NEVER, &result);
@@ -133,21 +115,19 @@ static int __map_kernel_info_page(void)
 }
 
 #if L4SCSI_JIFFIES
-/*****************************************************************************/
 /** Jiffies thread loop.
  * \ingroup grp_misc
  *
  * \param  data         dummy data pointer (unused)
  *
  * This thread implements the LINUX jiffies counter.
- * It uses a timeouted \c l4_i386_ipc_receive() on \c L4_NIL_ID.
+ * It uses a timeouted \c l4_ipc_receive() on \c L4_NIL_ID.
  *
  * (another implementation can be selected by defining \c L4_SCSI_JIFFIES=0 in
  * jiffies.h)
  *
  * \krishna Lars' L4SCSI implementation
  */
-/*****************************************************************************/
 static void jiffies_thread(void *data)
 {
   int ms, to_e, to_m, ret;
@@ -167,7 +147,7 @@ static void jiffies_thread(void *data)
   /* jiffie loop */
   for (;;)
     {
-      error = l4_i386_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
+      error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
                                   &dummy, &dummy,
                                   L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0), 
                                   &result);
@@ -183,7 +163,6 @@ static void jiffies_thread(void *data)
   Panic("left jiffies loop!");
 }
 #else
-/*****************************************************************************/
 /** Jiffies thread loop.
  * \ingroup grp_misc
  *
@@ -199,7 +178,6 @@ static void jiffies_thread(void *data)
  * \lars test for (wait < 0) to increment jiffies by 2 or more if \c
  * JIFFIE_PERIOD is too short
  */
-/*****************************************************************************/
 static void jiffies_thread(void *data)
 {
   int wait;
@@ -231,7 +209,6 @@ static void jiffies_thread(void *data)
 }
 #endif
 
-/*****************************************************************************/
 /** Jiffies thread initialization.
  * \ingroup grp_misc
  *
@@ -239,7 +216,6 @@ static void jiffies_thread(void *data)
  *
  * Initialize jiffie counter thread.
  */
-/*****************************************************************************/
 int io_jiffies_init()
 {
   int error;

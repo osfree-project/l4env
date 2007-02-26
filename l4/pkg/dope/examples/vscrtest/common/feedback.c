@@ -1,39 +1,49 @@
 /*
- * \brief	Feedback effect
- * \date	2002-10-10
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   Feedback effect
+ * \date    2002-10-10
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
-/*** GENERAL INCLUDES ***/
-#include <math.h>
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 /*** DOpE SPECIFIC INCLUDES ***/
-#include "dope-config.h"
+#include "dopestd.h"
 #include <dopelib.h>
 #include <vscreen.h>
 
 /*** LOCAL INCLUDES ***/
 #include "feedback.h"
 
-#define BTN_LEFT			0x110
-#define BTN_RIGHT			0x111
+/*** DECLARATIONS FROM STANDARD MATH LIB ***/
+double sin(double x);
+double cos(double x);
 
-#define SCR_W 256					/* size of virtual screen */
+#define BTN_LEFT  0x110
+#define BTN_RIGHT 0x111
+
+#define SCR_W 256                   /* size of virtual screen */
 #define SCR_H 256
-#define CENTX 128					/* centre position of virtual screen */
+#define CENTX 128                   /* centre position of virtual screen */
 #define CENTY 128
 
-extern long app_id;					/* DOpE application id */
+extern long app_id;                 /* DOpE application id */
 
 static void *feedvscr_id;
 
 static u16 scr_buf[SCR_H*2][SCR_W];
 static u16 *buf_adr;
-static u16 *scr_adr;
+static u16 *scr_adr = NULL;
 static u16 ball_gfx[32][32];
-//static u16 map[SCR_H][SCR_W];		/* map for fixed distortion */
-static float mx=42.0,my=42.0;
-static int px=64,py=64,pflag=0;
+//static u16 map[SCR_H][SCR_W];     /* map for fixed distortion */
+static float mx = 42.0, my = 42.0;
+static int px = 64, py = 64, pflag = 0;
 
 static float alph=0.0,beta=1.0,gamm=2.0,delt=3.0;
 
@@ -53,12 +63,12 @@ static void gen_ball_gfx(void) {
 
 /*** GENERATE STATIC MAP FOR TUNNEL-DISTORTION ***/
 //static void gen_tunn_map(void) {
-//	int x,y;
-//	for (y=0;y<SCR_H;y++) {
-//		for (x=0;x<SCR_W;x++) {
-//			map[y][x] = y*SCR_W + x;
-//		}
-//	}
+//  int x,y;
+//  for (y=0;y<SCR_H;y++) {
+//  	for (x=0;x<SCR_W;x++) {
+//  		map[y][x] = y*SCR_W + x;
+//  	}
+//  }
 //}
 
 
@@ -83,8 +93,8 @@ static void smooth(u16 *src,u16 *dst) {
 	d = dst + 2*SCR_W;
 	for (cnt=SCR_W*(SCR_H - 4);cnt--;) {
 		*(d++)= ((((((*(s+linoff))>>1)&MASK) + (((*(s+2))>>1)&MASK))>>1)&MASK) +
-				((((((*(s-linoff))>>1)&MASK) + (((*(s-2))>>1)&MASK))>>1)&MASK);		
-		s++;	
+				((((((*(s-linoff))>>1)&MASK) + (((*(s-2))>>1)&MASK))>>1)&MASK);     
+		s++;    
 	}
 }
 
@@ -92,8 +102,8 @@ static void smooth(u16 *src,u16 *dst) {
 
 /*** APPLY DISTORTION USING A FIXED MAP ***/
 //static void distort(u16 *map,u16 *src,u16 *dst) {
-//	int cnt = SCR_W*SCR_H;
-//	for (;cnt--;) *(dst++) = *(src + *(map++));
+//  int cnt = SCR_W*SCR_H;
+//  for (;cnt--;) *(dst++) = *(src + *(map++));
 //}
 
 
@@ -111,9 +121,9 @@ static void sindist(u16 *src,u16 *dst) {
 	for (x=0;x<SCR_W;x++) xmap[x]=(int)(af*sin(2*b+((float)x)/mx))*SCR_W;
 
 	for (y=0;y<SCR_H;y++) {
-		s=src + y*SCR_W + (int)(bf*sin(2*a+((float)y)/my));		// 36.0
+		s=src + y*SCR_W + (int)(bf*sin(2*a+((float)y)/my));     // 36.0
 		for (x=0;x<SCR_W;x++) *(dst++) = *((s++) + xmap[x]);
-//		for (x=0;x<SCR_W;x++) *(dst++) = (((*(dst))>>1)&MASK) + (((*((s++) + xmap[x]))>>1)&MASK);
+//  	for (x=0;x<SCR_W;x++) *(dst++) = (((*(dst))>>1)&MASK) + (((*((s++) + xmap[x]))>>1)&MASK);
 	}
 	a = a + 0.045*1;
 	b = b + 0.033*1;
@@ -170,13 +180,13 @@ static void motion_callback(dope_event *e,void *arg) {
 
 
 /*** INITIALISATION OF THE EFFECT - MUST BE CALLED DURING THE START UP ***/
-void feedback_init(void) {
+int feedback_init(void) {
 
 	/* open window with rt-widget */
 	dope_cmd(app_id, "feedwin=new Window()" );
 	dope_cmd(app_id, "feedvscr=new VScreen()" );
-	dope_cmd(app_id, "feedvscr.setmode(256,256,16)" );
-	dope_cmd(app_id, "feedvscr.set(-framerate 25)");
+	dope_cmd(app_id, "feedvscr.setmode(256,256,\"RGB16\")" );
+	dope_cmd(app_id, "feedvscr.set(-framerate 25 -grabmouse yes)");
 	dope_cmd(app_id, "feedwin.set(-x 100 -y 450 -w 266 -h 283 -fitx yes -fity yes -background off -content feedvscr)" );
 	
 	dope_bind(app_id,"feedvscr","motion", motion_callback, (void *)0x123);
@@ -185,18 +195,20 @@ void feedback_init(void) {
 	dope_bind(app_id,"feedvscr","leave", leave_callback, (void *)0x123);
 
 	/* map vscreen buffer to local address space */
-	scr_adr = vscr_get_fb( dope_cmd(app_id, "feedvscr.map()") );
+	scr_adr = vscr_get_fb(app_id, "feedvscr");
+	if (!scr_adr) return -1;
 	
 	/* get identifier of pSLIM-server */
-	feedvscr_id = vscr_get_server_id(dope_cmd(app_id,"feedvscr.getserver()"));
+	feedvscr_id = vscr_get_server_id(app_id, "feedvscr");
 	
 	buf_adr = &scr_buf[SCR_H/2][0];
 
 	gen_ball_gfx();
-//	gen_tunn_map();
-//	gen_sin1_map();
+//  gen_tunn_map();
+//  gen_sin1_map();
 
 	printf("VScrTest(feedback_init): done\n");
+	return 0;
 };
 
 
@@ -206,22 +218,22 @@ void feedback_exec(int exec_flag) {
 
 	vscr_server_waitsync(feedvscr_id);
 	
-	if (!exec_flag) return;
+	if (!exec_flag || !scr_adr) return;
 	
 	smooth(scr_adr,buf_adr);
 
 	/* draw feedback source */
-	if (!pflag) {	
+	if (!pflag) {   
 		clear(CENTX-1*64 + 5*sin(delt),CENTY + 15*cos(alph),0xffff,buf_adr);
 		plot (CENTX-1*64 + 15*sin(alph),CENTY + 5*cos(beta),0xf800,buf_adr);
 		plot (CENTX-1*64 + 5*sin(beta),CENTY + 15*cos(gamm),0x07e0,buf_adr);
 		plot (CENTX-1*64 + 5*sin(gamm),CENTY + 15*cos(delt),0x001f,buf_adr);
 
 		// 10 5
-//		clear(CENTX+0*64 + 80*sin(delt),CENTY + 80*cos(alph),0xffff,buf_adr);
-//		plot (CENTX+0*64 + 80*sin(gamm),CENTY + 80*cos(beta),0xf800,buf_adr);
-//		plot (CENTX+0*64 + 80*sin(alph),CENTY + 80*cos(gamm),0x07e0,buf_adr);
-//		plot (CENTX+0*64 + 80*sin(delt),CENTY + 80*cos(beta),0x001f,buf_adr);
+//  	clear(CENTX+0*64 + 80*sin(delt),CENTY + 80*cos(alph),0xffff,buf_adr);
+//  	plot (CENTX+0*64 + 80*sin(gamm),CENTY + 80*cos(beta),0xf800,buf_adr);
+//  	plot (CENTX+0*64 + 80*sin(alph),CENTY + 80*cos(gamm),0x07e0,buf_adr);
+//  	plot (CENTX+0*64 + 80*sin(delt),CENTY + 80*cos(beta),0x001f,buf_adr);
 
 		clear(CENTX+1*64 + 10*sin(delt),CENTY + 15*cos(alph),0xffff,buf_adr);
 		plot (CENTX+1*64 + 10*sin(gamm),CENTY + 5*cos(beta),0xf800,buf_adr);
@@ -245,7 +257,7 @@ void feedback_exec(int exec_flag) {
 		plot (px + 10*sin(delt),py + 10*cos(beta),0x001f,scr_adr);
 	}
 
-//		distort(map,scr_adr,buf_adr);
+//  	distort(map,scr_adr,buf_adr);
 
 }
 

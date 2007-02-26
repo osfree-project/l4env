@@ -162,6 +162,18 @@ static struct pci_device
 };
 #endif
 
+#if CONFIG_RHINE
+/* Not it libpci.h of 2.2 */
+#define PCI_DEVICE_ID_VIA_VT6102	0x3065
+static struct pci_device
+  pic_nic_list_rhine[] =
+{
+  { PCI_VENDOR_ID_VIA, PCI_DEVICE_ID_VIA_VT6102,
+    "Via VT6102 [Rhine-II]", 0, 0, 0},
+  {0, 0, NULL, 0, 0, 0}
+};
+#endif
+
 struct dispatch_table
   {
     char *nic_name;
@@ -202,6 +214,9 @@ static struct dispatch_table NIC[] =
 #endif
 #if CONFIG_RTL8139
   {"RTL8139", rtl8139_probe, pci_ioaddrs, pic_nic_list_rtl8139},
+#endif
+#if CONFIG_RHINE
+  {"Via-Rhine", rhine_probe, pci_ioaddrs, pic_nic_list_rhine},
 #endif
   {0, 0, 0}
 };

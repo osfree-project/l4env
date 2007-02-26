@@ -1,31 +1,20 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	generic_io/include/l4/generic_io/libio.h
+ * \file   generic_io/include/ARCH-x86/libio.h
+ * \brief  L4Env I/O Client API
  *
- * \brief	L4Env I/O Client API
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
-#ifndef _L4IO_LIBIO_H
-#define _L4IO_LIBIO_H
+#ifndef __GENERIC_IO_INCLUDE_ARCH_X86_LIBIO_H_
+#define __GENERIC_IO_INCLUDE_ARCH_X86_LIBIO_H_
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -269,4 +258,4 @@ int l4io_pci_writew_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t val);
 int l4io_pci_writel_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t val);
 /** @} */
 
-#endif /* !_L4IO_LIBIO_H */
+#endif

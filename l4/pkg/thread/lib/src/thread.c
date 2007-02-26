@@ -6,23 +6,13 @@
  *
  * \date   09/02/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4env includes */
 #include <l4/sys/types.h>
@@ -62,16 +52,16 @@ l4thread_init(void)
   int ret;
 
   /* avoid multiple initializations */
-  if (!cmpxchg32(&l4th_initialized,0,1))
+  if (!l4util_cmpxchg32(&l4th_initialized,0,1))
     return 0;
 
-#if DEBUG_CONFIG
-  INFO("l4thread config:\n");
-  DMSG("  max. threads:       %d\n",l4thread_max_threads);
-  DMSG("  default stack size: %u\n",l4thread_stack_size);
-  DMSG("  max. stack size:    %u\n",l4thread_max_stack);
-  DMSG("  default priority:   %d\n",l4thread_default_prio);
-#endif
+  LOGdL(DEBUG_CONFIG,"l4thread config:\n" \
+        "  max. threads:       %d\n" \
+        "  default stack size: %u\n" \
+        "  max. stack size:    %u\n" \
+        "  default priority:   %d",
+        l4thread_max_threads,l4thread_stack_size,
+        l4thread_max_stack,l4thread_default_prio);
 
   /* init stacks area */
   ret = l4th_stack_init();

@@ -10,6 +10,14 @@
 /*****************************************************************************/
 /*
  * $Log$
+ * Revision 1.3  2003/05/20 13:50:14  ra3
+ * - merge dice branch into HEAD
+ * - old flick branch can be found using -j pre-dice-merge
+ *
+ * Revision 1.2.2.1  2003/01/24 15:21:13  ra3
+ * - changed from CORBA_* types to l4_* types
+ * - some small IDL call fixes
+ *
  * Revision 1.2  2002/11/25 01:07:47  reuther
  * - adapted to new L4 integer types
  * - adapted to l4sys/l4util/l4env/dm_generic include changes
@@ -30,10 +38,10 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/env/env.h>
 
-void 
-LOG_flush(void)
-{
-}
+//void 
+//LOG_flush(void)
+//{
+//}
 
 int
 l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset, 

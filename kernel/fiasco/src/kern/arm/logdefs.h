@@ -9,5 +9,7 @@
 #define LOG_SHORTCUT_FAILED_2	do { } while (0)
 #define LOG_SHORTCUT_SUCCESS	do { } while (0)
 #define LOG_PF_RES_USER		do { } while (0)
+#define LOG_SCHED_LOAD		do { } while (0)
+#define LOG_SCHED_SAVE		do { } while (0)
 
 #endif

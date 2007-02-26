@@ -1,9 +1,23 @@
-#include "dopelib-config.h"
+/*
+ * \brief   DOpE client library - Linux specific event listener
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include "dopestd.h"
 #include "dopelib.h"
 #include "listener.h"
 #include "sync.h"
 #include <dopeapp-server.h>
-#include <stdio.h>
 #include <pthread.h>
 
 extern int get_free_port(void);
@@ -12,7 +26,7 @@ static char *listener_ident;
 static struct dopelib_mutex *listener_init_mutex;
 
 static void *listener_thread(void *arg) {
-	CORBA_char listener_ident_buf[128];
+	char listener_ident_buf[128];
 	CORBA_Environment listener_env = dice_default_environment;
 	int listener_port = get_free_port();
 	

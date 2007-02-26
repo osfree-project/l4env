@@ -9,6 +9,6 @@ const char* dice_user    = __USER__;
 #else
 const char* dice_user    = 0;
 #endif
-const char* dice_configure_cpp     = __CONFIGURECPP__;
-const char* dice_compile_cpp       = __WHICHCPP__;
+const char* dice_configure_gcc     = __CONFIGURECXX__;
+const char* dice_compile_gcc       = __WHICHCXX__;
 

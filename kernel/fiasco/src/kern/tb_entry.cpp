@@ -16,6 +16,7 @@ enum {
   TBUF_BREAKPOINT         = 12,
   TBUF_TRAP               = 13,
   TBUF_PF_RES             = 14,
+  TBUF_SCHED              = 15
 };
 
 #include "l4_types.h"
@@ -30,21 +31,24 @@ class Tb_entry
 public:
   void		number(Mword number);
   void		rdtsc();
-  void		rdpmc();
+  void		rdpmc1();
+  void		rdpmc2();
   Mword		eip() const;
   Context	* tid() const;
   Unsigned8	type() const;
   Mword		number() const;
   Unsigned64	tsc() const;
-  Unsigned64	pmc() const;
+  Unsigned32	pmc1() const;
+  Unsigned32	pmc2() const;
 
 protected:
   void		set_global(char type, Context *tid, Mword eip);
   Mword		_number;	// event number
   Mword		_eip;		// instruction pointer
-  Context	*_tid;	// tid Context
+  Context	*_tid;		// Context
   Unsigned64	_tsc;		// time stamp counter
-  Unsigned64	_pmc;		// performance counter value
+  Unsigned32	_pmc1;		// performance counter value 1
+  Unsigned32	_pmc2;		// performance counter value 2
   Unsigned8	_type;		// type of entry
 } __attribute__((packed));
 
@@ -181,6 +185,16 @@ private:
   Unsigned16	_cs,  _ds;
 };
 
+// logged scheduling event
+class Tb_entry_sched: public Tb_entry
+{
+private:
+  unsigned		_mode;
+  int			_ticks_left;
+  unsigned short	_id;
+  unsigned short	_prio;
+  unsigned short	_timeslice;
+};
 
 IMPLEMENTATION:
 
@@ -190,7 +204,7 @@ IMPLEMENTATION:
 #include "entry_frame.h"
 #include "cpu.h"
 #include "initcalls.h"
-#include "jdb_perf_cnt.h"
+#include "perf_cnt.h"
 #include <flux/x86/base_trap.h>
 
 
@@ -208,7 +222,7 @@ extern "C" void _wrong_sizeof_tb_entry_bp	(void);
 extern "C" void _wrong_sizeof_tb_entry_ipc_sfl	(void);
 extern "C" void _wrong_sizeof_tb_entry_ctx_sw	(void);
 extern "C" void _wrong_sizeof_tb_entry_trap	(void);
-
+extern "C" void _wrong_sizeof_tb_entry_sched	(void);
 
 IMPLEMENT FIASCO_INIT
 void
@@ -229,9 +243,8 @@ Tb_entry_fit64::init()
   if (sizeof(Tb_entry_ipc_sfl)	 > 64)	_wrong_sizeof_tb_entry_ipc_sfl();
   if (sizeof(Tb_entry_ctx_sw)	 > 64)	_wrong_sizeof_tb_entry_ctx_sw();
   if (sizeof(Tb_entry_trap)	 > 64)	_wrong_sizeof_tb_entry_trap();
+  if (sizeof(Tb_entry_sched)	 > 64)	_wrong_sizeof_tb_entry_sched();
 }
-
-
 
 PUBLIC inline
 void
@@ -291,11 +304,18 @@ Tb_entry::rdtsc()
   _tsc = Cpu::rdtsc();
 }
 
-IMPLEMENT inline NEEDS ["jdb_perf_cnt.h"]
+IMPLEMENT inline NEEDS ["perf_cnt.h"]
 void
-Tb_entry::rdpmc()
+Tb_entry::rdpmc1()
 {
-  _pmc = Jdb_perf_cnt::read_pmc();
+  _pmc1 = (Unsigned32)Perf_cnt::read_pmc[0]();
+}
+
+IMPLEMENT inline NEEDS ["perf_cnt.h"]
+void
+Tb_entry::rdpmc2()
+{
+  _pmc2 = (Unsigned32)Perf_cnt::read_pmc[1]();
 }
 
 IMPLEMENT inline
@@ -306,10 +326,17 @@ Tb_entry::tsc() const
 }
 
 IMPLEMENT inline
-Unsigned64
-Tb_entry::pmc() const
+Unsigned32
+Tb_entry::pmc1() const
 {
-  return _pmc;
+  return _pmc1;
+}
+
+IMPLEMENT inline
+Unsigned32
+Tb_entry::pmc2() const
+{
+  return _pmc2;
 }
 
 
@@ -631,9 +658,12 @@ Tb_entry_ke_reg::set(Context *tid, Mword eip, const char *msg, Mword len,
 		     trap_state *ts)
 {
   set_global(TBUF_KE_REG, tid, eip);
-  if (len > sizeof(_msg))
-    len = sizeof(_msg);
-  strncpy(_msg, msg, len);
+  if (len > 0)
+    {
+      if (len > sizeof(_msg))
+	len = sizeof(_msg);
+      strncpy(_msg, msg, len);
+    }
   _msg[len] = '\0';
   _eax = ts->eax; _ecx = ts->ecx; _edx = ts->edx;
 }
@@ -685,8 +715,6 @@ Tb_entry_ke_reg::edx() const
   return _edx;
 }
 
-
-
 PUBLIC inline
 void
 Tb_entry_ctx_sw::set(Context *tid, Mword eip, Context *dest,
@@ -718,8 +746,6 @@ Tb_entry_ctx_sw::dest() const
 {
   return _dest;
 }
-
-
 
 PUBLIC inline
 void
@@ -796,8 +822,6 @@ Tb_entry_ipc_sfl::dst_lck() const
   return _dst_lck;
 }
 
-
-
 PUBLIC inline
 void
 Tb_entry_unmap::set(Context *tid, Mword eip, 
@@ -829,8 +853,6 @@ Tb_entry_unmap::result() const
 {
   return _result;
 }
-
-
 
 PUBLIC inline
 void
@@ -976,3 +998,51 @@ Tb_entry_trap::eflags() const
   return _eflags;
 }
 
+PUBLIC inline
+void
+Tb_entry_sched::set (Context *tid, Mword eip, unsigned mode,
+                     int ticks_left, unsigned short id,
+		     unsigned short prio, unsigned short timeslice)
+{
+  set_global (TBUF_SCHED, tid, eip);
+  _mode       = mode;
+  _ticks_left = ticks_left;
+  _id         = id;
+  _prio       = prio;
+  _timeslice  = timeslice;
+}
+
+PUBLIC inline
+unsigned
+Tb_entry_sched::mode()
+{
+  return _mode;
+}
+
+PUBLIC inline
+int
+Tb_entry_sched::ticks_left()
+{
+  return _ticks_left;
+}
+
+PUBLIC inline
+unsigned short
+Tb_entry_sched::id()
+{
+  return _id;
+}
+
+PUBLIC inline
+unsigned short
+Tb_entry_sched::prio()
+{
+  return _prio;
+}
+
+PUBLIC inline
+unsigned short
+Tb_entry_sched::timeslice()
+{
+  return _timeslice;
+}

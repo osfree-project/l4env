@@ -137,9 +137,14 @@ typedef struct dsi_sg_elem
 typedef struct dsi_ctrl_header
 {
   /* control area config */
-  l4_uint32_t num_packets;	///< number of packets
-  l4_uint32_t num_sg_elems;	///< number of scatter/gather list elements
-  l4_uint32_t max_sg_len;	///< maximum length of sg-list
+  l4_uint32_t num_packets;	  ///< number of packets
+  l4_uint32_t num_sg_elems;	  ///< number of scatter/gather list elements
+  l4_uint32_t max_sg_len;         ///< maximum length of sg-list
+  l4_uint32_t packets_committed;  /**< number of packets commited by the 
+                                   **  sender and not yet released (i.e. 
+                                   **  commited) by the receiver, 
+                                   **  => 'fill level' of the packet list
+                                   **/
 } dsi_ctrl_header_t;
 
 /*!\brief	socket id

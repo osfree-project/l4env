@@ -10,28 +10,27 @@
 #include <l4/oskit/support.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "globals.h"
 #include "irq_threads.h"
 #include "server.h"
 #include "config.h"
 
 /* krishna: 16 kb of data for dynamic allocation + dynamic stack allocation */
-static int mem_size = 1024*16 + IRQ_NUMS*STACKSIZE;
+#define MEM_SIZE (1024*16 + IRQ_NUMS*STACKSIZE)
+static char mem_array[MEM_SIZE] __attribute__ ((aligned(4096)));
 
 static int mem_init(void);
 static int parse_args(int, char*[]);
 
 /* initalized list-based memory manager from oskit. We use <memsize> bytes
-   after _end. We assume there is enough space. */
+   within mem_array. */
 static int mem_init(void){
-  extern void *_end;
   void *addr;
   
-  addr = &_end;
-  addr = (void*)((l4_umword_t)(addr+4096)&~4095);
+  addr = &mem_array;
 
-  
-  init_OSKit_malloc(((l4_umword_t)addr), mem_size, mem_size, 0);
+  init_OSKit_malloc_from_memory((l4_umword_t)addr, MEM_SIZE);
   
   return 0;
 }

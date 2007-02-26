@@ -8,12 +8,11 @@ IMPLEMENTATION[syscall-x0]:
 #include "space_index.h"
 #include "space_index_util.h"
 
-
 /** L4 system call task_new.  */
-IMPLEMENT
-Mword Thread::sys_task_new(Syscall_frame *i_regs)
+IMPLEMENT inline NOEXPORT
+void Thread::sys_task_new()
 {
-  Sys_task_new_frame *regs = static_cast<Sys_task_new_frame*>(i_regs);
+  Sys_task_new_frame *regs = sys_frame_cast<Sys_task_new_frame>(this->regs());
 
   L4_uid id = regs->dest();
   unsigned taskno = id.task();
@@ -66,7 +65,7 @@ Mword Thread::sys_task_new(Syscall_frame *i_regs)
 
 	  regs->new_taskid( id );
 
-	  return 0;
+	  return;
 	}
       
       //
@@ -90,18 +89,21 @@ Mword Thread::sys_task_new(Syscall_frame *i_regs)
       //
       // create the first thread of the task
       //
-      Thread *t 
-	= new (id) Thread (s, id, sched()->prio(),
-			   (sched()->mcp() < regs->mcp()) 
-			   ? sched()->mcp() : regs->mcp());
+      Thread *t = new (id) Thread (s, id, sched()->prio(),
+				   mcp() < regs->mcp() ? mcp() : regs->mcp());
 
       check(t->initialize(regs->ip(), regs->sp(), 
-			  threadid_t(regs->pager()).lookup(),
-			  0));
+			  Threadid(regs->pager()).lookup(), 0));
       
-      return 0;
+      return;
     }
 
   regs->new_taskid( L4_uid::NIL );
-  return (Mword)-1;
+
+  //  return (Mword)-1;		// spec says return value is undefined
+}
+
+extern "C" void sys_task_new_wrapper()
+{
+  current_thread()->sys_task_new();
 }

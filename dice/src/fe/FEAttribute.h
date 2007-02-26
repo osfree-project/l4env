@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,52 +30,53 @@
 #define __DICE_FE_FEATTRIBUTE_H__
 
 enum ATTR_TYPE {
-    ATTR_NONE				= 0,	/**< interface: empty attribute */
-    ATTR_UUID				= 1,	/**< interface: uuid attribute */
-    ATTR_VERSION			= 2,	/**< interface: version attribute */
-    ATTR_ENDPOINT			= 3,	/**< interface: end_point attribute */
-    ATTR_EXCEPTIONS			= 4,	/**< interface: exceptions attribute */
-    ATTR_LOCAL				= 5,	/**< interface: local attribute */
-    ATTR_POINTER_DEFAULT	= 6,	/**< interface: pointer_default attribute */
-    ATTR_OBJECT				= 7,	/**< interface: object attribute */
-    ATTR_UUID_REP			= 8,	/**< library: uuid attribute */
-    ATTR_CONTROL			= 9,	/**< library: control attribute */
-    ATTR_HELPCONTEXT		= 10,	/**< library: helpcontext attribute */
-    ATTR_HELPFILE			= 11,	/**< library: helpfile attribute */
-    ATTR_HELPSTRING			= 12,	/**< library: helpstring attribute */
-    ATTR_HIDDEN				= 13,	/**< library: hidden attribute */
-    ATTR_LCID				= 14,	/**< library: lcid (library id) attribute */
-    ATTR_RESTRICTED			= 15,	/**< library: restricted attribute */
-    ATTR_SWITCH_IS			= 16,	/**< union: switch_is attribute - identifies the switch variable*/
-    ATTR_IDEMPOTENT			= 17,	/**< operation: idempotent attribute */
-    ATTR_BROADCAST			= 18,	/**< operation: broadcast attribute */
-    ATTR_MAYBE				= 19,	/**< operation: maybe attribute */
-    ATTR_REFLECT_DELETIONS	= 20,	/**< operation: reflect_deletions attribute */
-    ATTR_TRANSMIT_AS		= 21,	/**< type: transmit_as attribute */
-    ATTR_HANDLE				= 22,	/**< type: handle attribute */
-    ATTR_FIRST_IS			= 23,	/**< parameter: field attribute first_is */
-    ATTR_LAST_IS			= 24,	/**< parameter: field attribute last_is */
-    ATTR_LENGTH_IS			= 25,	/**< parameter: filed attribute length_is */
-    ATTR_SIZE_IS			= 26,	/**< parameter: field attribute size_is */
-    ATTR_MAX_IS				= 27,	/**< parameter: field attribute max_is */
-    ATTR_MIN_IS				= 28,	/**< parameter: field attribute min_is */
-    ATTR_IGNORE				= 29,	/**< parameter: field attribute ignore - ignores this member of a struct */
-    ATTR_IN					= 30,	/**< parameter: directional attribute in */
-    ATTR_OUT				= 31,	/**< parameter: directional attribute out */
-    ATTR_REF				= 32,	/**< parameter: pointer attribute ref */
-    ATTR_UNIQUE				= 33,	/**< parameter: pointer attribute unique */
-    ATTR_PTR				= 34,	/**< parameter: pointer attribute ptr */
-    ATTR_IID_IS				= 35,	/**< parameter: iid_is attribute - used to specify a varibale defining the way this parameter should be marshalled */
-    ATTR_STRING				= 36,	/**< parameter: usage attribute string */
-    ATTR_CONTEXT_HANDLE		= 37,	/**< parameter: usage attribute context_handle */
-    ATTR_SWITCH_TYPE		= 38,	/**< parameter: attribute switch_type defines the type of the switch variable */
-    ATTR_ABSTRACT			= 39,	/**< CORBA: abstract interfaces */
-    ATTR_DEFAULT_FUNCTION   = 40,   /**< interface: default function (if no opcode matches) */
-    ATTR_ERROR_FUNCTION     = 41,   /**< interface: error function (if IPC wait returns without receiving a message) */
-    ATTR_SERVER_PARAMETER   = 42,   /**< interface: same as -fserver-parameter on per interface basis */
-    ATTR_INIT_RCVSTRING     = 43,   /**< interface: same as -finit-rcvstring on per interface basis */
-	ATTR_INIT_WITH_IN       = 44,   /**< parameter: init the recieve buffer with the input value */
-    ATTR_LAST_ATTR          = 45    /**< the last attribute (used for iteration */
+    ATTR_NONE,	            /**< interface: empty attribute */
+    ATTR_UUID,	            /**< interface: uuid attribute */
+    ATTR_VERSION,	        /**< interface: version attribute */
+    ATTR_ENDPOINT,	        /**< interface: end_point attribute */
+    ATTR_EXCEPTIONS,	    /**< interface: exceptions attribute */
+    ATTR_LOCAL,	            /**< interface: local attribute */
+    ATTR_POINTER_DEFAULT,   /**< interface: pointer_default attribute */
+    ATTR_OBJECT,	        /**< interface: object attribute */
+    ATTR_UUID_REP,	        /**< library: uuid attribute */
+    ATTR_CONTROL,	        /**< library: control attribute */
+    ATTR_HELPCONTEXT,	    /**< library: helpcontext attribute */
+    ATTR_HELPFILE,	        /**< library: helpfile attribute */
+    ATTR_HELPSTRING,	    /**< library: helpstring attribute */
+    ATTR_HIDDEN,	        /**< library: hidden attribute */
+    ATTR_LCID,	            /**< library: lcid (library id) attribute */
+    ATTR_RESTRICTED,	    /**< library: restricted attribute */
+    ATTR_SWITCH_IS,	        /**< union: switch_is attribute - identifies the switch variable*/
+    ATTR_IDEMPOTENT,	    /**< operation: idempotent attribute */
+    ATTR_BROADCAST,	        /**< operation: broadcast attribute */
+    ATTR_MAYBE,             /**< operation: maybe attribute */
+    ATTR_REFLECT_DELETIONS,	/**< operation: reflect_deletions attribute */
+    ATTR_TRANSMIT_AS,	    /**< type: transmit_as attribute */
+    ATTR_HANDLE,	        /**< type: handle attribute */
+    ATTR_FIRST_IS,	        /**< parameter: field attribute first_is */
+    ATTR_LAST_IS,	        /**< parameter: field attribute last_is */
+    ATTR_LENGTH_IS,	        /**< parameter: filed attribute length_is */
+    ATTR_SIZE_IS,	        /**< parameter: field attribute size_is */
+    ATTR_MAX_IS,	        /**< parameter: field attribute max_is */
+    ATTR_MIN_IS,	        /**< parameter: field attribute min_is */
+    ATTR_IGNORE,	        /**< parameter: field attribute ignore - ignores this member of a struct */
+    ATTR_IN,	            /**< parameter: directional attribute in */
+    ATTR_OUT,	            /**< parameter: directional attribute out */
+    ATTR_REF,	            /**< parameter: pointer attribute ref */
+    ATTR_UNIQUE,	        /**< parameter: pointer attribute unique */
+    ATTR_PTR,	            /**< parameter: pointer attribute ptr */
+    ATTR_IID_IS,	        /**< parameter: iid_is attribute - used to specify a varibale defining the way this parameter should be marshalled */
+    ATTR_STRING,	        /**< parameter: usage attribute string */
+    ATTR_CONTEXT_HANDLE,	/**< parameter: usage attribute context_handle */
+    ATTR_SWITCH_TYPE,	    /**< parameter: attribute switch_type defines the type of the switch variable */
+    ATTR_ABSTRACT,	        /**< CORBA: abstract interfaces */
+    ATTR_DEFAULT_FUNCTION,  /**< interface: default function (if no opcode matches) */
+    ATTR_ERROR_FUNCTION,    /**< interface: error function (if IPC wait returns without receiving a message) */
+    ATTR_SERVER_PARAMETER,  /**< interface: same as -fserver-parameter on per interface basis */
+    ATTR_INIT_RCVSTRING,    /**< interface: same as -finit-rcvstring on per interface basis */
+	ATTR_PREALLOC,      /**< parameter: init the recieve buffer with the input value */
+	ATTR_ALLOW_REPLY_ONLY,  /**< function: allow that function can reply only to the client */
+    ATTR_LAST_ATTR          /**< the last attribute (used for iteration */
 };
 
 #include "fe/FEBase.h"

@@ -1,3 +1,13 @@
+/*!
+ * \file	main.c
+ * \brief	Simple test program for tftp file provider
+ *
+ * \date	06/03/2003
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
@@ -10,6 +20,7 @@
 #include <l4/generic_fprov/generic_fprov-client.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 int
 main(int argc, char **argv)
@@ -18,9 +29,9 @@ main(int argc, char **argv)
   l4_threadid_t tftp_id;
   l4_threadid_t dm_id;
   l4dm_dataspace_t ds;
-  l4_addr_t addr;
+  void *addr;
   l4_size_t size;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   
   LOG_init("tftptst");
   
@@ -43,22 +54,22 @@ main(int argc, char **argv)
       exit(1);
     }
 
-  if ((error = l4fprov_file_open(tftp_id,
+  if ((error = l4fprov_file_open_call(&tftp_id,
 			         argv[1],
-				 (l4fprov_threadid_t*)&dm_id,
-				 0, (l4fprov_dataspace_t*)&ds, &size, &exc)))
+				 &dm_id,
+				 0, &ds, &size, &_env)))
     {
       printf("Error opening file from tftp\n");
       return -1;
     }
   
-  if ((error = l4rm_attach(&ds, size, 0, L4DM_RO | L4RM_MAP, (void **)&addr)))
+  if ((error = l4rm_attach(&ds, size, 0, L4DM_RO | L4RM_MAP, &addr)))
     {
       printf("Error %d attaching dataspace\n", error);
       return -L4_ENOMEM;
     }
 
-  printf("File %s opened at %08x.\n", argv[1], addr);
+  printf("File %s opened at %08x.\n", argv[1], (unsigned)addr);
 
   return 1;
 }

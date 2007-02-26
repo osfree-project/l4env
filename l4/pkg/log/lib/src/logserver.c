@@ -6,6 +6,10 @@
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
@@ -87,11 +91,11 @@ void LOG_server_outstring(const char*string){
   err = 0;
   if( !initialized ||
 #if 1
-     ((err = l4_i386_ipc_call(log_server,&msg,LOG_COMMAND_LOG, flush_flag,
+     ((err = l4_ipc_call(log_server,&msg,LOG_COMMAND_LOG, flush_flag,
      		             NULL, &msg.d0, &msg.d1,
      		             L4_IPC_NEVER,&result))!=0 )
 #else
-     ((err = l4_i386_ipc_send(log_server,&msg,LOG_COMMAND_LOG, flush_flag,
+     ((err = l4_ipc_send(log_server,&msg,LOG_COMMAND_LOG, flush_flag,
      		             //L4_IPC_TIMEOUT(0,1,0,0,0,0),
      		             L4_IPC_NEVER,
      		             &result))!=0 )
@@ -160,13 +164,13 @@ int LOG_channel_open(int channel, l4_fpage_t page){
 
   if(page.fp.size>LOG_LOG2_CHANNEL_BUFFER_SIZE) return -L4_ENOMEM;
   if( check_server()) return -L4_ENOTFOUND;
-  if( (err = l4_i386_ipc_call(log_server,
+  if( (err = l4_ipc_call(log_server,
 			      (void*)(((l4_umword_t)&msg) | L4_IPC_FPAGE_MASK),
 			      0,     		// offset
 			      page.fpage,	// fpage
 			      NULL, &msg.d0, &msg.d1,
 			      L4_IPC_NEVER,&result))!=0 ){
-      return err;
+      return -err;
   }
   return msg.d0;
 }
@@ -204,10 +208,10 @@ int LOG_channel_write(int id, unsigned off, unsigned size){
     return -L4_EIPC;
   }
   
-  if((err=l4_i386_ipc_call(log_server,&msg,LOG_COMMAND_CHANNEL_WRITE, id,
+  if((err=l4_ipc_call(log_server,&msg,LOG_COMMAND_CHANNEL_WRITE, id,
 			   NULL, &msg.d0, &msg.d1,
 			   L4_IPC_NEVER,&result))!=0 ){
-    return err;
+    return -err;
   }
   return msg.d0;
 }
@@ -230,10 +234,10 @@ int LOG_channel_flush(int id){
     return -L4_EIPC;
   }
   
-  if((err=l4_i386_ipc_call(log_server,NULL,LOG_COMMAND_CHANNEL_FLUSH, id,
+  if((err=l4_ipc_call(log_server,NULL,LOG_COMMAND_CHANNEL_FLUSH, id,
 			   NULL, &dw0, &dw1,
 			   L4_IPC_NEVER,&result))!=0 ){
-    return err;
+    return -err;
   }
   return dw0;
 }
@@ -256,10 +260,10 @@ int LOG_channel_close(int id){
     return -L4_EIPC;
   }
   
-  if((err=l4_i386_ipc_call(log_server,NULL,LOG_COMMAND_CHANNEL_CLOSE, id,
+  if((err=l4_ipc_call(log_server,NULL,LOG_COMMAND_CHANNEL_CLOSE, id,
 			   NULL, &dw0, &dw1,
 			   L4_IPC_NEVER,&result))!=0 ){
-    return err;
+    return -err;
   }
   return dw0;
 }

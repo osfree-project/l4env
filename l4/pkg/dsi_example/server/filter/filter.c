@@ -65,7 +65,7 @@ filter_thread(void * data)
   ret = dsi_socket_get_data_area(rcv_soc,&rcv_area,&size);
   ret = dsi_socket_get_data_area(snd_soc,&snd_area,&size);
 
-  Msg("started, rcv at %p, snd at %p\n",rcv_area,snd_area);
+  LOG("started, rcv at %p, snd at %p",rcv_area,snd_area);
 
   count = 0;
   while (1)
@@ -74,7 +74,7 @@ filter_thread(void * data)
       ret = dsi_packet_get(rcv_soc,&rcv_p);
       if (ret)
 	{
-	  Panic("get receive packet failed (%d)\n",ret);
+	  Panic("get receive packet failed (%d)",ret);
 	  return;
 	}
 
@@ -82,21 +82,21 @@ filter_thread(void * data)
       ret = dsi_packet_get_data(rcv_soc,rcv_p,&addr,&size);
       if (ret)
 	{
-	  Panic("get receive data failed (%d)\n",ret);
+	  Panic("get receive data failed (%d)",ret);
 	  return;
 	}
       offs = addr - rcv_area;
       rcv_packets[count % NUM_PACKETS] = rcv_p;
 
 #if 0
-      KDEBUG("got rcv packet %u\n",rcv_p->no);
+      KDEBUG("got rcv packet %u",rcv_p->no);
 #endif
 
       /* get send packet */
       ret = dsi_packet_get(snd_soc,&snd_p);
       if (ret)
 	{
-	  Panic("get send packet failed (%d)\n",ret);
+	  Panic("get send packet failed (%d)",ret);
 	  return;
 	}
       
@@ -104,7 +104,7 @@ filter_thread(void * data)
       ret = dsi_packet_add_data(snd_soc,snd_p,snd_area + offs,size,0);
       if (ret)
 	{
-	  Panic("add data failed (%d)\n",ret);
+	  Panic("add data failed (%d)",ret);
 	  return;
 	}
 	  
@@ -112,7 +112,7 @@ filter_thread(void * data)
       ret = dsi_packet_set_no(snd_soc,snd_p,count++);
       if (ret)
 	{
-	  Panic("set packet number failed (%d)\n",ret);
+	  Panic("set packet number failed (%d)",ret);
 	  return;
 	}
       
@@ -120,13 +120,13 @@ filter_thread(void * data)
       ret = ret = dsi_packet_commit(snd_soc,snd_p);
       if (ret)
 	{
-	  Panic("commit send packet failed (%d)\n",ret);
+	  Panic("commit send packet failed (%d)",ret);
 	  return;
 	}
     }
 
   /* this should not happen */
-  Panic("left filter work loop!\n");
+  Panic("left filter work loop!");
 }
 
 /*****************************************************************************/
@@ -146,13 +146,13 @@ __release_callback(dsi_socket_t * socket, dsi_packet_t * packet)
   int ret;
 
 #if 0
-  INFO("packet %u\n",packet->no);
+  LOG("packet %u",packet->no);
 #endif  
 
   /* commit packet */
   ret = dsi_packet_commit(rcv_soc,rcv_packets[packet->no % NUM_PACKETS]);
   if (ret)
-    Panic("commit receive packet failed (%d)\n",ret);
+    Panic("commit receive packet failed (%d)",ret);
 }
 
 /*****************************************************************************
@@ -177,14 +177,15 @@ __release_callback(dsi_socket_t * socket, dsi_packet_t * packet)
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num, 
-			       const dsi_example_filter_dataspace_t * rcv_ctrl_ds, 
-			       const dsi_example_filter_dataspace_t * rcv_data_ds, 
-			       dsi_example_filter_socket_t * rcv_s, 
-			       dsi_example_filter_socket_t * snd_s, 
-			       dsi_example_filter_dataspace_t * snd_ctrl_ds, 
-			       dsi_example_filter_dataspace_t * snd_data_ds, 
-			       sm_exc_t * _ev)
+dsi_example_filter_open_component(CORBA_Object _dice_corba_obj,
+    l4_int32_t num,
+    const dsi_example_filter_dataspace_t *rcv_ctrl_ds,
+    const dsi_example_filter_dataspace_t *rcv_data_ds,
+    dsi_example_filter_socket_t *rcv_s,
+    dsi_example_filter_socket_t *snd_s,
+    dsi_example_filter_dataspace_t *snd_ctrl_ds,
+    dsi_example_filter_dataspace_t *snd_data_ds,
+    CORBA_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, rcv_sync_id, snd_sync_id;
@@ -201,7 +202,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
 			     255,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
     {
-      Panic("start work thread failed!\n");
+      Panic("start work thread failed!");
       return -1;
     }
   work_id = l4thread_l4_id(ret);
@@ -211,11 +212,11 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
    ***************************************************************************/
 
 #if 0
-  INFO("receive socket:\n");
-  INFO("ctrl_ds %d at %x.%x\n",((l4dm_dataspace_t *)rcv_ctrl_ds)->id,
+  LOGL("receive socket:");
+  LOGL("ctrl_ds %d at %x.%x",((l4dm_dataspace_t *)rcv_ctrl_ds)->id,
        ((l4dm_dataspace_t *)rcv_ctrl_ds)->manager.id.task,
        ((l4dm_dataspace_t *)rcv_ctrl_ds)->manager.id.lthread);
-  INFO("data_ds %d at %x.%x\n",((l4dm_dataspace_t *)rcv_data_ds)->id,
+  LOGL("data_ds %d at %x.%x",((l4dm_dataspace_t *)rcv_data_ds)->id,
        ((l4dm_dataspace_t *)rcv_data_ds)->manager.id.task,
        ((l4dm_dataspace_t *)rcv_data_ds)->manager.id.lthread);
 #endif
@@ -237,7 +238,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
 			  &rcv_sync_id,flags, &rcv_soc);
   if (ret)
     {
-      Panic("create DSI socket failed\n");
+      Panic("create DSI socket failed");
       return -1;
     }
 
@@ -254,7 +255,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
   ret = dsi_socket_get_data_area(rcv_soc,&addr,&size);
   if (ret)
     {
-      Panic("get data area failed\n");
+      Panic("get data area failed");
       return -1;
     }
 
@@ -292,7 +293,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
                           work_id,&snd_sync_id,flags,&snd_soc);
   if (ret)
     {
-      Panic("create DSI socket failed\n");
+      Panic("create DSI socket failed");
       return -1;
     }
 
@@ -300,7 +301,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
   ret = dsi_socket_set_release_callback(snd_soc,__release_callback);
   if (ret)
     {
-      Panic("set release callback failed\n");
+      Panic("set release callback failed");
       return -1;
     }
 
@@ -308,7 +309,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
   ret = dsi_socket_get_ref(snd_soc,(dsi_socket_ref_t *)snd_s);
   if (ret)
     {
-      Panic("get socket ref failed\n");
+      Panic("get socket ref failed");
       return -1;
     }
 
@@ -316,7 +317,7 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
   ret = dsi_socket_get_data_area(snd_soc,&addr,&size);
   if (ret)
     {
-      Panic("get data area failed\n");
+      Panic("get data area failed");
       return -1;
     }
 
@@ -345,10 +346,10 @@ dsi_example_filter_server_open(sm_request_t * request, l4_int32_t num,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_filter_server_connect(sm_request_t * request, 
-				  const dsi_example_filter_socket_t * local, 
-				  const dsi_example_filter_socket_t * remote, 
-				  sm_exc_t * _ev)
+dsi_example_filter_connect_component(CORBA_Object _dice_corba_obj,
+    const dsi_example_filter_socket_t *local,
+    const dsi_example_filter_socket_t *remote,
+    CORBA_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -357,7 +358,7 @@ dsi_example_filter_server_connect(sm_request_t * request,
   ret = dsi_socket_get_descriptor(local->socket,&s);
   if (ret)
     {
-      Panic("invalid socket\n");
+      Panic("invalid socket");
       return -1;
     }
 
@@ -365,7 +366,7 @@ dsi_example_filter_server_connect(sm_request_t * request,
   ret = dsi_socket_connect(s,(dsi_socket_ref_t *)remote);
   if (ret)
     {
-      Panic("connect failed\n");
+      Panic("connect failed");
       return -1;
     }
 
@@ -384,11 +385,6 @@ dsi_example_filter_server_connect(sm_request_t * request,
 /*****************************************************************************/ 
 int main(void)
 {
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-  int ret;
-
   /* init log lib */
   LOG_init("filter");
 
@@ -398,40 +394,15 @@ int main(void)
   /* register at nameserver */
   if (!names_register(DSI_EXAMPLE_FILTER_NAMES))
     {
-      Panic("failed to register filter!\n");
+      Panic("failed to register filter!");
       return -1;
     }
 
-  /* Flick server loop */
-  flick_init_request(&request, &ipc_buf);
-  while (1)
-    {
-      result = flick_server_wait(&request);
-
-      while (!L4_IPC_IS_ERROR(result))
-	{
-          /* dispatch request */
-          ret = dsi_example_filter_server(&request);
-          switch(ret)
-            {
-            case DISPATCH_ACK_SEND:
-              /* reply and wait for next request */
-              result = flick_server_reply_and_wait(&request);
-              break;
-              
-            default:
-              INFO("Flick dispatch error (%d)!\n",ret);
-              
-              /* wait for next request */
-              result = flick_server_wait(&request);
-              break;
-            }
-        }
-      Msg("Flick IPC error (0x%08x)!\n",result.msgdope);
-    }
+  /* Dice server loop */
+  dsi_example_filter_server_loop(NULL);
 
   /* this should never happen */
-  Panic("left filter server loop...\n");
+  Panic("left filter server loop...");
   return 0;
 }
   

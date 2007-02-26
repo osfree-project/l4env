@@ -1,0 +1,86 @@
+/*
+ * This interface demonstrates the usage of arrays in the IDL
+ */
+ 
+interface i_array
+{
+  /*
+   * This function transmits a constant sized array to the server
+   */
+  void func1([in] int t11[20]);
+  /*
+   * This function uses the size_is attributes of the IDL to determine the 
+   * actual size of the array at run-time
+   */
+  void func2([in] int t21, [in, size_is(t21), max_is(100)] int t22[], 
+      [in] int t23, [in, size_is(t23)] int t24[20]);
+  /*
+   * This function does the same only for the other direction...
+   */
+  void func3([out] int *t31, [out, size_is(t31), max_is(200)] int t32[]);
+  /*
+   * If we want the size of the array to be restricted, we can assign a maximum size
+   */
+  void func4([out] int *t41, [out, size_is(t41)] int t42[200]);
+  
+  /*
+   * This specific example shows when strings are used and
+   * when a char* is regarded as array of characters.
+   * 
+   * shows the usage of the size_is attribute to determine
+   * the runtime size of an array.
+   */
+  void func5([in, size_is(t52)] char* t51, [in] int t52);
+};
+
+/*
+ * This interface contains functions, which demonstrate the 
+ * usage of [prealloc].
+ */
+interface prealloc
+{
+  void func6([out, prealloc, size_is(size)] unsigned char **buffer,
+      [in, out] unsigned *size);
+  void func7([out, prealloc, size_is(size)] unsigned char *buffer[],
+      [in, out] unsigned *size);
+};
+
+/*
+ * This example is taken from the IDL4 testuite.
+ * 
+ * It is an "array example", because it uses multidimensional
+ * arrays. And it defines "array types", such as t_a and t_b.
+ * The task of the compiler is to regard all of the dimensions,
+ * which are available.
+ */
+library corba
+{
+  interface structs
+    {
+      typedef int t_a[5];
+      typedef t_a t_b[3];
+      
+      typedef struct 
+	{
+	  t_a a;
+	  t_b b[3];
+	  int g[4][2], h[7];
+	} t_c;
+      
+      typedef struct 
+	{ 
+	  char a; 
+	  char b; 
+	} t_d;
+
+      void gamma([in] t_a a, 
+	  [in] t_b b, 
+	  [in] t_c c);
+      t_c delta([in] t_c a, 
+	  [in, out] t_c *b, 
+	  [out] t_c *c);
+      void epsilon([in] t_d a, 
+	  [in] t_d b);
+  };  
+};
+

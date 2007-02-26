@@ -1,4 +1,5 @@
 #include <malloc.h>
+#include <string.h>
 #include <l4/lock/lock.h>
 #include "stringlist.h"
 

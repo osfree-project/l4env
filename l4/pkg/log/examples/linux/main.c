@@ -11,6 +11,7 @@
  */
 #include <l4/log/l4log.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* We have no prototype exported but know about it. */
 extern FILE *LOG_stdlog;

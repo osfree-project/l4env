@@ -1,0 +1,5 @@
+This backend is kindly provided by alex and should be suitable for
+very basic l4 programs, such as sigma0.
+
+It has only support for write() to fds stdout and stderr so that printf
+& co work. Internal stuff like str* and mem* should be usable.

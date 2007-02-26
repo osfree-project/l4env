@@ -58,8 +58,12 @@ int CL4X0BESizes::GetSizeOfEnvType(String sName)
         return 16; // 4*l4_umword_t
     if (sName == "l4_timeout_t")
         return 4; // l4_umword_t
+    if (sName == "l4_threadid_t")
+	    return 4;
     if (sName == "CORBA_Object")
-        return 4; // sizeof(l4_threadid_t)
+        return 4; // sizeof(l4_threadid_t*)
+    if (sName == "CORBA_Object_base")
+	    return 4; // sizeof(l4_threadid_t)
     if (sName == "CORBA_Environment")
         return 28; // 4(major+repos_id) + 4(param) + 4(ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(user_data) + 4(malloc ptr)
     return CBESizes::GetSizeOfEnvType(sName);

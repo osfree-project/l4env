@@ -1,0 +1,4 @@
+Name service for DROPS
+
+The name server in this package is used by nearly all of the DROPS
+components to register their thread IDs.

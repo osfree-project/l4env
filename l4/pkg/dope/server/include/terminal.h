@@ -1,22 +1,34 @@
-#if !defined(TERMINAL)
-#define TERMINAL struct public_terminal
-#endif
+/*
+ * \brief   Interface of DOpE Terminal widget module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
 
-#if !defined(WIDGETARG)
-#define WIDGETARG void
-#endif
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 struct terminal_methods;
+struct terminal_data;
 
-struct public_terminal {
-	struct widget_methods 	*gen;
+#define TERMINAL struct terminal
+
+struct terminal {
+	struct widget_methods   *gen;
 	struct terminal_methods *term;
+	struct widget_data      *wd;
+	struct terminal_data    *td;
 };
 
 struct terminal_methods {
-	void	(*print)		(TERMINAL *,char *txt);
+	void (*print) (TERMINAL *,char *txt);
 };
 
 struct terminal_services {
-	TERMINAL	*(*create)	(void);
+	TERMINAL *(*create) (void);
 };

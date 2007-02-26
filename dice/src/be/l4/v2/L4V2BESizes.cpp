@@ -5,7 +5,7 @@
  *	\date	Thu Oct 10 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 
 #include "be/l4/v2/L4V2BESizes.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CL4V2BESizes);
 
@@ -72,8 +72,12 @@ int CL4V2BESizes::GetSizeOfEnvType(String sName)
         return 16; // 4*l4_umword_t
     if (sName == "l4_timeout_t")
         return 4; // l4_umword_t
+    if (sName == "l4_threadid_t")
+	    return 8;
     if (sName == "CORBA_Object")
-        return 8; // sizeof(l4_threadid_t)
+        return 4; // sizeof(l4_threadid_t*)
+    if (sName == "CORBA_Object_base")
+	    return 8; // sizeof(l4_threadid_t)
     if (sName == "CORBA_Environment")
         return 28; // 4(major+repos_id) + 4(param) + 4(ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(user_data) + 4(malloc ptr)
     return CBESizes::GetSizeOfEnvType(sName);

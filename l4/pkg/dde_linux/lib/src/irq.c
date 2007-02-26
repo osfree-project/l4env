@@ -1,19 +1,24 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/irq.c
+ * \file   dde_linux/lib/src/irq.c
+ * \brief  IRQ handling and request
  *
- * \brief	IRQ handling and request
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_irq Interrupt Handling
  *
  * This module emulates the interrupt handling inside the Linux kernel. It is
  * derived from several existing DROPS emulation modules.
- * 
+ *
  * There are 2 different approaches to manage interrupts under DROPS/L4: the
  * root resource manager RMGR or Omega0 (resp. the L4Env I/O Server). The
  * Interrupt Handling Module has to be initialized via #irq_init() specifying
@@ -39,7 +44,7 @@
 #include <l4/omega0/client.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/util/irq.h>
-#include <l4/util/thread.h>	/* attach_interrupt() */
+#include <l4/util/thread.h>  /* attach_interrupt() */
 #include <l4/thread/thread.h>
 #include <l4/lock/lock.h>
 
@@ -52,33 +57,30 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
-/*****************************************************************************/
-/** 
- * \name Module Variables
+/** \name Module Variables
  * @{ */
-/*****************************************************************************/
+
 /** IRQ descriptor array.
  * \todo what about IRQ sharing? */
 static struct irq_desc
 {
-  int active;		/**< IRQ in use */
-  int num;		/**< IRQ number */
-  l4thread_t t;		/**< handler thread */
+  int active;           /**< IRQ in use */
+  int num;              /**< IRQ number */
+  l4thread_t t;         /**< handler thread */
   void (*handler) (int, void *, struct pt_regs *);
-			/**< ISR */
-  unsigned long flags;	/**< flags from request_irq() */
-  const char *dev_name;	/**< dev_name from request_irq() */
-  void *dev_id;		/**< dev_id from request_irq() */
+                        /**< ISR */
+  unsigned long flags;  /**< flags from request_irq() */
+  const char *dev_name; /**< dev_name from request_irq() */
+  void *dev_id;         /**< dev_id from request_irq() */
 } handlers[NR_IRQS];
 
 /** Usage flag.
  * If 1 use Omega0 and if 0 use RMGR for interrupts. */
 static int use_omega0 = 0;
 
-static int _initialized = 0;	/**< initialization flag */
+static int _initialized = 0;  /**< initialization flag */
 
 int l4dde_irq_set_prio(unsigned int irq, unsigned prio){
     struct irq_desc *handler;
@@ -91,25 +93,20 @@ int l4dde_irq_set_prio(unsigned int irq, unsigned prio){
 
 
 /** @} */
-/*****************************************************************************/
-/**
- * \name Omega0 specific routines
- *
+/** \name Omega0 specific routines
  * @{ */
-/*****************************************************************************/
+
 #define OM_MASK    0x00000001
 #define OM_UNMASK  0x00000002
 #define OM_CONSUME 0x00000004
 
-/*****************************************************************************/
 /** Attach IRQ line.
- * 
- * \param  irq           IRQ number
- * \retval handle        IRQ handle
- *	
+ *
+ * \param  irq     IRQ number
+ * \retval handle  IRQ handle
+ *
  * \return 0 on success (attached interrupt), -1 if attach failed.
  */
-/*****************************************************************************/
 static inline int __omega0_attach(unsigned int irq, int *handle)
 {
   omega0_irqdesc_t irqdesc;
@@ -126,17 +123,15 @@ static inline int __omega0_attach(unsigned int irq, int *handle)
     return 0;
 }
 
-/*****************************************************************************/
 /** Wait for IRQ notification.
- * 
- * \param  irq           IRQ number
- * \param  handle        IRQ line handle
- * \param  flags         Flags:
- *                       - \c OM_MASK    request IRQ mask
- *                       - \c OM_UNMASK  request IRQ unmask
- *                       - \c OM_CONSUME IRQ consumed
+ *
+ * \param  irq     IRQ number
+ * \param  handle  IRQ line handle
+ * \param  flags   Flags:
+ *                 - \c OM_MASK    request IRQ mask
+ *                 - \c OM_UNMASK  request IRQ unmask
+ *                 - \c OM_CONSUME IRQ consumed
  */
-/*****************************************************************************/
 static inline int __omega0_wait(unsigned int irq, int handle, unsigned int flags)
 {
   omega0_request_t request;
@@ -158,65 +153,53 @@ static inline int __omega0_wait(unsigned int irq, int handle, unsigned int flags
 }
 
 /** @} */
-/*****************************************************************************/
-/**
- * \name RMGR specific routines and PIC handling
- *
+/** \name RMGR specific routines and PIC handling
  * @{ */
-/*****************************************************************************/
-/*****************************************************************************/
+
 /** Enable IRQ
- * 
- * \param  irq           IRQ number
+ *
+ * \param  irq  IRQ number
  */
-/*****************************************************************************/
 static inline void __enable_irq(unsigned int irq)
 {
   int port;
-  __l4_cli();
+  l4util_cli();
   port = (((irq & 0x08) << 4) + 0x21);
-  __l4_outb(port, __l4_inb(port) & ~(1 << (irq & 7)));
-  __l4_sti();
+  l4util_out8(l4util_in8(port) & ~(1 << (irq & 7)), port);
+  l4util_sti();
 }
 
-/*****************************************************************************/
 /** Disable IRQ
- * 
- * \param  irq           IRQ number
+ *
+ * \param  irq  IRQ number
  */
-/*****************************************************************************/
 static inline void __disable_irq(unsigned int irq)
 {
   unsigned short port;
-  __l4_cli();
+  l4util_cli();
   port = (((irq & 0x08) << 4) + 0x21);
-  __l4_outb(port, __l4_inb(port) | (1 << (irq & 7)));
-  __l4_sti();
+  l4util_out8(l4util_in8(port) | (1 << (irq & 7)), port);
+  l4util_sti();
 }
 
-/*****************************************************************************/
 /** Disable and acknowledge IRQ
- * 
- * \param  irq           IRQ number
+ *
+ * \param  irq  IRQ number
  */
-/*****************************************************************************/
 static inline void __ack_irq(unsigned int irq)
 {
-  irq_acknowledge(irq);
+  l4util_irq_acknowledge(irq);
 }
 
 /** @} */
-/*****************************************************************************/
 /** IRQ handler thread
  *
- * \param irq_desc	IRQ handling descriptor (IRQ number and handler 
- *			routine)
+ * \param irq_desc  IRQ handling descriptor (IRQ number and handler routine)
  */
-/*****************************************************************************/
 static void dde_irq_thread(struct irq_desc *irq_desc)
 {
-  unsigned int irq = irq_desc->num;	/* save irq description */
-  int retval = 0;			/* thread startup return value */
+  unsigned int irq = irq_desc->num;     /* save irq description */
+  int retval = 0;                       /* thread startup return value */
 
   int ret, error = L4_IPC_RETIMEOUT, irq_handle;
   l4_threadid_t irq_id;
@@ -229,31 +212,31 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
     {
       ret = __omega0_attach(irq, &irq_handle);
       if (ret < 0)
-	Panic("failed to attach IRQ %d at omega0!\n", irq);
+        Panic("failed to attach IRQ %d at omega0!\n", irq);
       else
-	error = L4_IPC_RETIMEOUT;
+        error = L4_IPC_RETIMEOUT;
     }
   else
     {
       if (rmgr_get_irq(irq))
-	/* can't get permission -> block */
-	Panic("%s: can't get permission for irq 0x%02x, giving up...\n",
-	      __FUNCTION__, irq);
+        /* can't get permission -> block */
+        Panic("%s: can't get permission for irq 0x%02x, giving up...\n",
+              __FUNCTION__, irq);
 
       /* attach to IRQ */
-      if (l4_is_invalid_id(irq_id = attach_interrupt(irq)))
-	Panic("%s: can't attach to irq 0x%02x, giving up...\n",
-	      __FUNCTION__, irq);
+      if (l4_is_invalid_id(irq_id = l4util_attach_interrupt(irq)))
+        Panic("%s: can't attach to irq 0x%02x, giving up...\n",
+              __FUNCTION__, irq);
 
       /* read spurious interrupts */
       for (;;)
-	{
-	  error = l4_i386_ipc_receive(irq_id,
-				      L4_IPC_SHORT_MSG, &dw0, &dw1,
-				      L4_IPC_TIMEOUT(0, 0, 1, 15, 0, 0), &result);
-	  if (error == L4_IPC_RETIMEOUT)
-	    break;
-	}
+        {
+          error = l4_ipc_receive(irq_id,
+                                      L4_IPC_SHORT_MSG, &dw0, &dw1,
+                                      L4_IPC_TIMEOUT(0, 0, 1, 15, 0, 0), &result);
+          if (error == L4_IPC_RETIMEOUT)
+            break;
+        }
     }
 
   ++local_irq_count(smp_processor_id());
@@ -266,7 +249,7 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
     Panic("IRQ thread startup failed!");
 
   DMSG("dde_irq_thread[%d] "IdFmt" running.\n",
-	irq_desc->num, IdStr(l4thread_l4_id(l4thread_myself())));
+       irq_desc->num, IdStr(l4thread_l4_id(l4thread_myself())));
 
   if (!use_omega0)
     __enable_irq(irq);
@@ -274,58 +257,56 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
   for (;;)
     {
       if (use_omega0)
-	error = __omega0_wait(irq, irq_handle, om_flags);
+        error = __omega0_wait(irq, irq_handle, om_flags);
       else
-	{
-	  /* wait for incoming interrupt */
-	  error = l4_i386_ipc_receive(irq_id,
-				      L4_IPC_SHORT_MSG, &dw0, &dw1,
-				      L4_IPC_NEVER, &result);
-	  __disable_irq(irq);
-	  __ack_irq(irq);
-	}
+        {
+          /* wait for incoming interrupt */
+          error = l4_ipc_receive(irq_id,
+                                      L4_IPC_SHORT_MSG, &dw0, &dw1,
+                                      L4_IPC_NEVER, &result);
+          __disable_irq(irq);
+          __ack_irq(irq);
+        }
 
       switch (error)
-	{
-	case 0:
+        {
+        case 0:
 #if DEBUG_IRQ
-	  DMSG("got IRQ %d\n", irq);
+        DMSG("got IRQ %d\n", irq);
 #endif
-	  if (irq_desc->active)
-	    irq_desc->handler(irq, irq_desc->dev_id, 0);
-	  if (use_omega0)
-	    om_flags = 0;
-	  else
-	    __enable_irq(irq);
-	  break;
-	case L4_IPC_RETIMEOUT:
-	  ERROR("timeout while receiving irq");
-	  break;
-	default:
-	  ERROR("receiving irq (%d)", error);
-	  break;
-	}
+          if (irq_desc->active)
+            irq_desc->handler(irq, irq_desc->dev_id, 0);
+          if (use_omega0)
+            om_flags = 0;
+          else
+            __enable_irq(irq);
+          break;
+        case L4_IPC_RETIMEOUT:
+          ERROR("timeout while receiving irq");
+          break;
+        default:
+          ERROR("receiving irq (%d)", error);
+          break;
+        }
     }
 }
 
-/*****************************************************************************/
 /** Request Interrupt.
  * \ingroup mod_irq
  *
- * \param  irq		interrupt number
- * \param  handler	interrupt handler -> top half
- * \param  flags	interrupt handling flags (SA_SHIRQ, ...)
- * \param  dev_name	device name
- * \param  dev_id	cookie passed back to handler
+ * \param  irq       interrupt number
+ * \param  handler   interrupt handler -> top half
+ * \param  flags     interrupt handling flags (SA_SHIRQ, ...)
+ * \param  dev_name  device name
+ * \param  dev_id    cookie passed back to handler
  *
  * \return 0 on success; error code otherwise
  *
  * \todo reattachment
  */
-/*****************************************************************************/
 int request_irq(unsigned int irq,
-		void (*handler) (int, void *, struct pt_regs *),
-		unsigned long flags, const char *dev_name, void *dev_id)
+                void (*handler) (int, void *, struct pt_regs *),
+                unsigned long flags, const char *dev_name, void *dev_id)
 {
   l4thread_t irq_tid;
 
@@ -337,12 +318,12 @@ int request_irq(unsigned int irq,
   if(handlers[irq].t)
     {
       if (handlers[irq].active)
-	{
+        {
 #if DEBUG_IRQ
-	  DMSG("XXX attempt to reattach to active irq %d\n", irq);
+          DMSG("XXX attempt to reattach to active irq %d\n", irq);
 #endif
-	  return -EBUSY;
-	}
+          return -EBUSY;
+        }
       handlers[irq].active = 1;
 
       /* XXX what about handler, flags, ... ? */
@@ -357,7 +338,7 @@ int request_irq(unsigned int irq,
 
   /* create IRQ handler thread */
   irq_tid = l4thread_create((l4thread_fn_t) dde_irq_thread,
-			    (void *) &handlers[irq], L4THREAD_CREATE_SYNC);
+                            (void *) &handlers[irq], L4THREAD_CREATE_SYNC);
 
   if (irq_tid<0)
     {
@@ -384,18 +365,16 @@ int request_irq(unsigned int irq,
   return 0;
 }
 
-/*****************************************************************************/
 /** Release Interrupt
  * \ingroup mod_irq
  *
- * \param  irq		interrupt number
- * \param  dev_id	cookie passed back to handler
+ * \param  irq     interrupt number
+ * \param  dev_id  cookie passed back to handler
  *
  * \todo Stop IRQ-Thread
  *
  * \todo Release IRQ
  */
-/*****************************************************************************/
 void free_irq(unsigned int irq, void *dev_id)
 {
   handlers[irq].active = 0;
@@ -458,7 +437,6 @@ int probe_irq_off(unsigned long val)
 #ifdef CONFIG_SMP
 void synchronize_irq(void){
 #warning Not implemented.
-  LOG_Error("Not implemented");
 
   /* To implement this, I think it is better not to do a cli()/sti() as Linux
      does, but to wait until each of the current active interrupts was
@@ -469,16 +447,14 @@ void synchronize_irq(void){
 #endif
 
 /** @} */
-/*****************************************************************************/
 /** Initalize IRQ handling
  * \ingroup mod_irq
  *
- * \param omega0	If set use Omega0 interrupt handling - if unset use
- *			RMGR directly
+ * \param omega0  If set use Omega0 interrupt handling - if unset use RMGR
+ *                directly
  *
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int l4dde_irq_init(int omega0)
 {
   int i;

@@ -1,0 +1,16 @@
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.ps
+*.pdf
+*.idx
+*.toc
+*.lod
+*.ind
+*.ilg
+*.out
+*.title
+.*.d
+bid-tut*

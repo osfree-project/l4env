@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/page.c
+ * \file   dde_linux/lib/src/page.c
+ * \brief  Page Allocation/Deallocation
  *
- * \brief	Page Allocation/Deallocation
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_mm
  * \defgroup mod_mm_p Page Allocation/Deallocation
  *
@@ -20,7 +25,6 @@
  * All these are Linux' %FASTCALL()s. That means for i386 and successors an
  * extra GCC attribute (regparm(3)) is added. I will keep it here.
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/sys/types.h>
@@ -35,15 +39,13 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
-/*****************************************************************************/
 /** Allocate Free Memory Pages
  * \ingroup mod_mm_p
  *
- * \param  gfp_mask	flags
- * \param  order	log2(size)
+ * \param  gfp_mask  flags
+ * \param  order     log2(size)
  *
  * \return 0 on error, start address otherwise
  *
@@ -51,7 +53,6 @@
  *
  * \todo Physical alignment is not yet ensured.
  */
-/*****************************************************************************/
 unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
 {
   int error, pages;
@@ -62,7 +63,7 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
   l4dm_mem_addr_t dm_paddr;
 
   if (gfp_mask & GFP_DMA)
-    DMSG("Warning: No ISA DMA implemented.\n");
+    DMSG("Warning: No ISA DMA memory zone implemented.\n");
 
   size = L4_PAGESIZE << order;
   pages = 1 << order;
@@ -74,9 +75,9 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
   /* open and attach new dataspace */
   page = (l4_addr_t) \
     l4dm_mem_allocate_named(size,
-			    L4DM_CONTIGUOUS | L4DM_PINNED |\
-			    L4RM_MAP | L4RM_LOG2_ALIGNED,
-			    "dde pages");
+                            L4DM_CONTIGUOUS | L4DM_PINNED |\
+                            L4RM_MAP | L4RM_LOG2_ALIGNED,
+                            "dde pages");
   if (!page)
     {
       ERROR("allocating pages");
@@ -87,7 +88,7 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
   if (error != 1)
     {
       if (error>1 || !error)
-	Panic("Ouch, what's that?");
+        Panic("Ouch, what's that?");
       ERROR("getting physical address (%d)", error);
       return 0;
     }
@@ -103,15 +104,13 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
   return (unsigned long) page;
 }
 
-/*****************************************************************************/
 /** Allocate Free, Zeroed Memory Page
  * \ingroup mod_mm_p
  *
- * \param  gfp_mask	flags
+ * \param  gfp_mask  flags
  *
  * \return 0 on error, start address otherwise
  */
-/*****************************************************************************/
 unsigned long get_zeroed_page(unsigned int gfp_mask)
 {
   unsigned long page = __get_free_pages(gfp_mask, 0);
@@ -124,18 +123,16 @@ unsigned long get_zeroed_page(unsigned int gfp_mask)
   return page;
 }
 
-/*****************************************************************************/
 /** Release Memory Pages
  * \ingroup mod_mm_p
  *
- * \param  addr
- * \param  order	log2(size)
+ * \param  addr   start address of region
+ * \param  order  log2(size)
  *
  * Release 2^order contiguous pages.
  *
  * \todo implementation
  */
-/*****************************************************************************/
 void free_pages(unsigned long addr, unsigned int order)
 {
   Error("%s for 2^%d pages not implemented", __FUNCTION__, order);

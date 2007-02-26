@@ -1,7 +1,7 @@
-PKGDIR			?=	../../..
-L4DIR			?=	$(PKGDIR)/../..
+PKGDIR          ?= ../../..
+L4DIR           ?= $(PKGDIR)/../..
 
-TARGET			 = libvscreen.a
+TARGET           = libvscreen.a
 SYSTEMS          = x86-linux
 MODE             = host
 
@@ -10,8 +10,10 @@ PRIVATE_INCDIR   = $(PKGDIR)/lib/dope/include \
                    $(PKGDIR)/include \
                    $(L4DIR)/tool/dice/include
 
-SRC_C			 =	vscreen.c 
-CLIENTIDL		 =	vscr.idl
+SRC_C            = vscreen.c util.c
+CLIENTIDL        = vscr.idl
+
+vpath util.c $(PKGDIR)/lib/vscreen/common
 
 include $(L4DIR)/mk/lib.mk
 

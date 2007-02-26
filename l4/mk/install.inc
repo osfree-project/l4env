@@ -25,10 +25,6 @@
 # $(INSTALLFILE). This allows the difference between linking and actually
 # copying (with stripping for bins).
 
-# this stuff is only useful when building for one architecture
-
-# selecting for install via ln/install -s
-
 ifndef INSTALL_TARGET_$(OSYSTEM)
 ifndef NOTARGETSTOINSTALL
 INSTALL_TARGET?=$(TARGET)
@@ -39,13 +35,26 @@ INSTALL_TARGET += $(INSTALL_TARGET_$(OSYSTEM))
 all::	$(addprefix $(INSTALLDIR_LOCAL)/,$(INSTALL_TARGET))
 install:: $(addprefix $(INSTALLDIR)/,$(INSTALL_TARGET))
 
+# with prog.mk, we copy
+ifeq ($(ROLE),prog.mk)
 $(foreach f,$(INSTALL_TARGET),$(INSTALLDIR_LOCAL)/$(f)):$(INSTALLDIR_LOCAL)/%:%
-	$(INSTALL_LOCAL_MESSAGE)
+	@$(INSTALL_LOCAL_MESSAGE)
 	$(if $(INSTALLFILE_LOCAL),$(VERBOSE)$(INSTALL) -d $(dir $@))
 	$(VERBOSE)$(call INSTALLFILE_LOCAL,$<,$@)
+else
+# with others, we symlink
+# we check for each locally installed lib if the symlink is correct
+.PHONY: $(addprefix $(INSTALLDIR_LOCAL)/,$(INSTALL_TARGET))
+$(foreach f,$(INSTALL_TARGET),$(INSTALLDIR_LOCAL)/$(f)):$(INSTALLDIR_LOCAL)/%:%
+	@$(if $(INSTALLFILE_LOCAL),if [ ! $< -ef $@ ] ; then \
+		$(if $(INSTALL_LOCAL_MESSAGE),$(INSTALL_LOCAL_MESSAGE);) \
+		$(INSTALL) -d $(dir $@); \
+		$(call INSTALLFILE_LOCAL,$<,$@); \
+		fi)
+endif
 
 $(foreach f,$(INSTALL_TARGET),$(INSTALLDIR)/$(f)):$(INSTALLDIR)/%:%
-	$(INSTALL_MESSAGE)
+	@$(INSTALL_MESSAGE)
 	$(if $(INSTALLFILE),$(VERBOSE)$(INSTALL) -d $(dir $@))
 	$(VERBOSE)$(call INSTALLFILE,$<,$@)
 

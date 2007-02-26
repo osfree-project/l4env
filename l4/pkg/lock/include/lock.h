@@ -10,6 +10,12 @@
  * Simple, semaphore-based lock implementation.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4_LOCK_LOCK_H
 #define _L4_LOCK_LOCK_H
 

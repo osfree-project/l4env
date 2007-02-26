@@ -19,16 +19,11 @@
  */
 
 #include "be/l4/x0adapt/L4X0aBERcvFunction.h"
-#include "be/l4/L4BEMsgBufferType.h"
-#include "be/l4/L4BENameFactory.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEDeclarator.h"
+#include "be/l4/L4BEIPC.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
-#include "be/BEType.h"
-#include "be/BEMarshaller.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CL4X0aBERcvFunction);
 
@@ -42,296 +37,31 @@ CL4X0aBERcvFunction::~CL4X0aBERcvFunction()
 {
 }
 
-/** \brief test if we can write the assembler version of the short ipc
- *  \param pContext the context of the test
- *  \return true if the assembler version can be written
- */
-bool CL4X0aBERcvFunction::UseAsmShortIPC(CBEContext *pContext)
-{
-    if (pContext->IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
-	    return false;
-    return ((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(GetReceiveDirection(), pContext);
-}
-
-/** \brief test if we can write the assembler version of the long ipc
- *  \param pContext the context of the test
- *  \return true if the assembler version can be written
- */
-bool CL4X0aBERcvFunction::UseAsmLongIPC(CBEContext *pContext)
-{
-    if (pContext->IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
-	    return false;
-    return true;
-}
-
-/** \brief write the short IPC in assembler
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * This is the same code as in CL4X0aBERcvAnyFunction::WriteAsmShortIPC, since these
- * classes differentiate in other functions than this one, but have no common
- * X0 class, wich could implement this IPC.
- */
-void CL4X0aBERcvFunction::WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext)
-{
-	CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-	String sResult = pNF->GetResultName(pContext);
-	String sTimeout = pNF->GetTimeoutClientVariable(pContext);
-	String sDummy = pNF->GetDummyVariable(pContext);
-
-	VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-	CBEDeclarator *pObjName = m_pCorbaObject->GetNextDeclarator(pIter);
-	CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-	CBEDeclarator *pRetVar = 0;
-    if (m_pReturnVar && !GetReturnType()->IsVoid())
-    {
-	    pIter = m_pReturnVar->GetFirstDeclarator();
-		pRetVar = m_pReturnVar->GetNextDeclarator(pIter);
-	}
-
-	pFile->Print("#if defined(__PIC__)\n");
-	// PIC branch
-	pFile->PrintIndent("asm volatile(\n");
-	pFile->IncIndent();
-	pFile->PrintIndent("\"pushl  %%%%ebx        \\n\\t\"\n");
-	pFile->PrintIndent("\"pushl  %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("ToId32_EdiEsi\n");
-	pFile->PrintIndent("\"subl   %%%%ebp,%%%%ebp   \\n\\t\"\n");
-	pFile->PrintIndent("\"movl   $-1,%%%%eax    \\n\\t\"\n");
-	pFile->PrintIndent("IPC_SYSENTER\n");
-	pFile->PrintIndent("\"movl   %%%%ebx,%%%%ecx  \\n\\t\"\n");
-	pFile->PrintIndent("\"popl   %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("\"popl   %%%%ebx        \\n\\t\"\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"=a\" (%s),\n", (const char*)sResult);
-	pFile->PrintIndent("\"=d\" (");
-	if (pRetVar)
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 1, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 2, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print("),                /* EDX, 1 */\n");
-	pFile->PrintIndent("\"=c\" (");
-	if (pRetVar)
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 2, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 3, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print("),                /* ECX, 2 */\n");
-	pFile->PrintIndent("\"=S\" (%s),\n", (const char*)sDummy); // Id stays the same
-	pFile->PrintIndent("\"=D\" (");
-    if (pRetVar)
-	    pFile->Print("%s", (const char*)pRetVar->GetName());
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 1, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print(")                 /* EDI, 3 */\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"2\" (%s),\n", (const char*)sTimeout);
-	pFile->PrintIndent("\"3\" (%s->lh.low),\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent("\"4\" (%s->lh.high)\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"memory\"\n");
-	pFile->DecIndent();
-	pFile->PrintIndent(");\n");
-
-	pFile->Print("#else // !PIC\n");
-	pFile->Print("#if !defined(PROFILE)\n");
-	// !PIC branch
-	pFile->PrintIndent("asm volatile(\n");
-	pFile->IncIndent();
-	pFile->PrintIndent("\"pushl  %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("ToId32_EdiEsi\n");
-	pFile->PrintIndent("\"subl   %%%%ebp,%%%%ebp  \\n\\t\"\n");
-	pFile->PrintIndent("\"movl   $-1,%%%%eax    \\n\\t\"\n");
-	pFile->PrintIndent("IPC_SYSENTER\n");
-	pFile->PrintIndent("\"popl   %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"=a\" (%s),\n", (const char*)sResult);
-	pFile->PrintIndent("\"=d\" (");
-	if (pRetVar)
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 1, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 2, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print("),\n");
-	pFile->PrintIndent("\"=b\" (");
-	if (pRetVar)
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 2, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 3, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print("),\n");
-	pFile->PrintIndent("\"=c\" (%s),\n", (const char*)sDummy);
-	pFile->PrintIndent("\"=S\" (%s),\n", (const char*)sDummy);
-	pFile->PrintIndent("\"=D\" (");
-    if (pRetVar)
-	    pFile->Print("%s", (const char*)pRetVar->GetName());
-	else
-	{
-		if (!pMarshaller->MarshalToPosition(pFile, this, 1, 4, GetReceiveDirection(), true, pContext))
-			pFile->Print("%s", (const char*)sDummy);
-	}
-	pFile->Print(")\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"3\" (%s),\n", (const char*)sTimeout); /* ECX */
-	pFile->PrintIndent("\"4\" (%s->lh.low),\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent("\"5\" (%s->lh.high)\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"memory\"\n");
-	pFile->DecIndent();	
-	pFile->PrintIndent(");\n");	
-	
-	pFile->Print("#endif // !PROFILE\n");
-	pFile->Print("#endif // PIC\n");
-}
-
-/** \brief write the long IPC in assembler
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * This is the same code as in CL4X0aBERcvAnyFunction::WriteAsmLongIPC, since these
- * classes differentiate in other functions than this one, but have no common
- * X0 class, wich could implement this IPC.
- */
-void CL4X0aBERcvFunction::WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext)
-{
-	CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
-	String sResult = pNF->GetResultName(pContext);
-	String sTimeout = pNF->GetTimeoutClientVariable(pContext);
-	String sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
-    String sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-	String sDummy = pNF->GetDummyVariable(pContext);
-	VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-	CBEDeclarator *pObjName = m_pCorbaObject->GetNextDeclarator(pIter);
-
-	pFile->Print("#if defined(__PIC__)\n");
-	// PIC branch
-	pFile->PrintIndent("asm volatile(\n");
-	pFile->IncIndent();
-	pFile->PrintIndent("\"pushl  %%%%ebx        \\n\\t\"\n");
-	pFile->PrintIndent("\"pushl  %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("ToId32_EdiEsi\n");
-	pFile->PrintIndent("\"movl   %%%%eax,%%%%ebp  \\n\\t\"\n");
-	pFile->PrintIndent("\"movl   $-1,%%%%eax    \\n\\t\"\n");
-	pFile->PrintIndent("IPC_SYSENTER\n");
-	pFile->PrintIndent("\"movl   %%%%ebx,%%%%ecx  \\n\\t\"\n");
-	pFile->PrintIndent("\"popl   %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("\"popl   %%%%ebx        \\n\\t\"\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"=a\" (%s),\n", (const char*)sResult);
-    pFile->PrintIndent("\"=d\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])))),\n");
-	pFile->PrintIndent("\"=c\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-	pFile->Print("[8])))),\n");
-	pFile->PrintIndent("\"=S\" (%s),\n", (const char*)sDummy);
-	pFile->PrintIndent("\"=D\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-	pFile->Print("[0]))))\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"0\" (((int)");
-	if (m_pMsgBuffer->HasReference())
-		pFile->Print("%s", (const char *) sMsgBuffer);
-	else
-		pFile->Print("&%s", (const char *) sMsgBuffer);
-	pFile->Print(") & (~L4_IPC_OPEN_IPC)),\n");
-	pFile->PrintIndent("\"2\" (%s),\n", (const char*)sTimeout); /* ECX */
-	pFile->PrintIndent("\"3\" (%s->lh.low),\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent("\"4\" (%s->lh.high)\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"memory\"\n");
-	pFile->DecIndent();
-	pFile->PrintIndent(");\n");
-
-	pFile->Print("#else // !PIC\n");
-	pFile->Print("#if !defined(PROFILE)\n");
-	// !PIC branch
-	pFile->PrintIndent("asm volatile(\n");
-	pFile->IncIndent();
-	pFile->PrintIndent("\"pushl  %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent("ToId32_EdiEsi\n");
-	pFile->PrintIndent("\"movl   %%%%eax,%%%%ebp  \\n\\t\"\n");
-	pFile->PrintIndent("\"movl   $-1,%%%%eax    \\n\\t\"\n");
-	pFile->PrintIndent("IPC_SYSENTER\n");
-	pFile->PrintIndent("\"popl   %%%%ebp        \\n\\t\"\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"=a\" (%s),\n", (const char*)sResult);
-    pFile->PrintIndent("\"=d\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])))),\n");
-	pFile->PrintIndent("\"=b\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-	pFile->Print("[8])))),\n");
-	pFile->PrintIndent("\"=c\" (%s),\n", (const char*)sDummy);
-	pFile->PrintIndent("\"=S\" (%s),\n", (const char*)sDummy);
-	pFile->PrintIndent("\"=D\" (*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-	pFile->Print("[0]))))\n");
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"0\" (((int)");
-	if (m_pMsgBuffer->HasReference())
-		pFile->Print("%s", (const char *) sMsgBuffer);
-	else
-		pFile->Print("&%s", (const char *) sMsgBuffer);
-	pFile->Print(") & (~L4_IPC_OPEN_IPC)),\n"); /* EAX => EBP */
-	pFile->PrintIndent("\"3\" (%s),\n", (const char*)sTimeout); /* ECX */
-	pFile->PrintIndent("\"4\" (%s->lh.low),\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent("\"5\" (%s->lh.high)\n", (const char*)pObjName->GetName());
-	pFile->PrintIndent(":\n");
-	pFile->PrintIndent("\"memory\"\n");
-	pFile->DecIndent();	
-	pFile->PrintIndent(");\n");	
-	
-	pFile->Print("#endif // !PROFILE\n");
-	pFile->Print("#endif // PIC\n");
-}
-
-/** \brief write the ipc code
+/** \brief writes the variable declarations
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CL4X0aBERcvFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
-{
-    if (UseAsmShortIPC(pContext))
-	    WriteAsmShortIPC(pFile, pContext);
-    else if (UseAsmLongIPC(pContext))
-	    WriteAsmLongIPC(pFile, pContext);
-    else
-	    CL4BERcvFunction::WriteIPC(pFile, pContext);
-}
-
 void CL4X0aBERcvFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext)
 {
     CL4BERcvFunction::WriteVariableDeclaration(pFile, pContext);
-    if (UseAsmShortIPC(pContext) || UseAsmLongIPC(pContext))
+	// check if we use assembler
+	bool bAssembler = ((CL4BEIPC*)m_pComm)->UseAssembler(this, pContext);
+    if (bAssembler)
 	{
-		CL4BENameFactory *pNF = (CL4BENameFactory*)pContext->GetNameFactory();
+		CBENameFactory *pNF = pContext->GetNameFactory();
 		String sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
 		String sDummy = pNF->GetDummyVariable(pContext);
 		pFile->PrintIndent("%s %s;\n", (const char*)sMWord, (const char*)sDummy);
 	}
+}
+
+/** \brief writes the unmarshalling of the message buffer
+ *  \param pFile the file to write to
+ *  \param nStartOffset the offset where to start unmarshalling
+ *  \param bUseConstOffset true if nStartOffset chould be used
+ *  \param pContext the context of the write operation
+ */
+void CL4X0aBERcvFunction::WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
+{
+	WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
 }

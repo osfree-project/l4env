@@ -1,0 +1,8 @@
+.deps
+Makefile
+Makefile.in
+parser.h
+parser.output
+parser.cc
+scanner.cc
+y.output

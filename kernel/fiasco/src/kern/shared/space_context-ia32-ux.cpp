@@ -1,6 +1,6 @@
 INTERFACE:
 
-#include <flux/x86/paging.h>	// for pd_entry_t
+#include <flux/x86/paging.h>	// for Pd_entry
 #include "types.h"
 
 class Space_context
@@ -8,42 +8,46 @@ class Space_context
 public:
   static Space_context *	current();
   void				make_current();
-  vm_offset_t			lookup (vm_offset_t a) const;
-  const pd_entry_t *		dir() const;
+  Address			lookup (Address addr, bool *writable) const;
+  const Pd_entry *		dir() const;
   void				switchin_context();
 
 protected:		// DATA (be careful here!):  just a page directory
-  pd_entry_t _dir[1024];
+  Pd_entry _dir[1024];
 };
 
 IMPLEMENTATION[ia32-ux]:
 
 #include "config.h"
 #include "kmem.h"
-#include "undef_oskit.h"
 
-IMPLEMENT inline NEEDS [<flux/x86/paging.h>, "config.h", "kmem.h",
-                        "undef_oskit.h"]
-vm_offset_t
-Space_context::lookup(vm_offset_t a) const
+IMPLEMENT inline NEEDS [<flux/x86/paging.h>, "config.h", "kmem.h"]
+Address
+Space_context::lookup(Address addr, bool *writable) const
 {
-  pd_entry_t p = _dir[(a >> PDESHIFT) & PDEMASK];
+  Pd_entry pde = _dir[(addr >> PDESHIFT) & PDEMASK];
 
-  if (!(p & INTEL_PDE_VALID))
-    return 0xffffffff;
+  if (!(pde & INTEL_PDE_VALID))
+    return (Address) -1;
 
-  if (p & INTEL_PDE_SUPERPAGE)
-    return (p & Config::SUPERPAGE_MASK) | (a & ~Config::SUPERPAGE_MASK);
+  if (pde & INTEL_PDE_SUPERPAGE)
+    {
+      if (writable) *writable = (pde & INTEL_PDE_WRITE);
+      return (pde & Config::SUPERPAGE_MASK) | (addr & ~Config::SUPERPAGE_MASK);
+    }
 
-  pt_entry_t t = reinterpret_cast<pt_entry_t *>
-    ((p & Config::PAGE_MASK) + Kmem::mem_phys)[(a >> PTESHIFT) & PTEMASK];
+  Pt_entry pte = reinterpret_cast<Pt_entry *>
+    ((pde & Config::PAGE_MASK) + Kmem::mem_phys)[(addr >> PTESHIFT) & PTEMASK];
 
-  return (t & INTEL_PTE_VALID) ?
-         (t & Config::PAGE_MASK) | (a & ~Config::PAGE_MASK) : 0xffffffff;
+  if (!(pte & INTEL_PTE_VALID))
+    return (Address) -1;
+
+  if (writable) *writable = (pte & INTEL_PTE_WRITE);
+  return (pte & Config::PAGE_MASK) | (addr & ~Config::PAGE_MASK);
 }
 
 IMPLEMENT inline
-const pd_entry_t*
+const Pd_entry*
 Space_context::dir () const
 {
   return _dir;

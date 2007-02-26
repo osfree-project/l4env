@@ -22,14 +22,10 @@
 static void
 _putstocon(int x, int y, l4_uint8_t *s, int len)
 {
-  l4_strdope_t str;
-  sm_exc_t _ev;
+  CORBA_Environment env = dice_default_environment;
 
-  str.rcv_size = 0;
-  str.snd_str = (l4_umword_t) s;
-  str.snd_size = len;
-
-  con_vc_puts(vtc_l4id, str, BITX(x), BITY(y), fg_color, bg_color, &_ev);
+  con_vc_puts_call(&vtc_l4id, s, len, BITX(x), BITY(y), 
+		   fg_color, bg_color, &env);
 }
 
 void (*putstocon)(int, int, l4_uint8_t *, int) = _putstocon;

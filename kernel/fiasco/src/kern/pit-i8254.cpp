@@ -32,7 +32,7 @@ void Pit::init( unsigned rate )
   Pic::enable(0);
 }
 
-IMPLEMENT
+IMPLEMENT inline
 void Pit::done()
 {
 }

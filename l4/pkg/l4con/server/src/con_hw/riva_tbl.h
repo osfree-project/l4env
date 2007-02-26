@@ -1,3 +1,12 @@
+/*!
+ * \file	riva_tbl.h
+ * \brief	nVIDIA stuff
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+#ifndef __RIVA_TBL_H_
+#define __RIVA_TBL_H_
  /***************************************************************************\
 |*                                                                           *|
 |*       Copyright 1993-1999 NVIDIA, Corporation.  All rights reserved.      *|
@@ -775,3 +784,5 @@ static unsigned nv10TablePRAMIN_32BPP[][2] =
     {0x0000053D, 0x00000E02} 
 };
 
+
+#endif

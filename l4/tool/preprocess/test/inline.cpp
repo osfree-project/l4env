@@ -57,3 +57,8 @@ void function (Foo* f)
 {
   f->bar();
 }
+
+template <typename T> inline void* xcast(T* t)
+{
+  return (void*) t;
+}

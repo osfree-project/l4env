@@ -1,5 +1,6 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
+SYSTEMS		= x86-l4v2 x86-l4x0
 TARGET		= l4exec
 DEFAULT_RELOC	= 0x01100000
 SYSTEMS		= x86-l4v2 x86-l4x0

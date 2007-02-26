@@ -1,12 +1,14 @@
 INTERFACE:
 
+#include "l4_types.h"
+
 class Space;
 class Space_registry;
 
 class Space_index
 {
 public:
-  enum { max_space_number = 1 << 11 };
+  enum { max_space_number = L4_uid::MAX_TASKS };
 
 private:
   // CLASS DATA
@@ -17,8 +19,6 @@ private:
 };
 
 IMPLEMENTATION:
-
-//#include <flux/x86/paging.h>
 
 #include "atomic.h"
 

@@ -7,21 +7,6 @@
  * \date   08/31/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
- *
  * Stack Management.
  * We try to reserve a special address area for our stacks. If we get that
  * area, we can calculate the stack index from the stack pointer. If we
@@ -35,6 +20,11 @@
  * user allocated stack.)
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -89,12 +79,9 @@ l4th_stack_init(void)
   /* get stack area size */
   area_size = l4thread_max_threads * l4thread_max_stack;
 
-#if DEBUG_STACK_INIT
-  INFO("stack setup:\n");
-  DMSG("  %d threads\n",l4thread_max_threads);
-  DMSG("  stack max. %u bytes\n",l4thread_max_stack);
-  DMSG("  stack area size 0x%08x\n",area_size);
-#endif
+  LOGdL(DEBUG_STACK_INIT,"stack setup:\n  %d threads\n" \
+        "  stack max. %u bytes\n  stack area size 0x%08x",
+        l4thread_max_threads,l4thread_max_stack,area_size);
 
   if (l4thread_stack_area_addr == -1)
     {
@@ -108,7 +95,7 @@ l4th_stack_init(void)
       if (ret < 0)
 	{
 	  /* failed to reserve stack area */
-	  Msg("l4thread: Warning, stack area not available!\n");
+	  printf("l4thread: Warning, stack area not available!\n");
 	  l4th_have_stack_area = 0;
 	  l4th_stack_area_start = L4_MAX_ADDRESS;
 	  l4th_stack_area_end = L4_MAX_ADDRESS;
@@ -121,15 +108,15 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  DMSG("  using stack area <0x%08x-0x%08x>\n",
-	       l4th_stack_area_start,l4th_stack_area_end);
+	  printf("  using stack area <0x%08x-0x%08x>\n",
+                 l4th_stack_area_start,l4th_stack_area_end);
 #endif
 	}
     }
   else
     {
 #if DEBUG_STACK_INIT
-      DMSG("  trying area at 0x%08x\n",l4thread_stack_area_addr);
+      printf("  trying area at 0x%08x\n",l4thread_stack_area_addr);
 #endif
 
       /* reserve given stack map area */
@@ -151,8 +138,8 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = l4thread_stack_area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  DMSG("  using stack area <0x%08x-0x%08x>\n",
-	       l4th_stack_area_start,l4th_stack_area_end);
+	  printf("  using stack area <0x%08x-0x%08x>\n",
+                 l4th_stack_area_start,l4th_stack_area_end);
 #endif
 	}
     }
@@ -193,10 +180,8 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
       map_addr = l4th_stack_area_start + 
 	index * l4thread_max_stack + (l4thread_max_stack - size);
 
-#if DEBUG_STACK_ALLOC
-      INFO("allocating in stack area\n");
-      DMSG("  index %d, addr 0x%08x, size %u\n",index,map_addr,size);
-#endif
+      LOGdL(DEBUG_STACK_ALLOC,"allocating in stack area\n" \
+            "  index %d, addr 0x%08x, size %u",index,map_addr,size);
 
       ret = l4th_pages_allocate(size,map_addr,l4th_stack_area_id,owner,
 				"L4thread stack",flags,desc);
@@ -204,20 +189,17 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
   else
     {
       /* allocating stack somewhere */
-#if DEBUG_STACK_ALLOC
-      INFO("allocating stack somewhere\n");
-      DMSG("  size %u\n",size);
-#endif
-
+      LOGdL(DEBUG_STACK_ALLOC,"allocating stack somewhere\n  size %u",size);
+      
       ret = l4th_pages_allocate(size,VM_FIND_REGION,VM_DEFAULT_AREA,owner,
 				"L4thread stack",flags,desc);
     }
 
 #if DEBUG_STACK_ALLOC
   if (ret < 0)
-    INFO("error allocating stack (%d)!\n",ret);
+    LOGL("error allocating stack (%d)!",ret);
   else
-    INFO("stack at 0x%08x\n",desc->map_addr);
+    LOGL("stack at 0x%08x",desc->map_addr);
 #endif
 
   /* done */

@@ -37,12 +37,9 @@ public:
   ~CL4X0aBESndFunction();
 
 protected:
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmLongIPC(CBEContext *pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmShortIPC(CBEContext *pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif
+

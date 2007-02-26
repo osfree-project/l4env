@@ -16,16 +16,14 @@ IMPLEMENTATION:
 
 #include "uart.h"
 
-extern "C" int main(void);
+extern "C" int main(Address s, Address r);
 
 extern "C" 
-void __main(vm_offset_t mbi_pa, unsigned int aflag,
-	    unsigned achecksum_ro, unsigned achecksum_rw)
+void __main(Address sigma0, Address root)
 {
   atexit(&static_destruction);
   static_construction();
-  printf("mbi_pa=%08x\n",mbi_pa);
-  exit(main());
+  exit(main(sigma0,root));
 
 }
 

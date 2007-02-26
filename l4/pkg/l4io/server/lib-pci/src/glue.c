@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/lib-pci/src/glue.c
+ * \file   l4io/server/lib-pci/src/glue.c
+ * \brief  L4Env l4io PCIlib Linux PCI Extracts Glue Code
  *
- * \brief	L4Env l4io PCIlib Linux PCI Extracts Glue Code
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* Linux */
 #include <linux/config.h>
@@ -32,13 +21,15 @@
 #include <linux/mm.h>
 #include <asm/io.h>
 
+/* L4 */
+#include <l4/util/macros.h>
+#include <l4/util/bitops.h>
+
 /* OSKit */
 #include <stdlib.h>
 #include <malloc.h>
 
 /* local */
-#include "internal.h"
-#define __in_pcilib
 #include "pcilib.h"
 
 /* I/O local */
@@ -50,9 +41,10 @@
 void initcall_pci_proc_init(void);
 #endif
 
-/*****************************************************************************/
-/** 
- * \name Resource Management Glue for PCIlib
+/* Align PCI memory resources to superpage boundaries (BROKEN) */
+#undef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
+
+/** \name Resource Management Glue for PCIlib
  *
  * Linux' PCI subsystem _expects_ the new, hierarchical resource management
  * system. So it has to be mapped to io's flat allocation scheme:
@@ -69,7 +61,6 @@ void initcall_pci_proc_init(void);
  * supported)
  *
  * @{ */
-/*****************************************************************************/
 struct resource ioport_resource = {
   "PCI IO",
   0x0000, IO_SPACE_LIMIT,
@@ -115,7 +106,6 @@ static char * do_resource_list(struct resource *entry, const char *fmt, int offs
   return buf;
 }
 
-/*****************************************************************************/
 /** Generic resource requests.
  * \ingroup grp_pci
  *
@@ -127,7 +117,6 @@ static char * do_resource_list(struct resource *entry, const char *fmt, int offs
  * \todo Who is in trouble if region announcement fails (no mapping into io) -
  * we or the driver servers?
  */
-/*****************************************************************************/
 static struct resource *__request_resource(struct resource *root,
 					   struct resource *new)
 {
@@ -181,14 +170,12 @@ static struct resource *__request_resource(struct resource *root,
     }
 }
 
-/*****************************************************************************/
 /** Generic region requests.
  * \ingroup grp_pci
  *
  * \krishna As Linux grabs a write_lock(resource_lock), we assume
  * single-threading.
  */
-/*****************************************************************************/
 struct resource *__request_region(struct resource *parent,
 				  unsigned long start, unsigned long n,
 				  const char *name)
@@ -230,16 +217,15 @@ void __release_region(struct resource *parent,
 		      unsigned long start, unsigned long n)
 {}
 
-/*****************************************************************************/
 /** Generic Find empty slot in the resource tree given range and alignment.
  * \ingroup grp_pci
  */
-/*****************************************************************************/
 static int __find_resource(struct resource *root, struct resource *new,
 			   unsigned long size,
 			   unsigned long min, unsigned long max,
 			   unsigned long align,
-			   void (*alignf) (void *, struct resource *, unsigned long),
+			   void (*alignf) (void *, struct resource *,
+					   unsigned long, unsigned long),
 			   void *alignf_data)
 {
   struct resource *this = root->child;
@@ -258,7 +244,7 @@ static int __find_resource(struct resource *root, struct resource *new,
       new->start = (new->start + align - 1) & ~(align - 1);
       if (alignf)
 	{
-	  alignf(alignf_data, new, size);
+	  alignf(alignf_data, new, size, align);
 	}
       if (new->start < new->end && new->end - new->start + 1 >= size)
 	{
@@ -273,7 +259,6 @@ static int __find_resource(struct resource *root, struct resource *new,
   return -EBUSY;
 }
 
-/*****************************************************************************/
 /** Linux resource requests.
  * \ingroup grp_pci
  *
@@ -283,12 +268,11 @@ static int __find_resource(struct resource *root, struct resource *new,
  * \krishna Try to align MMIO regions before doing real allocation (see also
  * allocate_resource()).
  */
-/*****************************************************************************/
 int request_resource(struct resource *root, struct resource *new)
 {
   struct resource *conflict;
 
-#ifdef KRISHNA_ALIGN
+#ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
   int err;
   unsigned long size = new->end - new->start + 1;
   unsigned long min = pci_mem_start, max = -1;	/* XXX don't know if this always works */
@@ -299,10 +283,7 @@ int request_resource(struct resource *root, struct resource *new)
   /* align MMIO regions only */
   if (new->flags & IORESOURCE_MEM)
     {
-      __asm__ __volatile__ ("bsrl %1,%0 \n\t"
-			    : "=r" (align)	/* 0, index of most significant
-						 * set bit */
-			    : "r"  (size));	/* 1, argument */
+      align = l4util_bsr(size);
       /* round up */
       if (size > (1UL << align))
 	align++;
@@ -328,19 +309,18 @@ int request_resource(struct resource *root, struct resource *new)
   return conflict ? -EBUSY : 0;
 }
 
-/*****************************************************************************/
 /** Linux resource allocation
  * \ingroup grp_pci
  *
  * \krishna As Linux grabs a write_lock(resource_lock), we assume
  * single-threading.
  */
-/*****************************************************************************/
 int allocate_resource(struct resource *root, struct resource *new,
 		      unsigned long size,
 		      unsigned long min, unsigned long max,
 		      unsigned long align,
-		      void (*alignf) (void *, struct resource *, unsigned long),
+		      void (*alignf) (void *, struct resource *,
+                                      unsigned long, unsigned long),
 		      void *alignf_data)
 {
   int err;
@@ -353,23 +333,18 @@ int allocate_resource(struct resource *root, struct resource *new,
 }
 
 /** @} */
-/*****************************************************************************/
-/** 
- * \name Interrupt Line Request Glue for PCIlib
+/** \name Interrupt Line Request Glue for PCIlib
  *
  * Mapping of PCIlib interrupt allocation.
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Request interrupt.
  * \ingroup grp_pci
  *
  * It is used to check IRQ availability during pci_enable_device and will
  * always succeed because is executed on L4IO startup.
  */
-/*****************************************************************************/
 int request_irq(unsigned int irq, void (*handler) (int, void *, struct pt_regs *),
 		unsigned long flags, const char *name, void *id)
 {
@@ -377,29 +352,27 @@ int request_irq(unsigned int irq, void (*handler) (int, void *, struct pt_regs *
   return 0;
 }
 
-/*****************************************************************************/
 /** Free Interrupt.
  * \ingroup grp_pci
  *
  * It is used to check IRQ availability during pci_enable_device and as we
  * don't really occupy IRQs nothing is done in here.
  */
-/*****************************************************************************/
 void free_irq(unsigned int irq, void *id)
 {
 }
 
 /** @} */
-/*****************************************************************************/
-/**
- * \name Miscellaneous Glue for PCIlib
+/** \name Miscellaneous Glue for PCIlib
  *
  * - dev_probe_lock
  * - dev_probe_unlock
  * - simple_strtol (mapped to strtol)
+ * - schedule_timeout
+ * - ...
  *
  * @{ */
-/*****************************************************************************/
+
 /** dev_probe_lock */
 void dev_probe_lock(void)
 {
@@ -420,40 +393,64 @@ long simple_strtol(const char *cp, char **endp, unsigned int base)
   return strtol(cp, endp, base);
 }
 
+/** schedule_timeout */
+signed long schedule_timeout(signed long timeout)
+{
+  /* FIXME: delay some time */
+  return 0;
+}
+
+void __const_udelay(unsigned long usecs)
+{
+  /* FIXME: delay some time */
+}
+
+/* These are used by dead code only. */
+#include <asm/processor.h>
+struct cpuinfo_x86 boot_cpu_data;
+
+int remap_page_range(unsigned long from, unsigned long to, unsigned long size,
+                     pgprot_t prot)
+{return 0;}
+void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
+                           dma_addr_t *dma_handle)
+{return (void*)0;}
+void pci_free_consistent(struct pci_dev *hwdev, size_t size,
+                         void *vaddr, dma_addr_t dma_handle)
+{}
+void add_wait_queue(wait_queue_head_t *q, wait_queue_t * wait)
+{}
+void remove_wait_queue(wait_queue_head_t *q, wait_queue_t * wait)
+{}
+void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr)
+{}
 /** @} */
-/*****************************************************************************/
 /**
  * \name Memory Management Glue for PCIlib
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Well known kmalloc.
  * \ingroup grp_pci
  *
  * \krishna Okay, PCIlib never kmallocs with gfp != GFP_KERNEL, so malloc seems
  * sufficient.
  */
-/*****************************************************************************/
 void *kmalloc(size_t size, int gfp)
 {
   /* malloc size */
   return malloc(size);
 }
 
-/*****************************************************************************/
 /** Well known kfree.
  * \ingroup grp_pci
  */
-/*****************************************************************************/
 void kfree(const void *obj)
 {
   /* free obj */
   free((void *) obj);
 }
 
-/*****************************************************************************/
 /** Well known __get_free_pages.
  * \ingroup grp_pci
  *
@@ -462,7 +459,6 @@ void kfree(const void *obj)
  *
  * \todo implement __get_free_pages using l4rm?! ... for now it's _not_
  */
-/*****************************************************************************/
 unsigned long __get_free_pages(unsigned int gfp, unsigned int order)
 {
   unsigned long something = 0;
@@ -470,7 +466,6 @@ unsigned long __get_free_pages(unsigned int gfp, unsigned int order)
   return something;
 }
 
-/*****************************************************************************/
 /** Well known free_pages.
  * \ingroup grp_pci
  *
@@ -479,216 +474,28 @@ unsigned long __get_free_pages(unsigned int gfp, unsigned int order)
  *
  * \todo implement free_pages using l4rm?! ... for now it's _not_
  */
-/*****************************************************************************/
 void free_pages(unsigned long addr, unsigned int order)
 {
-  INFO("(%#08lx, %li)\n", addr, order);
-}
-
-#ifdef KRISHNA
-void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
-                           dma_addr_t *dma_handle)
-{
-  INFO("(%#08lx, %li)\n", *dma_handle, size);
-
-  return 0;
-}
-
-void pci_free_consistent(struct pci_dev *hwdev, size_t size,
-                         void *vaddr, dma_addr_t dma_handle)
-{
-  INFO("(%#08lx, %li)\n", dma_handle, size);
-}
-#endif /* KRISHNA */
-
-/** @} */
-#ifdef KRISHNA
-/*****************************************************************************/
-/**
- * \name PROC FS Glue for PCIlib
- *
- * Linux /proc fs glue code.
- *
- * @{ */
-/*****************************************************************************/
-struct proc_dir_entry *proc_bus, *proc_my_root;
-
-/*
- * This is the root "inode" in the /proc tree..
- */
-struct proc_dir_entry proc_root = {
-  low_ino:PROC_ROOT_INO,
-  namelen:5,
-  name:"/proc",
-  mode:S_IFDIR | S_IRUGO | S_IXUGO,
-  nlink:2,
-//      proc_iops:      &proc_root_inode_operations, 
-//      proc_fops:      &proc_root_operations,
-  parent:&proc_root,
-};
-
-static int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *dp)
-{
-  dp->next = dir->subdir;
-  dp->parent = dir;
-  dir->subdir = dp;
-  if (S_ISDIR(dp->mode))
-    {
-      dir->nlink++;
-    }
-
-  return 0;
-}
-
-int proc_match(int len, const char *name, struct proc_dir_entry *de)
-{
-  if (!de || !de->low_ino)
-    return 0;
-  if (de->namelen != len)
-    return 0;
-  return !memcmp(name, de->name, len);
-}
-
-struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode,
-					 struct proc_dir_entry *parent)
-{
-  struct proc_dir_entry *ent = NULL;
-  const char *fn = name;
-  int len;
-
-  /* Uhh, ugly ... */
-  if (!parent)
-    {
-      if (strcmp(name, "pci"))
-	goto out;
-      else
-	parent = proc_my_root;
-    }
-  len = strlen(fn);
-
-  ent = malloc(sizeof(struct proc_dir_entry) + len + 1);
-  if (!ent)
-    goto out;
-
-  INFO("%s (%#4x)\n", name, mode);
-
-  memset(ent, 0, sizeof(struct proc_dir_entry));
-  memcpy(((char *) ent) + sizeof(*ent), fn, len + 1);
-  ent->name = ((char *) ent) + sizeof(*ent);
-  ent->namelen = len;
-
-  if (S_ISDIR(mode))
-    {
-      if ((mode & S_IALLUGO) == 0)
-	mode |= S_IRUGO | S_IXUGO;
-      ent->nlink = 2;
-    }
-  else
-    {
-      if ((mode & S_IFMT) == 0)
-	mode |= S_IFREG;
-      if ((mode & S_IALLUGO) == 0)
-	mode |= S_IRUGO;
-      ent->nlink = 1;
-    }
-  ent->mode = mode;
-
-  proc_register(parent, ent);
-
-out:
-  return ent;
-}
-
-void remove_proc_entry(const char *name, struct proc_dir_entry *parent)
-{
-  struct proc_dir_entry **p;
-  struct proc_dir_entry *de;
-  const char *fn = name;
-  int len;
-
-  if (!parent)
-    goto out;
-
-  INFO("%s\n", name);
-
-  len = strlen(fn);
-  for (p = &parent->subdir; *p; p = &(*p)->next)
-    {
-      if (!proc_match(len, fn, *p))
-	continue;
-      de = *p;
-      *p = de->next;
-      de->next = NULL;
-      if (S_ISDIR(de->mode))
-	parent->nlink--;
-      de->nlink = 0;
-
-      free(de);
-
-      break;
-    }
-out:
-  return;
-}
-
-struct proc_dir_entry *proc_mkdir(const char *name, struct proc_dir_entry *parent)
-{
-  struct proc_dir_entry *ent = NULL;
-  const char *fn = name;
-  int len;
-
-  if (!parent)
-    goto out;
-  len = strlen(fn);
-
-  ent = malloc(sizeof(struct proc_dir_entry) + len + 1);
-  if (!ent)
-    goto out;
-
-  INFO("%s\n", name);
-
-  memset(ent, 0, sizeof(struct proc_dir_entry));
-  memcpy(((char *) ent) + sizeof(*ent), fn, len + 1);
-  ent->name = ((char *) ent) + sizeof(*ent);
-  ent->namelen = len;
-  ent->nlink = 2;
-  ent->mode = S_IFDIR | S_IRUGO | S_IXUGO;
-
-  proc_register(parent, ent);
-
-out:
-  return ent;
+  INFO("(%#08lx, %i)\n", addr, order);
 }
 
 /** @} */
-#endif /* KRISHNA */
-/*****************************************************************************/
-/**
- * \name PCIlib interface
+/** \name PCIlib interface
  *
  * \todo /proc fs has to be optional 
  * \todo __pa() and __va() has to be mapped to appropriate functions if really
  * used; defining __PAGE_OFFSET=0 is _not_ enough
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** PCIlib initialization.
- * \ingroup grp_pci
- */
-/*****************************************************************************/
+ * \ingroup grp_pci */
 int PCI_init()
 {
-#ifdef KRISHNA_ALIGN
+#ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
   struct list_head *list;
 #endif
   struct pci_dev *p;
-
-#ifdef KRISHNA
-  proc_my_root = &proc_root;
-  proc_bus = proc_mkdir("bus", proc_my_root);
-#endif /* KRISHNA */
 
   pci_init();
 
@@ -700,7 +507,8 @@ int PCI_init()
          This fixes a bug detected using USB hubs that allocate their "real"
          IRQs _after_ pci_enable_device(). thanks to gg5@os */
       if ((i = pci_enable_device(p)))
-	Panic("initial PCI device activation failed (%d)", i);
+	Msg("WARNING: initial PCI device activation for %s failed (%d)\n",
+            p->slot_name, i);
       /* Removed pci_disable_device(p); here because it produced errors with
          non-compliant drivers from grub. */
 
@@ -708,7 +516,7 @@ int PCI_init()
 	{
 	  if (p->resource[i].flags & IORESOURCE_MEM)
 	    {
-#ifdef KRISHNA_ALIGN
+#ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
 	      /* update configuration space of all PCI devices */
 	      pcibios_update_resource(p, &iomem_resource, &p->resource[i], i);
 #endif
@@ -741,60 +549,15 @@ int PCI_init()
       }
   }
 
-#ifdef KRISHNA
-  initcall_pci_proc_init();
-  PCI_dump_procfs();
-#endif /* KRISHNA */
-
   return 0;
 }
 
-#ifdef KRISHNA
-/*****************************************************************************/
-/** PCIlib /proc fs Dumping.
- * \ingroup grp_pci
- */
-/*****************************************************************************/
-void PCI_dump_procfs()
-{
-  struct proc_dir_entry *pci_entry = 0, *tmp = proc_my_root->subdir;
-
-  char *buffer = malloc(PAGE_SIZE);
-  char *start = "no data available";
-  int eof;
-
-  if (!buffer) return;
-
-  DMSG("--------------------------------------------------------------------\n");
-
-  while (tmp)
-    {
-      printf("  %s: %s\n", tmp->parent->name, tmp->name);
-      if (strcmp(tmp->name, "pci") == 0)
-	pci_entry = tmp;
-      tmp = tmp->next;
-    }
-
-  printf("(/proc/pci):\n");
-
-  if (pci_entry)
-    pci_entry->read_proc(buffer, &start, 0, PAGE_SIZE, &eof, (void *) 0);
-
-  printf("%s", start);
-
-  DMSG("--------------------------------------------------------------------\n");
-  free(buffer);
-}
-#endif /* KRISHNA */
-
-/*****************************************************************************/
 /** Info Type Conversion.
  * \ingroup grp_pci
  *
  * \return concatenated bus number and devfn index
  */
-/*****************************************************************************/
-unsigned short pci_linux_to_io(void *linux_pdev, void *l4io_pdev)
+unsigned short PCI_linux_to_io(void *linux_pdev, void *l4io_pdev)
 {
   int i;
   l4io_pci_dev_t *l4io = (l4io_pci_dev_t *) l4io_pdev;
@@ -821,5 +584,4 @@ unsigned short pci_linux_to_io(void *linux_pdev, void *l4io_pdev)
 
   return (l4io->bus<<8 | l4io->devfn);
 }
-
 /** @} */

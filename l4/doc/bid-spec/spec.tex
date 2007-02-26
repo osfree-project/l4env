@@ -1,26 +1,28 @@
 \documentclass[a4paper, 10pt]{article}
-
 \usepackage[latin1]{inputenc}
-
 \usepackage{html}
 \usepackage{longtable}
 \usepackage{makeidx}
+
+%begin{latexonly}
 \usepackage[a4paper,left=3cm, right=3cm]{geometry}
 \usepackage[bf, hang, nooneline, small]{caption}
-
-%\begin{latexonly}
+\usepackage{fancyvrb}
 \usepackage{fancyhdr}
 \usepackage{syntax}
 \usepackage{array}
 \usepackage{todo}
-%\end{latexonly}
+\usepackage{times}
+%end{latexonly}
+\begin{htmlonly}
+\newcommand{\todo}[1]{(\textbf{Todo:} \marginpar{Todo}\emph{#1})}
+\end{htmlonly}
+\sloppy
+\makeindex
+\newcommand{\smallsection}[1]{\latexhtml{\subsubsection*{#1}}{\paragraph*{#1}}}
 
 \setlength{\parindent}{0cm}
 \setlength{\parskip}{0.2cm plus 0.1cm minus 0.1cm}
-
-\usepackage{times}
-\sloppy
-\makeindex
 
 \begin{document}
 
@@ -53,7 +55,7 @@
   \addtolength{\descriptiontablelen}{-\descriptiontabletextlen}%
   \begin{longtable}{p{\descriptiontabletextlen}p{\descriptiontablelen}}%
   %end{latexonly}  
-  \html{\begin{tabular}{ll}}%
+  \html{\begin{tabular}{tltl}}%
 }{\latexhtml{\end{longtable}}{\end{tabular}}}
   
 % Create a framed table, whose first column contains text,
@@ -65,7 +67,7 @@
 % arguments: #1 - text with the maximum width of the first column
 \newenvironment{parameterlist}[1]{%
   %begin{latexonly}
-  \renewcommand{\#}{\\\hline}
+  \renewcommand{\#}{\\\hline}%
   \settowidth{\descriptiontabletextlen}{\tt\small{}#1}%
   \setlength{\descriptiontablelen}{-4\tabcolsep}%
   \addtolength{\descriptiontablelen}{\columnwidth}%
@@ -82,19 +84,26 @@
   %begin{latexonly}
    \end{longtable}%
   %end{latexonly}
-  \html{\end{tabular}}}
+  \html{\end{tabular}}}%
 
 %begin{latexonly}
 % We use the '§' character to write a '$' without entering math-mode
 \DeclareInputText{167}{\$}
+
 % We use '«' and '»' to begin and end code-pieces
-\DeclareInputText{171}{\begin{code}{}}
-\DeclareInputText{187}{\end{code}{}}
+\renewcommand{\guillemotleft}{\begin{code}{}}
+\renewcommand{\guillemotright}{\end{code}}
 
 \pagestyle{fancy}
 
+% verbatim handling to include other files. Uses fancyvrb.
+\newcommand{\vfontsize}{\small}
+\newcommand{\vframe}{single}
+\newcommand{\examplefile}[2]{\VerbatimInput[fontsize=\vfontsize,%
+               frame=\vframe, label=#1]{#2}}
+\DefineShortVerb{\|}
 %end{latexonly}  
-\newenvironment{code}{\ttfamily}{}
+\newenvironment{code}{\begin{ttfamily}}{\end{ttfamily}}
 \newcommand{\name}[1]{{\sl#1}}
 
 \newenvironment{implemented}{\subsubsection{Implementation status}\
@@ -121,33 +130,59 @@
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{Building Infrastructure for DROPS (BID) Proposal}
-\author{Jork Löser}
+\title{Building Infrastructure for DROPS (BID) Specification}
+\author{Jork Löser\\drops@os.inf.tu-dresden.de}
 \date{\today}
 \maketitle
+\thispagestyle{empty}
 
-\begin{abstract}
+\smallsection{Abstract}
 
-  To ease the writing of DROPS components, this document describes the
-  unified infrastructure of the DROPS source tree. It also describes
-  what files and macros should be used to create the Makefiles needed
-  to compile own components.
+To ease the writing of DROPS components, this document describes the
+unified infrastructure of the DROPS source tree. It also describes
+what files and macros should be used to create the Makefiles needed to
+compile own components.
 
-\end{abstract}
-
-\subsubsection*{Acknowledgements}
+\smallsection{Acknowledgements}
 
 This document is based on the work of Lukas Grützmacher, Michel
 Hohmuth, Jork Löser and Lars Reuther done in 2000. Since then, Frank Mehnert
 proposed a lot of functionality which is included in this document as well.
 
+\smallsection{Availability}
+
+This document is also available in
+\latexhtml{\htmladdnormallink{HTML}{index.html}}
+{\htmladdnormallink{.ps}{spec.ps} and
+  \htmladdnormallink{.pdf}{spec.pdf}} format. A short abstract is
+available as \htmladdnormallink{abstract.ps}{abstract.ps} and
+\htmladdnormallink{abstract.pdf}{abstract.pdf}. You can download this
+documentation in its various formats at
+\htmladdnormallink{http://os.inf.tu-dresden.de/l4env/}
+{http://os.inf.tu-dresden.de/l4env/}.
 
 \vfill
+
+\paragraph*{Copyright}
+
+This documentation is \copyright2003 by Technische Universität
+Dresden. This documentation is part of DROPS, being distributed under
+the terms of the GNU General Public License 2. Please see the world
+wide web at \htmladdnormallink{http://os.inf.tu-dresden.de/l4env/COPYING}
+{http://os.inf.tu-dresden.de/l4env/COPYING}, or write to the FSF, 59~Temple
+Place~\#330, Boston, MA 02111-1307, USA for details.
+
+
+%begin{latexonly}
+\pagebreak
 {
 \setcounter{tocdepth}{2}
 \setlength{\parskip}{0.5ex plus 1ex minus 0.5ex}
 \tableofcontents
 }
+%end{latexonly}
+
+\vfill\pagebreak
 \section{Source-Tree}
 
 \latexhtml{
@@ -166,7 +201,7 @@ l4/pkg/                                 & contains the packages \\\hline
 l4/mk/                                  & contains role-files (see
                                           Section \ref{sec:rolefiles}) \\\hline
 
-l4/pkg/PKGNAME/                         & DROPS-components (packages) \\\hline
+l4/pkg/PKGANME/                         & DROPS-components (packages) \\\hline
 l4/pkg/PKGNAME/include/                 & headers to be exported by
                                           that package \\\hline
 l4/pkg/PKGNAME/idl/                     & IDL-definition \\\hline
@@ -175,14 +210,13 @@ l4/pkg/PKGNAME/\{lib, server\}/\{lib,
                                         & sources \\\hline
 l4/pkg/PKGNAME/{etc/, examples/,
         man/, doc/, README, TODO,
-        INSTALL, COPYING, TODO}         & preferred names for
+        INSTALL, COPYING}               & preferred names for
                                           according files \\\hline
 l4/pkg/PKGNAME/Makefile                 & package-Makefile, there is
                                           no symlink anymore \\\hline
 
-§(DROPS_BUILD)/\{bin,\,lib\}/ 
-        \{x86_586/,x86_586/v2/,ia64/,\dots\} and
-        §(DROPS_BUILD)/\{include, idl\}
+l4/\{bin,\,lib\}/\{x86_586/,x86_586/v2/,ia64/,\dots\} and
+   l4/\{include, idl\}
                                        & Build-Installation path for
                                          the packages. These
                                          directories contain stripped
@@ -190,8 +224,6 @@ l4/pkg/PKGNAME/Makefile                 & package-Makefile, there is
                                          \\\hline
 
 \end{tabular}
-
-\todo{Write about recursive build process and subtree-consistency}
 
 
 \subsection{MAINTAINER files and L4Check}
@@ -206,41 +238,41 @@ a package (to be more precise, of a subdirectory), a so-called
 \emph{maintainer} file is used. This is a file named «MAINTAINER»
 containing lines of the following syntax:
 
-{\center\syntax{"mailaddr" <mail address> ["," <mail address> [, ...
-]]}
-
-}
+\begin{center}
+\syntax{"mailaddr" <mail address> ["," <mail address> [, ... ]]}
+\end{center}
 
 If an error occurs within the directory subtree containing the
 maintainer file, a mail indicating the error will be sent to the
-specified mail addresses. You can add maintainers for specific
-subdirectories by placing an additional maintainer file in that
-subdirectories. These ``sub-maintainers'' will receive a mail in the
+specified mail addresses. You can add maintainers for a specific
+subdirectory tree by placing an additional maintainer file in the root
+of that tree. The ``sub-maintainers'' will receive a mail in the
 case of an error in their subtree. Additionally, the maintainers of
 the upper directories will receive an according mail.
 
 
 \subsection{Package Flags}
+
+\paragraph*{broken}
 \index{broken package flag}
 If a package becomes broken for some reason, place a file named
 «broken» in the top-level directory of that package and it won't be
 built.
 
+\paragraph*{obsolete}
 \index{obsolete package flag}
 If a package becomes outdated for some reason, place a file named
 «obsolete» in the top-level directory of that package and it won't be
-built. To remind other users that the package should not be used any
-longer, building the package will fail when calling «make» from within
-the package directory, in contrast to a broken package.
+built.
 
 
-
-\section{Roles}
+\vfill\pagebreak
+\section{Directory Roles}
 \label{sec:rolefiles}
 
-Each directory in the source-tree has a distinct task, i.e., each
-directory builds special kinds of targets. This disctinct task is
-expressed by a role, while each role is one of the following:
+Each directory in the source-tree has a distinct task, i.e. each
+directory builds special kinds of targets. This distinct task is
+expressed by a role, where role is one of the following:
 
 \begin{descriptiontable}{include:}
 subdir:  & be a container for other directories and recursively build them\\
@@ -248,6 +280,7 @@ prog:    & build executable binaries \\
 lib:     & build libraries \\
 idl:     & translate IDL definitions into code \\
 include: & hold include-files which have to be installed \\
+doc:     & build documentation for the package \\
 \end{descriptiontable}
 
 To define the role of a directory, the Makefile of that directory has
@@ -266,171 +299,37 @@ prog:    & «include §(L4DIR)/mk/prog.mk» \\
 lib:     & «include §(L4DIR)/mk/lib.mk» \\
 idl:     & «include §(L4DIR)/mk/idl.mk» \\
 include: & «include §(L4DIR)/mk/include.mk» \\
+doc:     & «include §(L4DIR)/mk/doc.mk» \\
 \end{descriptiontable}
 
+\subsection*{Makeconf.local's}
 \index{Makeconf.local}
-Defining the Make-variables to control the role-files can happen in 4
-different places: The Makefile, a local «Makeconf.local», a
-packet-local «Makeconf.local», and a global «Makeconf.local». The
-local «Makeconf.local» resides within the same directory as the
-Makefile, the packet-local «Makeconf.local» is located in the
-top-level directory of a package, and the global «Makeconf.local»
-resides in «§(L4DIR)». All the «Makeconf.local»s are optional, they are
-included if they are available. They should never be checked into the
-CVS, as they are meant to define user-specific things. They are
-included from the role-files in the following order: global,
-packet-local, local.
+
+The Make-variables to control the role-files are defined in various
+files: The Makefile, a local «Makeconf.local», a packet-local
+«Makeconf.local», a global «Makeconf.local» and a global
+«Makeconf.bid.local». The local «Makeconf.local» resides within the
+same directory as the Makefile, the packet-local «Makeconf.local» is
+located in the top-level directory of a package, and both global
+«Makeconf.local» and «Makeconf.bid.local» reside in «§(L4DIR)».
+
+The gobal «§(L4DIR)/Makeconf.bid.local» is created by the DROPS
+Configuration Tool (see Section \ref{sec:config}) when called in
+«§(L4DIR)». This file is mandatory, i.e., you have to call «make
+config» and configure your DROPS tree prior to compilation. In
+contrast to this, the «Makeconf.local»s are optional, they are
+included if they are available. Create them with a text editor.
+
+The «Makeconf*local»'s should never be checked into the CVS, as they
+are meant to define user-specific things. Additional configuration
+files can be created using the DROPS Configuration Tool.
+
+The role-files include the configuration files in the following order:
+global Makeconf.bid.local, global Makeconf.local, packet-local, local.
 
 
-\subsubsection*{Abbreviations}
-
-Within the next sections, the following abbreviations are used in the
-description of role-file parameters:
-
-%\framebox[\columnwidth]{}
-
-\begin{descriptiontable}{XXX++}
-  XXX+  & The parameter «XXX» can be specified in multiple forms.
-          To set the parameter for all targets (defined in the parameter
-          «§(TARGET)» then), just specify «XXX». To set the
-          parameter for a special target «target» out of
-          «§(TARGET)», specify «XXX_target». \\
-
-  XXX++ & The parameter «XXX» can be specified in multiple forms.
-          To set the parameter for all targets (defined in the
-          parameter «§(TARGET)» then) and all systems
-          (defined in the parameter «§(SYSTEM)» then), just specify
-          «XXX». To set the parameter for a special target
-          «target» for all given systems, specify
-          «XXX_target». To set the parameter for a special
-          system «sys» for all given targets, specify
-          «XXX_sys». To set the parameter for a special target
-          «target» for a special system «sys»,
-          specify «XXX_sys_target». 
-\end{descriptiontable}
-
-
-\subsection{Targets and Parameters of
-  all Role-Files}
-
-\subsubsection{Make-Targets}
-
-All role-files support the following phony targets, which can be build
-using «make <target>».
-
-\begin{description}
-\item [config::]        \index{config:: make target}
-                        Runs the menu-driven configuration utility.
-                        See Section \ref{sec:config} for details.
-\item [txtconfig::]     \index{txtconfig:: make target}
-                        Runs the configuration utility. For
-                        directories, a recursive invocation is done.
-                        See Section \ref{sec:config} for details.
-\item [oldconfig::]     \index{oldconfig:: make target}
-                        (Re)creates a configuration header file based
-                        on a prior configuration or defaults. For
-                        directories, a recursive invocation is done.
-                        See Section \ref{sec:config} for details.
-\item [all:]            \index{all:: make target}
-                        The default target. It depends on the role,
-                        what exactly is done.
-\item [install::]       \index{install:: make target}
-                        Installs the generated files into the
-                        installation-tree «§(DROPS_STDDIR)».
-\item [reloc::]         \index{relocation!reloc:: make target}
-                        Build relocatable binaries. This is used for
-                        the relocation mechanism (see
-                        Section~\ref{sec:reloc}). Used by
-                        «subdir.mk» and «prog.mk»,
-                        ignored by the others.
-\item [scrub::]         \index{scrub:: make target}
-                        Delete temporary and backup files.
-\item [clean::]         \index{clean:: make target}
-                        Deletes all intermediate files generated
-                        during compilation. This does \emph{not}
-                        delete the generated targets such as binaries
-                        or libs.
-\item [cleanall::]      \index{cleanall:: make target}
-                        Deletes all generated and backup files. Depends on
-                        \textbf{clean::} and \textbf{scrub::}.
-\item [help::]          \index{help:: make target}
-                        Displays a short overview of the make-targets
-                        available with this role.
-\item [FORCE:]          \index{help:: make target}
-                        This target is not intended to build, but to
-                        depend on. If something depends on FORCE, it
-                        is built.
-\end{description}
-
-
-\subsubsection{Required Parameters}
-
-All role-files require the following variables to be set:
-
-\begin{parameterlist}{PKGDIR}
-    L4DIR       & \index{§(L4DIR)}
-                  The base directory of the L4 tree. \#
-    PKGDIR      & \index{§(PKGDIR)}
-                  The base directory of the package. \#
-\end{parameterlist}
-
-
-\subsubsection{Optional Parameters}
-\label{sec:common-targets-opt}
-
-The «prog.mk», «lib.mk», «include.mk» and «idl.mk» (all but
-«subdir.mk») role files respect the following variables:
-
-\begin{parameterlist}{DEPEND_VERBOSE}
-    SUBDIRS        & \index{§(SUBDIRS)}
-                     A list of subdirectories that will be treated
-                     specially: For each element of the list, a target
-                     will be created. If this target it called, the
-                     \textbf{all}-rule in the according directory will be
-                     made. Furthermore, \textbf{scrub}, \textbf{clean} and
-                     \textbf{cleanall} are made recursively for the
-                     specified directories. Default: unset. \#
-
-    DEPEND_VERBOSE & \index{§(DEPEND_VERBOSE)}
-                     If set to '«@»', no commands for
-                     dependency-generation will be shown. Default: unset.\#
-
-    DROPS_STDDIR   & \index{§(DROPS_STDDIR)}
-                     The base-directory of the install-tree. Default: 
-                     «/home/drops» \#
-
-    HAVE_LDSO      & \index{§(HAVE_LDSO)}
-                     If the host system provides ld.so, set this
-                     option to nonempty. Then, dependency generation
-                     uses more descent algorithms (see Section
-                     \ref{sec:dependencies} for details). Default: unset. \#
-
-    SHOWMESSAGES   & \index{§(SHOWMESSAGES)}
-                     If set to "true", a short textual description for
-                     every compilation step is printed. Default:
-                     true. \#
-
-    VERBOSE        & \index{§(VERBOSE)}
-                     If set to '«@»', no commands will be shown.
-                     Default: unset.\#
-
-\end{parameterlist}
-
-
-\subsubsection{Provided Variables}
-
-The following variables are \emph{provided} by the role files.
-
-\begin{parameterlist}{PKGNAME}
-    PKGNAME        & \index{§(PKGNAME)}
-                     The last part of the directory name specified
-                     in «§(PKGDIR)». \#
-\end{parameterlist}
-
-\todo{Restructure the role-files: move prog-related parts of
-  binary.inc to prog.mk, e.g., some parts of Makefile.inc generation.}
-
-\subsection{DROPS Configuration Tool}
+\vfill\pagebreak
+\section{DROPS Configuration Tool}
 \label{sec:config}
 \index{Configuration Tool}
 
@@ -441,12 +340,12 @@ variables. Some minor extensions are build in too.
 
 The configuration tool is run if the user runs ``«make config»'',
 ``«make txtconfig»'' or ``«make oldconfig»''. The following
-parameters are used to control the configuration tool.
+parameters control the configuration tool.
 
 {
-\begin{parameterlist}{DROPSCONF_CONFIG_IN}
+\begin{parameterlist}{DROPSCONF_DONTINC_MK}
 
-    DROPSCONF                   & \index{§(DROPSCONF)}
+    DROPSCONF                   & \index{§(DROPSCONF)}%
                                   if non-empty, the configuration tool
                                   will be run for the makefile-targets
                                   \textbf{\{old,txt,\}config::}. If
@@ -469,20 +368,19 @@ parameters are used to control the configuration tool.
                                   configuration tool on ``«make
                                     config»''. \#
         
-    DROPSCONF_DEFCONFIG        & \index{§(DROPSCONF_DEFCONFIG)}
+    DROPSCONF_DEFCONFIG        & \index{§(DROPSCONF_DEFCONFIG)}%
                                   the default configuration file,
                                   which is used as the initial
                                   configuration.
                                   
                                   Default: «defconfig» \#
 
-    DROPSCONF_CONFIG_IN       & \index{§(DROPSCONF_CONFIG_IN)}
+    DROPSCONF_CONFIG_IN       & \index{§(DROPSCONF_CONFIG_IN)}%
                                   the configuration definition file.
                                   
-                                  Default: «config.in»
-                                  \#
+                                  Default: «config.in» \#
 
-    DROPSCONF_CONFIG           & \index{§(DROPSCONF_CONFIG)}
+    DROPSCONF_CONFIG           & \index{§(DROPSCONF_CONFIG)}%
                                   the configuration file, which holds
                                   the configuration. This file is
                                   automatically build from
@@ -490,32 +388,45 @@ parameters are used to control the configuration tool.
 
                                   Default: «.config» \#
 
-    DROPSCONF_CONFIG_H          & \index{§(DROPSCONF_CONFIG_H)}
+    DROPSCONF_CONFIG_H          & \index{§(DROPSCONF_CONFIG_H)}%
                                   the configuration header file, which
                                   is included by the source files.
 
                                   Default: «config.h» \#
 
-    DROPSCONF_HELPFILE         & \index{§(DROPSCONF_HELPFILE)}
+    DROPSCONF_CONFIG_MK         & \index{§(DROPSCONF_CONFIG_MK)}%
+                                  the make include file, which
+                                  is included by the makefiles.
+
+                                  Default: «Makeconf.bid.local» \#
+
+    DROPSCONF_DONTINC_MK       & \index{§(DROPSCONF_DONTINC_MK)}%
+                                  If this option is non-empty,
+                                  inclusion of the make include file
+                                  is supressed.
+
+                                  Default: empty \#
+
+    DROPSCONF_HELPFILE         & \index{§(DROPSCONF_HELPFILE)}%
                                   the file containing the option help
                                   texts.
 
                                   Default: «config.help» \#
 
-    DROPSCONF_MACRO            & \index{§(DROPSCONF_MACRO)}
+    DROPSCONF_MACRO            & \index{§(DROPSCONF_MACRO)}%
                                   the macro which is defined when
                                   DROPSCONF_CONFIG_H is included.
 
                                   Default: «CONFIG_H_INCLUDED» \#
 
-    DROPSCONF_TITLE            & \index{§(DROPSCONF_TITLE)}
+    DROPSCONF_TITLE            & \index{§(DROPSCONF_TITLE)}%
                                   the main title in the configuration
                                   tool.
 
                                   Default: ``DROPS Configuration
                                   Tool'' \#
 
-    DROPSCONF_TOOL             & \index{§(DROPSCONF_TOOL)}
+    DROPSCONF_TOOL             & \index{§(DROPSCONF_TOOL)}%
                                   the path to the menu-driven
                                   configuration tool used for the
                                   \textbf{config::} target.
@@ -524,7 +435,7 @@ parameters are used to control the configuration tool.
                                   «§(L4DIR)/tool/config/Menu\-config»
                                   \#
 
-    DROPSCONF_TOOL_TXT        & \index{§(DROPSCONF_TOOL_TXT)}
+    DROPSCONF_TOOL_TXT        & \index{§(DROPSCONF_TOOL_TXT)}%
                                   the path to the configuration tool
                                   used for the \textbf{txtconfig::}
                                   target.
@@ -533,7 +444,7 @@ parameters are used to control the configuration tool.
                                   «§(L4DIR)/tool/config/\-Configure»
                                   \#
 
-    DROPSCONF_TOOL_OLD        & \index{§(DROPSCONF_TOOL_OLD)}
+    DROPSCONF_TOOL_OLD        & \index{§(DROPSCONF_TOOL_OLD)}%
                                   the path to the configuration tool
                                   used for the \textbf{oldconfig::} target.
 
@@ -541,42 +452,50 @@ parameters are used to control the configuration tool.
                                   «§(L4DIR)/tool/config/\-Configure -d»
                                   \#
 
-    DROPSCONF_UNDEF           & \index{§(DROPSCONF_UNDEF)}
+    DROPSCONF_UNDEF           & \index{§(DROPSCONF_UNDEF)}%
                                   If nonempty, disabled boolean options
-                                won't be defined in
-                                «§(DROPSCONF_CONFIG_H)» at all. If
-                                empty, disabled options will be
-                                defined as «0». Enabled boolean
-                                options are defined as «1» always.
+                                  won't be defined in
+                                  «§(DROPSCONF_CONFIG_H)» at all. If
+                                  empty, disabled options will be
+                                  defined as «0». Enabled boolean
+                                  options are defined as «1» always.
 
-                                 Default: empty. \#
-
+                                  Default: empty. \#
 \end{parameterlist}
 }
 
-The configuration tool creates two files: The configuration file
-(«§DROPSCONF_CONFIG») and the configuration include file
-(«§DROPSCONF_CONFIG_H»). The former contains the configuration in a
-format to be included inside a Makefile. The latter is a standard
-include-file. Note, that the configuration file is automatically
+The configuration tool creates three files: The configuration file
+(«§DROPSCONF_CONFIG»), the configuration include file
+(«§DROPSCONF_CONFIG_H») and the make include file
+(«§DROPSCONF_CONFIG_MK»). The first contains the configuration in a
+format suitable for the config tool. The second is a standard
+include-file for C files. The last contains the configuration in a
+format to be included in Makefiles. Note, that it is automatically
 included in your Makefile when one of the role-files is included and
 if your Makefile supports configuration. The role-files ensure that
 the configuration file is build appropriately. If you want to include
 the configuration file in other Makefiles, make sure the configuration
 file is built.
 
+\enlargethispage*{4ex}
+When using the configuration tool, the special target
+\textbf{DROPSCONF_CONFIG_MK_POST_HOOK::}
+\index{DROPSCONF_CONFIG_MK_POST_HOOK::} is called after generating
+«§(DROPSCONF_CONFIG_MK)». You can add your own commands here, the
+configuration options will already be effecive during execution.
 
-\subsection{Dependencies}
+\vfill\pagebreak
+\section{Dependencies}
 \label{sec:dependencies}
 \index{dependencies}
+
+\subsection{Source-code dependencies}
 
 Dependencies are built automatically. When compiling source-files into
 intermediate object files, each source-file is accompanied by an
 according dependency file. If the source-file is named «x», then the
 dependency file is named «.x.d». Typically these dependency files
-contain header files. When linking or archiving files into binaries or
-libraries, each target is accompanied by an according dependency file.
-If the target is named «y», then the dependency file is named «.y.d».
+contain header files. For binary linking the same rules apply. 
 Dependency files for binaries typically contain libraries. Dependency
 files are deleted on ``«make cleanall»''.
 
@@ -584,12 +503,13 @@ For generating of dependency files, we use two methods: If the host
 system provides and uses the dynamic linker \name{ld.so}, we use
 \emph{libgendep} \cite{www:gendep}\index{libgendep} to build the
 dependency files. libgendep uses the «LD_PRELOAD» method to overload
-the «open()»-function of libc during compilation or linking. All files
-opened read-only are added to the list of dependencies for the current
-target. This is a flexible solution, as it can be used on a broad
-range of compilers, linkers and other tools. To enable this tool, set
-«HAVE_LDSO» (Section \ref{sec:common-targets-opt}) to nonempty in your
-local configuration files.
+the «open()»- and «fopen()»-functions of libc during compilation or
+linking. All files opened read-only are added to the list of
+dependencies for the current target. This is a flexible solution, as
+it can be used on a broad range of compilers, linkers and other tools. 
+To enable this tool, set «HAVE_LDSO» (Section
+\ref{sec:common-targets-opt}) to nonempty in your local configuration
+files.
 
 If the host system does not provide \name{ld.so}, we fall back to the
 second method of dependency file generation: For compilation of C and
@@ -619,18 +539,26 @@ library directories, this is used for the library dependencies. This
 might be the wrong choice (as the actual library might appear later in
 the search path), resulting in an abortion of the compilation process.
 
-\todo{Write about that .general.d, Makefile.inc, and what depends on what}
+\subsection{Configuration File Dependencies}
 
-\subsection{Systems, Architectures and Modes}
+The dependency generation also covers configuration and Makefiles. 
+This is, each object file and target is made dependent on the Makefile
+and on the various «Makeconf.*local»'s present in the file-system.
+
+Information about if a configuration file is existing or not is stored
+in a file named «.general.d», and this file is made dependent of the
+existing files. The role-files then ensure that all objects files and
+targets depend on this «.general.d».
+
+
+\vfill\pagebreak
+\section{Systems, Architectures and Modes}
 \label{sec:systems}
-
-\todo{mention that OSYSTEMS stuff, and that the system-specific
-  variables always relate to the name as it was given in SYSTEMS.}
 
 This section describes how to build for multiple architectures and for
 multiple target systems.
 
-\subsubsection{Definitions of Terms}
+\subsection{Definitions of Terms}
 
 When building for multiple environments, we distinguish between the
 \emph{system} and a \emph{mode}:
@@ -657,7 +585,7 @@ When building for multiple environments, we distinguish between the
 
 \item [Mode] \index{Mode}%
   covers the target execution environment respectively the
-  libraries binaries should be linked against. Examples are
+  C-libraries binaries should be linked against. Examples are
   \name{oskit10}, \name{loader} or \name{host}. See Section
   \ref{sec:systems-modes} for a list of suggestions. Each target can
   be built/compiled for only one mode.
@@ -693,16 +621,16 @@ systems\footnote{read below about the granularity}. In a global
 configuration file (maintained by the user that compiles its tree),
 all systems that should be compiled are specified.
 
-\subsubsection{File System Representation}
+\subsection{File System Representation}
 
 Let us look now at a package subdirectory, containing the source-file
 «pkg/foo/lib/src/foo.c». We compile for systems \name{x86_586-l4v2}
 and \name{ia64-l4v2}. To distinguish between both object files, we
 place them in different directories: «OBJ-<system>»:
 «.../src/OBJ-x86_586-l4v2/foo.o» and «.../src/OBJ-ia64-l4v2/foo.o». As
-we have a smooth migration from one target architecture to multiple
-architectures in mind, we compile \emph{always} into subdirectories,
-even if we compile for only one architecture. Thus, we have the
+we have a smooth migration from one target system to multiple
+systems in mind, we compile \emph{always} into subdirectories,
+even if we compile for only one system. Thus, we have the
 structure as depicted in Figure \ref{fig:systems-package-tree}
 (please, ignore the Makefiles for now).
 
@@ -731,17 +659,24 @@ structure as depicted in Figure \ref{fig:systems-package-tree}
 \label{fig:systems-package-tree}
 \end{figure}
 
-\subsubsection{Compilation for Multiple Systems}
+\subsection{Compilation for Multiple Systems}
+\label{sec:systems-compile}
 
 Within the Makefile in the «.../src/» directory, «L4DIR» and «PKGDIR»
 and the supported systems are specified. Also, either «prog.mk» or
 «lib.mk» is included. During the make process, BID creates the
 system-specific subdirectories with Makefiles therein. Those Makefiles
 define the variables «L4DIR», «PKGDIR», «SYSTEM», «ARCH», «CPU» and
-«L4API»\footnote{Note that «L4API» can be empty.}. These Makefiles
-also include either the original Makefile in the upper directory or
-alternatively a separate file «Make.rules»\index{Make.rules} if
-it exists within the upper directory.
+«L4API»\footnote{Note that «L4API» can be empty.}. During compilation
+of C and C++ files, the preprocessor macros
+SYSTEM_§(SYSTEM)\index{SYSTEM preprocessor macro},
+ARCH_§(ARCH)\index{ARCH preprocessor macro},
+CPUTYPE_§(CPU)\index{CPUTYPE preprocessor macro} and
+L4API_§(L4API)\index{L4API preprocessor macro} will be
+defined. The generated Makefiles also include either the original
+Makefile in the upper directory or alternatively a separate file
+«Make.rules»\index{Make.rules} if it exists within the upper
+directory.
 
 Having that separate Make.rules file might be useful, as otherwise all
 definitions have to be done in that one Makefile. Note, that this
@@ -760,206 +695,7 @@ included once. If no role-file is included explicitly, it will be
 automatically included after including Make.rules.
 
 
-\subsubsection{Modes}
-\label{sec:systems-modes}
-
-Following is the list of the proposed modes.
-
-\begin{descriptiontable}{oskit10_sigma0}
-
-oskit10      & aka \name{oskit10_l4env_full}. This mode allows to use
-               drivers and the infrastructure from the Flux OSKit
-               0.97, together with the L4Env \cite{www:l4env}. Binaries
-               are linked against the huge freebsd-libc. \\
-
-oskit10_sigma0 & aka \name{oskit10}. This mode allows to use
-               drivers and the infrastructure from the Flux OSKit
-               0.97. Binaries are linked against the huge freebsd-libc. \\
-
-l4env        & aka \name{oskit10_l4env_tiny}. This mode allows to use some
-               basic libc functionality from the Flux OSKit 0.97,
-               together with the L4Env. Binaries are linked against
-               the small mini-libc \name{libmc}. \\
-
-loader       & Like l4env mode, but libraries are dynamically linked.
-               Binaries must be loaded with the L4Env
-               loader \cite{www:l4envloader}.\\
-
-sigma0       & This has no support for L4Env, the result is a plain L4
-               application. Binaries are linked against the small
-               mini-libc \name{libmc} from the Flux OSKit 0.6. \\
-
-l4linux      & Use this mode to build \llinux{} user-mode applications
-               with L4Env support. Binaries are linked dynamically
-               agains standard-libc. \\
-
-l4linux-kern & Use this mode to build \llinux{} kernel-mode modules
-               with  L4Env support. Modules are linked against L4Env
-               libraries. \\
-
-host         & Build an application for the host operating system. \\
-
-\end{descriptiontable}
-
-The mode specifies which standard C library and header files are being
-used, which objects for startup-code (CRT0) are being linked and which
-linker scripts are used for all this. See Tables \ref{tab:mode-dirs},
-\ref{tab:mode-clibs}, \ref{tab:mode-l4libs} for
-what is determined by each mode. See Section \ref{sec:prog.mk} and
-Section \ref{sec:lib.mk} for the meaning of the variables.
-
-\begin{table}[h]
-\index{§(MODE)}\index{§(LIBCINCDIR)}\index{§(LIBCLIBDIR)}%
-\begin{tabular}{|p{.2\tabThree}|>{\small\ttfamily\raggedright}p{.48\tabThree}|
-                 >{\small\ttfamily\raggedright}p{.32\tabThree}|@{}l@{}}
-\hline
-\bf Mode        & \bf «§LIBCINCDIR» & \bf «§LIBCLIBDIR» &\\\hline\hline
-
-sigma0          & -nostdinc -I§(L4DIR)/../oskit/flux/c
-                  -I§(L4DIR)/../oskit 
-                & -L§(L4DIR)/../oskit/lib &\\\hline
-
-host            & - & - &\\\hline
-
-oskit10_sigma0  & -nostdinc -I\{
-                  §(L4DIR)/include/l4/oskit10/oskit_override
-                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
-                  §(DROPS_STDDIR)/include 
-                  §(DROPS_STDDIR)/include/oskit/c \}
-                & -L§(DROPS_STDDIR)/lib &\\\hline
-
-l4env           & -nostdinc -DOSKIT -I\{
-                  §(DROPS_STDDIR)/include
-                  §(DROPS_STDDIR)/include/oskit/c \}
-                & -L§(DROPS_STDDIR)/lib &\\\hline
-
-oskit10         & t.b.d & t.b.d &\\\hline
-loader          & t.b.d & t.b.d &\\\hline
-l4linux         & t.b.d & t.b.d &\\\hline
-l4linux_kern    & t.b.d & t.b.d &\\\hline
-\end{tabular}
-\caption{Directories for include files and library path search
-  depending on the mode.}
-\label{tab:mode-dirs}
-\end{table}
-
-\begin{table}[h]
-\index{§(LIBCLIBS)}
-\begin{tabular}{|p{.17\tabTwo}|>{\small\ttfamily\raggedright}p{.83\tabTwo}|@{}l@{}}
-\hline
-\bf Mode        & \bf «§LIBCLIBS» &\\\hline\hline
-
-sigma0          & -nostdlib -lmc -loskit_support -lkern -llmm
-                &\\\hline
-
-host            & - &\\\hline
-
-oskit10_sigma0  & -nostdlib -loskit10_support -loskit_startup
-                  -loskit_clientos -loskit_bootp
-                  -loskit_linux_fs -loskit_diskpart
-                  -loskit_linux_dev -loskit_freebsd_net
-                  -loskit10_support -loskit_kern -loskit_lmm
-                  -loskit_amm -loskit_freebsd_c -loskit_com
-                  §(DROPS_STDDIR)/lib/oskit/crtn.o
-                &\\\hline
-
-l4env           & -nostdlib -loskit10_support
-                  -loskit10_support_l4env -ll4env -ll4rm
-                  -ldm_generic -ldm_mem -lthread -loskit_c
-                  -loskit_kern -loskit_clientos -loskit_lmm
-                  -loskit10_support_l4env -loskit_c
-                &\\\hline
-
-oskit10         & t.b.d &\\\hline
-loader          & t.b.d &\\\hline
-l4linux         & t.b.d &\\\hline
-l4linux_kern    & t.b.d &\\\hline
-\end{tabular}
-\caption{Standard libc-libraries depending on the mode.}
-\label{tab:mode-clibs}
-\end{table}
-
-
-\begin{table}[h]
-\index{§(L4LIBS)}
-\begin{tabular}{|p{.17\tabTwo}|>{\small\ttfamily\raggedright}p{.83\tabTwo}|@{}l@{}}
-\hline
-\bf Mode        & \bf «§L4LIBS»
-&\\\hline\hline
-
-sigma0          & -static -llogserver -lnames -ll4util -lrmgr §(GCCLIB)
-                &\\\hline
-
-host            & - &\\\hline
-
-oskit10_sigma0  & -static -llogserver -lnames -ll4util -lrmgr §(GCCLIB)
-                &\\\hline
-
-l4env           & -static -ll4env -ll4rm -ldm_generic -ldm_mem -lthread
-                  -lsemaphore -llogserver -lnames -ll4util -lrmgr
-                  -loskit10_support_l4env -ll4env -ll4rm -ldm_generic
-                  -ldm_mem -lthread
-                &\\\hline
-
-oskit10         & t.b.d &\\\hline
-loader          & t.b.d &\\\hline
-l4linux         & t.b.d &\\\hline
-l4linux_kern    & t.b.d &\\\hline
-\end{tabular}
-\caption{L4 libraries to be linked depending on the mode.}
-\label{tab:mode-l4libs}
-\end{table}
-
-\begin{table}[h]
-\index{§(LIBCLIBS)}\index{§(CRT0)}\index{§(LDSCRIPT)}
-\begin{tabular}{|p{.17\tabThree}|>{\small\ttfamily\raggedright}p{.41\tabThree}|
-                 >{\small\ttfamily\raggedright}p{.42\tabThree}|@{}l@{}}
-\hline
-\bf Mode        & \bf «§CRT0» & \bf «§LDSCRIPT» 
-&\\\hline\hline
-
-sigma0          & crt0_getopt.o
-                & main_stat.ld
-                &\\\hline
-
-host            & - & - &\\\hline
-
-oskit10_sigma0  & crt0.o
-                & main_stat.ld
-                &\\\hline
-
-l4env           & crt0_l4env_oskit10_tiny.o
-                & l4env_oskit10_tiny.ld
-                &\\\hline
-
-oskit10         & t.b.d & t.b.d &\\\hline
-loader          & t.b.d & t.b.d &\\\hline
-l4linux         & t.b.d & t.b.d &\\\hline
-l4linux_kern    & t.b.d & t.b.d &\\\hline
-\end{tabular}
-\caption{Standard libc-libraries depending on the mode.}
-\label{tab:mode-crt0ldscript}
-\end{table}
-\clearpage
-
-For §(CRT0) and §(LDSCRIPT) a directory-search within the directories
-in §(L4LIBDIR) is performed, the first occurrence is selected.
-
-\paragraph{Examples}
-
-Examples for the various modes can be found within the following
-packages:
-
-\begin{description}
-
-\item[sigma0] \name{names}: server and library
-\item[oskit10_sigma0] \name{names}: lister example; \name{log}: network
-  server
-\item[l4env] \name{oshkosh}: easy-client example
-
-\end{description}
-
-\subsubsection{Specifying the Systems to build}
+\subsection{Specifying the Systems to build}
 
 So far, we described how to build multiple systems. No, we describe
 how to specify the systems a packet can build.
@@ -973,8 +709,8 @@ optional too.
 
 The user that compiles its L4-tree specifies the systems he wants to
 build. Therefore he sets the variable
-«BUILD_SYSTEMS»\index{§(BUILD_SYSTEMS)}, best in its global
-Makeconf.local (see Section \ref{sec:rolefiles}). The systems listed
+«BUILD_SYSTEMS»\index{§(BUILD_SYSTEMS)}, e.g. using the global
+Makeconf.bid.local (see Section \ref{sec:config}). The systems listed
 in «BUILD_SYSTEMS» always have an L4API component. The user may
 specify a specific CPU for optimization purposes within the CPU
 component. He may even list the same CPU architecture/L4API
@@ -1004,18 +740,318 @@ Some packages built code for multiple systems and use an IDL compiler
 to generate the communication stubs. The systems these packets can be
 built for depend mainly on the IDL compiler. To avoid to change all
 the Makefile of those packages if the IDL compiler supports more
-systems, the variable «IDL_SYSTEMS» contains all the systems our
-default IDL compiler \name{dice}\cite{www:dice} can generate code for.
-A Makefile can use «SYSTEMS=§(IDL_SYSTEMS)» to automatically build for
-all systems that are supported by dice.
+systems, the variable «IDL_SYSTEMS»\index{§(IDL_SYSTEMS)} contains all
+the systems our default IDL compiler \name{dice}\cite{www:dice} can
+generate code for. A Makefile can use «SYSTEMS=§(IDL_SYSTEMS)» to
+automatically build for all systems that are supported by dice.
 
-\todo{We renamed 'architecture' to 'system' and use subdirectories
-  now. We also use Make.rules to parameterize the role-files. Adapt the
-  rest of this document to these changes. Also include the SYSTEMS,
-  SYSTEM, ARCH, CPU and L4API variables in prog.mk and lib.mk.}
+Note that when compiling files in the «OBJ-*» subdirectories, the
+contents of «§(SYSTEM)» can not necessarily be found in the §(SYSTEMS)
+variable of the original Makefile, e.g. due to the added «§(ARCH)»
+component. To help writing system-specific makefiles, the make
+variable «§(OSYSTEM)»\index{§(OSYSTEM)} is defined by the generated
+makefile. It contains that part of the «§(SYSTEMS)» variable in the
+Makefile that corresponds to the current «§(SYSTEM)». Note,
 
 
-\subsubsection{Backward Compatibility}
+\subsection{Modes}
+\label{sec:systems-modes}
+
+The following modes are defined:
+
+\begin{descriptiontable}{oskit10_sigma0}
+
+l4env        & aka \name{oskit10_l4env_tiny}. This mode allows to use some
+               basic libc functionality from the Flux OSKit 0.97,
+               together with the L4Env. Binaries are linked against
+               the small mini-libc \name{libmc}. \\
+
+l4env_freebsd & aka \name{oskit10_l4env_full}. This mode allows to use
+               drivers and the infrastructure from the Flux OSKit
+               0.97, together with the L4Env \cite{www:l4env}. Binaries
+               are linked against the huge freebsd-libc. \\
+
+loader       & Like l4env mode, but libraries are dynamically linked.
+               Binaries must be loaded with the L4Env
+               loader \cite{www:l4envloader}.\\
+
+sigma0       & This has no support for L4Env, the result is a plain L4
+               application. Binaries are linked against the small
+               mini-libc \name{libmc} from the Flux OSKit 0.6. \\
+
+oskit10_sigma0 & aka \name{oskit10}. This mode allows to use
+               drivers and the infrastructure from the Flux OSKit
+               0.97. Binaries are linked against the huge freebsd-libc. \\
+
+l4linux      & Use this mode to build \llinux{} user-mode applications
+               with L4Env support. Binaries are linked dynamically
+               against standard-libc. \\
+
+l4linux_kern & Use this mode to build \llinux{} kernel-mode modules
+               with  L4Env support. Modules are linked against L4Env
+               libraries. \\
+
+host         & Build an application for the host operating system. \\
+
+\end{descriptiontable}
+
+The mode specifies which standard C library and header files are being
+used, which objects for startup-code (CRT0), end-/marker-code (CRTN)
+are being linked and which linker scripts are used for all this. See
+Tables \ref{tab:mode-incdirs}, \ref{tab:mode-libdirs}, \ref{tab:mode-clibs},
+\ref{tab:mode-l4libs} and \ref{tab:mode-crt0ldscript} for what is determined
+by each mode. See Section \ref{sec:prog.mk} and Section
+\ref{sec:lib.mk} for the meaning of the variables.
+
+%begin{latexonly}
+\newenvironment{ptabtwo}{\begin{tabular}{|p{.17\tabTwo}|%
+                >{\small\ttfamily\raggedright}p{.83\tabTwo}|@{}l@{}}%
+}{\end{tabular}}
+\newenvironment{ptabthree}[2]{\begin{tabular}{|p{.17\tabThree}|%
+                 >{\small\ttfamily\raggedright}p{#1\tabThree}|%
+                 >{\small\ttfamily\raggedright}p{#2\tabThree}|@{}l@{}}%
+}{\end{tabular}}
+%end{latexonly}
+\begin{htmlonly}
+\newenvironment{ptabthree}[2]{\begin{tabular}{|p|%
+                >{\small\ttfamily\raggedright}p|%
+                >{\small\ttfamily\raggedright}p|}}%
+}{\end{tabular}}
+\newenvironment{ptabtwo}{\begin{tabular}{|p|>{\small\ttfamily\raggedright}p|}%
+}{\end{tabular}}
+\end{htmlonly}
+
+\begin{table}[h]
+\index{§(MODE)}\index{§(LIBCINCDIR)}%
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§LIBCINCDIR» &\\\hline\hline
+
+l4env           & -nostdinc -DOSKIT -I\{
+                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
+                  §(DROPS_STDDIR)/include/oskit10
+                  §(DROPS_STDDIR)/include/oskit10/oskit/c)\}
+                  &\\\hline
+
+l4env_freebsd   & -nostdinc -DOSKIT -I\{
+                  §(L4DIR)/../oskit10/freebsd/ \{libc/include,
+                  3.x/src/include, 3.x/src/sys\} §(L4DIR)/../oskit10
+                  §(L4DIR)/include/c++/§(GCCVERSION)
+                  §(L4DIR)/include/c++/§(GCCVERSION)/drops
+                  §(DROPS_STDDIR)/include/oskit10
+                  §(DROPS_STDDIR)/include/oskit10/oskit/freebsd
+                  §(DROPS_STDDIR)/include/c++/§(GCCVERSION)
+                  §(DROPS_STDDIR)/include/c++/§(GCCVERSION)/drops
+                  \}  &\\\hline
+
+loader          & nostdinc -DOSKIT -I\{
+                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
+                  §(DROPS_STDDIR)/include/oskit10
+                  §(DROPS_STDDIR)/include/oskit10/oskit/c \}
+                &\\\hline
+
+sigma0          & -nostdinc -I\{§(L4DIR)/../oskit/ §(L4DIR)/../oskit/flux/c
+                  §(DROPS_STDDIR)/include/oskit06 
+                  §(DROPS_STDDIR)/include/oskit06/flux/c\}
+                &\\\hline
+
+oskit10_sigma0  & -nostdinc -I\{
+                  §(L4DIR)/../oskit10 §(L4DIR)/../oskit10/oskit/c
+                  §(DROPS_STDDIR)/include/oskit10
+                  §(DROPS_STDDIR)/include/oskit10/oskit/c \}
+                &\\\hline
+
+l4linux         & - &\\\hline
+
+l4linux_kern    & -nostdinc -I§(L4LINUX22_DIR)/include -D__KERNEL__
+                  -DLINUX_ON_L4
+                &\\\hline
+
+host            & - &\\\hline
+
+\end{ptabtwo}
+\caption{Directories for include file search depending on the mode.}
+\label{tab:mode-incdirs}
+\end{table}
+
+\begin{table}[h]
+\index{§(MODE)}\index{§(LIBCLIBDIR)}%
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§LIBCLIBDIR» &\\\hline\hline
+
+l4env           & -L§(L4DIR)/../oskit10/lib
+                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+
+l4env_freebsd   & -L\{§(L4DIR)/../oskit10/lib 
+                  -L§(L4DIR)/lib/c++/§(GCCVERSION)
+                  §(DROPS_STDDIR)/lib/oskit10
+                  §(DROPS_STDDIR)/lib/c++/§(GCCVERSION)
+                  \} &\\\hline
+
+loader          & -L§(L4DIR)/../oskit10/lib
+                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+
+sigma0          & -L§(L4DIR)/../oskit/lib -L§(DROPS_STDDIR)/lib/oskit06
+                &\\\hline
+
+oskit10_sigma0  & -L§(L4DIR)/../oskit10/lib
+                  -L§(DROPS_STDDIR)/lib/oskit10 &\\\hline
+
+l4linux         & -L§(DROPS_STDDIR)/lib &\\\hline
+
+l4linux_kern    & - &\\\hline
+
+host            & - &\\\hline
+
+\end{ptabtwo}
+\caption{Directories for library path search depending on the mode.}
+\label{tab:mode-libdirs}
+\end{table}
+
+\begin{table}[h!]
+\index{§(LIBCLIBS)}
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§LIBCLIBS» &\\\hline\hline
+
+l4env           & -nostdlib
+                  -loskit10_support_l4env -ll4env -ll4rm
+                  -ldm_generic -ldm_mem -lthread -loskit_c
+                  -loskit_kern -loskit_clientos -loskit_lmm
+                  -loskit10_support_l4env -loskit_kern 
+                  -loskit_c -loskit10_support_l4env
+                &\\\hline
+
+l4env_freebsd   & -nostdlib -loskit10_support_l4env_full -loskit_startup
+                  -loskit_clientos -loskit_bootp -loskit_linux_fs 
+                  -loskit_diskpart -loskit_linux_dev
+                  -loskit_freebsd_net -loskit_kern -loskit_lmm
+                  -loskit_amm -loskit_freebsd_c -loskit_com
+                  -loskit_freebsd_c &\\\hline
+
+loader          & -nostdlib
+                  -loskit10_support_l4env -loskit_c
+                  -loskit_kern -loskit_clientos -loskit_lmm
+                  -loskit10_support_l4env -loskit_c
+                  -loskit_kern -loskit10_support_l4env &\\\hline
+
+sigma0          & -nostdlib -lmc -loskit_support -lkern -llmm -lmc
+                &\\\hline
+
+oskit10_sigma0  & -nostdlib -loskit10_support -loskit_startup
+                  -loskit_clientos -loskit_bootp
+                  -loskit_linux_fs -loskit_diskpart \
+                  -loskit_linux_dev -loskit_freebsd_net \
+                  -loskit10_support -loskit_kern -loskit_lmm \
+                  -loskit_amm -loskit_c -loskit_kern -lrmgr \
+                  -loskit_c
+                &\\\hline
+
+l4linux         & -ldm_generic -ldm_mem -lnames -ll4util
+                  -lrmgr -lloaderif -ll4env -ll4env_err -lslab -ll4sys
+                &\\\hline
+
+l4linux_kern    & - &\\\hline
+
+host            & - &\\\hline
+
+\end{ptabtwo}
+\caption{Standard libc-libraries depending on the mode.}
+\label{tab:mode-clibs}
+\end{table}
+
+
+\begin{table}[h!]
+\index{§(L4LIBS)}
+\begin{ptabtwo}
+\hline
+\bf Mode        & \bf «§L4LIBS»
+&\\\hline\hline
+
+l4env           & -static -ll4env -ll4rm -ldm_generic -ldm_mem -lthread
+                  -lsemaphore -llogserver -lnames -ll4util -lrmgr
+                  -loskit10_support_l4env -ll4env -ll4env_err -ll4rm 
+                  -ldm_generic -ldm_mem -lthread -lslab -ll4sys §(GCCLIB)
+                &\\\hline
+
+l4env_freebsd   & -static -ll4env_oskit10 -ll4rm -ldm_generic
+                  -ldm_mem -lthread -lsemaphore -llogserver -lnames
+                  -ll4util -lrmgr -loskit10_support_l4env_full
+                  -ll4env_oskit10 -ll4env_err -ll4rm -ldm_generic
+                  -ldm_mem -lthread -lslab -ll4sys §(GCCLIB)
+                  §(GCCLIB_EH) &\\\hline
+
+loader          & -lloader.s -ll4sys §(GCCLIB) &\\\hline
+
+sigma0          & -static -llogserver -lnames -ll4util -lrmgr -ll4sys §(GCCLIB)
+                &\\\hline
+
+oskit10_sigma0  & -static -llogserver -lnames -ll4util -lrmgr -ll4sys §(GCCLIB)
+                &\\\hline
+
+l4linux         & - &\\\hline
+l4linux_kern    & - &\\\hline
+host            & - &\\\hline
+
+\end{ptabtwo}
+\caption{L4 libraries to be linked depending on the mode.}
+\label{tab:mode-l4libs}
+\end{table}
+
+\begin{table}[h!]
+\index{§(LIBCLIBS)}\index{§(CRT0)}\index{§(CRTN)}\index{§(LDSCRIPT)}
+\begin{ptabthree}{.41}{.42}
+\hline
+\bf Mode        & \bf «§CRT0» & \bf «§LDSCRIPT» 
+&\\\hline\hline
+
+l4env           & crt0_l4env.o
+                & main_stat.ld
+                &\\\hline
+
+l4env_freebsd   & crt0_l4env_freebsd.o
+                & main_stat.ld
+                & \\\hline
+
+loader          & crt0_l4env_dyn.o
+                & main_stat.ld
+                &\\\hline
+
+sigma0          & crt0_getopt.o
+                & main_stat.ld
+                &\\\hline
+
+oskit10_sigma0  & crt0_oskit10_support.o
+                & main_stat.ld
+                &\\\hline
+
+l4linux         & - & - &\\\hline
+l4linux_kern    & - & - &\\\hline
+host            & - & - &\\\hline
+
+\end{ptabthree}
+\caption{Startup code (CRT0) and linker scripts depending on the mode.}
+\label{tab:mode-crt0ldscript}
+\end{table}
+
+\paragraph*{Examples}
+
+Examples for the various modes can be found within the following
+packages:
+
+\begin{description}
+
+\item[sigma0] \name{names}: server and library
+\item[oskit10_sigma0] \name{names}: lister example; \name{log}: network
+  server
+\item[l4env] \name{con}: bench example
+
+\end{description}
+
+
+
+\subsection{Backward Compatibility, \name{drops-gcc}}
 
 As long as packages have to be compiled that use the (older)
 make-system with those Makeconf's in «§(L4DIR)», they must be provided
@@ -1024,14 +1060,24 @@ is defined and used by the adapted Makeconf's. All packages that use
 BID and that should be used by old packages, compile at least for the
 standard system. The standard system is «x86_586-l4v2».
 
+\subsection{Defining new architectures and modes}
+\label{sec:modes-defining-own}
+\enlargethispage*{3ex}
 
-\begin{implemented}
-\item [IDL_SYSTEMS] is currently always empty.
-\item [oskit10, loader, l4linux, l4linux-kern:] These modes are not
-  implemented.
-\end{implemented}
+Defining additional architecture/mode pairs for a specific
+architecture is done by setting appropriate Make-variables. To define
+mode «mode» for architecture «arch», set «BID_SUPPORTED_arch_mode» to
+``y'' and define the variables «LIBCINCDIR_arch_mode»,
+«LIBCLIBDIR_arch_mode», «LIBCLIBS_arch_mode», «L4LIBS_arch_mode»,
+«CRT0_arch_mode», «CRTN_arch_mode» and «LDSCRIPT_x86_sigma0».
 
-\subsection{Relocation of Binaries}
+Also, you can set
+«CARCHFLAGS_<arch>_<cpu>»\index{§(CARCHFLAGS_arch_cpu)} to specify
+cpu-specific compiler options, e.g. «CARCHFLAGS_x86_p3=-march=p3» if
+-march=p3 is the compiler option to generate p3-optimized code.
+
+\vfill\pagebreak
+\section{Relocation of Binaries}
 \label{sec:reloc}
 \index{relocation}
 
@@ -1039,31 +1085,7 @@ To generate executable binaries, there are two flavors of finally
 linking: Relocating a formerly relocatable binary or build relocated
 binaries in a normal link process.
 
-\subsubsection{Relocatable binaries}
-\label{sec:reloc-bins}
-
-The idea behind this is to have all binaries to be executed during one
-run-time session linked to different virtual addresses. This is done
-by building the binaries relocatable first. These relocatable binaries
-have all symbols resolved and all required libraries linked, but the
-final start-address is not yet defined. These binaries are not
-executable yet. After building the binaries in this relocatable form,
-the size of all binaries is known. Then, you can relocate all binaries
-to successive address ranges. If you start these binaries later, they
-use disjoint virtual addresses, but do not waste much virtual memory
-between them. And its automatically.
-
-To build relocatable binaries, call «make reloc». This traverses the
-subtrees of your local directory and builds relocatable binaries in
-the directories having the prog role. The binaries are named
-«relocatable.xxx» with xxx being substituted by the target name(s).
-Finally, call «§(L4DIR)/bin/reloc/reloc.sh» with the binaries you want
-to relocate as parameters. This script relocates the binaries and
-copies them to «§(L4DIR)/bin/». For a more explanatory description of
-«reloc.sh»\index{relocation!reloc.sh}, ask its maintainer.
-
-
-\subsubsection{Relocated binaries and the STATIC file}
+\subsection{Relocated binaries and the STATIC file}
 \label{sec:reloc-STATIC}
 
 This is the classical approach of building an executable binary: Link
@@ -1079,27 +1101,199 @@ name of the binary is not found in STATIC, the start-address specified
 in «DEFAULT_RELOC++» is used.
 
 
-\begin{implemented}
-\item [Relocatable binaries:] This feature as described in Section
-  \ref{sec:reloc-bins} is not implemented.
-\end{implemented}
+\subsection{Relocatable binaries}
+\label{sec:reloc-bins}
+
+The idea behind this is to have all binaries to be executed during one
+run-time session linked to different virtual addresses. This is done
+by building the binaries relocatable first. These relocatable binaries
+have all symbols resolved and all required libraries linked, but the
+final start-address is not defined yet. These binaries are not
+executable yet. After building the binaries in this relocatable form,
+the size of all binaries is known. Then, all binaries are relocated
+to successive address ranges. If you start these binaries later, they
+use disjoint virtual addresses, but do not waste much virtual memory
+between them. And its automatically.
+
+To build relocatable binaries, call «make reloc». This traverses the
+subtrees of your local directory and builds relocatable binaries in
+the directories having the prog role. The binaries are named
+«relocatable.xxx» with xxx being substituted by the target name(s).
+Finally, call «§(L4DIR)/bin/reloc/reloc.sh» with the binaries you want
+to relocate as parameters. This script relocates the binaries and
+copies them to «§(L4DIR)/bin/». For a more explanatory description of
+«reloc.sh»\index{relocation!reloc.sh}, ask its maintainer.
 
 
 \pagebreak\section{The Role-Files}
+\subsubsection*{Abbreviations}
+
+Within the next sections, the following abbreviations are used in the
+description of role-file parameters:
+
+%\framebox[\columnwidth]{}
+
+\begin{descriptiontable}{XXX++}
+  XXX+  & The parameter «XXX» can be specified in multiple forms.
+          To set the parameter for all targets (defined in the parameter
+          «§(TARGET)» then), just specify \textbf{«XXX»}. To set the
+          parameter for a special target «target» out of
+          «§(TARGET)», specify \textbf{«XXX_target»}. \\
+
+  XXX++ & The parameter «XXX» can be specified in multiple forms.
+          To set the parameter for all targets (defined in the
+          parameter «§(TARGET)» then) and all systems
+          (defined in the parameter «§(SYSTEM)» then), just specify
+          \textbf{«XXX»}. To set the parameter for a special target
+          «target» for all given systems, specify
+          \textbf{«XXX_target»}. To set the parameter for a special
+          system «sys» for all given targets, specify
+          \textbf{«XXX_sys»}. To set the parameter for a special target
+          «target» for a special system «sys»,
+          specify \textbf{«XXX_sys_target»}. 
+\end{descriptiontable}
+
+
+\subsection{Common Role-File Targets and Parameters}
+
+\subsubsection{Make-Targets}
+
+All role-files support the following phony targets, which can be build
+using «make <target>».
+
+\begin{description}
+\item [config::]        \index{config:: make target}
+                        Runs the menu-driven configuration utility.
+                        See Section \ref{sec:config} for details.
+\item [txtconfig::]     \index{txtconfig:: make target}
+                        Runs the configuration utility. For
+                        directories, a recursive invocation is done.
+                        See Section \ref{sec:config} for details.
+\item [oldconfig::]     \index{oldconfig:: make target}
+                        (Re)creates a configuration header file based
+                        on a prior configuration or defaults. For
+                        directories, a recursive invocation is done.
+                        See Section \ref{sec:config} for details.
+\item [all:]            \index{all:: make target}
+                        The default target. It depends on the role,
+                        what exactly is done.
+\item [install::]       \index{install:: make target}
+                        Installs the generated files into the
+                        installation-tree «§(DROPS_STDDIR)».
+\item [reloc::]         \index{relocation!reloc:: make target}
+                        Build relocatable binaries. This is used for
+                        the relocation mechanism (see
+                        Section~\ref{sec:reloc-bins}). Used by
+                        «subdir.mk» and «prog.mk»,
+                        ignored by the others.
+\item [clean::]         \index{clean:: make target}
+                        Deletes all intermediate files generated
+                        during compilation. This does \emph{not}
+                        delete the generated targets such as binaries
+                        or libs.
+\item [cleanall::]      \index{cleanall:: make target}
+                        Deletes all generated and backup files. Invokes
+                        \textbf{clean::}.
+\item [help::]          \index{help:: make target}
+                        Displays a short overview of the make-targets
+                        available with this role.
+\item [FORCE:]          \index{help:: make target}
+                        This target is not intended to build, but to
+                        depend on. If something depends on FORCE, it
+                        is built.
+\end{description}
+
+
+\subsubsection{Required Parameters}
+
+All role-files require the following variables to be set:
+
+\begin{parameterlist}{PKGDIR}
+    L4DIR       & \index{§(L4DIR)}
+                  The base directory of the L4 tree. \#
+    PKGDIR      & \index{§(PKGDIR)}
+                  The base directory of the package. \#
+\end{parameterlist}
+
+
+\subsubsection{Optional Parameters}
+\label{sec:common-targets-opt}
+
+Most role files use the following variables:
+
+\begin{parameterlist}{DEPEND_VERBOSE}
+    SUBDIRS        & \index{§(SUBDIRS)}%
+                     used by «prog.mk», «lib.mk», «idl.mk», «doc.mk»
+                     \\\cline{2-2} & 
+                     A list of subdirectories that will be treated
+                     specially: For each element of the list, a target
+                     will be created. If this target it called, the
+                     \textbf{all}-rule in the according directory will be
+                     called. Furthermore, \textbf{scrub}, \textbf{clean} and
+                     \textbf{cleanall} are made recursively for the
+                     specified directories. Default: unset. \#
+
+    DEPEND_VERBOSE & \index{§(DEPEND_VERBOSE)}%
+                     used by all roles\\\cline{2-2} & 
+                     If set to '«@»', no commands for
+                     dependency-generation will be shown. Default: unset.\#
+
+    DROPS_STDDIR   & \index{§(DROPS_STDDIR)}%
+                     used by all roles\\\cline{2-2} & 
+                     The base-directory of the install-tree. Default: 
+                     «/home/drops» \#
+
+    HAVE_LDSO      & \index{§(HAVE_LDSO)}%
+                     used by «prog.mk», «lib.mk», «idl.mk»
+                     \\\cline{2-2} & 
+                     If enabled (nonempty), dependency generation uses
+                     descent algorithms (see Section \ref{sec:dependencies}
+                     for details). Only disable this option if your host
+                     system does not provide ld.so, set this option empty
+                     then.  Default: y (enabled). \#
+
+    SHOWMESSAGES   & \index{§(SHOWMESSAGES)}%
+                     used by all roles\\\cline{2-2} & 
+                     If set to "true" or "y", a short textual description for
+                     every compilation step is printed. Default:
+                     true. \#
+
+    VERBOSE        & \index{§(VERBOSE)}%
+                     used by all roles\\\cline{2-2} & 
+                     If set to '«@»', the commands invoked by make
+                     will not be shown.
+                     Default: unset.\#
+
+\end{parameterlist}
+
+
+\subsubsection{Provided Variables}
+
+The following variables are \emph{provided} by the role files.
+
+\begin{parameterlist}{PKGNAME}
+    PKGNAME        & \index{§(PKGNAME)}
+                     The last part of the directory name specified
+                     in «§(PKGDIR)». \#
+\end{parameterlist}
+
+
+\vfill\pagebreak
 \subsection{Role-File prog.mk}
 \label{sec:prog.mk}
 
 \subsubsection{Purpose}
 
 The purpose of the prog role is to build executable binaries for
-different architectures. The executable binaries are the targets.
+different systems. The executable binaries are the targets.
 
 \subsubsection{Make-Targets}
 
 \begin{description}
 \item [all:]    Phony target. Build all targets and install them into
                 the local install-tree then. The local install-tree is
-                «§(L4DIR)/bin». To install, «install -s» is used.
+                «§(L4DIR)/bin». To install, «strip --strip-unneeded» is
+                used.
 
 \item [relink:] \index{relink: make target}
                 Phony target. Relink and reinstall the targets,
@@ -1125,12 +1319,12 @@ The following variables are provided by the prog.mk role-file:
 
 \subsubsection{Required Parameters}
 
-\begin{parameterlist}{TARGET_system}
-    TARGET              & The list of the targets. \#
+\begin{parameterlist}{TARGET_<system>}
+    \bf{}TARGET           & The list of the targets. \#
 
     \multicolumn{2}{|l|}{\rm{}Or:}\#
 
-    TARGET_system       & The list of the targets for a special
+    TARGET_<system>       & The list of the targets for a special
                           system. Specify the system(s) in «SYSTEMS». \#
 \end{parameterlist}
 
@@ -1138,6 +1332,18 @@ The following variables are provided by the prog.mk role-file:
 \subsubsection{Optional Parameters}
 
 \begin{parameterlist}{INSTALLFILE_BIN_LOCAL}
+    ASFLAGS++         & \index{§(ASFLAGS)}%
+                        standard Makefile variable, used additionally
+                        for compiling assembler files.
+                        Default: empty. \#
+
+    BID_STRIP_PROGS   & \index{§(BID_STRIP_PROGS)}%
+                        If set to ``y'', strip binaries on
+                        installation into local or global
+                        bin-directories using «§(STRIP)
+                        --strip-unneeded».
+                        Default: empty.\#
+
     BUILD_PROFILE++   & \index{§(BUILD_PROFILE)}%
                         If nonempty, additional profile-versions of
                         the targets are built. Therefore, each
@@ -1151,24 +1357,10 @@ The following variables are provided by the prog.mk role-file:
                         profile libraries. Default: empty
                         \#
 
-    BUILD_SHARED++    & \index{§(BUILD_SHARED)}%
-                        If nonempty, the target is built using shared
-                        libraries. As of today, it is not clear what
-                        the shared-lib of drops-gcc is to be,
-                        therefore, this feature is not implemented yet.
-                        Default: empty
-                        \#
-                        
     CLIENTIDL++       & \index{§(CLIENTIDL)}%
                         IDL client source files. The .c-files compiled
                         from the given IDLs are added to SRC_C++.
                         Default: unset. \#
-
-    CXXFLAGS++, ASFLAGS++
-                      & UNUSED currently! standard Makefile variables,
-                        used as additional flags for the linker,
-                        compiler,c++-compiler, assembler and
-                        preprocessor. Default: unset. \#
 
     CFLAGS++          & \index{§(CFLAGS)}%
                         standard Makefile variable, used additionally
@@ -1179,33 +1371,55 @@ The following variables are provided by the prog.mk role-file:
                         standard Makefile variables, used additionally
                         for preprocessor.
                         Default: adds §(DEFINES) -I\{§(PRIVATE_INCDIR)
+                        §(IDL_PATH)
                         §(GCCINCDIR) §(L4INCDIR)\} §(LIBCINCDIR).
+                        §(IDL_PATH) is added if either §(CLIENTIDL) or
+                        §(SERVERIDL) are set.
                         With §(MODE)=host, §(L4INCDIR) is not added.
                         \#
 
     CRT0              & \index{§(CRT0)}%
-                        CRT0 object to link to the binary. Default
-                        depends on the selected mode. \#
+                        CRT0 object to link as fist object to the
+                        binary. Default depends on the selected mode. 
+                        \#
 
-    DEFAULT_RELOC++   & \index{§(DEFAULT_RELOC)}%
+    CRTN              & \index{§(CRTN)}%
+                        CRTN object to link as last object to the
+                        binary. Default depends on the selected mode. 
+                        \#
+
+    CXXFLAGS++        & \index{§(CXXFLAGS)}%
+                        standard Makefile variable, used additionally
+                        for compiling C++ files.
+                        Default: adds §(OPTS) §(WARNINGS). \#
+
+    DEBUG             & \index{§(DEBUG)}%
+                        If set, adds «-DDEBUG» to §(DEFINES).
+                        See there for details.\#
+
+    \bf{}DEFAULT_RELOC++
+                      & \index{§(DEFAULT_RELOC)}%
                         The default link-addresses for the
-                        targets. Depending on the architecture, a
+                        targets. Depending on the system, a
                         relocation address needs to be specified. This
                         address is used, if the default-reloc
                         mechanism (see \ref{sec:reloc}) does
                         not deliver an address. Default: unset. \#
 
-    DEFINES           & \index{§(DEFINES)}%
+    DEFINES++         & \index{§(DEFINES)}%
                         Container for additional defines for the
                         preprocessor. Default: Adds §(ARCH), §(CPU)
-                        and §(L4API) as defines. \#
+                        and §(L4API) as defines. See Section
+                        \ref{sec:systems-compile} for details. 
+                        If §(DEBUG) is set, «-DDEBUG» is added.
+                        \#
 
-    IDLPATH++         & \index{§(IDLPATH)}%
+    IDL_PATH++        & \index{§(IDL_PATH)}%
                         The path to IDL-files. This path is used to
                         find the client and server idl-files. Default:
-                        «§(PKG_DIR)/idl». \#
+                        «§(PKG_DIR)/idl/OBJ-§(SYSTEM)». \#
 
-    IDLTYPE+          & \index{§(IDLTYPE)}%
+    IDL_TYPE+         & \index{§(IDL_TYPE)}%
                         The type of the IDL-files. This type is used
                         to determine the compiler to use. See Section
                         \ref{sec:role-idl} for details.
@@ -1215,17 +1429,12 @@ The following variables are provided by the prog.mk role-file:
                         IDL-files, not to the values of
                         «§(TARGET)».  \#
 
-    INSTALLFILE_BIN   & \index{§(INSTALLFILE_BIN)}%
-                        The command to install a binary to the global
-                        install  tree.
-                        Default: «§(INSTALL) -s §(1) §(INSTALLDIR_BIN)/» \#
-
-    INSTALLFILE_BIN_LOCAL &
-                        \index{§(INSTALLFILE_BIN_LOCAL)}%
-                        The command to install a binary to the local
-                        install  tree.
-                        Default: «§(INSTALL) -s §(1) §(INSTALLDIR_BIN_LOCAL)/»
-                        \#
+    INSTALL_TARGET+   & \index{§(INSTALL_TARGET)}%
+                        The list of the targets that will be installed
+                        automatically or on «make install». Default:
+                        The targets and the targets specific to the
+                        current system. Also see the «NOTARGETSTOINSTALL»
+                        parameter.\#
 
     INSTALLDIR_BIN    & \index{§(INSTALLDIR_BIN)}%
                         The directory in the global install tree to
@@ -1237,6 +1446,25 @@ The following variables are provided by the prog.mk role-file:
                         The directory in the local install tree to
                         install a binary to.
                         Default: «§(L4DIR)/bin» \#
+
+    INSTALLFILE_BIN   & \index{§(INSTALLFILE_BIN)}%
+                        The command to install a binary to the global
+                        install  tree.
+
+                        Default depends on «§(BID_STRIP_PROGS)». \#
+
+    INSTALLFILE_BIN_LOCAL &
+                        \index{§(INSTALLFILE_BIN_LOCAL)}%
+                        The command to install a binary to the local
+                        install  tree.
+
+                        Default depends on «§(BID_STRIP_PROGS)». \#
+
+    KEEP_ON_CLEAN       & \index{§(KEEP_ON_CLEAN)}%
+                        A list of files that should not be removed on
+                        a ``make clean''.
+
+                        Default: empty. \#
 
     L4INCDIR++          & \index{§(L4INCDIR)}%
                         System-dependent list of include directories.
@@ -1276,16 +1504,18 @@ The following variables are provided by the prog.mk role-file:
 
     LDFLAGS++         & \index{§(LDFLAGS)}%
                         standard Makefile variables, used as
-                        additional flags for the linker.
-                        Default: -L\{§(PRIVATE_LIBDIR) §(L4LIBDIR)
-                        §(LIBCLIBDIR)\} §(LDSCRIPT) §(CRT0) §(LIBS)
-                        §(L4LIBS) §(LIBCLIBS). With §(MODE)=host,
-                        §(L4LIBDIR) is not added. \#
+                        additional flags for the linker. Default for
+                        mode host: -L\{§(PRIVATE_LIBDIR)
+                        §(LIBCLIBDIR)\} §(LDSCRIPT) §(LIBS) §(L4LIBS)
+                        §(LIBCLIBS).
+
+                        Default otherwise: -L\{§(PRIVATE_LIBDIR)
+                        §(L4LIBDIR) §(LIBCLIBDIR)\} §(LDSCRIPT)
+                        §(LIBS) §(L4LIBS) §(LIBCLIBS).\#
 
     LDSCRIPT++        & \index{§(LDSCRIPT)}%
                         The name of the standard linker script used to
-                        link the binary. Default:
-                        «§(L4DIR)/lib/main_stat.ld» \#
+                        link the binary. Default depends on the mode. \#
 
     LIBCINCDIR        & \index{§(LIBCINCDIR)}%
                         Include path and flags to the libc includes.
@@ -1303,21 +1533,27 @@ The following variables are provided by the prog.mk role-file:
                         OSKit0.6 or OSKit1.0 with support libraries
                         normally. \#
 
-    LIBS++            & \index{§(LIBS)}%
+    \bf{}LIBS++       & \index{§(LIBS)}%
                         libraries and objects to be linked to the targets.
                         Contains additional PATHS (with -L) and libs
                         (with -l). Default: unset. \#
 
-    MODE++            & \index{§(MODE)}%
-                        specify, which target system a target has to
+    \bf{}MODE++       & \index{§(MODE)}%
+                        Specify, which target system a target has to
                         be built for (see Section
-                        \ref{sec:archs-and-modes}). Default: l4env \#
+                        \ref{sec:systems-modes}). Default: l4env \#
 
+    NOTARGETSTOINSTALL & \index{§(NOTARGETSTOINSTALL)}%
+                        If nonempty, the binaries will not be installed,
+                        neither in the local §(L4DIR)/bin nor in the
+                        global §(DROPS_STDDIR)/bin. Default: empty\#
+                        
     OPTS              & \index{§(OPTS)}%
                         Optimization switches for the compiler.
                         Default: «-g -O2» plus arch-dependent switches \#
 
-    PRIVATE_INCDIR++  & \index{§(PRIVATE_INCDIR)}%
+    \bf{}PRIVATE_INCDIR++
+                      & \index{§(PRIVATE_INCDIR)}%
                         Additional list of include-directories. Will
                         be prefixed with -I.
                         Default: unset \#
@@ -1332,7 +1568,8 @@ The following variables are provided by the prog.mk role-file:
                         from the given IDLs are added to SRC_C++.
                         Default: unset. \#
 
-    SRC_\{C,CC,S\}++ &  \index{§(SRC_C)}\index{§(SRC_CC)}\index{§(SRC_S)}%
+    \bf{}SRC_\{C,CC,S\}++ 
+                      & \index{§(SRC_C)}\index{§(SRC_CC)}\index{§(SRC_S)}%
                         The list of source \{.c, .cc, .S\}-files
                         which have to be compiled and linked to the targets.
                         Default: unset. \#
@@ -1343,7 +1580,7 @@ The following variables are provided by the prog.mk role-file:
                         system is build into a separate
                         directory. Default: x86-l4v2. \#
 
-    WARNINGS          & \index{§(WARNINGS)}%
+    WARNINGS++        & \index{§(WARNINGS)}%
                         Warning switches for the compiler. Default:
                         «-Wall -Wstrict-prototypes -Wmissing-prototypes 
                          -Wmissing-declarations» \#
@@ -1351,7 +1588,6 @@ The following variables are provided by the prog.mk role-file:
 
 \end{parameterlist}
 
-\todo{envision that libc stuff and make it consistent}
 
 \subsubsection{Example}
 \begin{verbatim}
@@ -1364,13 +1600,24 @@ SRC_C  = ping.c
 include §(L4DIR)/mk/prog.mk
 \end{verbatim}
 
+\subsubsection{C++ programs}
+
+For full-featured C++ support, you have to use the l4env_freebsd mode. 
+If you do not need exception support, you can use the l4env mode,
+which comes with a much smaller libc. You have to define some
+callbacks then. Please see the exec server as an example.
+
 \begin{implemented}
-\item [«BUILD_PROFILE»] Is not implemented..
-\item [«BUILD_SHARED»] Is not implemented.
-\item [«CLIENTIDL»] Is not implemented.
+\item [«BUILD_PROFILE»] To make it work, additional libraries
+  (libl4sys.pr) must be linked, which is not the case now. It is not
+  clear, if all l4-libraries should be exchanged by profiling variants
+  or not.
 \item [«MODE»] is currently interpreted as MODE, not as MODE++.
-\item [«SERVERIDL»] Is not implemented.
 \end{implemented}
+
+\todo{Shall we link libprofile.a to the binary if profiling is enabled?}
+
+
 
 \vfill\pagebreak
 \subsection{Role-File lib.mk}
@@ -1379,7 +1626,7 @@ include §(L4DIR)/mk/prog.mk
 \subsubsection{Purpose}
 
 The purpose of the lib role is to build static and shared libraries
-for different architectures. The libraries are the targets.
+for different systems. The libraries are the targets.
 
 To build shared libraries, set the «BUILD_SHARED» option to
 nonempty. The shared libs end on .s.so. The additional ``.s'' later
@@ -1407,7 +1654,9 @@ object-files per source-file. Suffixes: .o, .pr.o, .s.o, .pr.s.o, .a,
 .pr.a, .p.a, .s.so, .pr.p.a, .pr.s.so.
 
 Note, that prior to building libraries, the library files are
-deleted. This prevents old object-files to be within the libraries.
+deleted. This prevents old (obsolete) object-files to be within the
+libraries.
+
 
 \subsubsection{Make-Targets}
 
@@ -1448,16 +1697,14 @@ The following variables are provided by the prog.mk role-file:
 
 \subsubsection{Required Parameters}
 
-\begin{parameterlist}{TARGET_system}
-    TARGET              & \index{§(TARGET)}
-                          The list of the target libraries. To build
-                          shared libraries, the corresponding
-                          file-name must end on _s.so.
+\begin{parameterlist}{TARGET_<system>}
+    \bf{}TARGET         & \index{§(TARGET)}
+                          The list of the target libraries.
                           \#
 
     \multicolumn{2}{|l|}{\rm{}Or:}\#
 
-    TARGET_system       & \index{§(TARGET_system)}
+    TARGET_<system>     & \index{§(TARGET_system)}
                           The list of the target libraries for special
                           system. Specify the system(s) in
                           «SYSTEMS». \#
@@ -1465,7 +1712,12 @@ The following variables are provided by the prog.mk role-file:
 
 \subsubsection{Optional Parameters}
 \begin{parameterlist}{INSTALLFILE_LIB_LOCAL}
-    BUILD_PROFILE++     & \index{§(BUILD_PROFILE)}%
+    ASFLAGS++         & \index{§(ASFLAGS)}%
+                        standard Makefile variable, used additionally
+                        for compiling assembler files.
+                        Default: empty. \#
+
+    BUILD_PROFILE++     & \index{§(BUILD_PROFILE)}
                         If nonempty, additional profile-versions of
                         the target-libs are built. These libraries
                         end on .pr.a. Default: empty
@@ -1482,17 +1734,48 @@ The following variables are provided by the prog.mk role-file:
                         too. These libs end on .p.a. Default: empty
                         \#
 
+    CFLAGS++          & \index{§(CFLAGS)}%
+                        standard Makefile variable, used additionally
+                        for the compiler.
+                        Default: adds §(OPTS) §(WARNINGS). \#
+
     CLIENTIDL++         & \index{§(CLIENTIDL)}%
                         IDL client source files. The .c-files compiled
                         from the given IDLs are added to SRC_C++.
                         Default: unset. \#
 
-    IDLPATH++           & \index{§(IDLPATH)}%
+    CPPFLAGS++        & \index{§(CPPFLAGS)}%
+                        standard Makefile variables, used additionally
+                        for preprocessor.
+                        Default: adds §(DEFINES) -I\{§(PRIVATE_INCDIR)
+                        §(IDL_PATH)
+                        §(GCCINCDIR) §(L4INCDIR)\} §(LIBCINCDIR).
+                        §(IDL_PATH) is added if either §(CLIENTIDL) or
+                        §(SERVERIDL) are set.
+                        With §(MODE)=host, §(L4INCDIR) is not added.
+                        \#
+
+    CXXFLAGS++        & \index{§(CXXFLAGS)}%
+                        standard Makefile variable, used additionally
+                        for compiling C++ files.
+                        Default: adds §(OPTS) §(WARNINGS). \#
+
+    DEBUG             & \index{§(DEBUG)}%
+                        If set, adds «-DDEBUG» to §(DEFINES).
+                        See there for details.\#
+
+    DEFINES++           & \index{§(DEFINES)}%
+                        Container for additional defines for the
+                        preprocessor. Default: Adds §(ARCH), §(CPU)
+                        and §(L4API) as defines. See Section
+                        \ref{sec:systems-compile} for details. \#
+
+    IDL_PATH++          & \index{§(IDL_PATH)}%
                         The path to IDL-files. This path is used to
                         find the client and server idl-files. Default:
-                        «§(PKG_DIR)/idl». \#
+                        «§(PKG_DIR)/idl/OBJ-§(SYSTEM)». \#
 
-    IDLTYPE+            & \index{§(IDLTYPE)}%
+    IDL_TYPE+           & \index{§(IDL_TYPE)}%
                         The type of the IDL-files. This type is used
                         to determine the compiler to use. See Section
                         \ref{sec:role-idl} for details.
@@ -1501,6 +1784,13 @@ The following variables are provided by the prog.mk role-file:
                         Note: The '+' refers to the different
                         IDL-files, not to the values of
                         «§(TARGET)».  \#
+
+    INSTALL_TARGET+   & \index{§(INSTALL_TARGET)}%
+                        The list of the targets that will be installed
+                        automatically or on «make install». Default:
+                        The targets and the targets specific to the
+                        current system. Also see the «NOTARGETSTOINSTALL»
+                        parameter.\#
 
     INSTALLFILE_LIB     & \index{§(INSTALLFILE_LIB)}%
                         The command to install a library to the global
@@ -1529,6 +1819,12 @@ The following variables are provided by the prog.mk role-file:
                         additional flags for the compiler,
                         c++-compiler, assembler and preprocessor.
                         Default: unset. \#
+
+    KEEP_ON_CLEAN       & \index{§(KEEP_ON_CLEAN)}%
+                        A list of files that should not be removed on
+                        a ``make clean''.
+
+                        Default: empty. \#
 
     L4INCDIR++          & \index{§(L4INCDIR)}%
                         System-dependent list of include directories.
@@ -1562,12 +1858,27 @@ The following variables are provided by the prog.mk role-file:
 
                         §(DROPS_STDDIR)/lib» \#
 
-    LIBS++              & \index{§(LIBS)}%
+    \bf{}LIBS++         & \index{§(LIBS)}%
                         objects to be archived to the target libraries.
                         Contains additional PATHS (with -L). Default:
                         unset. \#
 
-    PRIVATE_INCDIR++    & \index{§(PRIVATE_INCDIR)}%
+    \bf{}MODE++       & \index{§(MODE)}%
+                        specify, which target system a target has to
+                        be built for (see Section
+                        \ref{sec:systems-modes}). Default: l4env \#
+
+    NOTARGETSTOINSTALL & \index{§(NOTARGETSTOINSTALL)}%
+                        If nonempty, the libraries will not be installed,
+                        neither in the local §(L4DIR)/lib nor in the
+                        global §(DROPS_STDDIR)/lib. Default: empty\#
+                        
+    OPTS              & \index{§(OPTS)}%
+                        Optimization switches for the compiler.
+                        Default: «-g -O2» plus arch-dependent switches \#
+
+    \bf{}PRIVATE_INCDIR++ 
+                        & \index{§(PRIVATE_INCDIR)}%
                         Additional list of include-directories. Will
                         be prefixed with -I.
                         Default: unset \#
@@ -1582,7 +1893,8 @@ The following variables are provided by the prog.mk role-file:
                         from the given IDLs are added to SRC_C++.
                         Default: unset. \#
 
-    SRC_\{C,CC,S\}++    & \index{§(SRC_C)}\index{§(SRC_CC)}\index{§(SRC_S)}%
+    \bf{}SRC_\{C,CC,S\}++ 
+                        & \index{§(SRC_C)}\index{§(SRC_CC)}\index{§(SRC_S)}%
                         The list of source \{.c, .cc, .S\}-files
                         which have to be compiled and archived into
                         the libraries. Default: unset. \#
@@ -1593,6 +1905,10 @@ The following variables are provided by the prog.mk role-file:
                         given, each system is built into a
                         separate directory. Default: x86-l4v2. \#
 
+    WARNINGS++          & \index{§(WARNINGS)}%
+                        Warning switches for the compiler. Default:
+                        «-Wall -Wstrict-prototypes -Wmissing-prototypes 
+                         -Wmissing-declarations» \#
 \end{parameterlist}
 
 \subsubsection{Example}
@@ -1605,13 +1921,12 @@ SRC_C  = ping.c
 include §(L4DIR)/mk/lib.mk
 \end{verbatim}
 
-\begin{implemented}
-\item [«BUILD_PROFILE»] Is not implemented..
-\item [«BUILD_SHARED»] Is not implemented.
-\item [«BUILD_PIC»] Is not implemented.
-\item [«CLIENTIDL»] Is not implemented.
-\item [«SERVERIDL»] Is not implemented.
-\end{implemented}
+\subsubsection{C++ programs}
+
+For full-featured C++ support, you have to use the l4env_freebsd mode. 
+If you do not need exception support, you can use the l4env mode,
+which comes with a much smaller libc. You have to define some
+callbacks then. Please see the exec server as an example.
 
 \vfill\pagebreak
 \subsection{Role-File idl.mk}
@@ -1628,19 +1943,60 @@ There are no special targets.
 \subsubsection{Make-Targets}
 
 \begin{description}
-\item [all:]    Phony target. Generate the .c- and .h-files.
+\item [all::]      Phony target. Generate the .c- and .h-files.
+\item [install::]  Phony target. Install into «§(DROPS_STDDIR)».
 \end{description}
 
 \subsubsection{Required Parameters}
 
-\begin{parameterlist}{IDL}
-    IDL                 & The list of the idl definition files. \#
+\begin{parameterlist}{\bf{}IDL}
+    \bf{}IDL            & The list of the idl definition files. \#
 \end{parameterlist}
 
 \subsubsection{Optional Parameters}
 
-\begin{parameterlist}{IDL_EXPORT_SKELETON+}
-    IDLTYPE+            & \index{§(IDLTYPE)}
+\begin{parameterlist}{\bf{}IDL_EXPORT_SKELETON}%
+    DEFINES++           & \index{§(DEFINES)}%
+                          Container for additional defines for the
+                          preprocessor. Default: Adds §(ARCH), §(CPU)
+                          and §(L4API) as defines.
+                          See Section
+                          \ref{sec:systems-compile} for details. \#
+
+    FLICK_CPP_NAME      & \index{§(FLICK_CPP_NAME)}%
+                          The name of the preprocessor used by flick.
+                          Default: §(INT_CPP_NAME). \#
+                          
+    IDL_BE+             & \index{§(IDL_BE)}%
+                          The backend to compile the code for. Supported
+                          values are v2, x0 and x2. Default is v2.
+                          \#
+
+    \bf{}IDL_EXPORT_SKELETON
+                        & \index{§(IDL_EXPORT_SKELETON)}%
+                          Mask of IDL files, whose generated
+                          server-include files should be installed
+                          into «§(INSTALLDIR_IDL)».
+                          Default: empty, nothing to install. \#
+
+    \bf{}IDL_EXPORT_STUB & \index{§(IDL_EXPORT_STUB)}%
+                          Mask of IDL files, whose generated
+                          client-include files should be installed
+                          into «§(INSTALLDIR_IDL)».
+                          Default: \%, install the client-headers of
+                          all IDL files in §(IDL).\#
+
+    IDL_FLAGS           & \index{§(IDL_FLAGS)}%
+                          Additional flags to be passed to the
+                          idl-compiler. adds «-P\{ §(DEFINES)
+                          -I\{ §(PRIVATE_INCDIR) §(GCCINCDIR)
+                          §(L4INCDIR)\} §(LIBCINCDIR) \}».  Also adds
+                          flags to use the appropriate back- and
+                          front-ends according to «§(L4API)» and
+                          «§(IDL_TYPE)». With §(MODE)=host, §(L4INCDIR)
+                          is not added. \#
+
+    \bf{}IDL_TYPE+        & \index{§(IDL_TYPE)}%
                           This specifies what kind of idl the idl-files
                           are. This determines the compiler to use.
                           Supported values are
@@ -1660,38 +2016,47 @@ There are no special targets.
 
                           Default is 'dice'. \#
 
-    IDLBE+              & \index{§(IDLBE)}
-                          The backend to compile the code for. Supported
-                          values are v2, x0 and x2. Default is v2.
+    INSTALLDIR_IDL & \index{§(INSTALLDIR_IDL)}%
+                          The directory to install the created include
+                          files to. Default:
+                          «§(PKGDIR)/include/ARCH-§(ARCH)/L4API-§(L4API)»
                           \#
 
-    IDL_INCDIR+         & \index{§(IDL_INCDIR)}
-                          The directory, where the created include-files
-                          have to be installed to. Default:
-                          «§(L4DIR)/include/drops/§(PKGNAME)»
-                          \#
+    L4INCDIR++          & \index{§(L4INCDIR)}%
+                          System-dependent list of include directories.
+                          Default:
 
-    IDL_EXPORT_SKELETON+
-                        & \index{§(IDL_EXPORT_SKELETON)}
-                          Set to non-empty to install the
-                          generated server-include files into
-                          «§(IDL_INCDIR)». Default: empty, do not
-                          install. \#
+                          «§(L4DIR)/include/§(ARCH)/§(L4API)
+                        
+                          §(DROPS_STDDIR)/include/§(ARCH)/§(L4API)
 
-    IDL_EXPORT_STUB+    & \index{§(IDL_EXPORT_STUB)}
-                          Set to non-empty to install the
-                          generated client-include files into
-                          «§(IDL_INCDIR)». Default: install.
-                          \#
+                          §(L4DIR)/include/§(ARCH)
 
-    IDLFLAGS            & \index{§(IDLFLAGS)}
-                          Additional flags to be passed to the
-                          idl-compiler. Use with care. Default: empty. \#
+                          §(DROPS_STDDIR)/include/§(ARCH)
 
-    PRIVATE_INCDIR+     & \index{§(PRIVATE_INCDIR)}
+                          §(L4DIR)/include
+
+                          §(DROPS_STDDIR)/include» \#
+
+    LIBCINCDIR          & \index{§(LIBCINCDIR)}%
+                          Include path and flags to the libc includes.
+                          Default: Determined by the mode, points to
+                          OSKit0.6 or OSKit1.0 normally. \#
+
+    MODE++              & \index{§(MODE)}%
+                          specify, which target system a target has to
+                          be built for (see Section
+                          \ref{sec:systems-modes}). Default: host \#
+ 
+    PRIVATE_INCDIR+     & \index{§(PRIVATE_INCDIR)}%
                           List of directories to prepend to the
                           include-directive of the idl-compiler.
                           \#
+
+    SYSTEMS             & \index{§(SYSTEMS)}%
+                          The systems the .c and .h files have to be build
+                          for. Each system is build into a separate
+                          directory. Default: x86-l4v2. \#
 
 \end{parameterlist}
 
@@ -1706,13 +2071,6 @@ IDL = ping.idl
 include §(L4DIR)/mk/idl.mk
 \end{verbatim}
 
-\begin{implemented}
-\item [«IDLTYPE»:] ``flick'' mode is not implemented.
-\item [«IDLBE»:] Its value is ignored. ``v2'' is used.
-\item [«IDLFLAGS»:] Not implemented.
-
-\end{implemented}
-
 
 \vfill\pagebreak
 \subsection{Role-File include.mk}
@@ -1726,19 +2084,21 @@ role-file achieves two goals when managing include-files:
 \item The path where the include-files are to be found in is entirely
   defined by the package name and the target system of the
   include-files.
-\item When adding new include-files to a package, the author of a
-  package does not have to modify a Makefile.
+\item Once written, the makefile needs not to be modified, even if new
+  include files are added or old include files are removed from the package.
 \end{enumerate}
 
-To achieve these goals,the  include files are placed into specific
-subdirectories and the role-file takes care of the rest. The following
-table defines the subdirectories depending on the target systems.
+The target system of an include file is determined by putting it into
+a specific subdirectory. The role-file will install it accordingly
+then. The following table defines the subdirectories depending on the
+target systems.
 
+\begin{center}
 \begin{tabular}{|l|l|}
   \hline
   if the include-file is designated for \dots
-                        & the author places it into \dots{} or
-                        subdirectories thereof
+                        & put it into \dots{} or subdirectories
+                        thereof
                           \rule[-.5ex]{0mm}{3ex}\\\hline\hline
   any system            & ./ \\\hline
 
@@ -1749,6 +2109,7 @@ table defines the subdirectories depending on the target systems.
                           «ARCH-<arch>/L4API-<api>/»
                           \\\hline
 \end{tabular}
+\end{center}
 \vspace{2ex}
 
 %We achieve these goals by placing the include files in specific
@@ -1790,30 +2151,15 @@ table:
 \subsubsection{Make-Targets}
 
 \begin{description}
-\item [all:] Phony target. Install all header-files found in this
+\item [all::] Phony target. Install all header-files found in this
   directory-tree into the local install-tree.
+\item [install::] Phony target. Install all header-files found in this
+  directory-tree into the global install-tree.
 \end{description}
 
 \subsubsection{Optional Parameters}
 
 \begin{parameterlist}{INSTALLFILE_INC_LOCAL}
-   PKGNAME             & \index{§(PKGNAME)}%
-                        The name of the package. Default value is
-                        determined from the name of the
-                        package directory. \#
-
-   INSTALLFILE_INC     & \index{§(INSTALLFILE_INC)}%
-                        The command to install an include to the global
-                        install  tree.
-                        Default: «§(INSTALL) §(1) §(2)» \#
-
-   INSTALLFILE_INC_LOCAL &
-                        \index{§(INSTALLFILE_INC_LOCAL)}%
-                        The command to install an include to the local
-                        install  tree.
-
-                         Default: «§(LN) -sf §(1) §(2)» \#
-
    INSTALLDIR_INC      & \index{§(INSTALLDIR_INC)}%
                         The directory in the global install tree to
                         install an include to.
@@ -1831,6 +2177,16 @@ table:
                         pollutes the name space of include files.
                         Default: «l4/§(PKGNAME)» \#
 
+   PKGNAME             & \index{§(PKGNAME)}%
+                        The name of the package. Default value is
+                        determined from the name of the
+                        package directory. \#
+
+   TARGET              & \index{§(TARGET)}%
+                        The list of file to install on
+                        \textbf{all::} or \textbf{install::}. Default:
+                        all «*.h»-files found in the subdirectory tree.\#
+
 
 \end{parameterlist}
 
@@ -1840,6 +2196,27 @@ PKGDIR = ..
 L4DIR ?= §(PKGDIR)/../..
 include §(L4DIR)/mk/include.mk
 \end{verbatim}
+
+\subsubsection{How to use the Include Role}
+
+Note, that all include files found in the subdirectory tree are
+subject to installation.
+
+Generally, you would insert an include file with no system dependency,
+hence directly into the «include/» directory. Admittedly, this may
+result in a wrong compilation if you use this include file with a
+system target it was not intended for. But, as no library is available
+for that system target, the linker should catch this wrong package use
+later.
+
+If you realize later that you need different versions of the include
+file to support different systems, you can move the include files into
+appropriate subdirectories. The dependencies of the make system ensure
+that no old include files will be used: Files in system-dependent
+subdirectories will be found first when the preprocessor is looking
+for include files. Moreover, the symbolic links in the local
+installation directory «§(L4DIR)/include/» will become invalid, so
+that an undesired use of them is avoided safely.
 
 
 \vfill\pagebreak
@@ -1872,7 +2249,7 @@ are recursively forwarded to subdirectories.
 \subsubsection{Required Parameters}
 
 \begin{parameterlist}{PKGDIR}
-    PKGDIR              & \index{§(PKGDIR)}
+    PKGDIR              & \index{§(PKGDIR)}%
                           If ``.'', additional dependencies are
                           defined. If Makefiles in «idl» and «include» exist,
                           «include» depends on «idl». If Makefiles in
@@ -1883,16 +2260,20 @@ are recursively forwarded to subdirectories.
 
 \subsubsection{Optional Parameters}
 
-\begin{parameterlist}{TARGET}
-    TARGET              & \index{§(TARGET)}
+\begin{parameterlist}{MKFLAGS+}
+    TARGET              & \index{§(TARGET)}%
                           List of subdirectories to build. The
                           build-order is unspecified unless other make
-                          dependencies apply. Default: the list of
-                          those subdirectories that contain a
-                          Makefile, restricted to: «idl, include, src,
-                          lib, server, examples, doc» if «PKGDIR» is
-                          "."; and restricted to «idl, src, lib,
-                          server, examples, doc» else. \#
+                          dependencies apply. Default: a list of
+                          selected subdirectories that contain a
+                          Makefile. If «PKGDIR» is "." the default selection
+                          contains «idl, include, src, lib, server,
+                          examples, doc». If «PKGDIR» is not ".", «include»
+                          is not in the default list. \#
+
+    MKFLAGS+            & \index{§(MKFLAGS+)}%
+                          This value is passed to make when building a
+                          subdir. Default: empty. \#
 
 \end{parameterlist}
 
@@ -1907,6 +2288,112 @@ TARGET = example1 easy complex
 include $(L4DIR)/mk/subdir.mk
 \end{verbatim}
 
+
+\vfill\pagebreak
+\subsection{Role-File doc.mk}
+
+Use the doc role to create doxygen documentation related to a package
+or to compile latex files.
+
+\subsubsection{Doxygen support}
+
+The doc role allows to generate multiple documentations using doxygen,
+e.g. an API documentation, an internal documentation and a
+documentation of the usage of your server. For each documentation,
+pick a unique name beginning with the name of the package you are
+writing the documentation for. Save the doxygen files using these
+names, with the «.cfg» extension added. Ensure all configurations
+build into a subdir with the name of that documentation. List the
+configuration files within the «SRC_DOX_*» variables. A «make~all» will
+create the documentation and optionally install the html files into
+«§(L4DIR)/doc/html/». With the make-file located in this directory,
+you can build an index to the documentation of all DROPS packages then.
+
+The dependency mechanism detects all changes in your source files.
+
+Doxygen support allows to group your documentation into one of four
+groups: user guides, reference manuals, internal documentation and the
+rest. This classification is used when generating the index page in 
+«§(L4DIR)/doc/html/».
+
+\subsubsection{Latex support}
+
+The doc role provides rules to compile \LaTeX{} files into .ps and
+.pdf, and to convert xfig images to eps. List the .tex files you want
+to be compiled in the «SRC_TEX» variable. The first file in the
+«§(SRC_TEX)» is the \emph{primary tex document}. The compiled version
+of the primary tex document is easily showed by calling the "showdvi"
+or the "showps" target. To rebuild the primary tex document, call
+"«make~dvi»" or "«make~ps»". A successful compilation triggers a
+redraw within the appropriate viewer.
+
+\subsubsection{Make-Targets}
+
+\begin{description}
+\item [all::] Phony target. Generate documentation and install it locally.
+
+\item [install::] Phony target. Generate documentation and install it globally.
+
+\item [dvi::, ps::] Phony targets. Compile the primary tex document
+                    into dvi and ps, respectively.
+
+\item [showdvi::, showps::] Phony targets. Invoke a viewer on the
+                    compiled version of the primary tex document.
+
+\item [clean::]  Delete intermediate compilation files.
+
+\item [cleanall::] Delete all generated files.
+
+\end{description}
+
+\subsubsection{Optional Parameters}
+
+\begin{parameterlist}{SRC_DOX_GUIDE}
+    DOXY_FLAGS+         & \index{§(DOXY_FLAGS)}%
+                          Semicolon-separated list of additional flags
+                          for doxygen. Should be set in Makecond.local to
+                          enable/disable warnings and status output.
+                          Default: empty.
+
+                          Note: All semicolons are removed, no escaping!\#
+                          
+    SRC_DOX             & \index{§(SRC_DOX)}%
+                          List of \textsl{doxygen} configuration files
+                          that will be compiled using doxygen. The
+                          files should end on «.cfg» and should build
+                          into a directory with the same name and the
+                          «.cfg» removed. \#
+
+    SRC_DOX_GUIDE         & \index{§(SRC_DOX_INT)}%
+                          As §(SRC_DOX). Documentation will be
+                          classified as user guide. \#
+                          
+    SRC_DOX_INT         & \index{§(SRC_DOX_INT)}%
+                          As §(SRC_DOX). Documentation will be
+                          classified as internal. \#
+                          
+    SRC_DOX_REF         & \index{§(SRC_DOX_INT)}%
+                          As §(SRC_DOX). Documentation will be
+                          classified as reference manual. \#
+
+    SRC_TEX             & \index{§(SRC_TEX)}%
+                          List of \LaTeX{} files that will be compiled
+                          into postscript files.\#
+
+\end{parameterlist}
+
+
+\subsubsection{Example}
+
+\begin{verbatim}
+PKGDIR = ..
+L4DIR ?= $(PKGDIR)/../..
+
+SRC_DOX_REF = dm_phys.cfg
+include $(L4DIR)/mk/doc.mk
+\end{verbatim}
+
+
 \vfill\pagebreak
 
 \section{Reserved variables}
@@ -1914,12 +2401,12 @@ include $(L4DIR)/mk/subdir.mk
 When using BID, the following Make-variables are reserved besides the
 one already mentioned ('«*»' denotes 'any string'):
 
-«CARCHFLAGS_*, currentdothfile, DEPEND_EXTEND_CMD, DEPEND_EXTEND_FUNC,
+«BID*, CARCHFLAGS_*, currentdothfile, DEPEND_EXTEND_CMD, DEPEND_EXTEND_FUNC,
 DEPEND_FLAG, DEPS, DEPSNULL, DEPSVAR, DIR_FROM_SUB, FILTER_SYSTEM,
+IDL_INCLUDES,
 INSTALL_TARGET, INSTALL_TARGET_LOCAL, INSTALL_TARGET_GLOBAL, LIBDEPS,
 MAKEDEP, OSYSTEMS, ROLE, SYSTEM_TO_ARCH, SYSTEM_TO_CPU,
 SYSTEM_TO_L4API, TARGET_SYSTEMS»
-
 
 
 %begin{latexonly}
@@ -1934,34 +2421,12 @@ SYSTEM_TO_L4API, TARGET_SYSTEMS»
 \subsection*{Open Issues}
 
 
-\begin{description}
-
-\item [User Guide] Write a user guide.
-
-\item [install.inc] Into which directory do we want to install targets
-  in subdirectories?
-  
-\item [doc role] Should we define a doc role, which has a nice
-  environment for doxygenned documentation and has some support for
-  latex? This should unify how to publish this documentation on the
-  web.
-
-  Request from Lars: Allow to define the target directory in the
-  global Makeconf.local. Answer: define a variable, e.g.,
-  «§(HTML_DOC_DIR)» specifying were to install the html-files. This
-  could then be set to «§(HOME)/public_html/docs/§(PKGNAME)/».
-
-\end{description}
-
 The following open wishes are the result from the discussion on June 1st
 2002 in Rabenau after the presentation.
 
 \begin{description}
 
-\item [Automatic Install] Use L4Check to automatically install the
-  libraries and includes into /home/drops.
-
-\item [Install mk-files] Install the *.mk implementations to
+\item [Install mk-files, open] Install the *.mk implementations to
   /home/drops too. Then, we need a redirection mechanism that stays
   unmodified for a longer period of time.
 
@@ -1979,6 +2444,8 @@ The following open wishes are the result from the discussion on June 1st
   \bibliography{own}
 }
 
+
+\vfill\pagebreak
 \section{Configuration Language}
 \index{Configuration Language}
 This section describes the Configuration Language to be used to write
@@ -1995,267 +2462,6 @@ text is that of the Linux-Kernel, version 2.4.18.
 
 \end{document}
 
-\section{Removed Text}
-
-\subsection{Architectures and Modes}
-\label{sec:archs-and-modes}
-
-%Currently, there is something like a support for different
-%architectures: We allow different sets of source-files and options
-%depending on the architecture to build. When building for multiple
-%architectures from one source-tree, each architecture is built into a
-%separate subdirectory. However, for compatibility reasons all binaries
-%and libraries are installed into the same installation directories.
-%Hence, this support is really suboptimal.
-
-%There is no final consensus on how to support different target
-%systems. This is, the same hardware platform and the same kernel, but
-%different execution environments. We see the need to support the
-%following ones:
-
-This section proposes a solution on how to build for multiple
-architectures and for multiple target systems. This is a proposal,
-nothing is nailed down. We tried to identify the pros and cons and
-list them too.
-
-When building for multiple environments, we distinguish between the
-\emph{architecture} and a \emph{mode}:
-
-\begin{description}
-
-\item [architecture] covers the target hardware and optionally the L4
-  API of the running \mukernel. Hardware architecture is for example
-  \name{x86}, others are \name{itanium} (\name{it}) or
-  \name{arm-whatever}. Examples for the L4 API are \name{v2}, \name{x0}
-  or \name{x2}. An architecture name is built from the hardware
-  architecture, followed by a dash (-), followed by the L4 API. It is
-  possible to have no L4 API (because the object has nothing to do
-  with L4 APIs). In that case, the architecture name contains only the
-  hardware architecture. Possible values for hardware architectures
-  are \name{x86-v2}, \name{it-x0} or \name{x86}. We want to
-  build/compile for multiple architectures from one source at the same
-  time.
-
-\item [mode] covers the target execution environment respectively the
-  libraries binaries should be linked against. Examples are
-  \name{oskit10}, \name{loader} or \name{host}. See below for a list
-  of suggestions. We only want to build/compile for one mode from one
-  source.
-\end{description}
-
-In contrast to the mode, the architecture is visible within the
-directory structure: The architecture of a
-(compiled/linked/built/installed) file is encoded in the directory
-part of the name of that file. For example, if a library is compiled
-for architecture \name{x86-v2}, its name is «libfoo.a», it will be
-installed to «§(L4DIR)/lib/x86/v2/libfoo.a». Another library
-«libbar.a» compiled for architecture \name{x86}, it will be installed
-to «§(L4DIR)/lib/x86/libbar.a». This is the case for includes and
-binaries analogically. So far for the installed files.
-
-The compilation process must respect multiple architectures too: We
-allow to build multiple architecture at the same time from the same
-source-files. Therefore, the maintainer of a package specifies the
-possible architectures\footnote{we speak later about the granularity}.
-In a global configuration file (maintained by the user that compiles
-its tree), all architectures that should be compiled are specified.
-
-Let us look now at a package subdirectory, containing the source-file
-«pkg/foo/lib/src/foo.c». We compile for architectures \name{x86-v2}
-and \name{it-v2}. To distinguish between both object files, we place
-them in different directories: «.../src/x86-v2/foo.o» and
-«.../src/it-v2/foo.o». As we have a smooth migration from one target
-architecture to multiple architectures in mind, we could compile
-\emph{always} into subdirectories, even if we compile for only one
-architecture. Thus, we have the structure as depicted in Figure
-\ref{fig:package-tree} (please, ignore the Makefiles for now).
-
-\begin{figure}
-\label{fig:package-tree}
-\begin{center}\begin{minipage}{.4\columnwidth}\small\begin{verbatim}
-  pkg/
-   +- foo/
-   +- include/
-   +- lib/
-   |   +- src/
-   |       +- Makefile1
-   |       +- foo.c
-   |       +- x86-v2/
-   |       |   +- Makefile2
-   |       |   +- foo.o
-   |       |   +- libfoo.a
-   |       +- it-v2/
-   |           +- Makefile3
-   |           +- foo.o
-   |           +- libfoo.a
-   +- server/
-\end{verbatim}
-\end{minipage}\end{center}
-\caption{Structure of an example package}
-\end{figure}
-
-\vspace{1ex} Now the Makefiles. The best solution regarding usability
-would be to have one Makefile («Makefile1»), in the same directory as
-the source-files. Then, the make system could create the
-subdirectories for the architectures, copy the Makefile to there
-(«Makefile2» and «Makefile3») and execute it.
-
-However, this could be complicated to implement: If a user decides to
-use relative paths within its Makefile, these relative paths are
-either valid within «src/» or within the subdirectories «src/x86-v2»
-and «src/it-v2». As it is impossible to adapt these relative paths
-automatically\footnote{think of defines embedded in some switches,
-e.g., \mbox{-D}fwobj=../firmware/object.o}, Makefiles must be written
-to be interpreted within the subdirectories. If something has to be
-done prior to switching to the subdirectories, parts of the Makefile
-will be interpreted locally. This is a nasty pitfall for the unwary.
-Lets call this \emph{Method A}.
-
-Another solution is to disallow the compilation for multiple
-architectures within one directory. If package should compile for
-multiple architectures, the maintainer creates multiple subdirectories
-and places a Makefile within each directory. The Makefile declares the
-architecture and sources the .c-files using «§(VPATH)». By including a
-common Makefile from all subdirectories, maintenance is quite easy.
-Another advantage of this solution is that objects can be compiled
-into the same subdirectory as the source-files if only one
-architecture is used. This is nice, as this is the common case for
-about 90\% of all packets. Lets call this \emph{Method B}.
-
-To sum it up, we proposed two methods, presented our arguments, and
-need a decision:
-
-\begin{description}
-\item [Method A] uses architecture specific subdirectories
-  \emph{always}, these are automatically created. A Makefile is
-  written to be interpreted partially in place and partially within a
-  subdirectory.
-\item[Method B] uses architecture specific subdirectories \emph{when
-  needed}. Subdirectories are created manually. Makefiles are created
-  within each directory and can be specific.
-\end{description}
-
-Following is the list of the proposed modes.
-
-\begin{descriptiontable}{l4linux-kern}
-
-oskit10      & aka \name{oskit10_l4env_full}. This mode allows to use
-               drivers and the infrastructure from the Flux OSKit
-               0.97, together with the L4Env \cite{www:l4env}. Binaries
-               are linked against the huge freebsd-libc. \\
-
-l4env        & aka \name{oskit10_l4env_tiny}. This mode allows to use some
-               basic libc functionality from the Flux OSKit 0.97,
-               together with the L4Env. Binaries are linked against
-               the small mini-libc \name{libmc}. \\
-
-loader       & Like l4env mode, but libraries are dynamically linked.
-               Binaries must be loaded with the L4Env
-               loader \cite{www:l4envloader}.\\
-
-sigma0       & This has no support for L4Env, the result is a plain L4
-               application. Binaries are linked against the small
-               mini-libc \name{libmc} from the Flux OSKit 0.6. \\
-
-l4linux      & Use this mode to build \llinux{} user-mode applications
-               with L4Env support. Binaries are linked dynamically
-               agains standard-libc. \\
-
-l4linux-kern & Use this mode to build \llinux{} kernel-mode modules
-               with  L4Env support. Modules are linked against L4Env
-               libraries. \\
-
-host         & Build an application for the host operating system. \\
-
-\end{descriptiontable}
-
-
-\subsubsection{Specifying the Architectures to build}
-
-So far, we discussed how to build multiple architectures. No, we
-discuss how to specify the architectures a packet can build.
-
-It is only the packet (or a subdirectory within) that knows the target
-architectures it builds for. Hence, these architectures are defined
-within the Makefile. With Method~\textbf{A}, this is a list given in a
-variable within src/Makefile. With Method~\textbf{B}, this is a single
-value given in a variable within src/(arch)/Makefile. The user that
-compiles a tree specifies the architectures it wants to build.
-Therefore, it uses a variable, best defined in its global
-Makeconf.local (see Section \ref{sec:rolefiles}). Within a package,
-the intersection between both variables is built and the resulting
-architectures are built.
-
-Some packages build for multiple architectures and use an IDL compiler
-to generate the communication stubs. The architectures these packets
-can be built for depend mainly on the IDL compiler. To avoid to change
-all the Makefile of those packages if the IDL compiler supports more
-architectures, we define a variable that contains all the
-architectures this IDL compiler can generate code for. A package can
-use this variable to express the valid target architectures.
-
-
-\subsubsection{Implementation Issues of Method A, First approach}
-\label{sec:archs-implementation-A}
-
-\begin{enumerate}
-\item We place the object files into a directory in parallel to the
-  source-dir.
-\item Each src-directory has an additional file «Make.archs»,
-  containing the architectures this directory builds for.
-\item Each src-directory has a file «Make.rules» used for making.
-\item Within the above directory, (a subdir role), directory- and
-  architecture-specific directories are created.
-\item These directories are built.
-\end{enumerate}
-
-\paragraph{Limitations}
-
-\begin{description}
-\item[Dependencies:] It is not possible to detect if a new directory
-  within the a «lib/» or a «server/» appears to be built. It also
-  impossible to detect that these directories disappear. Consequently,
-  the (subdir-)Makefile should be touched prior to rebuilding.
-\end{description}
-
-
-\subsubsection{Implementation Issues of Method A, Second approach}
-
-As we need two control-files anyway (Make.archs and Make.rules), we
-can omit that ugly creation of object-dirs in the upper directory.
-Instead, we create it in a subdirectory, and use two control files as
-described in the first approach in Section
-\ref{sec:archs-implementation-A}. This also avoids the problems with
-the dependencies, and is a bit cleaner regarding that
-auto-recognizing of subdirectories. However, it is still confusing to
-write a Make.rules file, which is executed from another subdirectory.
-
-
-\paragraph{Naming the architectures}
-
-What we called architecture so far is called \emph{system} now. A
-system specifies the processor and optionally a certain instance of a
-processor, and an L4 API binding. A system is specified in a variables
-having «SYSTEM» in their name. System itself is split as following:
-
-\begin{center} «<SYSTEM> = <ARCH> [ \#<CPU> ] [ -<L4API> ]»\end{center}
-
-Both the CPU and the L4API can be omitted to specify a valid system.
-If the CPU is missing, a default CPU for the given architecture is
-selected. If the L4API is omitted, the target is assumed to be
-independent of a specific L4 binding.
-
-\begin{implemented}
-\item [architectures] is in discussion. Currently, one is supported,
-  no subdirectories are used. No support for the proposed IDL
-  architectures variable.
-\item [oskit10, loader, l4linux, l4linux-kern:] These modes are not
-  implemented.
-\end{implemented}
-
-
-
-\end{document}
 
 % Localwords: CVS unset API APIs IDL gcc libc
 % Local variables:

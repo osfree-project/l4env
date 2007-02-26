@@ -2,6 +2,8 @@ PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../../../..
 
 IDL		= test.idl
-IDL_FLAGS	= -T
+IDL_FLAGS	= -T -ftestsuite-shutdown -ftest-no-success-message
+
+SYSTEMS		= x86-l4v2 x86-l4x0
 
 include $(L4DIR)/mk/idl.mk

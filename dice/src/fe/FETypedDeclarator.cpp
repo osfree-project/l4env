@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -38,7 +38,11 @@
 #include "fe/FEOperation.h"
 #include "fe/FEExpression.h"
 #include "fe/FEIntAttribute.h"
+#include "fe/FEIsAttribute.h"
+#include "fe/FETypeAttribute.h"
 #include "fe/FEPrimaryExpression.h"
+#include "fe/FEConstDeclarator.h"
+#include "Compiler.h"
 
 IMPLEMENT_DYNAMIC(CFETypedDeclarator)
     
@@ -209,7 +213,7 @@ TYPEDDECL_TYPE CFETypedDeclarator::GetTypedDeclType()
  */
 CFETypeSpec *CFETypedDeclarator::ReplaceType(CFETypeSpec * pNewType)
 {
-    ASSERT(pNewType);
+    assert(pNewType);
     CFETypeSpec *pRet = m_pType;
     m_pType = pNewType;
     m_pType->SetParent(this);
@@ -330,9 +334,11 @@ bool CFETypedDeclarator::CheckConsistency()
     if (IsTypedef())
     {
         CFEFile *pRoot = GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
+		CFEFile *pMyFile = GetFile();
         VectorElement *pIter = GetFirstDeclarator();
         CFEDeclarator *pDecl;
+		CFETypedDeclarator *pSecondType;
         while ((pDecl = GetNextDeclarator(pIter)) != 0)
         {
             // now check if name is unique
@@ -341,10 +347,57 @@ bool CFETypedDeclarator::CheckConsistency()
                 CCompiler::GccError(this, 0, "The type %s is not defined.", (const char *) pDecl->GetName());
                 return false;
             }
-            if (pRoot->FindUserDefinedType(pDecl->GetName()) != this)
+            if ((pSecondType = pRoot->FindUserDefinedType(pDecl->GetName())) != this)
             {
-                CCompiler::GccError(this, 0, "The type %s is defined multiple times.", (const char *) pDecl->GetName());
-                return false;
+// 			    TRACE("\n\nCompare for \"%s\" (1st: %p; 2nd: %p)\n", (const char*)pDecl->GetName(), this, pSecondType);
+			    // check if both are in C header files and if they are include in different trees
+				bool bEqualPath = true;
+				CFEFile *pSecondFile = pSecondType->GetFile();
+/*				TRACE("Check for equal path with:\n"
+				    "\"%s\" (my) IDL? %s\n"
+					"\"%s\" (2nd) IDL? %s\n",
+					(const char*)pMyFile->GetFileName(), (pMyFile->IsIDLFile())?"yes":"no",
+					(const char*)pSecondFile->GetFileName(), (pSecondFile->IsIDLFile())?"yes":"no");*/
+				if (!(pMyFile->IsIDLFile()) && !(pSecondFile->IsIDLFile()) &&
+				    (pMyFile->GetFileName() == pSecondFile->GetFileName()))
+				{
+/*				TRACE("Check for equal path with:\n"
+				    "\"%s\" (my) IDL? %s\n"
+					"\"%s\" (2nd) IDL? %s\n",
+					(const char*)pMyFile->GetFileName(), (pMyFile->IsIDLFile())?"yes":"no",
+					(const char*)pSecondFile->GetFileName(), (pSecondFile->IsIDLFile())?"yes":"no");*/
+				    // they have to have different parents somewhere
+					// they start off being the same file
+					while (bEqualPath && pMyFile)
+					{
+					    if (!pMyFile->GetParent())
+						    break;
+				        // then tey get the next parent file
+						pMyFile = ((CFEBase*)pMyFile->GetParent())->GetFile();
+						if (pSecondFile->GetParent())
+							pSecondFile = ((CFEBase*)pSecondFile->GetParent())->GetFile();
+						else
+						{
+							bEqualPath = false;
+							break;
+						}
+						// test if the file names are the same
+						if (pMyFile->GetFileName() != pSecondFile->GetFileName())
+                        {
+						    bEqualPath = false;
+							break;
+						}
+					}
+				}
+				// if the path is equal (which is also true if none of the first if conditions
+				// are met) then we print an error message
+				if (bEqualPath)
+				{
+					CCompiler::GccError(this, 0, "The type %s is defined multiple times. "
+					    "Previously defined here: %s at line %d.", (const char *) pDecl->GetName(),
+						(pSecondFile)?(const char*)(pSecondFile->GetFileName()):"", pSecondType->GetSourceLine());
+					return false;
+				}
             }
         }
     }
@@ -361,8 +414,10 @@ bool CFETypedDeclarator::CheckConsistency()
 			AddAttribute(new CFEAttribute(ATTR_STRING));
     }
     // replace sequences
-    if (GetType()->GetType() == TYPE_ARRAY)
+/*    if (GetType()->GetType() == TYPE_ARRAY)
     {
+	    // a sequence will be converted into a struct, having a maximum,
+		// a length and a buffer member.
         CFEArrayType *pParamType = (CFEArrayType *) GetType();
         CFETypeSpec *pType = pParamType->GetBaseType();
         CFEExpression *pUpperBound = pParamType->GetBound();
@@ -399,9 +454,10 @@ bool CFETypedDeclarator::CheckConsistency()
         // delete the old paramtype
         // cannot delete it earlier, because it would destroy upper bound and ptype too
         delete pParamType;
-    }
+    }*/
     // replace string and wstring
-    if ((GetType()->GetType() == TYPE_STRING) || (GetType()->GetType() == TYPE_WSTRING))
+    if ((GetType()->GetType() == TYPE_STRING) ||
+	    (GetType()->GetType() == TYPE_WSTRING))
     {
         // replace type
         if (GetType()->GetType() == TYPE_STRING)
@@ -468,6 +524,20 @@ bool CFETypedDeclarator::CheckConsistency()
             pDecl->SetStars(nMaxStars);
         }
     }
+	// if we have an unsigned CHAR_ASTERISK, then we replace the
+	// CHAR_ASTERISK with CHAR and add the star to the first declarator
+	if ((GetType()->GetType() == TYPE_CHAR_ASTERISK) &&
+	    ((CFESimpleType*)GetType())->IsUnsigned())
+	{
+	    // replace the type
+	    CFETypeSpec *pOldType = ReplaceType(new CFESimpleType(TYPE_CHAR, true));
+		delete pOldType;
+		// set the star of the first declarator
+        VectorElement *pIter = GetFirstDeclarator();
+        CFEDeclarator *pDecl = GetNextDeclarator(pIter);
+		if (pDecl)
+		    pDecl->SetStars(pDecl->GetStars()+1);
+	}
 	// make from CHAR with one star an CHAR_ASTERISK
     // only if string attribute is given
 	if ((GetType()->GetType() == TYPE_CHAR) &&
@@ -491,7 +561,7 @@ bool CFETypedDeclarator::CheckConsistency()
             delete pOldType;
             // do not need to add the string attribute since this has
             // to be set to get here
-            
+
             // get all declarator and reduce their declarators by one
             // if it is an [out] string, set it to two
             pIter = GetFirstDeclarator();
@@ -501,12 +571,13 @@ bool CFETypedDeclarator::CheckConsistency()
                 pDecl->SetStars(pDecl->GetStars()-1);
             }
 		}
-	}		
+	}
     if ((GetType()->GetType() == TYPE_CHAR_ASTERISK) &&
         !FindAttribute(ATTR_STRING))
     {
         // char* var implies [string] attribute
         // only if no size or length attribute
+		// XXX: what about '[out] char*' which only wants to transmit one character?
         if (!FindAttribute(ATTR_SIZE_IS) &&
             !FindAttribute(ATTR_LENGTH_IS))
         {
@@ -536,13 +607,54 @@ bool CFETypedDeclarator::CheckConsistency()
                 }
                 // first add the pointer from char*
                 pDecl->SetStars(pDecl->GetStars()+1);
-            }   
+            }
         }
     }
+	// check for void* type and size parameter
+	// then this is a array. To be able to transmit it
+	// we add the transmit-as attribute with a character
+	// type
+	if ((GetType()->GetType() == TYPE_VOID_ASTERISK) &&
+	    (FindAttribute(ATTR_SIZE_IS) ||
+		 FindAttribute(ATTR_LENGTH_IS)))
+	{
+	    if (!FindAttribute(ATTR_TRANSMIT_AS))
+		{
+		    CFETypeSpec *pType = new CFESimpleType(TYPE_CHAR);
+			CFEAttribute *pAttr = new CFETypeAttribute(ATTR_TRANSMIT_AS, pType);
+			pType->SetParent(pAttr);
+		    AddAttribute(pAttr);
+		}
+		// to handle the parameter correctly we have to move the
+		// '*' from 'void*' to the declarators
+		CFETypeSpec *pOldType = ReplaceType(new CFESimpleType(TYPE_VOID));
+		delete pOldType;
+		// set declarator stars
+		VectorElement *pIter = GetFirstDeclarator();
+		CFEDeclarator *pDecl;
+		while ((pDecl = GetNextDeclarator(pIter)) != 0)
+		{
+			// if declarator is simple, we make it an array now
+			if ((pDecl->GetType() != DECL_ARRAY) &&
+				(pDecl->GetType() != DECL_ENUM))
+			{
+				CFEDeclarator *pArray = new CFEArrayDeclarator(pDecl);
+				RemoveDeclarator(pDecl);
+				delete pDecl;
+				AddDeclarator(pArray);
+				pDecl = pArray;
+			}
+			// first add the pointer from char*
+			pDecl->SetStars(pDecl->GetStars()+1);
+		}
+	}
     // check for in-parameter and struct or union type
     if (FindAttribute(ATTR_IN))
     {
-        if (CFETypeSpec::IsConstructedType(GetType()))
+	    // make structs reference parameters
+		// except they are pointers already.
+        if (CFETypeSpec::IsConstructedType(GetType()) &&
+		    !CFETypeSpec::IsPointerType(GetType()))
         {
             VectorElement *pIterD = GetFirstDeclarator();
             CFEDeclarator *pDecl;
@@ -596,6 +708,27 @@ bool CFETypedDeclarator::CheckConsistency()
                             // remove attribute
                             bRemoveSize = true;
                         }
+						// test for constant in size attribute
+						if (pSizeAttrib->IsKindOf(RUNTIME_CLASS(CFEIsAttribute)))
+						{
+						    // test for parameter
+							VectorElement *pIAttr = ((CFEIsAttribute*)pSizeAttrib)->GetFirstAttrParameter();
+							CFEDeclarator *pDAttr = ((CFEIsAttribute*)pSizeAttrib)->GetNextAttrParameter(pIAttr);
+							if (pDAttr)
+							{
+								// find constant
+								CFEFile *pFERoot = GetRoot();
+								assert(pFERoot);
+								CFEConstDeclarator *pConstant = pFERoot->FindConstDeclarator(pDAttr->GetName());
+								if (pConstant && pConstant->GetValue())
+								{
+								    // replace bounds
+									CFEExpression *pNewBound = new CFEPrimaryExpression(EXPR_INT, (long int) pConstant->GetValue()->GetIntValue());
+									pArray->ReplaceUpperBound(i, pNewBound);
+									// do not delete the size attribute
+								}
+							}
+						}
                     }
                 }
             }

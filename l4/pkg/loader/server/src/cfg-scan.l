@@ -1,4 +1,6 @@
 
+%option never-interactive
+
 %{
 
 int yylex(void);
@@ -54,13 +56,16 @@ min			{ count(); return MIN; }
 h			{ count(); return H; }
 ms			{ count(); return MS; }
 in			{ count(); return IN; }
+is			{ count(); return IS; }
 at			{ count(); return AT; }
 direct_mapped		{ count(); return DIRECT_MAPPED; }
 contiguous		{ count(); return CONTIGUOUS; }
-reboot_able		{ count(); return REBOOT_ABLE; }
+reboot_able		{ count(); return REBOOTABLE; }
+rebootable		{ count(); return REBOOTABLE; }
 no_sigma0		{ count(); return NO_SIGMA_NULL; }
 no_vga			{ count(); return NO_VGA; }
-dma_able		{ count(); return DMA_ABLE; }
+dma_able		{ count(); return DMAABLE; }
+dmaable			{ count(); return DMAABLE; }
 priority		{ count(); return PRIORITY; }
 ('[^']*'|\"[^\"]*\") 	{ count(); yylval.string = yytext; return STRING; }
 (0[xX]{HEXDIGIT}+|{DIGIT}+) { count(); 
@@ -142,8 +147,5 @@ yyerror(const char *s)
   printf("line=%d col=%d: %s\n", line, col-1, s);
   printf("%s\n", error_line_buffer);
   printf("%*s", col, "^\n");
-  printf("Last input character was 0x%02x\n",
-          error_line_buffer[strlen(error_line_buffer)-1]);
-  yy_flush_buffer(yy_current_buffer);
 }
 

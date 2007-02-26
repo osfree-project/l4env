@@ -5,7 +5,7 @@
  *	\date	02/13/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -46,14 +46,22 @@
 /////////////////////////////////////////////////////////////////////////////
 // Base class
 
-IMPLEMENT_DYNAMIC(CBEObject) 
+IMPLEMENT_DYNAMIC(CBEObject)
 
-CBEObject::CBEObject(CObject * pParent):CObject(pParent)
+CBEObject::CBEObject(CObject * pParent)
+: CObject(pParent),
+  m_sTargetHeader(),
+  m_sTargetImplementation(),
+  m_sTargetTestsuite()
 {
     IMPLEMENT_DYNAMIC_BASE(CBEObject, CObject);
 }
 
-CBEObject::CBEObject(CBEObject & src):CObject(src)
+CBEObject::CBEObject(CBEObject & src)
+: CObject(src),
+  m_sTargetHeader(src.m_sTargetHeader),
+  m_sTargetImplementation(src.m_sTargetImplementation),
+  m_sTargetTestsuite(src.m_sTargetTestsuite)
 {
     IMPLEMENT_DYNAMIC_BASE(CBEObject, CObject);
 }
@@ -72,14 +80,14 @@ CBEObject::~CBEObject()
  */
 CBERoot *CBEObject::GetRoot()
 {
-    CObject *pCurr = this;
-    while (pCurr)
-      {
-	  if (pCurr->IsKindOf(RUNTIME_CLASS(CBERoot)))
-	      return (CBERoot *) pCurr;
-	  pCurr = pCurr->GetParent();
-      }
-    return 0;
+	CObject *pCurr = this;
+	while (pCurr)
+	{
+		if (pCurr->IsKindOf(RUNTIME_CLASS(CBERoot)))
+			return (CBERoot *) pCurr;
+		pCurr = pCurr->GetParent();
+	}
+	return 0;
 }
 
 /**	\brief tries to find the function an object belongs to
@@ -89,11 +97,11 @@ CBEFunction *CBEObject::GetFunction()
 {
     CObject *pCur = this;
     while (pCur)
-      {
-	  if (pCur->IsKindOf(RUNTIME_CLASS(CBEFunction)))
-	      return (CBEFunction *) pCur;
-	  pCur = pCur->GetParent();
-      }
+	{
+		if (pCur->IsKindOf(RUNTIME_CLASS(CBEFunction)))
+			return (CBEFunction *) pCur;
+		pCur = pCur->GetParent();
+	}
     return 0;
 }
 
@@ -185,6 +193,7 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject, CBEContext *pContext)
  */
 bool CBEObject::IsTargetFile(CBEHeaderFile *pFile)
 {
+    DTRACE("IsTargetFile(%s) m_sTargetHeader=%s\n", (const char*)pFile->GetFileName(), (const char*)m_sTargetHeader);
 	if (m_sTargetHeader.Right(9) != "-client.h")
 		return false;
 	String sBaseLocal = m_sTargetHeader.Left(m_sTargetHeader.GetLength()-9);
@@ -217,13 +226,14 @@ bool CBEObject::IsTargetFile(CBEImplementationFile *pFile)
 {
 	if (m_sTargetImplementation.Right(9) != "-client.c")
 		return false;
-	String sBaseLocal = m_sTargetImplementation.Left(m_sTargetImplementation.GetLength()-9);
 	String sBaseTarget = pFile->GetFileName();
 	if (pFile->IsOfFileType(FILETYPE_CLIENT) && (sBaseTarget.Right(9) != "-client.c"))
 		return false;
 	if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (sBaseTarget.Right(9) != "-server.c"))
 		return false;
 	sBaseTarget = sBaseTarget.Left(sBaseTarget.GetLength()-9);
+//	String sBaseLocal = m_sTargetImplementation.Left(m_sTargetImplementation.GetLength()-9);
+	String sBaseLocal = m_sTargetImplementation.Left(sBaseTarget.GetLength());
 	if (sBaseTarget == sBaseLocal)
 		return true;
 	return false;
@@ -232,5 +242,22 @@ bool CBEObject::IsTargetFile(CBEImplementationFile *pFile)
 /** \brief creates a new instance of itself */
 CObject * CBEObject::Clone()
 {
+    TRACE("Clone() not implemented for %s. Fallback to CBEObject::Clone().\n", (const char*)GetClassName());
     return new CBEObject(*this);
+}
+
+/** \brief returns the name of the target header file
+ *  \return the name of the target header file name
+ */
+String CBEObject::GetTargetHeaderFileName()
+{
+    return m_sTargetHeader;
+}
+
+/** \brief return the name of the target implementation file
+ *  \return the name of the target implementation file
+ */
+String CBEObject::GetTargetImplementationFileName()
+{
+    return m_sTargetImplementation;
 }

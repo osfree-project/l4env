@@ -1,0 +1,6 @@
+File provider interface.
+
+This package provides an interface for accessing files in the L4 environment
+rather than providing binaries. Files are provided as dataspaces. Therefore
+all dataspace operations provided by the generic_dm interface can be used
+with files.

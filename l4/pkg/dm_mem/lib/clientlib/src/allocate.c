@@ -7,23 +7,13 @@
  *
  * \date   01/31/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -84,9 +74,8 @@ __allocate(l4_size_t size,
   /* round size to pagesize */
   size = l4_round_page(size);
 
-#if DEBUG_ALLOCATE
-  INFO("allocate 0x%x at %x.%x\n",size,dsm_id.id.task,dsm_id.id.lthread);
-#endif
+  LOGdL(DEBUG_ALLOCATE,"allocate 0x%x at %x.%x",
+        size,dsm_id.id.task,dsm_id.id.lthread);
 
   /* allocate memory */
   ret = l4dm_mem_open(dsm_id,size,DMMEM_ALLOCATE_ALIGN,flags,name,ds);
@@ -97,10 +86,8 @@ __allocate(l4_size_t size,
       return NULL;
     }
 
-#if DEBUG_ALLOCATE
-  INFO("got ds %u at %x.%x\n",ds->id,ds->manager.id.task,
-       ds->manager.id.lthread);
-#endif
+  LOGdL(DEBUG_ALLOCATE,"got ds %u at %x.%x",
+        ds->id,ds->manager.id.task,ds->manager.id.lthread);
 
   /* attach dataspace, set access rights to L4DM_RW */
   ret = l4rm_attach(ds,size,0,flags | L4DM_RW,&ptr);
@@ -111,9 +98,7 @@ __allocate(l4_size_t size,
       return NULL;
     }
 
-#if DEBUG_ALLOCATE
-  INFO("attached to 0x%08x\n",(l4_addr_t)ptr);
-#endif
+  LOGdL(DEBUG_ALLOCATE,"attached to 0x%08x",(l4_addr_t)ptr);
 
   /* done */
   return ptr;
@@ -135,9 +120,7 @@ __release(void * ptr)
   l4_addr_t ds_map_addr;
   l4_size_t ds_map_size;
 
-#if DEBUG_RELEASE
-  INFO("free at 0x%08x\n",(l4_addr_t)ptr);
-#endif
+  LOGdL(DEBUG_RELEASE,"free at 0x%08x",(l4_addr_t)ptr);
 
   /* lookup dataspace */
   ret = l4rm_lookup(ptr,&ds,&ds_offs,&ds_map_addr,&ds_map_size);
@@ -148,10 +131,8 @@ __release(void * ptr)
       return;
     }
 
-#if DEBUG_RELEASE
-  INFO("ds %u at %x.%x\n",ds.id,ds.manager.id.task,
-       ds.manager.id.lthread);
-#endif
+  LOGdL(DEBUG_RELEASE,"ds %u at %x.%x",
+        ds.id,ds.manager.id.task,ds.manager.id.lthread);
 
   /* detach dataspace */
   ret = l4rm_detach(ptr);

@@ -55,11 +55,11 @@ int dsi_thread_start_worker(dsi_socket_t * socket,
     dp=ret_code?ret_code:&d1;
 
     /* send start IPC */
-    ret = l4_i386_ipc_send(socket->work_th,L4_IPC_SHORT_MSG,(l4_umword_t)socket,0,
+    ret = l4_ipc_send(socket->work_th,L4_IPC_SHORT_MSG,(l4_umword_t)socket,0,
 			   L4_IPC_NEVER,&result);
     if (ret) return -L4_EIPC;
 
-    ret = l4_i386_ipc_receive(socket->work_th, L4_IPC_SHORT_MSG,
+    ret = l4_ipc_receive(socket->work_th, L4_IPC_SHORT_MSG,
 			      dp, &d1, L4_IPC_NEVER, &result);
     if(ret) return -L4_EIPC;
 
@@ -89,7 +89,7 @@ int dsi_thread_worker_wait(dsi_socket_t ** socket){
     parentid = l4thread_l4_id (l4thread_get_parent ());
 
     /* wait for start notification */
-    ret = l4_i386_ipc_receive(parentid,L4_IPC_SHORT_MSG,
+    ret = l4_ipc_receive(parentid,L4_IPC_SHORT_MSG,
 			      (l4_umword_t *)socket,&dw1,
 			      L4_IPC_NEVER,&result);
     return ret;
@@ -114,7 +114,7 @@ int dsi_thread_worker_started(int ret_code){
     parentid = l4thread_l4_id (l4thread_get_parent ());
 
     /* send start IPC */
-    ret = l4_i386_ipc_send(parentid,L4_IPC_SHORT_MSG,ret_code,0,
+    ret = l4_ipc_send(parentid,L4_IPC_SHORT_MSG,ret_code,0,
 			   L4_IPC_NEVER,&result);
     if (ret) return -L4_EIPC;
     return 0;

@@ -3,7 +3,7 @@ INTERFACE:
 #include "observer.h"
 #include "irq.h"
 
-class virq_t : public irq_t, public Observer
+class Virq : public Irq, public Observer
 {
 public:
   Receiver *owner() const;
@@ -13,15 +13,15 @@ public:
    * @brief Bind a receiver to this virtual interrupt.
    * @param t the receiver that wants to receive IPC messages for this IRQ
    * @param ack_in_kernel if true, the kernel will acknowledge the interrupt,
-   *        as opposed to user-lever acknowledgement
+   *        as opposed to user-level acknowledgement
    * @return true if the binding could be established
    */
   bool alloc(Receiver *t, bool ack_in_kernel);
 
 
 private:
-  virq_t();
-  virq_t(virq_t&);
+  Virq();
+  Virq(Virq&);
 
 };
 
@@ -37,13 +37,13 @@ IMPLEMENTATION:
 
 PUBLIC
 explicit
-virq_t::virq_t(unsigned irqnum) : irq_t(irqnum)
+Virq::Virq(unsigned irqnum) : Irq(irqnum)
 {
 }
 
 
 IMPLEMENT
-Receiver *virq_t::owner() const
+Receiver *Virq::owner() const
 {
   return _irq_thread;
 }
@@ -51,7 +51,7 @@ Receiver *virq_t::owner() const
 
 IMPLEMENT inline NEEDS ["atomic.h"]
 bool
-virq_t::alloc(Receiver *t, bool /*ack_in_kernel*/)
+Virq::alloc(Receiver *t, bool /*ack_in_kernel*/)
 {
   bool ret = smp_cas(&_irq_thread, static_cast<Receiver*>(0), t);
 
@@ -65,13 +65,13 @@ virq_t::alloc(Receiver *t, bool /*ack_in_kernel*/)
 }
 
 /** Release an virtual interrupt.
-    @param t the receiver that ownes the IRQ
+    @param t the receiver that owns the IRQ
     @return true if t really was the owner of the IRQ and operation was 
             successful
  */
 PUBLIC inline NEEDS ["receiver.h"]
 bool
-virq_t::free(Receiver *t)
+Virq::free(Receiver *t)
 {
   bool ret = smp_cas(&_irq_thread, t, static_cast<Receiver*>(0));
 
@@ -90,7 +90,7 @@ virq_t::free(Receiver *t)
  */
 PUBLIC inline NEEDS ["receiver.h","kdb_ke.h","config.h"]
 void
-virq_t::hit()
+Virq::hit()
 {
   // We're entered holding the kernel lock, which also means irqs are
   // disabled on this CPU (XXX always correct?).  We never enable irqs
@@ -101,7 +101,7 @@ virq_t::hit()
   if (_irq_thread == (void*)-1) /* debugger attached to IRQ */ 
     {
 #if defined(CONFIG_JDB)
-      jdb_enter_kdebug("IRQ ENTRY");
+      kdb_ke("IRQ ENTRY");
 #endif
       return;
     } 
@@ -134,7 +134,7 @@ virq_t::hit()
 }
 
 IMPLEMENT 
-void virq_t::notify()
+void Virq::notify()
 {
   hit();
 }

@@ -9,7 +9,8 @@ SERVERIDL	= l4rm.idl
 SRC_C		= libl4rm.c config.c alloc.c avl_tree.c avl_tree_alloc.c \
 		  region.c region_tree.c region_alloc.c pagefault.c \
 		  attach.c detach.c reserve.c release.c lookup.c clients.c
-PRIVATE_INCDIR	= ../../include
+PRIVATE_INCDIR	= ../../include 
+#DEBUG		= 1
 
 include $(L4DIR)/mk/lib.mk
 

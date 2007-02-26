@@ -5,32 +5,32 @@ INTERFACE:
 
 class Receiver;
 
-class dirq_t : public irq_t
+class Dirq : public Irq
 {
 public:
 
   static void init();
   void *operator new ( size_t );
 
-  explicit dirq_t( unsigned irq );
+  explicit Dirq( unsigned irq );
   Receiver *owner() const;
   bool alloc(Receiver *t, bool ack_in_kernel);
   bool free(Receiver *t);
 
 private:
-  dirq_t();
-  dirq_t(dirq_t&);
+  Dirq();
+  Dirq(Dirq&);
 };
 
 
 IMPLEMENTATION:
 
 IMPLEMENT 
-dirq_t::dirq_t(unsigned irqnum) : irq_t(irqnum)
+Dirq::Dirq(unsigned irqnum) : Irq(irqnum)
 {}
 
 IMPLEMENT
-Receiver *dirq_t::owner() const
+Receiver *Dirq::owner() const
 {
   return _irq_thread;
 }

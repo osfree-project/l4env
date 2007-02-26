@@ -1,11 +1,14 @@
 /* $Id$ */
 /**
  * \file	loader/server/src/fprov-if.c
+ * \brief	Helper functions for communicating with file provider
  *
  * \date	06/11/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Helper functions for communicating with file provider */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include "fprov-if.h"
 #include "cfg.h"
@@ -44,39 +47,47 @@ load_file(const char *fname, l4_threadid_t fprov_id, l4_threadid_t dm_id,
 	  int use_modpath, int contiguous, 
 	  l4_addr_t *addr, l4_size_t *size, l4dm_dataspace_t *ds)
 {
-  int error;
-  sm_exc_t exc;
+  int error = -L4_ENOTFOUND;
+  CORBA_Environment _env = dice_default_environment;
+  const char *path;
 
-  /* if neccessary, extent filename by modpath */
-  if (use_modpath && *cfg_modpath && *fname != '(' && *fname != '/')
+  path = (use_modpath && *fname!='(' && *fname!='/') ? cfg_modpath : "";
+  do 
     {
       static char pathname[255];
-      int pathname_len, fname_len;
+      unsigned l, ln;
+      const char *colon;
       
-      strncpy(pathname, cfg_modpath, sizeof(pathname)-1);
-      pathname[sizeof(pathname)-1]='\0';
-      
-      if (((pathname_len=strlen(pathname))>0)
-	  && (pathname_len<sizeof(pathname)-1)
-	  && (pathname[pathname_len-1]!='/'))
+      colon = strchr(path, ':');
+      l = colon ? colon-path : strlen(path);
+      if (l > sizeof(pathname)-2)
 	{
-	  /* append '/' */
-	  pathname[pathname_len]='/';
-	  pathname[pathname_len+1]='\0';
+	  printf("Skipping long path %*s\n", l, path);
+	  path = colon ? colon+1 : path+l;
+	  continue;
 	}
-      
-      pathname_len = strlen(pathname);
-      fname_len = strlen(fname);
-      strncat(pathname, fname, min(sizeof(pathname)-1-pathname_len, fname_len));
+      memcpy(pathname, path, l);
+      path = colon ? colon+1 : path+l;
+      if (l)
+	pathname[l++]='/';
+      ln = strlen(fname)+1;
+      if(l+ln>sizeof(pathname))
+	{
+	  printf("Skipping long path+file %s/%s\n",
+		 pathname, fname);
+	  continue;
+	}
+      memcpy(pathname+l, fname, ln);
 
-      fname = pathname;
-    }
+      /* get file image by file provider */
+      if (!(error = l4fprov_file_open_call(&fprov_id, pathname, &dm_id,
+					   contiguous ? L4DM_CONTIGUOUS : 0,
+					   ds, size, &_env)))
+	break;
 
-  /* get file image by file provider */
-  if ((error = l4fprov_file_open(fprov_id, fname,
-				 (l4fprov_threadid_t*)&dm_id, 
-				 contiguous ? L4DM_CONTIGUOUS : 0,
-				 (l4fprov_dataspace_t*)ds, size, &exc)))
+    } while(*path);
+
+  if (error)
     {
       printf("Error %d opening file \"%s\"\n", error, fname);
       return error;

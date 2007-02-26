@@ -6,23 +6,13 @@
  *
  * \date   07/31/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -90,15 +80,13 @@ __sigma0_allocate(int page)
   l4_fpage_t fp;
   l4_msgdope_t result;
 
-#if DEBUG_ALLOC_PAGE
-  INFO("L4RM heap (sigma0):\n");
-  DMSG("  heap page %d at 0x%08x\n",page,addr);
-#endif
+  LOGdL(DEBUG_ALLOC_PAGE,
+        "L4RM heap (sigma0):\n  heap page %d at 0x%08x",page,addr);
   
   if (!pages[page])
     {
       /* call pager to allocate new page */
-      error = l4_i386_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
+      error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
 			       L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
 			       &base,&fp.fpage,L4_IPC_NEVER,&result);
       if (error)
@@ -116,7 +104,7 @@ __sigma0_allocate(int page)
 	}
       
 #if DEBUG_ALLOC_PAGE
-      DMSG("  got page at 0x%08x\n",fp.fp.page << L4_LOG2_PAGESIZE);
+      printf("  got page at 0x%08x\n",fp.fp.page << L4_LOG2_PAGESIZE);
 #endif
     }
 
@@ -143,16 +131,14 @@ __l4env_allocate(int page)
   l4_size_t fpage_size;
   int ret;
   
-#if DEBUG_ALLOC_PAGE
-  INFO("L4RM heap (L4Env):\n");
-  DMSG("  heap page %d at 0x%08x\n",page,addr);
-#endif
+  LOGdL(DEBUG_ALLOC_PAGE,
+        "L4RM heap (L4Env):\n  heap page %d at 0x%08x",page,addr);
   
   if (!pages[page])
     {
       /* resize heap dataspace */
 #if DEBUG_ALLOC_PAGE
-      DMSG("  resize heap dataspace, new size 0x%08x\n",new_size);
+      printf("  resize heap dataspace, new size 0x%08x\n",new_size);
 #endif
       
       ret = l4dm_mem_resize(&heap_ds,new_size);
@@ -171,7 +157,7 @@ __l4env_allocate(int page)
   
   /* map page */
 #if DEBUG_ALLOC_PAGE
-  DMSG("  map page, ds offset 0x%08x\n",offs);
+  printf("  map page, ds offset 0x%08x\n",offs);
 #endif
   ret = l4dm_map_pages(&heap_ds,offs,L4_PAGESIZE,addr,L4_LOG2_PAGESIZE,
 		       0,L4DM_RW,&fpage_addr,&fpage_size);
@@ -230,11 +216,9 @@ l4rm_heap_init(int have_l4env,
     {
       /* search for suitable map address */ 
 #if DEBUG_ALLOC_INIT
-      INFO("\n");
-      DMSG("  testing vm range 0x%08x-0x%08x\n",addr,test_end);
-      DMSG("  used areas:\n");
+      LOGL("\n  testing vm range 0x%08x-0x%08x\n  used areas:",addr,test_end);
       for (i = 0; i < num_used; i++)
-	DMSG("    0x%08x-0x%08x\n",used[i].addr,used[i].addr + used[i].size);
+	printf("    0x%08x-0x%08x\n",used[i].addr,used[i].addr + used[i].size);
 #endif
       
       found = 0;
@@ -251,11 +235,9 @@ l4rm_heap_init(int have_l4env,
 		  ((used[i].addr <= addr) && (used_end >= end)))
 		{
 		  /* area overlaps used area */
-#if DEBUG_ALLOC_INIT
-		  INFO("heap 0x%08x-0x%08x\n",addr,end);
-		  DMSG("  overlaps used area at 0x%08x-0x%08x\n",
-		       used[i].addr,used_end);
-#endif
+		  LOGdL(DEBUG_ALLOC_INIT,"heap 0x%08x-0x%08x\n" \
+                        "  overlaps used area at 0x%08x-0x%08x",
+                        addr,end,used[i].addr,used_end);
 		  
 		  found = 0;
 		  addr = used_end;
@@ -270,11 +252,9 @@ l4rm_heap_init(int have_l4env,
       addr = l4rm_heap_start_addr;
       end = addr + size;
 
-#if DEBUG_ALLOC_INIT
-      INFO("\n");
-      DMSG("  testing heap map area 0x%08x-0x%08x\n",addr,end);
-#endif
-	  
+      LOGdL(DEBUG_ALLOC_INIT,"\n  testing heap map area 0x%08x-0x%08x",
+            addr,end);
+      
       found = 1;
       for (i = 0; i < num_used; i++)
 	{
@@ -284,8 +264,8 @@ l4rm_heap_init(int have_l4env,
 	      ((used[i].addr <= addr) && (used_end >= end)))
 	    {
 	      /* area overlaps used area */
-	      Msg("heap 0x%08x-0x%08xoverlaps used area at 0x%08x-0x%08x\n",
-		  addr,end,used[i].addr,used_end);
+	      printf("heap 0x%08x-0x%08xoverlaps used area at 0x%08x-0x%08x\n",
+                     addr,end,used[i].addr,used_end);
 	      
 	      found = 0;
 	      addr = used_end;
@@ -335,13 +315,13 @@ l4rm_heap_init(int have_l4env,
     }
 
 #if DEBUG_ALLOC_INIT
-  INFO("\n  heap at 0x%08x, max %d pages\n",heap_start,NUM_PAGES);
+  LOGL("\n  heap at 0x%08x, max %d pages",heap_start,NUM_PAGES);
   if (have_l4env)
-    DMSG("  L4Env mode, heap dataspace %u at %x.%x\n",heap_ds.id,
-	 heap_ds.manager.id.task,heap_ds.manager.id.lthread);
+    printf("  L4Env mode, heap dataspace %u at %x.%x\n",heap_ds.id,
+           heap_ds.manager.id.task,heap_ds.manager.id.lthread);
   else
-    DMSG("  sigma0 mode, sigma0 at %x.%x\n",sigma0_id.id.task,
-	 sigma0_id.id.lthread);
+    printf("  sigma0 mode, sigma0 at %x.%x\n",sigma0_id.id.task,
+           sigma0_id.id.lthread);
 #endif
 
   return 0;

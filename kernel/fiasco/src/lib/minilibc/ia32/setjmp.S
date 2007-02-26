@@ -21,7 +21,7 @@ __setjmp:
 	xor %eax,%eax
 	ret
 	
-.size __sigsetjmp,.-__sigsetjmp;
+.size __setjmp,.-__setjmp;
 
 
 

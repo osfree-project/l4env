@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -80,21 +80,25 @@ String CFEUserDefinedType::GetName()
  */
 bool CFEUserDefinedType::CheckConsistency()
 {
-    CFEFile *pFile = GetRoot();
-    ASSERT(pFile);
-    if (m_sName.IsEmpty())
-      {
-	  CCompiler::GccError(this, 0, "A user defined type without a name.");
-	  return false;
-      }
-    if (!(pFile->FindUserDefinedType(m_sName)))
-      {
-	  CCompiler::GccError(this, 0,
-			      "User defined type \"%s\" not defined.",
-			      (const char *) m_sName);
-	  return false;
-      }
-    return true;
+	CFEFile *pFile = GetRoot();
+	assert(pFile);
+	if (m_sName.IsEmpty())
+	{
+		CCompiler::GccError(this, 0, "A user defined type without a name.");
+		return false;
+	}
+	// the user defined type can also reference an interface
+	if (pFile->FindInterface(m_sName))
+	    return true;
+	// test if type has really been defined
+	if (!(pFile->FindUserDefinedType(m_sName)))
+	{
+		CCompiler::GccError(this, 0,
+					"User defined type \"%s\" not defined.",
+					(const char *) m_sName);
+		return false;
+	}
+	return true;
 }
 
 /** serialize this object
@@ -133,11 +137,11 @@ bool CFEUserDefinedType::Ignore()
 TYPESPEC_TYPE CFEUserDefinedType::GetOriginalType()
 {
     CFEFile *pFile = GetRoot();
-    ASSERT(pFile);
-    ASSERT(!m_sName.IsEmpty());
+    assert(pFile);
+    assert(!m_sName.IsEmpty());
     CFETypedDeclarator *pTypedef = pFile->FindUserDefinedType(m_sName);
-    ASSERT(pTypedef);
+    assert(pTypedef);
     CFETypeSpec* pType = pTypedef->GetType();
-    ASSERT(pType);
+    assert(pType);
     return pType->GetType();
 }

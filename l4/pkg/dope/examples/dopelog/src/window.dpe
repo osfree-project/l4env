@@ -10,11 +10,11 @@ bt_reboot=new Button()
 bt_reboot.set(-text "reboot computer")
 gd_buttons.place(bt_reboot, -column 2 -row 1 -padx 2 -pady 2)
 
-bt_mhz=new Button()
-gd_buttons.place(bt_mhz, -column 3 -row 1 -padx 2 -pady 2)
+lb_mhz=new Label()
+gd_buttons.place(lb_mhz, -column 3 -row 1 -padx 2 -pady 2)
 
-bt_time=new Button()
-gd_buttons.place(bt_time, -column 4 -row 1 -padx 2 -pady 2)
+lb_time=new Label()
+gd_buttons.place(lb_time, -column 4 -row 1 -padx 2 -pady 2)
 
 gd_buttons.columnconfig(1, -size 120)
 gd_buttons.columnconfig(2, -size 120)

@@ -14,23 +14,13 @@
  *       this might cause problems if the calling thread is manipulated
  *       (l4_thread_exregs, e.g during shutdown)
  * \todo How to recover from IPC errors?
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -224,13 +214,21 @@ __wakeup_thread(l4_threadid_t t)
 {
   int error;
   l4_msgdope_t result;
+  l4_timeout_t to;
+
+#if L4SEMAPHORE_RESTART_IPC
+  /* the thread might not wait */
+  to = L4_IPC_NEVER;
+#else
+  /* zero send timeout */
+  to = L4_IPC_TIMEOUT(0,1,0,0,0,0);
+#endif
 
 #if L4SEMAPHORE_SEND_ONLY_IPC
-  error = l4_i386_ipc_send(t,(void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK),
-                           0,0,L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+  error = l4_ipc_send(t, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK),
+                      0, 0, to, &result);
 #else
-  error = l4_i386_ipc_send(t,L4_IPC_SHORT_MSG,0,0,L4_IPC_TIMEOUT(0,1,0,0,0,0),
-                           &result);
+  error = l4_ipc_send(t, L4_IPC_SHORT_MSG, 0, 0, to, &result);
 #endif
 
   if ((error) && (error != L4_IPC_SETIMEOUT))
@@ -275,9 +273,7 @@ l4semaphore_thread(void * data)
   /* get my L4 id, required to check the sender of a message */
   me = l4thread_l4_id(l4thread_myself());
 
-#if DEBUG_INIT
-  INFO("semaphore thread: "IdFmt"\n",IdStr(me));
-#endif
+  LOGdL(DEBUG_INIT,"semaphore thread: "IdFmt,IdStr(me));
 
   /* setup wait queue entry allocation */
   for (i = 0; i < L4SEMAPHORE_MAX_WQ_ENTRIES; i++)
@@ -287,14 +283,14 @@ l4semaphore_thread(void * data)
   while (1)
     {
       /* wait for request */
-      error = l4_i386_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,L4_IPC_NEVER,
-                               &result);
+      error = l4_ipc_wait(&src, L4_IPC_SHORT_MSG, &dw0, &dw1, L4_IPC_NEVER,
+                          &result);
       if (!error)
         {
-          if (!l4_task_equal(me,src))
+          if (!l4_task_equal(me, src))
             {
               Error("L4semaphore: ignored request from other task "
-                    "("IdFmt", I'm "IdFmt")!",IdStr(src),IdStr(me));
+                    "("IdFmt", I'm "IdFmt")!", IdStr(src), IdStr(me));
               continue;
             }
 	  
@@ -341,8 +337,12 @@ l4semaphore_thread(void * data)
 
 #if !(L4SEMAPHORE_SEND_ONLY_IPC)
               /* reply */
-              l4_i386_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
-                               L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+#if L4SEMAPHORE_RESTART_IPC
+              l4_ipc_send(src, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_NEVER, &result);
+#else
+              l4_ipc_send(src, L4_IPC_SHORT_MSG, 0, 0,
+                          L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0), &result);
+#endif
 #endif
 
               if (!l4_is_invalid_id(wakeup))
@@ -399,10 +399,8 @@ l4semaphore_init(void)
   l4semaphore_thread_id = t;
   l4semaphore_thread_l4_id = l4thread_l4_id(t);
 
-#if DEBUG_INIT
-  INFO("started semaphore thread (%d,"IdFmt")\n",t,
-       IdStr(l4semaphore_thread_l4_id));
-#endif
+  LOGdL(DEBUG_INIT,"started semaphore thread (%d,"IdFmt")",t,
+        IdStr(l4semaphore_thread_l4_id));
 
 #ifdef L4API_l4x0
   l4semaphore_thread_l4_id32 = l4sys_to_id32(l4semaphore_thread_l4_id);

@@ -54,46 +54,70 @@ public:
   ~Uart();
 
   /**
-   * @brief Shutdown the serial port.
+   * @brief (abstract) Shutdown the serial port.
    */
   void shutdown();
 
   /**
-   * @brief Get the IRQ assigned to the port.
+   * @brief (abstract) Get the IRQ assigned to the port.
    */
   int const irq() const;
 
   /**
-   * @brief Enable rcv IRQ in UART.
+   * @brief (abstract) Enable rcv IRQ in UART.
    */
   void enable_rcv_irq();
 
   /**
-   * @brief Disable rcv IRQ in UART.
+   * @brief (abstract) Disable rcv IRQ in UART.
    */
   void disable_rcv_irq();
   
   /**
-   * @brief Change transfer mode or speed.
+   * @brief (abstract) Change transfer mode or speed.
    * @param m the new mode for the transfer, or MODE_NC for no mode change.
    * @param r the new baud rate, or BAUD_NC, for no speed change.
    */
   bool change_mode(TransferMode m, BaudRate r);
 
   /**
-   * @brief Get the current transfer mode.
+   * @brief (abstract) Get the current transfer mode.
    */
   TransferMode get_mode();
 
+  /**
+   * @brief (abstract) Write str.
+   */
   int write( char const *str, size_t len );
-  int getchar( bool blocking = true );
-  int char_avail() const;
 
+  /**
+   * @brief (abstract) Read a character.
+   */
+  int getchar( bool blocking = true );
+
+  /**
+   * @brief (abstract) Is there anything to read?
+   */
+  int char_avail() const;
+  
+  char const *next_attribute( bool restart = false ) const;
   
 };
 
 
 IMPLEMENTATION:
 
-//-
+IMPLEMENT
+char const *Uart::next_attribute( bool restart ) const
+{
+  static unsigned current = 0;
+  static char const *attribs[] = { "uart", "in", "out", 0 };
+  if(restart)
+    current = 0;
+  if(current>=4)
+    return 0;
+  else
+    return attribs[current++];
+}
+
 

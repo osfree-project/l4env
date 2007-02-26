@@ -38,7 +38,10 @@ typedef struct
   l4_low_high_t semi_reserved;
   l4_low_high_t dedicated[4];
   volatile unsigned long long clock;
-  l4_uint32_t reserved3[6];
+  l4_uint32_t reserved3[2];
+  l4_uint32_t frequency_cpu;
+  l4_uint32_t frequency_bus;
+  l4_uint32_t reserved4[2];
   l4_uint32_t sys_ipc;
   l4_uint32_t sys_id_nearest;
   l4_uint32_t sys_fpage_unmap;

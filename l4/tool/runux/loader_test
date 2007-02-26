@@ -1,0 +1,13 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l simple_ts \
+	-l fuxfprov \
+	-l l4exec \
+	-l loader" $L4PATH/loader_test" \
+	-n9 "$@"

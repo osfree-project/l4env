@@ -5,47 +5,47 @@ IMPLEMENTATION[task_new-arm]:
 IMPLEMENT inline 
 Mword Sys_task_new_frame::mcp() const 
 { 
-  return r[0];
+  return r[1];
 }
 
 IMPLEMENT inline 
 L4_uid Sys_task_new_frame::new_chief() const
 { 
-  return L4_uid( r[0] ); 
+  return L4_uid( r[1] ); 
 }
 
 IMPLEMENT inline   
 Mword Sys_task_new_frame::sp() const
 { 
-  return r[1];
+  return r[4];
 }
 
 IMPLEMENT inline 
 Mword Sys_task_new_frame::ip() const
 { 
-  return r[2];
+  return r[3];
 }
   
 IMPLEMENT inline 
 Mword Sys_task_new_frame::has_pager() const
 {
-  return r[3];
+  return r[2];
 }
 
 IMPLEMENT inline 
 L4_uid Sys_task_new_frame::pager() const
 {
-  return L4_uid( r[3] );    
+  return L4_uid( r[2] );    
 }
 
 IMPLEMENT inline 
 L4_uid Sys_task_new_frame::dest() const
 {
-  return L4_uid( r[12] );    
+  return L4_uid( r[0] );    
 }
 
 IMPLEMENT inline 
 void Sys_task_new_frame::new_taskid( L4_uid id ) 
 {
-  r[12] = id.raw(); 
+  r[0] = id.raw(); 
 }

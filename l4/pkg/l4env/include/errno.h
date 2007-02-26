@@ -25,8 +25,8 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
-#ifndef _L4ENV_ERRNO_H
-#define _L4ENV_ERRNO_H
+#ifndef __L4ENV_INCLUDE_ERRNO_H
+#define __L4ENV_INCLUDE_ERRNO_H
 
 /* L4/L4Env includes */
 #include <l4/env/cdefs.h>
@@ -50,18 +50,23 @@
 #define L4_ENODM          13  /* no dataspace manager found */
 #define L4_EUSED          14  /* item already used */
 #define L4_EUNUSED        15  /* item not used */
-#define L4_EPERM          16  /* permission denied */
-#define L4_EBUSY          17  /* resource busy */
-#define L4_ESKIPPED       18  /* operation skipped */
-#define L4_ENOHANDLE      19  /* no handle available */
-#define L4_ENOKEY         20  /* no key available */
-#define L4_ENOTSUPP       21  /* operation not supported */
-#define L4_EEXISTS        22  /* item already exists */
-#define L4_ENOENT         23  /* no such file or directory */
-#define L4_EOPEN          24  /* open failed */
-#define L4_EIOCTL         25  /* ioctl failed */
-#define L4_ENOTAVAIL      26  /* item not available */
-#define L4_ENODEV         27  /* no such device */
+/* 16 is reserved for L4 IPC error */
+#define L4_EPERM          17  /* permission denied */
+#define L4_EBUSY          18  /* resource busy */
+#define L4_ESKIPPED       19  /* operation skipped */
+#define L4_ENOHANDLE      20  /* no handle available */
+#define L4_ENOKEY         21  /* no key available */
+#define L4_ENOTSUPP       22  /* operation not supported */
+#define L4_EEXISTS        23  /* item already exists */
+#define L4_ENOENT         24  /* no such file or directory */
+#define L4_EOPEN          25  /* open failed */
+#define L4_EIOCTL         26  /* ioctl failed */
+#define L4_ENOTAVAIL      27  /* item not available */
+#define L4_ENODEV         28  /* no such device */
+#define L4_EMFILE         29  /* too many open files */
+#define L4_ENOSPC         30  /* no space left on device */
+
+/* 32, 48, 64 ... 240 are reserved for L4 IPC errors */
 
 /*****************************************************************************
  *** typedefs 
@@ -272,4 +277,4 @@ l4env_strerror(int code);
 
 __END_DECLS;
 
-#endif /* !_L4ENV_ERRNO_H */
+#endif /* !__L4ENV_INCLUDE_ERRNO_H */

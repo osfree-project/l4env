@@ -1,23 +1,17 @@
+/*!
+ * \file	aty.h
+ * \brief	ATI Mach64 driver
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
 /* taken from Linux 2.2.21: drivers/video/aty.h */
-/*
- * Exported procedures for the ATI/mach64 display driver on PowerMacs.
- *
- * Copyright (C) 1997 Michael AK Tesch
- *  written with much help from Jon Howell
- *
- * Updated for 3D RAGE PRO by Geert Uytterhoeven
- *	
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version
- * 2 of the License, or (at your option) any later version.
- */
 
 /*
  * most of the rest of this file comes from ATI sample code
  */
-#ifndef REGMACH64_H
-#define REGMACH64_H
+#ifndef __ATY_H_
+#define __ATY_H_
 
 /* NON-GUI MEMORY MAPPED Registers - expressed in BYTE offsets */
 
@@ -1008,8 +1002,8 @@
 #define BLMOD_EN		0x00010000
 #define BIASMOD_EN		0x00020000
 
-unsigned int ati_regbase;
-unsigned int blitter_may_be_busy;
+extern unsigned int ati_regbase;
+extern unsigned int blitter_may_be_busy;
 
 static inline void 
 aty_st_le32(int regindex, unsigned val)
@@ -1086,4 +1080,4 @@ wait_for_idle(void)
   blitter_may_be_busy = 0;
 }
 
-#endif /* REGMACH64_H */
+#endif

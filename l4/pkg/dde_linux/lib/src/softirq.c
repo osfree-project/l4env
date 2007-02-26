@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/softirq.c
+ * \file   dde_linux/lib/src/softirq.c
+ * \brief  Deferred Activities (BHs, Tasklets, real softirqs)
  *
- * \brief	Deferred Activities (BHs, Tasklets, real softirqs)
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_softirq Deferred Activities
  *
@@ -16,9 +21,9 @@
  *
  * Deferred activities in Linux can be \e old-style bottom halves, \e new-style
  * tasklets and softirqs.
- * 
+ *
  * Requirements: (additionally to \ref pg_req)
- * 
+ *
  * - none
  *
  * Configuration:
@@ -26,7 +31,6 @@
  * - setup #SOFTIRQ_THREADS to configure number of softirq handler threads
  * <em>(NOT YET IMPLEMENTED)</em>
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -49,11 +53,8 @@
 /* local */
 #include "internal.h"
 #include "__config.h"
-#include "__macros.h"
 
-/*****************************************************************************/
-/**
- * \name Module variables
+/** \name Module variables
  *
  * \krishna We want to support more than one softirq thread (\c
  * SOFTIRQ_THREADS), but there's only one semaphore \c softirq_sema. This'll be
@@ -62,7 +63,7 @@
  * \todo Redesign for more than one thread.
  *
  * @{ */
-/*****************************************************************************/
+
 /** softirq thread ids */
 static l4thread_t softirq_tid[SOFTIRQ_THREADS];
 
@@ -73,61 +74,54 @@ static l4semaphore_t softirq_sema = L4SEMAPHORE_LOCKED;
 static int _initialized = 0;
 
 /** @} */
-/*****************************************************************************/
-/** 
- * \name Softirqs
+/** \name Softirqs
  *
  * <em>This is from include/linux/interrupt.h</em>
  *
  * Softirqs are multithreaded, not serialized BH-like activities. Several
  * softirqs may run on several CPUs simultaneously - no matter if they are of
  * the same type.
- * 
+ *
  * Properties:
- * 
+ *
  * - If raise_softirq() is called, then softirq is guarenteed to be executed on
  *   this CPU.
  * - On schedule() do_softirq() is called if any softirq is active on this CPU.
  * - Softirqs are not serialized in any way.
- * 
+ *
  * Linux (2.4.20) has only 4 softirqs:
- * 
+ *
  * - \c HI_SOFTIRQ
  * - \c NET_TX_SOFTIRQ and \c NET_RX_SOFTIRQ
  * - \c TASKLET_SOFTIRQ
- * 
+ *
  * Relevant for Linux DDE are for now only the first and the latter - \c NET_*
  * softirqs allow transparent mutli-threading in Linux' network code. \c
  * HI_SOFTIRQ is for high priority bottom halves as \e old-style BHs and sound
  * related drivers. It triggers execution of tasklet_hi_action(). \c
  * TASKLET_SOFTIRQ runs lower priority bottom halves (e.g. in the console
  * subsystem). It triggers execution of tasklet_action().
- * 
+ *
  * \todo only the implementation of tasklets is done in Linux DDE
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Raise softirq for dedicated CPU / handler thread.
  *
  * Must hold global lock when calling this.
  */
-/*****************************************************************************/
 void __cpu_raise_softirq(unsigned cpu, int nr)
 {
   l4semaphore_up(&softirq_sema);
 }
 
-/*****************************************************************************/
 /** Raise Softirq.
  * \ingroup mod_softirq
  *
- * \param nr		one of (HI_SOFTIRQ, NET_TX_SOFTIRQ, NET_RX_SOFTIRQ,
- *			TASKLET_SOFTIRQ)
+ * \param nr  one of (HI_SOFTIRQ, NET_TX_SOFTIRQ, NET_RX_SOFTIRQ,
+ *            TASKLET_SOFTIRQ)
  *
  * Grab global lock and raise softirq for a dedicated handler.
  */
-/*****************************************************************************/
 void raise_softirq(int nr)
 {
   /* original comment: I do not want to use atomic variables now, so that
@@ -138,22 +132,20 @@ void raise_softirq(int nr)
 }
 
 /** @} */
-/*****************************************************************************/
-/** 
- * \name Tasklets
+/** \name Tasklets
  *
  * <em>This is from kernel/%softirq.c and  include/linux/interrupt.h)</em>
- * 
+ *
  * Tasklets are the multithreaded analogue of BHs.
- * 
+ *
  * Main feature differing them of generic softirqs: one tasklet is running only
  * on one CPU simultaneously.
- * 
+ *
  * Main feature differing them of BHs: different tasklets may be run
  * simultaneously on different CPUs.
- * 
+ *
  * Properties:
- * 
+ *
  * - If tasklet_schedule() is called, then tasklet is guaranteed to be executed
  *   on some cpu at least once after this.
  * - If the tasklet is already scheduled, but its excecution is still not
@@ -177,9 +169,8 @@ void raise_softirq(int nr)
  * will become \c NR_SOFTIRQ_THREADS later
  *
  * @{ */
-/*****************************************************************************/
 
-/** tasklet list head 
+/** tasklet list head
  * 1-element vector (NR_CPUS==1) */
 static struct tasklet_head tasklet_vec[NR_CPUS];
 
@@ -187,10 +178,7 @@ static struct tasklet_head tasklet_vec[NR_CPUS];
  * 1-element vector (NR_CPUS==1) */
 static struct tasklet_head tasklet_hi_vec[NR_CPUS];
 
-/*****************************************************************************/
-/** Tasklet Execution.
- */
-/*****************************************************************************/
+/** Tasklet Execution  */
 static void tasklet_action(void)
 {
   struct tasklet_struct *list;
@@ -211,17 +199,17 @@ static void tasklet_action(void)
       list = list->next;
 
       if (tasklet_trylock(t))
-	{
-	  if (atomic_read(&t->count) == 0)
-	    {
-	      clear_bit(TASKLET_STATE_SCHED, &t->state);
+        {
+          if (atomic_read(&t->count) == 0)
+            {
+              clear_bit(TASKLET_STATE_SCHED, &t->state);
 
-	      t->func(t->data);
-	      tasklet_unlock(t);
-	      continue;
-	    }
-	  tasklet_unlock(t);
-	}
+              t->func(t->data);
+              tasklet_unlock(t);
+              continue;
+            }
+          tasklet_unlock(t);
+        }
       cli();
       t->next = tasklet_vec[0].list;
       tasklet_vec[0].list = t;
@@ -230,12 +218,10 @@ static void tasklet_action(void)
     }
 }
 
-/*****************************************************************************/
-/** High-Priority Tasklet Execution.
+/** High-Priority Tasklet Execution
  *
  * \return 0 on empty high-priority tasklet list
  */
-/*****************************************************************************/
 static int tasklet_hi_action(void)
 {
   struct tasklet_struct *list;
@@ -260,17 +246,17 @@ static int tasklet_hi_action(void)
       list = list->next;
 
       if (tasklet_trylock(t))
-	{
-	  if (atomic_read(&t->count) == 0)
-	    {
-	      clear_bit(TASKLET_STATE_SCHED, &t->state);
+        {
+          if (atomic_read(&t->count) == 0)
+            {
+              clear_bit(TASKLET_STATE_SCHED, &t->state);
 
-	      t->func(t->data);
-	      tasklet_unlock(t);
-	      continue;
-	    }
-	  tasklet_unlock(t);
-	}
+              t->func(t->data);
+              tasklet_unlock(t);
+              continue;
+            }
+          tasklet_unlock(t);
+        }
       cli();
       t->next = tasklet_hi_vec[0].list;
       tasklet_hi_vec[0].list = t;
@@ -281,17 +267,15 @@ static int tasklet_hi_action(void)
   return !0;
 }
 
-/*****************************************************************************/
 /** Tasklet Initialization.
  * \ingroup mod_softirq
  *
- * \param t	tasklet struct that should be initialized
- * \param func	task of this deferred activity (handler function)
- * \param data	data cookie passed to handler
+ * \param t     tasklet struct that should be initialized
+ * \param func  task of this deferred activity (handler function)
+ * \param data  data cookie passed to handler
  */
-/*****************************************************************************/
 void tasklet_init(struct tasklet_struct *t,
-		  void (*func) (unsigned long), unsigned long data)
+                  void (*func) (unsigned long), unsigned long data)
 {
   t->func = func;
   t->data = data;
@@ -299,13 +283,11 @@ void tasklet_init(struct tasklet_struct *t,
   atomic_set(&t->count, 0);
 }
 
-/*****************************************************************************/
 /** Tasklet Termination.
  * \ingroup mod_softirq
  *
- * \param t	tasklet to be killed
+ * \param t  tasklet to be killed
  */
-/*****************************************************************************/
 void tasklet_kill(struct tasklet_struct *t)
 {
 //      if (in_interrupt())
@@ -313,24 +295,24 @@ void tasklet_kill(struct tasklet_struct *t)
 
   while (test_and_set_bit(TASKLET_STATE_SCHED, &t->state))
     {
-#if 0	/* original implementation uses schedule() */
+#if 0   /* original implementation uses schedule() */
       current->state = TASK_RUNNING;
       do
-	{
-	  current->policy |= SCHED_YIELD;
-	  schedule();
-	}
+        {
+          current->policy |= SCHED_YIELD;
+          schedule();
+        }
       while (test_bit(TASKLET_STATE_SCHED, &t->state));
-#else	/* spin for tasklet while it is scheduled */
+#else /* spin for tasklet while it is scheduled */
       do
-	{
-	  /* release CPU on any way (like schedule() does in DDE) */
+        {
+          /* release CPU on any way (like schedule() does in DDE) */
 # if SCHED_YIELD_OPT
-	  l4thread_usleep(SCHED_YIELD_TO);
+          l4thread_usleep(SCHED_YIELD_TO);
 # else
-	  l4_yield();
+          l4_yield();
 # endif
-	}
+        }
       while (test_bit(TASKLET_STATE_SCHED, &t->state));
 #endif /* 0 */
     }
@@ -338,16 +320,14 @@ void tasklet_kill(struct tasklet_struct *t)
   clear_bit(TASKLET_STATE_SCHED, &t->state);
 }
 
-/*****************************************************************************/
 /** Schedule dedicated tasklet.
  * \ingroup mod_softirq
  *
- * \param t	tasklet to be scheduled for execution
+ * \param t  tasklet to be scheduled for execution
  *
  * If tasklet is not already scheduled, grab global lock, enqueue as first in
  * global list, and raise softirq.
  */
-/*****************************************************************************/
 void tasklet_schedule(struct tasklet_struct *t)
 {
   if (!test_and_set_bit(TASKLET_STATE_SCHED, &t->state))
@@ -358,7 +338,7 @@ void tasklet_schedule(struct tasklet_struct *t)
 
       /* raise softirq only on new 1st element */
       if (!t->next)
-	__cpu_raise_softirq(0, TASKLET_SOFTIRQ);
+        __cpu_raise_softirq(0, TASKLET_SOFTIRQ);
       sti();
     }
 }
@@ -367,7 +347,7 @@ void tasklet_schedule(struct tasklet_struct *t)
 /** Schedule dedicated high-priority tasklet.
  * \ingroup mod_softirq
  *
- * \param t	high-priority tasklet to be scheduled for execution
+ * \param t  high-priority tasklet to be scheduled for execution
  *
  * If tasklet is not already scheduled, grab global lock, enqueue as first in
  * global list, and raise softirq.
@@ -383,39 +363,34 @@ void tasklet_hi_schedule(struct tasklet_struct *t)
 
       /* raise softirq only on new 1st element */
       if (!t->next)
-	__cpu_raise_softirq(0, HI_SOFTIRQ);
+        __cpu_raise_softirq(0, HI_SOFTIRQ);
       sti();
     }
 }
 
 /** @} */
-/*****************************************************************************/
-/**
- * \name Old-style Bottom Halves and Task Queues
+/** \name Old-style Bottom Halves and Task Queues
  *
  * <em>This is from kernel/%softirq.c</em>
  *
  * All bottom halves run as one tasklet so no two bottom halves can run
  * simultaneously.
- * 
+ *
  * \todo Implement this if any useful driver needs it.
  *
  * \todo encapsulate #tqueue_lock like #tasklet_vec providing proper interface
  *
  * @{ */
-/*****************************************************************************/
 
 /** protects tqueue list operation
  * <em>(from kernel/timer.c)</em> */
 spinlock_t tqueue_lock = SPIN_LOCK_UNLOCKED;
 
-/*****************************************************************************/
 /** Task Queue Execution
  * \ingroup mod_softirq
  *
  * Runs _all_ tasks currently in task queue \a list.
  */
-/*****************************************************************************/
 void __run_task_queue(task_queue * list)
 {
   struct list_head head, *next;
@@ -440,22 +415,20 @@ void __run_task_queue(task_queue * list)
       wmb();
       p->sync = 0;
       if (f)
-	f(data);
+        f(data);
     }
 }
 
 /** @} */
-/*****************************************************************************/
 /** Linux DDE Softirq Thread(s)
  *
- * \param num	number of softirq thread (for now always 0)
+ * \param num   number of softirq thread (for now always 0)
  *
  * \krishna call softirq_action functions directly; later open_softirq
  * implementation and call via softirq_vec[]
  *
  * \todo priorities
  */
-/*****************************************************************************/
 static void dde_softirq_thread(int num)
 {
   softirq_tid[num] = l4thread_myself();
@@ -477,11 +450,10 @@ static void dde_softirq_thread(int num)
 
       /* low-priority tasks only if no high-priority available */
       if (!tasklet_hi_action())
-	tasklet_action();
+        tasklet_action();
     }
 }
 
-/*****************************************************************************/
 /** Initalize Softirq Thread(s)
  * \ingroup mod_softirq
  *
@@ -491,7 +463,6 @@ static void dde_softirq_thread(int num)
  *
  * \todo configuration with more (than 1) threads
  */
-/*****************************************************************************/
 int l4dde_softirq_init()
 {
 #if !(SOFTIRQ_THREADS == 1)
@@ -504,7 +475,7 @@ int l4dde_softirq_init()
 
   /* create soft thread */
   err = l4thread_create((l4thread_fn_t) dde_softirq_thread,
-			0, L4THREAD_CREATE_SYNC);
+                        0, L4THREAD_CREATE_SYNC);
 
   if (err < 0)
     return err;

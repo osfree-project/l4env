@@ -5,10 +5,10 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
+ * This file contains free software, you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 2 as 
  * published by the Free Software Foundation (see the file COPYING). 
  *
@@ -38,14 +38,18 @@
 #include "be/BERoot.h"
 #include "be/BEClient.h"
 #include "be/BEFunction.h"
+#include "be/BEComponentFunction.h"
 #include "be/BEExpression.h"
 #include "be/BETestFunction.h"
 #include "be/BEMsgBufferType.h"
+#include "be/BEConstant.h"
 
 #include "fe/FETypedDeclarator.h"
 #include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEIsAttribute.h"
 #include "fe/FEExpression.h"
+#include "Compiler.h"
 
 IMPLEMENT_DYNAMIC(CBETypedDeclarator);
 
@@ -62,11 +66,11 @@ CBETypedDeclarator::CBETypedDeclarator(CBETypedDeclarator & src)
   m_vAttributes(RUNTIME_CLASS(CBEAttribute)),
   m_vDeclarators(RUNTIME_CLASS(CBEDeclarator))
 {
-    m_vAttributes.Add(&src.m_vAttributes);
+    m_vAttributes.Add(&src.m_vAttributes); // clones elements
     m_vAttributes.SetParentOfElements(this);
-    m_vDeclarators.Add(&src.m_vDeclarators);
+    m_vDeclarators.Add(&src.m_vDeclarators); // clones elements
     m_vDeclarators.SetParentOfElements(this);
-    m_pType = src.m_pType;
+    m_pType = (CBEType*)src.m_pType->Clone();
     m_pType->SetParent(this);
     IMPLEMENT_DYNAMIC_BASE(CBETypedDeclarator, CBEObject);
 }
@@ -76,6 +80,8 @@ CBETypedDeclarator::~CBETypedDeclarator()
 {
     m_vAttributes.DeleteAll();
     m_vDeclarators.DeleteAll();
+	if (m_pType)
+	    delete m_pType;
 }
 
 /**	\brief creates the back-end structure for a parameter
@@ -91,7 +97,6 @@ CBETypedDeclarator::~CBETypedDeclarator()
  */
 bool CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter, CBEContext * pContext)
 {
-    VERBOSE("CBETypedDeclarator::CreateBE (front-end type) (%s at 0x%x)\n", GetClassName(), pFEParameter);
     if (!pFEParameter)
     {
         VERBOSE("CBETypedDeclarator::CreateBE failed because front-end parameter is 0\n");
@@ -294,28 +299,82 @@ void CBETypedDeclarator::WriteAttributes(CBEFile * pFile, CBEContext * pContext)
  *
  * - An IN string is always const (its automatically an char*) on client's side.
  * (server side may need to fiddle with pointer)
+ * - An exception at server side is the component's function.
  * - An OUT string is never const, because it is set by the  server.
  * Exception is a send function from server to client, which
  * can send const string as OUT. -> we do not handle this yet.
  * - An IN string is not const if its a global test variable
+ * - IN arrays are also const
  *
  * If we do not use C or L4 types, we have to use the CORBA-types, which
  * define a 'const char*' as 'const_CORBA_char_ptr'
  */
 void CBETypedDeclarator::WriteType(CBEFile * pFile, CBEContext * pContext, bool bUseConst)
 {
+    bool bConstructed = (m_pType && m_pType->IsConstructedType());
+	// test if string
+	bool bIsArray = IsString();
+	bool bCheckedArrayDims = false;
+	// test all declarators for strings
+	if (!bIsArray)
+	{
+	    VectorElement *pIter = GetFirstDeclarator();
+		CBEDeclarator *pDecl;
+		while ((pDecl = GetNextDeclarator(pIter)) != 0)
+		{
+		    if (pDecl->IsArray())
+			{
+			    VectorElement *pIArr = pDecl->GetFirstArrayBound();
+				CBEExpression *pExpr;
+				while ((pExpr = pDecl->GetNextArrayBound(pIArr)) != 0)
+				{
+				    if (pExpr->IsOfType(EXPR_INT) || // either fixed number in bound
+				        (pExpr->GetIntValue() == 0)) // or no fixed array boundary
+					    bIsArray = true;
+				}
+				bIsArray |= pDecl->GetArrayDimensionCount() == 0;
+				bCheckedArrayDims = true;
+			}
+		}
+	}
+	// test for size/length/max attributes, which indicate arrays
+	if (!bIsArray && !bCheckedArrayDims)
+	{
+	    bIsArray |= FindAttribute(ATTR_SIZE_IS) != 0;
+		bIsArray |= FindAttribute(ATTR_LENGTH_IS) != 0;
+	}
+	// we do not test the max_is attribute because:
+	// if the parameter had brackets ([]) then max_is has been converted
+	// to a value there, or
+	// if max_is is found now its a pointer, which can use some
+	// const, but this has been enabled by the above checks (array-dims == 0)
+	// already
+	bool bUseNotCorba = pContext->IsOptionSet(PROGRAM_USE_ALLTYPES);
     // string check
-    if (IsString() && bUseConst)
+    if (bUseConst && (bConstructed || bIsArray))
     {
-        if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))
+        if (pFile->IsOfFileType(FILETYPE_CLIENT) ||
+		    pFile->IsOfFileType(FILETYPE_TESTSUITE))
         {
             if ((FindAttribute(ATTR_IN)) && (!FindAttribute(ATTR_OUT)))
             {
-                if (pContext->IsOptionSet(PROGRAM_USE_CTYPES) ||
-                    pContext->IsOptionSet(PROGRAM_USE_L4TYPES))
-                    pFile->Print("const ");
-                else
+                if (!bUseNotCorba && m_pType->IsPointerType())
                     pFile->Print("const_");
+                else
+                    pFile->Print("const ");
+            }
+        }
+		if (pFile->IsOfFileType(FILETYPE_COMPONENT) ||
+		    pFile->IsOfFileType(FILETYPE_TEMPLATE))
+		{
+		    if ((FindAttribute(ATTR_IN)) &&
+			    (!FindAttribute(ATTR_OUT)) &&
+				(GetFunction()->IsKindOf(RUNTIME_CLASS(CBEComponentFunction))))
+			{
+                if (!bUseNotCorba && m_pType->IsPointerType())
+                    pFile->Print("const_");
+                else
+                    pFile->Print("const ");
             }
         }
     }
@@ -414,9 +473,11 @@ bool CBETypedDeclarator::IsString()
 {
     if (!FindAttribute(ATTR_STRING))
         return false;
-    if (m_pType->IsOfType(TYPE_CHAR_ASTERISK))
+    if (m_pType->IsOfType(TYPE_CHAR_ASTERISK) &&
+	    !m_pType->IsUnsigned())
         return true;
-    if (m_pType->IsOfType(TYPE_CHAR))
+    if (m_pType->IsOfType(TYPE_CHAR) &&
+	    !m_pType->IsUnsigned())
     {
         VectorElement *pIter = GetFirstDeclarator();
         CBEDeclarator *pDeclarator = GetNextDeclarator(pIter);
@@ -462,29 +523,62 @@ bool CBETypedDeclarator::IsString()
  */
 bool CBETypedDeclarator::IsVariableSized()
 {
-    CBEAttribute *pAttr;
+	// need the root
+	CBERoot *pRoot = GetRoot();
+	assert(pRoot);
+	CBEConstant *pConstant = 0;
+	CBEAttribute *pAttr;
     if ((pAttr = FindAttribute(ATTR_SIZE_IS)) != 0)
     {
         if (pAttr->IsOfType(ATTR_CLASS_IS))
-            return true;
+		{
+		    // if declarator is a constant, then this is const as well
+			VectorElement *pIter = pAttr->GetFirstIsAttribute();
+			CBEDeclarator *pSizeName = pAttr->GetNextIsAttribute(pIter);
+			assert(pSizeName);
+			// this might by a constant declarator
+			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			// not a constant, return true
+			if (!pConstant)
+				return true;
+		}
     }
     if ((pAttr = FindAttribute(ATTR_LENGTH_IS)) != 0)
     {
         if (pAttr->IsOfType(ATTR_CLASS_IS))
-            return true;
+		{
+		    // if declarator is a constant, then this is const as well
+			VectorElement *pIter = pAttr->GetFirstIsAttribute();
+			CBEDeclarator *pSizeName = pAttr->GetNextIsAttribute(pIter);
+			assert(pSizeName);
+			// this might by a constant declarator
+			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			// not a constant, return true
+			if (!pConstant)
+				return true;
+		}
     }
     if ((pAttr = FindAttribute(ATTR_MAX_IS)) != 0)
     {
         if (pAttr->IsOfType(ATTR_CLASS_IS))
-            return true;
+		{
+		    // if declarator is a constant, then this is const as well
+			VectorElement *pIter = pAttr->GetFirstIsAttribute();
+			CBEDeclarator *pSizeName = pAttr->GetNextIsAttribute(pIter);
+			assert(pSizeName);
+			// this might by a constant declarator
+			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			// not a constant, return true
+			if (!pConstant)
+				return true;
+		}
     }
     if (IsString())
         return true;
     // if type is variable sized, then this variable
     // is too (e.g. a struct with a var-sized member
-    if (GetType())
-        if (GetType()->GetSize() < 0)
-            return true;
+    if (GetType() && (GetType()->GetSize() < 0))
+		return true;
     // test declarators for arrays
     VectorElement *pIter = GetFirstDeclarator();
     CBEDeclarator *pDeclarator;
@@ -494,10 +588,21 @@ bool CBETypedDeclarator::IsVariableSized()
             continue;
         VectorElement *pIter = pDeclarator->GetFirstArrayBound();
         CBEExpression *pExpr;
+		// check for size/length/max parameters parallel
+		VectorElement *pAttrIter = (pAttr) ? pAttr->GetFirstIsAttribute() : 0;
+		CBEDeclarator *pAttrName;
         while ((pExpr = pDeclarator->GetNextArrayBound(pIter)) != 0)
         {
             if (pExpr->IsOfType(EXPR_NONE)) // no bound
-                return true;
+			{
+			    // check attribute parameter
+				pConstant = 0;
+				pAttrName = (pAttr) ? pAttr->GetNextIsAttribute(pAttrIter) : 0;
+				if (pAttrName)
+				    pConstant = pRoot->FindConstant(pAttrName->GetName());
+				if (!pConstant)
+					return true;
+			}
         }
     }
     // no size/max attribute and no unbound array:
@@ -515,7 +620,7 @@ bool CBETypedDeclarator::IsVariableSized()
 //           pDeclarator->GetStars(),
 //           pDeclarator->GetSize(),
 //           (FindAttribute(ATTR_OUT))?"true":"false",
-//           GetType()->IsConstructedType()?"true":"false",
+//           (GetType() && GetType()->IsConstructedType())?"true":"false",
 //           (const char*)GetFunction()->GetName());
 // </DEBUG>
     return false;
@@ -557,10 +662,14 @@ bool CBETypedDeclarator::IsFixedSized()
  */
 int CBETypedDeclarator::GetSize()
 {
-    if (m_pType->IsVoid())
+    CBEType *pType = m_pType;
+	CBEAttribute *pAttr = FindAttribute(ATTR_TRANSMIT_AS);
+	if (pAttr && pAttr->GetType())
+	    pType = pAttr->GetAttrType();
+    if (pType->IsVoid())
         return 0;
     // get type's size
-    int nTypeSize = m_pType->GetSize();
+    int nTypeSize = pType->GetSize();
     int nSize = 0;
     VectorElement *pIter = GetFirstDeclarator();
     CBEDeclarator *pDecl;
@@ -578,7 +687,7 @@ int CBETypedDeclarator::GetSize()
         // if reference struct, this is the size
         if ((nDeclSize == -1) &&
             (pDecl->GetStars() == 1) &&
-            (m_pType->IsConstructedType()))
+            (pType->IsConstructedType()))
         {
             nSize += nTypeSize;
             continue;
@@ -599,10 +708,16 @@ int CBETypedDeclarator::GetSize()
  */
 int CBETypedDeclarator::GetMaxSize(CBEContext *pContext)
 {
-    if (m_pType->IsVoid())
+    CBEType *pType = m_pType;
+	// check transmit as
+	CBEAttribute *pAttr = FindAttribute(ATTR_TRANSMIT_AS);
+	if (pAttr && pAttr->GetType())
+	    pType = pAttr->GetAttrType();
+    // no size for void
+	if (pType->IsVoid())
         return 0;
     // get type's size
-    int nTypeSize = m_pType->GetSize();
+    int nTypeSize = pType->GetSize();
     int nSize = 0;
     bool bVarSized = false;
     VectorElement *pIter = GetFirstDeclarator();
@@ -615,9 +730,56 @@ int CBETypedDeclarator::GetMaxSize(CBEContext *pContext)
         // type times the dimensions
         if ((nDeclSize < 0) && pDecl->IsArray())
         {
-            nSize += pContext->GetSizes()->GetMaxSizeOfType(m_pType->GetFEType()) * -nDeclSize;
+            nSize += pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType()) * -nDeclSize;
             continue;
         }
+		// if size_is or length_is, then this is an array
+		if ((nDeclSize < 0) &&
+		    (FindAttribute(ATTR_SIZE_IS) ||
+			 FindAttribute(ATTR_LENGTH_IS) ||
+			 FindAttribute(ATTR_MAX_IS)))
+		{
+		    int nDimensions = 1;
+			CBEAttribute *pAttr;
+			if ((pAttr = FindAttribute(ATTR_SIZE_IS)) != 0)
+			{
+				if (pAttr->IsOfType(ATTR_CLASS_INT))
+				{
+					nSize += pAttr->GetIntValue() * nTypeSize;
+                    continue;
+				}
+				if (pAttr->IsOfType(ATTR_CLASS_IS))
+				    nDimensions = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+			}
+			if ((pAttr = FindAttribute(ATTR_LENGTH_IS)) != 0)
+			{
+				if (pAttr->IsOfType(ATTR_CLASS_INT))
+				{
+					nSize += pAttr->GetIntValue() * nTypeSize;
+                    continue;
+				}
+				if (pAttr->IsOfType(ATTR_CLASS_IS))
+				{
+				    int nTmp = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+					nDimensions = nDimensions > nTmp ? nDimensions : nTmp;
+				}
+			}
+			if ((pAttr = FindAttribute(ATTR_MAX_IS)) != 0)
+			{
+				if (pAttr->IsOfType(ATTR_CLASS_INT))
+				{
+					nSize += pAttr->GetIntValue() * nTypeSize;
+                    continue;
+				}
+				if (pAttr->IsOfType(ATTR_CLASS_IS))
+				{
+				    int nTmp = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+					nDimensions = nDimensions > nTmp ? nDimensions : nTmp;
+				}
+			}
+            nSize += pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType()) * nDimensions;
+            continue;
+		}
         // if referenced, this is the size
         if (nDeclSize == -(pDecl->GetStars()))
             nDeclSize = -nDeclSize;
@@ -628,7 +790,7 @@ int CBETypedDeclarator::GetMaxSize(CBEContext *pContext)
         // const array or simple? -> return array-dimension * type's size
         nSize += nDeclSize * nTypeSize;
     }
-    if (bVarSized || m_pType->IsPointerType())
+    if (bVarSized || pType->IsPointerType())
     {
 		// check max attributes
 		CBEAttribute *pAttr;
@@ -636,6 +798,22 @@ int CBETypedDeclarator::GetMaxSize(CBEContext *pContext)
 		{
 			if (pAttr->IsOfType(ATTR_CLASS_INT))
 				nSize = pAttr->GetIntValue();
+			else if (pAttr->IsOfType(ATTR_CLASS_IS))
+			{
+				// if declarator is a constant, then this is const as well
+				VectorElement *pIter = pAttr->GetFirstIsAttribute();
+				CBEDeclarator *pSizeName = pAttr->GetNextIsAttribute(pIter);
+				assert(pSizeName);
+				// this might by a constant declarator
+				CBERoot *pRoot = GetRoot();
+				assert(pRoot);
+				CBEConstant *pConstant = pRoot->FindConstant(pSizeName->GetName());
+				// set size to value of constant
+				if (pConstant && pConstant->GetValue())
+				    nSize = pConstant->GetValue()->GetIntValue() * nTypeSize;
+				else
+				    nSize = -1;
+            }
 			else
 				nSize = -1;
 		}
@@ -680,8 +858,16 @@ void CBETypedDeclarator::WriteGlobalDeclarators(CBEFile * pFile, CBEContext * pC
     {
         if (bComma)
             pFile->Print(", ");
-        pDecl->WriteGlobalName(pFile, pContext, true);
-        if (pDecl->GetArrayDimensionCount() == 0)
+        pDecl->WriteGlobalName(pFile, 0, pContext, true);
+		int nArrayDims = 0;
+		VectorElement *pIBound = pDecl->GetFirstArrayBound();
+		CBEExpression *pBound;
+		while ((pBound = pDecl->GetNextArrayBound(pIBound)) != 0)
+		{
+		    if (pBound->GetIntValue() > 0)
+			    nArrayDims++;
+		}
+        if (nArrayDims == 0)
         {
             // no array written by WriteGlobalName :
             // we don't have a dimension, so get the maximum for this type
@@ -714,19 +900,29 @@ void CBETypedDeclarator::WriteIndirect(CBEFile * pFile, CBEContext * pContext)
     if (!pFile->IsOpen())
         return;
 
-    WriteType(pFile, pContext, false);
+    m_pType->WriteIndirect(pFile, pContext);
     pFile->Print(" ");
 
     // test for pointer types
+    bool bIsPointerType = m_pType->IsPointerType();
+	// get the number of indirections if its a pointer type
+	int nIndirections = m_pType->GetIndirectionCount();
+	// if this is pointer type but has indirections during
+	// write than this is because the pointer type is a typedef
+	// this has been removed and the base type (without pointer has
+	// been written: therefore this is not a pointer type anymore
+	if (bIsPointerType && (nIndirections > 0))
+	    bIsPointerType = false;
     // if it is simple and we do not generate C-Types, than ignore the
     // pointer type, since it is typedefed, which makes the purpose of
     // this bool-parameter obsolete
-    bool bIsPointerType = GetType()->IsPointerType();
-    if (!pContext->IsOptionSet(PROGRAM_USE_CTYPES) &&
-        GetType()->IsSimpleType())
+    if (!pContext->IsOptionSet(PROGRAM_USE_ALLTYPES) &&
+        m_pType->IsSimpleType())
         bIsPointerType = false;
     // test if we need a pointer of this variable
-    bool bUsePointer = IsString() && !(GetType()->IsPointerType());
+    bool bUsePointer = IsString() && !m_pType->IsPointerType();
+	// size_is or length_is attributes indicate an array, where we will need
+	// a pointer to use.
     bUsePointer = bUsePointer || FindAttribute(ATTR_SIZE_IS) || FindAttribute(ATTR_LENGTH_IS);
     // loop over declarators
     VectorElement *pIter = GetFirstDeclarator();
@@ -734,10 +930,14 @@ void CBETypedDeclarator::WriteIndirect(CBEFile * pFile, CBEContext * pContext)
     bool bComma = false;
     while ((pDecl = GetNextDeclarator(pIter)) != 0)
     {
+	    // temporarely boost number of stars
+		pDecl->IncStars(nIndirections);
         if (bComma)
             pFile->Print(", ");
         pDecl->WriteIndirect(pFile, bUsePointer, bIsPointerType, pContext);
         bComma = true;
+		// remove star boost
+		pDecl->IncStars(-nIndirections);
     }
 }
 
@@ -749,14 +949,76 @@ void CBETypedDeclarator::WriteIndirect(CBEFile * pFile, CBEContext * pContext)
  */
 void CBETypedDeclarator::WriteIndirectInitialization(CBEFile * pFile, CBEContext * pContext)
 {
-    bool bUsePointer = IsString() && !(GetType()->IsPointerType());
+	// get the number of indirections if its a pointer type
+	int nIndirections = m_pType->GetIndirectionCount();
+
+    bool bUsePointer = IsString() && !m_pType->IsPointerType();
+	// with size_is or length_is we use malloc to init the pointer,
+	// we have no indirection variables
     bUsePointer = bUsePointer || FindAttribute(ATTR_SIZE_IS) || FindAttribute(ATTR_LENGTH_IS);
+	// iterate over declarators
     VectorElement *pIter = GetFirstDeclarator();
     CBEDeclarator *pDecl;
     while ((pDecl = GetNextDeclarator(pIter)) != 0)
     {
-        pDecl->WriteIndirectInitialization(pFile, bUsePointer, pContext);
+		// temporarely boost the number of stars
+		pDecl->IncStars(nIndirections);
+		pDecl->WriteIndirectInitialization(pFile, bUsePointer, pContext);
+		// revert star boost
+		pDecl->IncStars(-nIndirections);
     }
+}
+
+/**	\brief initializes indirect variables as declared by WriteIndirect
+ *	\param pFile the file to write to
+ *	\param pContext the context of the write operation
+ *
+ * This functin does assign a pointered variable a dynamic memory region
+ */
+void CBETypedDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile, CBEContext * pContext)
+{
+	// get the number of indirections if its a pointer type
+	int nIndirections = m_pType->GetIndirectionCount();
+
+    bool bUsePointer = IsString() && !m_pType->IsPointerType();
+	// with size_is or length_is we use malloc to init the pointer,
+	// we have no indirection variables
+    bUsePointer = bUsePointer || FindAttribute(ATTR_SIZE_IS) || FindAttribute(ATTR_LENGTH_IS);
+	// iterate over declarators
+    VectorElement *pIter = GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = GetNextDeclarator(pIter)) != 0)
+    {
+		// temporarely boost the number of stars
+		pDecl->IncStars(nIndirections);
+		pDecl->WriteIndirectInitializationMemory(pFile, bUsePointer, pContext);
+		// revert star boost
+		pDecl->IncStars(-nIndirections);
+    }
+}
+
+/** \brief writes the clean-up code of this parameter
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBETypedDeclarator::WriteCleanup(CBEFile* pFile, CBEContext* pContext)
+{
+	// get the number of indirections if its a pointer type
+	int nIndirections = m_pType->GetIndirectionCount();
+
+    bool bUsePointer = IsString() && !m_pType->IsPointerType();
+	// with size_is or length_is we use malloc to init the pointer,
+	// we have no indirection variables
+    bUsePointer = bUsePointer || FindAttribute(ATTR_SIZE_IS) || FindAttribute(ATTR_LENGTH_IS);
+	// iterate over declarators
+    VectorElement *pIter = GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = GetNextDeclarator(pIter)) != 0)
+    {
+	    pDecl->IncStars(nIndirections);
+		pDecl->WriteCleanup(pFile, bUsePointer, pContext);
+		pDecl->IncStars(-nIndirections);
+	}
 }
 
 /**	\brief checks if a declarator is member of this typed declarator
@@ -818,6 +1080,51 @@ void CBETypedDeclarator::WriteZeroInitDeclaration(CBEFile * pFile, CBEContext * 
     }
 }
 
+/** \brief writes the zero assignment
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBETypedDeclarator::WriteSetZero(CBEFile* pFile, CBEContext* pContext)
+{
+    if (GetType()->IsVoid())
+        return;
+    VectorElement *pIter = GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = GetNextDeclarator(pIter)) != 0)
+    {
+        pFile->PrintIndent("");
+        pDecl->WriteDeclaration(pFile, pContext);
+        if (GetType()->DoWriteZeroInit())
+        {
+            pFile->Print(" = ");
+            GetType()->WriteZeroInit(pFile, pContext);
+        }
+        pFile->Print(";\n");
+    }
+}
+
+/**	\brief write the variable declaration and initializes the variables to the given string
+ *	\param pFile the file to write to
+ *	\param pContext the context of the write operation
+ */
+void CBETypedDeclarator::WriteInitDeclaration(CBEFile* pFile, String sInitString, CBEContext* pContext)
+{
+    if (GetType()->IsVoid())
+        return;
+    VectorElement *pIter = GetFirstDeclarator();
+    CBEDeclarator *pDecl;
+    while ((pDecl = GetNextDeclarator(pIter)) != 0)
+    {
+        pFile->PrintIndent("");
+        WriteType(pFile, pContext);
+        pFile->Print(" ");
+        pDecl->WriteDeclaration(pFile, pContext);
+		if (!sInitString.IsEmpty())
+			pFile->Print(" = %s", (const char*)sInitString);
+        pFile->Print(";\n");
+    }
+}
+
 /**	\brief writes the code to obtain the size of a variabel sized parameter
  *	\param pFile the file to write to
  *  \param pStack the declarator stack used for variable sized members of structs, union
@@ -831,9 +1138,6 @@ void CBETypedDeclarator::WriteZeroInitDeclaration(CBEFile * pFile, CBEContext * 
  */
 void CBETypedDeclarator::WriteGetSize(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext)
 {
-//    if (!IsVariableSized() && !IsString())
-//        return;
-
     CBEAttribute *pAttr = 0;
     if ((pAttr = FindAttribute(ATTR_SIZE_IS)) == 0)
     {
@@ -904,18 +1208,57 @@ void CBETypedDeclarator::WriteGetSize(CBEFile * pFile, CDeclaratorStack *pStack,
     {
         VectorElement *pIter = pAttr->GetFirstIsAttribute();
         CBEDeclarator *pSizeName = pAttr->GetNextIsAttribute(pIter);
+		assert(pSizeName);
         CBEFunction *pFunction = GetFunction();
+		CBEStructType *pStruct = GetStructType();
         CBETypedDeclarator *pSizeParameter = 0;
+		CBEConstant *pConstant = 0;
+		// get original parameter
         if (pFunction)
-        {
-            // get original parameter
             pSizeParameter = pFunction->FindParameter(pSizeName->GetName());
-
+		// search for parameter in struct as well
+		if (!pSizeParameter && pStruct)
+            pSizeParameter = pStruct->FindMember(pSizeName->GetName());
+		if (pFunction)
+        {
+			if (!pSizeParameter)
+			{
+			    // this might by a constant declarator
+                CBERoot *pRoot = GetRoot();
+				assert(pRoot);
+                pConstant = pRoot->FindConstant(pSizeName->GetName());
+				// now at least this one should have been found
+				if (!pConstant)
+					CCompiler::Error("Size attribute %s is neither parameter in %s nor defined as constant.",
+						(const char*)pSizeName->GetName(), (const char*)pFunction->GetName());
+				assert(pConstant);
+				// the declarator stays the same, because the constant does not
+				// have a declarator and is without any references
+			}
+			else
+			{
+				// and now get original declarator, since size_is declarator
+				// might have different reference count...
+				pSizeName = pSizeParameter->FindDeclarator(pSizeName->GetName());
+			}
             if (pFunction->HasAdditionalReference(pSizeName, pContext))
                 pFile->Print("*");
         }
+		else if (pStruct)
+		{
+			if (pSizeParameter && pStack)
+			{
+			    CDeclaratorStackLocation *pTop = new CDeclaratorStackLocation(*pStack->GetTop());
+				pStack->Pop();
+			    pStack->Write(pFile, false, false, pContext);
+				pStack->Push(pTop);
+				pFile->Print(".");
+			}
+		}
         if (pSizeParameter)
             pSizeParameter->WriteDeclarators(pFile, pContext); // has only one declarator
+		else if (pConstant)
+		    pFile->Print("%s", (const char*)pConstant->GetName());
     }
     else if (pAttr->IsOfType(ATTR_CLASS_INT))
     {

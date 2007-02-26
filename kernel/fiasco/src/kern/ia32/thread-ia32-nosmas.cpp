@@ -23,22 +23,22 @@ bool Thread::handle_smas_gp_fault(Mword)
  */
 IMPLEMENT inline NEEDS[Thread::memcpy_byte_ds_es]
 template< typename T >
-void Thread::copy_from_user(void *kdst, void const *usrc, size_t n)
+void Thread::copy_from_user(T *kdst, T const *usrc, size_t n)
 {
   assert (this == current());
 
   // copy from user byte by byte
-  memcpy_byte_ds_es( kdst, usrc, n*sizeof(T) );
+  memcpy_byte_ds_es( (void*)kdst, (void*)usrc, n*sizeof(T) );
 }
 
 IMPLEMENT inline NEEDS [Thread::memcpy_mword_ds_es]
 template<>
-void Thread::copy_from_user<Mword>(void *kdst, void const *usrc, size_t n)
+void Thread::copy_from_user<Mword>(Mword *kdst, Mword const *usrc, size_t n)
 {
   assert (this == current());
 
   // copy from user word by word
-  memcpy_mword_ds_es( kdst, usrc, n );
+  memcpy_mword_ds_es( (void*)kdst, (void*)usrc, n );
 }
 
 
@@ -54,22 +54,22 @@ void Thread::copy_from_user<Mword>(void *kdst, void const *usrc, size_t n)
  */
 IMPLEMENT inline NEEDS [Thread::memcpy_byte_ds_es]
 template< typename T >
-void Thread::copy_to_user(void *udst, void const *ksrc, size_t n)
+void Thread::copy_to_user(T *udst, T const *ksrc, size_t n)
 {
   assert (this == current());
 
   // copy from user byte by byte
-  memcpy_byte_ds_es( udst, ksrc, n*sizeof(T) );
+  memcpy_byte_ds_es( (void*)udst, (void*)ksrc, n*sizeof(T) );
 }
 
 IMPLEMENT inline NEEDS [Thread::memcpy_mword_ds_es]
 template<>
-void Thread::copy_to_user<Mword>(void *udst, void const *ksrc, size_t n)
+void Thread::copy_to_user<Mword>(Mword *udst, Mword const *ksrc, size_t n)
 {
   assert (this == current());
 
   // copy from user word by word
-  memcpy_mword_ds_es( udst, ksrc, n );
+  memcpy_mword_ds_es( (void*)udst, (void*)ksrc, n );
 }
 
 

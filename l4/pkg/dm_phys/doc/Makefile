@@ -1,6 +1,6 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = dm_phys
+SRC_DOX_REF = dm_phys.cfg
 
 include $(L4DIR)/mk/doc.mk

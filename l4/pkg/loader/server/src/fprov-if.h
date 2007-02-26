@@ -1,5 +1,16 @@
-#ifndef LOADER_FPROV_IF_H
-#define LOADER_FPROV_IF_H
+/*!
+ * \file	loader/server/src/fprov-if.h
+ * \brief	interface to file provider
+ *
+ * \date	2001
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
+#ifndef __FPROV_IF_H_
+#define __FPROV_IF_H_
 
 #include <l4/l4rm/l4rm.h>
 

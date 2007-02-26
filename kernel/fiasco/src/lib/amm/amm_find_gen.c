@@ -35,7 +35,7 @@ amm_find_gen(struct amm *amm, vm_offset_t *addrp, vm_size_t size,
 	assert(size);
 	assert(align_bits < sizeof(vm_offset_t) * 8);
 
-#if 1
+#if 0
 	/*
 	 * XXX we heavily assume AMM_FORWARD in the following
 	 */

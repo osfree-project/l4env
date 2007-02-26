@@ -17,7 +17,6 @@
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
-#include <l4/oskit10_l4env/support.h>
 
 #define PROGTAG		"_demo1"
 
@@ -33,6 +32,9 @@
 #include "examples_config.h"
 #include "bmaps/set.bmap"
 #include "pmaps/drops.pmap"
+
+char LOG_tag[9] = PROGTAG;
+l4_ssize_t l4libc_heapsize = DEMO1_MALLOC_MAX_SIZE;
 
 /* internal prototypes */
 int clear_screen(void);
@@ -62,42 +64,45 @@ int clear_screen()
   int ret = 0;
   char buffer[30];
 
-  con_pslim_rect_t rect;
-  l4_strdope_t bmap;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t rect;
+  CORBA_Environment _env = dice_default_environment;
   
   /* setup initial vfb area info */
   rect.x = 0; rect.y = 0;
   rect.w = xres; rect.h = yres;
 
-  ret = con_vc_pslim_fill(vc_l4id, 
-			  (con_pslim_rect_t *) &rect, black, &_ev);
+  ret = con_vc_pslim_fill_call(&vc_l4id, &rect, black, &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
-      printf("pslim_fill returned %s error\n", buffer);
+      LOG("pslim_fill returned %s error", buffer);
       return -1;
+    }
+  if (_env.major != CORBA_NO_EXCEPTION)
+    {
+      LOG("pslim_fill returned IPC error: 0x%02x", _env.ipc_error);
+      _env.major = CORBA_NO_EXCEPTION;
     }
 
   /* setup new vfb area info */
   rect.x = xres-84; rect.y = 0;
   rect.w = 88; rect.h = 25;
 
-  /* setup L4 string dope */
-  bmap.snd_size = 275;
-  bmap.snd_str = (l4_umword_t) set_bmap;
-  bmap.rcv_size = 0;
-
-  ret = con_vc_pslim_bmap(vc_l4id,
-			  (con_pslim_rect_t *) &rect, 
-		  	  black, white, bmap,
+  ret = con_vc_pslim_bmap_call(&vc_l4id,
+			  &rect, 
+		  	  black, white, set_bmap, 275, 
 			  pSLIM_BMAP_START_MSB, 
-			  &_ev);
+			  &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
-      printf("pslim_bmap returned %s error\n", buffer);
+      LOG("pslim_bmap returned %s error", buffer);
       return -1;
+    }
+  if (_env.major != CORBA_NO_EXCEPTION)
+    {
+      LOG("pslim_bmap returned IPC error: 0x%02x", _env.ipc_error);
+      _env.major = CORBA_NO_EXCEPTION;
     }
   
   return 0;
@@ -145,30 +150,30 @@ int logo()
 	{ 330, 350}, { 400,-100}
     };
 
-  con_pslim_rect_t rect;
-  l4_strdope_t pmap;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t rect;
+  CORBA_Environment _env = dice_default_environment;
 
   /* setup initial vfb area info */
   rect.x = 0; rect.y = 0;
   rect.w = 160; rect.h = 120;
 
-  /* setup L4 string dope */
-  pmap.snd_size = 38400;
-  pmap.snd_str = (l4_umword_t) pmap_buf;
-  pmap.rcv_size = 0;
-
   for (i=0; i<=10; i++) 
     {
-      ret = con_vc_pslim_set(vc_l4id, 
-			     (con_pslim_rect_t *) &rect, 
-	      		     pmap, 
-			     &_ev);
+      ret = con_vc_pslim_set_call(&vc_l4id, 
+			     &rect,
+	      		     (l4_uint8_t*)pmap_buf, 
+			     38400,
+			     &_env);
       if (ret) 
 	{
 	  ret2ecodestr(ret, buffer);
-	  printf("pslim_set returned %s error\n", buffer);
+	  LOG("pslim_set returned %s error", buffer);
 	  return -1;
+	}
+      if (_env.major != CORBA_NO_EXCEPTION)
+	{
+	  LOG("pslim_set returned ipc error: 0x%02x", _env.ipc_error);
+	  _env.major = CORBA_NO_EXCEPTION;
 	}
 
       /* setup new vfb area info */
@@ -190,37 +195,35 @@ int main(int argc, char *argv[])
   int error = 0;
   l4_threadid_t dummy_l4id = L4_NIL_ID;
 
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   /* init */
   do_args(argc, argv);
-  LOG_init(PROGTAG);
-  OSKit_libc_support_init(DEMO1_MALLOC_MAX_SIZE);
   my_l4id = l4thread_l4_id( l4thread_myself() );
 
-  printf("Hello, I'm running as %x.%02x\n",
+  LOG("Hello, I'm running as %x.%02x",
 	 my_l4id.id.task, my_l4id.id.lthread);
 
   /* ask for 'con' (timeout = 5000 ms) */
   if (names_waitfor_name(CON_NAMES_STR, &con_l4id, 50000) == 0) 
     {
-      printf("PANIC: %s not registered at names", CON_NAMES_STR);
+      LOG("PANIC: %s not registered at names", CON_NAMES_STR);
       enter_kdebug("panic");
     }
 
-  if (con_if_openqry(con_l4id, MY_SBUF_SIZE, 0, 0,
+  if (con_if_openqry_call(&con_l4id, MY_SBUF_SIZE, 0, 0,
 		     L4THREAD_DEFAULT_PRIO,
-		     (con_threadid_t*) &vc_l4id, 
-	  	     CON_VFB, &_ev))
+		     &vc_l4id, 
+	  	     CON_VFB, &_env))
     enter_kdebug("Ouch, open vc failed");
   
-  if (con_vc_smode(vc_l4id, CON_OUT, (con_threadid_t*)&dummy_l4id, &_ev))
+  if (con_vc_smode_call(&vc_l4id, CON_OUT, &dummy_l4id, &_env))
     enter_kdebug("Ouch, setup vc failed");
 
-  if (con_vc_graph_gmode(vc_l4id, &gmode, &xres, &yres,
+  if (con_vc_graph_gmode_call(&vc_l4id, &gmode, &xres, &yres,
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
-			 &fn_x, &fn_y, &_ev))
+			 &fn_x, &fn_y, &_env))
     enter_kdebug("Ouch, graph_gmode failed");
 
   if (create_logo())
@@ -235,12 +238,12 @@ int main(int argc, char *argv[])
       l4_sleep(2000);
     }
 
-  if (con_vc_close(vc_l4id, &_ev))
+  if (con_vc_close_call(&vc_l4id, &_env))
     enter_kdebug("Ouch, close vc failed?!");
   
-  printf("Finally closed vc\n");
+  LOG("Finally closed vc");
 
-  printf("Going to bed ...\n");
+  LOG("Going to bed ...");
   l4_sleep(-1);
 
   return 0;

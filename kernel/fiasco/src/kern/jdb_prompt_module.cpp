@@ -22,13 +22,15 @@ class Jdb_pcm
 {
 public:
 private:
-  char subcmd;
+  static char subcmd;
 };
 
+char Jdb_pcm::subcmd;
 static Jdb_pcm jdb_pcm INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 PUBLIC
-Jdb_module::Action_code Jdb_pcm::action( int cmd, void *&args, char const *& )
+Jdb_module::Action_code Jdb_pcm::action( int cmd, void *&args, char const *&,
+					 int &)
 {
   if(cmd!=0)
     return NOTHING;
@@ -55,7 +57,7 @@ Jdb_module::Cmd const *const Jdb_pcm::cmds() const
 	   "C<color>\tset the Jdb prompt color, <color> must be:\n"
 	   "\tnN: noir(black), rR: red, gG: green, bB: blue,\n"
 	   "\tyY: yellow, mM: magenta, cC: cyan, wW: white;\n"
-	   "\tthe capital letters are for bold text.", (void*)&subcmd )
+	   "\tthe capital letters are for bold text.", &subcmd )
     };
 
   return cs;

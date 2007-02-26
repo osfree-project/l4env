@@ -165,13 +165,13 @@ void server(void){
 	} msg;
 
   msg.size = L4_IPC_DOPE(4,0);
-  error = l4_i386_ipc_wait(&client, &msg, &dw0, &dw1,
+  error = l4_ipc_wait(&client, &msg, &dw0, &dw1,
                            L4_IPC_NEVER, &result);
   while(1){
     if(error){
       LOGl("IPC error %#x", error);
       msg.size = L4_IPC_DOPE(4,0);
-      error = l4_i386_ipc_wait(&client, &msg, &dw0, &dw1,
+      error = l4_ipc_wait(&client, &msg, &dw0, &dw1,
                                L4_IPC_NEVER, &result);
       continue;
     }
@@ -192,7 +192,7 @@ void server(void){
       		break;
     }
     msg.size = L4_IPC_DOPE(4,0);
-    error = l4_i386_ipc_reply_and_wait(client, L4_IPC_SHORT_MSG, ret, 0,
+    error = l4_ipc_reply_and_wait(client, L4_IPC_SHORT_MSG, ret, 0,
                                        &client, &msg, &dw0, &dw1,
                                        L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
   } // while(1) - outer server loop

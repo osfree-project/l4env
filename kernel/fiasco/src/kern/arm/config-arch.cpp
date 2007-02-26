@@ -17,7 +17,8 @@ public:
     backward_compatibility = 0,
     hlt_works_ok = 0,
 
-    microsec_per_tick = 1000LL,
+    microsec_per_tick = 10000LL,
+    MAX_NUM_IRQ = 64,
   };
 
   // the default uart to use for serial console

@@ -24,5 +24,7 @@ void panic (const char *format, ...) {
   vprintf  (format, pvar);
   va_end   (pvar);
 
+  putchar ('\n');
+ 
   exit (EXIT_FAILURE);
 }

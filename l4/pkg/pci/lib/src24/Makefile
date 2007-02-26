@@ -17,11 +17,11 @@ WARNINGS	+= -Wno-unused
 names.o: devlist.h classlist.h
 
 devlist.h classlist.h: pci.ids gen-devlist
-	$(GEN_MESSAGE)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)./gen-devlist < $<
 
 gen-devlist: gen-devlist.c Makefile
-	$(BUILD_MESSAGE)
+	@$(BUILD_MESSAGE)
 	$(VERBOSE)$(CC) -o $@ $<
 
 clean::

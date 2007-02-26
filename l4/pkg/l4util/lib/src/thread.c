@@ -5,7 +5,8 @@
 #include <l4/util/thread.h>
 
 #ifdef __i386__
-l4_threadid_t create_thread (int thread_no, void (*function)(void), int *stack)
+l4_threadid_t
+l4util_create_thread (int thread_no, void (*function)(void), int *stack)
 {
   l4_threadid_t preempter, pager;
   l4_umword_t dummy;
@@ -39,16 +40,16 @@ l4_threadid_t create_thread (int thread_no, void (*function)(void), int *stack)
   return ret;
 }
 
-l4_threadid_t attach_interrupt (int irq)
+l4_threadid_t
+l4util_attach_interrupt (int irq)
 {
   l4_threadid_t irq_id;
   l4_umword_t dummy, code;
   l4_msgdope_t dummydope;
 
-  irq_id.lh.low = irq + 1;
-  irq_id.lh.high = 0;
+  l4_make_taskid_from_irq(irq, &irq_id);
 
-  code = l4_i386_ipc_receive(irq_id,
+  code = l4_ipc_receive(irq_id,
 			     0, /* receive descriptor */
 			     &dummy,
 			     &dummy,
@@ -59,12 +60,13 @@ l4_threadid_t attach_interrupt (int irq)
   return ((code != L4_IPC_RETIMEOUT) ? L4_INVALID_ID : irq_id);
 }
 
-void detach_interrupt (void)
+void
+l4util_detach_interrupt (void)
 {
   l4_umword_t dummy, code;
   l4_msgdope_t dummydope;
 
-  code = l4_i386_ipc_receive(L4_NIL_ID,
+  code = l4_ipc_receive(L4_NIL_ID,
 			     0, /* receive descriptor */
 			     &dummy,
 			     &dummy,
@@ -77,7 +79,8 @@ void detach_interrupt (void)
 #endif
 
 #ifdef __alpha__
-l4_threadid_t create_thread (int thread_no, void (*function)(void), int *stack)
+l4_threadid_t
+l4util_create_thread (int thread_no, void (*function)(void), int *stack)
 {
   l4_threadid_t preempter, pager;
   qword_t dummy;
@@ -109,7 +112,8 @@ l4_threadid_t create_thread (int thread_no, void (*function)(void), int *stack)
   return ret;
 }
 
-l4_threadid_t attach_interrupt (int irq)
+l4_threadid_t
+l4util_attach_interrupt (int irq)
 {
   l4_msgdope_t ret;
   
@@ -119,7 +123,8 @@ l4_threadid_t attach_interrupt (int irq)
   return (ret.msgdope ? L4_INVALID_ID : (l4_threadid_t)({thread_id:(irq)}));
 }
 
-void detach_interrupt (void)
+void
+l4util_detach_interrupt (void)
 {
 }
 

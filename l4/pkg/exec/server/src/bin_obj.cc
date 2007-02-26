@@ -6,8 +6,12 @@
  * An ELF binary object is an ELF binary with dependant ELF libraries.
  * Each of these libraries can depend on other ELF libraries.
  *
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <l4/env/errno.h>
 #include <l4/exec/errno.h>
@@ -183,7 +187,11 @@ bin_obj_t::mark_startup_library(l4env_infopage_t *env)
     return -L4_EXEC_NOSTANDARD;
 
   if ((error = check(exc_obj->set_section_type(L4_DSTYPE_STARTUP, env),
-		     "setting startup flag")))
+		     "setting startup flag for libloader")))
+    return -L4_EXEC_NOSTANDARD;
+
+  if ((error = check(deps[0]->set_section_type(L4_DSTYPE_STARTUP, env),
+		     "setting startup flag for binary")))
     return -L4_EXEC_NOSTANDARD;
 
   return 0;
@@ -204,6 +212,8 @@ bin_obj_t::link(l4env_infopage_t *env)
   return 0;
 }
 
+/** traverse on all dependent ELF objects and deliver lines information
+ * as summary. */
 int
 bin_obj_t::get_symbols(l4env_infopage_t *env, l4dm_dataspace_t *sym_ds)
 {
@@ -395,7 +405,7 @@ bin_obj_t::set_2nd_entry(l4env_infopage_t *env)
 			env, &env->entry_2nd)))
     {
       msg("2nd entry (l4env_init) not found (error=%d)", error);
-      return error;
+      return -L4_EXEC_NOSTANDARD;
     }
 
   return 0;

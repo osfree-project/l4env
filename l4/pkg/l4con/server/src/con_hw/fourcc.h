@@ -1,13 +1,19 @@
-/*
- * fourcc.h
+/*!
+ * \file	fourcc.h
+ * \brief	backend scaler stuff
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* fourcc.h
  * This file is part of VIDIX
  * Copyright 2002 Nick Kurshev
  * Licence: GPL
  * This interface is based on v4l2, fbvid.h, mga_vid.h projects
- * and personally my ideas.
-*/
-#ifndef FOURCC_H
-#define FOURCC_H
+ * and personally my ideas. */
+
+#ifndef __FOURCC_H_
+#define __FOURCC_H_
 
 /*  Four-character-code (FOURCC) */
 #define vid_fourcc(a,b,c,d)\

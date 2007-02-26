@@ -1,119 +1,54 @@
--include Makeconf.local
+L4DIR   ?= ../..
 
-.DELETE_ON_ERROR:
+SPEC = spec.tex
+SRC_TEX = $(SPEC) abstract.tex
+SRC_HTML = bid-spec.tex
 
-SRC_TEX = spec.tex
-ABSTRACT_TEX = abstract.tex
-HTML_TEX = html.tex
+SRC_DOX	 = $(SRC_HTML:.tex=.cfg)
 LANG_TEX = config-language.tex
-LANG_FILE = config-language.txt
-SHOW = spec
-
-VIEW_PS = $(SHOW).ps
-VIEW_DVI = $(SHOW).dvi
-
-DVI = $(SHOW).dvi
-PS = $(SHOW).ps
-PDF = $(SHOW).pdf
-ABSTRACT = $(ABSTRACT_TEX:.tex=.ps)
 
 all::
-show run: seedvi
 
-SRC_FIG = $(wildcard *.fig)
-EPS = $(SRC_FIG:.fig=.eps)
+$(SRC_DOX:.cfg=.title):
+	@echo guide >$@
+	@echo "Building Infrastructure for DROPS (BID) Specification" >>$@
 
-LAFIG = $(wildcard *.lafig)
-LTF = $(patsubst %.lafig,%.ltf,$(LAFIG))
+$(SRC_HTML:.tex=): $(SRC_HTML) $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf)
+	$(VERBOSE)$(RM) -r $@
+	$(VERBOSE)install -d $@/html
+	$(VERBOSE)latex2html -local_icons -split 5 -link 3\
+		-show_section_numbers $(SRC_HTML) -dir $@/html
+	$(VERBOSE)cp $(SRC_TEX:.tex=.ps) $@/html
+	$(VERBOSE)cp $(SRC_TEX:.tex=.pdf) $@/html
+	$(VERBOSE)touch $@
 
+$(SRC_HTML): $(SPEC:.tex=.dvi)
+	$(VERBOSE)./tex-preprocess.pl $(<:.dvi=.tex) >$@
+	$(VERBOSE)cp $(<:.dvi=.aux) $(@:.tex=.aux)
+	$(VERBOSE)cp $(<:.dvi=.bbl) $(@:.tex=.bbl)
 
-BIB = $(wildcard bib/*.bib *.bib)
+clean::
+	$(VERBOSE)$(RM) -rv $(SRC_HTML) $(SRC_HTML:.tex=.aux) \
+			$(SRC_HTML:.tex=.bbl)
 
-LATEX = latex -interaction=batchmode
-
-html:	.html
-
-.html:	$(SRC_TEX) Makefile $(LANG_FILE) $(LANG_TEX)
-	rm -rf $(HTML_TEX:.tex=)
-	sed -e 's/«/\\begin{code}/g' -e 's/»/\\end{code}\\rm{}/g' \
-	    -e 's/§/\\$$/g' -e 's/\\#/\\\\\\hline/g' \
-            <$(SRC_TEX) >$(HTML_TEX) && \
-	  cp $(SRC_TEX:.tex=.aux) $(HTML_TEX:.tex=.aux)
-	  cp $(SRC_TEX:.tex=.bbl) $(HTML_TEX:.tex=.bbl)
-	  latex2html -local_icons -split 5 -show_section_numbers \
-		$(HTML_TEX) && \
-	  true rm $(HTML_TEX) $(HTML_TEX:.tex=.aux) && cp $(LANG_FILE) html/
-	  touch .html
-
-%.ltf: %.lafig
-	fig2dev -L latex $< $@
-
-%.bbl:  %.tex
-	rm $@
-
-%.eps:	%.fig
-	fig2dev -L eps $< $*.eps
-
-%.dvi:	%.tex
-	$(LATEX) $<
-	@echo -e "\033[34mMaking $@ because of $?\033[0m"
-	grep -q '\citation' $*.aux && bibtex $* || true
-	grep -q '\indexentry' $*.idx && makeindex $* || true
-	@(export size=1 ; touch $*.dvi;\
-	 until [ $$size -eq `ls -o $*.dvi | awk '{print $$4}'` ]; do\
-	   export size=`ls -o $*.dvi | awk '{print $$4}'` ;\
-	   $(LATEX) $< ;\
-	 done)
-	killall -USR1 xdvi xdvi.bin xdvi.real || true
-
-%.ps:	%.dvi
-	dvips -o $@ $<
-
-%.pdf:	%.ps
-	ps2pdf $<
-
-seedvi:: $(VIEW_DVI)
-	xdvi  $(xdvi_big_flags) $^ &
-
-seeps:: $(VIEW_PS)
-	gv $^
-
-seebw:: $(VIEW_PS)
-	gv -magstep -2 -grayscale -display $(DISP) $^
+include $(L4DIR)/mk/doc.mk
 
 ifeq ($(HTMLDIR),)
 pub::
 	@echo 'Specify your http server directory in HTMLDIR in Makeconf.local'
 	@echo 'Then, "make pub" will copy all the files into this directory'
-	exit 1
+	$(VERBOSE)exit 1
 else
-pub:: $(PS) .html $(PDF)
-	install -d $(HTMLDIR)
-	install html/* -m 664 $(HTMLDIR)
-	install $(PS) $(PDF) -m 644 $(HTMLDIR)
+pub:: $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf) $(SRC_HTML:.tex=)
+	$(VERBOSE)install -d $(HTMLDIR)
+	$(VERBOSE)install $(SRC_HTML:.tex=)/html/* -m 664 $(HTMLDIR)
+	$(VERBOSE)install $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf) -m 644 \
+		$(HTMLDIR)
 endif
 
-all:: $(PS) $(ABSTRACT) $(ABSTRACT)
-
-clean::
-	@rm -fv *.aux *.log *.toc *.bbl *.blg *.ltf *.lod *.idx *.ilg *.ind
-	@rm -fv k.*
-	@for i in *.fig; do\
-		j=`basename $$i .fig`.eps; \
-		rm -vf $$j;\
-	done
-	@rm -frv html .html
-
-cleanall:: clean
-	@rm -fv *.ps *.dvi *.pdf
-
 help::
-	@echo "Specify a target:"
-	@echo "all      - build postscript version (default)"
-	@echo "html     - build html version"
-	@echo "pub      - build html version and copy it to the http server"
+	@echo
+	@echo "Additional targets"
+	@echo "pub      - build html, ps and pdf version and publish"
 	@echo "           this requires \"HTMLDIR\" to be set in Makeconf.local"
-	@echo "help     - this help"
 
-$(DVI): $(SRC_TEX) $(LANG_TEX) $(EPS) $(BIB) $(LTF)
-abstract.dvi: abstract.tex $(BIB)

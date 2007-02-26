@@ -5,7 +5,7 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -21,15 +21,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/L4BEMsgBufferType.h"
 #include "be/BEContext.h"
+#include "be/BEDeclarator.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CL4BENameFactory);
 
@@ -72,6 +73,10 @@ String CL4BENameFactory::GetString(int nStringCode, CBEContext * pContext, void 
             return GetInitRcvStringFunction(pContext, *(String*)pParam);
         else
             return GetInitRcvStringFunction(pContext, String());
+        break;
+    case STR_MSGBUF_SIZE_CONST:
+	    if (pParam)
+		    return GetMsgBufferSizeDopeConst((CBEMsgBufferType*)pParam);
         break;
     default:
         break;
@@ -167,8 +172,8 @@ String CL4BENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCo
         break;
     }
     if (m_bVerbose)
-        printf("%s (l4) Generated type name \"%s\" for type code %d\n",
-               GetClassName(), (const char *) sReturn, nType);
+        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+               __FUNCTION__, (const char *) sReturn, nType);
     return sReturn;
 }
 
@@ -211,6 +216,7 @@ String CL4BENameFactory::GetL4TypeName(int nType, bool bUnsigned, CBEContext *pC
     switch (nType)
     {
     case TYPE_INTEGER:
+	case TYPE_LONG:
         switch (nSize)
         {
         case 1:
@@ -250,6 +256,9 @@ String CL4BENameFactory::GetL4TypeName(int nType, bool bUnsigned, CBEContext *pC
         break;
     }
 
+    if (m_bVerbose)
+        printf("CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+               __FUNCTION__, (const char *) sReturn, nType);
     return sReturn;
 }
 
@@ -292,4 +301,21 @@ String CL4BENameFactory::GetInitRcvStringFunction(CBEContext *pContext, String s
         return pContext->GetInitRcvStringFunc();
     }
     return sFuncName;
+}
+
+/** \brief returns the name of the constant declaring the size dope of the message buffer
+ *  \param pMsgBuffer the message buffer to write the const for
+ *  \return the name of the appropriate constant
+ */
+String CL4BENameFactory::GetMsgBufferSizeDopeConst(CBEMsgBufferType* pMsgBuffer)
+{
+    String sName;
+    if (pMsgBuffer && pMsgBuffer->GetAlias())
+	{
+		// use the msg buffer's alias and attach a "_SIZE_DOPE"
+		sName = pMsgBuffer->GetAlias()->GetName();
+		sName.MakeUpper();
+		sName += "_SIZE_INIT";
+	}
+	return sName;
 }

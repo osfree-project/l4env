@@ -1,28 +1,45 @@
 /* -*- c -*- */
 /* $Id$ */
 
-/*	con/idl/stream/stream.idl
+/**
+ * \file	con/idl/stream/stream.idl
+ * \brief	streaming IPC interface for pushing console events to clients
  *
- *	streaming IPC interface
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
 
-typedef struct stream_io_timeval {
-	long tv_sec;
-	long tv_usec;
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
+/** time value */
+typedef struct stream_io_timeval
+{
+  long tv_sec;
+  long tv_usec;
 } stream_io_timeval_t;
 
+/** event type */
 typedef struct stream_io_input_event
 {
-	stream_io_timeval_t time;		/* not used */
-	unsigned short type;
-	unsigned short code;
-	unsigned long value;
+  stream_io_timeval_t time;  /* not used */
+  unsigned short type;
+  unsigned short code;
+  unsigned long value;
 } stream_io_input_event_t;
 
-module stream
+/** stream interface */
+library stream
 {
+  /** Stream interface
+   * \defgroup idl_stream_if Console Client Stream Interface */
   interface io
     {
-      void push(in stream_io_input_event_t event);
+      /** Push console event to client
+       * \ingroup idl_stream_if
+       *
+       * \param event		event to push */
+      void push([in] stream_io_input_event_t event);
     };
 };
+

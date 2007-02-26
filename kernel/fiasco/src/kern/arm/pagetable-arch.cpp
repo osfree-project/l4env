@@ -115,8 +115,59 @@ bool Page_table::kb64_present( Mword *pt, unsigned pt_idx )
   return false;
 }
 
+IMPLEMENT inline
+Page_table::Status Page_table::change( void *va, Page::Attribs a)
+{  
+  unsigned const pd_idx = pd_index(va);
+  unsigned const pt_idx = pt_index(va);
+  
+  if(!(raw[pd_idx] & PDE_PRESENT)) 
+    return E_INVALID;
 
-IMPLEMENT
+  if((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_SECTION) {
+    raw[pd_idx] = (raw[pd_idx] & ~PDE_AP_MASK) | (a & PDE_AP_MASK); 
+    if(_current==this) {
+      Mem_unit::write_back_data_cache( raw + pd_idx );
+      Mem_unit::dtlb_flush(va);
+    }
+  } else {
+    Unsigned32 *pt = alloc()->
+      phys_to_virt(P_ptr<Unsigned32>(raw[pd_idx] 
+				     & PT_BASE_MASK));
+
+    if(! (pt[pt_idx] & PTE_PRESENT)) 
+      return E_INVALID;
+
+    unsigned a4 = (a & PDE_AP_MASK);
+    unsigned a5 = a4 | (a4 >> 2) | (a4 >> 4) | (a4 >> 6);
+    
+    switch(pt[pt_idx] & PTE_TYPE_MASK) {
+    case PTE_TYPE_LARGE:
+      for(unsigned p= 0;p<16;p++) {
+        pt[pt_idx+p] = (pt[pt_idx+p] & 0x0ff0) | a5;
+        if(_current==this) {
+          Mem_unit::write_back_data_cache( pt + pt_idx );
+          Mem_unit::dtlb_flush(va);
+        }
+      }
+      break;
+    default:
+    case PTE_TYPE_SMALL:
+      pt[pt_idx] = (pt[pt_idx] & 0x0ff0) | a5;
+      if(_current==this) {
+        Mem_unit::write_back_data_cache( pt + pt_idx );
+        Mem_unit::dtlb_flush(va);
+      }
+      break;
+    }
+
+  }
+  return E_OK;
+    
+}
+
+
+IMPLEMENT inline NEEDS[Page_table::__insert]
 Page_table::Status Page_table::insert_invalid( void *va, 
 					       size_t size, 
 					       Mword value )
@@ -136,6 +187,7 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
   size_t const * const sizes = page_sizes();
   unsigned const pd_idx = pd_index(va);
   unsigned const pt_idx = pt_index(va);
+  bool need_flush = false;
 
   if( size == sizes[2] ) { // 1MB
     // try to insert or replace a 1MB superpage,
@@ -148,6 +200,8 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
     if(raw[pd_idx] & PDE_PRESENT) {
       if(!replace)
 	return E_EXISTS;
+
+      need_flush = true;
       
       if((raw[pd_idx] & PDE_TYPE_MASK) != PDE_TYPE_SECTION) {
 	// if there was anything else than a section mapping
@@ -166,8 +220,11 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
 
 	// if we are current, we want to 
 	// make the changes visible to the MMU
-	if(_current==this)
-	  Mem_unit::write_back_data_cache( raw + pd_idx );
+	if(_current==this) {
+          Mem_unit::write_back_data_cache( raw + pd_idx );
+          if(need_flush)
+            Mem_unit::tlb_flush();
+        }
 
 	// try to free the four adjacent 
 	// second level page tables if non 
@@ -178,6 +235,7 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
 	    break;
 	}
 	if(i==4) alloc()->free(0, pt);
+
 	return E_OK;
       }
     }
@@ -202,15 +260,14 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
     assert(invalid || ((pa.get_unsigned() & (sizes[1]-1)) == 0));
     assert(((Mword)va & (sizes[1]-1)) == 0);
 
-
     Mword *pt = 0;
 
     if((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_SECTION) {
-      if(!replace) {
+      if(!replace) 
 	return E_EXISTS;
-      }
+      else
+        need_flush = true;
     } else if((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_COARSE) {
-
       // threre is already a second level,
       // get the virtual address
       pt = alloc()->
@@ -221,9 +278,8 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
       // within the 16 entries
       if(!replace && kb64_present(pt,pt_idx)) {
 	return E_EXISTS;
-      }
-      
-
+      } else
+        need_flush = true;
     } else {
       // fine page tables are not used !!
       assert((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_FREE);
@@ -249,10 +305,7 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
 		     1024*(pd_idx & 0x03)) | PDE_TYPE_COARSE;
       if(_current==this)
 	Mem_unit::write_back_data_cache( raw + pd_idx );
-
-	
     }
-
     if(!invalid) {
       unsigned ap = a & PDE_AP_MASK;
       for(unsigned i=0;i<16;++i) {
@@ -265,11 +318,8 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
     } else {
       pt[(pt_idx & 0x03f0)] = pa.get_unsigned() & ~PTE_PRESENT;
     }
-    
-
   } else {
     // A 4KB mapping is requested
-
     assert(size == sizes[0]);
     // assert the right alignment
     assert(invalid || ((pa.get_unsigned() & (sizes[0]-1)) == 0));
@@ -280,6 +330,8 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
     if((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_SECTION) {
       if(!replace) 
 	return E_EXISTS;
+      else 
+        need_flush = true;
 
     } else if((raw[pd_idx] & PDE_TYPE_MASK) == PDE_TYPE_COARSE) {
       pt = alloc()->
@@ -290,12 +342,14 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
 	if(!replace) 
 	  return E_EXISTS;
 	else {
+          need_flush = true;
 	  if((pt[pt_idx] & PTE_TYPE_MASK) == PTE_TYPE_LARGE) {
 	    // kick the 64KB mapping
 	    for(unsigned i=0;i<16;++i) {
 	      pt[(pt_idx & 0x3f0) +i] = 0; // free
-	      if(_current==this)
+	      if(_current==this) {
 		Mem_unit::write_back_data_cache( pt + (pt_idx & 0x03f0) + i );
+              }
 	    }
 	  }
 	}
@@ -332,8 +386,6 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
 
       if(_current==this)
 	Mem_unit::write_back_data_cache(raw + pd_idx);
-
-      
     }
 
     if(!invalid) {
@@ -348,9 +400,11 @@ Page_table::Status Page_table::__insert( P_ptr<void> pa, void const *const va,
       
     if(this==_current)
       Mem_unit::write_back_data_cache(pt + pt_idx);
-	
   }
     
+  if(need_flush && (this==_current))
+    Mem_unit::tlb_flush();
+
   return E_OK;
 
 }
@@ -493,6 +547,29 @@ void Page_table::init()
   // kernel mode should acknowledge write-protected page table entries
   //  set_cr0(get_cr0() | CR0_WP);
 }
+
+
+IMPLEMENT inline
+void Page_table::copy_in( void *my_base, Page_table *o, 
+			  void *base, size_t size )
+{
+  unsigned pd_idx = pd_index(my_base);
+  unsigned o_pd_idx = pd_index(base);
+  do {
+    raw[pd_idx] = o->raw[o_pd_idx];
+    //    if(_current==this)
+    //      Mem_unit::write_back_data_cache(raw + pd_idx);
+
+    if(size <= 1024*1024)
+      break;    
+    size -= 1024*1024;
+    ++pd_idx;
+    ++o_pd_idx;
+  } while(1);
+  if(_current==this)
+    Mem_unit::write_back_data_cache();
+}
+
 
 
 IMPLEMENT inline

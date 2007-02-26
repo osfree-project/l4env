@@ -1,11 +1,20 @@
 /*
- * \brief	DOpE command terminal 
- * \date	2002-11-21
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE command terminal 
+ * \date    2002-11-21
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * This is a small example client for DOpE. It provides
  * a terminal to interact with the DOpE server based on
  * the DOpE command language.
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
  */
 
 #include <stdio.h>
@@ -14,7 +23,7 @@
 
 static long app_id;
 
-static char esc_red_bg[6] 	= {27,'[','4','1','m',0};
+static char esc_red_bg[6]   = {27,'[','4','1','m',0};
 static char esc_black_bg[6] = {27,'[','4','0','m',0};
 
 static char esc_white_fg[6] = {27,'[','3','7','m',0};
@@ -23,7 +32,7 @@ static char esc_yellow_fg[6]= {27,'[','3','3','m',0};
 static int  curs_x=0;
 static char command[256];
 
-static void print_dope_prompt(void) {	
+static void print_dope_prompt(void) {   
 	dope_cmdf(app_id, "t.print(\"%sDOpE>%s\")", esc_red_bg, esc_black_bg);
 }
 
@@ -54,8 +63,10 @@ static void termpress_callback(dope_event *e,void *arg) {
 		dope_cmdf(app_id, "t.print(\"%s\")", c);
 	}
 	if (execute) {
+		char retbuf[256];
 		command[curs_x] = 0;
-		print_answer(dope_cmd(app_id,command));
+		dope_req(app_id, retbuf, 256, command);
+		print_answer(retbuf);
 		print_dope_prompt();
 		curs_x = 0;
 	}

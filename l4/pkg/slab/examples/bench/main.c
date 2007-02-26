@@ -9,12 +9,16 @@
  */
 /*****************************************************************************/
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* L4/L4Env includes */
 #include <l4/slab/slab.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/util/rdtsc.h>
 #include <l4/env/errno.h>
-#include <l4/oskit10_l4env/support.h>
 #include <l4/util/macros.h>
 
 /* standard includes */
@@ -27,6 +31,7 @@
 
 /* Log tag */
 char LOG_tag[9] = "slab_be";
+l4_ssize_t l4libc_heapsize = MEM_SIZE;
 
 typedef struct
 {
@@ -149,19 +154,10 @@ bench_slab(void)
 static void 
 bench_malloc(void)
 {
-  int ret;
   l4_uint64_t start,end,time;
   int num;
   static alloc_t alloc[ROUNDS];
   void * ptr;
-
-  /* init malloc */
-  ret = OSKit_libc_support_init(MEM_SIZE);
-  if (ret < 0)
-    {
-      printf("init OSKit heap failed: %s (%d)\n",l4env_errstr(ret),ret);
-      return;;
-    }
 
   /* do benchmark, alloc */
   num = 0;

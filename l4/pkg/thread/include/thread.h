@@ -6,23 +6,14 @@
  *
  * \date   09/02/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _THREAD_THREAD_H
 #define _THREAD_THREAD_H
 
@@ -404,7 +395,7 @@ l4thread_on_exit(l4thread_exit_desc_t * name, void * data);
  * \brief   Sleep.
  * \ingroup api_sleep
  * 
- * \param   t            time (milliseconds)
+ * \param   t            time (milliseconds), if set to -1 sleep forever
  *
  * Sleep for \a t milliseconds.
  */
@@ -425,6 +416,17 @@ l4thread_sleep(l4_uint32_t t);
 /*****************************************************************************/ 
 void 
 l4thread_usleep(l4_uint32_t t);
+
+/*****************************************************************************/
+/**
+ * \brief   Sleep forever.
+ * \ingroup api_sleep
+ *
+ * Sleep forever.
+ */
+/*****************************************************************************/ 
+void
+l4thread_sleep_forever(void);
 
 /*****************************************************************************
  *** priorities 

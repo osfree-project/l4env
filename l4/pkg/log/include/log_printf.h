@@ -6,7 +6,10 @@
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
-
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #ifndef __LOG_INCLUDE_LOG_PRINTF_H_
 #define __LOG_INCLUDE_LOG_PRINTF_H_
 

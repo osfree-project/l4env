@@ -15,11 +15,11 @@ $(CHECKSUM): genchecksum $(KERNEL)
 
 genchecksum: $(OBJ_CHECKSUM)
 	$(LINK_MESSAGE)
-	$(VERBOSE)$(CXX) -o $@ $^
+	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -o $@ $^ 
 
 $(OBJ_CHECKSUM): %.o: %.cc
 	$(COMP_MESSAGE)
-	$(VERBOSE)$(CXX) -c -MD -O2 $< -o $@
+	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -c -MD -O2 $< -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $*.d, .$*.cc.d)
 
 clean-CHECKSUM:

@@ -16,7 +16,7 @@ IMPLEMENT inline
 void Context::switch_fpu( Context *t )
 {}
 
-
+#if 0
 /** Switch to a specific different context.  If that context is currently
     locked, switch to its locker instead (except if current() is the locker).
     @pre current() == this  &&  current() != t
@@ -37,7 +37,7 @@ Mword Context::switch_to( Context *t )
   while (t->donatee()                   // target thread not locked
          && t != t->donatee())          // target thread has lock itself
     {
-      // Special case for thread_t::kill(): If the locker is
+      // Special case for Thread::kill(): If the locker is
       // current(), switch to the locked thread to allow it to
       // release other locks.  Do this only when the target thread
       // actually owns locks.
@@ -76,16 +76,26 @@ Mword Context::switch_to( Context *t )
   Mword old_sp;
   asm volatile ( "mov %0, sp" : "=r"(old_sp) );
   printf("ASM: switch from %p [sp=%p] to %p [sp=%p]\n",
-	 this, (void*)old_sp, t,t->kernel_sp);
+	 this, (void*)old_sp, t, t->kernel_sp);
 
   printf("ASM: cont addr = %08x\n", *(t->kernel_sp));
 #endif
 
-  printf("ASM: switch from %p to %p [sp=%p]\n", this, t,t->kernel_sp);
 
+}
+#endif
+
+IMPLEMENT inline
+bool Context::switch_cpu( Context *t ) 
+{
+  //  putchar('+');  
+#if 0
+  printf("ASM: switch from %p to %p [sp=%p]\n", 
+	 this, t, t->kernel_sp);
+#endif
   asm volatile
     (// save context of old thread
-     "   stmdb sp!, {lr}          \n"
+     "   stmdb sp!, {fp}       \n"
      "   adr   lr, 1f             \n"
      "   str   lr, [sp, #-4]!     \n"
      "   str   sp, [%[old_sp]]    \n"
@@ -99,17 +109,17 @@ Mword Context::switch_to( Context *t )
      
      // return to new context
      "   ldr   pc, [sp], #4       \n"
-     "1: ldmia sp!, {lr}          \n"
+     "1: ldmia sp!, {fp}       \n"
 
      : 
      : 
      [new_thread] "r"(t), 
      [old_sp] "r" (&kernel_sp), 
      [new_sp] "r" (t->kernel_sp)
-     : "r0", "r3", "r4", "r5", "r6", "r7", "r8", "r9", 
-       "r10", "r11", "r12", "r13", "r14", "memory");
+     : "r0", "r4", "r5", "r6", "r7", "r8", "r9", 
+     "r10", "r12", "r14", "memory");
 
-  return ret;
+  return 1;
 }
 
 /** Thread context switchin.  Called on every re-activation of a
@@ -128,8 +138,9 @@ void Context::switchin_context()
   // TSS) the CPU uses when next switching from user to kernel mode.  
   // regs() + 1 returns a pointer to the end of our kernel stack.
   Kmem::kernel_sp( reinterpret_cast<Mword*>(regs() + 1) );
-
+#if 0
   printf("switch in address space: %p\n",_space_context);
+#endif
   
   // switch to our page directory if nessecary
   _space_context->switchin_context();

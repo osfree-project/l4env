@@ -1,0 +1,278 @@
+Build for x86 architecture
+BUILD_SYSTEMS_x86_s
+  If you want to build code for the x86 architecture (PC), say Y here.
+
+  You can build for multiple architectures, the code will be stored in
+  different directories.
+
+  Most users will say Y here.
+
+
+CPU-Types for x86 architecture
+CPU_x86
+  Specify for which x86 architecture CPU types you want to build code.
+  Specify at least one CPU type. Supported CPUs are: 586, 686, K6, K7.
+
+  You can build for multiple CPU types, the code will be stored in
+  different directories.
+
+
+Build code using L4V2 API
+BUILD_SYSTEMS_x86_l4v2
+  If you want to build L4 programs using the conservative
+  L4 version 2 API (L4 V2), specify Y here.
+  
+  You can build for multiple L4 API versions, the code will be stored
+  in different directories.
+
+  Most users will say Y here.
+
+
+Build code using L4X0 API
+BUILD_SYSTEMS_x86_l4x0
+  If you want to build L4 programs using the L4 version X0 API (L4 X0),
+  specify Y here.
+  
+  You can build for multiple L4 API versions, the code will be stored
+  in different directories.
+
+  Most users will say Y here.
+
+
+Build for arm architecture
+BUILD_SYSTEMS_arm_s
+  If you want to build code for the arm architecture, say Y here.
+
+  You can build for multiple architectures, the code will be stored in
+  different directories.
+
+  Most users will say Y here.
+
+
+CPU-Types for arm architecture
+CPU_arm
+  Specify for which arm architecture CPU types you want to build code.
+  Specify at least one CPU type. Supported CPUs are: sa.
+
+  You can build for multiple CPU types, the code will be stored in
+  different directories.
+
+
+Build code using L4X0 API
+BUILD_SYSTEMS_arm_l4x0
+  If you want to build L4 programs using the L4 version X0 API (L4 X0),
+  specify Y here.
+  
+  You can build for multiple L4 API versions, the code will be stored
+  in different directories.
+
+  Most users will say Y here.
+
+
+Build shared libloaders.s.so
+BUILD_LOADER
+  The "loader" package allows to build a shared library containing
+  common libraries of L4Env. To build this shared library, the other
+  L4Env libraries must be build in PIC mode, additionally to the
+  normal, i.e. non-PIC, mode.
+  
+  If you want to use the loader, say Y here.
+
+
+Base directory of the DROPS install tree
+DROPS_STDDIR
+  This is the directory where the includes, libraries and binaries
+  are looked for. On 'make install', files are installed here.
+  
+  For users at TUD with access to os:/home/drops, this is /home/drops.
+  For others, this is usually $(HOME)/src/drops or similar.
+
+
+Base directory of the L4Linux 2.2 sources
+L4LINUX22_DIR
+  This is the directory where L4Linux v. 2.2 resides. L4Linux is used by
+  some packages as they get include files from there.
+  
+  Typically, L4Linux 2.2 resides next to "l4/" in "linux22/", and hence
+  "$(L4DIR)/../linux22" is a good choice.
+
+
+Linux 2.4 kernel sources available
+LINUX24_AVAIL
+
+  Some packages need the sources of a Linux version 2.4 kernel. If you
+  have the sources available somewhere in your filesystem, enable this
+  option. You will be asked for the location of the sources then.
+  
+  Some packages only need the header files of a Linux version 2.4
+  kernel.  For those packages, there is a separate DROPS package that
+  provides just the headers. However, if you enable this option, those
+  packages will get their includes from the Linux kernel sources as
+  well.
+  
+  Most users will say N here.
+
+
+Path to Linux 2.4 sources
+LINUX24_DIR
+  The path to the sources of a Linux version 2.4 kernel. If you do not
+  have the sources, disable the LINUX24_AVAIL option. However, you may
+  be unable to compile some packages then.
+
+
+Use Linux headers from DROPS_STDDIR
+LINUX24_GLOBALINC
+
+  Some packages need the header files of a Linux version 2.4 kernel. 
+  These headers are provided by the DROPS package linux-24-headers.
+  
+  If you have a correctly installed DROPS_STDDIR tree, say Y here. 
+  Otherwise, get the linux-24-headers package and say N here.
+
+
+SDL include path
+SDL_INCDIR
+  This is a space-separated list of paths where the SDL includes can
+  be found.
+  
+  Upon compilation, the SDL package installs its header files
+  like any other DROPS package into subdirs of $(L4DIR)/include or
+  $(DROPS_STDDIR)/include, respectively. This variable lists these
+  subdirectories.
+  
+  Normally, you do not have to change this value.
+
+
+Verbose dependency building
+DEPEND_VERBOSE_SWITCH
+  If enabled, the commands for dependency-generation will be shown. If
+  disabled, DEPEND_VERBOSE is set to '@' to prevent this.
+
+  Most users will say N here.
+
+
+Verbose compilation and building
+VERBOSE_SWITCH
+  If enabled, the commands issued for compilation will be shown. If
+  disabled, VERBOSE is set to '@' to prevent this.
+
+
+Short messages for compilation
+SHOWMESSAGES
+  If enabled, a short textual description for every compilation step
+  is printed.
+
+  Most users will say Y here.
+
+
+Colored build-steps
+BID_COLORED_PHASES
+  If enabled, significant messages will be printed in color, depending
+  on your $TERM setting.
+
+
+Use special C-Compilers
+BIDc_USE_SPECIAL_CC
+  If you want to specify specific versions of C and C++ compilers instead
+  of using the default ones, enable this option. Defaults are
+  "$(SYSTEM_TARGET)gcc" and "$(SYSTEM_TARGET)g++".
+
+  Most users will say N here.
+
+Specific C-Compiler
+HOSTCC
+  The C compiler to use to generate code for the host system (the one
+  you are using currently).
+
+Specific C++-Compiler
+HOSTCXX
+  The C++ compiler to use to generate code for the host system (the one
+  you are using currently).
+
+Specific C-Compiler
+CC_x86
+  The C compiler to build x86 code.
+
+Specific C++-Compiler
+CXX_x86
+  The C++ compiler to build x86 code.
+
+Specific C-Compiler
+CC_arm
+  The C compiler to build arm code.
+
+Specific C++-Compiler
+CXX_arm
+  The C++ compiler to build arm code.
+
+
+System has ld.so
+HAVE_LDSO
+  If your system provides the dynamic linker ld.so, and this is used
+  by your compilers, you should enable this switch. This allows to
+  use faster, more flexible and more accurate methods for dependency
+  building.
+  
+  Most Linux-users will say Y here.
+
+
+Automatically determine C preprocessor names
+INT_CPP_NAME_SWITCH
+  If you use C-compilers BID does not know so far, there is a chance you
+  have to help BID about the names of the C and C++ preprocessors. E.g.,
+  gcc tends to change its preprocessor names from subversion to
+  subversion, and the dependency tool used by BID wants to know about
+  these names.  However, if dependencies are generated well, BID already
+  selected the corrects names for you.
+  
+  Most users will say Y here.
+
+
+Internal C preprocessor name
+INT_CPP_x86_NAME
+  The command name of the preprocessor your x86 C compiler uses.
+  Note: It is not necessarily the preprocessor as you would invoke it
+  from the command line. gcc uses its own internal names.
+
+  For gcc versions prior to gcc 2.95.4 it is 'cpp'.
+  gcc verssion 2.95.4 uses 'cpp0'. gcc version 3.2 uses 'cc1'.
+
+
+Internal C++ preprocessor name
+INT_CXX_x86_NAME
+  The command name of the preprocessor your x86 C++ compiler uses.
+  Note: It is not necessarily the preprocessor as you would invoke it
+  from the command line. g++ uses its own internal names.
+
+  For g++ versions prior to gcc 2.95.4 it is 'cpp'.
+  gcc verssion 2.95.4 uses 'cpp0'. gcc version 3.2 uses 'cc1plus'.
+
+
+Internal C preprocessor name
+INT_CPP_x86_NAME
+  The command name of the preprocessor your arm C compiler uses.
+  Note: It is not necessarily the preprocessor as you would invoke it
+  from the command line. gcc uses its own internal names.
+
+  For gcc versions prior to gcc 2.95.4 it is 'cpp'.
+  gcc verssion 2.95.4 uses 'cpp0'. gcc version 3.2 uses 'cc1'.
+
+
+Internal C++ preprocessor name
+INT_CXX_x86_NAME
+  The command name of the preprocessor your arm C++ compiler uses.
+  Note: It is not necessarily the preprocessor as you would invoke it
+  from the command line. g++ uses its own internal names.
+
+  For g++ versions prior to gcc 2.95.4 it is 'cpp'.
+  gcc verssion 2.95.4 uses 'cpp0'. gcc version 3.2 uses 'cc1plus'.
+
+
+Strip binaries on install
+BID_STRIP_PROGS
+  If enabled, binaries will be stripped on installation into
+  $(L4DIR)/bin or $(DROPS_STDDIR)/bin. If you want to load them with
+  all their symbols (eg to show the symbols with the Fiasco kernel
+  debugger), say 'N' here.
+  
+  If unsure, say 'Y'.

@@ -32,8 +32,8 @@ typedef struct {
  * L4 unique identifiers 
  */
 
-#define L4_NIL_ID 		((l4_threadid_t){val: 0})
-#define L4_INVALID_ID		((l4_threadid_t){val: 0xffffffffffffffff})
+#define L4_NIL_ID 		((l4_Threadid){val: 0})
+#define L4_INVALID_ID		((l4_Threadid){val: 0xffffffffffffffff})
 
 /*
  * L4 flex pages
@@ -108,18 +108,18 @@ typedef struct {
 
 
 // L4_INLINE int l4_is_invalid_sched_param(l4_sched_param_t sp);
-// L4_INLINE int l4_is_nil_id(l4_threadid_t id);
-// L4_INLINE int l4_is_invalid_id(l4_threadid_t id);
+// L4_INLINE int l4_is_nil_id(l4_Threadid id);
+// L4_INLINE int l4_is_invalid_id(l4_Threadid id);
 // L4_INLINE l4_fpage_t l4_fpage(unsigned long address, unsigned int size, 
 // 			      unsigned char write, unsigned char grant);
 
 
-// L4_INLINE l4_threadid_t get_taskid(l4_threadid_t t);
-// L4_INLINE int thread_equal(l4_threadid_t t1,l4_threadid_t t2);
-// L4_INLINE int task_equal(l4_threadid_t t1,l4_threadid_t t2);
-// L4_INLINE void l4_make_taskid_from_irq(int irq, l4_threadid_t *t);
-// L4_INLINE int l4_is_irq_id(l4_threadid_t t, unsigned irq_max) ;
-// L4_INLINE int l4_irq_from_id(l4_threadid_t t);
+// L4_INLINE l4_Threadid get_taskid(l4_Threadid t);
+// L4_INLINE int thread_equal(l4_Threadid t1,l4_Threadid t2);
+// L4_INLINE int task_equal(l4_Threadid t1,l4_Threadid t2);
+// L4_INLINE void l4_make_taskid_from_irq(int irq, l4_Threadid *t);
+// L4_INLINE int l4_is_irq_id(l4_Threadid t, unsigned irq_max) ;
+// L4_INLINE int l4_irq_from_id(l4_Threadid t);
 
 
 // L4_INLINE int l4_is_invalid_sched_param(l4_sched_param_t sp)
@@ -127,12 +127,12 @@ typedef struct {
 //   return sp.sched_param == 0xffffffffffffffff;
 // }
 
-// L4_INLINE int l4_is_nil_id(l4_threadid_t id)
+// L4_INLINE int l4_is_nil_id(l4_Threadid id)
 // {
 //   return id.val == 0;
 // }
 
-// L4_INLINE int l4_is_invalid_id(l4_threadid_t id)
+// L4_INLINE int l4_is_invalid_id(l4_Threadid id)
 // {
 //   return id.val == 0xffffffffffffffff;
 // }
@@ -146,22 +146,22 @@ typedef struct {
 // }
 
 
-// L4_INLINE l4_threadid_t 
-// get_taskid(l4_threadid_t t)
+// L4_INLINE l4_Threadid 
+// get_taskid(l4_Threadid t)
 // {
 //   t.id.lthread = 0;
 //   return t; 
 // }
 
 // L4_INLINE int
-// thread_equal(l4_threadid_t t1,l4_threadid_t t2)
+// thread_equal(l4_Threadid t1,l4_Threadid t2)
 // {
 //   return t1.val == t2.val ? 1 : 0;
 // }
 
 // #define TASK_MASK 0xfffffffffffe03ff
 // L4_INLINE int
-// task_equal(l4_threadid_t t1,l4_threadid_t t2)
+// task_equal(l4_Threadid t1,l4_Threadid t2)
 // {
 //   if((t1.val & TASK_MASK) == (t2.val & TASK_MASK)) 
 //     return 1;
@@ -178,19 +178,19 @@ typedef struct {
 // }
 
 // L4_INLINE void
-// l4_make_taskid_from_irq(int irq, l4_threadid_t *t)
+// l4_make_taskid_from_irq(int irq, l4_Threadid *t)
 // {
 //   t->val = irq+1;
 // }
 
 // L4_INLINE int
-// l4_is_irq_id(l4_threadid_t t, unsigned irq_max) 
+// l4_is_irq_id(l4_Threadid t, unsigned irq_max) 
 // {
 //   return (t.val <= irq_max);
 // }
 
 // L4_INLINE int
-// l4_irq_from_id(l4_threadid_t t)
+// l4_irq_from_id(l4_Threadid t)
 // {
 //   return t.val -1;
 // }

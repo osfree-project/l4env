@@ -1,0 +1,14 @@
+# -*- makefile -*-
+
+$(LINES):	$(PROG_LINES) $(KERNEL)
+		./$< $(KERNEL) > $@.new || true
+		mv $@.new $@
+		chmod 644 $@
+		$(call INSTALLFILE_RULE,$@,fiasco_lines)
+
+$(PROG_LINES):	genlines.c
+		$(LINK_MESSAGE)
+		$(VERBOSE)$(CC) -O2 -Wall -o $@ $^
+
+clean-LINES:
+		rm -f $(LINES) $(PROG_LINES)

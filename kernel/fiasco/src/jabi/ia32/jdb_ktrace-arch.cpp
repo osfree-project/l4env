@@ -8,7 +8,7 @@ enum {
   LOG_EVENT_MAX_EVENTS = 16,
 };
 
-struct l4_tracebuffer_status_t
+struct Tracebuffer_status
 {
   Unsigned32 tracebuffer0;
   Unsigned32 size0;
@@ -30,6 +30,7 @@ enum {
   LOG_EVENT_THREAD_EX_REGS = 4,
   LOG_EVENT_TRAP           = 5,
   LOG_EVENT_PF_RES         = 6,
+  LOG_EVENT_SCHED          = 7
 };
 
 IMPLEMENTATION [arch]:

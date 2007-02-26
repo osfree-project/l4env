@@ -7,7 +7,7 @@ IMPLEMENTATION[ia32]:
 
 #include <flux/x86/seg.h>
 
-IMPLEMENT
+IMPLEMENT inline
 void
 Idt::load_idt (pseudo_descriptor *desc)
 {

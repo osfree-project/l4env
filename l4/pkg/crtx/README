@@ -1,0 +1,4 @@
+Startup Scripts and Linker Scripts of L4 binaries.
+
+These scripts are used to initialize basic mechanisms of the L4 environment.
+Don't touch them if you don't really know what you are doing!

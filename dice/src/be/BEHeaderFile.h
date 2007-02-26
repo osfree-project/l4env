@@ -5,12 +5,12 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -37,13 +37,14 @@ class CFEInterface;
 class CFEOperation;
 
 class CBETypedef;
+class CBEType;
 class CBEConstant;
 
 /**	\class CBEHeaderFile
  *	\ingroup backend
  *	\brief the header file class
  */
-class CBEHeaderFile : public CBEFile  
+class CBEHeaderFile : public CBEFile
 {
 DECLARE_DYNAMIC(CBEHeaderFile);
 // Constructor
@@ -60,16 +61,25 @@ protected:
 	CBEHeaderFile(CBEHeaderFile &src);
 
 public:
-	virtual void RemoveTypedef(CBETypedef *pTypedef);
-	virtual void RemoveConstant(CBEConstant *pConstant);
-	virtual CBETypedef* FindTypedef(String sTypeName);
 	virtual void Write(CBEContext *pContext);
+
 	virtual CBETypedef* GetNextTypedef(VectorElement* &pIter);
 	virtual VectorElement* GetFirstTypedef();
 	virtual void AddTypedef(CBETypedef *pTypedef);
+	virtual void RemoveTypedef(CBETypedef *pTypedef);
+	virtual CBETypedef* FindTypedef(String sTypeName);
+
 	virtual CBEConstant* GetNextConstant(VectorElement* &pIter);
 	virtual VectorElement* GetFirstConstant();
 	virtual void AddConstant(CBEConstant *pConstant);
+	virtual void RemoveConstant(CBEConstant *pConstant);
+
+	virtual void AddTaggedType(CBEType *pTaggedType);
+	virtual void RemoveTaggedType(CBEType *pTaggedType);
+	virtual VectorElement* GetFirstTaggedType();
+	virtual CBEType* GetNextTaggedType(VectorElement* &pIter);
+	virtual CBEType *FindTaggedType(String sTypeName);
+
 	virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
 	virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
 	virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
@@ -77,6 +87,7 @@ public:
     virtual String GetIncludeFileName();
 
 protected:
+    virtual void WriteTaggedTypes(CBEContext *pContext);
 	virtual void WriteTypedefs(CBEContext *pContext);
 	virtual void WriteConstants(CBEContext *pContext);
 	virtual void WriteNameSpaces(CBEContext * pContext);
@@ -93,6 +104,10 @@ protected:
 	 *	\brief contains the type definitions of the header file
 	 */
 	Vector m_vTypedefs;
+	/** \var Vector m_vTaggedTypes
+	 *  \brief contains the tagged types of the header files (types without typedef)
+	 */
+	Vector m_vTaggedTypes;
     /** \var String m_sIncludeName
      *  \brief the file name used in include statements
      */

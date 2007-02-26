@@ -10,10 +10,13 @@ banner whoami
 
 symbols
 
-IA64 	'(IA-64) Intel IA-64 processor family'
 IA32 	'(IA-32) Intel IA-32 processor family'
 ARM 	'(ARM)   ARM processor family'
 UX 	'(UX)    User-Mode Fiasco on Linux'
+
+IA32_486 	'(i486)  Intel 80486 ' text
+Choose this if you have an Intel 80486 or equivalent CPU (i486).
+.
 
 IA32_586 	'(i586)  Intel Pentium ' text
 Choose this if you have an Intel Pentium processor (i586).
@@ -68,6 +71,11 @@ Use the assembler IPC shortcut to get even better short
 IPC performance in the common case.
 .
 
+PREEMPTION_IPC 'Preemption IPC' text
+Enable generation of preemption IPC by the kernel whenever a thread's
+timeslice runs out before the thread has voluntarily relinquished it.
+.
+
 SYNC_TSC 'Synchronize KIP time with time-stamp counter'
 
 #SCHED_PIT 'Use PIT for scheduling' text Normally, Fiasco uses the RTC
@@ -82,6 +90,16 @@ SYNC_TSC 'Synchronize KIP time with time-stamp counter'
 #profiling is enabled the PIT is used for generating the profiling
 #interrupts.  
 #.
+
+IO_PROT 'Enable I/O port protection' text
+Enabling this option adds I/O port protection to the kernel. That means
+that every thread starts running at IOPL 0 which means that only the
+kernel has full access to all I/O ports. This includes the right to set
+and clear the interrupt flags (that is using cli and sti). Access rights
+to I/O ports can be mapped like memory. If a task has access to the whole
+I/O port space, its IOPL is raised to 3 allowing the task to use cli and
+sti.
+.
 
 DECEIT_BIT_DISABLES_SWITCH 'Deceit bit disables switch' text
 The L4 reference manual defines a mechanism called 'Clans and Chiefs'.
@@ -100,9 +118,13 @@ DISABLE_AUTO_SWITCH 'Disable automatic switch to receiver' text
 This option is similar to the DECEIT_BIT_DISABLES_SWITCH option except that
 Fiasco assumes the deceit bit is set for every ipc. So Fiasco doesn't switch
 to the receiver if its priority is lower than the priority of the sender.
+EXPERIMENTAL!
 .
 
-APIC_MASK 'APIC measure interrupt'
+APIC_MASK 'APIC measure interrupt' text
+This option should be disabled except you know what you doing. It is used
+for interrupt latency measurements.
+.
 
 INLINE 'Generate inline code' text
 Inlining specifies that it is desirable for the compiler to integrate
@@ -111,9 +133,28 @@ to faster code, so unless you want to debug the kernel you should say 'Y'
 here.
 .
 
-NDEBUG 'Do not compile assertions'
+NDEBUG 'Do not compile assertions' text
+Don't insert assertions into the code. Should be enabled for kernels which
+are used for measurements.
+.
 
-PROFILE 'Compile with profiling support' text 
+FFUN 'Compile with -ffunction-sections' text
+This option helps to find unused functions in the kernel. Each function is
+placed in its own section and the linker drops all sections which are not
+referenced anywhere. It should not be enabled for stable kernels as it could
+lead to sub-optimal code.
+.
+
+SERIAL 'Support for debugging over serial line' text
+This option enables support for input/output over serial interface.
+.
+
+WATCHDOG 'Enable Watchdog support' text
+Enable support for watchdog using the builtin Local APIC and a performance
+counter. The watchdog can be enabled using the -watchdog command line option.
+.
+
+PROFILE 'Compile with profiling support' text
 This option enables support for kernel profiling. This implies that a
 special CPU lock is used, because profiling IRQ must be enabled even in
 cases where a CPU lock is locked. So the cpu_lock-pic module is used s
@@ -122,14 +163,14 @@ PIT scheduling (CONFIG_SCHED_PIT) because the PIT is used for
 generating profiling IRQs.  
 .
 
-POWERSAVE_GETCHAR 'Save power in getchar' text 
-This option uses a processor HALT in getchar to save power and prevent
-some P4 processors from being overheated. This option needs a working
-timer IRQ to wakeup getchar periodically.  
+POWERSAVE_GETCHAR 'Save power in getchar()' text
+This option uses a processor HALT in getchar() to save power and prevent
+some P4 processors from being overheated. This option requires a working
+timer IRQ to wakeup getchar periodically.
 .
 
-SCHED_RTC 'Use RTC for scheduling (timer) IRQ' text 
-'Yes' is the standard for this option. If this option is set FIASCO
+SCHED_RTC 'Use RTC for scheduling (timer) IRQ' text
+'Yes' is the standard for this option. If this option is set Fiasco
 uses the RTC on IRQ 8 for scheduling.  This can be disadvantageous in
 certain circumstances, e.g. VMWare doesn't seem to emulate the RTC
 good enough so that not enough timer interrupts are produced.  The PIT
@@ -141,11 +182,11 @@ case where PIT scheduling does not work is with profiling. If profiling
 is enabled the PIT is used for generating the profiling interrupts and
 the RTC must be used for scheduling.  
 In the case where profiling shall be used within VMWare the SLOW_RTC
-option must be set, so that the timer resolution of FIASCO is reduced
+option must be set, so that the timer resolution of Fiasco is reduced
 to 100Hz.  
 .
 
-SLOW_RTC 'Use RTC with 100 tics per second' text
+SLOW_RTC 'Use RTC with 100 ticks per second' text
 This option should be enabled if you use VMWare and no PIT
 scheduling. The timer resolution is lowered to 100 ticks per second.
 .
@@ -177,16 +218,13 @@ task in a single address space.
 In order to achive this the kernel donates part of its own space,
 splits it in the desired number of parts, and runs tasks in these
 segment using the ia32 hardware segmentation. If a task needs more
-space than that provided by the segment it is returned a full
+space than what is provided by the segment it is returned a full
 address space.
-
-EXPERIMENTAL. Does not yet work with most of the other advanced
-features of the kernel.
 .
 
-KDB 'Compile in the GNU debugger (GDB) stub' text
+KDB 'KDB Compile in the GNU debugger (GDB) stub' text
 With this option enabled it is possible to connect a remote GDB 
-session to the FIASCO kernel.
+session to the Fiasco kernel.
 .
 
 MAINTAINER_MODE 'Do additional checks at build time' text 
@@ -195,21 +233,45 @@ This enables the circular dependency check. Checks for bogus users of
 initcall functions and data.
 .
 
-UNREACHABLE_CODE 'Warn about unreachable code' text
-Say 'Yes' here to enable -Wunreachable-code.
+NO_FRAME_PTR 'Compile without frame pointer' text
+Enabling this option optimizes for speed but makes debugging more difficult.
 .
 
-NO_FRAME_PTR 'Compile without frame pointer'
-JDB 'JDB kernel debugger'
-JDB_LOGGING 'JDB logging options'
-JDB_LOG_CONTEXT_SWITCH 'Log context switches'
-JDB_LOG_THREAD_EX_REGS 'Log exchange registers'
-JDB_LOG_IRQ 'Log interrupts'
-JDB_LOG_TIMER 'Log timer interrupts'
-JDB_LOG_IPC_SHORT_CUT 'Log IPC short cut events'
+STACK_DEPTH 'Measure stack depth of threads' text
+When this option is enabled, each thread control block is marked with magic
+numbers while creation. The function ``show thread lists'' scans the TCB
+for these magic numbers and shows the currently used depth of each thread.
+.
+
+GSTABS 'Compile with gstabs+ debugging information' text
+Enabling this option includes the debugging information using the older
+gstabs+ format into the kernel image. This is necessary to access line
+number information of the kernel from JDB.
+.
+
+JDB 'JDB kernel debugger' text
+The powerful Fiasco kernel debugger.
+.
+
+JDB_LOGGING 'JDB extended logging' text
+There are two classes of logging events: Basic events don't consume any time
+if they are disabled (ipc, ipc result, pagefaults, unmap). Extended logging
+events add an additional overhead of most probably less than 10 cycles if they
+are disabled. These events can be activated/deactivated by the 'O' command in
+jdb.
+
+Should be disabled for kernels which are used for measurements.
+.
+
+UX_CON 'Graphical console (requires SDL library!)' text
+Fiasco/UX can supply a graphical console for the L4 program it is running.
+Enabling this option will build the additional program but needs the SDL
+library including development header files installed.
+.
+
+JDB_MISC 'Miscellaneous JDB modules'
 
 VMEM_ALLOC_TEST 'run test for Vmem_alloc allocator'
-
 
 USE_GCC     'GCC     Use the standard gcc version of your system' 
 USE_GCC_3_X 'GCC3.x  Use CC3 and CXX3 from your Makeconf'
@@ -225,15 +287,23 @@ installed on your system and they are called gcc-3.2
 and g++-3.2
 .
 
+experimental 'Configuration of experimental features' text
+In this menu you can configure experimental features. Enabling these features
+might be less than fully secure and may disrupt the stability of your kernel.
+Use with caution!
+.
 
 ABI_V2 '(L4V2)  L4 Version 2 ABI' 
 ABI_X0 '(L4X0)  L4 Version X0 ABI'
+ABI_V4 '(L4V4)  L4 Version 4 ABI'
 
 abiopts 'Kernel ABI Version'
 
 archopts 'Target Architectures'
 
 debugging 'Kernel Debugging'
+
+experimental 'Experimental Features'
 
 ia32_processor 'Target processor'
 req_p3_gcc_3 'Intel Pentium III option needs GCC 3.x'
@@ -246,31 +316,43 @@ req_athlon_mp_gcc_3 'Athlon MP option needs GCC 3.x'
 req_profile_nopit 'PIT scheduling is incompatible with profiling'
 req_profile_fp    'Profiling needs frame pointers'
 req_small_spaces 'Does not (yet) work with small address spaces'
-req_small_spaces2 'Does not (yet) work with small address spaces'
+exp_arm_kdb 'ARM can only use either JDB or KDB'
+#exp_arm_jdb 'ARM can only use either JDB or KDB'
 
 main 'Main menu'
  
-whoami 	'FIASCO kernel options'
+whoami 	'Fiasco kernel options'
 
 default IA32_586 from y
 default IA32 from y
 default USE_GCC_3_X from n
 default INLINE from y
+default ASSEMBLER_IPC_SHORTCUT from y
+default PREEMPTION_IPC from n
 default POWERSAVE_GETCHAR from y
 default JDB from IA32 or ARM
 default SCHED_RTC from y
 default SLOW_RTC from n
+default GSTABS from y
 default KDB from y
+default SERIAL from y
+default WATCHDOG from y
+default FFUN from n
+default UX_CON from n
 
 unless UX or IA32 suppress ia32_processor
 unless IA32 or UX suppress ASSEMBLER_IPC_SHORTCUT
-unless IA32 or UX suppress SCHED_RTC
 unless IA32 or UX suppress DECEIT_BIT_DISABLES_SWITCH
 unless IA32 or UX suppress DISABLE_AUTO_SWITCH
 unless IA32 suppress APIC_MASK
+unless IA32 suppress IO_PROT
 unless SCHED_RTC suppress SLOW_RTC
+when   UX suppress SERIAL
 when   UX suppress POWERSAVE_GETCHAR
-unless IA32 suppress KDB
+when   UX suppress FFUN
+require UX implies (SCHED_RTC == n)
+require UX implies (JDB == y)
+unless IA32 suppress WATCHDOG
 unless IA32 suppress SCHED_RTC
 
 unless ARM suppress VMEM_ALLOC_TEST
@@ -283,6 +365,8 @@ require IA32_ATHLON_4 implies (USE_GCC_3_X) explanation req_athlon_4_gcc_3
 require IA32_ATHLON_XP implies (USE_GCC_3_X) explanation req_athlon_xp_gcc_3
 require IA32_ATHLON_MP implies (USE_GCC_3_X) explanation req_athlon_mp_gcc_3
 
+require ARM implies (JDB==n) or (KDB==n) or (JDB!=KDB) explanation exp_arm_kdb
+
 unless USE_GCC_3_X suppress  IA32_P3
 unless USE_GCC_3_X suppress  IA32_P4
 unless USE_GCC_3_X suppress  IA32_ATHLON
@@ -290,41 +374,42 @@ unless USE_GCC_3_X suppress  IA32_ATHLON_TBIRD
 unless USE_GCC_3_X suppress  IA32_ATHLON_4
 unless USE_GCC_3_X suppress  IA32_ATHLON_XP
 unless USE_GCC_3_X suppress  IA32_ATHLON_MP
-unless USE_GCC_3_X suppress  UNREACHABLE_CODE
 
-unless IA32 or ARM suppress  JDB
+unless IA32 or ARM or UX suppress  JDB
 unless IA32 suppress SLOW_RTC
 unless IA32 suppress SYNC_TSC
+unless IA32 or UX suppress GSTABS
 
-unless JDB suppress  JDB_LOGGING
-unless JDB_LOGGING suppress  JDB_LOG_CONTEXT_SWITCH
-unless JDB_LOGGING suppress  JDB_LOG_THREAD_EX_REGS
-unless JDB_LOGGING suppress  JDB_LOG_IRQ
-unless JDB_LOGGING suppress  JDB_LOG_TIMER
-unless JDB_LOGGING suppress  JDB_LOG_IPC_SHORT_CUT
+unless SERIAL suppress KDB
+
+unless JDB suppress JDB_LOGGING
+unless JDB suppress JDB_MISC
+when   UX  suppress JDB_MISC
 
 unless IA32 or UX suppress abiopts
 
-unless MAINTAINER_MODE suppress UNREACHABLE_CODE
-
 unless IA32 suppress SMALL_SPACES
-require SMALL_SPACES implies (ASSEMBLER_IPC_SHORTCUT == n) explanation req_small_spaces
-require SMALL_SPACES implies (X2_LIKE_SYS_CALLS == n) explanation          req_small_spaces2
+require SMALL_SPACES implies (X2_LIKE_SYS_CALLS == n) explanation          req_small_spaces
 
 unless IA32 suppress PROFILE 
 require PROFILE implies (SCHED_RTC == y) explanation req_profile_nopit
 require PROFILE implies (NO_FRAME_PTR == n) explanation req_profile_fp
+when ABI_V4 suppress X2_LIKE_SYS_CALLS
+when ABI_V4 suppress ASSEMBLER_IPC_SHORTCUT
 
-derive XARCH from IA32 ? 'ia32' : ( IA64 ? 'ia64' : ( ARM ? 'arm' : ( UX ? 'ux' : '' ))) 
-derive ABI from ABI_V2 ? 'v2' : ( ABI_X0 ? 'x0' : ( IA32 or UX ? '': 'generic'))
-derive IA32_TARGET from ARM ? 'StrongARM' : (IA32_586 ? 'Intel Pentium' : (IA32_686 ? 'Intel Pentium Pro/II' : (IA32_P4 ? 'Intel Pentium 4' : (IA32_P3 ? 'Intel Pentium III' : (IA32_K6 ? 'AMD K6' : (IA32_K6_2 ? 'AMD K6-2' : (IA32_K6_3 ? 'AMD K6-3' : (IA32_ATHLON ? 'AMD Athlon' : (IA32_ATHLON_TBIRD ? 'AMD Athlon Thunderbird' : (IA32_ATHLON_4 ? 'AMD Athlon 4' : (IA32_ATHLON_XP ? 'AMD Athlon XP' : (IA32_ATHLON_MP ? 'AMD Athlon MP' : 'unknown'))))))))))))
+derive XARCH from IA32 ? 'ia32' : ( ARM ? 'arm' : ( UX ? 'ux' : '' ))
+derive ABI from ABI_V2 ? 'v2' : ( ABI_X0 ? 'x0' : ( ABI_V4 ? 'v4' : ( IA32 or UX ? '': 'generic')))
+derive IA32_TARGET from ARM ? 'StrongARM' : (IA32_486 ? 'Intel 80486' : (IA32_586 ? 'Intel Pentium' : (IA32_686 ? 'Intel Pentium Pro/II' : (IA32_P4 ? 'Intel Pentium 4' : (IA32_P3 ? 'Intel Pentium III' : (IA32_K6 ? 'AMD K6' : (IA32_K6_2 ? 'AMD K6-2' : (IA32_K6_3 ? 'AMD K6-3' : (IA32_ATHLON ? 'AMD Athlon' : (IA32_ATHLON_TBIRD ? 'AMD Athlon Thunderbird' : (IA32_ATHLON_4 ? 'AMD Athlon 4' : (IA32_ATHLON_XP ? 'AMD Athlon XP' : (IA32_ATHLON_MP ? 'AMD Athlon MP' : 'unknown')))))))))))))
 
 
 derive SCHED_PIT from (SCHED_RTC ? n : y)
 
+derive PERF_CNT from (WATCHDOG or JDB)
+
+unless UX suppress UX_CON
+
 choices arch # Target platform
 	IA32
-	IA64
 	ARM
 	UX
 	default IA32
@@ -332,9 +417,11 @@ choices arch # Target platform
 choices abiopts
 	ABI_V2
 	ABI_X0
+	ABI_V4
 	default ABI_V2
 
 choices ia32_processor # Target processor
+	IA32_486
 	IA32_586
 	IA32_686
 	IA32_P3
@@ -362,6 +449,7 @@ menu archopts
 	SCHED_RTC {
 	  SLOW_RTC
 	}
+	IO_PROT
 	DECEIT_BIT_DISABLES_SWITCH
 	DISABLE_AUTO_SWITCH
 	APIC_MASK
@@ -371,28 +459,31 @@ menu archopts
 	}
 	SYNC_TSC
 	SMALL_SPACES
+	UX_CON
 
+menu experimental
+        PREEMPTION_IPC
 
 menu debugging
 	INLINE
 	NDEBUG
 	PROFILE
 	NO_FRAME_PTR
+	STACK_DEPTH
+	GSTABS
+	WATCHDOG
+	FFUN
+	SERIAL
 	KDB
 	JDB {
-	  JDB_LOGGING {
-	    JDB_LOG_CONTEXT_SWITCH
-	    JDB_LOG_THREAD_EX_REGS
-	    JDB_LOG_IRQ
-	    JDB_LOG_TIMER
-    	    JDB_LOG_IPC_SHORT_CUT
-	  }
-	}	
+	  JDB_LOGGING
+          JDB_MISC
+	}
 	VMEM_ALLOC_TEST
 	MAINTAINER_MODE
-	UNREACHABLE_CODE
 
 menu main
 	compiler
 	archopts
 	debugging
+	experimental

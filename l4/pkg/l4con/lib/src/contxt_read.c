@@ -23,7 +23,6 @@
 #include "evh.h"
 
 
-/*****************************************************************************/
 /**
  * \brief  Get the keycode from keylist
  *	
@@ -33,7 +32,6 @@
  * in a keylist. getkeycode() reads from this list and returns the keycode.
  * Skip all keycode > 127.
  */
-/*****************************************************************************/ 
 static int 
 _getkeycode(void)
 {
@@ -176,7 +174,6 @@ _search_ihb(contxt_ihb_t *ihb, int *line, int x0, int maxlen, int *idx)
     }
 }
   
-/*****************************************************************************/
 /**
  * \brief  Read a number of character with input history buffer (ihb)
  *
@@ -187,7 +184,6 @@ _search_ihb(contxt_ihb_t *ihb, int *line, int x0, int maxlen, int *idx)
  *
  * Read a number of character and store it in the input history buffer.
  */
-/*****************************************************************************/ 
 static void
 _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
 {
@@ -421,7 +417,6 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
 }
 
 
-/*****************************************************************************/
 /**
  * \brief  Read a number of character without input history buffer (ihb).
  *
@@ -430,7 +425,6 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
  * \retval retstr          ... return string
  *
  */
-/*****************************************************************************/ 
 static void
 _read_noihb(char *retstr, int maxlen)
 {
@@ -474,7 +468,6 @@ _read_noihb(char *retstr, int maxlen)
 }
 
 
-/*****************************************************************************/
 /**
  * \brief   Reads a maxcount of character
  *
@@ -486,7 +479,6 @@ _read_noihb(char *retstr, int maxlen)
  *
  * This function reads a number (maximum maxlen) of character. 
  */
-/*****************************************************************************/
 void
 contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
 { 
@@ -500,7 +492,6 @@ contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
 }
 
 
-/*****************************************************************************/
 /**
  * \brief   Init of input history buffer
  *
@@ -511,7 +502,6 @@ contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
  * This is the init-function of the input history buffer. It allocates the
  * history buffer.
  */
-/*****************************************************************************/
 int
 contxt_init_ihb(contxt_ihb_t *ihb, int lines, int length)
 {  
@@ -539,5 +529,28 @@ contxt_init_ihb(contxt_ihb_t *ihb, int lines, int length)
   memset(ihb->buffer, 0, lines*length);
   
   return 0;
+}
+
+/** Add string to history buffer
+ * \ingroup contxt_if
+ *
+ * \param   ihb            ... input history buffer structure
+ * \param   s              ... string to add
+ */
+void
+contxt_add_ihb(contxt_ihb_t *ihb, const char *s)
+{
+  if (ihb && ihb->buffer)
+    {
+      ihb->last++;
+      if (ihb->last >= ihb->lines)
+	ihb->last = 0;
+      if (ihb->last == ihb->first)
+	ihb->first++;
+      if (ihb->first >= ihb->lines)
+	ihb->first = 0;
+      strncpy(ihb->buffer, s, ihb->length-1);
+      ihb->buffer[ihb->length-1] = '\0';
+    }
 }
 

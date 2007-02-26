@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +12,6 @@ int main (void) {
   struct itimerval t;
   int sig;
 
-  signal (SIGINT, SIG_IGN);
-
   sigemptyset (&blocked);
   sigaddset   (&blocked, SIGALRM);
   sigprocmask (SIG_BLOCK, &blocked, NULL);
@@ -21,9 +20,19 @@ int main (void) {
   t.it_interval.tv_usec = t.it_value.tv_usec = 10000;
   setitimer (ITIMER_REAL, &t, NULL);
 
-  while (sigwait (&blocked, &sig) == 0)
-    if (write (0, "T", 1) == -1)
-      break;
+  for (;;)
+    {  
+      switch (sigwait (&blocked, &sig))
+        {
+          case 0:
+            if (write (0, "T", 1) != -1)
+              continue;
+
+          case -1:
+            if (errno != EINTR)
+              return 1;
+        }
+    }
 
   return 0;
 }

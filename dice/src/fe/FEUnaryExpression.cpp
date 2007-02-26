@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,6 +26,7 @@
  */
 
 #include "fe/FEUnaryExpression.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEUnaryExpression) 
 
@@ -90,11 +91,11 @@ bool CFEUnaryExpression::IsOfType(TYPESPEC_TYPE nType)
       {
       case EXPR_SPLUS:
       case EXPR_SMINUS:
-	  return (nType == TYPE_INTEGER) && GetOperand()->IsOfType(nType);
+	  return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG)) && GetOperand()->IsOfType(nType);
 	  break;
       case EXPR_TILDE:
       case EXPR_EXCLAM:
-	  return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN)
+	  return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN || nType == TYPE_LONG)
 	      && GetOperand()->IsOfType(nType);
 	  break;
       default:
@@ -103,7 +104,7 @@ bool CFEUnaryExpression::IsOfType(TYPESPEC_TYPE nType)
     return GetOperand()->IsOfType(nType);
 }
 
-/** retrieves the operator of this expression 
+/** retrieves the operator of this expression
  *	\return the operator of this expression
  */
 EXPT_OPERATOR CFEUnaryExpression::GetOperator()

@@ -3,7 +3,6 @@
 
 #include <l4/names/libnames.h>
 #include <l4/env/errno.h>
-#include <l4/oskit10_l4env/support.h>
 #include <l4/con/l4contxt.h>
 #include <l4/log/l4log.h>
 #include <l4/sys/kdebug.h>
@@ -14,6 +13,7 @@
 #define LOG_COMMAND_LOG 0
 
 char LOG_tag[9] = "logcon";
+l4_ssize_t l4libc_heapsize = 16*1024;
 
 static char message_buffer[LOG_BUFFERSIZE+5];
 static volatile int contxt_init_done;
@@ -49,7 +49,7 @@ get_message(void)
     {
       if (l4_thread_equal(msg_sender, L4_INVALID_ID))
 	{
-  	  if ((err=l4_i386_ipc_wait(&msg_sender,
+  	  if ((err=l4_ipc_wait(&msg_sender,
 				    &message, &message.d0, &message.d1,
 				    L4_IPC_TIMEOUT(0,0,0,0,0,0),
 				    &message.result))!=0)
@@ -58,7 +58,7 @@ get_message(void)
 	} 
       else 
 	{
-	  err = l4_i386_ipc_reply_and_wait(
+	  err = l4_ipc_reply_and_wait(
 				    msg_sender, NULL, message.d0, 0,
 				    &msg_sender,
 				    &message, &message.d0, &message.d1,
@@ -110,12 +110,6 @@ main(int argc, char**argv)
   int err;
 
   LOG_outstring = my_LOG_outstring;
-
-  if ((err = OSKit_libc_support_init(16*1024)))
-    {
-      printf("Error initializing memory\n");
-      return err;
-    }
 
   l4thread_create(contxt_init_thread, 0, L4THREAD_CREATE_ASYNC);
 

@@ -33,4 +33,37 @@ namespace Page {
 };
 
 IMPLEMENTATION[ia32-ux]:
-//-
+
+#include "regdefs.h"
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::is_translation_error( Mword error )
+{
+  return !(error & PF_ERR_PRESENT);
+}
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::is_usermode_error( Mword error )
+{
+  return (error & PF_ERR_USERMODE);
+}
+
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::is_read_error( Mword error )
+{
+  return !(error & PF_ERR_WRITE);
+}
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::addr_to_msgword0( Address pfa, Mword error )
+{
+  return    (pfa   & ~(PF_ERR_PRESENT | PF_ERR_WRITE))
+          | (error &  (PF_ERR_PRESENT | PF_ERR_WRITE));
+}
+
+IMPLEMENT inline NEEDS["regdefs.h"]
+Mword PF::pc_to_msgword1( Address pc, Mword error )
+{
+  return is_usermode_error(error) ? pc : (Mword)-1;
+}

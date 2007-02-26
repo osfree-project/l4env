@@ -32,8 +32,6 @@
 #ifndef	_FLUX_X86_PAGING_H_
 #define _FLUX_X86_PAGING_H_
 
-#include <flux/page.h>
-
 #define INTEL_OFFMASK	0xfff	/* offset within page */
 #define PDESHIFT	22	/* page descriptor shift */
 #define PDEMASK		0x3ff	/* mask for page descriptor index */
@@ -55,8 +53,8 @@
 /*
  *	Number of ptes/pdes in a page table/directory.
  */
-#define NPTES	(ptoa(1)/sizeof(pt_entry_t))
-#define NPDES	(ptoa(1)/sizeof(pt_entry_t))
+#define NPTES	(ptoa(1)/sizeof(Pt_entry))
+#define NPDES	(ptoa(1)/sizeof(Pt_entry))
 
 /*
  *	Hardware pte bit definitions (to be used directly on the ptes
@@ -97,20 +95,6 @@
 #define	pde_to_pa(p)		((p) & INTEL_PDE_PFN)
 #define	pde_increment_pa(p)	((p) += INTEL_OFFMASK+1)
 
-/*
- *	Superpage-related macros.
- */
-#define SUPERPAGE_SHIFT		PDESHIFT
-#define SUPERPAGE_SIZE		(1 << SUPERPAGE_SHIFT)
-#define SUPERPAGE_MASK		(SUPERPAGE_SIZE - 1)
-
-#define round_superpage(x)	((vm_offset_t)((((vm_offset_t)(x))	\
-				+ SUPERPAGE_MASK) & ~SUPERPAGE_MASK))
-#define trunc_superpage(x)	((vm_offset_t)(((vm_offset_t)(x))	\
-				& ~SUPERPAGE_MASK))
-
-#define	superpage_aligned(x)	((((vm_offset_t)(x)) & SUPERPAGE_MASK) == 0)
-
 
 #ifndef ASSEMBLER
 
@@ -120,11 +104,11 @@
 /*
  *	i386/i486/i860 Page Table Entry
  */
-typedef unsigned int	pt_entry_t;
-#define PT_ENTRY_NULL	((pt_entry_t *) 0)
+typedef unsigned int	Pt_entry;
+#define PT_ENTRY_NULL	((Pt_entry *) 0)
 
-typedef unsigned int	pd_entry_t;
-#define PD_ENTRY_NULL	((pt_entry_t *) 0)
+typedef unsigned int	Pd_entry;
+#define PD_ENTRY_NULL	((Pt_entry *) 0)
 
 /*
  * Read and write the page directory base register (PDBR).

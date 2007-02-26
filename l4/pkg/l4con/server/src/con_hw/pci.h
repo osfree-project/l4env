@@ -1,5 +1,17 @@
-#ifndef __CON_HW_PCI_H__
-#define __CON_HW_PCI_H__
+/*!
+ * \file	pci.h
+ * \brief	PCI stuff
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __PCI_H_
+#define __PCI_H_
 
 #include <l4/pci/libpci.h>
 #include <l4/generic_io/libio.h>
@@ -15,9 +27,10 @@ struct pci_device_id
 };
 
 int  pci_probe(con_accel_t *accel);
-void pci_register(struct pci_device_id *tbl, 
+void pci_register(const struct pci_device_id *tbl, 
 		  int(*probe)(unsigned int bus, unsigned int devfn,
-		              struct pci_device_id *dev, con_accel_t *accel));
+		              const struct pci_device_id *dev, 
+			      con_accel_t *accel));
 
 /* krishna: looks a bit sick, but we want complete L4IO compatibility NOW.
 

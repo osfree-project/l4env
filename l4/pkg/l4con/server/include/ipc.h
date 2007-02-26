@@ -1,9 +1,16 @@
 /* $Id$ */
-
-/*	 con/server/include/ipc.h
+/**
+ * \file	con/server/include/ipc.h
+ * \brief	server ipc macros/functions
  *
- *	 server ipc macros/functions
- */
+ * \date	2001
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * 		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #ifndef _IPC_H
 #define _IPC_H
@@ -45,7 +52,7 @@ thread_exists(l4_threadid_t thread)
   l4_msgdope_t result;
   int error;
 
-  error = l4_i386_ipc_receive(thread, 
+  error = l4_ipc_receive(thread, 
 			      L4_IPC_SHORT_MSG, 
 		  	      &dw0, &dw1, 
 	  		      L4_IPC_TIMEOUT(0, 0, 0, 1, 0, 0), 

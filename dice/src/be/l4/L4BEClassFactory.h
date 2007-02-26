@@ -5,12 +5,12 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -35,11 +35,11 @@
  *	\ingroup backend
  *	\brief the class factory for the back-end classes
  *
- * We use seperate functions for each class, because the alternative is to use 
- * some sort of identifier to find out which class to generate. This involves 
- * writing a big switch statement.  
+ * We use seperate functions for each class, because the alternative is to use
+ * some sort of identifier to find out which class to generate. This involves
+ * writing a big switch statement.
  */
-class CL4BEClassFactory : public CBEClassFactory  
+class CL4BEClassFactory : public CBEClassFactory
 {
 DECLARE_DYNAMIC(CL4BEClassFactory);
 // Constructor
@@ -60,8 +60,6 @@ public:
     virtual CBETestMainFunction* GetNewTestMainFunction();
     virtual CBETestServerFunction* GetNewTestServerFunction();
     virtual CBEHeaderFile* GetNewHeaderFile();
-    virtual CBEReplyRcvFunction* GetNewReplyRcvFunction();
-    virtual CBEReplyWaitFunction* GetNewReplyWaitFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
     virtual CBEMsgBufferType* GetNewMessageBufferType();
@@ -76,7 +74,11 @@ public:
     virtual CBERcvAnyFunction * GetNewRcvAnyFunction();
     virtual CBETypedDeclarator * GetNewTypedDeclarator();
     virtual CBEReplyAnyWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
+	virtual CBEReplyFunction * GetNewReplyFunction();
     virtual CBEClass * GetNewClass();
+    virtual CBECommunication* GetNewCommunication();
+	virtual CBEMarshalFunction* GetNewMarshalFunction();
+	virtual CBEDispatchFunction* GetNewDispatchFunction();
 };
 
 #endif // !__DICE_L4BEClassFactory_H__

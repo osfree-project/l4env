@@ -1,3 +1,17 @@
+/*!
+ * \file   names/server/src/names.c
+ * \brief  names server implementation
+ *
+ * \date   05/27/2003
+ * \author Uwe Dannowski <Uwe.Dannowski@ira.uka.de>
+ * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ *
+ */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
@@ -5,9 +19,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <l4/util/util.h>
-#include <l4/util/string.h>
 #include <l4/util/getopt.h>		/* from libl4util */
 
 #include <l4/log/l4log.h>
@@ -15,14 +29,14 @@
 #include <names.h>
 
 typedef struct {
-  char		name[MAX_NAME_LEN+1];
+  char		name[NAMES_MAX_NAME_LEN+1];
   l4_threadid_t	id;
 } entry_t;
 
 /* logserver name to compare */
-static int use_logserver=0;
+static int use_logserver=1;
 static l4_threadid_t logserver_id;
-static char logserver_name[MAX_NAME_LEN+1];
+static char logserver_name[NAMES_MAX_NAME_LEN+1]="stdlogV05";
 void (*logsrv_outfunc)(const char*);	/* the original function using the
                                            logserver. We can use this after
                                            the logserver registered. */
@@ -32,7 +46,7 @@ void parse_args(int argc, char* argv[]);
 void init_entries(void);
 
 /* this holds the registered names and thread ids */
-static entry_t entries[MAX_ENTRIES];
+static entry_t entries[NAMES_MAX_ENTRIES];
 
 /* runtime debug level */
 static int verbosity = 0;
@@ -60,7 +74,7 @@ int names_query_name(const char* name, l4_threadid_t* id)
 /*!\brief Register a new thread
  *
  * The string in msg->string.rcv_str needs not to be 0-terminated! Its
- * maximum length is MAX_NAME_LEN.
+ * maximum length is NAMES_MAX_NAME_LEN.
  */
 static void
 server_names_register(message_t* msg, const l4_threadid_t *who)
@@ -72,24 +86,24 @@ server_names_register(message_t* msg, const l4_threadid_t *who)
 	   who->id.task, who->id.lthread,
 	   __func__,
 	   msg->id.id.task, msg->id.id.lthread,
-	   MAX_NAME_LEN,
+	   NAMES_MAX_NAME_LEN,
 	   (char*) msg->string.rcv_str);
 
   msg->cmd = 0;
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (!strcmp(entries[i].name, (char*) msg->string.rcv_str))
       return;
   
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (l4_is_invalid_id(entries[i].id))
       break;
   
-  if (i == MAX_ENTRIES)
+  if (i == NAMES_MAX_ENTRIES)
     return;
   
   entries[i].id = msg->id;
-  strncpy(entries[i].name, (char*) msg->string.rcv_str, MAX_NAME_LEN);
-  entries[i].name[MAX_NAME_LEN] = 0;
+  strncpy(entries[i].name, (char*) msg->string.rcv_str, NAMES_MAX_NAME_LEN);
+  entries[i].name[NAMES_MAX_NAME_LEN] = 0;
   
   if(use_logserver && !strcmp(entries[i].name, logserver_name)){
     /* use the logserver now */
@@ -118,16 +132,16 @@ server_names_unregister(message_t* msg, const l4_threadid_t *who)
 	   msg->id.id.task, msg->id.id.lthread,
 	   __func__,
 	   who->id.task, who->id.lthread,
-	   MAX_NAME_LEN,
+	   NAMES_MAX_NAME_LEN,
 	   (char*) msg->string.rcv_str);
 
   msg->cmd = 0;
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (l4_thread_equal(entries[i].id, msg->id) &&
 	(!strcmp(entries[i].name, (char*) msg->string.rcv_str)))
       break;
   
-  if (i == MAX_ENTRIES)
+  if (i == NAMES_MAX_ENTRIES)
     return;
   
   entries[i].id = L4_INVALID_ID;
@@ -147,18 +161,18 @@ server_names_query_name(message_t* msg, const l4_threadid_t *who)
     printf("%d.%d: %s(\"%.*s\")\n",
 	   who->id.task, who->id.lthread,
 	   __func__,
-	   MAX_NAME_LEN, (char*) msg->string.rcv_str);
+	   NAMES_MAX_NAME_LEN, (char*) msg->string.rcv_str);
 
   msg->cmd = 0;
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (!strcmp(entries[i].name, (char*) msg->string.rcv_str))
       break;
 
-  if (i == MAX_ENTRIES)
+  if (i == NAMES_MAX_ENTRIES)
     return;
 
   msg->id = entries[i].id;
-  strncpy((char*) msg->string.rcv_str, entries[i].name, MAX_NAME_LEN);
+  strncpy((char*) msg->string.rcv_str, entries[i].name, NAMES_MAX_NAME_LEN);
   msg->cmd = 1;
 
   return;
@@ -176,15 +190,15 @@ server_names_query_id(message_t* msg, const l4_threadid_t *who)
 	   msg->id.id.task, msg->id.id.lthread);
 
   msg->cmd = 0;
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (l4_thread_equal(entries[i].id, msg->id))
       break;
 
-  if (i == MAX_ENTRIES)
+  if (i == NAMES_MAX_ENTRIES)
     return;
 
   msg->id = entries[i].id;
-  strncpy((char*) msg->string.rcv_str, entries[i].name, MAX_NAME_LEN);
+  strncpy((char*) msg->string.rcv_str, entries[i].name, NAMES_MAX_NAME_LEN);
   msg->cmd = 1;
 
   return;
@@ -209,12 +223,12 @@ server_names_query_nr(message_t* msg, const l4_threadid_t *who)
 	   __func__, i);
 
   msg->cmd = 0;
-  if(i>=MAX_ENTRIES) return;
+  if(i>=NAMES_MAX_ENTRIES) return;
 
   if (l4_is_invalid_id(entries[i].id)) return;
 
   msg->id = entries[i].id;
-  strncpy((char*) msg->string.rcv_str, entries[i].name, MAX_NAME_LEN);
+  strncpy((char*) msg->string.rcv_str, entries[i].name, NAMES_MAX_NAME_LEN);
   msg->cmd = 1;
 
   return;
@@ -232,7 +246,7 @@ server_names_unregister_task(message_t* msg, const l4_threadid_t *who)
 	   msg->id.id.task, msg->id.id.lthread);
 
   msg->cmd = 0;
-  for (i = 0; i < MAX_ENTRIES; i++)
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     if (l4_task_equal(entries[i].id, msg->id))
       {
 	entries[i].id = L4_INVALID_ID;
@@ -247,7 +261,7 @@ server_names_unregister_task(message_t* msg, const l4_threadid_t *who)
 void
 init_entries(void)
 {
-  int i = MAX_ENTRIES;
+  int i = NAMES_MAX_ENTRIES;
   while(i--)
     {
       entries[i].id = L4_INVALID_ID;
@@ -294,9 +308,9 @@ parse_args(int argc, char* argv[])
 	      break;
 	    case 2:
 	      printf("Preparing for logserver named \"%.*s\".\n",
-	             MAX_NAME_LEN-1,optarg);
-	      strncpy(logserver_name, optarg, MAX_NAME_LEN);
-	      logserver_name[MAX_NAME_LEN]=0;
+	             NAMES_MAX_NAME_LEN-1,optarg);
+	      strncpy(logserver_name, optarg, NAMES_MAX_NAME_LEN);
+	      logserver_name[NAMES_MAX_NAME_LEN]=0;
 	      use_logserver = 1;	// potentially use it
 	      break;
 	    default:
@@ -329,7 +343,7 @@ main(int argc, char* argv[])
   l4_msgdope_t	result;
   l4_threadid_t	client;
   
-  unsigned char	buffer[MAX_NAME_LEN+1];
+  unsigned char	buffer[NAMES_MAX_NAME_LEN+1];
   unsigned	error;
 
   /* first: use the own output function, because we do not know who is the
@@ -344,7 +358,7 @@ main(int argc, char* argv[])
 
   /* register ourself, just for fun */
   entries[0].id = l4_myself();
-  strncpy(entries[0].name, "names", MAX_NAME_LEN);
+  strncpy(entries[0].name, "names", NAMES_MAX_NAME_LEN);
 
   message.fpage.fpage = 0;
   
@@ -353,10 +367,10 @@ main(int argc, char* argv[])
   
   message.string.rcv_str = (l4_umword_t) buffer;
   message.string.snd_str = (l4_umword_t) buffer;
-  message.string.rcv_size = MAX_NAME_LEN;
-  message.string.snd_size = MAX_NAME_LEN;
+  message.string.rcv_size = NAMES_MAX_NAME_LEN;
+  message.string.snd_size = NAMES_MAX_NAME_LEN;
 
-  error = l4_i386_ipc_wait(&client, &message,
+  error = l4_ipc_wait(&client, &message,
 			   &message.id.lh.low, &message.id.lh.high,
 			   L4_IPC_NEVER, &result);
   while (4711)
@@ -398,7 +412,7 @@ main(int argc, char* argv[])
 	  break;
 	};
 
-      error = l4_i386_ipc_reply_and_wait(client, &message,
+      error = l4_ipc_reply_and_wait(client, &message,
 					 message.id.lh.low, message.id.lh.high,
 					 &client, &message,
 					 &message.id.lh.low, &message.id.lh.high,

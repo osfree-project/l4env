@@ -326,20 +326,20 @@ l4_kernel_interface(void);
 
 #ifndef CONFIG_L4_CALL_SYSCALLS
 
-# define SYS_CALL_id_nearest            "int $0x31 \n\t"
-# define SYS_CALL_fpage_unmap           "int $0x32 \n\t"
-# define SYS_CALL_thread_switch         "int $0x33 \n\t"
-# define SYS_CALL_thread_schedule       "int $0x34 \n\t"
-# define SYS_CALL_lthread_ex_regs       "int $0x35 \n\t"
-# define SYS_CALL_task_new              "int $0x36 \n\t"
-# define SYS_CALL(name)                 SYS_CALL_ ## name
+# define L4_SYSCALL_id_nearest            "int $0x31 \n\t"
+# define L4_SYSCALL_fpage_unmap           "int $0x32 \n\t"
+# define L4_SYSCALL_thread_switch         "int $0x33 \n\t"
+# define L4_SYSCALL_thread_schedule       "int $0x34 \n\t"
+# define L4_SYSCALL_lthread_ex_regs       "int $0x35 \n\t"
+# define L4_SYSCALL_task_new              "int $0x36 \n\t"
+# define L4_SYSCALL(name)                 L4_SYSCALL_ ## name
 
 #else
 
 # ifdef CONFIG_L4_ABS_SYSCALLS
-#  define SYS_CALL(s) "call __L4_"#s"_direct   \n\t"
+#  define L4_SYSCALL(s) "call __L4_"#s"_direct   \n\t"
 # else
-#  define SYS_CALL(s) "call *__L4_"#s"  \n\t"
+#  define L4_SYSCALL(s) "call *__L4_"#s"  \n\t"
 # endif
 
 #endif
@@ -350,11 +350,7 @@ l4_kernel_interface(void);
 #include "syscalls-l42-profile.h"
 #else
 #  if GCC_VERSION < 295
-#    ifdef __PIC__
-#      include "syscalls-l42-gcc273-pic.h"
-#    else
-#      include "syscalls-l42-gcc273-nopic.h"
-#    endif
+#    error gcc >= 2.95 required
 #  elif GCC_VERSION < 302
 #    ifdef __PIC__
 #      include "syscalls-l42-gcc295-pic.h"
@@ -369,14 +365,6 @@ l4_kernel_interface(void);
 #    endif
 #  endif
 #endif
-
-#undef SYS_CALL_id_nearest
-#undef SYS_CALL_fpage_unmap
-#undef SYS_CALL_thread_switch
-#undef SYS_CALL_thread_schedule
-#undef SYS_CALL_lthread_ex_regs
-#undef SYS_CALL_task_new
-#undef SYS_CALL
 
 L4_INLINE void
 l4_yield(void)

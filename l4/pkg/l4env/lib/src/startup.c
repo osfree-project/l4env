@@ -1,5 +1,4 @@
 /* $Id$ */
-/*****************************************************************************/
 /**
  * \file   l4env/lib/src/startup.c  
  * \brief  Task startup (static version).
@@ -9,97 +8,62 @@
  *         Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
  * L4Env task startup code, basic OSKit 1.0 support.
- * Version for static linking (used by tftp, exec, loader, ...) 
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
+ * Version for static linking (used by tftp, exec, loader, ...) */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
  */
-/*****************************************************************************/
 
 /* standard includes */
 #include <stdio.h>
+#include <stdlib.h>
 
 /* L4 includes */
-#include <l4/sys/consts.h>
-#include <l4/sys/syscalls.h>
-#include <l4/sys/kdebug.h>
-#include <l4/l4rm/l4rm.h>
+#include <l4/crtx/crt0.h>
 #include <l4/env/env.h>
-#include <l4/util/util.h>
-#include <l4/thread/thread.h>
+#include <l4/l4rm/l4rm.h>
 #include <l4/semaphore/semaphore.h>
+#include <l4/sys/consts.h>
+#include <l4/sys/kdebug.h>
+#include <l4/sys/syscalls.h>
+#include <l4/thread/thread.h>
+#include <l4/util/util.h>
+#include <l4/util/mbi_argv.h>
 
-#include <oskit/machine/multiboot.h>
-
-/*****************************************************************************
- *** external symbols
- *****************************************************************************/
-
-/* binary test/data segments */
+/* binary test/data segments from linker script */
 extern char _stext;
 extern char _end;
 
-/* Region mapper stack, these symbols must be definied in __crt0.S */
-extern unsigned long stack_low;
-extern unsigned long stack_high;
-
-/* RMGR trampoline page */
-extern long   _tramppage;
-
-extern int    _argc;
-extern char * _argv[];
-extern void * _mbi;
-
-/* application main */
-extern int main(int argc, char ** argv);
-
-/*****************************************************************************
- *** global data 
- *****************************************************************************/
-
-/* pointer to structure the RMGR gave us */
-static struct multiboot_info * boot_info;
+/* exported symbols */
+l4util_mb_info_t *l4env_multiboot_info;
 
 /* list of reserved VM regions (binary segments, boot modules, ...) */
 #define MAX_FIXED  32
-
 static l4rm_vm_range_t fixed[MAX_FIXED];
 static int num_fixed = 0;
 
-/*****************************************************************************
- *** helpers
- *****************************************************************************/
+extern int main(int argc, char *argv[]);
 
-/*****************************************************************************/
 /**
- * \brief Start main thread
+ * \brief Application worker thread.
+ * Initializes memory and then starts up the application.
  */
-/*****************************************************************************/ 
 static void
-__start_main_with_args(void)
+__startup_main(void)
 {
-  exit(main(_argc, (char**)(&_argv)));
+  /* call constructors, register destructors */
+  crt0_construction();
+
+  /* call application */
+  exit(main(l4util_argc, l4util_argv));
 }
 
-/*****************************************************************************/
 /**
  * \brief Setup fixed VM regions.
  *
  * Reserve fixed program sections we know about (text, data, bss...)
  */
-/*****************************************************************************/ 
 static void
 __setup_fixed(void)
 {
@@ -109,7 +73,7 @@ __setup_fixed(void)
   num_fixed++;
 
   /* RMGR trampoline page */
-  fixed[num_fixed].addr = _tramppage & L4_PAGEMASK;
+  fixed[num_fixed].addr = crt0_tramppage & L4_PAGEMASK;
   fixed[num_fixed].size = L4_PAGESIZE;
   num_fixed++;
 
@@ -119,17 +83,17 @@ __setup_fixed(void)
   num_fixed++;
 
   /* areas where our modules (e.g. files for memfs) live */
-  if (boot_info->flags & MULTIBOOT_MODS)
+  if (l4env_multiboot_info->flags & L4UTIL_MB_MODS)
     {
-      int i;
-      struct multiboot_module * m;
+      l4_umword_t i;
+      l4util_mb_mod_t *m;
 
-      m = (struct multiboot_module *)(boot_info->mods_addr);
-      
-      for (i=0; i < boot_info->mods_count; i++,m++)
+      m = (l4util_mb_mod_t*) (l4env_multiboot_info->mods_addr);
+
+      for (i=0; i<l4env_multiboot_info->mods_count; i++,m++)
 	{
-	  l4_addr_t addr     = m->mod_start & L4_PAGEMASK;
-	  l4_addr_t end_addr = (m->mod_end + L4_PAGESIZE-1) & L4_PAGEMASK;
+	  l4_addr_t addr     = l4_trunc_page(m->mod_start);
+	  l4_addr_t end_addr = l4_round_page(m->mod_end);
 	  l4_addr_t size     = end_addr - addr;
 
 	  if (num_fixed == MAX_FIXED)
@@ -149,28 +113,24 @@ __setup_fixed(void)
     }
 }
 
-/*****************************************************************************
- *** L4Env functions
- *****************************************************************************/
-
-/*****************************************************************************/
 /**
- * \brief Task startup. It is called from __crt0.
+ * \brief Task startup.
  */
-/*****************************************************************************/ 
-void 
-l4env_startup(void);
+void __main(void);
 
 void
-l4env_startup(void)
+__main(void)
 {
   int ret,i;
   l4_uint32_t area;
   l4_umword_t dummy;
   l4_threadid_t preempter,pager;
 
+  /* parse command line and initialize l4util_argc/l4util_argv */
+  l4util_mbi_to_argv(crt0_multiboot_flag, crt0_multiboot_info);
+
   /* set pointer to multiboot info */  
-  boot_info = (struct multiboot_info *)_mbi;
+  l4env_multiboot_info = (l4util_mb_info_t*) crt0_multiboot_info;
 
   /* init some internal L4env stuff */
   preempter = pager = L4_INVALID_ID;
@@ -182,8 +142,7 @@ l4env_startup(void)
   __setup_fixed();
 
   /* init region mapper, enable L4ENV */
-  ret = l4rm_init(1,fixed,num_fixed);
-  if (ret < 0)
+  if ((ret = l4rm_init(1,fixed,num_fixed)) < 0)
     {
       printf("Startup: setup region mapper failed (%d)!\n",ret);
       enter_kdebug("PANIC");
@@ -192,9 +151,8 @@ l4env_startup(void)
   /* reserve VM areas */
   for (i = 0; i < num_fixed; i++)
     {
-      ret = l4rm_direct_area_reserve_region(fixed[i].addr,fixed[i].size,
-					    L4RM_RESERVE_USED,&area);
-      if (ret < 0)
+      if ((ret = l4rm_direct_area_reserve_region(fixed[i].addr,fixed[i].size,
+						 L4RM_RESERVE_USED,&area)) < 0)
 	{
 	  printf("Startup: reserve region 0x%08x-0x%08x failed (%d)!\n",
 		 fixed[i].addr,fixed[i].addr + fixed[i].size,ret);
@@ -207,8 +165,8 @@ l4env_startup(void)
   l4thread_init();
 
   /* setup region mapper tcb */
-  if ((ret = l4thread_setup(l4_myself(),(l4_addr_t)&stack_low,
-			    (l4_addr_t)&stack_high)) < 0)
+  if ((ret = l4thread_setup(l4_myself(),(l4_addr_t)&crt0_stack_low,
+					(l4_addr_t)&crt0_stack_high)) < 0)
     {
       printf("Startup: setup region mapper tcb failed (%d)!\n",ret);
       enter_kdebug("PANIC");
@@ -222,8 +180,8 @@ l4env_startup(void)
     }
 
   /* start main thread */
-  if ((ret = l4thread_create((l4thread_fn_t)__start_main_with_args,NULL,
-		       L4THREAD_CREATE_ASYNC | L4THREAD_CREATE_SETUP)) < 0)
+  if ((ret = l4thread_create((l4thread_fn_t)__startup_main, NULL,
+			   L4THREAD_CREATE_ASYNC | L4THREAD_CREATE_SETUP)) < 0)
     {
       printf("Startup: create main thread failed (%d)!\n",ret);
       enter_kdebug("PANIC");
@@ -233,20 +191,19 @@ l4env_startup(void)
   l4rm_service_loop();
 }
 
-/*****************************************************************************/
 /**
  * \brief  Return pointer to L4 environment page
  *	
  * \return NULL
  *
- * Since this is a old-style L4 task, it has no L4 environment infopage
- * mapped in from the L4 Loader. But nevertheless, it could be started by
- * the compatibility mode of the L4 loader.
- */ 
-/*****************************************************************************/ 
+ * Since this is a sigma0-style L4 task, it has no L4 environment infopage
+ * mapped from the L4 Loader. But nevertheless, it could be started by the
+ * compatibility mode of the L4 loader.
+ */
 l4env_infopage_t *
 l4env_get_infopage(void)
 {
   /* deliver 0 since we have nothing to deliver */
   return NULL;
 }
+

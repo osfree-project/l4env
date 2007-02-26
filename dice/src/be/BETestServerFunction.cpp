@@ -5,7 +5,7 @@
  *	\date	04/04/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -69,13 +69,13 @@ CBETestServerFunction::~CBETestServerFunction()
 bool CBETestServerFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
 
     // find server loop to test
     int nOldType = pContext->SetFunctionType(FUNCTION_SRV_LOOP);
     String sFunctionName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
     m_pFunction = pRoot->FindFunction(sFunctionName);
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
 
     pContext->SetFunctionType(FUNCTION_SRV_LOOP | FUNCTION_TESTFUNCTION);
 	// set target file name
@@ -87,7 +87,10 @@ bool CBETestServerFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContex
 
     // add test functions
     if (!AddTestFunction(pFEInterface, pContext))
+	{
+        VERBOSE("%s failed because test function could not be added\n", __PRETTY_FUNCTION__);
         return false;
+	}
 
     return true;
 }

@@ -4,43 +4,7 @@ IMPLEMENTATION[ia32]:
 #include "idt.h"
 #include "kmem.h"
 #include "processor.h"
-#include "pic.h"
-
-Pic::Status pic_status;
-
-#ifdef CONFIG_APIC_MASK
-static unsigned apic_timer_irq_enabled;
-#endif
-
-
-
-/** If this is a kernel-acknowledged IRQ, disable and acknowledge the
-    IRQ with the PIC.
-    XXX We assume here that we have the kernel lock.
- */
-PUBLIC inline NEEDS ["pic.h"]
-void irq_t::maybe_acknowledge()
-{
-  if (_ack_in_kernel)
-    {
-      unsigned irqnum = id().irq();
-      
-      Pic::disable_locked(irqnum);
-      Pic::acknowledge_locked(irqnum);
-    }
-}
- 
-/** If this is a kernel-acknowledged IRQ, enable the IRQ with the PIC. */
-PUBLIC inline NEEDS ["pic.h"]
-void irq_t::maybe_enable()
-{
-  if (_ack_in_kernel)
-    {
-      unsigned irqnum = id().irq();
-      Pic::enable(irqnum);
-    }
-}
-
+#include "timer.h"
 
 extern "C" void timer_interrupt(void);
 extern "C" void timer_interrupt_slow(void);

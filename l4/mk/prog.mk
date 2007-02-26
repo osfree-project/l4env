@@ -17,14 +17,21 @@ _L4DIR_MK_PROG_MK=y
 
 ROLE = prog.mk
 
+include $(L4DIR)/mk/Makeconf
+
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined.
 INSTALLDIR_BIN		?= $(DROPS_STDDIR)/bin/$(subst -,/,$(SYSTEM))
 INSTALLDIR_BIN_LOCAL	?= $(L4DIR)/bin/$(subst -,/,$(SYSTEM))
+ifeq ($(BID_STRIP_PROGS),y)
 INSTALLFILE_BIN 	?= $(STRIP) --strip-unneeded $(1) -o $(2) && \
 			   chmod 755 $(2)
 INSTALLFILE_BIN_LOCAL 	?= $(STRIP) --strip-unneeded $(1) -o $(2) && \
 			   chmod 755 $(2)
+else
+INSTALLFILE_BIN 	?= $(INSTALL) -m 755 $(1) $(2)
+INSTALLFILE_BIN_LOCAL 	?= $(INSTALL) -m 755 $(1) $(2)
+endif
 
 INSTALLFILE		= $(INSTALLFILE_BIN)
 INSTALLDIR		= $(INSTALLDIR_BIN)
@@ -35,7 +42,6 @@ INSTALLDIR_LOCAL	= $(INSTALLDIR_BIN_LOCAL)
 MODE 			?= l4env
 
 # include all Makeconf.locals, define common rules/variables
-include $(L4DIR)/mk/Makeconf
 include $(L4DIR)/mk/binary.inc
 
 ifneq ($(SYSTEM),) # if we have a system, really build
@@ -49,8 +55,11 @@ LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIV
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
 LDFLAGS	+= $(addprefix -T,$(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
 
+ifeq ($(notdir $(LDSCRIPT)),main_stat.ld)
+LDFLAGS += -Wl,-gc-sections
+endif
+
 include $(L4DIR)/mk/install.inc
-include $(L4DIR)/mk/config.inc
 
 #VPATHEX = $(foreach obj, $(OBJS), $(firstword $(foreach dir, \
 #          . $(VPATH),$(wildcard $(dir)/$(obj)))))
@@ -84,9 +93,9 @@ endif
 DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
 $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)
-	$(LINK_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,ld) $(CC) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
-	$(BUILT_MESSAGE)
+	@$(LINK_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(CC) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
+	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build
 

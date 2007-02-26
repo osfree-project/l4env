@@ -6,31 +6,30 @@ RM_F=		rm -f
 DOXFILES=	mainpage.dox backend.dox frontend.dox
 EXTRA_DIST=	$(DOXFILES)
 SUFFIXES=	.dox
-CLEANFILES=	dox-stamp version.dox
+CLEANFILES=	version.dox
 
 if HAS_DOXYGEN
 manual_HTML=	html/
 
-all-local:	dox-stamp version.dox $(manual_HTML)
+all-local:	version.dox $(manual_HTML)
 
 $(manual_HTML):	$(DOXFILES) Doxyfile
 	$(DOXYGEN)
 
+else
+all-local:
+	@echo *********************************************************
+	@echo I cannot build the reference manual pages for dice, 
+	@echo because doxygen could not be found during configure. 
+	@echo To build the manual run 'doxygen' in the doc/html 
+	@echo directory manually, or install doxygen and run configure 
+	@echo again.
+	@echo *********************************************************
+
 endif
 
 version.dox:
-	echo \\newcommand{\\Version}{${VERSION}} > $@
-
-dox-stamp: $(DOXFILES)
-	@for F in $(DOXFILES); do \
-	  if test ! -f $${F} -a ! -L $${F}; then \
-	    ${LN_S} $(srcdir)/$${F} $${F}; \
-	  fi \
-	done
-	@echo timestamp > dox-stamp 2>/dev/null
+	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
 	rm -rf html/
-	for F in $(DOXFILES); do \
-	  test ! -L $${F} || ${RM_F} $${F}; \
-	done

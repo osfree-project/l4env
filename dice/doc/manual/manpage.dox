@@ -41,6 +41,17 @@ generated with server functions to test the transmitted values.
 There is also a test-suite file generated, which starts the server 
 loop threads and calls the client stubs.
 
+\subsection general General Options
+--help, --version, --verbose
+
+\subsection preprocess Preprocessing Options
+-E, --preprocess, -I, -D, --with-cpp, -nostdinc, --corba, -M, -MM, -MD, -MD
+
+\subsection backend Code Generation Options
+--create-inline, --no-opcodes, --create-skeleton, --template, --server-timeout,
+--filename-prefix, --include-prefix, -f, 
+--back-end, --client, --server, -O, --testsuite, --message-passing
+
 \section REQUIREMENTS REQUIREMENTS
 This compiler uses 'cpp' for preprocessing its input files. Thus 
 gcc (at least version 2.95) should be installed.
@@ -50,18 +61,9 @@ gcc (at least version 2.95) should be installed.
 Most `<b>-W</b>' options have two contrary forms: <b>-W</b>name and
 <b>-Wno-</b>name. Only the non-default forms are shown here.
 
-\subsection general General Options
---help, --version, --verbose
-
-\subsection preprocess Preprocessing Options
--E, --preprocess, -I, -nostdinc, --corba, -M, -MM, -MD, -MD
-
-\subsection backend Code Generation Options
---create-inline, --no-opcodes, --create-skeleton, --template, --server-timeout,
---server-return-code, --filename-prefix, --include-prefix, -f, 
---back-end, --client, --server, -O, --testsuite, --message-passing
-
 <DL>
+
+\subsection general2 General Options
 
 <DT><b>--help, -h</b></DT>
 <DD>Displays the help for dice, which is a short list of its 
@@ -88,17 +90,47 @@ generate output
 <BR>7 - lets only the parser generate output
 </DD>
 
+\subsection preprocess2 Preprocessing Options
+
 <DT><b>-E</b></DT>
-<DD>Stops the compiler after parsing the input file and checking 
-its integrity. The compiler generates and intermediate output in 
-an XML file. The file name is the same as the IDL file's with the 
-idl extension replaced with xml.</DD>
+<DD>Stops the compiler after preprocessing the input file. The 
+output is printed to stdout. 
+</DD>
+
+<DT><b>-EXML</b></DT>
+<DD>Stops the compiler after parsing the input file. The compiler 
+prints the intermediate representation into an XML file. The file 
+name is the same as the IDL file's with the idl extension replaced 
+with xml.</DD>
 
 <DT><b>--preprocess, -P</b> &lt;string&gt;</DT>
-<DD>Hands the string as is to the preprocessor (gcc).</DD>
+<DD>Hands the <i>string</i> as is to the preprocessor (cpp).</DD>
 
-<DT><b>-I, -nostdinc</b></DT>
-<DD>Same as -P-I or -P-nostdinc</DD>
+<DT><b>-Wp,</b>&lt;string&gt;</DT>
+<DD>Hands the <i>string</i> as is to the preprocessor --
+same as -P<i>string</i>.</DD>
+
+<DT><b>-nostdinc</b></DT>
+<DD>Same as -P-nostdinc</DD>
+
+<DT><b>-I</b>&lt;path&gt;</DT>
+<DD>Handed to preprocessor (same as -P-I<i>path</i>). <i>path</i>
+is also used by dice to find imported files.</DD>
+
+<DT><b>-D</b>&lt;symbol&gt;</DT>
+<DD>Handed to preprocessor (same as -P-D<i>symbol</i>).
+<i>symbol</i> may also be used with -fuse-symbols to generate
+target code which respected defined symbols.</DD>
+
+<DT><b>--with-cpp=</b>&lt;cpp&gt;</DT>
+<DD>Defines own preprocessor. The order to determine the used
+preprocessor is this:
+<br>1. --with-cpp=<i>cpp</i> if '<i>cpp</i> --version' executes
+<br>2. environment variable CPP
+<br>3. 'cpp' in PATH if 'cpp --version' executes
+<br>4. CPP set when configuring dice
+<br>5. CPP available when compiling dice
+</DD>
 
 <DT><b>--corba, -C</b></DT>
 <DD>Regards the input file as CORBA IDL file. If not specified the 
@@ -122,6 +154,8 @@ continues with the compilation or generation of intermediate files.</DD>
 <DD>Same as <b>-MD</b> but does skip standard include files, just like
 <b>-MM</b>.</DD>
 
+\subsection backend2 Code Generation Options
+
 <DT><b>--create-inline, -i &lt;mode&gt;</b></DT>
 <DD>Creates the client stubs as inline functions. No client 
 implementation file is generated. Set &lt;mode&gt; to
@@ -142,11 +176,6 @@ generated.</DD>
 skeletons for the server functions. You could use this option the 
 first time you compile an IDL file to generate the function 
 skeletons.</DD>
-
-<DT><b>--server-return-code, -r</b></DT>
-<DD>Generates a return code from the server to the client. This 
-return code contains status information about the server (e.g. 
-internal processing error).</DD>
 
 <DT><b>--filename-prefix, -F</b> &lt;string&gt;</DT>
 <DD>Prefixes each generated file-name with <i>string</i>.</DD>
@@ -202,6 +231,20 @@ For example if the server receives flexpages, the parameter has
 to provide an environment whith a proper receive flexpage set.
 </DD>
 
+<DT><b>-fno-server-loop</b> or <b>-fno-srvloop</b></DT>
+<DD>Does not generate the server loop. Only the dispatch function
+is generated.
+</DD>
+
+<DT><b>-fno-dispatcher</b></DT>
+<DD>Does not generate the dispatcher function. The declaration
+in the header file is generated if the server loop function
+is generated. The implementation has to be provided by the user.
+If the server loop function is also absent, the declaration in
+the header file is missing as well (user might define own 
+function).
+</DD>
+
 <DT><b>-finit-rcvstring</b>[ =&lt;name&gt; ]</DT>
 <DD> Makes the server loop use the user specified function to
 set the buffers for the received indirect strings. The name of
@@ -221,15 +264,109 @@ would be used. These functions are only invoked to allocate
 memory for variable or fixed sized arrays dynamically.
 </DD>
 
+<DT><b>-fforce-env-malloc</b></DT>
+<DD>Force the use of CORBA_Environment's malloc member. This is
+useful for server's without -fserver-parameter option. Otherwise
+CORBA_alloc is used, because it is assumed that the server has
+a default CORBA_Environment, which does not contain a valid malloc
+function. 
+</DD>
+
 <DT><b>-fforce-c-bindings</b></DT>
 <DD>For use of L4 C-bindings. Otherwise dice generates the
 communication code in inline assemlber directly.
 </DD>
 
-<DT><b>-ftrace-server</b></DT>
+<DT><b>-ftrace-server[=&lt;function&gt;]</b></DT>
 <DD>Trace all messages received by the server loop. The
 print-out contains the opcode, and the thread-ID of the
-client.
+client. If &lt;function&gt; is given, it is used instead
+of <i>printf</i> to print the trace message for the
+server. (&lt;function&gt; has to have the same syntax
+as <i>printf</i>.)
+</DD>
+
+<DT><b>-ftrace-client[=&lt;function&gt;]</b></DT>
+<DD>Trace client by printing status messages just before
+an IPC and right after. The message before the IPC contains
+the ID of the server and the data transferred in the registers.
+The message after the IPC contains the result dope and
+IPC error code. If &lt;function&gt; is given, it is used
+instead of <i>printf</i> to print the trace message for
+the server. (&lt;function&gt; has to have the same syntax
+as <i>printf</i>.)
+</DD>
+
+<DT><b>-ftrace-dump-msgbuf[=&lt;function&gt;]</b></DT>
+<DD>Dump the message buffer just before the call IPC,
+right after it, and after each wait IPC. If &lt;function&gt;
+is given, it is used instead of <i>printf</i> to print the
+trace message.
+</DD>
+
+<DT><b>-ftrace-dump-msgbuf-dwords=&lt;number&gt;</b></DT>
+<DD>Restrict the number of dumped dwords to a maximum of
+<i>number</i>. Use this if the message might contain too
+many dwords. <i>number</i> can be any positive integer
+including zero.
+</DD>
+
+<DT><b>-ftrace-function=&lt;function&gt;</b></DT>
+<DD>Specifies the function to use instead of <i>printf</i>
+to trace output all trace messages (client, server, and
+message buffer).
+</DD>
+
+<DT><b>-fzero-msgbuf</b></DT>
+<DD>Fills the memory region occupied by the message buffer
+with zeros for each call and before each wait/reply-and-wait.
+This means that the message buffer is 'clean' when data
+is put into it.
+</DD>
+
+<DT><b>-ftest-no-success-message</b></DT>
+<DD>The testsuite will only print error messages. This is
+useful if you test large arrays and don't want to see 
+success messages scroll by, thus missing the important 
+failure messages.
+</DD>
+
+<DT><b>-fuse-symbols</b></DT>
+<DD>Generated code may include <i>ifdef</i>'s to provide
+code for different compile time conditions. These conditions
+are usually marked by symbols. If you know the symbols when
+using dice and are sure they won't change you can let dice
+evaluate them and generate appropriate code.
+</DD>
+
+<DT><b>-fno-send-canceled-check</b></DT>
+<DD>By default, the client stub will try to resend a
+message if the IPC operation was aborted or canceled
+by another thread. Using this switch, this behaviour is
+turned off.
+</DD>
+
+<DT><b>-fconst-as-define</b></DT>
+<DD>By default, constants defined in the IDL file using a constant
+statement, will be printed as a constant statement in the
+generated C header files. Using this switch the constants
+are printed as <code>#define</code> statements in the generated
+C header files.
+</DD>
+
+<DT><b>-fno-l4dir-include-path</b></DT>
+<DD>By default '$(L4DIR)/include' is added to the include
+paths to be able to include the file 'dice/dice-corba-types.h',
+which is parsed by default to "know" the CORBA Types.
+If you do not wish to add this path to your include paths,
+then use this option. $(L4DIR) is build during 
+compile-time of dice and can be set using the <i>--with-l4dir</i>
+configure switch.
+</DD>
+
+<DT><b>-fkeep-temp-files</b></DT>
+<DD>Keeps the temporarely during preprocessing created files.
+This option should be used to debug Dice only.
 </DD>
 
 <DT><b>--back-end, -B</b> &lt;string&gt;</DT>
@@ -237,9 +374,10 @@ client.
 <BR><i>string</i> starts with a letter specifying the platform,
 kernel interface or language mapping.
 <BR><i>p</i> specifies the platform (IA32, IA64, ARM) (default: IA32)
-<BR><i>i</i> specifies the kernel interface (v2, x0, x0adapt, v4, sock[et]) (default: v2)
+<BR><i>i</i> specifies the kernel interface (v2, x0, x0adapt, v4, 
+sock[et], cdr) (default: v2)
 <BR><i>m</i> specifies the language mapping (C, CPP) (default: C)
-<BR>(For platform and language mapping, only default values are
+<BR>(For language mapping, only the default values is
 currently supported. For kernel interface only v4 is not supported.)
 <BR>The kernel interface denotes the ABI used to communicate with
 other threads. The 'x0adapt' kernel interface is a support option
@@ -248,6 +386,7 @@ to allow V2 applications to run on an X0 kernel. The X0 kernel uses
 can transmit one more double word in a short IPC. The x0adapt interface
 maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
 <BR>example: -Bpia32 -Biv2 -BmC
+<BR>The ARM back-end is currently only supported for the X0 interface.
 </DD>
 
 <DT><b>--client, -c</b></DT>
@@ -278,6 +417,8 @@ speperate tasks. If neither is specified <i>thread</i> is chosen.</DD>
 as well. E.g. is an unmarshal, receive-any and wait-any function
 added for an RPC function at the client's side.</DD>
 
+\subsection warnings Warnings
+
 <DT><b>-Wall</b></DT>
 <DD>Ignore all warnings. Or rather combines all of the following options.
 </DD>
@@ -305,7 +446,7 @@ using CORBA_alloc (see -Wprealloc for details on that).</DD>
 Ronald Aigner <ra3@os.inf.tu-dresden.de>
 
 \section SEE SEE ALSO
-gcc(1) for preprocessing options.
+cpp(1) for preprocessing options.
 
 http://www.omg.org/ for a specification of the CORBA IDL (or OMG 
 IDL). 

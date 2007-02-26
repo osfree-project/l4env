@@ -1,11 +1,16 @@
 /* $Id$ */
-
-/*	con/examples/evdemo/evdemo.c
+/**
+ * \file	con/examples/evdemo/evdemo.c
+ * \brief	event distribution demonstration
  *
- *	demonstration server for con
- *
- *	event distribution demonstration
+ * \date	2001
+ * \author	Christian Helmuth <fm3@os.inf.tu-dresden.de>
  */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 /* L4 includes */
 #include <l4/thread/thread.h>
@@ -19,7 +24,6 @@
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
-#include <l4/oskit10_l4env/support.h>
 
 #define PROGTAG		"_evdemo"
 
@@ -90,9 +94,10 @@ char *released = "released";
  *                                                                            *
  * push event into con event stream                                           *
  ******************************************************************************/
-void stream_io_server_push(sm_request_t *request, 
-			   const stream_io_input_event_t *event, 
-			   sm_exc_t *_ev)
+void 
+stream_io_push_component(CORBA_Object _dice_corba_obj,
+    const stream_io_input_event_t *event,
+    CORBA_Environment *_dice_corba_env)
 {
 	l4input_t *input_ev = (l4input_t*) event;
 
@@ -131,6 +136,9 @@ void stream_io_server_push(sm_request_t *request,
  ******************************************************************************/
 void ev_loop()
 {
+  l4thread_started(NULL);
+  stream_io_server_loop(NULL);
+#if 0
 	int ret;
 	l4_msgdope_t result;
 	sm_request_t request;
@@ -171,6 +179,7 @@ void ev_loop()
 		printf(" Flick IPC error (%#x)", L4_IPC_ERROR(result));
 		enter_kdebug("PANIC");
 	}
+#endif
 }
 
 /******************************************************************************
@@ -180,7 +189,7 @@ void ev_loop()
  ******************************************************************************/
 int main(int argc, char *argv[])
 {
-	sm_exc_t _ev;
+	CORBA_Environment _env = dice_default_environment;
 
 	/* init */
 	LOG_init(PROGTAG);
@@ -195,11 +204,11 @@ int main(int argc, char *argv[])
 		enter_kdebug("panic");
 	}
 
-	if (con_if_openqry(con_l4id, MY_SBUF_SIZE, 0, 0, 
+	if (con_if_openqry_call(&con_l4id, MY_SBUF_SIZE, 0, 0, 
 			   L4THREAD_DEFAULT_PRIO,
-			   (con_threadid_t*) &vc_l4id, 
+			   &vc_l4id, 
 			   CON_VFB,
-			   &_ev))
+			   &_env))
 		enter_kdebug("Ouch, open vc failed");
 	printf("Hey, openqry okay\n");
 
@@ -208,14 +217,14 @@ int main(int argc, char *argv[])
 						  NULL,
 						  L4THREAD_CREATE_SYNC) );
 
-	if (con_vc_smode(vc_l4id, CON_INOUT, (con_threadid_t*) &ev_l4id, &_ev))
+	if (con_vc_smode_call(&vc_l4id, CON_INOUT, &ev_l4id, &_env))
 		enter_kdebug("Ouch, setup vc failed");
 	printf("Cool, smode okay\n");
 
 	/* do something ... */
 	for(;;) {}
 
-	if (con_vc_close(vc_l4id, &_ev))
+	if (con_vc_close_call(&vc_l4id, &_env))
 		enter_kdebug("Ouch, close vc failed?!");
 	printf("Finally closed vc\n");
 

@@ -12,23 +12,23 @@ IMPLEMENTATION:
 
 static __attribute__((format(printf, 3, 4)))
 void
-my_snprintf(char **buf, int *maxlen, const char *format, ...)
+my_snprintf(char *&buf, int &maxlen, const char *format, ...)
 {
   int len;
   va_list list;
 
-  if (*maxlen<=0)
+  if (maxlen<=0)
     return;
 
   va_start(list, format);
-  len = vsnprintf(*buf, *maxlen, format, list);
+  len = vsnprintf(buf, maxlen, format, list);
   va_end(list);
 
-  if (len<0 || len>*maxlen)
-    len = *maxlen;
+  if (len<0 || len>maxlen)
+    len = maxlen;
 
-  *buf    += len;
-  *maxlen -= len;
+  buf    += len;
+  maxlen -= len;
 }
 
 // ipc / irq / shortcut success
@@ -37,15 +37,15 @@ unsigned
 formatter_ipc(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 {
   Tb_entry_ipc *e = static_cast<Tb_entry_ipc*>(tb);
-  
-  my_snprintf(&buf, &maxlen, "%s: ", (e->type() == TBUF_IPC) ? "ipc" : "sc ");
+
+  my_snprintf(buf, maxlen, "%s: ", (e->type() == TBUF_IPC) ? "ipc" : "sc ");
 
   if (   e->snd_desc().is_register_ipc()
       && e->rcv_desc().is_register_ipc()
       && e->dest().is_irq())
     {
       // irq raised
-      my_snprintf(&buf, &maxlen, "irq %02x raised at %x.%02x",
+      my_snprintf(buf, maxlen, "irq %02x raised at %x.%02x",
 				 e->dest().irq(), tid.task(), tid.lthread());
     }
   else
@@ -55,25 +55,25 @@ formatter_ipc(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 
       if (e->snd_desc().has_send())
 	m = (e->rcv_desc().has_receive())
-		 ? (e->rcv_desc().open_wait()) ? "replies->" : "-calls-->"
-		 : "-sends-->";
+		 ? (e->rcv_desc().open_wait()) ? "repl->" : "call->"
+		 : "send->";
       else
 	m = (e->rcv_desc().has_receive())
-		 ? (e->rcv_desc().open_wait()) ? "waits" : "recv from"
+		 ? (e->rcv_desc().open_wait()) ? "waits"  : "recv from"
 	     	 : "(no ipc) ";
 
-      my_snprintf(&buf, &maxlen, "%3x.%02x %s", 
+      my_snprintf(buf, maxlen, "%3x.%02x %s", 
 				  tid.task(), tid.lthread(), m);
 
       // print destination id
       if (!e->rcv_desc().open_wait() || e->snd_desc().has_send())
 	{
 	  if (e->dest().is_nil())
-	    my_snprintf(&buf, &maxlen, " -");
+	    my_snprintf(buf, maxlen, " -");
 	  else if (e->dest().is_irq())
-	    my_snprintf(&buf, &maxlen, " irq %02x", e->dest().irq());
+	    my_snprintf(buf, maxlen, " irq %02x", e->dest().irq());
 	  else
-	    my_snprintf(&buf, &maxlen, " %x.%02x",
+	    my_snprintf(buf, maxlen, " %x.%02x",
 					e->dest().task(), e->dest().lthread());
 	}
 
@@ -81,13 +81,19 @@ formatter_ipc(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
       if (e->snd_desc().has_send())
 	{
 	  if (e->snd_desc().map())
-	    my_snprintf(&buf, &maxlen, e->dword(1) & 1 ? " grant" : " map");
+	    my_snprintf(buf, maxlen, e->dword(1) & 1 ? " grant" : " map");
 
-	  my_snprintf(&buf, &maxlen, " (%08x,%08x)", e->dword(0), e->dword(1));
+#ifdef CONFIG_ABI_X0
+	  my_snprintf(buf, maxlen, " (%08x,%08x,%08x)", 
+	      e->dword(0), e->dword(1), e->dword(2));
+#else
+	  my_snprintf(buf, maxlen, " (%08x,%08x)",
+	      e->dword(0), e->dword(1));
+#endif
 	}
     }
 
-  my_snprintf(&buf, &maxlen, " eip=%08x", e->eip());
+  my_snprintf(buf, maxlen, " @%08x", e->eip());
 
   return maxlen;
 }
@@ -100,7 +106,7 @@ formatter_sc_failed(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   Tb_entry_ipc_sfl *e = static_cast<Tb_entry_ipc_sfl*>(tb);
   const char *m;
   
-  my_snprintf(&buf, &maxlen, "!sc: %3x.%02x ", tid.task(), tid.lthread());
+  my_snprintf(buf, maxlen, "!sc: %3x.%02x ", tid.task(), tid.lthread());
      
   if (e->snd_desc().has_send())
     m = (e->rcv_desc().has_receive())
@@ -109,21 +115,21 @@ formatter_sc_failed(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   else
     m = (e->rcv_desc().open_wait()) ? "waits" : "recv from";
 
-  my_snprintf(&buf, &maxlen, "%s", m);
+  my_snprintf(buf, maxlen, "%s", m);
 
   // print dst id
   if (!(e->rcv_desc().open_wait()) || (e->snd_desc().has_send()))
     {
       if (e->dest().is_nil())
-	my_snprintf(&buf, &maxlen, " -");
+	my_snprintf(buf, maxlen, " -");
       else if (e->dest().is_irq())
-	my_snprintf(&buf, &maxlen, " irq %02x", e->dest().irq());
+	my_snprintf(buf, maxlen, " irq %02x", e->dest().irq());
       else
-      	my_snprintf(&buf, &maxlen, " %x.%02x", 
+      	my_snprintf(buf, maxlen, " %x.%02x", 
 	    e->dest().task(), e->dest().lthread());
     }
 
-  my_snprintf(&buf, &maxlen, " eip=%08x (rsn: ", e->eip());
+  my_snprintf(buf, maxlen, " @%08x (rsn: ", e->eip());
 
   m = "unknown";
 
@@ -135,7 +141,7 @@ formatter_sc_failed(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
     m = "no send";
   else if (e->snd_desc().is_long_ipc())
     m = "long send";
-  else if (!threadid_t(e->dest()).is_valid())
+  else if (!Threadid(e->dest()).is_valid())
     m = "dest invalid";
   else if (e->dest().is_nil())
     m = "dest nil";
@@ -157,7 +163,7 @@ formatter_sc_failed(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 	}
     }
 
-  my_snprintf(&buf, &maxlen, "%s)", m);
+  my_snprintf(buf, maxlen, "%s)", m);
 
   return maxlen;
 }
@@ -178,20 +184,22 @@ formatter_ipc_res(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   else
     m = (e->rcv_desc().open_wait()) ? "wait" : "recv";
 
-  my_snprintf(&buf, &maxlen, "     %3x.%02x %s dope=%08x (%s%s) ",
+  my_snprintf(buf, maxlen, "     %3x.%02x %s dope=%08x (%s%s) ",
 			    tid.task(), tid.lthread(), m, e->result().raw(),
 			    error ? "L4_IPC_" : "", e->result().str_error());
 
   if (e->rcv_desc().has_receive())
     {
-      my_snprintf(&buf, &maxlen, "%x.%02x",
+      if (   !e->rcv_desc().open_wait()
+	  || e->result().error() != L4_msgdope::RETIMEOUT)
+	my_snprintf(buf, maxlen, "%x.%02x",
 				 e->rcv_src().task(), e->rcv_src().lthread());
       if (!error)
 	{
      	  if (e->result().fpage_received())
-	    my_snprintf(&buf, &maxlen, "%s", 
+	    my_snprintf(buf, maxlen, "%s", 
 		e->dword(1) & 1 ? " grant" : " map");
-	  my_snprintf(&buf, &maxlen, 
+	  my_snprintf(buf, maxlen, 
 	      " (%08x,%08x)", e->dword(0), e->dword(1));
 	}
     }
@@ -208,7 +216,7 @@ formatter_pf(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   char eip_buf[16];
 
   sprintf(eip_buf, "%08x", e->eip());
-  my_snprintf(&buf, &maxlen, "pf:  %3x.%02x pfa=%08x eip=%s (%c%c)",
+  my_snprintf(buf, maxlen, "pf:  %3x.%02x pfa=%08x eip=%s (%c%c)",
       tid.task(), tid.lthread(), e->pfa(), e->eip() ? eip_buf : "unknown",
       e->error() & 2 ? (e->error() & 4 ? 'w' : 'W')
 		     : (e->error() & 4 ? 'r' : 'R'),
@@ -226,7 +234,7 @@ formatter_pf_res(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 
   // e->ret contains only an error code
   // e->err contains only up to 3 dwords
-  my_snprintf(&buf, &maxlen, "     %3x.%02x pfa=%08x dope=%02x (%s%s) "
+  my_snprintf(buf, maxlen, "     %3x.%02x pfa=%08x dope=%02x (%s%s) "
 		"err=%04x (%s%s)",
 	      tid.task(), tid.lthread(), e->pfa(),
 	      e->ret().raw(), e->ret().error() ? "L4_IPC_" : "",
@@ -246,9 +254,9 @@ formatter_ke(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   char eip_buf[16];
   char tid_buf[16];
 
-  sprintf(eip_buf, " eip=%08x", e->eip());
+  sprintf(eip_buf, " @%08x", e->eip());
   sprintf(tid_buf, "%3x.%02x: ", tid.task(), tid.lthread());
-  my_snprintf(&buf, &maxlen, "ke:  %s\"%s\"%s",
+  my_snprintf(buf, maxlen, "ke:  %s\"%s\"%s",
       tid.is_invalid() ? "" : tid_buf, e->msg(), e->eip() ? eip_buf : "");
 
   return maxlen;
@@ -263,9 +271,9 @@ formatter_ke_reg(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 
   char eip_buf[16];
   char tid_buf[16];
-  sprintf(eip_buf, " eip=%08x", e->eip());
+  sprintf(eip_buf, " @%08x", e->eip());
   sprintf(tid_buf, "%3x.%02x: ", tid.task(), tid.lthread());
-  my_snprintf(&buf, &maxlen, "kr:  %s\"%s\" %08x %08x %08x%s",
+  my_snprintf(buf, maxlen, "kr:  %s\"%s\" %08x %08x %08x%s",
       tid.is_invalid() ? "" : tid_buf, e->msg(), e->eax(), e->ecx(), e->edx(),
       e->eip() ? eip_buf : "");
 
@@ -279,7 +287,7 @@ formatter_bp(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 {
   Tb_entry_bp *e = static_cast<Tb_entry_bp*>(tb);
 
-  my_snprintf(&buf, &maxlen, "b%c:  %3x.%02x at %08x ",
+  my_snprintf(buf, maxlen, "b%c:  %3x.%02x at %08x ",
       "iwpa"[e->mode() & 3], tid.task(), tid.lthread(), e->eip());
   switch (e->mode() & 3)
     {
@@ -288,18 +296,18 @@ formatter_bp(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
       switch (e->len())
 	{
      	case 1:
-	  my_snprintf(&buf, &maxlen, "[%08x]=%02x", e->addr(), e->value());
+	  my_snprintf(buf, maxlen, "[%08x]=%02x", e->addr(), e->value());
 	  break;
 	case 2:
-	  my_snprintf(&buf, &maxlen, "[%08x]=%04x", e->addr(), e->value());
+	  my_snprintf(buf, maxlen, "[%08x]=%04x", e->addr(), e->value());
 	  break;
 	case 4:
-	  my_snprintf(&buf, &maxlen, "[%08x]=%08x", e->addr(), e->value());
+	  my_snprintf(buf, maxlen, "[%08x]=%08x", e->addr(), e->value());
 	  break;
 	}
       break;
     case 2:
-      my_snprintf(&buf, &maxlen, "[%08x]", e->addr());
+      my_snprintf(buf, maxlen, "[%08x]", e->addr());
       break;
     }
 
@@ -315,11 +323,11 @@ formatter_ctx_switch(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   Tb_entry_ctx_sw *e = static_cast<Tb_entry_ctx_sw*>(tb);
   L4_uid dst = Thread::lookup(e->dest())->id();
 
-  if (!Jdb_symbol::match_eip_to_symbol(e->kernel_eip(), 0, 
+  if (!Jdb_symbol::match_eip_to_symbol(e->kernel_eip(), 0 /*kernel*/,
 				       str, sizeof(str)))
     sprintf(str, "%08x", e->kernel_eip());
 
-  my_snprintf(&buf, &maxlen, "     %3x.%02x %c=> %3x.%02x eip %08x krnl %s",
+  my_snprintf(buf, maxlen, "     %3x.%02x %c=> %3x.%02x eip %08x krnl %s",
       tid.task(), tid.lthread(), (e->kernel_esp() == 0) ? '!' : '=',
       dst.task(), dst.lthread(), e->eip(), str);
 
@@ -333,8 +341,8 @@ formatter_unmap(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 {
   Tb_entry_unmap *e = static_cast<Tb_entry_unmap*>(tb);
 
-  my_snprintf(&buf, &maxlen, 
-      "ump: %3x.%02x: at %08x size %dkB, %s %s, eip=%08x",
+  my_snprintf(buf, maxlen, 
+      "ump: %3x.%02x: at %08x size %dkB, %s %s, @%08x",
       tid.task(), tid.lthread(),
       e->fpage().page(), 1 << (e->fpage().size() - 10),
       e->mask() & 2 ? "flush" : "remap",
@@ -350,12 +358,12 @@ formatter_ex_regs(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
 {
   Tb_entry_ex_regs *e = static_cast<Tb_entry_ex_regs*>(tb);
 
-  my_snprintf(&buf, &maxlen, "exr: %3x.%02x at %08x: %02x ",
+  my_snprintf(buf, maxlen, "exr: %3x.%02x at %08x: %02x ",
       tid.task(), tid.lthread(), e->eip(), e->lthread());
   if (e->new_eip() != 0xffffffff)
-    my_snprintf(&buf, &maxlen, "eip %08x=>%08x ", e->old_eip(), e->new_eip());
+    my_snprintf(buf, maxlen, "eip %08x=>%08x ", e->old_eip(), e->new_eip());
   if (e->new_esp() != 0xffffffff)
-    my_snprintf(&buf, &maxlen, "esp=%08x", e->new_esp());
+    my_snprintf(buf, maxlen, "esp=%08x", e->new_esp());
 
   return maxlen;
 }
@@ -368,14 +376,30 @@ formatter_trap(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
   Tb_entry_trap *e = static_cast<Tb_entry_trap*>(tb);
 
   if (e->trapno() & 0x80)
-    my_snprintf(&buf, &maxlen,
-		"#%02x: %3x.%02x eip=%08x",
+    my_snprintf(buf, maxlen,
+		"#%02x: %3x.%02x @%08x",
 	      	e->trapno() & 0x7f, tid.task(), tid.lthread(), e->eip());
   else
-    my_snprintf(&buf, &maxlen, 
-	        "#%02x: %3x.%02x err=%04x eip=%08x cs=%04x esp=%08x fl=%08x",
+    my_snprintf(buf, maxlen, 
+	        "#%02x: %3x.%02x err=%04x @%08x cs=%04x esp=%08x fl=%08x",
 	        e->trapno(), tid.task(), tid.lthread(), e->errno(), e->eip(),
 	        e->cs(), e->esp(), e->eflags());
+
+  return maxlen;
+}
+
+// trap
+static
+unsigned
+formatter_sched(Tb_entry *tb, L4_uid tid, char *buf, int maxlen)
+{
+  Tb_entry_sched *e = static_cast<Tb_entry_sched*>(tb);
+
+  my_snprintf (buf, maxlen, 
+               "%3x.%02x -- timeslice %s -- id:%3u, prio:%3u, ticks:%3d/%-3u %s",
+               tid.task(), tid.lthread(), e->mode() ? "load" : "save",
+               e->id(), e->prio(), e->ticks_left(), e->timeslice(),
+               e->ticks_left() <= 0 ? "PIPC" : "");
 
   return maxlen;
 }
@@ -401,5 +425,6 @@ init_formatters()
   Jdb_tbuf_output::register_ff(TBUF_EXREGS, formatter_ex_regs);
   Jdb_tbuf_output::register_ff(TBUF_BREAKPOINT, formatter_bp);
   Jdb_tbuf_output::register_ff(TBUF_TRAP, formatter_trap);
+  Jdb_tbuf_output::register_ff(TBUF_SCHED, formatter_sched);
 }
 

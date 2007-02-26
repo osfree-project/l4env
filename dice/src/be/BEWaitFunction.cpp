@@ -5,7 +5,7 @@
  *	\date	01/14/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,6 +30,7 @@
 #include "be/BEFile.h"
 #include "be/BEType.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BEDeclarator.h"
 #include "be/BEAttribute.h"
 #include "be/BEClient.h"
 #include "be/BEComponent.h"
@@ -37,9 +38,10 @@
 #include "be/BEHeaderFile.h"
 #include "be/BEMsgBufferType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 #include "fe/FEOperation.h"
+#include "fe/FETypedDeclarator.h"
 
 IMPLEMENT_DYNAMIC(CBEWaitFunction);
 
@@ -68,7 +70,7 @@ CBEWaitFunction::~CBEWaitFunction()
 void CBEWaitFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // define message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
     // check for temp
     if (HasVariableSizedParameters() || HasArrayParameters())
@@ -88,7 +90,7 @@ void CBEWaitFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCo
  */
 void CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
@@ -111,7 +113,6 @@ void CBEWaitFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEWaitFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-    pFile->PrintIndent("/* clean up */\n");
 }
 
 /**	\brief creates the back-end wait function
@@ -128,18 +129,29 @@ bool CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pC
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
     if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
+	{
+        VERBOSE("%s failed because base function could not be created\n", __PRETTY_FUNCTION__);
         return false;
+	}
 
     // set return type
     CBEType *pReturnType = pContext->GetClassFactory()->GetNewType(TYPE_VOID);
     pReturnType->SetParent(this);
     if (!pReturnType->CreateBackEnd(false, 0, TYPE_VOID, pContext))
-      {
-	  delete pReturnType;
-	  return false;
-      }
+	{
+        VERBOSE("%s failed because return type could not be created\n", __PRETTY_FUNCTION__);
+		delete pReturnType;
+		return false;
+	}
     CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
     delete pOldType;
+
+    // add message buffer
+    if (!AddMessageBuffer(pFEOperation, pContext))
+	{
+        VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
+        return false;
+	}
 
     return true;
 }
@@ -165,8 +177,16 @@ bool CBEWaitFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, CBECon
  */
 bool CBEWaitFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext)
 {
-    if (pParameter->FindAttribute(ATTR_IN))
-        return true;
+    if (IsComponentSide())
+    {
+        if (pParameter->FindAttribute(ATTR_IN))
+            return true;
+    }
+    else
+    {
+        if (pParameter->FindAttribute(ATTR_OUT))
+            return true;
+    }
     return false;
 }
 
@@ -183,22 +203,13 @@ void CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile, CBEContext *pContext)
     pFile->PrintIndent("{\n");
     pFile->IncIndent();
     String sException = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
-    pFile->PrintIndent("CORBA_ exception_set(%s,\n", (const char*)sException);
+    pFile->PrintIndent("CORBA_exception_set(%s,\n", (const char*)sException);
     pFile->IncIndent();
-    pFile->PrintIndent("CORBA_USER_EXCEPTION,\n");
-    pFile->PrintIndent("__CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_WRONG_OPCODE],\n");
+    pFile->PrintIndent("CORBA_SYSTEM_EXCEPTION,\n");
+    pFile->PrintIndent("CORBA_DICE_EXCEPTION_WRONG_OPCODE,\n");
     pFile->PrintIndent("0);\n");
     pFile->DecIndent();
-    pFile->PrintIndent("return");
-    if (GetReturnType())
-    {
-        if (!GetReturnType()->IsVoid())
-        {
-            String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
-            pFile->Print("%s", (const char*)sReturn);
-        }
-    }
-    pFile->Print(";\n");
+	WriteReturn(pFile, pContext);
     pFile->DecIndent();
     pFile->PrintIndent("}\n");
 }
@@ -244,4 +255,82 @@ int CBEWaitFunction::GetSendDirection()
 int CBEWaitFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+}
+
+/** \brief checks whether a given parameter needs an additional reference pointer
+ *  \param pDeclarator the decl to check
+ *  \param pContext the context of the operation
+ *  \param bCall true if the parameter is a call parameter
+ *  \return true if we need a reference
+ *
+ * This implementation checks for the special condition to give an extra reference.
+ * Since the declarator may also belong to an attribute, we have to check this as well.
+ * (The size_is declarator belongs to a parameter, but has to be checked as well).
+ *
+ * Another possibility is, that members of structures or union are checked. To avoid
+ * giving them unwanted references, we search for the parameter.
+ *
+ * An additional reference is also given to the [in, string] parameters.
+ *
+ * (The message buffer parameter needs no additional reference, it is itself a pointer.)
+ *
+ *
+ * Because every parameter is set inside this functions, all parameters should be referenced.
+ * Since OUT parameters are already referenced, we only need to add an asterisk to IN parameters.
+ * This function is only called when iterating over the declarators of a typed declarator. Thus the
+ * direction of a parameter can be found out by checking the attributes of the declarator's parent.
+ * To be sure, whether this parameter needs an additional star, we check the existing number of stars.
+ *
+ * We also need to add an asterisk to the message buffer parameter.
+ */
+bool CBEWaitFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall)
+{
+    CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
+    if (!pParameter)
+        return false;
+    assert(pParameter->IsKindOf(RUNTIME_CLASS(CBETypedDeclarator)));
+    if (pParameter->FindAttribute(ATTR_IN))
+    {
+		CBEType *pType = pParameter->GetType();
+		CBEAttribute *pAttr;
+		if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+			pType = pAttr->GetAttrType();
+		int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - pType->GetArrayDimensionCount();
+        if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
+            return true;
+        if ((pParameter->FindAttribute(ATTR_STRING)) &&
+             pType->IsOfType(TYPE_CHAR) &&
+            (pDeclarator->GetStars() < 2))
+            return true;
+        if ((pParameter->FindAttribute(ATTR_SIZE_IS) ||
+            pParameter->FindAttribute(ATTR_LENGTH_IS) ||
+            pParameter->FindAttribute(ATTR_MAX_IS)) &&
+            (nArrayDimensions <= 0))
+            return true;
+    }
+    return CBEOperationFunction::HasAdditionalReference(pDeclarator, pContext, bCall);
+}
+
+/**	\brief adds a single parameter to this function
+ *	\param pFEParameter the parameter to add
+ *	\param pContext the context of the code generation
+ *	\return true if successful
+ *
+ * This function decides, which parameters to add and which don't. The parameters to unmarshal are
+ * for client-to-component transfer the IN parameters and for component-to-client transfer the OUT
+ * and return parameters. We depend on the information set in m_bComponentSide.
+ */
+bool CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext)
+{
+    if (IsComponentSide())
+    {
+        if (!(pFEParameter->FindAttribute(ATTR_IN)))
+            return true;
+    }
+    else
+    {
+        if (!(pFEParameter->FindAttribute(ATTR_OUT)))
+            return true;
+    }
+    return CBEOperationFunction::AddParameter(pFEParameter, pContext);
 }

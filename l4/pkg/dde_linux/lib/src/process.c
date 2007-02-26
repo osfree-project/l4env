@@ -1,20 +1,26 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/process.c
+ * \file   dde_linux/lib/src/process.c
+ * \brief  Process Level
  *
- * \brief	Process Level
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_proc Process Level Activities
  *
  * This module emulates the process level environment inside the Linux kernel.
  *
  * It provides one task structure (PCB) per worker (L4-)thread. Functions like
- * schedule(), sleep_on() and wake_up() rely on this.
+ * schedule(), sleep_on() and wake_up() rely on this. Kernel threads are also
+ * implemented here.
  *
  * Requirements: (additionally to \ref pg_req)
  *
@@ -28,9 +34,11 @@
 
 #include <l4/dde_linux/dde.h>
 
+/* Linux */
+#include <linux/sched.h>
+
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
 /** thread data key for "current" data */
@@ -42,7 +50,6 @@ static struct task_struct _data = INIT_TASK(_data);
 /** initialization flag */
 static int _initialized = 0;
 
-/*****************************************************************************/
 /** Get pointer to current task structure
  * \ingroup mod_proc
  *
@@ -51,7 +58,6 @@ static int _initialized = 0;
  * \krishna What about "current" derefences from irqs and softirqs? Are they
  * all eliminated?
  */
-/*****************************************************************************/
 struct task_struct * get_current()
 {
   void *p = l4thread_data_get_current(_key);
@@ -59,7 +65,6 @@ struct task_struct * get_current()
   return (struct task_struct *) p;
 }
 
-/*****************************************************************************/
 /** Add caller as new process level worker
  * \ingroup mod_proc
  *
@@ -67,7 +72,6 @@ struct task_struct * get_current()
  *
  * This allocates and initializes a new task_struct for the worker thread.
  */
-/*****************************************************************************/
 int l4dde_process_add_worker()
 {
   int err;
@@ -89,7 +93,6 @@ int l4dde_process_add_worker()
   return 0;
 }
 
-/*****************************************************************************/
 /** Initalize process module
  * \ingroup mod_proc
  *
@@ -99,7 +102,6 @@ int l4dde_process_add_worker()
  * only worker thread. Additional threads can be used after calling
  * l4dde_process_add_worker() in new thread's context.
  */
-/*****************************************************************************/
 int l4dde_process_init()
 {
   int err;
@@ -129,29 +131,30 @@ int l4dde_process_init()
   return 0;
 }
 
-/****************************************************************************/
-
-/** */
+/** Kernel thread startup helper */
 struct kernel_thread_data
 {
-  int	(*fn)(void *);
-  void	*arg;
+  int (*fn)(void *);
+  void *arg;
 };
 
-/** */
+/** Kernel thread startup helper */
 static void __start_kernel_thread(struct kernel_thread_data *data)
 {
   int ret;
 
-  if ( l4dde_process_add_worker() ) Panic("dde: __start_kernel_thread failed");
-  if ( l4thread_started(NULL) ) Panic("dde: l4thread_started() failed");
+  if (l4dde_process_add_worker())
+    Panic("add_worker() failed");
+  if (l4thread_started(NULL))
+    Panic("l4thread_started() failed");
   ret = data->fn(data->arg);
   vfree(data);
 }
 
 
 
-/** */
+/** Create kernel thread
+ * \ingroup mod_proc */
 int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 {
   int err;

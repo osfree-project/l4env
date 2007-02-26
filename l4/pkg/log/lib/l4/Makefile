@@ -5,7 +5,7 @@ TARGET		= liblog.a liblogserver.a liblogserver_capsule.a
 MODE		= oskit10_sigma0
 SYSTEMS		= x86-l4v2 x86-l4x0
 
-SRC_C		= log_init.c log.c logl.c logL.c logI.c lock.c \
+SRC_C		= log_init.c log.c logl.c logL.c lock.c \
 		  doprnt.c log_printf.c
 SRC_C_liblog.a	= loglib.c printf.c sprintf.c
 SRC_C_liblogserver.a = logserver.c printf.c sprintf.c

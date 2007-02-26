@@ -37,8 +37,8 @@ ARFLAGS := rs
 # you either change these two values here, or override it
 # in the Makeconf.<arch>.
 ###########################################################
-CC3	:= gcc-3.2
-CXX3	:= g++-3.2
+CC3	?= gcc-3.2
+CXX3	?= g++-3.2
 
 ifeq ("$(CONFIG_USE_GCC_3_X)","y")
   CC	= $(SYSTEM_TARGET)$(CC3)
@@ -119,8 +119,8 @@ ifdef OPT
   OPT_CFLAGS	+= -O$(OPT)
   OPT_CXXFLAGS	+= -O$(OPT)
 else
-  OPT_CFLAGS	+= -O3
-  OPT_CXXFLAGS	+= -O3
+  OPT_CFLAGS	+= -O2
+  OPT_CXXFLAGS	+= -O2
 endif
 
 ifdef ASM
@@ -133,8 +133,13 @@ endif
 
 SHARED_FLAGS	+= -fno-defer-pop -freg-struct-return -g -Wall
 
+ifeq ($(CONFIG_FFUN),y)
+  SHARED_FLAGS += -ffunction-sections
+  KERNEL_LDFLAGS += -gc-sections
+endif
+
 ifeq ($(CCVER),3)
-  SHARED_FLAGS	+= -W -finline-limit=2000
+  SHARED_FLAGS	+= -W -frename-registers -finline-limit=10000
 ifeq ($(CONFIG_UNREACHABLE_CODE),y)
   SHARED_FLAGS	+= -Wunreachable-code
 endif
@@ -169,10 +174,10 @@ DEPEND_EXTEND_CMD = $(AWKP) '			\
 	split($$0,field,": ");			\
 	sub("^$(*F).o","$*.s $*.E $@",field[1]);\
 	nr=split(field[2],deps) ;		\
-	printf("%s: Makefile\n",	                \
+	printf("%s: Makefile\n",		\
 	  	field[1],field[1]);		\
 	for(i=1;i<=nr;){			\
-	  printf("%s: ",				\
+	  printf("%s: ",			\
 	  	field[1],field[1]);		\
 	  for(j=0; j<100 && i+j<=nr; j++){	\
 	    printf("%s ",deps[i+j]);		\

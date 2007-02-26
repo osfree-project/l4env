@@ -2,7 +2,7 @@
 #define EVENT_QUEUE_SIZE 100
 #define MAX_DOPE_CLIENTS 8
 
-struct dopelib_app_struct {
+struct dopelib_app {
 	dope_event event_queue[EVENT_QUEUE_SIZE];
 	char bindarg_queue[EVENT_QUEUE_SIZE][256];
 	long first;
@@ -11,5 +11,5 @@ struct dopelib_app_struct {
 	CORBA_Environment env;
 };
 
-extern struct dopelib_app_struct *dopelib_apps[MAX_DOPE_CLIENTS];
+extern struct dopelib_app *dopelib_apps[MAX_DOPE_CLIENTS];
 

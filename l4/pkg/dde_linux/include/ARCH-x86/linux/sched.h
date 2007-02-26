@@ -550,7 +550,6 @@ extern struct exec_domain	default_exec_domain;
     keep_capabilities:	0,						\
     rlim:		INIT_RLIMITS,					\
     comm:		"swapper",					\
-    thread:		INIT_THREAD,					\
     sigmask_lock:	SPIN_LOCK_UNLOCKED,				\
     pending:		{ NULL, &tsk.pending.head, {{0}}},		\
     blocked:		{{0}},						\

@@ -6,9 +6,9 @@
  * \ingroup atomic
  *
  * \date    10/20/2000
- * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de> */
+
+/* Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,7 +37,8 @@
 
 EXTERN_C_BEGIN;
 
-/*****************************************************************************/
+/** \defgroup atomic Atomic Instructions */
+
 /**
  * \brief Atomic compare and exchange (64 bit version) 
  * \ingroup atomic
@@ -51,11 +52,10 @@ EXTERN_C_BEGIN;
  * Compare the value in \em dest with \em cmp_val, if equal set \em dest to 
  * \em_val new
  */
-/*****************************************************************************/
 L4_INLINE int
-cmpxchg64(volatile l4_uint64_t * dest, l4_uint64_t cmp_val, l4_uint64_t new_val);
+l4util_cmpxchg64(volatile l4_uint64_t * dest, 
+		 l4_uint64_t cmp_val, l4_uint64_t new_val);
 
-/*****************************************************************************/
 /**
  * \brief Atomic compare and exchange (32 bit version) 
  * \ingroup atomic
@@ -69,11 +69,10 @@ cmpxchg64(volatile l4_uint64_t * dest, l4_uint64_t cmp_val, l4_uint64_t new_val)
  * Compare the value in \em dest with \em cmp_val, if equal set \em dest to 
  * \em_val new
  */
-/*****************************************************************************/
 L4_INLINE int
-cmpxchg32(volatile l4_uint32_t * dest, l4_uint32_t cmp_val, l4_uint32_t new_val);
+l4util_cmpxchg32(volatile l4_uint32_t * dest,
+		 l4_uint32_t cmp_val, l4_uint32_t new_val);
 
-/*****************************************************************************/
 /**
  * \brief Atomic compare and exchange (16 bit version) 
  * \ingroup atomic
@@ -87,11 +86,10 @@ cmpxchg32(volatile l4_uint32_t * dest, l4_uint32_t cmp_val, l4_uint32_t new_val)
  * Compare the value in \em dest with \em cmp_val, if equal set \em dest to 
  * \em_val new
  */
-/*****************************************************************************/
 L4_INLINE int
-cmpxchg16(volatile l4_uint16_t * dest, l4_uint16_t cmp_val, l4_uint16_t new_val);
+l4util_cmpxchg16(volatile l4_uint16_t * dest,
+		 l4_uint16_t cmp_val, l4_uint16_t new_val);
 
-/*****************************************************************************/
 /**
  * \brief Atomic compare and exchange (8 bit version)
  * \ingroup atomic
@@ -105,11 +103,48 @@ cmpxchg16(volatile l4_uint16_t * dest, l4_uint16_t cmp_val, l4_uint16_t new_val)
  * Compare the value in \em dest with \em cmp_val, if equal set \em dest to 
  * \em new_val
  */
-/*****************************************************************************/ 
 L4_INLINE int 
-cmpxchg8(volatile l4_uint8_t * dest, l4_uint8_t cmp_val, l4_uint8_t new_val);
+l4util_cmpxchg8(volatile l4_uint8_t * dest,
+		l4_uint8_t cmp_val, l4_uint8_t new_val);
+
+/**
+ * \brief Atomic exchange (32 bit version)
+ * \ingroup atomic
+ * 
+ * \param  dest          destination operand
+ * \param  val           new value for dest
+ * 
+ * \return old value at destination
+ */
+L4_INLINE l4_uint32_t
+l4util_xchg32(volatile l4_uint32_t * dest, l4_uint32_t val);
+
+/**
+ * \brief Atomic exchange (16 bit version)
+ * \ingroup atomic
+ * 
+ * \param  dest          destination operand
+ * \param  val           new value for dest
+ * 
+ * \return old value at destination
+ */
+L4_INLINE l4_uint16_t
+l4util_xchg16(volatile l4_uint16_t * dest, l4_uint16_t val);
+
+/**
+ * \brief Atomic exchange (8 bit version)
+ * \ingroup atomic
+ * 
+ * \param  dest          destination operand
+ * \param  val           new value for dest
+ * 
+ * \return old value at destination
+ */
+L4_INLINE l4_uint8_t
+l4util_xchg8(volatile l4_uint8_t * dest, l4_uint8_t val);
 
 EXTERN_C_END;
+
 
 /*****************************************************************************
  *** Implementation
@@ -117,7 +152,8 @@ EXTERN_C_END;
 
 /* atomic compare and exchange 64 bit value */
 L4_INLINE int
-cmpxchg64(volatile l4_uint64_t * dest, l4_uint64_t cmp_val, l4_uint64_t new_val)
+l4util_cmpxchg64(volatile l4_uint64_t * dest,
+		 l4_uint64_t cmp_val, l4_uint64_t new_val)
 {
   unsigned char ret;
 
@@ -130,7 +166,7 @@ cmpxchg64(volatile l4_uint64_t * dest, l4_uint64_t cmp_val, l4_uint64_t new_val)
      :
      "A"  (cmp_val),
      "c"  ((unsigned int)(new_val>>32ULL)),
-     "b"  (((l4_low_high_t*)&new_val)->low),
+     "b"  ((unsigned int)new_val),
      "m"  (*dest)    /* 3 mem, destination operand */
      : 
      "memory", "cc"
@@ -141,7 +177,8 @@ cmpxchg64(volatile l4_uint64_t * dest, l4_uint64_t cmp_val, l4_uint64_t new_val)
 
 /* atomic compare and exchange 32 bit value */
 L4_INLINE int
-cmpxchg32(volatile l4_uint32_t * dest, l4_uint32_t cmp_val, l4_uint32_t new_val)
+l4util_cmpxchg32(volatile l4_uint32_t * dest,
+		 l4_uint32_t cmp_val, l4_uint32_t new_val)
 {
   l4_uint32_t tmp;
 
@@ -163,7 +200,8 @@ cmpxchg32(volatile l4_uint32_t * dest, l4_uint32_t cmp_val, l4_uint32_t new_val)
 
 /* atomic compare and exchange 16 bit value */
 L4_INLINE int
-cmpxchg16(volatile l4_uint16_t * dest, l4_uint16_t cmp_val, l4_uint16_t new_val)
+l4util_cmpxchg16(volatile l4_uint16_t * dest,
+		 l4_uint16_t cmp_val, l4_uint16_t new_val)
 {
   l4_uint16_t tmp;
 
@@ -185,7 +223,8 @@ cmpxchg16(volatile l4_uint16_t * dest, l4_uint16_t cmp_val, l4_uint16_t new_val)
 
 /* atomic compare and exchange 8 bit value */
 L4_INLINE int 
-cmpxchg8(volatile l4_uint8_t * dest, l4_uint8_t cmp_val, l4_uint8_t new_val)
+l4util_cmpxchg8(volatile l4_uint8_t * dest,
+		l4_uint8_t cmp_val, l4_uint8_t new_val)
 {
   l4_uint8_t tmp;
 
@@ -203,6 +242,60 @@ cmpxchg8(volatile l4_uint8_t * dest, l4_uint8_t cmp_val, l4_uint8_t new_val)
      );
 
   return tmp == cmp_val;
+}
+
+/* atomic exchange 32 bit value */
+L4_INLINE l4_uint32_t
+l4util_xchg32(volatile l4_uint32_t * dest, l4_uint32_t val)
+{
+  __asm__ __volatile__
+    (
+     "xchg %0, %1 \n\t"
+     :
+     "=r" (val)
+     :
+     "m" (*dest), "0" (val)
+     :
+     "memory"
+    );
+
+  return val;
+}
+
+/* atomic exchange 16 bit value */
+L4_INLINE l4_uint16_t
+l4util_xchg16(volatile l4_uint16_t * dest, l4_uint16_t val)
+{
+  __asm__ __volatile__
+    (
+     "xchg %w0, %1 \n\t"
+     :
+     "=r" (val)
+     :
+     "m" (*dest), "0" (val)
+     :
+     "memory"
+    );
+
+  return val;
+}
+
+/* atomic exchange 8 bit value */
+L4_INLINE l4_uint8_t
+l4util_xchg8(volatile l4_uint8_t * dest, l4_uint8_t val)
+{
+  __asm__ __volatile__
+    (
+     "xchg %b0, %1 \n\t"
+     :
+     "=r" (val)
+     :
+     "m" (*dest), "0" (val)
+     :
+     "memory"
+    );
+
+  return val;
 }
 
 #endif /* !_L4UTIL_ATOMIC_H */

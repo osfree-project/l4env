@@ -1,6 +1,6 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = semaphore
+SRC_DOX_REF = semaphore.cfg
 
 include $(L4DIR)/mk/doc.mk

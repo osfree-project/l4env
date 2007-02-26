@@ -5,7 +5,7 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -68,8 +68,12 @@ DECLARE_DYNAMIC(CBETypedDeclarator);
   public:
     virtual void WriteGetSize(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext);
     virtual void WriteZeroInitDeclaration(CBEFile * pFile, CBEContext * pContext);
+	virtual void WriteInitDeclaration(CBEFile* pFile, String sInitString, CBEContext* pContext);
+	virtual void WriteSetZero(CBEFile* pFile, CBEContext* pContext);
     virtual CBEType *ReplaceType(CBEType * pNewType);
+	virtual void WriteCleanup(CBEFile* pFile, CBEContext* pContext);
     virtual void WriteIndirectInitialization(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIndirect(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteGlobalTestVariable(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteDeclaration(CBEFile * pFile, CBEContext * pContext);

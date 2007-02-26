@@ -9,7 +9,7 @@ int foo(char *s);
 
 #line 6 "comment_in_string.cpp"
 
-irq_init(unsigned char master_base, unsigned char slave_base)
+void irq_init(unsigned char master_base, unsigned char slave_base)
 {
   if (!(foo(" -vmware"))
     {
@@ -19,4 +19,12 @@ irq_init(unsigned char master_base, unsigned char slave_base)
     {
       foo("using normal pic mode \n");
     }
+}
+
+#line 18 "comment_in_string.cpp"
+
+void bar()
+{
+  foo ("if (0) {");
+  foo ("} // if(0)");
 }

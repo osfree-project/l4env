@@ -1,6 +1,6 @@
 /** For small address spaces this class assumes that the pointers in
  *  the long message refer to addresses in user space. Therefore they
- *  have to be accessed via GS segment.
+ *  have to be accessed via FS segment.
  */
 IMPLEMENTATION[ia32-smas]:
 
@@ -13,7 +13,7 @@ Long_msg::msg_word (void *_msg, unsigned index) const
 
   register Mword ret;
 
-  asm volatile ("movl %%gs:(%1), %%eax"
+  asm volatile ("movl %%fs:(%1), %%eax"
                 : "=a" (ret)  
                 : "r" ((Mword *) _msg + 3 + index * sizeof (Mword)));
   return ret;

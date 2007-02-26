@@ -7,16 +7,16 @@ class Filter_console : public Console
 {
 public:
 
-  Filter_console( Console *o );
+  Filter_console( Console *o, int to=8000 );
   ~Filter_console();
 
   int write( char const *str, size_t len );
   int getchar( bool blocking = true );
-
   int char_avail() const;
 
 private:
   Console *const _o;
+  int csi_timeout;
   enum {
     NORMAL,
     UNKNOWN_ESC,
@@ -25,9 +25,7 @@ private:
   unsigned pos;
   char ibuf[32];
   unsigned arg;
-  int  args[4];
-
-
+  int args[4];
 };
 
 
@@ -57,8 +55,8 @@ int Filter_console::char_avail() const
 }
 
 IMPLEMENT 
-Filter_console::Filter_console( Console *o )
-  : _o(o), state(NORMAL), pos(0), arg(0)
+Filter_console::Filter_console( Console *o, int to )
+  : _o(o), csi_timeout(to), state(NORMAL), pos(0), arg(0)
 {}
 
 IMPLEMENT
@@ -112,7 +110,8 @@ PRIVATE inline
 int Filter_console::getchar_timeout( unsigned timeout )
 {
   int c;
-  while((c= _o->getchar(false)) == -1 && timeout--);
+  while((c= _o->getchar(false)) == -1 && timeout--)
+    ;
   return c;
 }
 
@@ -120,10 +119,6 @@ int Filter_console::getchar_timeout( unsigned timeout )
 IMPLEMENT
 int Filter_console::getchar( bool b )
 {
-  enum {
-    CSI_TIMEOUT = 8000,
-  };
-
   unsigned loop_count = 100;
   int ch;
     
@@ -158,7 +153,7 @@ int Filter_console::getchar( bool b )
       if(ch==27)
 	{
 	  ibuf[pos++] = 27;
-	  int nc = getchar_timeout(CSI_TIMEOUT);
+	  int nc = getchar_timeout(csi_timeout);
 	  if(nc==-1)
 	    {
 	      pos = 0;
@@ -265,4 +260,12 @@ int Filter_console::getchar( bool b )
     return -1;
 
 }
+
+
+PUBLIC
+char const *Filter_console::next_attribute( bool restart = false ) const
+{
+  return _o->next_attribute(restart);
+}
+
 

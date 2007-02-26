@@ -11,7 +11,7 @@
 
 /* L4/DROPS includes */
 #include <l4/util/atomic.h>
-#include <l4/util/macros.h>
+#include <l4/log/l4log.h>
 #include <l4/env/errno.h>
 #include <l4/semaphore/semaphore.h>
 
@@ -67,20 +67,22 @@ blkclient_set_request_status(l4_uint32_t req_handle,
   /* check request handle */
   if ((req_handle < 0) || (req_handle >= BLKCLIENT_MAX_REQUESTS))
     {
-      Error("invalid request handle (%d)\n",req_handle);
+      LOG_Error("invalid request handle (%d)", req_handle);
       return;
     }
 
   if (l4blk_requests[req_handle] == NULL)
     {
-      Error("No client request (handle %d, status %d, error %d)\n",
-	    req_handle,status,error);
+      LOG_Error("no client request (handle %d, status %d, error %d)",
+	    req_handle, status, error);
       return;
     }
 
-  if ((status != L4BLK_DONE) && (status != L4BLK_ERROR) && (status != L4BLK_SKIPPED))
+  if ((status != L4BLK_DONE) && 
+      (status != L4BLK_ERROR) && 
+      (status != L4BLK_SKIPPED))
     {
-      Error("invalid request status (%u)\n",status);
+      LOG_Error("invalid request status (%u)", status);
       l4blk_requests[req_handle]->status = L4BLK_ERROR;
       l4blk_requests[req_handle]->error = -L4_EINVAL;
       return;
@@ -90,13 +92,14 @@ blkclient_set_request_status(l4_uint32_t req_handle,
   l4blk_requests[req_handle]->status = status;
   l4blk_requests[req_handle]->error = error; 
 
+  /* call done-callback */
+  if (l4blk_requests[req_handle]->done != NULL)
+    l4blk_requests[req_handle]->done(l4blk_requests[req_handle], 
+                                     status, error);
+
   /* check if someone is waiting for the request */
   if (l4blk_requests[req_handle]->wait != NULL)
     l4semaphore_up(l4blk_requests[req_handle]->wait);
-
-  /* call done-callback */
-  if (l4blk_requests[req_handle]->done != NULL)
-    l4blk_requests[req_handle]->done(l4blk_requests[req_handle],status,error);
 
   /* remove request from descriptor list */
   l4blk_requests[req_handle] = NULL;
@@ -124,8 +127,8 @@ __find_descriptor(l4blk_request_t * request)
 
   do
     {
-      if (cmpxchg32((l4_uint32_t *)&l4blk_requests[i],
-		    (l4_uint32_t)NULL,(l4_uint32_t)request))
+      if (l4util_cmpxchg32((l4_uint32_t *)&l4blk_requests[i],
+			   (l4_uint32_t)NULL, (l4_uint32_t)request))
 	{
 	  /* found */
 	  found = 1;
@@ -146,44 +149,56 @@ __find_descriptor(l4blk_request_t * request)
 
 /*****************************************************************************/
 /**
- * \brief Send request list to driver
+ * \brief Send request to driver
  * 
- * \param  driver        Driver handle
- * \param  requests      Request list
- * \param  num           Number of requests
+ * \param  request       Request list
  *	
- * \return 0 on success (sent requests to driver), error code otherwise
+ * \return 0 on success (sent request to driver), error code otherwise
  *         - -#L4_EINVAL  invalid driver handle 
  *         - -#L4_EIPC    IPC error calling driver
  */
 /*****************************************************************************/ 
 static int
-__send_requests(l4blk_driver_t driver, 
-		l4blk_cmd_request_list_t requests,
-		int num)
+__send_request(l4blk_request_t * request)
 {
   blkclient_driver_t * drv;
-  sm_exc_t exc;
-  int ret;
-
-  if (num == 0)
-    /* nothing to do */
-    return 0;
+  CORBA_Environment _env = dice_default_environment;
+  int ret, sg_size;
 
   /* get driver descriptor */
-  drv = blkclient_get_driver(driver);
+  drv = blkclient_get_driver(request->driver);
   if (drv == NULL)
     {
-      Error("Invalid driver handle (%d)\n",driver);
+      LOG_Error("invalid driver handle (%d)", request->driver);
       return -L4_EINVAL;
     }
   
-  /* send request list to driver */
-  ret = l4blk_cmd_put_requests(drv->cmd_id,drv->handle,requests,num,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  /* some sanity checks */
+  if ((request->sg_num == 0) || (request->sg_list == NULL))
     {
-      Error("Error sending requests to driver (ret %d, exc %d)\n",
-	    ret,exc._type);
+      LOG_Error("no target buffer specified!");
+      return -L4_EINVAL;
+    }
+
+  if ((request->sg_type != L4BLK_SG_PHYS) && (request->sg_type != L4BLK_SG_DS))
+    {
+      LOG_Error("invalid scatter-gather list type!");
+      return -L4_EINVAL;
+    }
+
+  /* send request to driver */
+  if (request->sg_type == L4BLK_SG_DS)
+    sg_size = request->sg_num * sizeof(l4blk_sg_ds_elem_t);
+  else
+    sg_size = request->sg_num * sizeof(l4blk_sg_phys_elem_t);
+
+  ret = l4blk_cmd_put_request_call(&drv->cmd_id, drv->handle, &request->request,
+                                   request->sg_list, sg_size, request->sg_num, 
+                                   request->sg_type, &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
+    {
+      LOG_Error("error sending request to driver (ret %d, exc %d)",
+                ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -192,31 +207,6 @@ __send_requests(l4blk_driver_t driver,
     
   /* done */
   return 0;
-}
-
-/*****************************************************************************/
-/**
- * \brief Cleanup request list.
- * 
- * \param  requests      Request list
- * \param  num           number of requests
- *
- * Error handling: remove all requests in the request list from the 
- * descriptor list.
- */
-/*****************************************************************************/ 
-static void
-__cleanup_request_list(l4blk_cmd_request_list_t requests, 
-		       int num)
-{
-  int i;
-
-  for (i = 0; i < num; i++)
-    {
-      if ((requests[i].req_handle >= 0) && 
-	  (requests[i].req_handle < BLKCLIENT_MAX_REQUESTS))
-	l4blk_requests[requests[i].req_handle] = NULL;
-    }
 }
 
 /*****************************************************************************
@@ -253,7 +243,7 @@ l4blk_create_stream(l4blk_driver_t driver,
 {
   blkclient_driver_t * drv;
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   
   /* return invalid stream id on error */
   *stream = L4BLK_INVALID_STREAM;
@@ -262,17 +252,17 @@ l4blk_create_stream(l4blk_driver_t driver,
   drv = blkclient_get_driver(driver);
   if (drv == NULL)
     {
-      Error("Invalid driver handle (%d)\n",driver);
+      LOG_Error("invalid driver handle (%d)", driver);
       return -L4_EINVAL;
     }
 
   /* call driver to create new stream */
-  ret = l4blk_cmd_create_stream(drv->cmd_id,drv->handle,bandwidth,blk_size,
-				q,meta_int,(l4blk_cmd_stream_handle_t *)stream,
-				&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4blk_cmd_create_stream_call(&drv->cmd_id, drv->handle, bandwidth,
+                                     blk_size, q, meta_int, stream, &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("Create stream failed (ret %d, exc %d)\n",ret,exc._type);
+      LOG_Error("create stream failed (ret %d, exc %d)\n", 
+                ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -301,21 +291,22 @@ l4blk_close_stream(l4blk_driver_t driver,
 {
   blkclient_driver_t * drv;
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* get driver descriptor */
   drv = blkclient_get_driver(driver);
   if (drv == NULL)
     {
-      Error("Invalid driver handle (%d)\n",driver);
+      LOG_Error("invalid driver handle (%d)", driver);
       return -L4_EINVAL;
     }
 
   /* call driver to close stream */
-  ret = l4blk_cmd_close_stream(drv->cmd_id,drv->handle,stream,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4blk_cmd_close_stream_call(&drv->cmd_id, drv->handle, stream, &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("Close stream failed (ret %d, exc %d)\n",ret,exc._type);
+      LOG_Error("close stream failed (ret %d, exc %d)",
+                ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -346,22 +337,23 @@ int l4blk_start_stream(l4blk_driver_t driver,
 {
   blkclient_driver_t * drv;
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* get driver descriptor */
   drv = blkclient_get_driver(driver);
   if (drv == NULL)
     {
-      Error("Invalid driver handle (%d)\n",driver);
+      LOG_Error("invalid driver handle (%d)", driver);
       return -L4_EINVAL;
     }
 
   /* call driver to start stream */
-  ret = l4blk_cmd_start_stream(drv->cmd_id,drv->handle,stream,time,request_no,
-			     &exc);
-  if ((ret < 0) || (exc._type != exc_l4_no_exception))
+  ret = l4blk_cmd_start_stream_call(&drv->cmd_id, drv->handle, stream,
+                                    time, request_no, &_env);
+  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("Set start time failed (ret %d, exc %d)\n",ret,exc._type);
+      LOG_Error("set start time failed (ret %d, exc %d)",
+                ret, _env.major);
       if (ret < 0)
 	return ret;
       else
@@ -392,36 +384,19 @@ int l4blk_start_stream(l4blk_driver_t driver,
 int
 l4blk_do_request(l4blk_request_t * request)
 {
-  int r,i,ret;
-  l4blk_cmd_request_list_t req_list;
-  l4blk_cmd_request_t * req;
+  int r, ret;
   l4semaphore_t sem = L4SEMAPHORE_LOCKED;
 
   /* find request descriptor */
   r = __find_descriptor(request);
   if (r == -1)
     {
-      Error("No request descriptor available!\n");
+      LOG_Error("no request descriptor available!");
       return -L4_EBUSY;
     }
 
-  /* setup RPC request list */
-  req = &req_list[0];
-  req->req_handle = r;
-  req->cmd = request->cmd;
-  req->device = request->device;
-  req->block = request->block;
-  req->count = request->count;
-  req->buf = request->buf;
-  req->stream = request->stream;
-  req->request_no = request->req_no;
-  req->flags = request->flags;
-
-  /* replace streams not yet supported */
-  for (i = 0; i < BLKCLIENT_MAX_REPLACE; i++)
-    req->replaces[i] = L4BLK_INVALID_STREAM;
-
-  /* set request status / return value */
+  /* setup request */
+  request->request.req_handle = r;
   request->status = L4BLK_UNPROCESSED;
   request->error = 0;
 
@@ -430,7 +405,7 @@ l4blk_do_request(l4blk_request_t * request)
   request->done = NULL;
 
   /* send request to the driver */
-  ret = __send_requests(request->driver,req_list,1);
+  ret = __send_request(request);
   if (ret)
     {
       /* error sending request */
@@ -441,15 +416,13 @@ l4blk_do_request(l4blk_request_t * request)
   /* wait for request to be finished */
   l4semaphore_down(&sem);
 
-  /* release request descriptor */
-  l4blk_requests[r] = NULL;
-
   /* check request status */
   switch (request->status)
     {
     case L4BLK_UNPROCESSED:
       /* this should never happen */
-      Error("got processed notification but request status is UNPROCESSED!\n");
+      LOG_Error("got processed notification but request status " \
+                "is UNPROCESSED!");
       return -L4_EINVAL;
 
     case L4BLK_DONE:
@@ -466,105 +439,50 @@ l4blk_do_request(l4blk_request_t * request)
 
     default:
       /* ??? */
-      Error("invalid request status %d\n",request->status);
+      LOG_Error("invalid request status %d", request->status);
       return -L4_EINVAL;
     }
 }
 
 /*****************************************************************************/
 /**
- * \brief Send request list to driver.
+ * \brief Send request to driver.
  * 
- * \param  requests      Request list
- * \param  num           Number of requests in request list
+ * \param  request       Request
  *	
- * \return 0 on succcess (sent requests to the driver), error code otherwise:
+ * \return 0 on succcess (sent request to the driver), error code otherwise:
  *         - -#L4_EINVAL  invalid request structure
  */
 /*****************************************************************************/ 
 int
-l4blk_put_requests(l4blk_request_t requests[], 
-		   int num)
+l4blk_put_request(l4blk_request_t * request) 
 {
-  int i,j,k,r;
-  int ret,error;
-  l4blk_driver_t cur_drv;
-  l4blk_request_t * request;
-  l4blk_cmd_request_list_t req_list;
-  l4blk_cmd_request_t * req;
+  int r, ret;
 
-  if (num == 0)
-    /* nothing to do */
-    return 0;
-
-  /* create request list */
-  j = 0;
-  error = 0;
-  cur_drv = requests[0].driver;
-  for (i = 0; i < num; i++)
+  /* find request descriptor */
+  r = __find_descriptor(request);
+  if (r == -1)
     {
-      request = &requests[i];
-      if ((j >= BLKCLIENT_MAX_RPC_REQUESTS) || (cur_drv != request->driver))
-	{
-	  /* send request list to driver */
-	  ret = __send_requests(cur_drv,req_list,j);
-	  if (ret)
-	    {
-	      /* error sending requests */
-	      error = ret;
-	      __cleanup_request_list(req_list,j);
-	    }
-	  j = 0;
-	  cur_drv = request->driver;
-	}
-
-      /* find request descriptor */
-      r = __find_descriptor(request);
-      if (r == -1)
-	{
-	  Error("No request descriptor available!\n");
-	  error = -L4_EBUSY;
-	  break;
-	}
-      
-      /* insert request into request list */
-      req = &req_list[j];
-      req->req_handle = r;
-      req->cmd = request->cmd;
-      req->device = request->device;
-      req->block = request->block;
-      req->count = request->count;
-      req->buf = request->buf;
-      req->stream = request->stream;
-      req->request_no = request->req_no;
-      req->flags = request->flags;
-      
-      /* replace streams not yet supported */
-      for (k = 0; k < BLKCLIENT_MAX_REPLACE; k++)
-	req->replaces[k] = L4BLK_INVALID_STREAM;
-
-      /* set request status / return value */
-      request->status = L4BLK_UNPROCESSED;
-      request->error = 0;
-
-      /* next request */
-      j++;
+      LOG_Error("no request descriptor available!");
+      return -L4_EBUSY;
     }
       
-  if (j > 0)
+  /* setup request */
+  request->request.req_handle = r;
+  request->status = L4BLK_UNPROCESSED;
+  request->error = 0;
+
+  /* send request to driver */
+  ret = __send_request(request);
+  if (ret)
     {
-      /* send remaining requests to driver */
-      ret = __send_requests(cur_drv,req_list,j);
-      if (ret)
-	{
-	  /* error sending requests */
-	  error = ret;
-	  __cleanup_request_list(req_list,j);
-	}
+      /* error sending request */
+      l4blk_requests[r] = NULL;
+      return ret;
     }
   
   /* return immediately  */
-  return error;
+  return 0;
 }
 
 /*****************************************************************************/

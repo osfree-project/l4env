@@ -1,0 +1,7 @@
+Root Memory Pager.
+
+Sigma0 is the root pager which owns all physical memory at system startup.
+All further mappings start at Sigma0. This implementation can be used
+together with Fiasco (the L4 implementation of the Technische Universität
+Dresden) and with the original L4 implementation by Jochen Liedtke which
+was never available for public use).

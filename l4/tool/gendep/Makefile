@@ -1,33 +1,29 @@
-L4DIR ?= $(shell cd ../..; pwd)
-all::
-include $(L4DIR)/Makeconf.local
-
--include Makeconf.local
-
-ifeq ($(wildcard ${DROPS_STDDIR}),)
-$(error please specify DROPS_STDDIR using $(L4DIR)/Makeconf.local)
-endif
-
+L4DIR ?= ../..
+include $(L4DIR)/mk/Makeconf
 
 VERSION	=0.2
 CSRC	= deptrack.c syscall.c
 MAN	= man/man7/libgendep.so.7
 MAN_SRC	= manpage.dox Doxyfile
 
-CFLAGS=-fPIC -Wall -pedantic -g
-DDIR=gendep-$(VERSION)
-OBJS= $(CSRC:.c=.o)
-LIB=libgendep.so
+CFLAGS	= -fPIC -Wall -pedantic -g
+DDIR	= gendep-$(VERSION)
+OBJS	= $(CSRC:.c=.o)
+LIB	= libgendep.so
+CC	= $(HOST_CC)
 
-all:: $(LIB) $(MAN)
+all:: $(LIB)
 
 $(LIB): $(OBJS)
-	gcc -shared -Wl,-soname,$@ -o $@ $^
+	gcc -shared -Wl,-soname,$@ -ldl -o $@ $^
+
+doc: $(MAN)
 
 $(MAN): $(MAN_SRC)
 	doxygen
 
-install: $(LIB) $(MAN)
+install:: $(LIB) $(MAN)
+	$(if $(DROPS_STDDIR),,$(error DROPS_STDDIR is not set. Do a 'make config' in $(L4DIR)))
 	$(VERBOSE)install -d $(DROPS_STDDIR)/tool/lib
 	$(VERBOSE)install -c $(LIB) $(DROPS_STDDIR)/tool/lib
 	$(VERBOSE)install -d $(DROPS_STDDIR)/tool/man/man7

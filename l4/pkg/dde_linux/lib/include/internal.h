@@ -1,20 +1,24 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/include/internal.h
+ * \file   dde_linux/lib/include/internal.h
+ * \brief  Internal Helpers / Interfaces
  *
- * \brief	Internal Helpers / Interfaces
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
-/**
- * \defgroup internals Internals
- *
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
  */
 
-#ifndef _LIBDDE_INTERNAL_H
-#define _LIBDDE_INTERNAL_H
+/**
+ * \defgroup internals Internals
+ */
+
+#ifndef __DDE_LINUX_LIB_INCLUDE_INTERNAL_H_
+#define __DDE_LINUX_LIB_INCLUDE_INTERNAL_H_
 
 #include <l4/util/macros.h>
 #include <linux/vmalloc.h>
@@ -28,27 +32,25 @@ void address_remove_region(l4_addr_t, l4_size_t);
 /** region data type */
 struct dde_region
 {
-  l4_addr_t va;			/**< virtual start address */
-  l4_addr_t pa;			/**< physical start address */
-  l4_size_t size;		/**< region size */
-  struct dde_region *next;	/**< next region pointer */
+  l4_addr_t va;            /**< virtual start address */
+  l4_addr_t pa;            /**< physical start address */
+  l4_size_t size;          /**< region size */
+  struct dde_region *next; /**< next region pointer */
 };
 
-/*****************************************************************************/
 /** Internal Region Addition
  * \ingroup internals
  *
- * \param  head		head of region list
- * \param  va		virtual start address
- * \param  pa		physical start address
- * \param  size		region size
+ * \param  head   head of region list
+ * \param  va     virtual start address
+ * \param  pa     physical start address
+ * \param  size   region size
  *
  * \krishna do we have overlapping regions in any case? we do not test for
  * these!
- * */
-/*****************************************************************************/
+ */
 static inline void dde_add_region(struct dde_region **head,
-				  l4_addr_t va, l4_addr_t pa, l4_size_t size)
+                                  l4_addr_t va, l4_addr_t pa, l4_size_t size)
 {
   struct dde_region *p = vmalloc(sizeof(struct dde_region));
 
@@ -62,14 +64,13 @@ static inline void dde_add_region(struct dde_region **head,
   DMSG("new dde_region [0x%08x, 0x%08x, %d]\n", va, pa, size);
 }
 
-/*****************************************************************************/
 /** Internal Region Removal
  * \ingroup internals
  *
- * \param  head		head of region list
- * \param  va		virtual start address
- * \param  pa		physical start address
- * \param  size		region size
+ * \param  head  head of region list
+ * \param  va    virtual start address
+ * \param  pa    physical start address
+ * \param  size  region size
  *
  * This removes the region described by \a va/pa and \a size from list \a head.
  *
@@ -78,9 +79,8 @@ static inline void dde_add_region(struct dde_region **head,
  * -# search right node
  * -# remove node resp. split it up into more nodes
  */
-/*****************************************************************************/
 static inline void dde_remove_region(struct dde_region **head,
-				     l4_addr_t va, l4_addr_t pa, l4_size_t size)
+                                     l4_addr_t va, l4_addr_t pa, l4_size_t size)
 {
 #if 1
   INFO("not implemented yet\n");

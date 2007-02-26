@@ -12,8 +12,8 @@
 void
 contxt_clrscr(void)
 {
-  con_pslim_rect_t rect;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t rect;
+  CORBA_Environment env = dice_default_environment;
   int i;
   
   rect.x = 0; 
@@ -21,10 +21,7 @@ contxt_clrscr(void)
   rect.w = BITX(vtc_cols);
   rect.h = BITY(vtc_lines);
   
-  con_vc_pslim_fill(vtc_l4id, 
-		    (con_pslim_rect_t *) &rect, 
-		    bg_color,
-		    &_ev);
+  con_vc_pslim_fill_call(&vtc_l4id, &rect, bg_color, &env);
   
   /* clear history buffer */
   for(i = 0; i < vtc_lines; i++) 

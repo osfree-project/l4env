@@ -5,7 +5,7 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -33,6 +33,7 @@
 #include "be/BEImplementationFile.h"
 
 #include "fe/FEConstDeclarator.h"
+#include "fe/FETypeSpec.h"
 
 IMPLEMENT_DYNAMIC(CBEConstant);
 
@@ -40,21 +41,29 @@ CBEConstant::CBEConstant()
 {
     m_pType = 0;
     m_pValue = 0;
+	m_bAlwaysDefine = false;
     IMPLEMENT_DYNAMIC_BASE(CBEConstant, CBEObject);
 }
 
-CBEConstant::CBEConstant(CBEConstant & src):CBEObject(src)
+CBEConstant::CBEConstant(CBEConstant & src)
+: CBEObject(src)
 {
     m_sName = src.m_sName;
-    m_pType = src.m_pType;
-    m_pValue = src.m_pValue;
+	m_bAlwaysDefine = src.m_bAlwaysDefine;
+    m_pType = (CBEType*)src.m_pType->Clone();
+	m_pType->SetParent(this);
+    m_pValue = (CBEExpression*)src.m_pValue->Clone();
+	m_pValue->SetParent(this);
     IMPLEMENT_DYNAMIC_BASE(CBEConstant, CBEObject);
 }
 
 /**	\brief destructor of this instance */
 CBEConstant::~CBEConstant()
 {
-
+    if (m_pType)
+	    delete m_pType;
+    if (m_pValue)
+	    delete m_pValue;
 }
 
 /**	\brief creates the back-end constant declarator
@@ -80,6 +89,12 @@ bool CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator, CBECont
         m_pType = 0;
         return false;
     }
+	// check for constant's value
+	if (!pFEConstDeclarator->GetValue())
+	{
+	    VERBOSE("CBEConstant::CreateBackEnd for \"%s\" failed because no value\n", (const char*)m_sName);
+		return false;
+	}
     // get value
     m_pValue = pContext->GetClassFactory()->GetNewExpression();
     m_pValue->SetParent(this);
@@ -100,9 +115,10 @@ bool CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator, CBECont
  *	\param pContext the context of the generation
  *	\return true if successful.
  */
-bool CBEConstant::CreateBackEnd(CBEType * pType, String sName, CBEExpression * pValue, CBEContext * pContext)
+bool CBEConstant::CreateBackEnd(CBEType * pType, String sName, CBEExpression * pValue, bool bAlwaysDefine, CBEContext * pContext)
 {
      m_sName = sName;
+	 m_bAlwaysDefine = bAlwaysDefine;
      m_pType = pType;
      if (m_pType)
          m_pType->SetParent(this);
@@ -130,14 +146,25 @@ bool CBEConstant::CreateBackEnd(CBEType * pType, String sName, CBEExpression * p
 void CBEConstant::Write(CBEHeaderFile * pFile, CBEContext * pContext)
 {
     if (!pFile->IsOpen())
-	return;
+        return;
 
-    // #define <name>
-    pFile->Print("#define %s ", (const char *) m_sName);
-    // <expression>
-    m_pValue->Write(pFile, pContext);
-    // newline
-    pFile->Print("\n");
+    if (pContext->IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
+	{
+		// #define <name>
+		pFile->Print("#define %s ", (const char *) m_sName);
+		// <expression>
+		m_pValue->Write(pFile, pContext);
+		// newline
+		pFile->Print("\n");
+	}
+	else
+	{
+	    pFile->Print("const ");
+		m_pType->Write(pFile, pContext);
+		pFile->Print(" %s = ", (const char*)GetName());
+		m_pValue->Write(pFile, pContext);
+		pFile->Print(";\n");
+	}
 }
 
 /** \brief returns the name of the constant
@@ -146,6 +173,14 @@ void CBEConstant::Write(CBEHeaderFile * pFile, CBEContext * pContext)
 String CBEConstant::GetName()
 {
     return m_sName;
+}
+
+/** \brief return the value of this constant
+ *  \return a reference to the expression
+ */
+CBEExpression *CBEConstant::GetValue()
+{
+    return m_pValue;
 }
 
 /** \brief checks if this constant is added to the header file

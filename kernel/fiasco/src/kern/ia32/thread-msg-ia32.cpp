@@ -4,10 +4,8 @@ IMPLEMENTATION[msg-ia32]:
 #include "long_msg.h"
 #include "std_macros.h"
 
-// OSKIT crap
-#include "undef_oskit.h"
 
-IMPLEMENT inline
+IMPLEMENT inline NEEDS ["kmem.h"]
 Address
 Thread::remote_fault_addr (Address pfa)
 {
@@ -24,7 +22,7 @@ Thread::remote_fault_addr (Address pfa)
 */              
 PROTECTED inline NEEDS ["kmem.h", "std_macros.h"]
 void             
-Thread::setup_ipc_window(unsigned win, vm_offset_t address)
+Thread::setup_ipc_window(unsigned win, Address address)
 {                
   if (win == 0) {
 
@@ -41,45 +39,14 @@ Thread::setup_ipc_window(unsigned win, vm_offset_t address)
     _vm_window1 = address;
   }
 
-  // Pull in the mappings for the entire 8 MB window, replacing the old ones
-  space()->update (Kmem::ipc_window (win),
-                   receiver()->space_context(),
-                   address);
-
-  space()->update (Kmem::ipc_window (win) + Config::SUPERPAGE_SIZE,
-                   receiver()->space_context(),
-                   address + Config::SUPERPAGE_SIZE);
-
-  Kmem::tlb_flush();
-}                                                                                                                                                             
-
-IMPLEMENT inline
-Mword
-Thread::update_ipc_window (Address pfa, Address remote_pfa)
-{
-  // XXX: We don't care about the page-fault error code here, but
-  // we should: If we want to write to a read-only page, we would
-  // fail here.  Space::update() probably should take an
-  // error-code argument, as should
-  // Thread::ipc_pagein_request().
-
-  if (space()->update (pfa, receiver()->space_context(), remote_pfa))
-    {
-      cpu_lock.clear();
-
-      // It's OK if the PF occurs again: This can happen if we're
-      // preempted after the call to update() above.  (This code
-      // corresponds to code in Thread::handle_page_fault() that
-      // checks for double page faults.)
-      if (Config::monitor_page_faults)
-        {
-          _last_pf_address = (vm_offset_t) -1;
-        }
-
-      return 1;		// Success
-    }
-
-  return 0;		// Failure
+  // Pull in the mappings for the entire 8 MB window, by copying 2 PDE slots,
+  // thereby replacing the old ones, based on the optimistic assumption that
+  // the receiver's mappings are already set up appropriately. Note that this
+  // does not prevent a pagefault on either of these mappings later on, e.g.
+  // if the receiver's mapping is r/o here and needs to be r/w for Long-IPC.
+  // Careful: for SMAS current_space() != space()
+  current_space()->remote_update (Kmem::ipc_window (win),
+                                  receiver()->space_context(), address, 2);
 }
 
 /** Carry out long IPC.
@@ -98,8 +65,7 @@ Thread::update_ipc_window (Address pfa, Address remote_pfa)
     @return sender's IPC error code
  */
 PRIVATE 
-L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
-				Sys_ipc_frame *i_regs)
+L4_msgdope Thread::do_send_long(Thread *partner, Sys_ipc_frame *i_regs)
 {
   
   Long_msg *regs = (Long_msg*)i_regs;
@@ -110,14 +76,15 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
   
   // The nice asm statements (asm volatile ("" : : "r"(&result) : "memory");)
   // must occur after all write accesses to result that shall be seen after 
-  // an eventual jongjmp recovery.
+  // an eventual longjmp recovery.
+  // FIXME: We need a barrier() function.
   L4_msgdope result(Sys_ipc_frame::num_reg_words(), 0); // 2 dwords in regs
   asm volatile ("" : : : "memory");
 
   // set up exception handling
   jmp_buf pf_recovery;  
   unsigned error;
-  if ((error = setjmp(pf_recovery)) == 0)
+  if (EXPECT_TRUE ((error = setjmp(pf_recovery)) == 0) )
     {
       // set up pointers to message buffers
   
@@ -131,14 +98,11 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
       //save the address of the snd_header for later use
       //be careful, although it is a pointer, there is no valid
       //data behind it (see small address spaces)
-      snd_descr = (message_header*)regs->snd_desc().msg();
+      snd_descr  = (message_header*)regs->snd_desc().msg();
+      rcv_header = 0;   // default is receiver expects short message
   
-      if (_target_desc.msg() == 0) // receiver expects short message
+      if (EXPECT_TRUE ((_target_desc.msg() != 0) && !_target_desc.rmap()) )
         {
-          rcv_header = 0;
-        }
-      else
-        { 
           // the receiver's message buffer is mapped into VM window 1.
           setup_ipc_window(0, ((Address)(_target_desc.msg())) 
 						     & Config::SUPERPAGE_MASK);
@@ -163,12 +127,11 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
       _recover_jmpbuf = &pf_recovery;
 
       // read the fpage option from the receiver's message buffer
-      L4_fpage rcv_fpage = 
-        rcv_header ? rcv_header->fp
-                   : _target_desc.fpage();
+      L4_fpage rcv_fpage = rcv_header ? rcv_header->fp
+				      : _target_desc.fpage();
 
       // check if we cannot send flexpages
-      if (send_fpages && ! rcv_fpage.is_valid())
+      if (EXPECT_FALSE (send_fpages && ! rcv_fpage.is_valid()) )
         {
           _recover_jmpbuf = 0;
           return ipc_finish(partner, L4_msgdope::REMSGCUT);
@@ -177,15 +140,16 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
       L4_msgdope ret;
 
       // send flexpages?
-      if (send_fpages)  
+      if (send_fpages)
         {
           // transfer the first flexpage -- the one transferred in the
           // message registers.
 
           bool send_short_fpage = !snd_descr;
-          L4_fpage snd_fpage = L4_fpage(regs->msg_word(1));
+          L4_fpage snd_fpage    = L4_fpage(regs->msg_word(1));
 
-          if (/* snd_fpage.fpage == 0 || */ snd_fpage.size() < 12) // fpage valid?
+          if (EXPECT_FALSE (/* snd_fpage.fpage == 0 || */
+			    snd_fpage.size() < 12) )
             {
               // This is not a valid flexpage, so do not try to send it.
               // Also, don't try to transfer any more flexpages.
@@ -206,7 +170,8 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
 				   send_short_fpage);
 	      
               if (send_short_fpage) // short-fpage send?
-                {               // if yes, we're finished
+                {               
+		  // yes, we're finished
                   _recover_jmpbuf = 0;
                   return ret;
                 }
@@ -233,7 +198,7 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
 
       // We must stop now if we don't have a receive buffer.  Check
       // for cut message.
-      if (! rcv_header)  
+      if (! rcv_header)
         {
           _recover_jmpbuf = 0;
 	  if(!(snd_words <= (int)Sys_ipc_frame::num_reg_words() 
@@ -249,12 +214,12 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
       unsigned s = snd_words, r = rcv_words;
       unsigned min = (snd_words > rcv_words) ? rcv_words : snd_words;
 
-      if (min>Sys_ipc_frame::num_reg_words())
+      if (min > Sys_ipc_frame::num_reg_words())
         {
           // XXX if the memcpy() fails somewhere in the middle because
           // of a page fault, we don't report the memory words that   
           // have already been copied.
-	  copy_from_user<Mword>
+	  copy_from_user
 	    (rcv_header->words + Sys_ipc_frame::num_reg_words(),
 	     snd_descr->words  + Sys_ipc_frame::num_reg_words(),
 	     min - Sys_ipc_frame::num_reg_words());
@@ -269,10 +234,9 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
           // the memory buffer here.
 	  unsigned pos = 2; // start with message word 2
 
-          while (s >= (Sys_ipc_frame::num_reg_words() + 2)  
+          while (   s >= (Sys_ipc_frame::num_reg_words() + 2)
 		 && r >= (Sys_ipc_frame::num_reg_words() + 2))
             {
-
               L4_fpage snd_fpage(regs->msg_word(snd_descr,pos+1));
 
               // if not a valid flexpage, break
@@ -281,19 +245,21 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
                   send_fpages = false;
                   break;
                 }
-#warning shall we mask the offset (page sized)
+
               // otherwise, map
-              ret = ipc_send_fpage(partner, snd_fpage, rcv_fpage,
-				   regs->msg_word(snd_descr,pos), false);
-              if (ret.has_error())
+              ret = ipc_send_fpage (partner, snd_fpage, rcv_fpage,
+				    regs->msg_word (snd_descr, pos) &
+                                    Config::PAGE_MASK, false);
+
+              if (EXPECT_FALSE (ret.has_error()) )
                 break;
 
               result.combine(ret);
 	      asm volatile ("" : : : "memory");
 
 	      pos += 2;
-              s -= 2;
-              r -= 2;
+              s   -= 2;
+              r   -= 2;
             }
         }
 
@@ -330,10 +296,10 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
 
       while (s && r)
         {
-          vm_offset_t from = peek_user(&snd_strdope->snd_str);
-          vm_offset_t from_size = peek_user(&snd_strdope->snd_size);
-          vm_offset_t to = rcv_strdope->rcv_str;
-          vm_offset_t to_size = rcv_strdope->rcv_size;
+          Unsigned8 *from      = peek_user(&snd_strdope->snd_str);
+          size_t     from_size = peek_user(&snd_strdope->snd_size);
+          Unsigned8 *to        = rcv_strdope->rcv_str;
+          size_t     to_size   = rcv_strdope->rcv_size;
 
           // silently limit sizes to 4MB
           if (to_size > Config::SUPERPAGE_SIZE)
@@ -345,17 +311,17 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
           if (min > 0)
             {
               // XXX no bounds checking!
-              setup_ipc_window(1, to & Config::SUPERPAGE_MASK);
-              copy_from_user<Unsigned8>((void*)(Kmem::ipc_window(1) 
-						+ (to & ~Config::SUPERPAGE_MASK)),
-					(void*)from, min);
+              setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK);
+              copy_from_user((Unsigned8*)(Kmem::ipc_window(1) 
+                                          + (((Address)to) & ~Config::SUPERPAGE_MASK)),
+                             from, min);
             }
 
           // indicate size of received data
           rcv_strdope->snd_size = min;
           // XXX also overwrite rcv_strdope->snd_str?
 
-          if (from_size > to_size)
+          if (EXPECT_FALSE (from_size > to_size) )
             break;      
 
           s--;
@@ -366,13 +332,13 @@ L4_msgdope Thread::do_send_long(Thread *partner,               // l4_timeout_t t
           result.strings(result.strings()+1);
 	  asm volatile ("" : : : "memory");
         }
-  
+
       _recover_jmpbuf = 0;
-      if(s)
+
+      if (EXPECT_FALSE (s) )
 	result.combine(L4_msgdope(L4_msgdope::REMSGCUT));
 
       return ipc_finish(partner, result);
-
     }
   else                          // an exception occurred
     {

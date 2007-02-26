@@ -9,6 +9,11 @@
  */
 /*****************************************************************************/
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
@@ -72,8 +77,8 @@ up_thread(void * data)
   l4_msgdope_t result;
 
   /* wait for start message */
-  l4_i386_ipc_receive(parent,L4_IPC_SHORT_MSG,&dummy,&dummy,L4_IPC_NEVER,
-		      &result);
+  l4_ipc_receive(parent,L4_IPC_SHORT_MSG,&dummy,&dummy,L4_IPC_NEVER,
+		 &result);
 
   l4thread_sleep(500);
 
@@ -111,16 +116,16 @@ up_thread(void * data)
 #endif
     }
 
-  DMSG("  up:       %4lu/%4lu/%4lu\n",
-       min_up,(unsigned long)(time_up / TEST_NUM),max_up);
+  printf("  up:       %4lu/%4lu/%4lu\n",
+         min_up,(unsigned long)(time_up / TEST_NUM),max_up);
 #if DO_DOWN
-  DMSG("  wakeup:   %4lu/%4lu/%4lu\n",
-       min_wakeup,(unsigned long)(time_wakeup / TEST_NUM),max_wakeup);
+  printf("  wakeup:   %4lu/%4lu/%4lu\n",
+         min_wakeup,(unsigned long)(time_wakeup / TEST_NUM),max_wakeup);
 #endif
-  DMSG("\n");
+  printf("\n");
   
   /* done */
-  l4_i386_ipc_send(parent,L4_IPC_SHORT_MSG,0,0,L4_IPC_NEVER,&result);
+  l4_ipc_send(parent,L4_IPC_SHORT_MSG,0,0,L4_IPC_NEVER,&result);
 
   l4thread_sleep(10000);
 }
@@ -140,7 +145,7 @@ do_test(l4_prio_t up_prio, l4_prio_t down_prio)
   l4_umword_t dummy;
   l4_msgdope_t result;
 
-  INFO("test:\n");
+  LOGL("test:");
 
   /* initialize semaphore */
   sem = L4SEMAPHORE_INIT(SEM_INIT);
@@ -155,8 +160,8 @@ do_test(l4_prio_t up_prio, l4_prio_t down_prio)
       Error("start down thread failed: %s (%d)!",l4env_errstr(down),down);
       return;
     }
-  DMSG("  down thread %x.%x, prio %u\n",
-       l4thread_l4_id(down).id.task,l4thread_l4_id(down).id.lthread,down_prio);
+  printf("  down thread %x.%x, prio %u\n",
+         l4thread_l4_id(down).id.task,l4thread_l4_id(down).id.lthread,down_prio);
 #endif
 
   /* start up thread */
@@ -168,12 +173,12 @@ do_test(l4_prio_t up_prio, l4_prio_t down_prio)
       Error("start up thread failed: %s (%d)!",l4env_errstr(up),up);
       return;
     }
-  DMSG("  up thread   %x.%x, prio %u\n",
-       l4thread_l4_id(up).id.task,l4thread_l4_id(up).id.lthread,up_prio);
+  printf("  up thread   %x.%x, prio %u\n",
+         l4thread_l4_id(up).id.task,l4thread_l4_id(up).id.lthread,up_prio);
 
   /* start test */
-  l4_i386_ipc_call(l4thread_l4_id(up),L4_IPC_SHORT_MSG,0,0,
-		   L4_IPC_SHORT_MSG,&dummy,&dummy,L4_IPC_NEVER,&result); 
+  l4_ipc_call(l4thread_l4_id(up),L4_IPC_SHORT_MSG,0,0,
+	      L4_IPC_SHORT_MSG,&dummy,&dummy,L4_IPC_NEVER,&result); 
 
   /* test finished */
   l4thread_shutdown(up);
@@ -230,8 +235,7 @@ test_rdtsc(void)
       
     }
   
-  INFO("rdtsc:\n");
-  DMSG("  1-2: %lu/%lu/%lu 2-3: %lu/%lu/%lu, 1-3: %lu/%lu/%lu\n\n",
+  LOGL("rdtsc:\n  1-2: %lu/%lu/%lu 2-3: %lu/%lu/%lu, 1-3: %lu/%lu/%lu\n",
        min1,(unsigned long)(total1 / TEST_RDTSC_NUM),max1,
        min2,(unsigned long)(total2 / TEST_RDTSC_NUM),max2,
        min3,(unsigned long)(total3 / TEST_RDTSC_NUM),max3);
@@ -247,8 +251,6 @@ int main(int argc, char * argv[])
   extern char _stext;
   extern char _etext;
   extern char _end;
-  
-  LOG_init("sem_test");
   
   /* set semaphore thread priority */
   l4semaphore_set_thread_prio(SEM_THREAD_PRIO);

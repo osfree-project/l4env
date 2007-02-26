@@ -98,13 +98,13 @@ profile::stop_and_dump()
  * intermediate result is at most 48 bits.
  */
 #define PC_TO_INDEX(pc, off, scale)				\
-        ((vm_offset_t)(((unsigned long long)((pc) - (off)) *	\
+        ((Address)(((unsigned long long)((pc) - (off)) *	\
 		(unsigned long long)((scale))) >> 16) & ~1)
 
 PUBLIC static 
 inline NOEXPORT
 void
-profile::handle_profile_interrupt(vm_offset_t pc)
+profile::handle_profile_interrupt(Address pc)
 {
   // runs with disabled irqs
 
@@ -114,7 +114,7 @@ profile::handle_profile_interrupt(vm_offset_t pc)
 
   ticks++;
 
-  vm_size_t i;
+  size_t i;
 
   if (! pr_scale)
     return;
@@ -130,7 +130,7 @@ profile::handle_profile_interrupt(vm_offset_t pc)
 }
 
 extern "C" void
-profile_interrupt(vm_offset_t pc)
+profile_interrupt(Address pc)
 {
   profile::handle_profile_interrupt(pc);
 }
@@ -143,14 +143,14 @@ void profile_mcount_wrap(unsigned short *frompcindex, char *selfpc )
   static bool overrun = false;
   if (! overrun)
     {
-      vm_offset_t sp;
+      Address sp;
       asm("movl %%esp, %0" : "=r" (sp));
       if ((sp & 0xf8000000) == Kmem::mem_tcbs
-	  && ((vm_offset_t)current()) + sizeof(Thread) + 0x20 > sp)
+	  && ((Address)current()) + sizeof(Thread) + 0x20 > sp)
 	{
 	  overrun = true;
 	  panic("stack overrun: current=0x%x, esp=0x%x", 
-		(vm_offset_t)current(), sp);
+		(Address)current(), sp);
 	}
     }
   

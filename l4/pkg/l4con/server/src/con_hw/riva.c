@@ -1,8 +1,16 @@
-/** \file	con/server/src/con_hw/riva.c
+/**
+ * \file	con/server/src/con_hw/riva.c
+ * \brief	Acceleration functions for nVIDIA boards
  *
- *  \brief	Acceleration functions for nVIDIA boards
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
- *  Hacked together from XFree86 Sources. */
+ *  Hacked from XFree86 Sources. */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
  /***************************************************************************\
 |*                                                                           *|
@@ -139,7 +147,7 @@ static struct riva_chip_info
 #define PCI_DEVICE_ID_NVIDIA_GEFORCE3_2		0x0202
 #define PCI_DEVICE_ID_NVIDIA_QUADRO_DDC		0x0203
 
-static struct pci_device_id riva_pci_tbl[] __init = 
+static const struct pci_device_id riva_pci_tbl[] __init = 
 {
     { PCI_VENDOR_ID_NVIDIA_SGS, PCI_DEVICE_ID_NVIDIA_SGS_RIVA128,
       0, 0, CH_RIVA_128 },
@@ -971,7 +979,7 @@ riva_setup_accel(void)
 
 static int
 riva_probe(unsigned int bus, unsigned int devfn, 
-	   struct pci_device_id *device,  con_accel_t *accel)
+	   const struct pci_device_id *device,  con_accel_t *accel)
 {
   unsigned int l, sz;
   unsigned addr0, size0, addr1, size1;

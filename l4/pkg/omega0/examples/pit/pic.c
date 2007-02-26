@@ -8,19 +8,8 @@ static wq_lock_queue_base pic_wq = {NULL};
 #endif
 
 #ifdef USE_CLISTI
-unsigned char static volatile inline l4_cli (void){
-  int r;
-  __asm__ ("cli"
-           );
-  return r;
-}
-
-unsigned char static volatile inline l4_sti (void){
-  int r;
-  __asm__ ("sti"
-           );
-  return r;
-}
+#define l4_cli l4util_cli
+#define l4_sti l4util_sti
 #else
 #define l4_cli()
 #define l4_sti()
@@ -36,9 +25,9 @@ void irq_mask(int irq){
 
   l4_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) | (1<<irq));  
+    l4util_out8(l4util_in8(0x21) | (1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) | (1<<(irq-8)));  
+    l4util_out8(l4util_in8(0xa1) | (1<<(irq-8)), 0xa1);  
   }
   l4_sti();
   
@@ -57,9 +46,9 @@ void irq_unmask(int irq){
   
   l4_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) & ~(1<<irq));  
+    l4util_out8(l4util_in8(0x21) & ~(1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) & ~(1<<(irq-8)));
+    l4util_out8(l4util_in8(0xa1) & ~(1<<(irq-8)), 0xa1);
   }
   l4_sti();
   
@@ -77,11 +66,11 @@ void irq_ack(int irq){
   
   l4_cli();
     if (irq > 7){
-      __l4_outb(0xA0,0x60|(irq&7));
-      __l4_outb(0xA0,0x0B);
-      if (__l4_inb(0xA0) == 0)  __l4_outb(0x20, 0x62);
+      l4util_out8(0x60|(irq&7),0xA0);
+      l4util_out8(0x0B,0xA0);
+      if (l4util_in8(0xA0) == 0)  l4util_out8(0x62,0x20);
     }else{
-      __l4_outb(0x20,0x60|irq);
+      l4util_out8(0x60|irq,0x20);
     }
   l4_sti();
   
@@ -107,11 +96,11 @@ int pic_isr(int master){
   
   l4_cli();
   if (master){
-    __l4_outb(0xA0,0xb);
-    dat = __l4_inb(0xa0);
+    l4util_out8(0xb,0xA0);
+    dat = l4util_in8(0xa0);
   }else{
-    __l4_outb(0x20,0xb);
-    dat = __l4_inb(0x20);
+    l4util_out8(0xb,0x20);
+    dat = l4util_in8(0x20);
   }
   l4_sti();
 
@@ -135,11 +124,11 @@ int pic_irr(int master){
   
   l4_cli();
   if (master){
-    __l4_outb(0xA0,0xa);
-    dat = __l4_inb(0xa0);
+    l4util_out8(0xa,0xA0);
+    dat = l4util_in8(0xa0);
   }else{
-    __l4_outb(0x20,0xa);
-    dat = __l4_inb(0x20);
+    l4util_out8(0xa,0x20);
+    dat = l4util_in8(0x20);
   }
   l4_sti();
 
@@ -165,9 +154,9 @@ int pic_imr(int master){
   
   l4_cli();
   if (master){
-    dat = __l4_inb(0xa1);
+    dat = l4util_in8(0xa1);
   }else{
-    dat = __l4_inb(0x21);
+    dat = l4util_in8(0x21);
   }
   l4_sti();
 

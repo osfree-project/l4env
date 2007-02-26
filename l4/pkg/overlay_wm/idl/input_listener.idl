@@ -1,0 +1,4 @@
+interface input_listener {
+	void motion([in] int abs_x, [in] int abs_y, [in] int rel_x, [in] int rel_y);
+	void button([in] int type,  [in] int code);
+};

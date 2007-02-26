@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/mm.c
+ * \file   dde_linux/lib/src/mm.c
+ * \brief  Memory Management
  *
- * \brief	Memory Management
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_mm Memory Management
  *
@@ -30,7 +35,6 @@
  * - setup #MM_KREGIONS to change number of kernel memory regions (default 1!)
  * - maximum size of pools is configured via parameters of l4dde_mm_init()
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -51,14 +55,11 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
-/*****************************************************************************/
-/** 
- * \name Module Variables
+/** \name Module Variables
  * @{ */
-/*****************************************************************************/
+
 /** initialization flag */
 static int _initialized = 0;
 
@@ -83,11 +84,10 @@ static lmm_region_t vregion;
 static l4lock_t vlock = L4LOCK_UNLOCKED_INITIALIZER;
 
 /** @} */
-/*****************************************************************************/
 /** Simulated LMM Callback on Memory Shortage (kmem)
  *
- * \param  size		size of memory chunk needed
- * \param  flags	memory type
+ * \param  size   size of memory chunk needed
+ * \param  flags  memory type
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -104,7 +104,6 @@ static l4lock_t vlock = L4LOCK_UNLOCKED_INITIALIZER;
  *
  * \todo consider \p flags
  */
-/*****************************************************************************/
 static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
 {
   int error;
@@ -126,8 +125,8 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
   /* open and attach new dataspace */
   kaddr = (l4_addr_t) \
     l4dm_mem_allocate_named(kregion_size,
-			    L4DM_CONTIGUOUS | L4DM_PINNED | L4RM_MAP,
-			    "dde kmem");
+                            L4DM_CONTIGUOUS | L4DM_PINNED | L4RM_MAP,
+                            "dde kmem");
   if (!kaddr)
     {
       ERROR("allocating kmem");
@@ -138,7 +137,7 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
   if (error != 1)
     {
       if (error>1 || !error)
-	Panic("Ouch, what's that?");
+        Panic("Ouch, what's that?");
       ERROR("getting physical address (%d)", error);
       return error;
     }
@@ -160,36 +159,31 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
   return 0;
 }
 
-/*****************************************************************************/
 /** Simulated LMM Callback on Memory Shortage (vmem)
  *
- * \param  size		size of memory chunk needed
+ * \param  size  size of memory chunk needed
  *
  * \return -L4_ENOMEM
  *
  * This always returns "Out of memory" as we leave mappings in vmem region to
  * l4rm and dataspace managers.
  */
-/*****************************************************************************/
 static __inline__ int __more_vcore(l4_size_t size)
 {
   ERROR("out of memory (vmem)");
   return -L4_ENOMEM;
 }
 
-/*****************************************************************************/
 /** kmem Allocation
  * \ingroup mod_mm
  *
- * \param  size		size of memory chunk
- * \param  gfp		flags
+ * \param  size  size of memory chunk
+ * \param  gfp   flags
  *
  * This is Linux' %kmalloc().
  *
  * \return start address of allocated chunk; NULL on error
- *
  */
-/*****************************************************************************/
 void *kmalloc(size_t size, int gfp)
 {
   lmm_flags_t lmm_flags = 0;
@@ -197,7 +191,7 @@ void *kmalloc(size_t size, int gfp)
 
   if (gfp & GFP_DMA)
     DMSG("Warning: No ISA DMA implemented.\n");
-   
+
   /* mutex pool access */
   l4lock_lock(&klock);
 
@@ -205,18 +199,18 @@ void *kmalloc(size_t size, int gfp)
   while (!(chunk = lmm_alloc(&kpool, size, lmm_flags)))
     {
       if (__more_kcore(size, lmm_flags))
-	{
+        {
 #if DEBUG_MALLOC
-	  DMSG("failed to allocate %d bytes (kmem)\n", size);
-	  lmm_dump(&kpool);
-	  lmm_stats(&kpool);
+          DMSG("failed to allocate %d bytes (kmem)\n", size);
+          lmm_dump(&kpool);
+          lmm_stats(&kpool);
 #endif
-	  return NULL;
-	}
+          return NULL;
+        }
     }
   *chunk = size;
 
-#if DEBUG_MALLOC
+#if DEBUG_MALLOC_EACH
   DMSG("allocated %d bytes @ %p (kmem)\n", *chunk, chunk);
 #endif
 
@@ -225,15 +219,13 @@ void *kmalloc(size_t size, int gfp)
   return ++chunk;
 }
 
-/*****************************************************************************/
 /** kmem Deallocation
  * \ingroup mod_mm
  *
- * \param  addr		start address of memory chunk to free
+ * \param  addr  start address of memory chunk to free
  *
  * This is Linux' %kfree().
  */
-/*****************************************************************************/
 void kfree(const void *addr)
 {
   l4_uint32_t *chunk = (l4_uint32_t *) addr - 1;
@@ -244,7 +236,7 @@ void kfree(const void *addr)
   /* mutex pool access */
   l4lock_lock(&klock);
 
-#if DEBUG_MALLOC
+#if DEBUG_MALLOC_EACH
   DMSG("freeing %d bytes @ %p (kmem)\n", *chunk, chunk);
 #endif
 
@@ -253,17 +245,15 @@ void kfree(const void *addr)
   l4lock_unlock(&klock);
 }
 
-/*****************************************************************************/
 /** vmem Allocation
  * \ingroup mod_mm
  *
- * \param  size		size of memory chunk
+ * \param  size  size of memory chunk
  *
  * \return start address of allocated chunk; NULL on error
  *
  * This is Linux' %vmalloc().
  */
-/*****************************************************************************/
 void *vmalloc(unsigned long size)
 {
   lmm_flags_t lmm_flags = 0;
@@ -276,18 +266,18 @@ void *vmalloc(unsigned long size)
   while (!(chunk = lmm_alloc(&vpool, size, lmm_flags)))
     {
       if (__more_vcore(size))
-	{
+        {
 #if DEBUG_MALLOC
-	  DMSG("failed to allocate %ld bytes (vmem)\n", size);
-	  lmm_dump(&vpool);
-	  lmm_stats(&vpool);
+          DMSG("failed to allocate %ld bytes (vmem)\n", size);
+          lmm_dump(&vpool);
+          lmm_stats(&vpool);
 #endif
-	  return NULL;
-	}
+          return NULL;
+        }
     }
   *chunk = size;
 
-#if DEBUG_MALLOC
+#if DEBUG_MALLOC_EACH
   DMSG("allocated %d bytes @ %p (vmem)\n", *chunk, chunk);
 #endif
 
@@ -296,15 +286,13 @@ void *vmalloc(unsigned long size)
   return ++chunk;
 }
 
-/*****************************************************************************/
 /** vmem Deallocation
  * \ingroup mod_mm
  *
- * \param  addr		start address of memory chunk to release
+ * \param  addr  start address of memory chunk to release
  *
  * This is Linux' %vfree().
  */
-/*****************************************************************************/
 void vfree(void *addr)
 {
   l4_uint32_t *chunk = (l4_uint32_t *) addr - 1;
@@ -317,7 +305,7 @@ void vfree(void *addr)
 
   lmm_free(&vpool, chunk, *chunk);
 
-#if DEBUG_MALLOC
+#if DEBUG_MALLOC_EACH
   DMSG("freed %d bytes @ %p (vmem)\n", *chunk, chunk);
 #endif
 
@@ -360,15 +348,15 @@ static int __setup_kmem(unsigned int *max, l4_addr_t *addr)
   /* open and attach initial dataspace */
   *addr = (l4_addr_t) \
     l4dm_mem_allocate_named(kregion_size,
-			    L4DM_CONTIGUOUS | L4DM_PINNED | L4RM_MAP,
-			    "dde kmem");
+                            L4DM_CONTIGUOUS | L4DM_PINNED | L4RM_MAP,
+                            "dde kmem");
   if (!*addr) return -L4_ENOMEM;
 
   error = l4dm_mem_phys_addr((void *)*addr, 1, &dm_paddr, 1, &tmp);
   if (error != 1)
     {
       if (error>1 || !error)
-	Panic("Ouch, what's that?");
+        Panic("Ouch, what's that?");
       ERROR("getting physical address (%d)", error);
       return error;
     }
@@ -414,12 +402,11 @@ static int __setup_vmem(unsigned int *max, l4_addr_t *addr)
   return 0;
 }
 
-/*****************************************************************************/
 /** Initalize LMM pools and initial regions.
  * \ingroup mod_mm
  *
- * \param  max_vsize	max size of virtual memory allocations
- * \param  max_ksize	max size of kernel memory allocations
+ * \param  max_vsize  max size of virtual memory allocations
+ * \param  max_ksize  max size of kernel memory allocations
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -429,7 +416,6 @@ static int __setup_vmem(unsigned int *max, l4_addr_t *addr)
  * will be \c max_ksize (or greater because of rounding/page size). vmem pool
  * has only one region of \c max_vsize.
  */
-/*****************************************************************************/
 int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
 {
   int error;
@@ -497,13 +483,13 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
     if (debug)
       Panic("l4rm_lookup failed (%d)", debug);
     DMSG("vmem: ds={%3u, "IdFmt"} offset=%d map_addr=0x%08x map_size=%d\n",
-	 ds.id, IdStr(ds.manager), offset, map_addr, map_size);
+         ds.id, IdStr(ds.manager), offset, map_addr, map_size);
 
     debug = l4rm_lookup((void*)kaddr, &ds, &offset, &map_addr, &map_size);
     if (debug)
       Panic("l4rm_lookup failed (%d)", debug);
     DMSG("kmem: ds={%3u, "IdFmt"} offset=%d map_addr=0x%08x map_size=%d\n",
-	 ds.id, IdStr(ds.manager), offset, map_addr, map_size);
+         ds.id, IdStr(ds.manager), offset, map_addr, map_size);
   }
 #endif
 

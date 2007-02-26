@@ -7,22 +7,25 @@
 .SH "Synopsis"
 \fBmain\fP
 [\fB\-nowait\fP]
+[\fB\-nojdb\fP]
 [\fB\-nokdb\fP]
+[\fB\-noscreen\fP]
+[\fB\-noserial\fP]
 [\fB\-comspeed\fP \fIn\fP]
 [\fB\-comport\fP \fIn\fP]
 [\fB\-hercules\fP]
-[\fB\-serial\fP] [\fB\-VT\fP[\fB+\fP]]
 [\fB\-serial_esc\fP]
 [\fB\-tbuf_entries\fP \fIn\fP]
 [\fB\-out_buf\fP \fIn\fP]
 [\fB\-esc\fP]
 [\fB\-watchdog\fP]
-[\fB\-no_serial_fifo\fP]
+[\fB\-apic\fP]
 [\fB\-profile\fP]
 [\fB\-profstart\fP]
 [\fB\-irq0\fP]
 [\fB\-irqcom\fP | \fB\-I\-\fP]
-[\fB\-vmware\fP]\fB proto=\fP\fIphysical_address\fP
+[\fB\-jdb_color\fP \fIn]
+[\fP\fB\-always_irqack\fP]\fB proto=\fP\fIphysical_address\fP
 
 .SH "Description"
 Fiasco is a new \(*m\-kernel (microkernel) running on x86 PCs intended to
@@ -37,11 +40,20 @@ embedded applications.
 .IP "\fB\-nowait\fP"
 Removes the initial ,,KDB: init'' breakpoint. The
 installation instructions on the Fiasco web site recommend this
-option; if you plan to do some serious debugging, you shouldn't use
-it. 
+option; if you plan to do some serious debugging, you shouldn't use it.
+.IP "\fB\-nojdb\fP"
+Disables the builtin kernel debugger JDB.
 .IP "\fB\-nokdb\fP"
-Disables the kernel debugger. Should Fiasco raise an
-exception, it will just call the builtin jdb.
+Disables the GDB stub. Should Fiasco raise an exception,
+it will just call the builtin jdb.
+.IP "\fB\-noscreen\fP"
+Disables output to vga/hercules console.
+.IP "\fB\-noserial\fP"
+Disables output to serial console. If this switch is
+not given, kernel messages will output additionally to the serial interface.
+If \fB\-nokdb\fP is enabled, you can use a terminal program on the host to
+control Fiasco. If you are connected to a remote GDB, messages are copied to
+GDB's console.
 .IP "\fB\-comspeed\fP \fIn\fP"
 Will set the rate of the serial interface to n
 bytes/second. 115200 bytes/second is the default.
@@ -52,15 +64,6 @@ and 2.
 .IP "\fB\-hercules\fP"
 Redirect kernel messages to the Hercules (or
 other MGA\-compatible) console.
-.IP "\fB\-no_serial_fifo\fP"
-Disable seriel fifo buffer. Might be
-required by some older (buggy) UARTs to work properly.
-.IP "\fB\-serial\fP or \fB\-VT\fP[\fB+\fP]"
-Will additionally output
-kernel messages to the serial interface; this can save you copying
-kernel messages by hand. If \fB\-nokdb\fP is also enabled, you can
-use a terminal program on the host to control Fiasco. If you are
-connected to a remote GDB, messages are copied to GDB's console.
 .IP "\fB\-esc\fP"
 Enable esc hack. On every timer interrupt, ask the
 keyboard if the Escape key was pressed. If so, do enter into kernel
@@ -73,12 +76,15 @@ and loops, the timer interrupt is'nt called anymore and after 2 seconds
 the watchdog releases an non maskable interrupt (NMI) which forces
 Fiasco to step into the kernel debugger. Works on >= Intel PPro and
 >= AMD K7 Model 2.
+.IP "\fB\-apic\fP"
+Initialize the builtin Local APIC. If the Local APIC is
+disabled by the BIOS but available, it is re\-enabled.
 .IP "\fB\-serial_esc\fP"
 Enter jdb on serial receive interrupts. This
 is only necessary if kdb was disabled by \fB\-nokdb\fP.
 .IP "\fB\-tbuf_entries\fP \fIn\fP"
 Set number of lines to store in the 
-debugging trace buffer. Default is 200.
+debugging trace buffer. Default is 1024.
 .IP "\fB\-out_buf\fP \fIn\fP"
 Set output buffer for kd_display functions
 to n bytes. Default is 4096.
@@ -104,10 +110,9 @@ reserved for kernel use.
 .IP "\fB\-irqcom\fP or \fB\-I\-\fP"
 Disable for user tasks the IRQ
 associated with the serial port used for I/O or the kernel debugger.
-.IP "\fB\-vmware\fP"
-Disable the usage of the fully special nested PIC
-mode since VMware isn't able to handle it (it crashes with an internal
-monitor error \-\- BUG F(152):393 bugNr=4388).
+.IP "\fB\-always_irqack\fP"
+IRQs are acknowledged by the kernel. Your
+userland code has to know this!
 .IP "\fBproto=\fP\fIphysical_address\fP"
 This argument is automatically
 added by RMGR when starting Fiasco. It communicates the address of a

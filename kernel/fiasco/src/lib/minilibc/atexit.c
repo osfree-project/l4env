@@ -10,8 +10,7 @@ static volatile int atexit_counter;
 int atexit(function t) {
 
   if (atexit_counter<NUM_ATEXIT) {
-    __atexitlist[atexit_counter]=t;
-    ++atexit_counter;
+    __atexitlist[atexit_counter++]=t;
     return 0;
   }
   return -1;

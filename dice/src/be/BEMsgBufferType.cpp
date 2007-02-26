@@ -5,7 +5,7 @@
  *	\date	02/13/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -33,12 +33,14 @@
 #include "be/BERoot.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEFunction.h"
+#include "be/BEAttribute.h"
 
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEPrimaryExpression.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
+#include "fe/FEArrayDeclarator.h"
 
 IMPLEMENT_DYNAMIC(CBEMsgBufferType);
 
@@ -48,6 +50,7 @@ CBEMsgBufferType::CBEMsgBufferType()
     m_nVariableCount[0] = m_nVariableCount[1] = 0;
     m_nStringCount[0] = m_nStringCount[1] = 0;
     m_pAliasType = 0;
+	m_bCountAllVarsAsMax = false;
     IMPLEMENT_DYNAMIC_BASE(CBEMsgBufferType, CBETypedef);
 }
 
@@ -61,6 +64,7 @@ CBEMsgBufferType::CBEMsgBufferType(CBEMsgBufferType & src)
     m_nStringCount[0] = src.m_nStringCount[0];
     m_nStringCount[1] = src.m_nStringCount[1];
     m_pAliasType = src.m_pAliasType;
+	m_bCountAllVarsAsMax = src.m_bCountAllVarsAsMax;
     IMPLEMENT_DYNAMIC_BASE(CBEMsgBufferType, CBETypedef);
 }
 
@@ -85,9 +89,9 @@ bool CBEMsgBufferType::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * p
 {
     // init counts first, because GetMsgBufferType may access them
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     CBEClass *pClass = pRoot->FindClass(pFEInterface->GetName());
-    ASSERT(pClass);
+    assert(pClass);
     InitCounts(pClass, pContext);
 
     // create declarator
@@ -118,7 +122,7 @@ bool CBEMsgBufferType::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * p
 bool CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation, CBEContext * pContext)
 {
     // init counts first, because GetMsgBufferType may access them
-    ASSERT(GetParent()->IsKindOf(RUNTIME_CLASS(CBEFunction)));
+    assert(GetParent()->IsKindOf(RUNTIME_CLASS(CBEFunction)));
     CBEFunction *pFunction = (CBEFunction*)GetParent();
     InitCounts(pFunction, pContext);
 
@@ -286,7 +290,7 @@ void CBEMsgBufferType::WriteInitialization(CBEFile *pFile, CBEContext *pContext)
         // allocate message data structure
         pFile->PrintIndent("%s = ", (const char *) sMsgBuffer);
         m_pType->WriteCast(pFile, true, pContext);
-        pFile->Print("alloca(%s);\n", (const char *) sOffset);
+        pFile->Print("_dice_alloca(%s);\n", (const char *) sOffset);
     }
 }
 
@@ -303,7 +307,7 @@ void CBEMsgBufferType::WriteInitialization(CBEFile *pFile, CBEContext *pContext)
  */
 void CBEMsgBufferType::InitCounts(CBEClass *pClass, CBEContext *pContext)
 {
-    ASSERT(pClass);
+    assert(pClass);
     m_bCountAllVarsAsMax = true;
     // base classes
     VectorElement *pIter = pClass->GetFirstBaseClass();
@@ -334,7 +338,7 @@ void CBEMsgBufferType::InitCounts(CBEClass *pClass, CBEContext *pContext)
  */
 void CBEMsgBufferType::InitCounts(CBEFunction *pFunction, CBEContext *pContext)
 {
-    ASSERT(pFunction);
+    assert(pFunction);
     int nSendDir = pFunction->GetSendDirection();
     int nRecvDir = pFunction->GetReceiveDirection();
     // count parameters
@@ -396,7 +400,7 @@ void CBEMsgBufferType::InitCounts(CBEFunction *pFunction, CBEContext *pContext)
  */
 void CBEMsgBufferType::InitCounts(CBEMsgBufferType *pMsgBuffer, CBEContext *pContext)
 {
-    ASSERT(pMsgBuffer);
+    assert(pMsgBuffer);
     m_nFixedCount[0] = pMsgBuffer->m_nFixedCount[0];
     m_nFixedCount[1] = pMsgBuffer->m_nFixedCount[1];
     m_nStringCount[0] = pMsgBuffer->m_nStringCount[0];
@@ -469,12 +473,13 @@ int CBEMsgBufferType::GetVariableCount(int nDirection)
  *  \param pFile the file to write to
  *  \param nMemberType the type of the member to access
  *  \param pContext the context of the write operation
+ *  \param sOffset the offset if the access to the member has to be done using a cast of another member
  *
  * This is used to access the members correctly.
  * A member access is usually '&lt;msg buffer&gt;(->|.)&lt;member&gt;' if the message buffer is a
  * constructed type. If it is simple then it is only '&lt;msg buffer&gt;'.
  */
-void CBEMsgBufferType::WriteMemberAccess(CBEFile *pFile, int nMemberType, CBEContext *pContext)
+void CBEMsgBufferType::WriteMemberAccess(CBEFile *pFile, int nMemberType, CBEContext *pContext, String sOffset)
 {
     // print variable name
     // because this implementation uses a simple type, we only write the name.
@@ -522,7 +527,11 @@ void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBE
             {
                 pFile->Print("+(");
                 pParameter->WriteGetSize(pFile, NULL, pContext);
-                if ((pParameter->GetType()->GetSize() > 1) && !(pParameter->IsString()))
+				CBEType *pType = pParameter->GetType();
+				CBEAttribute *pAttr;
+				if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+					pType = pAttr->GetAttrType();
+                if ((pType->GetSize() > 1) && !(pParameter->IsString()))
                 {
                     pFile->Print("*sizeof");
                     pParameter->GetType()->WriteCast(pFile, false, pContext);
@@ -541,4 +550,16 @@ void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBE
             }
         }
     }
+}
+
+/** \brief test if we need to cast the message buffer
+ *  \param nFEType the type to test for
+ *  \param pContext the context of the cast operation
+ *  \return true if we need to cast the message buffer member
+ */
+bool CBEMsgBufferType::NeedCast(int nFEType, CBEContext *pContext)
+{
+    if (nFEType == TYPE_CHAR)
+	    return false;
+    return true;
 }

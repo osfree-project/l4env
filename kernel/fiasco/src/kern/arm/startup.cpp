@@ -8,7 +8,9 @@ IMPLEMENTATION:
 #include "irq_alloc.h"
 #include "kip_init.h"
 #include "kmem_space.h"
+#include "pic.h"
 #include "static_init.h"
+#include "timer.h"
 #include "vmem_alloc.h"
 
 #include <cstdlib>
@@ -28,9 +30,13 @@ static void startup_system()
   Config::init();
   Kip::init();
   Kmem_space::init();
+  Pic::init();
+#if !defined(CONFIG_KDB)
   Boot_console::init();
+#endif
   Vmem_alloc::init();
   Irq_alloc::init();
-  dirq_t::init();
+  Dirq::init();
   Cpu::init();
+  Timer::init();
 }

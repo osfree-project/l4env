@@ -2,7 +2,6 @@ INTERFACE:
 
 #include "l4_types.h"
 #include "jdb_ktrace.h"
-#include "jdb_perf_cnt.h"
 #include "tb_entry.h"
 
 class Log_event;
@@ -38,8 +37,8 @@ public:
    * @retval tsc event value of CPU cycles
    * @retval pmc event value of perf counter cycles
    * @return 0 if something wrong, 1 if everything ok */
-  static int event (Mword idx,
-		    Mword *number, Unsigned64 *tsc, Unsigned64 *pmc);
+  static int event (Mword idx, Mword *number, 
+		    Unsigned64 *tsc, Unsigned32 *pmc1, Unsigned32 *pmc2);
 
   /** @brief search the paired event to an ipc event or ipc result event
    * @param idx number of event to search the pair event for
@@ -61,9 +60,10 @@ public:
 
   /** @brief get difference perfcnt cycles between event idx and event idx+1
    * @param idx position of first event in tracebuffer
+   * @param nr  number of perfcounter (0=first, 1=second)
    * @retval difference in perfcnt cycles
    * @return 0 if something wrong, 1 if everything ok */ 
-  static int diff_pmc(Mword idx, Signed64 *delta);
+  static int diff_pmc(Mword idx, Mword nr, Signed32 *delta);
 
   enum
     { 
@@ -75,7 +75,7 @@ protected:
   static Tb_entry_fit64	*tbuf;		// entry buffer
   static Tb_entry_fit64	*tbuf_act;	// current entry
   static Tb_entry_fit64 *tbuf_max;
-  static l4_tracebuffer_status_t *status;
+  static Tracebuffer_status *status;
   static Mword		_entries;	// number of entries
   static Mword		number;		// current event number
   static Mword		count_mask1;
@@ -86,13 +86,11 @@ protected:
 
 class Log_patch
 {
-public:
-  Log_patch		*next;
+  friend class Log_event;
 
 private:
-  typedef Unsigned8	Log_patch_code[5];
-  Log_patch_code	*orig_code;
-  Log_patch_code	save_code;
+  Log_patch		*next;
+  Unsigned8		*activator;
 };
 
 class Log_event
@@ -103,46 +101,26 @@ class Log_event
 };
 
 
-#ifdef NO_LOG_EVENTS
+#ifndef CONFIG_JDB_LOGGING
 
 #define BEGIN_LOG_EVENT(name)	if (0) {
 #define END_LOG_EVENT(name)	}
 
 #else
 
-#ifdef CONFIG_NO_FRAME_PTR
-#define SAVE_EBP							\
-  {									\
-    Mword ebp;								\
-    asm volatile ("movl %%ebp, %0" : "=g"(ebp));
-
-#define RESTORE_EBP							\
-    asm volatile ("movl %0, %%ebp" : : "g"(ebp));			\
-  }
-#else
-#define SAVE_EBP
-#define RESTORE_EBP
-#endif
-
 #define BEGIN_LOG_EVENT(name)						\
   do									\
     {									\
-      asm volatile (".globl  "#name"			\n\t"		\
-		    ".globl  patch_"#name"		\n\t"		\
+      Unsigned8 __do_log__;						\
+      asm volatile (".globl  patch_"#name"		\n\t"		\
 		    "patch_"#name":			\n\t"		\
-		    "jmp     "#name"			\n\t"		\
-		    "1:					\n\t"		\
-		    ".text   1				\n\t"		\
-		    ""#name":				\n\t");		\
-      SAVE_EBP {
-      
+		    "movb    $0,%0			\n\t"		\
+		    : "=q"(__do_log__) );				\
+      if (EXPECT_FALSE( __do_log__ ))					\
+	{
 
 #define END_LOG_EVENT(name)						\
-      } RESTORE_EBP							\
-      asm volatile ("jmp     1b				\n\t"		\
-		    ".previous				\n\t"		\
-		    : : : "eax","ebx","ecx","edx","esi",		\
-		          "edi","memory");				\
+	}								\
     } while (0)
 
 #endif
@@ -154,7 +132,6 @@ IMPLEMENTATION:
 #include <cstdarg>
 
 #include "boot_info.h"
-#include "checksum.h"
 #include "config.h"
 #include "initcalls.h"
 #include "observer.h"
@@ -163,7 +140,7 @@ IMPLEMENTATION:
 Tb_entry_fit64 *Jdb_tbuf::tbuf;
 Tb_entry_fit64 *Jdb_tbuf::tbuf_act;
 Tb_entry_fit64 *Jdb_tbuf::tbuf_max;
-l4_tracebuffer_status_t *Jdb_tbuf::status;
+Tracebuffer_status *Jdb_tbuf::status;
 Mword Jdb_tbuf::_entries;
 Mword Jdb_tbuf::number;
 Mword Jdb_tbuf::count_mask1;
@@ -175,10 +152,10 @@ static void direct_log_dummy(Tb_entry*, const char*)
 
 void (*Jdb_tbuf::direct_log_entry)(Tb_entry*, const char*) = &direct_log_dummy;
 
-#ifndef NO_LOG_EVENTS
+#ifdef CONFIG_JDB_LOGGING
 #define DECLARE_PATCH(VAR, NAME)		\
-  extern "C" char patch_ ## NAME ;		\
-  static Log_patch VAR(&patch_ ## NAME )
+  extern "C" char patch_##NAME;			\
+  static Log_patch VAR(&patch_##NAME)
 
 
 // logging of context switch not implemented in Assembler shortcut but we
@@ -203,19 +180,31 @@ DECLARE_PATCH (lp6, log_timer_irq);
 static Log_event le4("timer irq raised",
 		      LOG_EVENT_TIMER_IRQ, 1, &lp6);
 
+#ifndef CONFIG_ABI_V4
 DECLARE_PATCH (lp7, log_thread_ex_regs);
 static Log_event le5("thread_ex_regs",
 		      LOG_EVENT_THREAD_EX_REGS, 1, &lp7);
+#endif
 
+#ifdef CONFIG_IA32
 DECLARE_PATCH (lp8, log_trap);
 DECLARE_PATCH (lp9, log_trap_n);
 static Log_event le6("trap raised",
 		      LOG_EVENT_TRAP, 2, &lp8, &lp9);
+#else
+DECLARE_PATCH (lp8, log_trap);
+static Log_event le6("trap raised",
+		      LOG_EVENT_TRAP, 1, &lp8);
+#endif
 
 DECLARE_PATCH (lp10, log_pf_res);
 static Log_event le7("pagefault result",
 		      LOG_EVENT_PF_RES, 1, &lp10);
 
+DECLARE_PATCH (lp11, log_sched_load);
+DECLARE_PATCH (lp12, log_sched_save);
+static Log_event le8("scheduling event",
+                      LOG_EVENT_SCHED, 2, &lp11, &lp12);
 
 Log_event * const Jdb_tbuf::log_events[LOG_EVENT_MAX_EVENTS] =
 { 
@@ -223,9 +212,14 @@ Log_event * const Jdb_tbuf::log_events[LOG_EVENT_MAX_EVENTS] =
   &le2, // ipc shortcut
   &le3, // irq raised
   &le4, // timer irq raised
+#ifndef CONFIG_ABI_V4
   &le5, // thread_ex_regs
+#else
+  0,
+#endif
   &le6, // trap raised
   &le7, // pagefault result
+  &le8,	// scheduling event
   0,    // terminate list
 };
 #endif
@@ -260,7 +254,8 @@ Jdb_tbuf::new_entry()
 
   tb->number(++number);
   tb->rdtsc();
-  tb->rdpmc();
+  tb->rdpmc1();
+  tb->rdpmc2();
 
   return tb;
 }
@@ -278,7 +273,8 @@ Jdb_tbuf::commit_entry()
 	status->version1++;
 
       // fire the virtual 'buffer full' irq
-      observer->notify();
+      if (observer)
+	observer->notify();
     }
 }
 
@@ -316,16 +312,21 @@ Jdb_tbuf::lookup(Mword idx)
 
 IMPLEMENT
 int
-Jdb_tbuf::event(Mword idx, Mword *number, Unsigned64 *tsc, Unsigned64 *pmc)
+Jdb_tbuf::event(Mword idx, Mword *number, 
+		Unsigned64 *tsc, Unsigned32 *pmc1, Unsigned32 *pmc2)
 {
   Tb_entry *e = lookup(idx);
 
   if (!e)
     return false;
 
-  *number  = e->number();
-  *tsc     = e->tsc();
-  *pmc     = e->pmc();
+  *number = e->number();
+  if (tsc)
+    *tsc = e->tsc();
+  if (pmc1)
+    *pmc1 = e->pmc1();
+  if (pmc2)
+    *pmc2 = e->pmc2();
   return true;
 }
 
@@ -431,7 +432,7 @@ Jdb_tbuf::diff_tsc(Mword idx, Signed64 *delta)
 
 IMPLEMENT
 int
-Jdb_tbuf::diff_pmc(Mword idx, Signed64 *delta)
+Jdb_tbuf::diff_pmc(Mword idx, Mword nr, Signed32 *delta)
 {
   Tb_entry *e      = lookup(idx);
   Tb_entry *e_prev = lookup(idx+1);
@@ -439,7 +440,12 @@ Jdb_tbuf::diff_pmc(Mword idx, Signed64 *delta)
   if (!e || !e_prev)
     return false;
 
-  *delta = e->pmc() - e_prev->pmc();
+  switch (nr)
+    {
+    case 0: *delta = e->pmc1() - e_prev->pmc1(); break;
+    case 1: *delta = e->pmc2() - e_prev->pmc2(); break;
+    }
+
   return true;
 }
 
@@ -467,7 +473,7 @@ Log_event::Log_event(const char *name, int type,
 // enable all patch entries of log event
 PUBLIC
 void
-Log_event::enable(bool enable)
+Log_event::enable(int enable)
 {
   Log_patch *p = patch;
 
@@ -479,8 +485,8 @@ Log_event::enable(bool enable)
 }
 
 // log event enabled if first entry is enabled
-PUBLIC
-bool
+PUBLIC inline
+int
 Log_event::enabled(void) const
 {
   return patch->enabled();
@@ -505,33 +511,23 @@ Log_event::get_type(void) const
 PUBLIC
 explicit
 Log_patch::Log_patch(void *code)
+  : next(0), activator((Unsigned8*)code+1)
 {
-  orig_code  = (Log_patch_code*)code;
-  next       = 0;
-  memcpy (save_code, orig_code, sizeof (save_code));
-  enable(false);
 }
 
 PUBLIC
 void
-Log_patch::enable(bool enable)
+Log_patch::enable(int enable)
 {
-  static Log_patch_code disable_code =
-    { 0x8d, 0x44, 0x20, 0x00, 0x90 };	/* lea 0(%eax), %eax ; nop */
-
-  if (enable)
-    memcpy (orig_code, save_code, sizeof (save_code));
-  else
-    memcpy (orig_code, disable_code, sizeof (disable_code));
+  *activator = enable;
 
   // checksum has changed
-  Boot_info::set_checksum_ro( checksum::get_checksum_ro() );
+  Boot_info::reset_checksum_ro();
 }
 
-PUBLIC
-bool
+PUBLIC inline
+int
 Log_patch::enabled(void)
 {
-  return !memcmp(*orig_code, save_code, sizeof(save_code));
+  return *activator;
 }
-

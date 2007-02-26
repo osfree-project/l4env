@@ -1,5 +1,17 @@
-#ifndef __CON_HW_VIDIX_H__
-#define __CON_HW_VIDIX_H__
+/*!
+ * \file	vidix.h
+ * \brief	backend scaler stuff
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __VIDIX_H_
+#define __VIDIX_H_
 
 /* taken from mplayer/vidix/vidix.h */
 

@@ -26,5 +26,13 @@
 // some other consts
 #define ipc_window0			0xee000000
 #define ipc_window1			0xee800000
+#define smas_version			0xef000000
+#define smas_area			0xef400000
+#define smas_start			0xeb000000
+#define smas_end			0xee000000
+
+// see kmem-ia32.cpp
+#define smas_trampoline			(0xeac00000 + 0x3000)
 
 #endif
+

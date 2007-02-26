@@ -1,0 +1,245 @@
+\chapter{Message Buffer Access Macros}
+\label{app:msgbuf_macros}
+
+{\small
+\begin{longtable}{|p{4.5cm}|p{9cm}|}%
+  \multicolumn{2}{r}{next page \dots}\\\endfoot%
+  \multicolumn{2}{l}{\dots continued from last page}\\\endhead%
+  \endfirsthead%
+  \endlastfoot%
+  \hline
+\it Macro & \it Description \\ \hline \hline
+
+% #define DICE_GET_DWORD(buf, pos)   *((l4_umword_t*)(&(buf->_bytes[pos*4])))
+\verb|DICE_GET_DWORD|
+\newline
+Parameters:\verb|buf|, \verb|pos| & 
+retrieves the double word at 
+position \verb|pos| from the message buffer 
+specified by \verb|buf|
+\newline
+\it Usage:
+\begin{verbatim}
+long dw1 = DICE_GET_DWORD(buffer, 0);
+\end{verbatim} 
+\\ \hline
+
+% #define DICE_GET_STRING(buf, pos)  (buf->_strings[pos]).rcv_str
+\verb|DICE_GET_STRING|
+\newline
+Parameters: \verb|buf|, \verb|pos| & 
+retrieves the pointer
+to the indirect part at position \verb|pos| in the 
+message buffer specified by \verb|buf|
+\newline
+\it Usage:
+\begin{verbatim}
+char* str = DICE_GET_STRING(buffer, 0);
+\end{verbatim} 
+\\ \hline
+
+% #define DICE_GET_STRSIZE(buf, pos) (buf->_strings[pos]).rcv_size
+\verb|DICE_GET_STRSIZE|
+\newline
+Parameters: \verb|buf|, \verb|pos| &
+retrieves the size of the indirect part at
+position \verb|pos| in the message buffer
+specified by \verb|buf|
+\newline
+\it Usage:
+\begin{verbatim}
+long str_len = DICE_GET_STRSIZE(buffer, 0);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_UNMARSHAL_DWORD(buf, var, pos)  var=DICE_GET_DWORD(buf, pos)
+\verb|DICE_UNMARSHAL_DWORD|
+\newline
+Parameters: \verb|buf|, \verb|var|, \verb|pos| &
+retrieves the double word of the position \verb|pos| from the
+message buffer \verb|buf| and stores it in the variable \verb|var|
+\newline
+\it Usage:
+\begin{verbatim}
+long dw2;
+DICE_UNMARSHAL_DWORD(buffer, dw2, 2);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_MARSHAL_DWORD(buf, var, pos)    DICE_GET_DWORD(buf, pos)=var
+\verb|DICE_MARSHAL_DWORD|
+\newline
+Parameters: \verb|buf|, \verb|var|, \verb|pos| &
+stores the value of the variable \verb|var| at the position \verb|pos|
+in the message buffer \verb|buf|.
+\newline
+\it Usage:
+\begin{verbatim}
+long variable = 42;
+DICE_MARSHAL_DWORD(buffer, variable, 3);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_UNMARSHAL_STRING(buf, ptr, size, pos) ptr=DICE_GET_STRING(buf, pos); \
+%                                                    size=DICE_GET_STRSIZE(buf, pos)
+\verb|DICE_UNMARSHAL_STRING|
+\newline
+Parameters: \verb|buf|, \verb|ptr|, \verb|size|, \verb|pos| &
+retrieves the pointer to an indirect part and its size 
+from the position \verb|pos| from the message buffer \verb|buf|
+and stores the values in \verb|ptr| and \verb|size| respectively.
+\newline
+\it Usage:
+\begin{verbatim}
+char *str;
+long size;
+DICE_UNMARSHAL_STRING(buffer, str, size, 0);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_MARSHAL_STRING(buf, ptr, size, pos)   (buf->_strings[pos]).snd_str=ptr; \
+%						     (buf->_strings[pos]).snd_size=size
+\verb|DICE_MARSHAL_STRING|
+\newline
+Parameters: \verb|buf|, \verb|ptr|, \verb|size|, \verb|pos| &
+sets the indirect part pointer and size at position \verb|pos|
+in the message buffer \verb|buf| to the values of \verb|ptr| and
+\verb|size|.
+\newline
+\it Usage:
+\begin{verbatim}
+char *str = "Hello World!";
+long size = strlen(str)+1;
+DICE_MARSHAL_STRING(buffer, str, size, 0);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_UNMARSHAL_FPAGE(buf, snd_fpage, pos) (snd_fpage).snd_base=DICE_GET_DWORD(buf,pos); \
+%                                                   (snd_fpage).fpage=DICE_GET_DWORD(buf,pos+1)
+\verb|DICE_UNMARSHAL_FPAGE|
+\newline
+Parameters: \verb|buf|, \verb|snd_fpage|, \verb|pos| &
+Retrieves the value of a \verb|l4_snd_fpage_t| structure from the
+message buffer \verb|buf| starting at position \verb|pos|, and 
+stores the values in the \verb|snd_fpage| variable.
+\newline
+\it Usage:
+\begin{verbatim}
+l4_snd_fpage_t fpage;
+DICE_UNMARSHAL_FPAGE(buffer, fpage, 0);
+\end{verbatim}
+\\ \hline
+						
+% #define DICE_MARSHAL_FPAGE(buf, snd_fpage, pos)   DICE_GET_DWORD(buf,pos)=(l4_umword_t)(snd_fpage).snd_base; \
+%                                                   DICE_GET_DWORD(buf,pos+1)=(l4_umword_t)(snd_fpage).fpage.fpage
+\verb|DICE_MARSHAL_FPAGE|
+\newline
+Parameters:\verb|buf|, \verb|snd_fpage|, \verb|pos| &
+Stores the value of the \verb|l4_snd_fpage_t| structure of
+variable \verb|var| in the message buffer \verb|buf| at
+position \verb|pos|.
+\newline
+\it Usage:
+\begin{verbatim}
+l4_snd_fpage_t fpage;
+fpage.snd_base = address;
+fpage.fpage.fpage = other_flexpage;
+DICE_MARSHAL_FPAGE(buffer, fpage, 0);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_MARSHAL_ZERO_FPAGE(buf, pos)         DICE_GET_DWORD(buf,pos)=0; \
+% 						   DICE_GET_DWORD(buf,pos+1)=0
+\verb|DICE_MARSHAL_ZERO_FPAGE|
+\newline
+Parameters: \verb|buf|, \verb|pos| &
+Stores zeros at position \verb|pos| and \verb|pos+1| in the
+message buffer. (L4 uses a ''zero flexpage'' to separate
+flexpages from the rest of a message.)
+\newline
+\it Usage:
+\begin{verbatim}
+DICE_MARSHAL_ZERO_FPAGE(buffer, 1);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_GET_DWORD_COUNT(buf)                 (buf->send.md.dwords)
+\verb|DICE_GET_DWORD_COUNT|
+\newline
+Parameters: \verb|buf| &
+Retrieves the number of send dwords.
+\newline
+\it Usage:
+\begin{verbatim}
+num = DICE_GET_DWORD_COUNT(buffer);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_GET_STRING_COUNT(buf)                (buf->send.md.strings)
+\verb|DICE_GET_STRING_COUNT|
+\newline
+Parameters: \verb|buf| &
+Retrieves the number of send indirect parts.
+\newline
+\it Usage:
+\begin{verbatim}
+str_num = DICE_GET_STRING_COUNT(buffer);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_SET_DWORD_COUNT(buf, count)          buf->send.md.dwords = count
+\verb|DICE_SET_DWORD_COUNT|
+\newline
+Parameters: \verb|buf|, \verb|count| &
+Sets the number of send dwords.
+\newline
+\it Usage:
+\begin{verbatim}
+DICE_SET_DWORD_COUNT(buffer, num);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_SET_STRING_COUNT(buf, count)         buf->send.md.strings = count
+\verb|DICE_SET_STRING_COUNT|
+\newline
+Parameters: \verb|buf|, \verb|count| &
+Sets the number of send indirect parts.
+\newline
+\it Usage:
+\begin{verbatim}
+DICE_SET_STRING_COUNT(buffer, str_num);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_SET_SHORTIPC_COUNT(buf)              DICE_SET_DWORD_COUNT(buf,2); \
+%                                                   DICE_SET_STRING_COUNT(buf,0); \
+%                                                   buf->send.md.fpage_received = 0
+\verb|DICE_SET_SHORTIPC_COUNT|
+\newline
+Parameters: \verb|buf| &
+Sets the values of the message buffer to transfer a
+fast short IPC. It sets the dword count to 2, the
+indirect part count to 0 and the flexpages to 0.
+\newline
+\begin{verbatim}
+DICE_SET_SHORTIPC_COUNT(buffer);
+\end{verbatim}
+\\ \hline
+
+% #define DICE_SET_SEND_FPAGE(buf)                  buf->send.md.fpage_received = 1
+\verb|DICE_SET_SEND_FPAGE|
+\newline
+Parameters: \verb|buf| &
+Sets a flag in the message buffer to tell the 
+\verb|reply_any_wait_any| function to transfer a
+flexpage.
+\newline
+\begin{verbatim}
+DICE_SET_SEND_FPAGE(buffer);
+\end{verbatim}
+\\ \hline
+				
+
+\end{longtable}
+}
+

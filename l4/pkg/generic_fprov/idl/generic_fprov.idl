@@ -5,35 +5,30 @@
  *  \brief Common L4 Environment, File provider interface
  */
 
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+
 /** \brief module l4 */
-module l4fprov
+library l4fprov
 {
-  struct threadid_t
-    {
-      unsigned long low;
-      unsigned long high;
-    };
-  
-  struct dataspace_t
-    {
-      unsigned long id;
-      threadid_t manager;
-    };
-  
   /** File provider interface */
   interface file
     {
-      /*! Open new binary and return a dataspace.
+      /*! Open new binary and return a dataspace containing the binary image
+       * of the file.
        * 
        *  \param fname	file name
        *  \param dm	id of dataspace manager to use
-       *  \param flags	flags
+       *  \param flags	flags (currently unused)
        *  
        *  \retval ds	opened dataspace
        *  \retval size	size of file in bytes
        */
-      long open(in string fname, in threadid_t dm, in unsigned long flags,
-	        out dataspace_t ds, out unsigned long size);
+      long open([in, string] char* fname, 
+	        [in] l4_threadid_t dm, 
+		[in] unsigned long flags,
+	        [out] l4dm_dataspace_t *ds, 
+		[out] unsigned long *size);
     };
 };
 

@@ -32,20 +32,17 @@ class CL4V2BECallFunction : public CL4BECallFunction
 DECLARE_DYNAMIC(CL4V2BECallFunction);
 
 public:
-  CL4V2BECallFunction();
-  ~CL4V2BECallFunction();
+    /** creates the call IPC object */
+	CL4V2BECallFunction();
+	~CL4V2BECallFunction();
 
 protected:
     virtual void WriteUnmarshalling(CBEFile * pFile,  int nStartOffset,  bool & bUseConstOffset,  CBEContext * pContext);
     virtual void WriteMarshalling(CBEFile * pFile,  int nStartOffset,  bool & bUseConstOffset,  CBEContext * pContext);
     virtual void WriteInvocation(CBEFile * pFile,  CBEContext * pContext);
-    virtual bool UseAsmShortIPC(CBEContext* pContext);
-    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
     virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
     virtual void WriteVariableInitialization(CBEFile * pFile,  CBEContext * pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmLongIPC(CBEContext *pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
 };
 
 #endif

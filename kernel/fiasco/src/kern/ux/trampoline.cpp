@@ -2,12 +2,13 @@
 INTERFACE:
 
 #include <sys/types.h>
+#include "types.h"
 
 class Trampoline
 {
 private:
   static const unsigned		syscall_opcode = 0x80cd;
-  static unsigned		phys_magic;
+  static Address const		kern_trampoline_page;
 
 public:
   static void	mmap		(pid_t pid, unsigned int start, size_t length,
@@ -33,14 +34,16 @@ IMPLEMENTATION:
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include "undef_page.h"
 
 #include "cpu_lock.h"
 #include "emulation.h"
 #include "kmem.h"
 #include "lock_guard.h"
+#include "boot_info.h"
 
-unsigned Trampoline::phys_magic = (unsigned) Kmem::phys_to_virt (Emulation::trampoline_frame);
-
+Address const Trampoline::kern_trampoline_page =
+              (Address) Kmem::phys_to_virt (Emulation::trampoline_frame);
 /* 
  * Trampoline Operations
  *
@@ -62,13 +65,20 @@ Trampoline::mmap (pid_t pid, unsigned int start, size_t length,
 
   ptrace (PTRACE_GETREGS, pid, NULL, &regs);
 
-  *(unsigned int *)(phys_magic)      = syscall_opcode;
-  *(unsigned int *)(phys_magic + 4)  = start;
-  *(unsigned int *)(phys_magic + 8)  = length;
-  *(unsigned int *)(phys_magic + 12) = prot;
-  *(unsigned int *)(phys_magic + 16) = flags;
-  *(unsigned int *)(phys_magic + 20) = fd;
-  *(unsigned int *)(phys_magic + 24) = offset;
+  *(unsigned int *)(kern_trampoline_page)      = syscall_opcode;
+  *(unsigned int *)(kern_trampoline_page + 4)  = start;
+  *(unsigned int *)(kern_trampoline_page + 8)  = length;
+  *(unsigned int *)(kern_trampoline_page + 12) = prot;
+  *(unsigned int *)(kern_trampoline_page + 16) = flags;
+  *(unsigned int *)(kern_trampoline_page + 20) = fd;
+
+  if ((Address) offset >= Boot_info::fb_virt() &&
+       offset + length <= Boot_info::fb_virt() +
+                          Boot_info::fb_size() +
+                          Boot_info::input_size())
+    *(unsigned int *)(kern_trampoline_page + 24) = Boot_info::fb_phys() + (offset - Boot_info::fb_virt());
+  else
+    *(unsigned int *)(kern_trampoline_page + 24) = offset;
 
   stackregs     = regs;					/* Start with valid segment selectors */
   stackregs.eax = __NR_mmap;
@@ -106,7 +116,7 @@ Trampoline::munmap (pid_t pid, unsigned int start, size_t length)
 
   ptrace (PTRACE_GETREGS, pid, NULL, &regs);
 
-  *(unsigned int *)(phys_magic) = syscall_opcode;
+  *(unsigned int *)(kern_trampoline_page) = syscall_opcode;
 
   stackregs     = regs;					/* Start with valid segment selectors */
   stackregs.eax = __NR_munmap;
@@ -145,7 +155,7 @@ Trampoline::mprotect (pid_t pid, unsigned int start, size_t length, int prot)
 
   ptrace (PTRACE_GETREGS, pid, NULL, &regs);
 
-  *(unsigned int *)(phys_magic) = syscall_opcode;
+  *(unsigned int *)(kern_trampoline_page) = syscall_opcode;
 
   stackregs     = regs;					/* Start with valid segment selectors */
   stackregs.eax = __NR_mprotect;

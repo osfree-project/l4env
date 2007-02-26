@@ -63,3 +63,21 @@ void *Kmem_alloc::_virt_to_phys( void *virt ) const
 
 }
 
+PUBLIC
+void Kmem_alloc::debug_dump()
+{
+  Helping_lock_guard guard(&lmm_lock);
+
+  lmm_dump((lmm_t*)lmm);
+  vm_size_t free = lmm_avail((lmm_t*)lmm, 0);
+  vm_size_t orig_free = 1000; /*Kmem::info()->reserved1.high 
+				- Kmem::info()->reserved1.low;*/
+  printf("Used 0x%x/0x%x bytes (%d%%, %d/%dkB) of kmem\n", 
+	 orig_free - free, 
+	 orig_free,
+	 (Unsigned32)(100LL*(orig_free-free)/orig_free),
+	 (orig_free - free + 1023)/1024,
+	 (orig_free        + 1023)/1024);
+}
+
+

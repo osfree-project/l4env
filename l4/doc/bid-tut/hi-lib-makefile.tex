@@ -1,0 +1,8 @@
+PKGDIR          ?= ../..
+L4DIR           ?= $(PKGDIR)/../..
+
+TARGET          = lib$(PKGNAME).a
+SRC_C           = encap.c
+CLIENTIDL       = hiworld.idl
+
+include $(L4DIR)/mk/lib.mk

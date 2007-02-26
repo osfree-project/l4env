@@ -1,0 +1,14 @@
+interface petze {
+	
+	void malloc([in, string] char *poolname,
+	            [in] int address,
+	            [in] int size);
+	
+	void free  ([in] char *poolname,
+	            [in] int address);
+	
+	void dump  (void);
+
+	void reset (void);
+	
+};

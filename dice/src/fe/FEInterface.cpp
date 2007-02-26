@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -38,8 +38,9 @@
 #include "fe/FETaggedStructType.h"
 #include "fe/FETaggedUnionType.h"
 #include "fe/FETaggedEnumType.h"
-
+#include "Compiler.h"
 #include "CString.h"
+#include "File.h"
 
 /////////////////////////////////////////////////////////////////////
 // Interface stuff
@@ -72,7 +73,7 @@ CFEInterface::CFEInterface(Vector * pIAttributes, String sIName, Vector * pIBase
 				else
 				{
 					TRACE("Unknown Interface component: %s\n", pIter->GetElement()->GetClassName());
-					ASSERT(false);
+					assert(false);
 				}
 			}
 		}
@@ -413,7 +414,7 @@ bool CFEInterface::CheckConsistency()
 {
     // set base interfaces
     CFEFile *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     VectorElement *pIter = GetFirstBaseInterfaceName();
     CFEIdentifier *pBaseName = 0;
     while ((pBaseName = GetNextBaseInterfaceName(pIter)) != 0)

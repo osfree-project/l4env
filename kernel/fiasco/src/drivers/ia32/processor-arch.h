@@ -10,13 +10,13 @@ namespace Proc {
 
   typedef Unsigned32 Status;
 
-  FIASCO_INLINE
+  inline
   void stack_pointer( Mword sp )
   {
     asm volatile ( "movl %0, %%esp \n" : : "r"(sp) );
   }
 
-  FIASCO_INLINE
+  inline
   void pause()
   {
     asm volatile (" .byte 0xf3, 0x90 #pause \n" ); 
@@ -30,25 +30,25 @@ namespace Proc {
    * some time (e.g. when gcc-3.3 is used as a standard compiler).
    */
 
-  FIASCO_INLINE
+  inline
   void halt()
   {
     asm volatile (" hlt" : : : "memory");
   }
 
-  FIASCO_INLINE
+  inline
   void cli()
   {
     asm volatile ("cli" : : : "memory");
   }
 
-  FIASCO_INLINE
+  inline
   void sti()
   {
     asm volatile ("sti" : : : "memory");
   }
   
-  FIASCO_INLINE
+  inline
   Status cli_save()
   {
     Status ret;
@@ -59,14 +59,14 @@ namespace Proc {
     return ret;
   }
   
-  FIASCO_INLINE
+  inline
   void sti_restore( Status st )
   {
     if (st & 0x0200)
       asm volatile ("sti" : : : "memory");
   }
 
-  FIASCO_INLINE
+  inline
   Status interrupts()
   {
     Status ret;
@@ -76,11 +76,12 @@ namespace Proc {
     return ret & 0x0200;
   }
 
-  FIASCO_INLINE
+  inline
   void irq_chance()
   {
     asm volatile ("nop; nop;" : : : "memory");
   }
+
 };
 
 #endif // PROCESSOR_ARCH_H__

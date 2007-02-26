@@ -5,7 +5,7 @@
  *	\date	Sat Jun 1 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -44,14 +44,10 @@ public:
 	CL4BESndFunction();
 	~CL4BESndFunction();
 
-public: // public methods
-    virtual bool CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext);
-
 protected: // Protected methods
     virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
     virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
     virtual bool DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext);
     virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);

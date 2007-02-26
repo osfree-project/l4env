@@ -1,8 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 noinst_LIBRARIES=	libfe.a
-libfe_a_SOURCES=	FEArrayDeclarator.cpp \
-			FEFileComponent.cpp \
+libfe_a_SOURCES = FEArrayDeclarator.cpp \
+            FEFileComponent.cpp \
 			FEStructType.cpp \
 			FEArrayType.cpp \
 			FEFunctionDeclarator.cpp \
@@ -42,7 +42,8 @@ libfe_a_SOURCES=	FEArrayDeclarator.cpp \
 			FEExpression.cpp \
 			FESimpleType.cpp \
 			FEFile.cpp \
-			FEStringAttribute.cpp
+			FEStringAttribute.cpp \
+			FESizeOfExpression.cpp
 
 noinst_HEADERS=		FEArrayDeclarator.h \
 			FEFileComponent.h \
@@ -85,5 +86,6 @@ noinst_HEADERS=		FEArrayDeclarator.h \
 			FEExpression.h \
 			FESimpleType.h \
 			FEFile.h \
-			FEStringAttribute.h
+			FEStringAttribute.h \
+			FESizeOfExpression.h
 

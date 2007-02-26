@@ -5,7 +5,7 @@
  *	\date	02/13/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -29,8 +29,10 @@
 #include "be/BEContext.h"
 #include "be/BERoot.h"
 #include "be/BETypedef.h"
+#include "be/BEDeclarator.h"
+#include "be/BEExpression.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FEFile.h"
 
@@ -60,7 +62,10 @@ CBEUserDefinedType::~CBEUserDefinedType()
 bool CBEUserDefinedType::CreateBackEnd(String sName, CBEContext * pContext)
 {
     if (sName.IsEmpty())
+	{
+        VERBOSE("%s failed because user defined name is empty\n", __PRETTY_FUNCTION__);
         return false;
+	}
     m_sName = sName;
     // set size
     m_nSize = GetSizeOfType(sName);
@@ -84,16 +89,15 @@ bool CBEUserDefinedType::CreateBackEnd(String sName, CBEContext * pContext)
  */
 bool CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
 {
-    VERBOSE("CBEUserDefinedType::CreateBackEnd(front-end type)\n");
     if (!pFEType)
     {
-        VERBOSE("CBEUserDefinedType::CreateBE failed because FE type is 0\n");
+        VERBOSE("%s failed because FE Type is 0\n", __PRETTY_FUNCTION__);
         return false;
     }
 
     if (!pFEType->IsKindOf(RUNTIME_CLASS(CFEUserDefinedType)))
     {
-        VERBOSE("CBEUserDefinedType::CreateBE failed because FE type is not user defined\n");
+        VERBOSE("%s failed because FE Type is not 'user defined'\n", __PRETTY_FUNCTION__);
         return false;
     }
 
@@ -102,16 +106,22 @@ bool CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pCont
     {
         // find original type
         CFEFile *pFERoot = pFEType->GetRoot();
-        ASSERT(pFERoot);
-        CFETypedDeclarator *pFETypedef = pFERoot->FindUserDefinedType(pUserType->GetName());
-        String sName;
+        assert(pFERoot);
+        String sName, sUserName = pUserType->GetName();
+        CFETypedDeclarator *pFETypedef = pFERoot->FindUserDefinedType(sUserName);
         if (pFETypedef)
-            sName = pContext->GetNameFactory()->GetTypeName((CFEBase*)pFETypedef, pUserType->GetName(), pContext);
+            sName = pContext->GetNameFactory()->GetTypeName((CFEBase*)pFETypedef, sUserName, pContext);
         else
-            sName = pUserType->GetName();
+		{
+		    CFEInterface *pFEInterface = pFERoot->FindInterface(sUserName);
+			if (pFEInterface)
+			    sName = pContext->GetNameFactory()->GetTypeName((CFEBase*)pFEInterface, sUserName, pContext);
+		}
+		if (sName.IsEmpty())
+            sName = sUserName;
         if (!CreateBackEnd(sName, pContext))
         {
-            VERBOSE("CBEUserDefinedType::CreateBE failed because no name set\n");
+			VERBOSE("%s failed because no name set\n", __PRETTY_FUNCTION__);
             return false;
         }
     }
@@ -130,7 +140,7 @@ bool CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pCont
 int CBEUserDefinedType::GetSizeOfType(String sTypeName)
 {
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
     if (!pTypedef)
         return 0;
@@ -166,6 +176,7 @@ int CBEUserDefinedType::GetSize()
     return m_nSize;
 }
 
+
 /**	\brief writes cod eto initialize a variable of this type with a zero value
  *	\param pFile the file to write to
  *	\param pContext the context of the write operation
@@ -175,17 +186,20 @@ int CBEUserDefinedType::GetSize()
  */
 void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
 {
-    CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
-    CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    if (pTypedef)
-    {
-        if (pTypedef->GetType())
-        {
-            pTypedef->GetType()->WriteZeroInit(pFile, pContext);
-            return;
-        }
-    }
+    CBEType *pType = GetRealType();
+	if (pType)
+	{
+		// test for array types, something like: typedef int five_ints[5];
+		CBEDeclarator *pAlias = GetRealName();
+		if (pAlias && pAlias->IsArray())
+		{
+			WriteZeroInitArray(pFile, pType, pAlias, pAlias->GetFirstArrayBound(), pContext);
+			return;
+		}
+		// no array
+		pType->WriteZeroInit(pFile, pContext);
+		return;
+	}
     CBEType::WriteZeroInit(pFile, pContext);
 }
 
@@ -196,14 +210,9 @@ void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
  */
 bool CBEUserDefinedType::IsConstructedType()
 {
-    CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
-    CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    if (pTypedef)
-    {
-        if (pTypedef->GetType())
-            return pTypedef->GetType()->IsConstructedType();
-    }
+    CBEType *pType = GetRealType();
+	if (pType)
+		return pType->IsConstructedType();
     return false;
 }
 
@@ -212,16 +221,9 @@ bool CBEUserDefinedType::IsConstructedType()
  */
 bool CBEUserDefinedType::DoWriteZeroInit()
 {
-    CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
-    CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    if (pTypedef)
-    {
-        if (pTypedef->GetType())
-        {
-            return pTypedef->GetType()->DoWriteZeroInit();;
-        }
-    }
+    CBEType *pType = GetRealType();
+	if (pType)
+		return pType->DoWriteZeroInit();;
     return CBEType::DoWriteZeroInit();
 }
 
@@ -232,15 +234,22 @@ bool CBEUserDefinedType::DoWriteZeroInit()
  */
 void CBEUserDefinedType::WriteGetSize(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext)
 {
-    CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
-    CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    if (pTypedef)
-    {
-        CBEType *pType = pTypedef->GetType();
-        if (pType)
-            pType->WriteGetSize(pFile, pStack, pContext);
-    }
+	CBEType *pType = GetRealType();
+	CBEDeclarator *pAlias = GetRealName();
+	// if the type is simple, but the alias is variable sized
+	// then we need to the get max-size of the type
+	// e.g. typedef small *small_var_array;
+	if (pType && pType->IsSimpleType() &&
+	    pAlias && (pAlias->GetStars() > 0))
+	{
+		int nMaxSize = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
+		pFile->Print("%d", nMaxSize);
+	}
+	else
+	{
+		if (pType)
+			pType->WriteGetSize(pFile, pStack, pContext);
+	}
 }
 
 /** \brief test if this is a simple type
@@ -249,4 +258,121 @@ void CBEUserDefinedType::WriteGetSize(CBEFile *pFile, CDeclaratorStack *pStack, 
 bool CBEUserDefinedType::IsSimpleType()
 {
     return false;
+}
+
+/** \brief checks if this type has array dimensions
+ *  \return true if it has
+ */
+bool CBEUserDefinedType::IsArrayType()
+{
+	CBEDeclarator *pAlias = GetRealName();
+	// if the type is simple, but the alias is variable sized
+	// then we have at least one array dimensions
+	if (pAlias && (pAlias->GetStars() > 0))
+		return true;
+	if (pAlias && (pAlias->GetArrayDimensionCount() > 0))
+		return true;
+	// check base type
+	CBEType *pType = GetRealType();
+	if (pType)
+		return pType->IsArrayType();
+	return false;
+}
+
+/** \brief calculates the number of array dimensions for this type
+ *  \return the number of found array dimensions
+ */
+int CBEUserDefinedType::GetArrayDimensionCount()
+{
+	CBEType *pType = GetRealType();
+	CBEDeclarator *pAlias = GetRealName();
+	// if the type is simple, but the alias is variable sized
+	// then we have at least one array dimensions
+	if (pType && pAlias)
+		return pType->GetArrayDimensionCount() + pAlias->GetArrayDimensionCount();
+	return 0;
+}
+
+/** \brief test if this type is a pointer type
+ *  \return true if it is
+ *
+ * The CORBA_Object type is a pointer type
+ */
+bool CBEUserDefinedType::IsPointerType()
+{
+	CBEDeclarator *pAlias = GetRealName();
+	// if the type is simple, but the alias is variable sized
+	// then we have at least one array dimensions
+	if (pAlias && (pAlias->GetStars() > 0))
+		return true;
+	// check the aliased type
+	CBEType *pType = GetRealType();
+	if (pType)
+		return pType->IsPointerType();
+	// no alias; fallback to base type
+    return CBEType::IsPointerType();
+}
+
+/** \brief if this is the alias of another type, get this type
+ *  \return the type of the typedef
+ */
+CBEType* CBEUserDefinedType::GetRealType()
+{
+    CBERoot *pRoot = GetRoot();
+	assert(pRoot);
+	CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
+	if (pTypedef)
+	    return pTypedef->GetType();
+    return 0;
+}
+
+/** \brief if this is the alias of another type, get the alias of that type
+ *  \return the alias of the typedef
+ */
+CBEDeclarator* CBEUserDefinedType::GetRealName()
+{
+    CBERoot *pRoot = GetRoot();
+	assert(pRoot);
+	CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
+	if (pTypedef)
+	    return pTypedef->GetAlias();
+    return 0;
+}
+
+/** \brief writes the type without indirections
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBEUserDefinedType::WriteIndirect(CBEFile* pFile,  CBEContext* pContext)
+{
+    if (IsPointerType())
+	{
+		CBEType *pType = GetRealType();
+		if (pType)
+		{
+			pType->WriteIndirect(pFile, pContext);
+			return;
+		}
+	}
+	CBEType::WriteIndirect(pFile, pContext);
+}
+
+/** \brief returns the number of indirections
+ *  \return the number of stars in the typedef alias
+ */
+int CBEUserDefinedType::GetIndirectionCount()
+{
+    if (IsPointerType())
+	{
+		int nIndirect = 0;
+		CBEType *pType = GetRealType();
+		if (pType)
+		{
+			CBEDeclarator *pAlias = GetRealName();
+			if (pAlias)
+				nIndirect = pAlias->GetStars();
+			return nIndirect + pType->GetIndirectionCount();
+		}
+	}
+	return CBEType::GetIndirectionCount();
 }

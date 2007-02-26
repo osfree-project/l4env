@@ -56,7 +56,7 @@ int create_threads_sync()
 		/* receive an ipc from the thread. This informs us the corresponding
 		   irq field is initialized correctly. After receiving this ipc it is
 		   not valid to communicate with the thread if irqs[i].available==0. */
-		error = l4_i386_ipc_receive(thread, L4_IPC_SHORT_MSG, &dummy, &dummy,
+		error = l4_ipc_receive(thread, L4_IPC_SHORT_MSG, &dummy, &dummy,
 					    L4_IPC_NEVER, &result);
 		if(error) return -1;
 	}

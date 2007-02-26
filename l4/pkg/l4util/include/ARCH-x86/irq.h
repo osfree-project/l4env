@@ -1,74 +1,74 @@
-/* 
- * $Id$
- */
+/* $Id$ */
+/**
+ * \file     l4util/include/ARCH-x86/irq.h
+ * \brief    some PIC and hardware interrupt related functions
+ * \ingroup  irq
+ *
+ * \date     2003
+ * \author   Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ *           Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
 #ifndef __L4_IRQ_H__ 
 #define __L4_IRQ_H__ 
 
 #include <l4/sys/compiler.h>
+#include <l4/util/port_io.h>
 
-L4_INLINE void irq_acknowledge(unsigned int irq);
+/** Acknowledge IRQ at PIC in fully special nested mode.
+ * \param irq  number of interrupt to acknowledge 
+ */
+L4_INLINE void
+l4util_irq_acknowledge(unsigned int irq);
 
-void static volatile inline __l4_outb(int p, unsigned char r)
+/** Disable all interrupts
+ */
+void static volatile inline
+l4util_cli (void)
 {
-  __asm__ __volatile__ ("outb %b0, %w1"
-           :
-           : "a" ((unsigned char)r), "Nd"((unsigned short)p)
-           );
+  __asm__ __volatile__ ("cli" : : : "memory");
 }
 
-unsigned char static volatile inline __l4_inb (int p)
+/** Enable all interrupts
+ */
+void static volatile inline
+l4util_sti (void)
 {
-  unsigned char r;
-  
-  __asm__ __volatile__ ("inb %w1, %b0"
-           : "=a" (r)
-           :  "Nd" ((unsigned short)p)
-           );
-  return r;
+  __asm__ __volatile__ ("sti" : : : "memory");
 }
 
-unsigned char static volatile inline __l4_cli (void)
-{
-  int r;
-  __asm__ ("cli"
-           );
-  return r;
-}
-
-unsigned char static volatile inline __l4_sti (void)
-{
-  int r;
-  __asm__ ("sti"
-           );
-  return r;
-}
-
-void static volatile inline __l4_flags_save (unsigned *flags)
+/** Save the processor flags. Can be used to save and later restore the
+ * interrupt flag 
+ */
+void static volatile inline
+l4util_flags_save (unsigned *flags)
 {
   __asm__ __volatile__ ("pushfl ; popl %0 " :"=g" (*flags) : :"memory");
 }
 
-void static volatile inline __l4_flags_restore (unsigned *flags)
+/** Restore processor flags. Can be used to restore the interrupt flag
+ */
+void static volatile inline
+l4util_flags_restore (unsigned *flags)
 {
   __asm__ __volatile__ ("pushl %0 ; popfl" : :"g" (*flags) : "memory");
 }
 
-/* Acknowledge the given irq. Special fully nested mode of the pic is assumed
-   as in L4. 
-*/
-L4_INLINE void irq_acknowledge(unsigned int irq)
+L4_INLINE void
+l4util_irq_acknowledge(unsigned int irq)
 {
   if (irq > 7)
     {
-      __l4_outb(0xA0,0x60+(irq & 7));
-      __l4_outb(0xA0,0x0B);
-      if (__l4_inb(0xA0) == 0)
-	__l4_outb(0x20, 0x60 + 2);
+      l4util_out8(0x60+(irq & 7), 0xA0);
+      l4util_out8(0x0B,0xA0);
+      if (l4util_in8(0xA0) == 0)
+	l4util_out8(0x60 + 2, 0x20);
     } 
   else
-    {
-      __l4_outb(0x20, 0x60+irq);     /* acknowledge the irq */
-    }
+    l4util_out8(0x60+irq, 0x20);     /* acknowledge the irq */
 };
 
 #endif

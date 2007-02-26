@@ -1,11 +1,14 @@
 /* $Id$ */
+/**
+ * \file	con/examples/demo2/demo2.c
+ * \brief	demonstration server for con
+ *
+ * pSLIM_FILL ('DROPS' - message) */
 
-/*	con/examples/demo2/demo2.c		
- *
- *	demonstration server for con
- *
- *	pSLIM_FILL ('DROPS' - message)
- */
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 /* L4 includes */
 #include <l4/thread/thread.h>
@@ -17,7 +20,6 @@
 #include <l4/con/con-client.h>
 
 #include <l4/names/libnames.h>
-#include <l4/oskit10_l4env/support.h>
 #include <l4/log/l4log.h>
 
 #define PROGTAG		"_demo2"
@@ -60,16 +62,15 @@ clear_screen(void)
 {
   int ret;
   char buffer[30];
-  con_pslim_rect_t rect;
+  l4con_pslim_rect_t rect;
   l4_strdope_t bmap;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   /* setup initial vfb area info */
   rect.x = 0; rect.y = 0;
   rect.w = xres; rect.h = yres;
   
-  ret = con_vc_pslim_fill(vc_l4id, 
-			  (con_pslim_rect_t *) &rect, antiquewhite, &_ev);
+  ret = con_vc_pslim_fill_call(&vc_l4id, &rect, antiquewhite, &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
@@ -86,12 +87,13 @@ clear_screen(void)
   bmap.snd_str = (l4_umword_t) fill_bmap;
   bmap.rcv_size = 0;
 
-  ret = con_vc_pslim_bmap(vc_l4id,
-			  (con_pslim_rect_t *) &rect, 
+  ret = con_vc_pslim_bmap_call(&vc_l4id,
+			  &rect, 
 			  antiquewhite, indianred,
-  			  bmap,
+  			  (char*)fill_bmap,
+			  275,
 			  pSLIM_BMAP_START_MSB, 
-			  &_ev);
+			  &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
@@ -176,17 +178,14 @@ int draw_pt(int x, int y, int color)
 {
   int ret = 0;
   char buffer[30];
-  con_pslim_rect_t rect;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t rect;
+  CORBA_Environment _env = dice_default_environment;
 
   /* setup initial vfb area info */
   rect.x = x*10; rect.y = y*10;
   rect.w = 9; rect.h = 9;
 
-  ret = con_vc_pslim_fill(vc_l4id, 
-			  (con_pslim_rect_t *) &rect, 
-		  	  color,
-	  		  &_ev);
+  ret = con_vc_pslim_fill_call(&vc_l4id, &rect, color, &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
@@ -207,7 +206,7 @@ int main(int argc, char *argv[])
   int error = 0;
   l4_threadid_t dummy_l4id = L4_NIL_ID;
 
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   do_args(argc, argv);
   LOG_init(PROGTAG);
@@ -222,17 +221,17 @@ int main(int argc, char *argv[])
       enter_kdebug("panic");
     }
 
-  if (con_if_openqry(con_l4id, MY_SBUF_SIZE, 0, 0, L4THREAD_DEFAULT_PRIO,
-		     (con_threadid_t*) &vc_l4id, CON_VFB, &_ev))
+  if (con_if_openqry_call(&con_l4id, MY_SBUF_SIZE, 0, 0, L4THREAD_DEFAULT_PRIO,
+		     &vc_l4id, CON_VFB, &_env))
     enter_kdebug("open vc failed");
 
-  if (con_vc_smode(vc_l4id, CON_OUT, (con_threadid_t*)&dummy_l4id, &_ev))
+  if (con_vc_smode_call(&vc_l4id, CON_OUT, &dummy_l4id, &_env))
     enter_kdebug("setup vc failed");
 
-  if (con_vc_graph_gmode(vc_l4id, &gmode, &xres, &yres,
+  if (con_vc_graph_gmode_call(&vc_l4id, &gmode, &xres, &yres,
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
-			 &fn_x, &fn_y, &_ev))
+			 &fn_x, &fn_y, &_env))
     enter_kdebug("graph_gmode failed");
 
   while (!error) 
@@ -245,7 +244,7 @@ int main(int argc, char *argv[])
       l4_sleep(2000);
     }
 
-  if (con_vc_close(vc_l4id, &_ev))
+  if (con_vc_close_call(&vc_l4id, &_env))
     enter_kdebug("close vc failed?!");
 
   printf(PROGTAG "Going to bed ...\n");

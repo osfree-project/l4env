@@ -1,15 +1,23 @@
 /*
- * \brief	DOpE tokenizer module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE tokenizer module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * This module splits a given DOpE command string
  * into its tokens. It returns a table of offsets
  * and lengths of the tokens.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
-#include "dope-config.h"
+#include "dopestd.h"
 #include "tokenizer.h"
 
 int init_tokenizer(struct dope_services *d);
@@ -35,7 +43,8 @@ static s16 is_ident_char(char c) {
 }
 
 /*** RETURNS TYPE OF TOKEN IN THE GIVEN STRING AT A GIVEN OFFSET ***/
-static s32 token_type(char *s,s32 offset) {
+static s32 token_type(const char *s,s32 offset) {
+	if (!s) return TOKEN_WEIRD;
 
 	/* check if first token character is a 'special' character */
 	switch (s[offset]) {
@@ -43,9 +52,9 @@ static s32 token_type(char *s,s32 offset) {
 		case ')':
 		case '.':
 		case ',':
-		case '=': 	
+		case '=':
 			return TOKEN_STRUCT;
-		case 0:		
+		case 0:
 			return TOKEN_EOS;
 		case '"':
 			return TOKEN_STRING;
@@ -56,18 +65,18 @@ static s32 token_type(char *s,s32 offset) {
 			if (is_number_char(s[offset+1])) return TOKEN_NUMBER;
 			if (is_ident_char(s[offset+1])) return TOKEN_IDENT;
 	}
-	
+
 	/* check if first character is a number */
 	if (is_number_char(s[offset])) return TOKEN_NUMBER;
-	
+
 	/* check if first character is a identifier-character */
 	if (is_ident_char(s[offset])) return TOKEN_IDENT;
-	
+
 	return TOKEN_WEIRD;
 }
 
 
-static s16 ident_size(char *s) {
+static s16 ident_size(const char *s) {
 	s16 result=1;
 	s++;
 	while (is_ident_char(*(s++))) result++;
@@ -75,7 +84,7 @@ static s16 ident_size(char *s) {
 }
 
 
-static s16 number_size(char *s) {
+static s16 number_size(const char *s) {
 	s16 result=1;
 	s++;
 	while (is_number_char(*(s++))) result++;
@@ -83,7 +92,7 @@ static s16 number_size(char *s) {
 }
 
 
-static s16 string_size(char *s) {
+static s16 string_size(const char *s) {
 	s16 result=1;
 	s++;
 	while (((*s) != 0) && (*s != '"')) {
@@ -97,23 +106,23 @@ static s16 string_size(char *s) {
 		s++;
 		result++;
 	}
-	if ((*s) == 0) return 1;	/* unclosed string error */
+	if ((*s) == 0) return 1;    /* unclosed string error */
 	return result+1;
 }
 
 
-static s32 token_size(char *s,u32 offset) {
+static s32 token_size(const char *s,u32 offset) {
 	switch (token_type(s,offset)) {
-		case TOKEN_STRUCT:	return 1;
-		case TOKEN_IDENT:	return ident_size(s+offset);
-		case TOKEN_NUMBER:	return number_size(s+offset);
-		case TOKEN_STRING:	return string_size(s+offset);
-		default:			return 1;
+		case TOKEN_STRUCT:  return 1;
+		case TOKEN_IDENT:   return ident_size(s+offset);
+		case TOKEN_NUMBER:  return number_size(s+offset);
+		case TOKEN_STRING:  return string_size(s+offset);
+		default:            return 1;
 	}
 }
 
 
-static s32 skip_space(char *s,u32 offset) {
+static s32 skip_space(const char *s,u32 offset) {
 	while ((s[offset] == ' ') || (s[offset] == '\t')) offset++;
 	return offset;
 }
@@ -124,10 +133,10 @@ static s32 skip_space(char *s,u32 offset) {
 /*** SERVICE FUNCTIONS ***/
 /*************************/
 
-static s32 parse(char *s,s32 max_tok,s32 *offbuf,s32 *lenbuf) {
+static s32 parse(const char *s,s32 max_tok,s32 *offbuf,s32 *lenbuf) {
 	s32 num_tok=0;
 	s32 offset=0;
-	
+
 	/* go to first token of the string */
 	while ((*(s+offset))!=0) {
 		offset = skip_space(s,offset);
@@ -138,7 +147,7 @@ static s32 parse(char *s,s32 max_tok,s32 *offbuf,s32 *lenbuf) {
 		offbuf++;
 		num_tok++;
 	}
-	
+
 	return num_tok;
 }
 
@@ -160,7 +169,7 @@ static struct tokenizer_services services = {
 /**************************/
 
 int init_tokenizer(struct dope_services *d) {
-	
+
 	d->register_module("Tokenizer 1.0",&services);
 	return 1;
 }

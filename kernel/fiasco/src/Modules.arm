@@ -4,7 +4,7 @@
 
 ####################################################################################
 
-SUBSYSTEMS = ABI LIBAMM LIBLMM KERNEL CRT0 LIBK DRIVERS MINILIBC BOOT CXXLIB
+SUBSYSTEMS := 	ABI LIBAMM LIBLMM KERNEL CRT0 LIBK DRIVERS MINILIBC BOOT CXXLIB
 
 #ifneq ($(wildcard $(srcdir)/disasm),)
 #SUBSYSTEMS += LIBDISASM
@@ -27,7 +27,8 @@ PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
 DRIVERS 		:= libdrivers.a libgluedriverslibc.a
 VPATH			+= drivers/$(CONFIG_XARCH) drivers
 PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
-INTERFACES_DRIVERS 	:= mux_console console uart 
+INTERFACES_DRIVERS 	:= mux_console console uart filter_console \
+			   gdb_server
 uart_IMPL		:= uart uart-sa1100
 CXXSRC_DRIVERS		:= glue_libc.cc
 
@@ -88,7 +89,7 @@ VPATH 		+= abi/$(CONFIG_XARCH) abi
 
 INTERFACES_ABI 	:= l4_types kip
 
-l4_types_IMPL 	:= l4_types l4_types-x0 l4_types-32bit 
+l4_types_IMPL 	:= l4_types l4_types-x0 l4_types-32bit l4_types-debug
 # x0!=32Bit UIDs
 kip_IMPL	:= kip kip-arm
 
@@ -123,7 +124,7 @@ KERNEL_EXTRA 	:= Symbols
 VPATH 		+= kern/$(CONFIG_XARCH) kern
 PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH) kern
 
-INTERFACES_KERNEL := 	kmem boot_info __main globals config main \
+INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			kernel_uart pagetable kern_types  \
 			mapped_alloc kmem_alloc kip_init kmem_space \
 			mem_unit boot_uart_init kernel_console cpu \
@@ -131,18 +132,15 @@ INTERFACES_KERNEL := 	kmem boot_info __main globals config main \
 			cpu_lock irq sender startup boot_console \
 			entry_frame irq_alloc helping_lock switch_lock stack \
 			kmem_slab_simple region kmem_slab slab_cache_anon \
-			mapdb thread_state space_context context sched fpu \
+			mapdb thread_state space_context context sched_context fpu \
 			fpu_state sa_1100 space space_index space_index_util \
-			map_util task thread_lock receiver timer \
+			map_util task thread_lock receiver timer timeout \
+			ipc_timeout sched_timeout \
 			dirq threadid thread_util fpu_alloc long_msg \
-			kernel_thread
-
-
-INTERFACES_KERNEL 	+= jdb jdb_core jdb_module jdb_prompt_module \
-			   jdb_exit_module
+			kernel_thread pic cmdline preemption
 
 boot_info_IMPL	  	:= boot_info boot_info-arch
-config_IMPL	  	:= config config-arch
+config_IMPL	  	:= config config-v2x0 config-arch
 context_IMPL	  	:= context context-arm
 cpu_IMPL	  	:= cpu-arm
 cpu_lock_IMPL  	  	:= cpu_lock cpu_lock-generic
@@ -150,26 +148,53 @@ dirq_IMPL		:= dirq dirq-arm
 entry_frame_IMPL  	:= entry_frame entry_frame-arm entry_frame-ipc-arm \
 			   entry_frame-id_nearest-arm entry_frame-thread_switch-arm \
 			   entry_frame-thread_schedule-arm entry_frame-unmap-arm \
-			   entry_frame-ex_regs-arm entry_frame-task_new-arm
-fpu_IMPL		:= fpu fpu-arm
+			   entry_frame-ex_regs-arm entry_frame-task_new-arm \
+			   entry_frame-abs-timeout-hack
+fpu_IMPL		:= fpu fpu-nofpu
 globals_IMPL	  	:= globals globals-arch
-irq_IMPL		:= irq irq-arm irq-ipc
+irq_IMPL		:= irq irq-generic irq-ipc
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std
 kernel_uart_IMPL  	:= kernel_uart kernel_uart-sa1100
-long_msg		:= long_msg long_msg-generic
+long_msg_IMPL		:= long_msg long_msg-generic
+mapdb_IMPL		:= mapdb-$(CONFIG_XARCH) mapdb mapdb-v2x0
 map_util_IMPL		:= map_util map_util-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-arm
 pagetable_IMPL	  	:= pagetable pagetable-arch
 paging_IMPL	  	:= paging paging-arch
+pic_IMPL		:= pic pic-sa1100
+receiver_IMPL		:= receiver receiver-v2x0
 sched_IMPL		:= sched sched-arm
 space_context_IMPL	:= space_context-arm
-task_IMPL		:= task task-no-auto-map-kip
-thread_IMPL	  	:= thread-entry thread thread-list thread-arm thread-nosmas \
-			   thread-syscall thread-syscall-x0 thread-ipc thread-msg \
-			   thread-msg-arm
+sched_context_IMPL	:= sched_context sched_context-generic
+task_IMPL		:= task task-v2x0 task-v2x0-no-auto-map-kip
+thread_IMPL	  	:= thread thread-v2x0 thread-x0 \
+			   thread-list thread-arm thread-nosmas \
+			   thread-syscall thread-syscall-v2x0 \
+			   thread-syscall-x0 thread-jdb \
+			   thread-ipc thread-msg thread-msg-arm \
+			   thread-nolog thread-pagefault 
+thread_util_IMPL	:= thread_util thread_util-v2x0
 timer_IMPL		:= timer timer-arm
 vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
+
+
+ifeq ("$(CONFIG_JDB)","y")
+INTERFACES_KERNEL 	+= jdb jdb_core jdb_module jdb_prompt_module \
+			   jdb_exit_module jdb_mem_dump jdb_kern_info \
+			   jdb_tcb jdb_dump_entry_frame jdb_screen
+
+jdb_IMPL		:= jdb jdb-arm
+jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-arm
+jdb_dump_entry_frame_IMPL:= jdb_dump_entry_frame-arm
+thread_IMPL		+= thread-debug 
+endif
+
+ifeq ("$(CONFIG_KDB)","y")
+INTERFACES_KERNEL 	+= gdb
+gdb_IMPL		:= gdb gdb-arm
+endif
+
 
 CXXSRC_KERNEL		:= kernel_panic.cc 
 ASSRC_KERNEL	  	:= ivt.S
@@ -213,5 +238,14 @@ PRIVATE_INCDIR 	+= lib/libk/$(CONFIG_XARCH) lib/libk
 INTERFACES_LIBK := std_macros atomic lock_guard auto_ptr
 atomic_IMPL     := atomic atomic-arch
 
+SIGMA0		:= sigma0.elf
+VPATH 		+= sigma0-arm
+ASSRC_SIGMA0 	:= sigma0_crt0.S #syscalls.S
+CXXSRC_SIGMA0	:= __sigma0_main.cc sigma0_main.cc
+CSRC_SIGMA0	:= sigma0_libcglue.c
 
 
+TEST		:= test.elf
+ASSRC_TEST 	:= sigma0_crt0.S #syscalls.S
+CXXSRC_TEST	:= __sigma0_main.cc test.cc
+CSRC_TEST	:= sigma0_libcglue.c

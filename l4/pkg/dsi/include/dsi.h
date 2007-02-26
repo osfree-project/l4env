@@ -92,6 +92,13 @@ dsi_socket_set_event(dsi_socket_t * socket, l4_uint32_t events);
 int
 dsi_socket_share_ds(dsi_socket_t * socket, l4_threadid_t client);
 
+int
+dsi_socket_get_packet_num(dsi_socket_t * socket);
+
+int
+dsi_socket_get_num_committed_packets(dsi_socket_t * socket);
+
+
 /* 
  * packet operations 
  */
@@ -130,6 +137,9 @@ dsi_packet_get_nr(dsi_socket_t * socket, unsigned nr, dsi_packet_t ** packet);
 void 
 dsi_set_dataspace_manager(l4_threadid_t id);
 
+int 
+dsi_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg);
+
 /*****************************************************************************
  * application API                                                           *
  *****************************************************************************/
@@ -161,7 +171,14 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 int dsi_thread_start_worker(dsi_socket_t * socket, l4_uint32_t * ret_code);
 int dsi_thread_worker_wait(dsi_socket_t ** socket);
 int dsi_thread_worker_started(int ret_code);
-int dsi_socket_connect_local(dsi_component_t * comp, dsi_socket_ref_t * remote);
+int dsi_socket_local_create(dsi_stream_cfg_t cfg, l4dm_dataspace_t *ctrl_ds,
+			    l4dm_dataspace_t *data_ds, l4_threadid_t work_id,
+			    l4_uint32_t flags, dsi_socket_t **socket,
+			    dsi_component_t *comp);
+int dsi_socket_local_close(dsi_component_t *comp);
+int dsi_socket_local_connect(dsi_component_t * comp,
+			     dsi_socket_ref_t * remote);
+int dsi_socket_local_stop(dsi_component_t * comp);
 
 __END_DECLS;
 

@@ -5,12 +5,12 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,10 +21,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
+#include "File.h" // needed for IncludeFile
+#include "CPreProcess.h" // needed to get include statements
 #include "fe/FEFile.h"
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEConstDeclarator.h"
@@ -36,14 +38,15 @@
 #include "fe/FELibrary.h"
 
 IMPLEMENT_DYNAMIC(CFEFile)
-    
-CFEFile::CFEFile(String sFileName, String sPath, int nIncludeLevel, int nStdInclude)
+
+CFEFile::CFEFile(String sFileName, String sPath, int nIncludedOnLine, int nStdInclude)
 : m_vTaggedDecls(RUNTIME_CLASS(CFEConstructedType)),
   m_vConstants(RUNTIME_CLASS(CFEConstDeclarator)),
   m_vTypedefs(RUNTIME_CLASS(CFETypedDeclarator)),
   m_vLibraries(RUNTIME_CLASS(CFELibrary)),
   m_vInterfaces(RUNTIME_CLASS(CFEInterface)),
-  m_vChildFiles(RUNTIME_CLASS(CFEFile))
+  m_vChildFiles(RUNTIME_CLASS(CFEFile)),
+  m_vIncludes(RUNTIME_CLASS(IncludeFile))
 {
     IMPLEMENT_DYNAMIC_BASE(CFEFile, CFEBase);
     // this procedure is interesting for included files:
@@ -54,6 +57,7 @@ CFEFile::CFEFile(String sFileName, String sPath, int nIncludeLevel, int nStdIncl
     // m_sFilenameWithoutExtension = "types"
     // m_sFileExtension = "h"
     // m_sFileWithPath = "../../include/l4/sys/types.h"
+	assert(!sFileName.IsEmpty());
     m_sFileName = sFileName;
     if (!m_sFileName.IsEmpty())
     {
@@ -93,8 +97,35 @@ CFEFile::CFEFile(String sFileName, String sPath, int nIncludeLevel, int nStdIncl
         m_sFileExtension.Empty();
         m_sFileWithPath.Empty();
     }
-    m_nIncludeLevel = nIncludeLevel;
     m_nStdInclude = nStdInclude;
+	m_nIncludedOnLine = nIncludedOnLine;
+
+	// get includes from preprocessor
+	CPreProcess *pPreprocess = CPreProcess::GetPreProcessor();
+    inc_bookmark_t *pCur = pPreprocess->GetFirstIncludeInFile(m_sFileName);
+	while (pCur)
+	{
+	    String sFileName = *(pCur->m_pFilename);
+	    // test if idl file
+		bool bIDL = false;
+		int iDot = sFileName.ReverseFind('.');
+        if (iDot > 0)
+        {
+            String s = sFileName.Mid(iDot + 1);
+			s.MakeLower();
+            if (s == "idl")
+			    bIDL = true;
+        }
+	    // extract include information and add it to m_vIncludes
+		IncludeFile *pNew = new IncludeFile();
+		pNew->bIDLFile = bIDL;
+		pNew->bIsStandardInclude = pCur->m_bStandard;
+		pNew->sFileName = sFileName;
+		pNew->bPrivate = false;
+		AddInclude(pNew);
+	    // now get next
+		pCur = pPreprocess->GetNextIncludeInFile(m_sFileName, pCur);
+	}
 }
 
 CFEFile::CFEFile(CFEFile & src)
@@ -104,7 +135,8 @@ CFEFile::CFEFile(CFEFile & src)
   m_vTypedefs(RUNTIME_CLASS(CFETypedDeclarator)),
   m_vLibraries(RUNTIME_CLASS(CFELibrary)),
   m_vInterfaces(RUNTIME_CLASS(CFEInterface)),
-  m_vChildFiles(RUNTIME_CLASS(CFEFile))
+  m_vChildFiles(RUNTIME_CLASS(CFEFile)),
+  m_vIncludes(RUNTIME_CLASS(IncludeFile))
 {
     IMPLEMENT_DYNAMIC_BASE(CFEFile, CFEBase);
 
@@ -112,8 +144,8 @@ CFEFile::CFEFile(CFEFile & src)
     m_sFileExtension = src.m_sFileExtension;
     m_sFilenameWithoutExtension = src.m_sFilenameWithoutExtension;
     m_sFileWithPath = src.m_sFileWithPath;
-    m_nIncludeLevel = src.m_nIncludeLevel;
     m_nStdInclude = src.m_nStdInclude;
+	m_nIncludedOnLine = src.m_nIncludedOnLine;
     m_vTaggedDecls.Add(&src.m_vTaggedDecls);
     m_vTaggedDecls.SetParentOfElements(this);
     m_vConstants.Add(&src.m_vConstants);
@@ -126,12 +158,14 @@ CFEFile::CFEFile(CFEFile & src)
     m_vInterfaces.SetParentOfElements(this);
     m_vChildFiles.Add(&src.m_vChildFiles);
     m_vChildFiles.SetParentOfElements(this);
+	m_vIncludes.Add(&src.m_vIncludes);
+	m_vIncludes.SetParentOfElements(this);
 }
 
 /** cleans up the file object */
 CFEFile::~CFEFile()
 {
-
+    m_vIncludes.DeleteAll();
 }
 
 /** copies the object
@@ -151,28 +185,10 @@ void CFEFile::AddChild(CFEFile * pNewChild)
     pNewChild->SetParent(this);
 }
 
-/**
- *	\brief checks if this component is at the first include level
- *	\return true if the include level is bigger than 0
- */
-bool CFEFile::IsIncluded()
-{
-    return (m_nIncludeLevel > 0);
-}
-
-/**
- *	\brief return the include level of the component
- *	\return the include level
- */
-int CFEFile::GetIncludeLevel()
-{
-    return m_nIncludeLevel;
-}
-
 /** returns a pointer to the first included file
  *	\return a pointer to the first included file
  */
-VectorElement *CFEFile::GetFirstIncludeFile()
+VectorElement *CFEFile::GetFirstChildFile()
 {
     return m_vChildFiles.GetFirst();
 }
@@ -181,14 +197,14 @@ VectorElement *CFEFile::GetFirstIncludeFile()
  *	\param iter the pointer to the next included file
  *	\return a refrence to the next included file
  */
-CFEFile *CFEFile::GetNextIncludeFile(VectorElement * &iter)
+CFEFile *CFEFile::GetNextChildFile(VectorElement * &iter)
 {
     if (!iter)
        return 0;
     CFEFile *pRet = (CFEFile *) (iter->GetElement());
     iter = iter->GetNext();
     if (!pRet)
-        return GetNextIncludeFile(iter);
+        return GetNextChildFile(iter);
     return pRet;
 }
 
@@ -393,9 +409,9 @@ CFETypedDeclarator *CFEFile::FindUserDefinedType(String sName)
             return pTypedDecl;
     }
     // next search included files
-    pIter = GetFirstIncludeFile();
+    pIter = GetFirstChildFile();
     CFEFile *pFile;
-    while ((pFile = GetNextIncludeFile(pIter)) != 0)
+    while ((pFile = GetNextChildFile(pIter)) != 0)
     {
         if ((pTypedDecl = pFile->FindUserDefinedType(sName)))
             return pTypedDecl;
@@ -442,9 +458,9 @@ CFEConstructedType* CFEFile::FindTaggedDecl(String sName)
             return pTaggedDecl;
     }
     // search included files
-    pIter = GetFirstIncludeFile();
+    pIter = GetFirstChildFile();
     CFEFile *pFile;
-    while ((pFile = GetNextIncludeFile(pIter)) != 0)
+    while ((pFile = GetNextChildFile(pIter)) != 0)
     {
         if ((pTaggedDecl = pFile->FindTaggedDecl(sName)) != 0)
             return pTaggedDecl;
@@ -510,9 +526,9 @@ CFEInterface *CFEFile::FindInterface(String sName)
             return pInterface;
     }
     // the search the included files
-    pIter = GetFirstIncludeFile();
+    pIter = GetFirstChildFile();
     CFEFile *pFile;
-    while ((pFile = GetNextIncludeFile(pIter)) != 0)
+    while ((pFile = GetNextChildFile(pIter)) != 0)
     {
         if ((pInterface = pFile->FindInterface(sName)))
             return pInterface;
@@ -546,16 +562,16 @@ CFELibrary *CFEFile::FindLibrary(String sName)
          if (pLib->GetName() == sName)
              return pLib;
          // no matter if the name if 0, test nested libs
-         if (pLib2 = pLib->FindLibrary(sName))
+         if ((pLib2 = pLib->FindLibrary(sName)) != 0)
              return pLib2;
      }
 
      // search included/imported files
-     pIter = GetFirstIncludeFile();
+     pIter = GetFirstChildFile();
      CFEFile *pFEFile;
-     while ((pFEFile = GetNextIncludeFile(pIter)) != 0)
+     while ((pFEFile = GetNextChildFile(pIter)) != 0)
      {
-         if (pLib = pFEFile->FindLibrary(sName))
+         if ((pLib = pFEFile->FindLibrary(sName)) != 0)
              return pLib;
      }
 
@@ -588,9 +604,9 @@ CFEConstDeclarator *CFEFile::FindConstDeclarator(String sName)
             return pConst;
     }
     // then search included files
-    pIter = GetFirstIncludeFile();
+    pIter = GetFirstChildFile();
     CFEFile *pFile;
-    while ((pFile = GetNextIncludeFile(pIter)) != 0)
+    while ((pFile = GetNextChildFile(pIter)) != 0)
     {
         if ((pConst = pFile->FindConstDeclarator(sName)))
             return pConst;
@@ -608,7 +624,7 @@ CFEConstDeclarator *CFEFile::FindConstDeclarator(String sName)
     CFELibrary *pLibrary;
     while ((pLibrary = GetNextLibrary(pIter)) != 0)
     {
-        if ((pConst = pInterface->FindConstant(sName)))
+        if ((pConst = pLibrary->FindConstant(sName)))
             return pConst;
     }
     // if none found, return 0
@@ -631,14 +647,18 @@ bool CFEFile::HasExtension(String sExtension)
  *	\return true if this file is an IDL file
  *
  * The check is done using the xtension of the input file. This should be "idl" (case-insensitive)
- * or it also might be &lt;stdin&gt; if read from the standard input.
+ * or it also might be &lt;stdin&gt; if read from the standard input. Or empty if this is the top
+ * level file.
  */
 bool CFEFile::IsIDLFile()
 {
     if (!HasExtension(String("idl")))
     {
-        if (m_sFilenameWithoutExtension.CompareNoCase("<stdin>"))
-            return false;
+        if (m_sFilenameWithoutExtension.CompareNoCase("<stdin>") == 0)
+            return true;
+        if (m_sFilenameWithoutExtension.IsEmpty())
+		    return true;
+        return false;
     }
     return true;
 }
@@ -661,48 +681,51 @@ String CFEFile::GetFileNameWithoutExtension()
  */
 bool CFEFile::CheckConsistency()
 {
-     // included files
-     VectorElement *pIter = GetFirstIncludeFile();
-     CFEFile *pFile;
-     while ((pFile = GetNextIncludeFile(pIter)) != 0)
-     {
-         if (!(pFile->CheckConsistency()))
-             return false;
-     }
-     // check types
-     pIter = GetFirstTypedef();
-     CFETypedDeclarator *pTypedef;
-     while ((pTypedef = GetNextTypedef(pIter)) != 0)
-     {
-         if (!(pTypedef->CheckConsistency()))
-             return false;
-     }
-     // check constants
-     pIter = GetFirstConstant();
-     CFEConstDeclarator *pConst;
-     while ((pConst = GetNextConstant(pIter)) != 0)
-     {
-         if (!(pConst->CheckConsistency()))
-             return false;
-     }
-     // check interfaces
-     pIter = GetFirstInterface();
-     CFEInterface *pInterface;
-     while ((pInterface = GetNextInterface(pIter)) != 0)
-     {
-         if (!(pInterface->CheckConsistency()))
-             return false;
-     }
-     // check libraries
-     pIter = GetFirstLibrary();
-     CFELibrary *pLib;
-     while ((pLib = GetNextLibrary(pIter)) != 0)
-     {
-         if (!(pLib->CheckConsistency()))
-             return false;
-     }
-     // everything ran through, so we might consider this file clean
-     return true;
+	// included files
+	VectorElement *pIter = GetFirstChildFile();
+	CFEFile *pFile;
+	while ((pFile = GetNextChildFile(pIter)) != 0)
+	{
+	    // only check consistency of IDL files
+		if (!(pFile->HasExtension("idl")))
+		    continue;
+		if (!(pFile->CheckConsistency()))
+			return false;
+	}
+	// check types
+	pIter = GetFirstTypedef();
+	CFETypedDeclarator *pTypedef;
+	while ((pTypedef = GetNextTypedef(pIter)) != 0)
+	{
+		if (!(pTypedef->CheckConsistency()))
+			return false;
+	}
+	// check constants
+	pIter = GetFirstConstant();
+	CFEConstDeclarator *pConst;
+	while ((pConst = GetNextConstant(pIter)) != 0)
+	{
+		if (!(pConst->CheckConsistency()))
+			return false;
+	}
+	// check interfaces
+	pIter = GetFirstInterface();
+	CFEInterface *pInterface;
+	while ((pInterface = GetNextInterface(pIter)) != 0)
+	{
+		if (!(pInterface->CheckConsistency()))
+			return false;
+	}
+	// check libraries
+	pIter = GetFirstLibrary();
+	CFELibrary *pLib;
+	while ((pLib = GetNextLibrary(pIter)) != 0)
+	{
+		if (!(pLib->CheckConsistency()))
+			return false;
+	}
+	// everything ran through, so we might consider this file clean
+	return true;
 }
 
 /** for debugging purposes only */
@@ -710,9 +733,9 @@ void CFEFile::Dump()
 {
     printf("Dump: CFEFile (%s)\n", (const char *) GetFileName());
     printf("Dump: CFEFile (%s): included files:\n", (const char *) GetFileName());
-    VectorElement *pIter = GetFirstIncludeFile();
+    VectorElement *pIter = GetFirstChildFile();
     CFEBase *pElement;
-    while ((pElement = GetNextIncludeFile(pIter)) != 0)
+    while ((pElement = GetNextChildFile(pIter)) != 0)
     {
         pElement->Dump();
     }
@@ -753,9 +776,9 @@ void CFEFile::Serialize(CFile * pFile)
         pFile->IncIndent();
         pFile->PrintIndent("<name>%s</name>\n", (const char *) GetFileName());
         // write included files
-        VectorElement *pIter = GetFirstIncludeFile();
+        VectorElement *pIter = GetFirstChildFile();
         CFEBase *pElement;
-        while ((pElement = GetNextIncludeFile(pIter)) != 0)
+        while ((pElement = GetNextChildFile(pIter)) != 0)
         {
             pFile->PrintIndent("<include>%s</include>\n", (const char *) ((CFEFile *) pElement)->GetFileName());
         }
@@ -814,9 +837,9 @@ int CFEFile::GetConstantCount(bool bCountIncludes)
      if (!bCountIncludes)
          return nCount;
 
-     pIter = GetFirstIncludeFile();
+     pIter = GetFirstChildFile();
      CFEFile *pFile;
-     while ((pFile = GetNextIncludeFile(pIter)) != 0)
+     while ((pFile = GetNextChildFile(pIter)) != 0)
      {
          nCount += pFile->GetConstantCount();
      }
@@ -844,9 +867,9 @@ int CFEFile::GetTypedefCount(bool bCountIncludes)
      if (!bCountIncludes)
          return nCount;
 
-     pIter = GetFirstIncludeFile();
+     pIter = GetFirstChildFile();
      CFEFile *pFile;
-     while ((pFile = GetNextIncludeFile(pIter)) != 0)
+     while ((pFile = GetNextChildFile(pIter)) != 0)
      {
          nCount += pFile->GetTypedefCount();
      }
@@ -868,4 +891,62 @@ bool CFEFile::IsStdIncludeFile()
 String CFEFile::GetFullFileName()
 {
     return m_sFileWithPath;
+}
+
+/** \brief returns the line number on which this file has been included in its parent file
+ *  \return line number
+ */
+int CFEFile::GetIncludedOnLine()
+{
+    return m_nIncludedOnLine;
+}
+
+/** \brief retrieves a pointer to the first include statement
+ *  \return a VectorElement
+ */
+VectorElement* CFEFile::GetFirstInclude()
+{
+    return m_vIncludes.GetFirst();
+}
+
+/** \brief get the next include statement
+ *  \param iter the pointer to the next include statement
+ *  \return the next include statement
+ */
+IncludeFile* CFEFile::GetNextInclude(VectorElement* &iter)
+{
+    if (!iter)
+	    return 0;
+    IncludeFile *pRet = (IncludeFile *) (iter->GetElement());
+    iter = iter->GetNext();
+    if (!pRet)
+        return GetNextInclude(iter);
+    return pRet;
+}
+
+/** \brief adds a new include statement
+ *  \param the new include statement
+ */
+void CFEFile::AddInclude(IncludeFile *pNewInclude)
+{
+    m_vIncludes.Add(pNewInclude);
+	pNewInclude->SetParent(this);
+}
+
+/** \brief tries to find a file with the given filename
+ *  \param sFileName the name of the file to find
+ *  \return a reference to the found file
+ */
+CFEFile* CFEFile::FindFile(String sFileName)
+{
+    if (m_sFileName == sFileName)
+	    return this;
+    VectorElement *pIter = GetFirstChildFile();
+	CFEFile *pFile, *pFoundFile;
+	while ((pFile = GetNextChildFile(pIter)) != 0)
+    {
+	    if ((pFoundFile = pFile->FindFile(sFileName)) != 0)
+		    return pFoundFile;
+	}
+	return 0;
 }

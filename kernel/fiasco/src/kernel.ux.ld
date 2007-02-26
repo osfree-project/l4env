@@ -15,22 +15,13 @@
  * 0xc0000000-0xcfffffff	Linux Kernel
  */
 
-_tcbs_1			= 0x20000000;	/* assumption: 256MB-aligned */
-_mappings_1		= 0x50000000;	/* Multipage Slabs */
-_mappings_end_1		= 0x5f000000;	/* XXX old code uses _unused1_1 as end-of-region */
-_idt                    = 0x5f001000;
-_iobitmap_1		= 0x5fc00000;	/* assumption: 4MB-aligned */
-_physmem_1		= 0x60000000;	/* Where the physical memory is mapped */
-_linuxstack		= 0xbfff0000;	/* Anything above reserved for Linux stack */
-_unused1_1		= 0xc0000000;	/* 4MB-aligned (space index)	*/
-_unused2_1		= 0xc0400000;	/* 4MB-aligned (chief number)	*/
-_unused3_1		= 0xc0800000;	/* 4MB-aligned (host pid)	*/
-_unused4_io_1		= 0xc0c00000;	/* assumption: 2nd level field in page table for IO bitmap */
-_syscalls		= 0xeacff000;	/* Absolute Syscall Page */
+_tcbs_1			= 0x20000000;	/* Assumption: 256MB-aligned	*/
+_physmem_1		= 0x60000000;	/* Physical memory mapping	*/
+_syscalls		= 0xeacff000;	/* Absolute Syscall Page	*/
+_utcb_address_page	= 0xbfff0000;	/* UTCB address page		*/
+_trampoline_page	= 0xbfff1000;	/* Task Trampoline Page Address */
 
-_trampoline_page	= 0xbfff1000;	/* Virt. addr of tramp page in tasks */
-
-load_address		= 0x1000;	/* Where the kernel code gets loaded */
+load_address		= 0x1000;	/* Kernel Load Address		*/
 
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)
@@ -39,7 +30,7 @@ SEARCH_DIR(/lib); SEARCH_DIR(/usr/lib); SEARCH_DIR(/usr/local/lib);
 
 SECTIONS {
 
-  . = load_address;
+  . = load_address + SIZEOF_HEADERS;
 
   .init : {
     KEEP (*(.init))
@@ -49,6 +40,8 @@ SECTIONS {
     *(.text .stub .text.* .gnu.linkonce.t.*)
   }
 
+  PROVIDE (_ecode = .);
+
   .fini : {
     KEEP (*(.fini))
   }
@@ -56,6 +49,26 @@ SECTIONS {
   .rodata : {
     *(.rodata .rodata.* .gnu.linkonce.r.*)
   }
+
+  .preinit_array : {
+    PROVIDE (__preinit_array_start = .);
+    *(.preinit_array)
+    PROVIDE (__preinit_array_end = .);
+  }
+
+  .init_array : {
+    PROVIDE (__init_array_start = .);
+    *(.init_array)
+    PROVIDE (__init_array_end = .);
+  }
+
+  .fini_array : {
+    PROVIDE (__fini_array_start = .);
+    *(.fini_array)
+    PROVIDE (__fini_array_end = .);
+  }
+
+  PROVIDE (_etext = .);
 
   .data : {
     *(.data .data.* .gnu.linkonce.d.*)
@@ -81,12 +94,16 @@ SECTIONS {
     *(.got)
   }
 
+  PROVIDE (_edata = .);
+
   . = ALIGN(4096);
   .bss : {
     *(.dynbss)
     *(.bss .bss.* .gnu.linkonce.b.*)
     *(COMMON)
   }
+
+  PROVIDE (_end = .);
 
   . = ALIGN(4096);
   .initcall : {

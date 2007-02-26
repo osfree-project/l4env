@@ -13,53 +13,53 @@ Mword Sys_ex_regs_frame::lthread() const
 IMPLEMENT inline 
 Mword Sys_ex_regs_frame::sp() const 
 { 
-  return r[1]; 
+  return r[2]; 
 }
 
 IMPLEMENT inline 
 Mword Sys_ex_regs_frame::ip() const 
 { 
-  return r[2]; 
+  return r[1]; 
 }
 
 IMPLEMENT inline 
 L4_uid Sys_ex_regs_frame::preempter() const
 { 
-  return L4_uid( r[3] );
+  return L4_uid( r[5] );
 }
 
 IMPLEMENT inline 
 L4_uid Sys_ex_regs_frame::pager() const
 { 
-  return L4_uid( r[12] );
+  return L4_uid( r[3] );
 }
 
 IMPLEMENT inline 
 void Sys_ex_regs_frame::old_eflags( Mword oefl ) 
 { 
-  r[0] = oefl; 
+  r[4] = oefl; 
 }
 
 IMPLEMENT inline 
 void Sys_ex_regs_frame::old_sp( Mword osp ) 
 { 
-  r[1] = osp; 
+  r[2] = osp; 
 }
 
 IMPLEMENT inline 
 void Sys_ex_regs_frame::old_ip( Mword oip ) 
 { 
-  r[2] = oip; 
+  r[1] = oip; 
 }
 
 IMPLEMENT inline 
 void Sys_ex_regs_frame::old_preempter( L4_uid id ) 
 {
-  r[3] = id.raw();
+  r[5] = id.raw();
 }
 
 IMPLEMENT inline 
 void Sys_ex_regs_frame::old_pager( L4_uid id )
 {
-  r[12] = id.raw();
+  r[3] = id.raw();
 }

@@ -5,7 +5,7 @@
  *	\date	Sat Jun 1 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,16 +26,18 @@
  */
 
 #include "be/l4/L4BESndFunction.h"
-#include "be/BEContext.h"
 #include "be/l4/L4BENameFactory.h"
+#include "be/l4/L4BEClassFactory.h"
+#include "be/BEContext.h"
 #include "be/BEOpcodeType.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEMarshaller.h"
 #include "be/BEClient.h"
 #include "be/l4/L4BEMsgBufferType.h"
 #include "be/l4/L4BESizes.h"
+#include "be/l4/L4BEIPC.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BESndFunction);
@@ -71,24 +73,13 @@ void CL4BESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pC
 void CL4BESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
     // after marshalling set the message dope
-    int nDirection = GetSendDirection();
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nDirection, pContext);
+    int nSendDirection = GetSendDirection();
+	bool bHasSizeIsParams = (GetParameterCount(ATTR_SIZE_IS, ATTR_REF, nSendDirection) > 0) ||
+	    (GetParameterCount(ATTR_LENGTH_IS, ATTR_REF, nSendDirection) > 0);
+    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nSendDirection, bHasSizeIsParams, pContext);
 
     WriteIPC(pFile, pContext);
     WriteIPCErrorCheck(pFile, pContext);
-}
-
-/** \brief creates this class
- *  \param pFEOperation the resprective front-end operation
- *  \param pContext the context of the creation
- *  \return true if successful
- */
-bool CL4BESndFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
-{
-    if (!CBESndFunction::CreateBackEnd(pFEOperation, pContext))
-        return false;
-
-    return true;
 }
 
 /** \brief writes the IPC error check
@@ -100,24 +91,6 @@ bool CL4BESndFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * p
 void CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext)
 {
 // should do some error checking here
-}
-
-/** \brief writes the marshalling code
- *  \param pFile the file to marshal to
- *  \param nStartOffset the const offset into the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used
- *  \param pContext the context of this write operation
- */
-void CL4BESndFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
-{
-    // if we have send flexpages, marshal them first
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    nStartOffset += pMarshaller->Marshal(pFile, this, TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
-    // marshal opcode
-    nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
-    // marshal rest
-    pMarshaller->Marshal(pFile, this, -TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
-    delete pMarshaller;
 }
 
 /** \brief init message buffer size dope
@@ -155,44 +128,6 @@ bool CL4BESndFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBEType
  */
 void CL4BESndFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
 {
-    int nDirection = GetSendDirection();
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
-    if (IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
-    else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-
-    pFile->PrintIndent("l4_i386_ipc_send(*%s,\n", (const char *) sServerID);
-    pFile->IncIndent();
-    pFile->PrintIndent("");
-    bool bVarBuffer = m_pMsgBuffer->IsVariableSized(nDirection);
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasSendFlexpages())
-        pFile->Print("(%s*)((%s)", (const char*)sMWord, (const char*)sMWord);
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(nDirection, pContext))
-        pFile->Print("L4_IPC_SHORT_MSG");
-    else
-    {
-        if (bVarBuffer)
-            pFile->Print("%s", (const char *) sMsgBuffer);
-        else
-            pFile->Print("&%s", (const char *) sMsgBuffer);
-    }
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasSendFlexpages())
-        pFile->Print(")|2)");
-    pFile->Print(",\n");
-
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0]))),\n");
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4]))),\n");
-
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
-
-    pFile->DecIndent();
+    assert(m_pComm);
+	((CL4BEIPC*)m_pComm)->WriteSend(pFile, this, pContext);
 }

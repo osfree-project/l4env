@@ -1,3 +1,15 @@
+/*!
+ * \file	savage_vid.c
+ * \brief	Hardware Acceleration for S3 Savage cards (backend scaler)
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 /* Programming of backend scaler for "new" savage chips
  * (Savage/MX{-MV}, Savage/IX{-MV}, SuperSavage, Savage 2000) */
 

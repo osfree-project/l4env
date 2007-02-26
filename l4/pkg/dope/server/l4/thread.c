@@ -3,18 +3,26 @@
  * \date    2002-11-13
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
- * Component that provides functions to  handle 
- * threads and related things (e.g. semaphores) 
+ * Component that provides functions to  handle
+ * threads and related things (e.g. semaphores)
  * to the other components of DOpE.
- */ 
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 #define THREAD void
-#define MUTEX struct mutex_struct
+#define MUTEX struct mutex
 
 #include <l4/thread/thread.h>
 #include <l4/semaphore/semaphore.h>
-#include "dope-config.h"
-#include "memory.h"
+#include "dopestd.h"
 #include "thread.h"
 
 MUTEX {
@@ -23,7 +31,6 @@ MUTEX {
 };
 
 
-static struct memory_services *mem;
 
 int init_thread(struct dope_services *d);
 
@@ -56,19 +63,19 @@ static THREAD *create_thread(void (*entry)(void *),void *arg) {
 /*** CREATE NEW MUTEX AND SET IT UNLOCKED ***/
 static MUTEX *create_mutex(int init) {
 	MUTEX *result;
-	
-	result = (MUTEX *)mem->alloc(sizeof(MUTEX));
+
+	result = (MUTEX *)malloc(sizeof(MUTEX));
 	if (!result) {
-		DOPEDEBUG(printf("Thread(create_mutex): out of memory!\n");)
+		INFO(printf("Thread(create_mutex): out of memory!\n");)
 		return NULL;
 	}
-	
+
 	if (init) {
 		result->sem = L4SEMAPHORE_LOCKED;
 		result->locked_flag = 1;
-		
+
 	} else {
-		result->sem = L4SEMAPHORE_UNLOCKED;	
+		result->sem = L4SEMAPHORE_UNLOCKED;
 		result->locked_flag = 0;
 	}
 	return (MUTEX *)result;
@@ -79,7 +86,7 @@ static MUTEX *create_mutex(int init) {
 /*** DESTROY MUTEX ***/
 static void destroy_mutex(MUTEX *m) {
 	if (!m) return;
-	mem->free(m);
+	free(m);
 }
 
 
@@ -107,19 +114,19 @@ static s8 mutex_is_down(MUTEX *m) {
 
 
 /*** CONVERT IDENTIFIER TO THREAD ID ***/
-static THREAD *ident2thread(u8 *ident) {
-	l4_threadid_t tid;
+static int ident2thread(u8 *ident, THREAD *dst) {
+	l4_threadid_t *tid = (l4_threadid_t *)dst;
 	int i;
-	if (!ident) return NULL;
+	if (!ident || !tid) return -1;
 
 	/* check if identifier string length is valid */
 	for (i=0;i<24;i++) {
-		if (!ident[i]) return NULL;
+		if (!ident[i]) return -1;
 	}
-	
-	tid.lh.low  = hex2u32(ident+7);
-	tid.lh.high = hex2u32(ident+16);
-	return (THREAD *)l4thread_id(tid);
+
+	tid->lh.low  = hex2u32(ident+7);
+	tid->lh.high = hex2u32(ident+16);
+	return 0;
 }
 
 
@@ -143,9 +150,6 @@ static struct thread_services services = {
 /**************************/
 
 int init_thread(struct dope_services *d) {
-	
-	mem = d->get_module("Memory 1.0");
-	
 	d->register_module("Thread 1.0",&services);
 	return 1;
 }

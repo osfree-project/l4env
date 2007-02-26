@@ -40,7 +40,7 @@ int omega0_call(int handle, omege0_request_descriptor type,
   if(handle)
     server.id.lthread = handle;
 
-  error = l4_i386_ipc_call(server, L4_IPC_SHORT_MSG, type, param,
+  error = l4_ipc_call(server, L4_IPC_SHORT_MSG, type, param,
                            L4_IPC_SHORT_MSG, &dw0, &dw1,
                            L4_IPC_NEVER, &result);
   if(error) return -error;
@@ -75,7 +75,7 @@ int omega0_call_long(int handle, omege0_request_descriptor type,
   if(handle)
     server.id.lthread = handle;
 
-  error = l4_i386_ipc_call(server, &message, type, param,
+  error = l4_ipc_call(server, &message, type, param,
                            L4_IPC_SHORT_MSG, &dw0, &dw1,
                            L4_IPC_NEVER, &result);
   if(error) return -error;

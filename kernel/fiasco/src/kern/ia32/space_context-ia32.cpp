@@ -11,7 +11,6 @@ IMPLEMENTATION[ia32]:
 #include <cstring>
 #include "config.h"
 #include "kmem.h"
-#include "undef_oskit.h"
 
 IMPLEMENT
 Space_context::Space_context() // con: create new empty address space

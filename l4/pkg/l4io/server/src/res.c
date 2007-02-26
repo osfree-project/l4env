@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/src/res.c
+ * \file   l4io/server/src/res.c
+ * \brief  L4Env l4io I/O Server Resource Management Module
  *
- * \brief	L4Env l4io I/O Server Resource Management Module
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -31,7 +20,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/l4rm/l4rm.h>
-#include <l4/generic_io/generic_io-server.h>	/* FLICK IPC interface */
+#include <l4/generic_io/generic_io-server.h>	/* IDL IPC interface */
 
 /* OSKit includes */
 #include <stdio.h>
@@ -43,9 +32,9 @@
 #include "__config.h"
 #include "__macros.h"
 
-/*****************************************************************************
- *** types and module vars
- *****************************************************************************/
+/*
+ * types and module vars
+ */
 
 /** Arbitrated resources (creating an USED SPACE list).
  * \ingroup grp_res
@@ -109,18 +98,13 @@ static struct io_dma_res isa_dma[8] = {
 /** l4io self client structure reference */
 static io_client_t *io_self;
 
-/*****************************************************************************/
-/**
- * \name Generic Resource Manipulation
+/** \name Generic Resource Manipulation
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Generic allocate region.
  * \ingroup grp_res
  */
-/*****************************************************************************/
 static int __request_region(unsigned long start, unsigned long len,
 			    unsigned long max, io_res_t ** root, io_client_t * c)
 {
@@ -171,11 +155,9 @@ static int __request_region(unsigned long start, unsigned long len,
     }
 };
 
-/*****************************************************************************/
 /** Generic release region.
  * \ingroup grp_res
  */
-/*****************************************************************************/
 static int __release_region(unsigned long start, unsigned long len,
 			    io_res_t ** root, io_client_t * c)
 {
@@ -219,81 +201,74 @@ static int __release_region(unsigned long start, unsigned long len,
   printf("Non-existent region (0x%08lx-0x%08lx) not freed\n", start, end);
   return -L4_EINVAL;
 }
-
 /** @} */
-/*****************************************************************************/
-/**
- * \name Request/Release Interface Functions (IPC interface)
+/** \name Request/Release Interface Functions (IPC interface)
  *
  * Functions for system resource request and release.
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Request I/O port region.
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param addr		region start address
- * \param len		region length
+ * \param _dice_corba_obj	DICE corba object
+ * \param addr			region start address
+ * \param len			region length
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
  * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
  * not implemented yet.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_request_region(sm_request_t * request,
-			    l4_uint32_t addr, l4_uint32_t len, sm_exc_t * _ev)
+l4_int32_t l4_io_request_region_component(CORBA_Object _dice_corba_obj,
+                                          l4_uint32_t addr,
+                                          l4_uint32_t len,
+                                          CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
-  c = (io_client_t *) flick_server_get_local(request);
+  c = (io_client_t *) (_dice_corba_env->user_data);
 
   return (__request_region(addr, len, MAX_IO_PORTS, &io_port_res, c));
 }
 
-/*****************************************************************************/
 /** Release I/O Port Region.
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param addr		region start address
- * \param len		region length
+ * \param _dice_corba_obj	DICE corba object
+ * \param addr			region start address
+ * \param len			region length
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
  * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
  * not implemented yet.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_release_region(sm_request_t * request,
-			    l4_uint32_t addr, l4_uint32_t len, sm_exc_t * _ev)
+l4_int32_t l4_io_release_region_component(CORBA_Object _dice_corba_obj,
+                                          l4_uint32_t addr,
+                                          l4_uint32_t len,
+                                          CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
-  c = (io_client_t *) flick_server_get_local(request);
+  c = (io_client_t *) (_dice_corba_env->user_data);
 
   return (__release_region(addr, len, &io_port_res, c));
 }
 
-/*****************************************************************************/
 /** Request I/O Memory Region.
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param addr		region start address
- * \param len		region length
- * \param region	fpage descriptor for memory region
+ * \param _dice_corba_obj	DICE corba object
+ * \param addr			region start address
+ * \param len			region length
+ * \param region		fpage descriptor for memory region
  *
- * \retval offset	offset with memory region
- * \retval _ev		exception vector (unused)
+ * \retval offset		offset with memory region
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -303,19 +278,19 @@ l4_io_server_release_region(sm_request_t * request,
  *
  * Memory Regions are kept in a list.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_request_mem_region(sm_request_t * request,
-				l4_uint32_t addr, l4_uint32_t len,
-				l4_snd_fpage_t * region,
-				l4_uint32_t * offset, sm_exc_t * _ev)
+l4_int32_t l4_io_request_mem_region_component(CORBA_Object _dice_corba_obj,
+                                              l4_uint32_t addr,
+                                              l4_uint32_t len,
+                                              l4_snd_fpage_t *region,
+                                              l4_uint32_t *offset,
+                                              CORBA_Environment *_dice_corba_env)
 {
   int error, size;
   unsigned int start = addr;
   unsigned int end = addr + len - 1;
   unsigned int sp_voffset;
   unsigned int vaddr;
-  io_client_t *c = (io_client_t *) flick_server_get_local(request);
+  io_client_t *c = (io_client_t *) (_dice_corba_env->user_data);
   io_ares_t *p = io_mem_ares;
 
   /* find/check announcement */
@@ -370,25 +345,24 @@ l4_io_server_request_mem_region(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Release I/O memory region.
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param addr		region start address
- * \param len		region length
+ * \param _dice_corba_obj	DICE corba object
+ * \param addr			region start address
+ * \param len			region length
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_release_mem_region(sm_request_t * request,
-				l4_uint32_t addr, l4_uint32_t len, sm_exc_t * _ev)
+l4_int32_t l4_io_release_mem_region_component(CORBA_Object _dice_corba_obj,
+                                              l4_uint32_t addr,
+                                              l4_uint32_t len,
+                                              CORBA_Environment *_dice_corba_env)
 {
   int error, size;
-  io_client_t *c = (io_client_t *) flick_server_get_local(request);
+  io_client_t *c = (io_client_t *) (_dice_corba_env->user_data);
 
   unsigned int start = addr;
   unsigned int end = addr + len - 1;
@@ -423,27 +397,25 @@ l4_io_server_release_mem_region(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Request ISA DMA Channel
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param channel	ISA DMA channel
+ * \param _dice_corba_obj	DICE corba object
+ * \param channel		ISA DMA channel
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
  * \todo Implementation completion! For now it's deferred.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_request_dma(sm_request_t * request, l4_uint32_t channel, 
-			 sm_exc_t * _ev)
+l4_int32_t l4_io_request_dma_component(CORBA_Object _dice_corba_obj,
+                                       l4_uint32_t channel,
+                                       CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
-  c = (io_client_t *) flick_server_get_local(request);
+  c = (io_client_t *) (_dice_corba_env->user_data);
 
   /* sanity checks */
   if (!(channel < MAX_ISA_DMA))
@@ -458,27 +430,25 @@ l4_io_server_request_dma(sm_request_t * request, l4_uint32_t channel,
   return 0;
 }
 
-/*****************************************************************************/
 /** Release ISA DMA Channel.
  * \ingroup grp_res
  *
- * \param request	FLICK request structure
- * \param channel	ISA DMA channel
+ * \param _dice_corba_obj	DICE corba object
+ * \param channel		ISA DMA channel
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
  * \todo Implementation completion! For now it's deferred.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_release_dma(sm_request_t * request, l4_uint32_t channel, 
-			 sm_exc_t * _ev)
+l4_int32_t l4_io_release_dma_component(CORBA_Object _dice_corba_obj,
+                                       l4_uint32_t channel,
+                                       CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
-  c = (io_client_t *) flick_server_get_local(request);
+  c = (io_client_t *) (_dice_corba_env->user_data);
 
   /* sanity checks */
   if (!(channel < MAX_ISA_DMA))
@@ -503,11 +473,8 @@ l4_io_server_release_dma(sm_request_t * request, l4_uint32_t channel,
 
   return 0;
 }
-
 /** @} */
-/*****************************************************************************/
-/**
- * \name Region Specific Interface Functions (internal callbacks)
+/** \name Region Specific Interface Functions (internal callbacks)
  *
  * Functions for system resource request, release, and announcement.
  *
@@ -515,13 +482,10 @@ l4_io_server_release_dma(sm_request_t * request, l4_uint32_t channel,
  *
  * \todo Rethink release() and implement if appropriate.
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Request I/O port region.
  * \ingroup grp_res
  */
-/*****************************************************************************/
 int callback_request_region(unsigned long addr, unsigned long len)
 {
   io_client_t *c = io_self;
@@ -529,11 +493,9 @@ int callback_request_region(unsigned long addr, unsigned long len)
   return (__request_region(addr, len, MAX_IO_PORTS, &io_port_res, c));
 }
 
-/*****************************************************************************/
 /** Request I/O memory region.
  * \ingroup grp_res
  */
-/*****************************************************************************/
 int callback_request_mem_region(unsigned long addr, unsigned long len)
 {
   io_client_t *c = io_self;
@@ -541,7 +503,6 @@ int callback_request_mem_region(unsigned long addr, unsigned long len)
   return (__request_region(addr, len, MAX_IO_MEMORY, &io_mem_res, c));
 }
 
-/*****************************************************************************/
 /** Announce I/O memory region.
  * \ingroup grp_res
  *
@@ -552,7 +513,6 @@ int callback_request_mem_region(unsigned long addr, unsigned long len)
  *
  * \todo sanity checks
  */
-/*****************************************************************************/
 void callback_announce_mem_region(unsigned long addr, unsigned long len)
 {
   int error, i;
@@ -609,10 +569,10 @@ void callback_announce_mem_region(unsigned long addr, unsigned long len)
   /* request sigma0/RMGR mappings to area */
   for (i = size; i; i--)
     {
-      error = l4_i386_ipc_call(pager,
-			       L4_IPC_SHORT_MSG, (addr - 0x40000000) & L4_SUPERPAGEMASK,
-			       0, L4_IPC_MAPMSG(vaddr, L4_LOG2_SUPERPAGESIZE), &dw0, &dw1,
-			       L4_IPC_NEVER, &result);
+      error = l4_ipc_call(pager,
+	                  L4_IPC_SHORT_MSG, (addr - 0x40000000) & L4_SUPERPAGEMASK,
+		     	  0, L4_IPC_MAPMSG(vaddr, L4_LOG2_SUPERPAGESIZE), &dw0, &dw1,
+	   		  L4_IPC_NEVER, &result);
       /* IPC error || no fpage received */
       if (error || !dw1)
 	{
@@ -630,110 +590,109 @@ void callback_announce_mem_region(unsigned long addr, unsigned long len)
 #endif
 }
 
-static struct device_inclusion_list{
-    unsigned short vendor;
-    unsigned short device;
-    struct device_inclusion_list *next;
+static struct device_inclusion_list
+{
+  unsigned short vendor;
+  unsigned short device;
+  struct device_inclusion_list *next;
 } *device_handle_inclusion_list,	/* if nonempty, the device must be
 					   listed here to be handled. */
   *device_handle_exclusion_list;	/* if the above is empty, the device
 					   must not be listed here to be
 					   taken care of. */
 
-/*****************************************************************************/
 /** Check if we should handle this specific PCI device
  * \ingroup grp_res
  *
- * This is checked agains the paramters the user provided on startup.
+ * This is checked against the parameters the user provided on startup.
  *
  * \retval	1	yes, we should allocated/handle this device
  * \retval	0	no, do not handle this device
  */
-/*****************************************************************************/
 int callback_handle_pci_device(unsigned short vendor, unsigned short device)
 {
-    struct device_inclusion_list *list;
+  struct device_inclusion_list *list;
 
-    if(device_handle_inclusion_list){
-	for(list=device_handle_inclusion_list; list; list=list->next){
-	    if(list->vendor==vendor && list->device==device){
-		return 1;
-	    }
-	}
-	return 0;
+  if (device_handle_inclusion_list)
+    {
+      for (list=device_handle_inclusion_list; list; list=list->next)
+        if (list->vendor==vendor && list->device==device)
+          return 1;
+      return 0;
     }
-    for(list=device_handle_exclusion_list; list; list=list->next){
-	if(list->vendor==vendor && list->device==device){
-	    return 0;
-	}
-    }
-    return 1;
+  for (list=device_handle_exclusion_list; list; list=list->next)
+    if (list->vendor==vendor && list->device==device)
+      return 0;
+  return 1;
 }
 
-/*!\brief parse a 'vendor:device' pair into nums
+/** parse a 'vendor:device' pair into nums
  *
  * \retval 0 - ok, invalid format else
  */
-static int parse_device_pair(const char*s, unsigned short*vendor,
-			     unsigned short*device){
-    char*t;
-    *vendor=strtoul(s, &t, 16);
-    if(*t!=':') return -L4_EINVAL;
-    s=t+1;
-    *device=strtoul(s, &t, 16);
-    if(*t!=0) return -L4_EINVAL;
-    return 0;
+static int parse_device_pair(const char *s, unsigned short *vendor,
+			     unsigned short *device)
+{
+  char *t;
+  *vendor = strtoul(s, &t, 16);
+  if (*t != ':') return -L4_EINVAL;
+  s = t + 1;
+  *device = strtoul(s, &t, 16);
+  if(*t != 0) return -L4_EINVAL;
+  return 0;
 }
 
-/*!\brief add a new inclusion-entry
+/** add a new inclusion-entry
  *
  * \retval 0 ok, l4env-error-code else
  */
-int add_device_inclusion(const char*s){
-    static short vendor, device;
-    static struct device_inclusion_list *elem;
+int add_device_inclusion(const char *s)
+{
+  static short vendor, device;
+  static struct device_inclusion_list *elem;
 
-    if(!parse_device_pair(s, &vendor, &device)){
-	if((elem=malloc(sizeof(struct device_inclusion_list)))==0){
-	    return -L4_ENOMEM;
-	}
-	elem->vendor=vendor;
-	elem->device=device;
-	elem->next=device_handle_inclusion_list;
-	device_handle_inclusion_list=elem;
-	Msg("taking care of device %04x:%04x\n", elem->vendor, elem->device);
-	return 0;
+  if (!parse_device_pair(s, &vendor, &device))
+    {
+      if ((elem=malloc(sizeof(struct device_inclusion_list)))==0)
+        return -L4_ENOMEM;
+
+      elem->vendor = vendor;
+      elem->device = device;
+      elem->next = device_handle_inclusion_list;
+      device_handle_inclusion_list = elem;
+      Msg("taking care of device %04x:%04x\n", elem->vendor, elem->device);
+      return 0;
     }
-    return -L4_EINVAL;
+  return -L4_EINVAL;
 }
-/*!\brief add a new inclusion-entry
+
+/** add a new inclusion-entry
  *
  * \retval 0 ok
  * \retval -L4_EINVAL	invalid format in parameter
  * \retval -L4_ENOMEM	out of mem
  */
-int add_device_exclusion(const char*s){
-    static short vendor, device;
-    static struct device_inclusion_list *elem;
+int add_device_exclusion(const char *s)
+{
+  static short vendor, device;
+  static struct device_inclusion_list *elem;
 
-    if(!parse_device_pair(s, &vendor, &device)){
-	if((elem=malloc(sizeof(struct device_inclusion_list)))==0){
-	    return -L4_ENOMEM;
-	}
-	elem->vendor=vendor;
-	elem->device=device;
-	elem->next=device_handle_exclusion_list;
-	device_handle_exclusion_list=elem;
-	Msg("ignoring device %04x:%04x\n", elem->vendor, elem->device);
-	return 0;
+  if (!parse_device_pair(s, &vendor, &device))
+    {
+      if ((elem=malloc(sizeof(struct device_inclusion_list)))==0)
+        return -L4_ENOMEM;
+
+      elem->vendor = vendor;
+      elem->device = device;
+      elem->next = device_handle_exclusion_list;
+      device_handle_exclusion_list = elem;
+      Msg("ignoring device %04x:%04x\n", elem->vendor, elem->device);
+
+      return 0;
     }
-    return -L4_EINVAL;
+  return -L4_EINVAL;
 }
-
-
-
 /** @} */
-/*****************************************************************************/
 /** Resource Module Initialization.
  * \ingroup grp_res
  *
@@ -745,7 +704,6 @@ int add_device_exclusion(const char*s){
  *
  * \krishna This list is not complete ...
  */
-/*****************************************************************************/
 int io_res_init(io_client_t *c)
 {
   int err;
@@ -789,11 +747,9 @@ err:
   return err;
 }
 
-/*****************************************************************************/
 /*
  * DEBUGGING functions
  */
-/*****************************************************************************/
 #ifdef DEBUG
 static void list_regions(void)
 {

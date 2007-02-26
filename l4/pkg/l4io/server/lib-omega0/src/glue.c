@@ -1,39 +1,28 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/lib-omega0/src/glue.c
+ * \file   l4io/server/lib-omega0/src/glue.c
+ * \brief  L4Env l4io OMEGA0lib Server Glue Code
  *
- * \brief	L4Env l4io OMEGA0lib Server Glue Code
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 */
 #include <l4/names/libnames.h>
 #include <l4/sys/kdebug.h>
 #include <l4/thread/thread.h>
+#include <l4/util/macros.h>
 
 /* OSKit */
 #include <stdio.h>
 
 /* local */
-#include "internal.h"
 #include "omega0lib.h"
 
 /* omega0 internals */
@@ -42,19 +31,14 @@
 #include <irq_threads.h>
 #include <create_threads.h>
 
-/*****************************************************************************/
 /*
  * global vars
  */
-/*****************************************************************************/
 unsigned MANAGEMENT_THREAD;	/**< omega0 management thread 
 				 * \ingroup grp_o0 */
 
-/*****************************************************************************/
 /** Startup for Omega0 server thread.
- * \ingroup grp_o0
- */
-/*****************************************************************************/
+ * \ingroup grp_o0 */
 static void server_startup(void *fake)
 {
   /* register at names */
@@ -75,11 +59,8 @@ static void server_startup(void *fake)
     }
 }
 
-/*****************************************************************************/
 /** Startup for Omega0 IRQ handlers.
- * \ingroup grp_o0
- */
-/*****************************************************************************/
+ * \ingroup grp_o0 */
 static void irq_handler_startup(void *fake_nr)
 {
   DMSG("omega0_irq_thread[%d] "IdFmt" running.\n",
@@ -93,11 +74,8 @@ static void irq_handler_startup(void *fake_nr)
     }
 }
 
-/*****************************************************************************/
 /** Provide separated thread creation to Omega0 sources.
- * \ingroup grp_o0
- */
-/*****************************************************************************/
+ * \ingroup grp_o0 */
 int create_threads_sync(void)
 {
   int i, error;
@@ -118,7 +96,7 @@ int create_threads_sync(void)
 	PANIC("[OMEGA0lib] thread creation failed");
 
       /* notification */
-      error = l4_i386_ipc_receive(l4thread_l4_id(irq_tid),
+      error = l4_ipc_receive(l4thread_l4_id(irq_tid),
 				  L4_IPC_SHORT_MSG, &dummy, &dummy,
 				  L4_IPC_NEVER, &result);
       if (error)
@@ -127,17 +105,11 @@ int create_threads_sync(void)
   return 0;
 }
 
-/*****************************************************************************/
-/**
- * \name OMEGA0lib interface
+/** \name OMEGA0lib interface
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** OMEGA0lib initialization.
- * \ingroup grp_o0
- */
-/*****************************************************************************/
+ * \ingroup grp_o0 */
 int OMEGA0_init()
 {
   l4thread_t dummy = L4THREAD_INVALID_ID;
@@ -157,5 +129,4 @@ int OMEGA0_init()
 
   return 0;
 }
-
 /** @} */

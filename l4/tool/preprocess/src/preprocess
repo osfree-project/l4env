@@ -375,7 +375,22 @@ sub parse_init			# Initialize parser variables.
   $template_arg = "<(?:[A-Za-z_0-9<>,]|$s_once)*>";
 
   # Operator name
-  $operator_name = "(?:operator$s(?:(?:".'[=\-\+\*<>]'."*)|$identifier)$s)";
+  $operator_name = "(?:operator$s(?:"
+                  .'(?:[~,]|[+\-*/%^&|!=<>]=?|[<>]{2}=?|[&|+\-]{2}|->\*?'
+                  .'|\(\)|(?:new|delete)?'.$s.'\[\])'."|$identifier)$s)";
+
+
+  $paren_group = qr{
+                      \(
+                      (?:
+                         (?> [^()]+ )    # Non-parens without backtracking
+                       |
+                         (??{ $paren_group })     # Group with matching parens
+                      )*
+                      \)
+                  }x;
+
+  $paren_expr = qr{ (?> $paren_group | [^()]+ )* }x;
 }
 
 sub parse_file  
@@ -598,7 +613,7 @@ sub parse_file
 	  if (/^([^\{]*)                # pretext, maybe w template decl tag
                \b ($operator_name | $identifier) # function name
 	       ($s $template_arg)?      # optional template args
-               $s( \( (?: [^\)] | \([^\)]*\) )* \) [^:\{\(=]*) # arg list
+               $s( \( $paren_expr \) [^:\{\(\)=]*) # arg list
                (\{.*)$/sx)              # body
 	    {
 	      $function = { class => '',
@@ -647,20 +662,10 @@ sub read_more ()	# Read one more line of code. Stow away
 
       $_ .= $line;
 
-      # Save comments in @comments array.
+      # Save comments and strings in @comments array.  Save strings
+      # first to catch strings with comment-like contents.
       my $number = @comments;
-      while (s|(//(?!-\s*\n).*)$|\001$number\001|m) # Do not match magic "//-"
-	{			# The \001 signifies whitespace.
-	  push @comments, $1;
-	  $number++;
-	}
 
-      while (s|(/\*.*\*/)|\001$number\001|s)
-	{
-	  push @comments, $1;
-	  $number++;
-	}
-      
       # We don't touch strings in NEEDS[], neither #includes!  Save now --
       # restore later.
       my $saved = '';
@@ -689,6 +694,18 @@ sub read_more ()	# Read one more line of code. Stow away
 	  s/\003/$saved/s;
 	}
 
+      while (s|(//(?!-\s*\n).*)$|\001$number\001|m) # Do not match magic "//-"
+	{			# The \001 signifies whitespace.
+	  push @comments, $1;
+	  $number++;
+	}
+
+      while (s|(/\*.*\*/)|\001$number\001|s)
+	{
+	  push @comments, $1;
+	  $number++;
+	}
+      
       if (! /\/\*/)
 	{
 	  last;
@@ -1066,6 +1083,11 @@ sub func_prototype($)		# Return a function declaration from
   my $func = $_[0];
   my $pretext = $func->{pretext};
 
+  if ($doing_inlines && $func->{inline}) 
+    {
+      $pretext =~ s/^($s)/${1}inline /s;
+    }
+
   if ($func->{explicit}) 
     {
       $pretext =~ s/^($s)/${1}explicit /s;
@@ -1264,8 +1286,14 @@ sub lookup_by_name		# Return (list of) item(s) matching name.
   return shift @grepresult
     if (scalar @grepresult == 1);
 
-  die "${ARGV}:" . $context->{line} . ": Cannot find inline code for $item;"
-    if (scalar @grepresult == 0);
+  if (scalar @grepresult == 0)
+    {
+      my @xgrepresult = grep {$_->{name} eq $funcname}
+                              @{$classes{$classname}->{funcs}};
+      die "${ARGV}:" . $context->{line} . ": Cannot find $item;"
+        if (scalar @xgrepresult == 0);
+      print STDERR "${ARGV}:" . $context->{line} . ": warning: Cannot find inline code for $item;\n"
+    }
 
   return @grepresult;	# Return list of matching function names.
 }

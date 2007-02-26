@@ -120,12 +120,11 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
   l4_umword_t dummy;
 #endif
 
-#if DEBUG_RECEIVE_PACKET
-  INFO("packet %d\n",packet->no);
-  INFO("remote sync %x.%x\n",socket->remote_socket.sync_th.id.task,
-       socket->remote_socket.sync_th.id.lthread);
-#endif
-
+  LOGdL(DEBUG_RECEIVE_PACKET,"packet %d",packet->no);
+  LOGdL(DEBUG_RECEIVE_PACKET,"remote sync %x.%x",
+        socket->remote_socket.sync_th.id.task,
+        socket->remote_socket.sync_th.id.lthread);
+  
   /* get packet index */
   p = __get_packet_index(socket,packet);
 
@@ -134,11 +133,11 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
     {
       /* call send component */
 #if RELEASE_DO_CALL
-      ret = l4_i386_ipc_call(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
+      ret = l4_ipc_call(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
 			     DSI_SYNC_RELEASE,p,L4_IPC_SHORT_MSG,&dummy,
 			     &dummy,L4_IPC_NEVER,&result);
 #else
-      ret = l4_i386_ipc_send(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
+      ret = l4_ipc_send(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
 			     DSI_SYNC_RELEASE,p,L4_IPC_NEVER,&result);
 #endif
 
@@ -240,9 +239,7 @@ __get_send_packet(dsi_socket_t * socket, int * packet)
   dsi_packet_t * p = &socket->packets[socket->next_packet];
   int err;
 
-#if DEBUG_SEND_PACKET
-  INFO("trying to get packet %d\n",socket->next_packet);
-#endif
+  LOGdL(DEBUG_SEND_PACKET,"trying to get packet %d",socket->next_packet);
 
   /* Abort-Flag set in between? */
   if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
@@ -351,9 +348,7 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
   dsi_sync_msg_t msg;
   int result = -1;
 
-#if DEBUG_RECEIVE_PACKET
-  INFO("trying to get packet %d\n",socket->next_packet);
-#endif
+  LOGdL(DEBUG_RECEIVE_PACKET,"trying to get packet %d",socket->next_packet);
 
   /* Abort-Flag set in between? */
   if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
@@ -367,10 +362,10 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
 	  msg.packet = socket->next_packet;
 	  if (socket->flags & DSI_SOCKET_MAP) {
 	      LOG_Error("Mapping sockets not supported");
-	      return -EINVAL;
+	      return -L4_EINVAL;
  	  } else if (socket->flags & DSI_SOCKET_COPY) {
 	      LOG_Error("Copying sockets not supported");
-	      return -EINVAL;
+	      return -L4_EINVAL;
 	  } else
 	      msg.rcv = L4_IPC_SHORT_MSG;
 
@@ -406,9 +401,7 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
       }
   } /* got the packet */
       
-#if DEBUG_RECEIVE_PACKET
-  INFO("got packet %d\n",socket->next_packet);
-#endif
+  LOGdL(DEBUG_RECEIVE_PACKET,"got packet %d",socket->next_packet);
 
   /* got the packet */
   *packet = socket->next_packet;
@@ -467,10 +460,7 @@ __commit_send_packet(dsi_socket_t * socket, dsi_packet_t * packet)
   msg.work_th = socket->remote_socket.work_th; 
   msg.packet = __get_packet_index(socket,packet);
 
-#if DEBUG_SEND_PACKET
-  INFO("commiting packet %d\n",msg.packet);
-  INFO("message to %x.%x\n",msg.sync_th.id.task,msg.sync_th.id.lthread);
-#endif
+  LOGdL(DEBUG_SEND_PACKET,"commiting packet %d",msg.packet);
 
   /* commit packet, the rx_sem counter of the packet is used to synchronize 
    * valid send data (see __get_receive_packet) */
@@ -583,7 +573,7 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
   int ret,i;
 
 #if 0
-  INFO("socket at 0x%08x\n",(unsigned)socket);
+  LOGL("socket at 0x%08x",(unsigned)socket);
 #endif
 
 #if DO_SANITY
@@ -604,12 +594,12 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
     }
 
 #if 0
-  INFO("ret = %d\n",ret);
+  LOGL("ret = %d",ret);
 #endif
 
   if (ret && (ret != -DSI_ENOPACKET) && ret!=-DSI_EEOS)
     {
-      Error("DSI: get packet failed: %s (%d)\n",l4env_errstr(ret),ret);
+      Error("DSI: get packet failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -617,7 +607,7 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
 
 #if 0
 #if (DEBUG_SEND_PACKET || DEBUG_RECEIVE_PACKET)
-  INFO("got packet %d\n",i);
+  LOGL("got packet %d",i);
 #endif
 #endif
 
@@ -772,7 +762,7 @@ dsi_packet_commit(dsi_socket_t * socket, dsi_packet_t * packet)
   
   if (ret)
     {
-      Error("DSI: commit packet failed: %s (%d)\n",l4env_errstr(ret),ret);
+      Error("DSI: commit packet failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -828,7 +818,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
   if (packet->sg_len >= socket->header->max_sg_len)
     {
       /* exceeded max scatter gather list length */
-      Error("DSI: scatter gather list too long (%d)\n",packet->sg_len + 1);
+      Error("DSI: scatter gather list too long (%d)",packet->sg_len + 1);
       return -DSI_ESGLIST;
     }
 
@@ -845,7 +835,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
 	  (size == 0))
 	{
 	  /* invalid data area */
-	  Error ("DSI: invalid data area (addr 0x%08x, size %u)\n",
+	  Error ("DSI: invalid data area (addr 0x%08x, size %u)",
 		 (l4_addr_t)addr,size);
 	  return -L4_EINVAL;
 	}

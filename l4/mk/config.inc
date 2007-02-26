@@ -22,7 +22,7 @@
 #
 # Optional Parameters:
 #
-# DROPSCONF		- if nunempty, the configuration tool is run for
+# DROPSCONF		- if nonempty, the configuration tool is run for
 #			  target config::. If empty, the configuration tool
 #			  is not run.
 # DROPSCONF_TITLE	- the main title in the configuration tool.
@@ -42,12 +42,16 @@ DROPSCONF_DEFCONFIG	?= defconfig
 DROPSCONF_CONFIG_IN	?= config.in
 DROPSCONF_CONFIG	?= .config
 DROPSCONF_CONFIG_H	?= config.h
+DROPSCONF_CONFIG_MK	?= Makeconf.bid.local
+DROPSCONF_DONTINC_MK	?=
 DROPSCONF_MACRO		?= CONFIG_H_INCLUDED
 DROPSCONF_HELPFILE	?= config.help
 DROPSCONF_TOOL		?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Menuconfig \
 					$(DROPS_STDDIR)/tool/bin/Menuconfig) \
 					false)
+DROPSCONF_LXDIALOG	= $(filter-out false, \
+			     $(DROPSCONF_TOOL:Menuconfig=lxdialog/lxdialog))
 DROPSCONF_TOOL_TXT	?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Configure \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
@@ -56,42 +60,65 @@ DROPSCONF_TOOL_OLD	?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Configure \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
 					false) -d
-export DROPSCONF_TITLE DROPSCONF_DEFCONFIG DROPSCONF_CONFIG_IN \
-	DROPSCONF_CONFIG DROPSCONF_CONFIG_H DROPSCONF_MACRO \
-	DROPSCONF_HELPFILE DROPSCONF_UNDEF
+DROPSCONF_VARDEFS = $(foreach v,TITLE DEFCONFIG CONFIG_IN CONFIG CONFIG_H \
+	MACRO HELPFILE UNDEF,DROPSCONF_$v='$(DROPSCONF_$v)')
 
 ifneq ($(DROPSCONF),)
 .o:	$(DROPSCONF_CONFIG_H)
 
 $(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG):
 	@echo "Create the configuration files"
-	true | $(DROPSCONF_TOOL_OLD) || \
+	$(VERBOSE)true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) || \
 	  ( echo -e "\nError: Some defaults for config options are missing." ; \
 	    false )
 
-config::
-	$(DROPSCONF_TOOL)
+$(DROPSCONF_CONFIG_MK): $(DROPSCONF_CONFIG)
+	$(VERBOSE)sed -e "s/\(^[^= ]*=\)'\([^']*\)'/\1\2/" \
+		<$(DROPSCONF_CONFIG) >$@
+	$(MAKE) DROPSCONF_CONFIG_MK_POST_HOOK
+
+DROPSCONF_CONFIG_MK_POST_HOOK::
+	
+config:: $(DROPSCONF_LXDIALOG)
+	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG_H))
+	$(VERBOSE)$(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL)
+	$(VERBOSE)test ! -r $(DROPSCONF_CONFIG) -o \
+		! $(DROPSCONF_CONFIG) -nt $(DROPSCONF_CONFIG_MK) || \
+		$(MAKE) $(DROPSCONF_CONFIG_MK)
 
 txtconfig::
-	$(DROPSCONF_TOOL_TXT)
+	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG_H))
+	$(VERBOSE)$(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_TXT)
+	@$(MAKE) $(DROPSCONF_CONFIG_MK)
 
 oldconfig::
-	$(DROPSCONF_TOOL_OLD)
+	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG_H))
+	$(VERBOSE)$(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD)
+	@$(MAKE) $(DROPSCONF_CONFIG_MK)
+
+# provide a rule for generating the lxdialog in $(L4DIR)/tool/config
+# If Menuconfig is not found there, you will receive an error
+$(L4DIR)/tool/config/lxdialog/lxdialog:
+	$(MAKE) -C $(L4DIR)/tool/config
 
 clean::
-	$(VERBOSE)$(RM) $(DROPSCONF_CONFIG_H) .menuconfig.log $(DROPSCONF_CONFIG).old
 
-cleanall:: clean
-	$(VERBOSE)$(RM) $(DROPSCONF_CONFIG)
-
+cleanall::
+	$(VERBOSE)$(RM) $(DROPSCONF_CONFIG) $(DROPSCONF_CONFIG_H) \
+			$(DROPSCONF_CONFIG_MK) .menuconfig.log \
+			$(DROPSCONF_CONFIG).old
 help::
 	@echo "  config         - run the menu-driven configuration tool"
 	@echo "  txtconfig      - run the configuration tool"
 	@echo "  oldconfig      - (re)create the configuration header based on a prior"
 	@echo "                   configuration or default values"
 
-ifeq ($(filter config oldconfig txtconfig help scrub clean cleanall,$(MAKECMDGOALS)),)
--include $(DROPSCONF_CONFIG)
+# special switch not to include DROPSCONF_CONFIG_MK
+ifeq ($(DROPSCONF_DONTINC_MK),)
+# do not prebuild the config file on "make config"
+ifeq ($(filter config oldconfig txtconfig help scrub clean cleanall $(DROPSCONF_CONFIG_MK),$(MAKECMDGOALS)),)
+-include $(DROPSCONF_CONFIG_MK)
+endif
 endif
 
 # end of DROPSCONF defined
@@ -100,5 +127,3 @@ config txtconfig oldconfig::
 endif
 
 .PHONY: config oldconfig txtconfig
-
-

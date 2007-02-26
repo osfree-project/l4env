@@ -6,23 +6,13 @@
  *
  * \date   09/02/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -92,12 +82,9 @@ l4th_tcb_init(void)
       return ret;
     }
 
-#if DEBUG_TCB_INIT
-  INFO("\n");
-  DMSG("  tcb size = %d, tcb table size = %u\n",sizeof(l4th_tcb_t),table_size);
-  DMSG("  ds %u at "IdFmt", mapped to 0x%08x\n",tcb_table.ds.id,
-       IdStr(tcb_table.ds.manager),tcb_table.map_addr);
-#endif
+  LOGdL(DEBUG_TCB_INIT,"\n  tcb size = %d, tcb table size = %u\n" \
+        "  ds %u at "IdFmt", mapped to 0x%08x",sizeof(l4th_tcb_t),table_size,
+        tcb_table.ds.id,IdStr(tcb_table.ds.manager),tcb_table.map_addr);
 
   /* map tcb table */
   offs = 0;
@@ -146,7 +133,7 @@ l4th_tcb_reserve(l4thread_t thread)
     return -L4_EINVAL;
   
   /* try to reserve tcb */
-  if (cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_RESERVED))
+  if (l4util_cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_RESERVED))
     return 0;
   else
     return -L4_EUSED;

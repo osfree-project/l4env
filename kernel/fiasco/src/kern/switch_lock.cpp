@@ -120,7 +120,7 @@ Switch_lock::lock()
 /** Acquire the lock with priority inheritance.
     @return true if we owned the lock already.  false otherwise.
  */
-PUBLIC
+PUBLIC inline NEEDS["globals.h"]
 bool
 Switch_lock::test_and_set()
 {

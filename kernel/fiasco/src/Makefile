@@ -1,14 +1,26 @@
-srcdir		:= .
+srcdir		:= NOT_SET
 tooldir		:= $(srcdir)/../tool
 
 CONFIG_BANNER_STRING ?= "Fiasco - prepare for world domination"
 
 
-.PHONY: all do-all test-all menuconfig xconfig mrproper doc
+.PHONY: all do-all test-all config menuconfig xconfig oldconfig mrproper doc
+
+ifeq ($(srcdir),NOT_SET)
+all config menuconfig xconfig oldconfig:
+	@echo "======================================================================"
+	@echo " Building Fiasco in the src directory is deprecated!"
+	@echo ""
+	@echo " Go to the Fiasco root directory and create your build directory with"
+	@echo "    cd .. && make BUILDDIR=build-dir"
+	@echo "======================================================================"
+	@exit 1
+
+else
 
 all: globalconfig.out globalconfig.h 
 
-ifeq ($(filter xconfig menuconfig,$(MAKECMDGOALS)),)
+ifeq ($(filter config xconfig menuconfig oldconfig,$(MAKECMDGOALS)),)
 
 -include globalconfig.out
 CONFIG_XARCH	:= $(subst ",,$(CONFIG_XARCH))
@@ -44,7 +56,7 @@ include $(srcdir)/Makerules.global
 
 endif # no ABI
 endif # no XARCH
-endif # xconfig menuconfig
+endif # config xconfig menuconfig oldconfig
 
 auto:
 	test -e auto || mkdir auto
@@ -62,8 +74,12 @@ globalconfig.out: rules.out
 globalconfig.h: globalconfig.out
 	$(tooldir)/cml2/configtrans.py -h $@ $<
 
-menuconfig: rules.out
+config menuconfig: rules.out
 	$(tooldir)/cml2/cmlconfigure.py -B $(CONFIG_BANNER_STRING) -c -i globalconfig.out -o globalconfig.out $< && \
+	$(tooldir)/cml2/configtrans.py -h globalconfig.h globalconfig.out
+
+oldconfig: rules.out
+	$(tooldir)/cml2/cmlconfigure.py -B $(CONFIG_BANNER_STRING) -t -I globalconfig.out -o globalconfig.out $< && \
 	$(tooldir)/cml2/configtrans.py -h globalconfig.h globalconfig.out
 
 xconfig: rules.out
@@ -86,3 +102,4 @@ mrproper: cleanall
 	rm -rf $(srcdir)/Modules $(srcdir).Modules.deps $(srcdir)/auto 
 	rm -rf $(srcdir)/globalconfig.h $(srcdir)/globalconfig.out $(srcdir)/rules.out
 	rm -rf docs
+endif

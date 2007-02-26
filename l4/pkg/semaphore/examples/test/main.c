@@ -6,23 +6,13 @@
  *
  * \date   12/30/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <l4/semaphore/semaphore.h>
 #include <l4/thread/thread.h>
@@ -50,7 +40,7 @@ test_fn(void * data)
 
   me = l4thread_myself();
 #if 1
-  prio = (int)(255.0 * ((float)l4_rand()/(float)L4_RAND_MAX));
+  prio = (int)(255.0 * ((float)l4util_rand()/(float)L4_RAND_MAX));
 #else
   if (me > 10)
     prio = 10;
@@ -72,7 +62,7 @@ test_fn(void * data)
 
       x = x + 1;
 
-      wait = (int)(WAIT_MAX * ((float)l4_rand()/(float)L4_RAND_MAX));
+      wait = (int)(WAIT_MAX * ((float)l4util_rand()/(float)L4_RAND_MAX));
       l4thread_sleep(wait);
 
 #if 1
@@ -84,7 +74,7 @@ test_fn(void * data)
       l4semaphore_up(&sem);
 
 #if 1
-      wait = (int)(WAIT_MAX * ((float)l4_rand()/(float)L4_RAND_MAX));
+      wait = (int)(WAIT_MAX * ((float)l4util_rand()/(float)L4_RAND_MAX));
       l4thread_sleep(wait);
 #endif
     }

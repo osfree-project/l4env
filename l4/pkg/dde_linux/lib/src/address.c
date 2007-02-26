@@ -1,14 +1,19 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/address.c
+ * \file   dde_linux/lib/src/address.c
+ * \brief  Memory Address Conversion and Region Handling
  *
- * \brief	Memory Address Conversion and Region Handling
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
-/**  \ingroup mod_mm
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
+/** \ingroup mod_mm
  * \defgroup mod_mm_addr Address Conversion
  *
  * Linux' %__va()/%__pa() macro replacements.
@@ -33,7 +38,6 @@
  * \krishna Ouch, if "struct conv_region" is vmalloc'ed, we may get a pfault
  * on address conversion - that IS slow.
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -42,52 +46,42 @@
 
 /* local */
 #include "__config.h"
-#include "__macros.h"
 #include "internal.h"
 
-/*****************************************************************************/
-/** 
- * \name Module Variables
+/** \name Module Variables
  * @{ */
-/*****************************************************************************/
 /** region list for memory management */
 static struct dde_region *conv = NULL;
 
 /** @} */
-/*****************************************************************************/
 /** Address conversion region addition.
  *
- * \param  va		virtual start address
- * \param  pa		physical start address
- * \param  size		region size
+ * \param  va    virtual start address
+ * \param  pa    physical start address
+ * \param  size  region size
  */
-/*****************************************************************************/
 void address_add_region(l4_addr_t va, l4_addr_t pa, l4_size_t size)
 {
   dde_add_region(&conv, va, pa, size);
 }
 
-/*****************************************************************************/
 /** Address conversion region removal.
  *
- * \param  va		virtual start address
- * \param  size		region size
+ * \param  va    virtual start address
+ * \param  size  region size
  */
-/*****************************************************************************/
 void address_remove_region(l4_addr_t va, l4_size_t size)
 {
   dde_remove_region(&conv, va, 0, size);
 }
 
-/*****************************************************************************/
 /** Convert physical to virtual memory address.
  * \ingroup mod_mm_addr
  *
- * \param  paddr	physical memory address
+ * \param  paddr  physical memory address
  *
  * \return virtual address
  */
-/*****************************************************************************/
 void *__va(volatile unsigned long paddr)
 {
   struct dde_region *p;
@@ -98,13 +92,13 @@ void *__va(volatile unsigned long paddr)
   while (p)
     {
       if ((p->pa <= paddr) && (p->pa + p->size > paddr))
-	{
-	  pp = (void *) (p->va + (paddr - p->pa));
+        {
+          pp = (void *) (p->va + (paddr - p->pa));
 #if DEBUG_ADDRESS
-	  DMSG("__va(0x%lx) => %p\n", paddr, pp);
+          DMSG("__va(0x%lx) => %p\n", paddr, pp);
 #endif
-	  return pp;
-	}
+          return pp;
+        }
       p = p->next;
     }
 
@@ -112,15 +106,13 @@ void *__va(volatile unsigned long paddr)
   return NULL;
 }
 
-/*****************************************************************************/
 /** Convert virtual to physical memory address.
  * \ingroup mod_mm_addr
  *
- * \param  vaddr	virtual memory address
+ * \param  vaddr  virtual memory address
  *
  * \return physical address
  */
-/*****************************************************************************/
 unsigned long __pa(volatile void *vaddr)
 {
   struct dde_region *p;
@@ -132,13 +124,13 @@ unsigned long __pa(volatile void *vaddr)
   while (p)
     {
       if ((p->va <= addr) && (p->va + p->size > addr))
-	{
-	  pp = p->pa + (addr - p->va);
+        {
+          pp = p->pa + (addr - p->va);
 #if DEBUG_ADDRESS
-	  DMSG("__pa(0x%lx) => 0x%lx\n", addr, pp);
+          DMSG("__pa(0x%lx) => 0x%lx\n", addr, pp);
 #endif
-	  return pp;
-	}
+          return pp;
+        }
       p = p->next;
     }
 

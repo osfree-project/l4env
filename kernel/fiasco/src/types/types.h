@@ -25,11 +25,13 @@ a nonull_static_cast( b p )
 /// OBSOLETE IA-32 64bit type
 typedef struct { Unsigned32 low, high; } l4_low_high_t; 
 
-/// type for address ranges
-typedef struct { Address low, high; } l4_addr_range_t;
-
 /// standard size type
 ///typedef mword_t size_t;
 typedef Smword ssize_t;
 
+/// momentary only used in UX since there the kernel has a different
+/// address space than user mode applications
+enum Address_type { KERNEL = 0, USER = 1, UNKNOWN = 2 };
+
 #endif // TYPES_H__
+

@@ -1,0 +1,11 @@
+This package contains not really a network HUB but a component that
+implements a set of cross-link cables.
+
+This component can be used to connect two instances of L4Linux via xl4tun
+devices. This is the first step towards the l4-ipsec implementation that
+shall be implemented in such a cross-link cable. 
+
+At the moment the component is not optimized and uses long IPC for
+transfering network packets. The final version shall use memory mappings to
+do a singe decryption/encryption-and-copy step.
+

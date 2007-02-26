@@ -13,45 +13,36 @@
  */
 /*****************************************************************************/
 
+import <l4/generic_blk/types.h>
+
 /*****************************************************************************/
 /**
  * DROPS Block Device Driver Interface
+ * \ingroup idl
  */
 /*****************************************************************************/
-module l4blk
+library l4blk
 {
-  /**
-   * Thread id
-   */
-  typedef struct threadid
-  {
-    unsigned long low;
-    unsigned long high;
-  } threadid_t;
-      
-  /**
-   * Driver handle (-1 ... invalid driver)
-   */
-  typedef long driver_handle_t;
-
   /***************************************************************************/
   /**
    * Driver Interface.
    * This is the initial interface of a driver to its clients, it is used
    * to create and destroy instances of the other interfaces of the driver.
+   * \ingroup idl
    */
   /***************************************************************************/
   interface driver
     {
       /***********************************************************************/
       /**
-       * \brief  Open new driver instance. 
+       * \brief   Open new driver instance. 
+       * \ingroup idl_driver
        * 
-       * \retval driver       Handle for new instance
-       * \retval cmd_id       Id of command service thread
-       * \retval notify_id    Id of notification thread
+       * \retval  drv         Handle for new instance
+       * \retval  cmd_id      Id of command service thread
+       * \retval  notify_id   Id of notification thread
        * 	
-       * \return 0 on success, error code if open failed.
+       * \return  0 on success, error code if open failed.
        *
        * Create a new instance of the driver. The main job is to assign 
        * instances of the command and callback interface threads to the client. 
@@ -59,205 +50,164 @@ module l4blk
        * dependent on the actual requirements of the driver.
        */
       /***********************************************************************/ 
-      long open(out driver_handle_t driver, 
-                out threadid_t cmd_id, 
-                out threadid_t notify_id);
+      int open([out] l4blk_driver_id_t * drv, 
+               [out] l4_threadid_t * cmd_id, 
+               [out] l4_threadid_t * notify_id);
 
       /***********************************************************************/
       /**
-       * \brief  Close driver instance.
+       * \brief   Close driver instance.
+       * \ingroup idl_driver
        * 
-       * \param  driver       Driver handle
+       * \param   drv         Driver handle
        *	
-       * \return 0 on success, error code if close failed.
+       * \return  0 on success, error code if close failed.
        *
        * Close instance of the driver.
        */
       /***********************************************************************/ 
-      long close(in driver_handle_t driver);
+      int close([in] l4blk_driver_id_t drv);
     };
 
   /***************************************************************************/
   /**
    * Command handling interface
+   * \ingroup idl
    */
   /***************************************************************************/
   interface cmd
     {
-      /**
-       * Stream handle (-1 ... invalid stream)
-       */
-      typedef long stream_handle_t;
-
-      /**
-       * Request structure
-       */
-      typedef struct request
-      {
-        unsigned long   req_handle;     ///< client request handle
-
-        unsigned long   cmd;            ///< command
-        unsigned long   device;         ///< device 
-        unsigned long   block;          ///< block number
-        unsigned long   count;          ///< number of blocks
-        unsigned long   buf;            ///< address of target/source buffer
-
-        // real-time stream requests
-        stream_handle_t stream;         /**< stream handle, must be set to 
-                                         *   invalid stream to mark 
-                                         *   non-real-time request */
-        unsigned long   request_no;     ///< request number
-        stream_handle_t replaces[4];    /**< list of streams the request 
-                                         *   replaces, it must be set to 
-                                         *   invalid stream for regular 
-                                         *   requests */ 
-        unsigned long   flags;          /**< flags, used to mark metadata 
-                                         *   requests for a real-time stream 
-                                         *   (\a stream must be set) */
-      } request_t;
-
-      /**
-       * Request list 
-       */
-      typedef request_t request_list_t[8];
-
-      /**
-       * Scatter-gather list element 
-       */
-      typedef struct sg_elem
-      {
-        unsigned long addr;
-        unsigned long size;
-      } sg_elem_t;
-
       /***********************************************************************/
       /**
-       * \brief  Create new real-time stream.
+       * \brief   Create new real-time stream.
+       * \ingroup idl_cmd
        *
-       * \param  driver       Driver handle
-       * \param  bandwidth    Bandwidht of stream (bytes/s)
-       * \param  blk_size     Blocksize (bytes)
-       * \param  q            Quality parameter
-       * \param  meta_int     Metadata request interval (number of regular 
+       * \param   drv         Driver handle
+       * \param   bandwidth   Bandwidht of stream (bytes/s)
+       * \param   blk_size    Blocksize (bytes)
+       * \param   q           Quality parameter
+       * \param   meta_int    Metadata request interval (number of regular 
        *                      requests per metadata request)
-       * \retval stream       Stream handle
+       * \retval  stream      Stream handle
        * 
-       * \return 0 on success (created new stream, \a stream contains a valid
-       *         stream handle), error code otherwise.
+       * \return  0 on success (created new stream, \a stream contains a valid
+       *          stream handle), error code otherwise.
        *
        */
       /***********************************************************************/ 
-      long create_stream(in driver_handle_t driver, 
-                         in unsigned long bandwidth,
-                         in unsigned long blk_size, 
-                         in float q,
-                         in unsigned long meta_int, 
-                         out stream_handle_t stream);
+      int create_stream([in] l4blk_driver_id_t drv, 
+                        [in] unsigned long bandwidth,
+                        [in] unsigned long blk_size, 
+                        [in] float q,
+                        [in] unsigned long meta_int, 
+                        [out] l4blk_stream_t * stream);
 
       /***********************************************************************/
       /**
-       * \brief  Close real-time stream.
+       * \brief   Close real-time stream.
+       * \ingroup idl_cmd
        *
-       * \param  driver       Driver handle
-       * \param  stream       Stream handle.
+       * \param   drv         Driver handle
+       * \param   stream      Stream handle.
        * 
-       * \return 0 on succes (closed stream, released resources), error code
-       *         otherwise.
+       * \return  0 on succes (closed stream, released resources), error code
+       *          otherwise.
        */
       /***********************************************************************/ 
-      long close_stream(in driver_handle_t driver, 
-                        in stream_handle_t stream);
+      int close_stream([in] l4blk_driver_id_t drv, 
+                       [in] l4blk_stream_t stream);
 
       /***********************************************************************/
       /**
-       * \brief  Set stream start time
+       * \brief   Set stream start time
+       * \ingroup idl_cmd
        * 
-       * \param  driver       Driver handle
-       * \param  stream       Stream handle.
-       * \param  time         Time (deadline) of first request (milliseconds)
-       * \param  request_no   Request number of first request
+       * \param   drv         Driver handle
+       * \param   stream      Stream handle.
+       * \param   time        Time (deadline) of first request (milliseconds)
+       * \param   request_no  Request number of first request
        *
-       * \return 0 on success, error code otherwise.
+       * \return  0 on success, error code otherwise.
        */
       /***********************************************************************/ 
-      long start_stream(in driver_handle_t driver, 
-                        in stream_handle_t stream,
-                        in unsigned long time, 
-                        in unsigned long request_no);
+      int start_stream([in] l4blk_driver_id_t drv, 
+                       [in] l4blk_stream_t stream,
+                       [in] unsigned long time, 
+                       [in] unsigned long request_no);
 
       /***********************************************************************/
       /**
-       * \brief  Send request list to driver.
+       * \brief   Send scatter-gather request to driver
+       * \ingroup idl_cmd
        * 
-       * \param  driver       Driver handle
-       * \param  requests     Request list
-       * \param  num          Number of requests in request list.
-       *
-       * \return 0 on success (requests enqueued into driver's request list),
-       *         error code otherwise.
-       */
-      /***********************************************************************/ 
-      long put_requests(in driver_handle_t driver, 
-                        in request_list_t requests,
-                        in unsigned long num);
-
-      /***********************************************************************/
-      /**
-       * \brief  Send scatter-gather request to driver
-       * 
-       * \param  driver       Driver handle
-       * \param  req          Request descriptor (first element of list)
-       * \param  buffers      Buffer list
-       * \param  num          Number of buffers in buffer list
+       * \param   drv         Driver handle
+       * \param   request     Request
+       * \param   sg_list     Buffer list
+       * \param   sg_size     Sizr of sg_list (bytes)
+       * \param   sg_num      Number of buffers in buffer list
+       * \param   sg_type     Type of scatter-gather list:
+       *                      - #L4BLK_SG_PHYS
+       *                      - #L4BLK_SG_DS
        *	
-       * \return 0 on success (requests enqueued into driver's request list),
-       *         error code otherwise.
+       * \return  0 on success (requests enqueued into driver's request list),
+       *          error code otherwise.
        */
       /***********************************************************************/ 
-      long put_sg_request(in driver_handle_t driver,
-                          in request_list_t req,
-                          in refstring buffers,
-                          in unsigned long num);
+      int put_request([in] l4blk_driver_id_t drv,
+                      [in] l4blk_blk_request_t request,
+                      [in, ref, size_is(sg_size), max_is(4096)] void * sg_list,
+                      [in] int sg_size,
+                      [in] int sg_num,
+                      [in] int sg_type);
 
       /***********************************************************************/
       /**
-       * \brief  Generic driver control function.
+       * \brief   Generic driver control function.
+       * \ingroup idl_cmd
        * 
-       * \param  driver       Driver handle
-       * \param  cmd          Control command
-       * \param  args         Argument buffer
+       * \param   drv         Driver handle
+       * \param   command     Control command
+       * \param   in_args     Input buffer
+       * \param   in_size     Size of input buffer
+       * \param   out_args    Output buffer
+       * \param   out_size    Size of output buffer
        *
-       * \return 0 on success, error code otherwise.
+       * \return  0 on success, error code otherwise.
        */
       /***********************************************************************/ 
-      long ctrl(in driver_handle_t driver, 
-                in unsigned long cmd,
-                inout refstring args);
+      int ctrl([in] l4blk_driver_id_t drv, 
+               [in] l4_uint32_t command,
+               [in, ref, size_is(in_size)] void * in_args,
+               [in] int in_size,
+               [out, ref, prealloc, size_is(out_size)] void ** out_args,
+               [in, out] int * out_size);
     };
 
   /***************************************************************************/
   /**
    * Processed notification interface
+   * \ingroup idl
    */
   /***************************************************************************/
   interface notify
     {
       /***********************************************************************/
       /**
-       * \brief  Wait for processed notification
+       * \brief   Wait for processed notification
+       * \ingroup idl_wait
        *
-       * \param  driver       Driver handle
-       * \retval req_handle   Client request handle
-       * \retval status       Request status
-       * \retval error        Error code (if status == BLK_ERROR)
+       * \param   drv         Driver handle
+       * \retval  req_handle  Client request handle
+       * \retval  status      Request status
+       * \retval  error       Error code (if status == BLK_ERROR)
        * 
-       * \return 0 on succes (\a req_handle and \a status are valid), error
-       *         code otherwise.
+       * \return  0 on succes (\a req_handle and \a status are valid), error
+       *          code otherwise.
        */
       /***********************************************************************/ 
-      long wait(in driver_handle_t driver, 
-                out unsigned long req_handle,
-                out unsigned long status, 
-                out long error);
+      int wait([in] l4blk_driver_id_t drv, 
+               [out] l4_uint32_t * req_handle,
+               [out] l4_uint32_t * status, 
+               [out] int * error);
     };
 };

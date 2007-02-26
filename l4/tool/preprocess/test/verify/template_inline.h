@@ -40,10 +40,10 @@ public:
   
   
   
-  stack_top_t(int version, T *next);
+  inline stack_top_t(int version, T *next);
   
 #line 67 "template.cpp"
-  stack_top_t();
+  inline stack_top_t();
 };
 #line 17 "template.cpp"
 
@@ -95,10 +95,10 @@ public:
 
 // typesafe variants
 
-template <class I> bool compare_and_swap(I *ptr, I oldval, I newval);
+template <class I> inline bool compare_and_swap(I *ptr, I oldval, I newval);
 
 #line 41 "template.cpp"
-template <class I> bool test_and_set(I *l);
+template <class I> inline bool test_and_set(I *l);
 
 #line 180 "template.cpp"
 template<class T> stack_t<T>*
@@ -109,7 +109,7 @@ template <> stack_t<int>*
 create_stack();
 
 #line 195 "template.cpp"
-template <> stack_t<bool>*
+template <> inline stack_t<bool>*
 create_stack();
 
 //

@@ -33,15 +33,12 @@ class CL4X0BESndFunction : public CL4BESndFunction
 DECLARE_DYNAMIC(CL4X0BESndFunction);
 
 public:
-  CL4X0BESndFunction();
-  ~CL4X0BESndFunction();
+	CL4X0BESndFunction();
+	~CL4X0BESndFunction();
 
 protected:
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmLongIPC(CBEContext *pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmShortIPC(CBEContext *pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

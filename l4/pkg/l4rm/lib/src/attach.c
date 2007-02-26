@@ -6,29 +6,20 @@
  *
  * \date   06/03/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
 #include <l4/env/errno.h>
-#include <l4/dm_generic/dm_generic.h>
+//#include <l4/dm_generic/dm_generic.h>
+#include <l4/sys/consts.h>
 #include <l4/util/bitops.h>
 #include <l4/util/macros.h>
 
@@ -36,9 +27,12 @@
 #include <l4/l4rm/l4rm.h>
 #include "__region.h"
 #include "__region_alloc.h"
-#include "__libl4rm.h"
+//#include "__libl4rm.h"
 #include "__config.h"
 #include "__debug.h"
+
+// was in __libl4rm.h
+extern l4_threadid_t l4rm_service_id;
 
 /*****************************************************************************
  *** helpers
@@ -95,11 +89,9 @@ __attach(l4dm_dataspace_t * ds,
   if (l4dm_is_invalid_ds(*ds))
     return -L4_EINVAL;
 
-#if DEBUG_ATTACH
-  INFO("DS %u at %x.%x, offset 0x%x, area 0x%x\n",ds->id,ds->manager.id.task,
-       ds->manager.id.lthread,ds_offs,area);
-#endif
-
+  LOGdL(DEBUG_ATTACH,"DS %u at %x.%x, offset 0x%x, area 0x%x",
+        ds->id,ds->manager.id.task,ds->manager.id.lthread,ds_offs,area);
+  
   /* lock region list */
   l4rm_lock_region_list_direct(flags);
 
@@ -118,9 +110,7 @@ __attach(l4dm_dataspace_t * ds,
 	}
     }
 
-#if DEBUG_ATTACH
-  INFO("region <%08x,%08x>\n",*addr,*addr + size);
-#endif
+  LOGdL(DEBUG_ATTACH,"region <%08x,%08x>",*addr,*addr + size);
   
   /* allocate new region descriptor */
   r = l4rm_region_desc_alloc();
@@ -136,7 +126,7 @@ __attach(l4dm_dataspace_t * ds,
   if ((flags & L4RM_LOG2_ALIGNED) && (flags & L4RM_LOG2_ALLOC))
     {
       /* round size to next log2 size */
-      align = bsr(size);
+      align = l4util_bsr(size);
       if (size > (1UL << align))
 	align++;
 
@@ -177,11 +167,9 @@ __attach(l4dm_dataspace_t * ds,
   if (rights & ~old_rights)
     {
       /* new rights exeed old rights, call dataspace manager */
-#if DEBUG_ATTACH
-      INFO("expand rights, old 0x%02x, new 0x%02x\n",
-	   old_rights,old_rights | rights);
-#endif
-
+      LOGdL(DEBUG_ATTACH,"expand rights, old 0x%02x, new 0x%02x",
+            old_rights,old_rights | rights);
+      
       ret = l4dm_share(ds,l4rm_service_id,rights);
       if (ret < 0)
 	{
@@ -198,14 +186,13 @@ __attach(l4dm_dataspace_t * ds,
   if ((flags & L4RM_MAP) && !(flags & MODIFY_DIRECT))
     {
       /* immediately map attached region */
-#if DEBUG_ATTACH
-      INFO("map attached region\n");
-      DMSG("  region 0x%08x-0x%08x, size 0x%x, rights 0x%02x\n",
-	   *addr, *addr + size - 1, size, rights);
-#endif
+      LOGdL(DEBUG_ATTACH,"map attached region\n" \
+            "  region 0x%08x-0x%08x, size 0x%x, rights 0x%02x",
+            *addr, *addr + size - 1, size, rights);
+
       ret = l4dm_map((void *)*addr,real_size,rights);
       if (ret < 0)
-	Msg("map attached region failed (%d), ignored!\n",ret);
+	printf("map attached region failed (%d), ignored!\n",ret);
     }
 
   /* done */
@@ -298,8 +285,8 @@ l4rm_attach_to_region(l4dm_dataspace_t * ds,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }
@@ -394,8 +381,8 @@ l4rm_area_attach_to_region(l4dm_dataspace_t * ds,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }
@@ -452,8 +439,8 @@ l4rm_direct_attach_to_region(l4dm_dataspace_t * ds,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }
@@ -502,8 +489,8 @@ l4rm_direct_area_attach_to_region(l4dm_dataspace_t * ds,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }

@@ -21,21 +21,29 @@ ifneq ($(TARGET),)
 # if no SRC_DOX is given, but TARGET, extract it from TARGET
 ifeq ($(origin SRC_DOX),undefined)
 SRC_DOX		   := $(filter $(addsuffix .cfg, $(TARGET)),$(wildcard *.cfg))
+ifneq ($(SRC_DOX),)
+$(error SRC_DOX is undefined, but TARGET is defined. This is invalid since 04/23/2003)
+endif
 endif
 # the same for SRC_TEX
 ifeq ($(origin SRC_TEX),undefined)
 SRC_TEX		   := $(filter $(TARGET:.ps=.tex),$(wildcard *.tex)) \
 		      $(filter $(TARGET:.dvi=.tex),$(wildcard *.tex))
+ifneq ($(SRC_TEX),)
+$(error SRC_TEX is undefined, but TARGET is defined. This is invalid since 04/23/2003)
+endif
 endif
 endif
 
-TARGET_DOX ?= $(SRC_DOX:.cfg=)
+TARGET_DOX 	= $(SRC_DOX:.cfg=) $(SRC_DOX_REF:.cfg=) \
+		  $(SRC_DOX_GUIDE:.cfg=) $(SRC_DOX_INT:.cfg=)
 INSTALL_TARGET_DOX ?= $(filter $(INSTALL_TARGET_MASK), $(TARGET_DOX))
-TARGET_TEX ?= $(SRC_TEX:.tex=.ps)
-# there is nothing to install for .tex files
+TARGET_TEX 	?= $(SRC_TEX:.tex=.ps)
+DEPS		+= $(foreach x,$(SRC_TEX:.tex=.dvi),$(dir $x).$(notdir $x).d)
 
 # if no TARGET is given, generate it from all types of targets
-TARGET	   ?= $(TARGET_DOX) $(TARGET_TEX)
+TARGET	   	?= $(TARGET_DOX) $(TARGET_TEX)
+DEPS		+= $(foreach file,$(TARGET),$(dir $(file)).$(notdir $(file)).d)
 
 all:: $(TARGET)
 $(TARGET): .general.d
@@ -58,7 +66,7 @@ DOXY_FLAGS += $(DOXY_FLAGS_$@)
 		echo | $(MAKE) -C $@/latex ) || true
 	$(VERBOSE)if [ -d $@ ] ; then touch $@ ; fi
 
-# Installation rules foolow
+# Installation rules follow
 #
 # define LOCAL_INSTALLDIR prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
@@ -75,20 +83,26 @@ INSTALLDIR_LOCAL	= $(INSTALLDIR_HTML_LOCAL)
 all::	$(TARGET) $(addprefix $(INSTALLDIR_LOCAL)/, $(addsuffix .title, \
 		$(INSTALL_TARGET_DOX)))
 
-# The text of the title file will appear at the generated index page
-%.title:%.cfg
-	$(VERBOSE)make -s -f $(L4DIR)/mk/doc.inc -f $< \
-		print VAR=PROJECT_NAME >$@
+$(SRC_DOX_REF:.cfg=.title): BID_DOC_DOXTYPE=ref
+$(SRC_DOX_GUIDE:.cfg=.title): BID_DOC_DOXTYPE=guide
+$(SRC_DOX_INT:.cfg=.title): BID_DOC_DOXTYPE=int
+
+# first line: type
+# second line: title that will appear at the generated index page
+%.title:%.cfg .general.d
+	$(VERBOSE)$(ECHO) $(BID_DOC_DOXTYPE)>$@
+	$(VERBOSE)MAKEFLAGS= $(MAKE) -s -f $(L4DIR)/mk/makehelpers.inc -f $< \
+	   BID_print VAR=PROJECT_NAME >>$@
 
 # Install the title file locally
 # The installed title file depends on the installed doku for message reasons
 $(foreach f,$(INSTALL_TARGET_DOX),$(INSTALLDIR_LOCAL)/$(f).title):$(INSTALLDIR_LOCAL)/%.title:%.title $(INSTALLDIR_LOCAL)/%
 	$(VERBOSE)$(call INSTALLFILE_LOCAL,$<,$@)
-	$(call UPDATE_HTML_MESSAGE,$(INSTALLDIR_LOCAL))
+	@$(call UPDATE_HTML_MESSAGE,$(INSTALLDIR_LOCAL))
 
 # Install the docu locally, the title file will depend on
 $(foreach f,$(INSTALL_TARGET_DOX),$(INSTALLDIR_LOCAL)/$(f)):$(INSTALLDIR_LOCAL)/%:% %/html
-	$(INSTALL_DOC_LOCAL_MESSAGE)
+	@$(INSTALL_DOC_LOCAL_MESSAGE)
 	$(if $(INSTALLFILE_LOCAL),$(VERBOSE)$(INSTALL) -d $@)
 	$(VERBOSE)$(call INSTALLFILE_LOCAL,$</html/*,$@)
 
@@ -96,11 +110,11 @@ $(foreach f,$(INSTALL_TARGET_DOX),$(INSTALLDIR_LOCAL)/$(f)):$(INSTALLDIR_LOCAL)/
 # The installed title file depends on the installed doku for message reasons
 $(foreach f,$(INSTALL_TARGET_DOX),$(INSTALLDIR)/$(f).title):$(INSTALLDIR)/%.title:%.title $(INSTALLDIR)/%
 	$(VERBOSE)$(call INSTALLFILE,$<,$@)
-	$(call UPDATE_HTML_MESSAGE,$(INSTALLDIR))
+	@$(call UPDATE_HTML_MESSAGE,$(INSTALLDIR))
 
 # Install the docu globally, the title file will depend on
 $(foreach f,$(INSTALL_TARGET_DOX),$(INSTALLDIR)/$(f)):$(INSTALLDIR)/%:% %/html
-	$(INSTALL_DOC_MESSAGE)
+	@$(INSTALL_DOC_MESSAGE)
 	$(if $(INSTALLFILE),$(VERBOSE)$(INSTALL) -d $@)
 	$(VERBOSE)$(call INSTALLFILE,$</html/*,$@)
 
@@ -119,14 +133,14 @@ install:: $(addprefix $(INSTALLDIR)/,$(addsuffix .title,$(INSTALL_TARGET_DOX)))
 	$(VERBOSE)fig2dev -L eps $< $@
 
 %.ps:%.dvi  .general.d
-	$(VERBOSE)dvips -o $@ $<
+	$(VERBOSE)$(call MAKEDEP,dvips) dvips -o $@ $<
 	$(VERBOSE)$(VIEWERREFRESH_PS)
 
 %.pdf:%.ps  .general.d
 	ps2pdf $<
 
 %.dvi:%.tex  .general.d
-	$(VERBOSE)$(LATEX) $<
+	$(VERBOSE)$(call MAKEDEP,$(LATEX)) $(LATEX) $<
 	$(VERBOSE)if grep -q '\indexentry' $*.idx; then makeindex $*; fi
 	$(VERBISE)if grep -q '\citation' $*.aux; then bibtex $*; fi
         # Do we really need to call latex unconditionally again? Isn't it
@@ -158,8 +172,6 @@ ps:	$(SHOWPS)
 showps: ps
 	$(VERBOSE)$(VIEWER_PS) $(SHOWPS) &
 
-DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
-
 clean::
 	$(VERBOSE)$(RM) $(addsuffix .title,$(TARGET_DOX))
 	$(VERBOSE)$(RM) $(addsuffix .flags,$(TARGET_DOX))
@@ -169,7 +181,7 @@ clean::
 
 cleanall:: clean
 	$(VERBOSE)$(RM) -r $(wildcard $(TARGET)) $(wildcard .*.d)
-	$(VERBOSE)$(RM) $(wildcard $(SRC_TEX:.tex=.ps))
+	$(VERBOSE)$(RM) $(wildcard $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf))
 
 .PHONY: all clean cleanall config help install oldconfig reloc txtconfig
 .PHONY: ps dvi showps showdvi

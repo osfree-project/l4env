@@ -21,7 +21,11 @@ int strncmp(const char *s1, const char *s2, size_t n);
 int strcasecmp(const char *s1, const char *s2);
 int strncasecmp(const char *s1, const char *s2, size_t n);
 
+#if (__GNUC__>=3)
+size_t strlen(const char *s) __attribute__((pure));
+#else
 size_t strlen(const char *s);
+#endif
 
 char *strstr(const char *haystack, const char *needle);
 

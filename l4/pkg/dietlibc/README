@@ -1,0 +1,209 @@
+This is a quick port of parts of the dietlibc to L4/DROPS.
+
+All paths in this document will be relative to the packet's directory
+if not otherwise stated.
+
+Current State
+=============
+
+The actual state of the port was driven by the small example in
+examples/ which uses file-io, at first at syscall-level (open, read,
+write) and later at stream-level (fopen, fread, fwrite).
+
+Some other functionality was necessary for the file-access at
+stream-level and was therefore implemented in the currently solely
+existing "backend" for the libc --- the "simple_backend". The
+functionality includes (among other things):
+ - malloc, free, realloc, ...
+ - open, read, write, close, lseek, sync
+ - fopen, fread, fwrite, fclose, ...
+ - printf, ...
+ - str*
+ - mem*
+ - ...
+
+Filesystem functionality for the "simple_backend" is provided by a
+server running in L4Linux, thus access is possible to all files
+accessible there. The interface between the backend and the concrete
+server running in L4Linux is defined using idl, which can be found ---
+surprise, surprise --- in idl/.
+
+Update: As of now there are more backends, providing startup and
+shutdown functionality for native and l4env applications. There are
+two memory backends as well. A major attempt for an io solution is in
+progress. For details have a look into the lib/backends directory.
+
+
+The Example
+===========
+
+To run the example in examples you should setup an entry in your
+menu.lst like follows:
+
+  title L4Linux-2.2, vfs_client, ram-disk
+  kernel  = (nd)/tftpboot/mp26/l4v2/rmgr -sigma0 task modname "glinux-2.2-v2" module task modname "libc_libstdio_example" boot_priority 20
+  modaddr 0x02000000
+  module  = (nd)/tftpboot/mp26/kernel/main -nowait -serial -serial_esc -nokdb -comport 2 -esc
+  module  = (nd)/tftpboot/mp26/l4v2/sigma0
+  module  = (nd)/tftpboot/mp26/l4v2/names
+  module  = (nd)/tftpboot/mp26/l4v2/log
+  module  = (nd)/tftpboot/mp26/l4v2/dm_phys --mem=0x400000,0x4000000,0x8000000
+  module  = (nd)/tftpboot/mp26/l4linux/glinux-2.2-v2 rw load_ramdisk=1 ramdisk_size=16384 no-scroll root=/dev/ram
+  module  = (nd)/tftpboot/mp26/ramdisk/drops-os.rd
+  module  = (nd)/tftpboot/mp26/l4v2/libc_libstdio_example
+
+After booting up L4Linux log in and start the "l4xvfs_server". It will
+register at "names" and the already waiting example client will be
+able to run on and do some file-io.
+
+Note: * You will probable want to adapt the file name in the example
+        if you intend to run it ...
+      * Note the priority settings above. They are useful to prevent
+        stuff like this:
+
+irq=00 irqs_in_progress=00000800 sender=0008.10
+KDB: bh: irqs active
+    --bh: irqs active---------------------------------------EIP: 0040a1a6
+(8.20) jdb: g
+
+
+Architecture
+============
+
+One of the goals of this port, was to by able to reuse as much as
+possible of the dietlibc. Ideally, the libc would just have to be
+recompiled, providing its interface to L4-Programms and using some
+kind of emulation environment I will refer to as backends.
+
+I my current imagination I have the plan to implement some backends
+for the libc, providing functionality for different demands, like: a
+filesystem-like interface (open, read, ...), memory managment
+interface (mmap, ...), and others, and link those to the libc. Each of
+these backends may be intended for different situations. The libc
+itself can be compiled independently of the backends.
+
+* For example, one might write a set of simple backends providing the
+  basis for the libc usage in a micro-kernel. Filesystem functionality
+  would probably not be necessary in this situation, but str* and mem*
+  functions would.
+
+* On the other side, a set of backends satisfying high level demands,
+  such as file-io, network-io, and thread-management functions could
+  be based on the l4env and some newly to be developed servers.
+
+
+Backends
+========
+
+The backends should be placed in lib/backends. As already mentioned,
+currently there is just one backend. Please have a look in the chapter
+Current state.
+
+ * micro-kernel: After a recent discussion with Alexander Warg, it
+   seems unlikely that the dietlibc port will be the base for future
+   versions of the fiasco micro-kernel. Although there is some code
+   that coexists in both the kernel package and the dietlibc package,
+   some facts discommend sharing:
+    - The kernel should not depend on a user package,
+    - The GPL (not LGPL) license of the dietlibc,
+    - some parts are already rewritten or come from other sources,
+    - more will be replaced with time.
+
+ * The "simple_backend" should be reentrant, especially the vfs server
+   on the L4Linux side is multithreaded now. The interface is split
+   into two halves, one for the connection managment and the other for
+   the core functionality.
+
+ * For current state have a look at lib/backends.
+
+Modes
+=====
+
+The currently only supported mode is the
+"l4env_dietlibc_preliminary". Using this mode all BID variables should be
+set accordingly and the "simple_backend" will be used.
+
+
+Building Infrastructure
+=======================
+
+The whole package should be located in l4/pkg/dietlibc.  The original
+dietlibc lives in lib/contrib/dietlibc, the actual port in
+lib/dietlibc.
+
+The Makefile in lib/dietlibc is responsible for creating links to
+files not existent in lib/dietlibc but mentioned in
+lib/dietlibc/contrib_files.lst.
+
+So, to modify a file for the port you would remove the link, but copy
+and modify the file directly. Than you should add it to the CVS.
+
+If you would just like to add more files to the port, but think that
+these need no modification, you should add their names to the file
+lib/dietlibc/contrib_files.lst.
+
+
+FAQ
+===
+
+ * Why did you choose to port the dietlibc and not something better /
+   more free / nicer / faster / smaller ...?
+
+   Well, dietlibc is simple enough to be understandable in large
+   parts. It is nicely structured. It seems to be portable across
+   different plattforms (i386, mips, ia64, arm, ...). We needed a fast
+   solution ...
+
+ * Why does the structure in the dietlibc package not completely
+   follow BID conventions ?
+
+   There are other concerns too. One of which is that I want to keep
+   the structure of the original contrib directories, as to ease the
+   maintenance of the port.
+
+ * How may I help?
+
+   First of all, you may want to use the dietlibc port in your
+   package. Most probably you will find errors and missing
+   functionality. Of course you are welcome to fix the found errors ;-).
+   For the missing functionality, you may want to ask me (the
+   maintainer), whether a solution for this specific problem is
+   already planned and how it would fit in the future plans of this
+   port. If you want to implement the functionality yourself there
+   might be two approaches. The first is to implement a completely new
+   backend and the second is to adapt an existing one.
+
+ * How come, my question is not listed here?
+
+   Well, up to now the questions listed here are no real FAQ-questions
+   as noone really asked them. They simply came to my mind. But of
+   course you may send some ...
+
+ * Help me, something doesn't compiles / links / ...
+
+   At first, do a 'make cleanall' followed by 'cvs up -d' in the
+   PKG-Dir of the dietlibc.  If the problem persists, you might want
+   to contact me (see below).
+
+
+Current Stuff
+=============
+
+In the recent development I came to the point where some system-wide
+config files are accessed from within the libc (e.g. /etc/passwd,
+/etc/hosts, ...). Problem is, that this seems to be the point were we
+should break compatibility with Unix/Linux as we currently have no
+idea what uid could be in DROPS.
+
+On the other hand things like /etc/hosts are useful for DNS resolving
+and therefore somewhat belong to flips. So we need some kind of
+config-file access without fileservers or similar complex stuff. The
+idea is to link some small config files directly to the libc-backend
+and route access to them.
+
+
+Maintainer
+=========
+
+Martin Pohlack
+mp26@os.inf.tu-dresden.de

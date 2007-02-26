@@ -6,30 +6,36 @@ RM_F=		rm -f
 DOXFILES=	manpage.dox
 EXTRA_DIST=	$(DOXFILES)
 SUFFIXES=	.dox
-CLEANFILES=	dox-stamp version.dox
+CLEANFILES=	version.dox
 
 if HAS_DOXYGEN
 man_MANS=	dice.1
 
-all-local:	dox-stamp $(man_MANS)
+all-local:	$(man_MANS)
 
-$(man_MANS):	$(DOXFILES) Doxyfile
+# because man_MANS is mapped to MAN
+# and MAN is before all-local in the
+# dependency list of all, we have to
+# add version.dox here
+$(man_MANS):	version.dox $(DOXFILES) Doxyfile
 	$(VERBOSE)$(DOXYGEN)
 	$(VERBOSE)$(LN_S) -f man/man1/dice.1
 
+else
+all-local:
+	@echo *********************************************************
+	@echo I cannot build the manual page for dice, because doxygen
+	@echo could not be found during configure. To build the manual
+	@echo run 'doxygen' in the doc/manual directory manually, or
+	@echo install doxygen and run configure again.
+	@echo *********************************************************
+
 endif
 
-dox-stamp: $(DOXFILES)
-	@for F in $(DOXFILES); do \
-	  if test ! -f $${F} -a ! -L $${F}; then \
-	    ${LN_S} $(srcdir)/$${F} $${F}; \
-	  fi \
-	done
-	@echo timestamp > dox-stamp 2>/dev/null
+version.dox:
+	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
 	rm -rf man/
 	rm -f dice.1
-	for F in $(DOXFILES); do \
-	  test ! -L $${F} || ${RM_F} $${F}; \
-	done
+

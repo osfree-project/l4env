@@ -15,6 +15,70 @@ typedef Mword LThread_num;
 /// Type for global thread numbers.
 typedef Mword GThread_num;
 
+/**
+ * @brief L4 unique ID.
+ *
+ * This class encapsulates UIDs in L4. Theese IDs are
+ * used for threads, tasks, and IRQs.
+ *
+ * This is the general interface to access L4 Version 2
+ * and also L4 Version X.0 UIDs, like specified in the
+ * resp. L4 reference manuals.
+ */
+class L4_uid
+{
+public:
+  
+  /**
+   * @brief Extract the version part of the UID.
+   * @return The version (V2: low and high) of the UID.
+   */
+  unsigned version() const;
+
+  /// Extract the task local thread-number.
+  LThread_num lthread() const;
+
+  /// Extract the system global thread-number.
+  GThread_num gthread() const;
+
+  /// Set the version part.
+  void version( unsigned );
+
+  /// Set the local thread-number.
+  void lthread( LThread_num );
+
+  /**
+   * @brief Is this a NIL ID?
+   * @return 0 if this is not the NIL ID, not 0 else.
+   */
+  Mword is_nil() const;
+
+  /**
+   * @brief Is this the INVALID ID?
+   * @return 0 if this is not the INVALID ID, not 0 else.
+   */
+  Mword is_invalid() const;
+
+  /// Get the L4 UID for the given IRQ.
+  static L4_uid irq( unsigned irq );
+  
+  /// Is this a IRQ ID?
+  Mword is_irq() const;
+
+  /**
+   * @brief Get the IRQ number.
+   * @pre is_irq() must return true, or the result is unpredictable.
+   * @return the IRQ number for the L4 IRQ ID.
+   */
+  Mword irq() const;
+
+  /// Test for equality.
+  bool operator == ( L4_uid o ) const;
+
+  /// Test for inequality.
+  bool operator != ( L4_uid o ) const
+  { return ! operator == (o); }
+};
 
 /**
  * @brief A L4 flex page.
@@ -26,30 +90,7 @@ class L4_fpage
 {
 public:
 
-  /**
-   * @brief Create a flexpage with the given parameters.
-   *
-   * @param grant if not zero the grant bit is to be set.
-   * @param write if not zero the write bit is to be set.
-   * @param order the size of the flex page is 2^order.
-   * @param page the base address of the flex page.
-   *   
-   */
-  L4_fpage( Mword grant, Mword write, Mword order, Mword page );
-
-  /**
-   * @brief Is the grant bit set?
-   *
-   * @return the state of the grant bit.
-   */
-  Mword grant() const;
-
-  /**
-   * @brief Set the grant bit according to g.
-   *
-   * @param g if not zero the grant bit is to be set.
-   */
-  void grant( Mword g );
+  // Constructors are defined in the ABI specific files
 
   /**
    * @brief Is the write bit set?
@@ -102,7 +143,6 @@ public:
    *    contains a value other than 0.
    */
   Mword is_valid() const;
-
 };
 
 /**
@@ -292,7 +332,7 @@ public:
    * @param er the exponent for the receive timeout (see L4_timeout()).
    * @see rcv_man()
    */
-  void  rcv_exp( Mword er );
+  void rcv_exp( Mword er );
 
   /**
    * @brief Get the receive timout's mantissa.
@@ -306,7 +346,7 @@ public:
    * @param mr the mantissa of the recieve timeout (see L4_timeout()).
    * @see rcv_exp()
    */
-  void  rcv_man( Mword mr );
+  void rcv_man( Mword mr );
 
   /**
    * @brief Get tge send timeout exponent.
@@ -320,7 +360,7 @@ public:
    * @param es the exponent of the send timeout (see L4_timeout()).
    * @see snd_man()
    */
-  void  snd_exp( Mword es );
+  void snd_exp( Mword es );
 
  /**
    * @brief Get the send timout's mantissa.
@@ -334,7 +374,7 @@ public:
    * @param ms the mantissa of the send timeout (see L4_timeout()).
    * @see snd_exp()
    */
-  void  snd_man( Mword ms );
+  void snd_man( Mword ms );
 
   /**
    * @brief Get the receive page fault timeout.
@@ -361,117 +401,37 @@ public:
   void  snd_pfault( Mword ps );
 
   /**
-   * @brief Get the receive timeout in micro seconds.
+   * @brief Get the relative receive timeout in microseconds.
+   * @param clock Current value of kernel clock
    * @return The receive timeout in micro seconds.
    */
-  Unsigned64 rcv_microsecs() const;
+  Unsigned64 rcv_microsecs_rel (Unsigned64 clock) const;
 
   /**
-   * @brief Get the send timeout in micro seconds.
+   * @brief Get the relative send timeout in microseconds.
+   * @param clock Current value of kernel clock
    * @return The send timeout in micro seconds.
    */
-  Unsigned64 snd_microsecs() const;
+  Unsigned64 snd_microsecs_rel (Unsigned64 clock) const;
+
+  /**
+   * @brief Get the absolute receive timeout in microseconds.
+   * @param clock Current value of kernel clock
+   * @return The receive timeout in micro seconds.
+   */
+  Unsigned64 rcv_microsecs_abs (Unsigned64 clock, bool c) const;
+
+  /**
+   * @brief Get the absolute send timeout in microseconds.
+   * @param clock Current value of kernel clock
+   * @return The send timeout in micro seconds.
+   */
+  Unsigned64 snd_microsecs_abs (Unsigned64 clock, bool c) const;
 
 private:
   Mword _t;
-
 };
 
-/**
- * @brief L4 unique ID.
- *
- * This class encapsulates UIDs in L4. Theese IDs are
- * used for threads, tasks, and IRQs.
- *
- * This is the general interface to access L4 Version 2
- * and also L4 Version X.0 UIDs, like specified in the
- * resp. L4 reference manuals.
- */
-class L4_uid
-{
-public:
-
-  //
-  // Must be defined in the ABI specific file (e.g. -v2)
-  // enum { 
-  //   INVALID = 0x0ffffffff,
-  //   NIL     = 0x000000000,
-  // };
-
-  
-  /// Create a UID for the given task and thread.
-  L4_uid( Task_num task, LThread_num lthread );
-
-  
-  /**
-   * @brief Extract the version part of the UID.
-   * @return The version (V2: low and high) of the UID.
-   */
-  unsigned version() const;
-
-  /// Extract the task local thread-number.
-  LThread_num lthread() const;
-
-  /// Extract the task number.
-  Task_num task() const;
-
-  /// Extract the system global thread-number.
-  GThread_num gthread() const;
-
-  /// Extract the chief ID.
-  Task_num chief() const;
-
-  /// Set the version part.
-  void version( unsigned );
-
-  /// Set the local thread-number.
-  void lthread( LThread_num );
-
-  /// Set the task number.
-  void task( Task_num );
-
-  /// Set the chief ID.
-  void chief( Task_num );
-
-  /**
-   * @brief Is this a NIL ID?
-   * @return 0 if this is not the NIL ID, not 0 else.
-   */
-  Mword is_nil() const;
-
-  /**
-   * @brief Is this the INVALID ID?
-   * @return 0 if this is not the INVALID ID, not 0 else.
-   */
-  Mword is_invalid() const;
-
-  /// Get the task ID, thle local thread-number set to 0.
-  L4_uid task_id() const;
-
-  /// Get the L4 UID for the given IRQ.
-  static L4_uid irq( unsigned irq );
-  
-  /// Is this a IRQ ID?
-  Mword is_irq() const;
-
-  /**
-   * @brief Get the IRQ number.
-   * @pre is_irq() must return true, or the result is unpredictable.
-   * @return the IRQ number for the L4 IRQ ID.
-   */
-  Mword irq() const;
-
-  /// Test for equality.
-  bool operator == ( L4_uid o ) const;
-
-  /// Test for inequality.
-  bool operator != ( L4_uid o ) const
-  { return ! operator == (o); }
-
-  /// Get the maximum number of threads per task.
-  static unsigned const threads_per_task();
-
-};
 
 /**
  * @brief L4 Message Dope.
@@ -529,7 +489,7 @@ public:
    * @brief Message was deceited?
    * @return true if the message was deceited (the deceite bit is set).
    */
-  Mword deceidet() const;
+  Mword deceited() const;
 
   /**
    * @brief Flexpage received?
@@ -673,13 +633,13 @@ public:
   Mword snd_size;
 
   /// Address of the string to send.
-  Mword snd_str;
+  Unsigned8 *snd_str;
 
   /// Size of the receive string buffer.
   Mword rcv_size;
 
   /// Address of the receive string buffer.
-  Mword rcv_str;
+  Unsigned8 *rcv_str;
 };
 
 
@@ -724,6 +684,18 @@ public:
    * @param s the new small address space number.
    */
   void small( Mword s );
+
+  /**
+   * @brief Get the mode number.
+   * @return The mode number.
+   */
+  Mword mode() const;
+
+  /**
+   * @brief Set the returned thread_state.
+   * @param s the new returned thread_state.
+   */
+  void thread_state( Mword s );
 
   /**
    * @brief Set the timeslice in micro seconds.
@@ -773,18 +745,6 @@ public:
    */
   Mword raw() const;
 
-  /**
-   * @brief Get the error code.
-   * @return The error code of the params (for the syscall).
-   */
-  Mword error() const;
-
-  /**
-   * @brief Set the error code.
-   * @param e the new error code (for the syscall).
-   */
-  void error( Mword e );
-
 private:
 
   Mword _raw;
@@ -796,10 +756,10 @@ private:
     SMALL_SHIFT    = PRIO_SIZE + PRIO_SHIFT,
     SMALL_SIZE     = 8,
     SMALL_MASK     = ((1UL << SMALL_SIZE)-1) << SMALL_SHIFT,
-    ERROR_SHIFT    = SMALL_SHIFT + SMALL_SIZE,
-    ERROR_SIZE     = 4,
-    ERROR_MASK     = ((1UL << ERROR_SIZE)-1) << ERROR_SHIFT,
-    TIME_EXP_SHIFT = ERROR_SHIFT + ERROR_SIZE, 
+    MODE_SHIFT     = SMALL_SHIFT + SMALL_SIZE,
+    MODE_SIZE      = 4,
+    MODE_MASK      = ((1UL << MODE_SIZE)-1) << MODE_SHIFT,
+    TIME_EXP_SHIFT = MODE_SHIFT + MODE_SIZE, 
     TIME_EXP_SIZE  = 4,
     TIME_EXP_MASK  = ((1UL << TIME_EXP_SIZE)-1) << TIME_EXP_SHIFT,
     TIME_MAN_SHIFT = TIME_EXP_SIZE + TIME_EXP_SHIFT,
@@ -916,8 +876,6 @@ Mword L4_rcv_desc::raw() const
   return _d;
 }
 
-
-
 IMPLEMENT inline 
 L4_timeout::L4_timeout( Mword t )
   : _t(t)
@@ -1009,24 +967,52 @@ Mword L4_timeout::snd_man() const
 }
 
 IMPLEMENT inline
-void  L4_timeout::snd_man( Mword w )
+void L4_timeout::snd_man( Mword w )
 {
   _t = (_t & ~SND_MAN_MASK) | ((w << SND_MAN_SHIFT) & SND_MAN_MASK);
 }
 
 IMPLEMENT inline
-Unsigned64 L4_timeout::rcv_microsecs() const
+Unsigned64 L4_timeout::rcv_microsecs_rel (Unsigned64 clock) const
 {
-  return (Unsigned64)(rcv_man()) << ((15 - rcv_exp()) << 1);
+  return clock + ((Unsigned64)(rcv_man()) << ((15 - rcv_exp()) << 1));
 }
 
 IMPLEMENT inline
-Unsigned64 L4_timeout::snd_microsecs() const
+Unsigned64 L4_timeout::snd_microsecs_rel (Unsigned64 clock) const
 {
-  return (Unsigned64)(snd_man()) << ((15 - snd_exp()) << 1);
+  return clock + ((Unsigned64)(snd_man()) << ((15 - snd_exp()) << 1));
 }
 
+IMPLEMENT inline
+Unsigned64 L4_timeout::rcv_microsecs_abs (Unsigned64 clock, bool c) const
+{
+  Mword e = 15 - rcv_exp();
+  Unsigned64 timeout = clock & ~((1 << e + 8) - 1) | rcv_man() << e;
 
+  if (((clock >> e + 8) & 1) != c)
+    timeout += 1 << e + 8;
+
+  if (timeout > clock + (1 << e + 8))
+    timeout -= 1 << e + 9;
+
+  return timeout;
+}
+
+IMPLEMENT inline
+Unsigned64 L4_timeout::snd_microsecs_abs (Unsigned64 clock, bool c) const
+{
+  Mword e = 15 - snd_exp();
+  Unsigned64 timeout = clock & ~((1 << e + 8) - 1) | snd_man() << e;
+
+  if (((clock >> e + 8) & 1) != c)
+    timeout += 1 << e + 8;
+
+  if (timeout > clock + (1 << e + 8))
+    timeout -= 1 << e + 9;
+
+  return timeout;
+}
 
 IMPLEMENT inline
 L4_msgdope::L4_msgdope( Mword mwords, Mword strings )
@@ -1046,7 +1032,7 @@ Mword L4_msgdope::raw() const
 }
 
 IMPLEMENT inline
-Mword L4_msgdope::deceidet() const
+Mword L4_msgdope::deceited() const
 {
   return _raw & (1 << DECEITE_BIT);
 }
@@ -1112,7 +1098,10 @@ Mword L4_msgdope::error() const
   return _raw & ERROR_MASK;
 }
 
-IMPLEMENT inline
+// This function must not be inlined because in that case the str[] array
+// would be inserted as often as an L4_msgdope type is used anywhere. It
+// is only an issue with gcc 2.95, newer gcc version handle this correctly.
+IMPLEMENT
 char const * L4_msgdope::str_error() const
 {
   static char const * const str[] =
@@ -1215,15 +1204,15 @@ void L4_sched_param::time_man( Mword m )
 }
 
 IMPLEMENT inline
-Mword L4_sched_param::error() const
+Mword L4_sched_param::mode() const
 {
-  return (_raw & ERROR_MASK) >> ERROR_SHIFT;
+  return (_raw & MODE_MASK) >> MODE_SHIFT;
 }
 
 IMPLEMENT inline
-void L4_sched_param::error( Mword e )
+void L4_sched_param::thread_state( Mword e )
 {
-  _raw = (_raw & ~ERROR_MASK) | ((e<<ERROR_SHIFT) & ERROR_MASK);
+  _raw = (_raw & ~MODE_MASK) | ((e << MODE_SHIFT) & MODE_MASK);
 }
 
 IMPLEMENT inline

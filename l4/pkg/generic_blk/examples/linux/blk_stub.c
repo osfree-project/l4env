@@ -92,8 +92,9 @@ MODULE_PARM_DESC(l4blk_name, "L4 block driver name (default 'L4SCSI')");
 #define L4BLK_READ_AHEAD      120
 
 /* max. sectors in a single request. No real idea what to use here, linux 
- * default is 128, but bigger seems to be better ;-) */
-#define L4BLK_MAX_SECTORS     128
+ * default is 128, but bigger seems to be better ;-) and Linux seems to 
+ * also use bigger values */
+#define L4BLK_MAX_SECTORS     256
 
 /* max. length of scatter gather list, this is the max. we can handle with 
  * the L4 block device interface, the max. number for a device is stored 
@@ -173,7 +174,7 @@ static l4_threadid_t l4blk_cmd_id;      /* command thread */
 static l4_threadid_t l4blk_notify_id;   /* request done notification thread */
 
 /* driver handle */
-static l4blk_driver_handle_t l4blk_drv_handle = -1;
+static l4blk_driver_id_t l4blk_drv_handle = -1;
 
 /* number of disks */
 static int l4blk_num_disks = 0;
@@ -224,8 +225,9 @@ __msg(const char * tag, int line, const char * fn, const char * format, ...)
 {
   va_list args;
   static char buf[256];
-  
-  printk("%sl4blk [%s:%d] %s: ",tag,__FILE__,line,fn);
+  char * f = strrchr(__FILE__, '/');
+
+  printk("%sl4blk [%s:%d] %s: ", tag, f != NULL ? ++f : __FILE__, line, fn);
   va_start(args,format);
   vsprintf(buf,format,args);
   va_end(args);
@@ -241,6 +243,11 @@ __msg(const char * tag, int line, const char * fn, const char * format, ...)
 #else
 #  define INFO(format...)
 #  define INFOd(doit,format...)
+#endif
+
+#ifndef IdStr
+#  define IdFmt       "%x.%x"
+#  define IdStr(tid)  (tid).id.task,(tid).id.lthread
 #endif
 
 #define DEBUG_INIT      1
@@ -271,8 +278,8 @@ __get_block_number(kdev_t dev, unsigned long sector)
   int minor = MINOR(dev);
   unsigned long block = sector;
 
-  INFOd(DEBUG_BLOCK,"device 0x%x, minor 0x%x \n" \
-        "  sector %lu, start_sect %lu",dev,minor,sector,
+  INFOd(DEBUG_BLOCK, "device 0x%x, minor 0x%x \n" \
+        "  sector %lu, start_sect %lu", dev, minor, sector,
         l4blk_partitions[minor].start_sect);
 
   /* add partition offset */
@@ -281,7 +288,7 @@ __get_block_number(kdev_t dev, unsigned long sector)
   /* make 1KB block */
   block >>= 1;
 
-  INFOd(DEBUG_BLOCK,"block %lu",block);
+  INFOd(DEBUG_BLOCK, "block %lu", block);
 
   return block;
 }
@@ -296,18 +303,16 @@ __get_block_number(kdev_t dev, unsigned long sector)
 static int
 __l4blk_ctrl(unsigned int cmd, unsigned long arg, void * ret_buf, int ret_len)
 {
-  l4_strdope_t args;
   int ret;
-  sm_exc_t exc;
-  
-  /* only in arguments */
-  args = sndrcv_refstring(sizeof(unsigned long),&arg,ret_len,ret_buf);
+  CORBA_Environment _env = dice_default_environment;
   
   /* do blk_ctrl */
-  ret = l4blk_cmd_ctrl(l4blk_cmd_id,l4blk_drv_handle,cmd,&args,&exc);
-  if (exc._type != exc_l4_no_exception)
+  ret = l4blk_cmd_ctrl_call(&l4blk_cmd_id, l4blk_drv_handle,
+                            cmd, &arg, sizeof(unsigned long), 
+                            &ret_buf, &ret_len, &_env);
+  if (_env.major != CORBA_NO_EXCEPTION)
     {
-      Error("calling block driver failed (exc %d)!",exc._type);
+      Error("calling block driver failed (exc %d)!", _env.major);
       return -1;
     }
   
@@ -338,12 +343,12 @@ __finish_request(l4blk_req_t * req, int uptodate)
   INFOd(DEBUG_FINISH,
         "request at %p, device 0x%x\n" \
         "  cmd % d, sector %lu, %lu sectors, uptodate %d",
-        r,r->rq_dev,r->cmd,r->sector,r->nr_sectors,uptodate);
+        r, r->rq_dev, r->cmd, r->sector, r->nr_sectors, uptodate);
   
   /* error? */
   r->errors = 0;
   if (!uptodate)
-    Error("I/O error, dev %s, sector %lu",kdevname(r->rq_dev),r->sector);
+    Error("I/O error, dev %s, sector %lu", kdevname(r->rq_dev), r->sector);
   
   /* mark all buffers uptodate */
   bh = r->bh;
@@ -352,7 +357,7 @@ __finish_request(l4blk_req_t * req, int uptodate)
       bh = r->bh;
       r->bh = r->bh->b_reqnext;
       bh->b_reqnext = NULL;
-      bh->b_end_io(bh,uptodate);
+      bh->b_end_io(bh, uptodate);
     }
   
   /* release Linux request */
@@ -377,11 +382,9 @@ __l4blk_do_request(void)
   l4blk_req_t * r;
   int i,ret,found,num;
   struct buffer_head * bh, * bhp;
-  l4blk_cmd_sg_elem_t * sg_list;
-  l4blk_cmd_request_list_t blk_req_list;
-  l4blk_cmd_request_t * blk_req;
-  l4_strdope_t buffers;
-  sm_exc_t exc;
+  l4blk_sg_phys_elem_t * sg_list;
+  l4blk_blk_request_t blk_req;
+  CORBA_Environment _env = dice_default_environment;
   
 #if DO_LIMIT_REQS
   while (l4blk_req_at_driver < L4BLK_MAX_DRV_REQS)
@@ -404,9 +407,8 @@ __l4blk_do_request(void)
         {
           if (MAJOR(req->rq_dev) != 0)
             /* ugly: Linux seems to have a problem with locking, FIXME!!! */
-            Error("%x.%x: invalid device, is 0x%x, should be 0x%x",
-                  l4_myself().id.task,l4_myself().id.lthread,
-                  MAJOR(req->rq_dev),MAJOR_NR);
+            Error(IdFmt": invalid device, is 0x%x, should be 0x%x",
+                  IdStr(l4_myself()), MAJOR(req->rq_dev), MAJOR_NR);
           
           continue;
         }
@@ -440,29 +442,30 @@ __l4blk_do_request(void)
       r->req = req;
       l4blk_next_request = (i + 1) % L4BLK_NUM_REQUESTS;
       
+      /* setup scatter-gather list */
       if (req->nr_sectors != req->current_nr_sectors)
         {
           /* clustered request  */
-          INFOd(DEBUG_REQUEST,"\n" \
+          INFOd(DEBUG_REQUEST, "\n" \
                 "  request at %p, device 0x%x, %s, sector %lu, nr_sectors %lu\n" \
                 "  first buffer at %p, size %u",
-                req,req->rq_dev,(req->cmd == READ) ? "read" : "write",
-                req->sector,req->nr_sectors,req->bh->b_data,req->bh->b_size);
+                req, req->rq_dev, (req->cmd == READ) ? "read" : "write",
+                req->sector, req->nr_sectors, req->bh->b_data, req->bh->b_size);
           
           /* sanity checks */
           if (!req->bh)
             {
               Error("no buffer list for clustered request!");
-                goto cluster_error_req;
+              goto req_error_req;
             }
           
           /* allocate sg list */
-          sg_list = 
-            kmalloc((L4BLK_MAX_SG_LEN * sizeof(l4blk_cmd_sg_elem_t)),GFP_ATOMIC);
+          sg_list = kmalloc((L4BLK_MAX_SG_LEN * sizeof(l4blk_sg_phys_elem_t)),
+                            GFP_ATOMIC);
           if (sg_list == NULL)
             {
               Error("scatter gather list allocation failed!");
-              goto cluster_error_req;
+              goto req_error_req;
             }
           
           /* setup sg list */
@@ -474,7 +477,7 @@ __l4blk_do_request(void)
               if (!buffer_locked(bh))
                 {
                   Error("buffer not locked!");
-                  goto cluster_error_mem;
+                  goto req_error_mem;
                 }
               
               if ((bhp != NULL) && (CONTIGUOUS_BUFFERS(bhp,bh)))
@@ -493,124 +496,85 @@ __l4blk_do_request(void)
 #if 0
           INFO("SG list: ");
           for (i = 0; i < num; i++)
-            printk("  buffer at 0x%08x, size %lu\n",sg_list[i].addr,
+            printk("  buffer at 0x%08x, size %lu\n", sg_list[i].addr,
                    sg_list[i].size);
 #endif
-                   
-          /* setup request */
-          blk_req = &blk_req_list[0];
-          blk_req->req_handle = r->handle;
-          switch (req->cmd)
-            {
-            case READ:
-              blk_req->cmd = L4BLK_REQUEST_READ;
-              break;
-            case WRITE:
-              blk_req->cmd = L4BLK_REQUEST_WRITE;
-              break;
-            default:
-              /* invalid request */
-              Error("invalid request command %d",req->cmd);
-              goto cluster_error_mem;
-              continue;
-            }
-          blk_req->device = MINOR(req->rq_dev) & L4BLK_PART_MASK;
-          blk_req->block = __get_block_number(req->rq_dev,req->sector);
-          blk_req->count = L4BLK_SECT_TO_BLK(req->nr_sectors);
-          blk_req->buf = 0;
-          blk_req->stream = L4BLK_INVALID_STREAM;
-          blk_req->request_no = 0;
-          blk_req->flags = 0;
-          for (i = 0; i < 4; i++)
-            blk_req->replaces[i] = L4BLK_INVALID_STREAM;
-          
-          buffers = sndrcv_refstring(num * sizeof(l4blk_cmd_sg_elem_t),sg_list,
-                                     0,NULL);
-          
-          /* send request to driver */
-          ret = l4blk_cmd_put_sg_request(l4blk_cmd_id,l4blk_drv_handle,
-                                         blk_req_list,buffers,num,&exc);
-          if ((ret < 0) || (exc._type != exc_l4_no_exception))
-            {
-              Error("send request to driver failed (ret %d, exc %d)",
-                    ret,exc._type);
-              goto cluster_error_mem;
-            }
-          
-          l4blk_req_at_driver++;
-          
-          /* release sg list */
-          kfree(sg_list);
-          
-          /* done */
-          goto cluster_done;
-          
-        cluster_error_mem:
-          kfree(sg_list);
-          
-        cluster_error_req:
-          __finish_request(r,0);
-          
-        cluster_done:
-          
-        }
+        }                   
       else
         {
-          /* simple request, just send it to the driver */
-          INFOd(DEBUG_REQUEST,"\n" \
+          /* single buffer request */
+          INFOd(DEBUG_REQUEST, "\n" \
                 "  request at %p, device 0x%x, %s\n" \
                 "  sector %lu, nr_sectors %lu, current_nr_sectors %lu\n" \
                 "  buffer at %p, size %lu", 
-                req,req->rq_dev,(req->cmd == READ) ? "read" : "write",
-                req->sector,req->nr_sectors,req->current_nr_sectors,
-                req->bh->b_data,req->bh->b_size);
-          
-          blk_req = &blk_req_list[0];
-          blk_req->req_handle = r->handle;
-          switch (req->cmd)
+                req, req->rq_dev, (req->cmd == READ) ? "read" : "write",
+                req->sector, req->nr_sectors, req->current_nr_sectors,
+                req->bh->b_data, req->bh->b_size);
+
+          /* allocate single sg list element */
+          sg_list = kmalloc(sizeof(l4blk_sg_phys_elem_t), GFP_ATOMIC);
+          if (sg_list == NULL)
             {
-            case READ:
-              blk_req->cmd = L4BLK_REQUEST_READ;
-              break;
-            case WRITE:
-              blk_req->cmd = L4BLK_REQUEST_WRITE;
-              break;
-            default:
-              /* invalid request */
-              Error("invalid request command %d",req->cmd);
-              goto simple_error;
+              Error("scatter gather list allocation failed!");
+              goto req_error_req;
             }
-          blk_req->device = MINOR(req->rq_dev) & L4BLK_PART_MASK;
-          blk_req->block = __get_block_number(req->rq_dev,req->sector);
-          blk_req->count = L4BLK_SECT_TO_BLK(req->current_nr_sectors);
-          blk_req->buf = virt_to_phys(req->buffer);
-          blk_req->stream = L4BLK_INVALID_STREAM;
-          blk_req->request_no = 0;
-          blk_req->flags = 0;
-          for (i = 0; i < 4; i++)
-            blk_req->replaces[i] = L4BLK_INVALID_STREAM;
-          
-          /* send request to driver */
-          ret = l4blk_cmd_put_requests(l4blk_cmd_id,l4blk_drv_handle,
-                                       blk_req_list,1,&exc);
-          if ((ret < 0) || (exc._type != exc_l4_no_exception))
-            {
-              Error("send request to driver failed (ret %d, exc %d)",
-                    ret,exc._type);
-              goto simple_error;
-            }
-          
-          l4blk_req_at_driver++;
-          
-          /* done */
-          goto simple_done;
-          
-        simple_error:
-          __finish_request(r,0);
-          
-        simple_done:     
-          
+
+          /* setup sg list */
+          sg_list->addr = virt_to_phys(req->buffer);
+          sg_list->size = req->nr_sectors * L4BLK_SECT_SIZE;
+          num = 1;
         }
+
+      /* setup request */
+      blk_req.req_handle = r->handle;
+      switch (req->cmd)
+        {
+        case READ:
+          blk_req.cmd = L4BLK_REQUEST_READ;
+          break;
+        case WRITE:
+          blk_req.cmd = L4BLK_REQUEST_WRITE;
+          break;
+        default:
+          /* invalid request */
+          Error("invalid request command %d", req->cmd);
+          goto req_error_mem;
+          continue;
+        }
+      blk_req.device = MINOR(req->rq_dev) & L4BLK_PART_MASK;
+      blk_req.block = __get_block_number(req->rq_dev, req->sector);
+      blk_req.count = L4BLK_SECT_TO_BLK(req->nr_sectors);
+      blk_req.stream = L4BLK_INVALID_STREAM;
+      blk_req.req_no = 0;
+      blk_req.flags = 0;
+      
+      /* send request to driver */
+      ret = l4blk_cmd_put_request_call(&l4blk_cmd_id, l4blk_drv_handle,
+                                       &blk_req, sg_list, 
+                                       num * sizeof(l4blk_sg_phys_elem_t), 
+                                       num, L4BLK_SG_PHYS, &_env);
+      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+        {
+          Error("send request to driver failed (ret %d, exc %d)",
+                ret, _env.major);
+          goto req_error_mem;
+        }
+      
+      l4blk_req_at_driver++;
+      
+      /* release sg list */
+      kfree(sg_list);
+          
+      /* done */
+      goto req_done;
+          
+    req_error_mem:
+      kfree(sg_list);
+      
+    req_error_req:
+      __finish_request(r,0);
+      
+    req_done:
     }
 }
 
@@ -625,34 +589,33 @@ __l4blk_notify_thread(void)
   int ret,status,error;
   unsigned int handle;
   unsigned long flags;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   l4_threadid_t id = get_l4_id_from_stack();
 
-  INFOd(DEBUG_INIT,"started notification thread at %x.%x",
-        id.id.task,id.id.lthread);
+  INFOd(DEBUG_INIT, "started notification thread at "IdFmt, IdStr(id));
   
   while (1)
     {
       /* wait for request to be done */
-      ret = l4blk_notify_wait(l4blk_notify_id,l4blk_drv_handle,&handle,
-                              &status,&error,&exc);
+      ret = l4blk_notify_wait_call(&l4blk_notify_id, l4blk_drv_handle,
+                                   &handle, &status, &error, &_env);
 
       /* we must disable the interrupts, otherwise we might get in conflict
        * with real interrupts 
        */
       cli();
 
-      INFOd(DEBUG_NOTIFY,"\n" \
+      INFOd(DEBUG_NOTIFY, "\n" \
             "  ret %d, handle %u,status %d, error %d",
-            ret,handle,status,error);
+            ret, handle, status, error);
       
       /* we are handling an 'interrupt', tell the rest of the kernel */ 
-      irq_enter(smp_processor_id(),l4blk_irq);
+      irq_enter(smp_processor_id(), l4blk_irq);
       
-      if ((ret < 0) || (exc._type != exc_l4_no_exception))
+      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
         {
-          Error("error waiting for notification (ret %d,  exc %d)",
-                ret,exc._type);
+          Error("error waiting for notification (ret %d,  exc %d, ipc 0x%02x)",
+                ret, _env.major, _env.ipc_error);
           goto notify_error;
         }
       
@@ -664,32 +627,32 @@ __l4blk_notify_thread(void)
           goto notify_error;
         }
       
-      INFOd(DEBUG_NOTIFY,"request finished, statux 0x%02x, error 0x%x",
-            status,error);
+      INFOd(DEBUG_NOTIFY, "request finished, statux 0x%02x, error 0x%x",
+            status, error);
       
       l4blk_req_at_driver--;
       
       if (status == L4BLK_DONE)
         /* request finished successfully */
-        __finish_request(&l4blk_requests[handle],1);
+        __finish_request(&l4blk_requests[handle], 1);
       else
         {
-          Error("request error (status 0x%02x, error 0x%02x)!",status,error);
-          __finish_request(&l4blk_requests[handle],0);
+          Error("request error (status 0x%02x, error 0x%02x)!", status, error);
+          __finish_request(&l4blk_requests[handle], 0);
         }
       
     notify_error:
       
       /* finished handling the 'interrupt' */
-      irq_exit(smp_processor_id(),l4blk_irq);
+      irq_exit(smp_processor_id(), l4blk_irq);
       
 #if DO_LIMIT_REQS
       /* done with an old request, more requests to do? */
-      spin_lock_irqsave(&io_request_lock,flags);
+      spin_lock_irqsave(&io_request_lock, flags);
       
       __l4blk_do_request();
       
-      spin_unlock_irqrestore(&io_request_lock,flags);
+      spin_unlock_irqrestore(&io_request_lock, flags);
 #endif
       
       /* we do not have a bh, but this also wakes up the idle thread which 
@@ -728,7 +691,7 @@ __revalidate_disk(kdev_t dev)
   for (i = max_p - 1; i >= 0; i--)
     {
       index = start + i;
-      devi = MKDEV(MAJOR_NR,index);
+      devi = MKDEV(MAJOR_NR, index);
       sb = get_super(devi);
       
       if (sb) 
@@ -740,24 +703,24 @@ __revalidate_disk(kdev_t dev)
     }
   
   /* reset disk size */
-  size = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE,target,NULL,0);
+  size = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE, target, NULL, 0);
   if (size < 0)
     {
-      Error("get disk size failed: %d",size);
+      Error("get disk size failed: %d", size);
       return -EIO;
     }
   l4blk_partitions[start].nr_sects = L4BLK_BLK_TO_SECT(size);
   
   /* reread at driver */
-  ret = __l4blk_ctrl(L4BLK_CTRL_RREAD_PART,MINOR(dev),NULL,0);
+  ret = __l4blk_ctrl(L4BLK_CTRL_RREAD_PART, MINOR(dev), NULL, 0);
   if (ret < 0)
     {
-      Error("reread partition table failed: %d",ret);
+      Error("reread partition table failed: %d", ret);
       return -EIO;
     }
   
   /* last, reread Linux partition table */
-  resetup_one_dev(&l4blk_gendisk,target);
+  resetup_one_dev(&l4blk_gendisk, target);
   
   /* done */
   return 0;
@@ -783,13 +746,13 @@ l4blk_stub_open(struct inode * inode, struct file * filp)
   int dev = inode->i_rdev;
   int disk = DEVICE_NR(dev);
   
-  INFOd(DEBUG_OPEN,"l4blk_stub_open called\n" \
+  INFOd(DEBUG_OPEN, "l4blk_stub_open called\n" \
         "  major 0x%x, minor 0x%x, device nr %d",
-        MAJOR(dev),MINOR(dev),DEVICE_NR(dev));
+        MAJOR(dev), MINOR(dev), DEVICE_NR(dev));
   
   if (disk >= l4blk_num_disks)
     {
-      Error("invalid disk %d (dev 0x%02x)!",disk,MINOR(dev));
+      Error("invalid disk %d (dev 0x%02x)!", disk, MINOR(dev));
       return -ENODEV;
     }
   
@@ -813,7 +776,7 @@ l4blk_stub_open(struct inode * inode, struct file * filp)
 static int 
 l4blk_stub_release(struct inode * inode, struct file * filp)
 {
-  INFOd(DEBUG_OPEN,"l4blk_stub_release called.");
+  INFOd(DEBUG_OPEN, "l4blk_stub_release called.");
   
   /* decrement module use count */
   MOD_DEC_USE_COUNT;
@@ -843,8 +806,8 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
   l4blk_disk_geometry_t geom;
   struct hd_geometry * loc = (struct hd_geometry *) arg;
   
-  INFOd(DEBUG_IOCTL,"l4blk_stub_ioctl called:\n" \
-        "  dev 0x%08x, cmd 0x%08x",dev,cmd);
+  INFOd(DEBUG_IOCTL, "l4blk_stub_ioctl called:\n" \
+        "  dev 0x%08x, cmd 0x%08x", dev, cmd);
   
   if (MAJOR(dev) != MAJOR_NR)
     return -EINVAL;
@@ -856,18 +819,18 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
     {
     case HDIO_GETGEO:
       /* return BIOS disk parameters */
-      ret = __l4blk_ctrl(L4BLK_CTRL_DISK_GEOM,MINOR(dev),&geom,
+      ret = __l4blk_ctrl(L4BLK_CTRL_DISK_GEOM, MINOR(dev), &geom,
                          sizeof(l4blk_disk_geometry_t));
       if (ret < 0)
         {
-          Error("get disk geometry failed: %d",ret);
+          Error("get disk geometry failed: %d", ret);
           return -EIO;
         }
       else
         {
-          INFOd(DEBUG_IOCTL,"disk geometry:\n" \
+          INFOd(DEBUG_IOCTL, "disk geometry:\n" \
                 "  %u heads, %u cylinders, %u sectors, partition offset %u",
-                geom.heads,geom.cylinders,geom.sectors,geom.start);
+                geom.heads, geom.cylinders, geom.sectors, geom.start);
           
           ret = put_user(geom.heads, &loc->heads);
           ret |= put_user(geom.sectors, &loc->sectors);
@@ -879,15 +842,15 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
       
     case BLKGETSIZE:   
       /* return device size (sectors) */
-      ret = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE,MINOR(dev),NULL,0);
+      ret = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE, MINOR(dev), NULL, 0);
       if (ret < 0)
         {
-          Error("get disk size failed: %d",ret);	  
+          Error("get disk size failed: %d", ret);	  
           return -EIO;
         }
-      INFOd(DEBUG_IOCTL,"disk size: %d KB (%d MB)",ret,ret >> 10);
+      INFOd(DEBUG_IOCTL, "disk size: %d KB (%d MB)", ret, ret >> 10);
 
-      return put_user(L4BLK_BLK_TO_SECT(ret),(long *)arg);
+      return put_user(L4BLK_BLK_TO_SECT(ret), (long *)arg);
 
     case BLKRASET:
       /* set read-ahead value for device */
@@ -897,7 +860,7 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
       if(arg > 0xff) 
         return -EINVAL;
 
-      INFOd(DEBUG_IOCTL,"set read-ahead to %lu",arg);
+      INFOd(DEBUG_IOCTL, "set read-ahead to %lu", arg);
       read_ahead[MAJOR(inode->i_rdev)] = arg;
 
       return 0;
@@ -921,13 +884,13 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
       if (!capable(CAP_SYS_ADMIN))
         return -EACCES;
 
-      INFOd(DEBUG_IOCTL,"reread partition table");
+      INFOd(DEBUG_IOCTL, "reread partition table");
 
       return __revalidate_disk(inode->i_rdev);
 
     case BLKSSZGET:
       /* get block size of media */
-      return put_user(blksize_size[MAJOR(dev)][MINOR(dev)&0x0F],(int *)arg);
+      return put_user(blksize_size[MAJOR(dev)][MINOR(dev)&0x0F], (int *)arg);
       
     case BLKELVGET:
     case BLKELVSET:
@@ -949,7 +912,7 @@ l4blk_stub_ioctl(struct inode * inode, struct file * filp,
 static void
 l4blk_stub_request(void)
 {  
-  INFOd(DEBUG_REQUEST,"l4blk_stub_request called.");
+  INFOd(DEBUG_REQUEST, "l4blk_stub_request called.");
 
   /* start processing request queue */
   __l4blk_do_request();
@@ -970,47 +933,45 @@ static int
 l4blk_stub_init(void)
 {
   int ret, dev, i;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   unsigned int * sp;
   l4_threadid_t tid; 
 
-  INFOd(DEBUG_INIT,"init module");
+  INFOd(DEBUG_INIT, "init module");
 
   /* find L4 block driver */
-  ret = names_waitfor_name(l4blk_name,&l4blk_drv_id,500);
+  ret = names_waitfor_name(l4blk_name, &l4blk_drv_id, 500);
   if (!ret)
     {
-      Error("L4 block driver (\'%s\') not found!",l4blk_name);
+      Error("L4 block driver (\'%s\') not found!", l4blk_name);
       return -ENODEV;
     }
 
-  INFOd(DEBUG_INIT,"found L4 block driver \'%s\' at %x.%x",l4blk_name,
-        l4blk_drv_id.id.task,l4blk_drv_id.id.lthread);
+  INFOd(DEBUG_INIT, "found L4 block driver \'%s\' at "IdFmt, 
+        l4blk_name, IdStr(l4blk_drv_id));
 
   /* open block driver */
-  ret = l4blk_driver_open(l4blk_drv_id,&l4blk_drv_handle,
-                          (l4blk_threadid_t *)&l4blk_cmd_id,
-                          (l4blk_threadid_t *)&l4blk_notify_id,&exc);
-  if ((ret < 0) || (exc._type != exc_l4_no_exception))
+  ret = l4blk_driver_open_call(&l4blk_drv_id, &l4blk_drv_handle,
+                               &l4blk_cmd_id, &l4blk_notify_id, &_env);
+  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("open L4 block driver failed (ret %d, exc %d)",ret,exc._type);
+      Error("open L4 block driver failed (ret %d, exc %d)", ret, _env.major);
       return -ENODEV;
     }
 
-  INFOd(DEBUG_INIT,"driver handle %d, cmd at %x.%x, notify at %x.%x",
-        l4blk_drv_handle,l4blk_cmd_id.id.task,l4blk_cmd_id.id.lthread,
-        l4blk_notify_id.id.task,l4blk_notify_id.id.lthread);
+  INFOd(DEBUG_INIT, "driver handle %d, cmd at "IdFmt", notify at "IdFmt,
+        l4blk_drv_handle, IdStr(l4blk_cmd_id), IdStr(l4blk_notify_id));
 
   /* get number of disks */
   ret = -ENODEV;
-  l4blk_num_disks = __l4blk_ctrl(L4BLK_CTRL_NUM_DISKS,0,NULL,0);
+  l4blk_num_disks = __l4blk_ctrl(L4BLK_CTRL_NUM_DISKS, 0, NULL, 0);
   if (l4blk_num_disks < 0)
     {
-      Error("get number of disks failed: %d!",l4blk_num_disks);
+      Error("get number of disks failed: %d!", l4blk_num_disks);
       goto init_error_drv;
     }
   
-  INFOd(DEBUG_INIT,"got %d disk(s)",l4blk_num_disks);
+  INFOd(DEBUG_INIT, "got %d disk(s)", l4blk_num_disks);
 
   if (l4blk_num_disks == 0)
     {
@@ -1021,15 +982,15 @@ l4blk_stub_init(void)
   /* get the IRQ number of the host adapter the first disk is connected to,
    * we need this to pretend that our notification thread is a Linux 
    * interrupt thread */
-  l4blk_irq = __l4blk_ctrl(L4BLK_CTRL_DRV_IRQ,0,NULL,0);
+  l4blk_irq = __l4blk_ctrl(L4BLK_CTRL_DRV_IRQ, 0, NULL, 0);
   if (l4blk_irq < 0)
     {
-      Error("failed to get the host adapter IRQ: %d!\n",l4blk_irq);
+      Error("failed to get the host adapter IRQ: %d!\n", l4blk_irq);
       goto init_error_drv;
     }
 
-  INFOd(DEBUG_INIT,"using IRQ %d for notify thread, prio %d",
-        l4blk_irq,PRIO_IRQ(l4blk_irq));
+  INFOd(DEBUG_INIT, "using IRQ %d for notify thread, prio %d",
+        l4blk_irq, PRIO_IRQ(l4blk_irq));
 
   /* allocate stack for notification thread */
   tid = l4_myself();
@@ -1040,7 +1001,7 @@ l4blk_stub_init(void)
   sp = l4blk_notify_stack;
   *(--sp) = 0;			/* fake return address */
   l4blk_notify_thread = 
-    create_thread(L4BLK_NOTIFY_THREAD,__l4blk_notify_thread,sp);
+    create_thread(L4BLK_NOTIFY_THREAD, __l4blk_notify_thread, sp);
 
   if(l4_is_invalid_id(l4blk_notify_thread))
     {
@@ -1052,13 +1013,13 @@ l4blk_stub_init(void)
   /* set the priority of the notification thread to the corresponding 
    * interrupt thread priority, so we do somehow fit into the L4Linux
    * priority scheme */
-  rmgr_set_prio(l4blk_notify_thread,PRIO_IRQ(l4blk_irq));
+  rmgr_set_prio(l4blk_notify_thread, PRIO_IRQ(l4blk_irq));
   
   /* register block device */
-  ret = register_blkdev(MAJOR_NR,DEVICE_NAME,&l4blk_fops);
+  ret = register_blkdev(MAJOR_NR, DEVICE_NAME, &l4blk_fops);
   if (ret < 0)
     {
-      Error("register block device failed (%d)!\n",ret);
+      Error("register block device failed (%d)!\n", ret);
       goto init_error_thread;
     }
 
@@ -1073,7 +1034,7 @@ l4blk_stub_init(void)
   l4blk_max_segments = kmalloc(L4BLK_NUM_DEVICES * sizeof(int), GFP_KERNEL);
   l4blk_sizes = kmalloc(L4BLK_NUM_DEVICES * sizeof(int), GFP_KERNEL);
   l4blk_partitions = 
-    kmalloc(L4BLK_NUM_DEVICES * sizeof(struct hd_struct),GFP_KERNEL);
+    kmalloc(L4BLK_NUM_DEVICES * sizeof(struct hd_struct), GFP_KERNEL);
 
   if ((l4blk_blksizes == NULL) || 
       (l4blk_hardsizes == NULL) || 
@@ -1100,17 +1061,18 @@ l4blk_stub_init(void)
   memset(l4blk_sizes,0,L4BLK_NUM_DEVICES * sizeof(int));
   for (dev = 0; dev < L4BLK_NUM_DEVICES; dev += (1 << L4BLK_DEV_SHIFT))
     {
-      l4blk_sizes[dev] = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE,dev,NULL,0);
+      l4blk_sizes[dev] = __l4blk_ctrl(L4BLK_CTRL_DISK_SIZE, dev, NULL, 0);
       if (l4blk_sizes[dev] < 0)
         {
-          Error("get disk size failed: %d",l4blk_sizes[dev]);
+          Error("get disk size failed: %d", l4blk_sizes[dev]);
           ret = -EIO;
           goto init_error_malloc;
         }
-      INFOd(DEBUG_INIT,"device 0x%02x: %d KB (%d MB)",dev,l4blk_sizes[dev],
+      INFOd(DEBUG_INIT, "device 0x%02x: %d KB (%d MB)", dev, l4blk_sizes[dev],
             l4blk_sizes[dev] >> 10);
 
-      l4blk_max_segments[dev] = __l4blk_ctrl(L4BLK_CTRL_MAX_SG_LEN,dev,NULL,0);
+      l4blk_max_segments[dev] = 
+        __l4blk_ctrl(L4BLK_CTRL_MAX_SG_LEN, dev, NULL, 0);
       if (l4blk_max_segments[dev] < 0)
         {
           Error("get max. scatter gather list length failed: %d",
@@ -1120,8 +1082,8 @@ l4blk_stub_init(void)
         }
       if (l4blk_max_segments[dev] > L4BLK_MAX_SG_LEN)
         l4blk_max_segments[dev] = L4BLK_MAX_SG_LEN;
-      INFOd(DEBUG_INIT,"device 0x%02x: max. %d elements in sg list",
-            dev,l4blk_max_segments[dev]);
+      INFOd(DEBUG_INIT, "device 0x%02x: max. %d elements in sg list",
+            dev, l4blk_max_segments[dev]);
 
       /* copy to all minors */
       for (i = 1; i < (1 << L4BLK_DEV_SHIFT); i++)
@@ -1148,7 +1110,7 @@ l4blk_stub_init(void)
   /* setup partitions */
   printk("Partition check:\n");
   for (i = 0; i < l4blk_num_disks; i++)
-    resetup_one_dev(&l4blk_gendisk,i);
+    resetup_one_dev(&l4blk_gendisk, i);
 
   /* stub initialization */
   for (i = 0; i < L4BLK_NUM_REQUESTS; i++)
@@ -1186,7 +1148,7 @@ l4blk_stub_init(void)
     kfree(l4blk_partitions);
 
   /* unregister device */
-  unregister_blkdev(MAJOR_NR,DEVICE_NAME);
+  unregister_blkdev(MAJOR_NR, DEVICE_NAME);
 
  init_error_thread:
   /* shutdown notification thread */
@@ -1195,7 +1157,7 @@ l4blk_stub_init(void)
 
  init_error_drv:
   /* close L4 block driver instance */
-  l4blk_driver_close(l4blk_drv_id,l4blk_drv_handle,&exc);
+  l4blk_driver_close_call(&l4blk_drv_id, l4blk_drv_handle, &_env);
 
   return ret;
 }
@@ -1211,14 +1173,14 @@ static void
 l4blk_stub_cleanup(void)
 {
   int ret, i;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   struct gendisk ** gdp;
   
   INFOd(DEBUG_INIT,"l4blk_stub: cleanup module");
   
   /* flush disks */
   for (i = 0; i < (l4blk_num_disks << L4BLK_DEV_SHIFT); i++)
-    fsync_dev(MKDEV(MAJOR_NR,i));
+    fsync_dev(MKDEV(MAJOR_NR, i));
 
   /* free memory */
   if (l4blk_sizes != NULL)
@@ -1254,7 +1216,7 @@ l4blk_stub_cleanup(void)
     }
 
   /* unregister block device */
-  unregister_blkdev(MAJOR_NR,DEVICE_NAME);
+  unregister_blkdev(MAJOR_NR, DEVICE_NAME);
 
   /* destroy notification thread */
   destroy_thread(L4BLK_NOTIFY_THREAD);
@@ -1263,11 +1225,11 @@ l4blk_stub_cleanup(void)
   /* close L4 block driver instance */
   if (l4blk_drv_handle != -1)
     {
-      ret = l4blk_driver_close(l4blk_drv_id,l4blk_drv_handle,&exc);
-      if ((ret < 0) || (exc._type != exc_l4_no_exception))
+      ret = l4blk_driver_close_call(&l4blk_drv_id, l4blk_drv_handle, &_env);
+      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
         {
           Error("close L4 block driver failed (ret %d, exc %d)",
-                ret,exc._type);
+                ret, _env.major);
           return;
         }
     }

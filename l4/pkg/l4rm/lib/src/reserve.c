@@ -6,23 +6,13 @@
  *
  * \date   08/22/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -76,9 +66,7 @@ __reserve(l4_addr_t * addr,
   l4rm_region_desc_t *r;
   l4_uint32_t align;
 
-#if DEBUG_REGION_RESERVE
-  INFO("addr 0x%08x, size 0x%08x\n",*addr,size);
-#endif
+  LOGdL(DEBUG_REGION_RESERVE,"addr 0x%08x, size 0x%08x",*addr,size);
 
   /* lock region list */
   l4rm_lock_region_list_direct(flags);
@@ -105,8 +93,8 @@ __reserve(l4_addr_t * addr,
 	}
 
 #if DEBUG_REGION_RESERVE
-      DMSG("  in region <0x%08x-0x%08x>, area 0x%05x\n",
-	   r->start,r->end,REGION_AREA(r));
+      printf("  in region <0x%08x-0x%08x>, area 0x%05x\n",
+             r->start,r->end,REGION_AREA(r));
 #endif
 
       if (!IS_FREE_REGION(r) || IS_RESERVED_AREA(r) || 
@@ -116,7 +104,7 @@ __reserve(l4_addr_t * addr,
 	  l4rm_unlock_region_list_direct(flags);
 	  return -L4_EUSED;
 	}
-   }
+    }
       
   /* allocate new region descriptor */
   r = l4rm_region_desc_alloc();
@@ -130,15 +118,13 @@ __reserve(l4_addr_t * addr,
   /* the area id is the first page number of that area */
   *area = *addr >> L4_PAGESHIFT;
 
-#if DEBUG_REGION_RESERVE
-  INFO("area 0x%05x\n",*area);
-#endif
+  LOGdL(DEBUG_REGION_RESERVE,"area 0x%05x",*area);
 
   /* setup new region */
   if ((flags & L4RM_LOG2_ALIGNED) && (flags & L4RM_LOG2_ALLOC))
     {
       /* round size to next log2 size */
-      align = bsr(size);
+      align = l4util_log2(size);
       if (size > (1UL << align))
 	align++;
 
@@ -241,8 +227,8 @@ l4rm_area_reserve_region(l4_addr_t addr,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }
@@ -291,8 +277,8 @@ l4rm_direct_area_reserve_region(l4_addr_t addr,
   offs = a & ~(L4_PAGEMASK);
   if (offs > 0)
     {
-      Msg("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
-          a,a & L4_PAGEMASK);
+      printf("L4RM: fixed alignment, 0x%08x -> 0x%08x!\n",
+             a,a & L4_PAGEMASK);
       a &= L4_PAGEMASK;
       size += offs;
     }

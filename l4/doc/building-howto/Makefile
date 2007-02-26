@@ -1,61 +1,38 @@
-#
-# Files
-#
+L4DIR	?= ../..
 
-DOC_TEX =	building.tex
+SRC_TEX	= building.tex
+SRC_HTML= drops-building.tex
 
-#
-# Rules and stuff 
-# 
+SRC_DOX  = $(SRC_HTML:.tex=.cfg)
+SUPPORT = todo.sty
+all::
 
-default:	doc_ps
+$(SRC_DOX:.cfg=.title):
+	@echo guide >$@
+	@echo "Building DROPS HOWTO" >>$@
 
-# Tools
-LATEX =		latex
-DVIPS =		dvips
-FIG2DEV =	fig2dev
-#GV =		gv -spartan -geometry 950x1140+0+0 -noresize -scale 2
-#GV =		gv -spartan -geometry 950x845+0+0 -noresize -scale 2
-##GV =		gv -spartan -geometry 790x550+0+0 -noresize -antialias
-GREP = 		grep
-RM =		rm -f
+$(SRC_TEX:.tex=.dvi): $(SUPPORT)
 
-DOC_DVI =	$(DOC_TEX:.tex=.dvi)
-DOC_PS =	$(DOC_TEX:.tex=.ps)
+$(SUPPORT):%:../bid-spec/%
+	$(VERBOSE)ln -sf $< $@
 
-DOC_FIGURES_EPS =	$(DOC_FIGURES:.fig=.eps)
+$(SRC_HTML:.tex=): $(SRC_HTML) $(SRC_TEX:.tex=.ps)
+	$(VERBOSE)$(RM) -r $@
+	$(VERBOSE)install -d $@/html
+	$(VERBOSE)latex2html -local_icons -split 4\
+		-show_section_numbers $(SRC_HTML) -dir $@/html
+	$(VERBOSE)cp $(SRC_TEX:.tex=.ps) $@/html
+	$(VERBOSE)touch $@
 
-DOC_CLEAN =	$(DOC_DVI) $(DOC_FIGURES_EPS) \
-		*.aux *.log *.toc *.bbl *.blg *.ltf
+$(SRC_HTML): $(SRC_TEX:.tex=.dvi)
+	$(VERBOSE)cp $(<:.dvi=.tex) $@
+	$(VERBOSE)cp $(<:.dvi=.aux) $(@:.tex=.aux)
+	$(VERBOSE)test ! -r $(<:.dvi=.bbl) || cp $(<:.dvi=.bbl) $(@:.tex=.bbl)
 
-VERBOSE = @
+include $(L4DIR)/mk/doc.mk
 
-# build DVI file. This is a bit tricky, because we need to check if we must 
-# rebuild the DVI file due to references and citations.
-$(DOC_DVI): $(DOC_FIGURES_EPS) $(DOC_TEX) $(DOC_TEX_ADD) $(DOC_BIB)
-	$(VERBOSE)$(LATEX) $(DOC_TEX)
-	$(VERBOSE)$(GREP) '\citation' $(DOC_DVI:.dvi=.aux) && \
-	  bibtex $(basename $(DOC_DVI)) || true
-	$(VERBOSE)(export size=1 ; touch $(DOC_DVI);\
-	  until [ $$size -eq `ls -o $(DOC_DVI) | awk '{print $$4}'` ]; do\
-	    export size=`ls -o $(DOC_DVI) | awk '{print $$4}'` ;\
-	    $(LATEX) $(DOC_TEX) ;\
-	  done)
-
-$(DOC_PS): $(DOC_DVI)
-	$(VERBOSE)$(DVIPS) -o $@ $<
-
-doc_ps: $(DOC_PS)
-
-doc_view: $(DOC_PS)
-	$(VERBOSE)$(GV) $(DOC_PS)
-
-clean cleanall::
-	$(VERBOSE)$(RM) $(DOC_CLEAN)
-
+clean::
+	$(VERBOSE)$(RM) -rv $(SRC_HTML) $(SRC_HTML:.tex=.aux) \
+		$(SRC_HTML:.tex=.bbl) $(SUPPORT)
 cleanall::
-	$(VERBOSE)$(RM) $(DOC_PS)
-	$(VERBOSE)$(RM) -r $(DOC_HTML_DIR)
-
-%.eps:  %.fig
-	$(FIG2DEV) -L ps -p dummy $< $*.eps
+	$(VERBOSE)$(RM)

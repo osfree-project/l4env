@@ -9,6 +9,6 @@ vpath %.xga ..
 include $(L4DIR)/mk/lib.mk
 
 %.o: %.xga
-	$(COMP_MESSAGE)
+	@$(COMP_MESSAGE)
 	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
 

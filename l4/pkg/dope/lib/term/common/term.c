@@ -1,13 +1,31 @@
+/*
+ * \brief   DOpE terminal library
+ * \date    2003-03-06
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+/*** GENERAL INCLUDES ***/
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
+/*** LOCAL INCLUDES ***/
 #include "dopelib.h"  /* public interface of dopelib */
 #include "term.h"     /* public interface of this library */
 #include "listener.h" /* from lib/dope/include */
 #include "sync.h"     /* from lib/dope/include */
 
 extern void dopelib_waitforexit(void);
+extern void dopelib_wait_event(int app_id, dope_event **e_out, char **bindarg_out);
 
 static struct dopelib_mutex *printf_mutex;
 
@@ -46,27 +64,27 @@ void term_deinit() {
 }
 
 
-int term_printf(const char *format, ...) {
+static
+int term_vprintf(const char *format, va_list ap) {
 	static char strbuf[2048];
 	static char subbuf[2048];
 	int i,j,num,off=0;
-	va_list list;
 	
 	dopelib_lock_mutex(printf_mutex);
 	
-	va_start(list, format);
-	num = vsnprintf(strbuf, 2048, format, list);
-	va_end(args);
+	num = vsnprintf(strbuf, 2048-2, format, ap);
 	
 	/* send pieces of 128 characters to the DOpE terminal widget */
 	while (off<num) {
 		/* substitute '"' characters */
-		for (i=0, j=0; i<128; i++, j++) {
+		for (i=0, j=0; i<128;) {
 			if (strbuf[i+off] == '"') subbuf[j++] = '\\';
 			subbuf[j] = strbuf[i+off];
 			if (strbuf[i+off] == 0) break;
+			i++;j++;
 		}
 		subbuf[j] = 0;
+		subbuf[j+1] = 0;
 
 		/* send dope cmd */
 		dope_cmdf(app_id, "t.print(\"%s\")", subbuf);
@@ -74,7 +92,15 @@ int term_printf(const char *format, ...) {
 	}
 	
 	dopelib_unlock_mutex(printf_mutex);
-	
+	return 0;
+}
+
+
+int term_printf(const char *format, ...) {
+	va_list list;
+	va_start(list, format);
+	term_vprintf(format, list);
+	va_end(list);
 	return 0;
 }
 
@@ -104,7 +130,7 @@ static void clear_chars(int num_chars) {
 }
 
 
-static int browse_history(char *dst, int max_len, struct history_struct *hist) {
+static int browse_history(char *dst, int max_len, struct history *hist) {
 	int keycode;
 	char hidx = 0;
 	char *curr_str = NULL;
@@ -145,7 +171,7 @@ static int browse_history(char *dst, int max_len, struct history_struct *hist) {
 }
 
 
-int term_readline(char *dst, int max_len, struct history_struct *hist) {
+int term_readline(char *dst, int max_len, struct history *hist) {
 	int i = 0;
 	int keycode, ascii;
 	while (i < max_len - 1) {

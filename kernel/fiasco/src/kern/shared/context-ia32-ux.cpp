@@ -12,61 +12,10 @@ IMPLEMENTATION[ia32-ux]:
 #include "lock_guard.h"
 #include "space_context.h"
 #include "thread_state.h"
-#include "logdefs.h"
 
-/** Switch to a specific different context.  If that context is currently
-    locked, switch to its locker instead (except if current() is the locker).
-    @pre current() == this  &&  current() != t
-    @param t thread that shall be activated.  
-    @return false if the context could not be activated, either because it was
-            not runnable or because it was not initialized.
- */
-IMPLEMENT
-Mword Context::switch_to(Context *t)
+IMPLEMENT inline 
+bool Context::switch_cpu( Context *t )
 {
-  assert (current() != t);
-  assert (current() == this);
-
-  Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-  // Time-slice lending: if t is locked, switch to it's locker
-  // instead, this is transitive
-  while (t->donatee()                   // target thread not locked
-         && t != t->donatee())          // target thread has lock itself
-    {
-      // Special case for thread_t::kill(): If the locker is
-      // current(), switch to the locked thread to allow it to
-      // release other locks.  Do this only when the target thread
-      // actually owns locks.
-      if (t->donatee() == current())
-        {
-          if (t->lock_cnt() > 0)
-            break;
-
-          return 0;
-        }
-
-      t = t->donatee();
-    }
-
-  // Can only switch to running threads!
-  if (! (t->state() & Thread_running))  
-    return false;
-
-//   // Make sure stack has enough space.  (Irqs must be disabled here
-//   // because otherwise we could be preempted between the tests, and
-//   // t->kernel_sp could be set to 0 after we checked for that case.)
-//   assert(t->kernel_sp == 0 
-//       || reinterpret_cast<vm_offset_t>(t->kernel_sp)
-//          > reinterpret_cast<vm_offset_t>(t) + sizeof(Context) + 0x20);
-
-  switch_fpu(t);
-
-  if ((state() & Thread_running) && ! in_ready_list())
-    ready_enqueue();
-
-  LOG_CONTEXT_SWITCH;
-
   // switch to new thread's stack
 
   bool ret;
@@ -139,9 +88,13 @@ void Context::switchin_context()
   // kmem::kernel_esp() returns a pointer to the kernel SP (in the
   // TSS) the CPU uses when next switching from user to kernel mode.  
   // regs() + 1 returns a pointer to the end of our kernel stack.
-  *(Kmem::kernel_esp()) = reinterpret_cast<vm_offset_t>(regs() + 1);
+  *(Kmem::kernel_esp()) = reinterpret_cast<Address>(regs() + 1);
   
   // switch to our page directory if nessecary
   _space_context->switchin_context();
+
+  // update the global UTCB pointer to make the thread find its UTCB 
+  // using gs:[0]
+  update_utcb_ptr();
 }
 

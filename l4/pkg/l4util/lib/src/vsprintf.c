@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <l4/sys/types.h>
 #include <l4/util/ctype.h>
-#include <l4/util/util.h>
+#include <l4/util/l4_stdio.h>
 
 unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base);
 unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)
@@ -138,7 +138,7 @@ static char * number(char * str, long num, int base, int size, int precision
 	return str;
 }
 
-int l4_vsprintf(char *buf, const char *fmt, va_list args)
+int l4util_vsprintf(char *buf, const char *fmt, va_list args)
 {
 	int len;
 	unsigned long num;
@@ -306,13 +306,13 @@ int l4_vsprintf(char *buf, const char *fmt, va_list args)
 	return str-buf;
 }
 
-int l4_sprintf(char * buf, const char *fmt, ...)
+int l4util_sprintf(char * buf, const char *fmt, ...)
 {
 	va_list args;
 	int i;
 
 	va_start(args, fmt);
-	i=l4_vsprintf(buf,fmt,args);
+	i=l4util_vsprintf(buf,fmt,args);
 	va_end(args);
 	return i;
 }

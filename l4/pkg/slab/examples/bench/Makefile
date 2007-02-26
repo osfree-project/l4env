@@ -10,7 +10,6 @@ TARGET =	slab_bench
 MODE =		l4env
 SYSTEMS =	x86-l4v2 x86-l4x0
 DEFAULT_RELOC = 0x00400000
-LIBS = 		$(GCCLIB)
 
 # include prog role
 include $(L4DIR)/mk/prog.mk

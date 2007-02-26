@@ -13,22 +13,25 @@
 
 <code/main/
 [<code/-nowait/]
+[<code/-nojdb/]
 [<code/-nokdb/]
+[<code/-noscreen/]
+[<code/-noserial/]
 [<code/-comspeed/ <var/n/]
 [<code/-comport/ <var/n/]
 [<code/-hercules/]
-[<code/-serial/] [<code/-VT/[<code/+/]]
 [<code/-serial_esc/]
 [<code/-tbuf_entries/ <var/n/]
 [<code/-out_buf/ <var/n/]
 [<code/-esc/]
 [<code/-watchdog/]
-[<code/-no_serial_fifo/]
+[<code/-apic/]
 [<code/-profile/]
 [<code/-profstart/]
 [<code/-irq0/]
 [<code/-irqcom/ | <code/-I-/]
-[<code/-vmware/]
+[<code/-jdb_color/ <var/n]
+[<code/-always_irqack/]
 <code/ proto=/<var/physical_address/
 
 <sect>Description
@@ -47,11 +50,20 @@ embedded applications.
 <desc>
 <dt/<code/-nowait//Removes the initial "KDB: init" breakpoint.  The
 installation instructions on the Fiasco web site recommend this
-option; if you plan to do some serious debugging, you shouldn't use
-it. 
+option; if you plan to do some serious debugging, you shouldn't use it.
 
-<dt/<code/-nokdb//Disables the kernel debugger.  Should Fiasco raise an
-exception, it will just call the builtin jdb.
+<dt/<code/-nojdb//Disables the builtin kernel debugger JDB.
+
+<dt/<code/-nokdb//Disables the GDB stub.  Should Fiasco raise an exception,
+it will just call the builtin jdb.
+
+<dt/<code/-noscreen//Disables output to vga/hercules console.
+
+<dt/<code/-noserial//Disables output to serial console. If this switch is
+not given, kernel messages will output additionally to the serial interface.
+If <code/-nokdb/ is enabled, you can use a terminal program on the host to
+control Fiasco.  If you are connected to a remote GDB, messages are copied to
+GDB's console.
 
 <dt/<code/-comspeed/ <var/n//Will set the rate of the serial interface to n
 bytes/second.  115200 bytes/second is the default.
@@ -62,15 +74,6 @@ and 2.
 
 <dt/<code/-hercules//Redirect kernel messages to the Hercules (or
 other MGA-compatible) console.
-
-<dt/<code/-no_serial_fifo//Disable seriel fifo buffer. Might be
-required by some older (buggy) UARTs to work properly.
-
-<dt/<code/-serial/ or <code/-VT/[<code/+/]/Will additionally output
-kernel messages to the serial interface; this can save you copying
-kernel messages by hand.  If <code/-nokdb/ is also enabled, you can
-use a terminal program on the host to control Fiasco.  If you are
-connected to a remote GDB, messages are copied to GDB's console.
 
 <dt/<code/-esc//Enable esc hack. On every timer interrupt, ask the
 keyboard if the Escape key was pressed. If so, do enter into kernel
@@ -84,11 +87,14 @@ the watchdog releases an non maskable interrupt (NMI) which forces
 Fiasco to step into the kernel debugger. Works on >= Intel PPro and
 >= AMD K7 Model 2.
 
+<dt/<code/-apic//Initialize the builtin Local APIC. If the Local APIC is
+disabled by the BIOS but available, it is re-enabled.
+
 <dt/<code/-serial_esc//Enter jdb on serial receive interrupts. This
 is only necessary if kdb was disabled by <code/-nokdb/.
 
 <dt/<code/-tbuf_entries/ <var/n//Set number of lines to store in the 
-debugging trace buffer. Default is 200.
+debugging trace buffer. Default is 1024.
 
 <dt/<code/-out_buf/ <var/n//Set output buffer for kd_display functions
 to n bytes. Default is 4096.
@@ -115,10 +121,9 @@ reserved for kernel use.
 <dt/<code/-irqcom/ or <code/-I-//Disable for user tasks the IRQ
 associated with the serial port used for I/O or the kernel debugger.
 
-<dt/<code/-vmware//Disable the usage of the fully special nested PIC
-mode since VMware isn't able to handle it (it crashes with an internal
-monitor error -- BUG F(152):393 bugNr=4388).
- 
+<dt/<code/-always_irqack//IRQs are acknowledged by the kernel. Your
+userland code has to know this!
+
 <dt/<code/proto=/<var/physical_address//This argument is automatically
 added by RMGR when starting Fiasco.  It communicates the address of a
 template for the kernel's info page which contains configuration

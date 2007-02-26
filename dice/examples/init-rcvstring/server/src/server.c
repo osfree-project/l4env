@@ -3,7 +3,7 @@
 #include <l4/names/libnames.h>
 
 CORBA_void 
-test_f1_component(CORBA_Object *_dice_corba_obj,
+test_f1_component(CORBA_Object _dice_corba_obj,
     CORBA_char_ptr *t1,
     CORBA_Environment *_dice_corba_env)
 {
@@ -13,8 +13,8 @@ test_f1_component(CORBA_Object *_dice_corba_obj,
 }
 
 CORBA_void 
-test_f2_component(CORBA_Object *_dice_corba_obj,
-    CORBA_char_ptr t2,
+test_f2_component(CORBA_Object _dice_corba_obj,
+    const_CORBA_char_ptr t2,
     CORBA_Environment *_dice_corba_env)
 {
   LOG("rcvd: %s", t2);

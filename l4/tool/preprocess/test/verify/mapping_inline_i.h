@@ -56,11 +56,11 @@ private:
 #line 177 "mapping.cpp"
   // public routines with inline implementations
   
-  unsigned 
+  inline unsigned 
   number_of_entries() const;
   
 #line 186 "mapping.cpp"
-  mapping_t *
+  inline mapping_t *
   mappings();
 } __attribute__((packed));
 #line 392 "mapping.cpp"

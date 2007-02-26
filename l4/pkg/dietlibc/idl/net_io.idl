@@ -1,0 +1,67 @@
+/* -*- c -*- */ 
+/* This draft is heavily inspired by Norman's flips interface.
+ * I hope those will merge soon!
+ */
+
+import <l4/sys/types.h>
+import <l4/dietlibc/io-types.h>
+
+import "rw.idl"
+
+library io
+{
+    [uuid(60)]
+    interface net_io : rw
+    {
+	int accept  ([in] object_handle_t fd,
+	             [in, out, size_is(addrlen), max_is(16)] char addr[],
+	             [in, out] int *addrlen);
+
+	int bind    ([in] object_handle_t fd,
+	             [in, size_is(addrlen), max_is(16)] char addr[],
+	             [in] int addrlen);
+
+	int connect ([in] object_handle_t fd,
+	             [in, size_is(addrlen), max_is(16)] char addr[],
+	             [in] int addrlen);
+	
+	int listen  ([in] object_handle_t fd,
+	             [in] int backlog);
+	
+	/*** !!! tricky... get away from me !!! ***/
+//	int recvmsg ([in] object_handle_t fd,
+//	             [out] struct idl_msghdr **msg,
+//	             [in] int flags);
+	
+	int recvfrom([in] object_handle_t fd,
+	             [out, size_is(len)] char buf[],
+	             [in, out] int *len,              /* only [in] is needed */
+	             [in] int flags,
+	             [in, out, size_is(fromlen), max_is(16)] char from[],
+	             [in, out] int *fromlen);
+	
+	int recv    ([in] object_handle_t fd,
+	             [out, size_is(len)] char buf[],
+	             [in,out] int *len,               /* only [in] is needed */
+	             [in] int flags);
+	
+	int send    ([in] object_handle_t fd,
+	             [in, ref, size_is(len)] char *msg,
+	             [in] int len,
+	             [in] int flags);
+	
+	int sendto  ([in] object_handle_t fd,
+	             [in, ref, size_is(len)] char *msg,
+	             [in] int len,
+	             [in] int flags,
+	             [in, ref, size_is(tolen)] char *to,
+	             [in] int tolen);
+	
+	int shutdown([in] object_handle_t fd,
+	             [in] int how);
+	
+	int socket  ([in] int domain,
+	             [in] int type,
+	             [in] int protocol);
+    };
+};

@@ -1,15 +1,19 @@
 /* $Id$ */
 /**
  * \file	loader/server/src/dm-if.c
+ * \brief	Helper functions for communication with dataspace managers
  *
  * \date	06/11/2001
- * \author	Frank Mehnert
- *
- * \brief	Helper functions for communication with dataspace managers */
+ * \author	Frank Mehnert */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include "dm-if.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include <l4/sys/consts.h>
 #include <l4/env/errno.h>

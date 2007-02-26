@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -29,10 +29,12 @@
 #ifndef __DICE_FE_FEUNIONCASE_H__
 #define __DICE_FE_FEUNIONCASE_H__
 
-#include "defines.h"
 #include "fe/FEBase.h"
-#include "fe/FETypedDeclarator.h"
-#include "fe/FEExpression.h"
+
+class CFETypedDeclarator;
+class CFEExpression;
+class Vector;
+class VectorElement;
 
 /**	\class CFEUnionCase
  *	\ingroup frontend

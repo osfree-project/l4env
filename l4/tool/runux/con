@@ -1,0 +1,14 @@
+#! /bin/bash
+
+[ -n "$UXRES" ] || UXRES=640x480@16
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l con-ux \
+	-l con_demo3 \
+	-n8 "$@"

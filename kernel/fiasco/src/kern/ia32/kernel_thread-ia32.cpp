@@ -6,7 +6,7 @@ IMPLEMENTATION[ia32]:
 #include <flux/x86/base_trap.h>
 
 #include "apic.h"
-#include "boot_info.h"
+#include "cmdline.h"
 #include "config.h"
 #include "cpu.h"
 #include "irq_alloc.h"
@@ -43,13 +43,11 @@ Kernel_thread::bootstrap_arch()
   Pic::enable(2);			// allow cascaded irqs
 
   // initialize the profiling timer
-  bool user_irq0 = strstr(Boot_info::cmdline(), "irq0");
+  bool user_irq0 = strstr (Cmdline::cmdline(), "irq0");
 
   if (Config::scheduling_using_pit && user_irq0)
     {
-      kdb_ke("option -irq0' not possible since irq 0 is used for scheduling\n"
-             "     -- disabling -irq0'");
-      user_irq0 = false;
+      panic("option -irq0 not possible since irq 0 is used for scheduling");
     }
 
 #ifdef CONFIG_PROFILE
@@ -57,8 +55,7 @@ Kernel_thread::bootstrap_arch()
     {
       if (user_irq0)
         {
-          kdb_ke("options -profile' and -irq0' don't mix "
-                  "-- disabling -irq0'");
+          panic("options -profile and -irq0 don't mix");
         }
       if (Config::scheduling_using_pit)
         {
@@ -70,7 +67,7 @@ Kernel_thread::bootstrap_arch()
 
       profile::init();
 
-      if (strstr(Boot_info::cmdline(), " -profstart"))
+      if (strstr (Cmdline::cmdline(), " -profstart"))
         profile::start();
     }
   else
@@ -78,19 +75,13 @@ Kernel_thread::bootstrap_arch()
     if (! user_irq0 && ! Config::scheduling_using_pit)
       Irq_alloc::lookup(0)->alloc(this, false); // reserve irq0 even though
 
-  // this has to be done with working scheduling interrupt
+  // this has to be done with working scheduling interrupt (needed as
+  // indicator for working interrupts)
   if (Config::apic)
     Apic::init();  
 
   // this has to be done after Apic::init()
   if (Config::watchdog)
-    Watchdog::init();  
-
-  //
-  // set PCE-Flag in CR4 to enable read of performace measurement counters
-  // in usermode. PMC were introduced in Pentium MMX and PPro processors. 
-  //
-  if (Cpu::vendor() == Cpu::VENDOR_INTEL &&
-     (Cpu::family() == CPU_FAMILY_PENTIUM_PRO || (Cpu::features() & FEAT_MMX)))
-    set_cr4 (get_cr4() | CR4_PCE);
+    Watchdog::init();
 }
+

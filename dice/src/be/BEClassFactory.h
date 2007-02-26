@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -43,9 +43,11 @@ class CBESndFunction;
 class CBERcvFunction;
 class CBEWaitFunction;
 class CBEReplyRcvFunction;
+class CBEReplyFunction;
 class CBEReplyWaitFunction;
 class CBECallFunction;
 class CBEUnmarshalFunction;
+class CBEMarshalFunction;
 class CBEComponentFunction;
 class CBESwitchCase;
 class CBETestFunction;
@@ -54,10 +56,12 @@ class CBETestMainFunction;
 class CBERcvAnyFunction;
 class CBEWaitAnyFunction;
 class CBEReplyAnyWaitAnyFunction;
+class CBEDispatchFunction;
 class CBESrvLoopFunction;
 class CBEAttribute;
 class CBEType;
 class CBEOpcodeType;
+class CBEReplyCodeType;
 class CBEMsgBufferType;
 class CBEUserDefinedType;
 class CBETypedDeclarator;
@@ -72,6 +76,7 @@ class CBENameSpace;
 class CBEMarshaller;
 class CBEContext;
 class CBESizes;
+class CBECommunication;
 
 /**	\class CBEClassFactory
  *	\ingroup backend
@@ -101,7 +106,9 @@ public:
     virtual CBESwitchCase* GetNewSwitchCase();
     virtual CBEComponentFunction* GetNewComponentFunction();
     virtual CBEOpcodeType* GetNewOpcodeType();
+    virtual CBEReplyCodeType* GetNewReplyCodeType();
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
+    virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBERcvAnyFunction* GetNewRcvAnyFunction();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
@@ -115,8 +122,7 @@ public:
     virtual CBETypedDeclarator* GetNewTypedDeclarator();
     virtual CBEType* GetNewType(int nType);
     virtual CBEAttribute* GetNewAttribute();
-    virtual CBEReplyWaitFunction* GetNewReplyWaitFunction();
-    virtual CBEReplyRcvFunction* GetNewReplyRcvFunction();
+    virtual CBEReplyFunction* GetNewReplyFunction();
     virtual CBEWaitFunction* GetNewWaitFunction();
     virtual CBERcvFunction* GetNewRcvFunction();
     virtual CBESndFunction* GetNewSndFunction();
@@ -130,6 +136,8 @@ public:
     virtual CBENameSpace* GetNewNameSpace();
     virtual CBEReplyAnyWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
     virtual CBESizes* GetNewSizes();
+	virtual CBECommunication* GetNewCommunication();
+	virtual CBEDispatchFunction* GetNewDispatchFunction();
 
 protected:
 	/**	\brief copy constructor

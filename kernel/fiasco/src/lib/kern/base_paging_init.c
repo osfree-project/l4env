@@ -33,6 +33,11 @@
 
 vm_offset_t base_pdir_pa;
 
+#define SUPERPAGE_SIZE		(1 << 22)
+#define SUPERPAGE_MASK		(SUPERPAGE_SIZE - 1)
+
+#define round_superpage(x)	((vm_offset_t)((((vm_offset_t)(x))	\
+				+ SUPERPAGE_MASK) & ~SUPERPAGE_MASK))
 void base_paging_init(void)
 {
 	if (ptab_alloc(&base_pdir_pa))

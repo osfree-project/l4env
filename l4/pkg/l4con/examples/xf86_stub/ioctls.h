@@ -1,5 +1,12 @@
-#ifndef __IOCTLS_H
-#define __IOCTLS_H
+/*!
+ * \file	con/examples/xf86_stub/ioctls.h
+ * \brief	
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+#ifndef __CON_EXAMPLES_XF86_STUB_IOCTLS_H_
+#define __CON_EXAMPLES_XF86_STUB_IOCTLS_H_
 
 /* taken from L4Linux */
 

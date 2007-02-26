@@ -13,16 +13,17 @@ CLIENTIDL        = dopeapp.idl
 PRIVATE_LIBDIR   = $(PKGDIR)/server/common/OBJ-$(SYSTEM) \
                    $(PKGDIR)/server/gfx/OBJ-$(SYSTEM)
 
-LIBS             = -lcommon -lgfx -lpthread -lSDL 
+LIBS             = -lcommon -lgfx -lpthread -lSDL
 
-PRIVATE_INCDIR   = $(PKGDIR)/server/include	\
+PRIVATE_INCDIR   = $(PKGDIR)/server/include\
                    $(L4DIR)/tool/dice/include
 
-SRC_C            = memory.c messenger.c dummies.c     \
-                   screen.c server.c    startup.c     \
+SRC_C            = messenger.c dummies.c     \
+                   scrdrv.c server.c    startup.c     \
                    thread.c timer.c     vscr_server.c \
                    input.c  sharedmem.c
 
 vpath messenger.c $(PKGDIR)/server/common
 
+#include $(L4DIR)/pkg/petze/mk/petze.mk
 include $(L4DIR)/mk/prog.mk

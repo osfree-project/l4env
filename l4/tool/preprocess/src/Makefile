@@ -3,22 +3,18 @@
 #
 
 # scan the L4 global configuration file
-ifeq (${L4_DIR},)
-  L4DIR = ../../..
-else
-  L4DIR = ${L4_DIR}
-endif
-include $(L4DIR)/Makeconf
+L4DIR	?= ../../..
+include $(L4DIR)/mk/Makeconf
 
 -include Makeconf.local
 
 TARGET = preprocess
 
-all: $(TARGET)
+all:: $(TARGET)
 
-install: all
-	-$(INSTALL) -d $(L4_INSTALL_DIR)/tool/bin
-	$(INSTALL) -m 755 $(TARGET) $(L4_INSTALL_DIR)/tool/bin
+install:: all
+	-$(INSTALL) -d $(DROPS_STDDIR)/tool/bin
+	$(INSTALL) -m 755 $(TARGET) $(DROPS_STDDIR)/tool/bin
 
 clean:: 
 #	$(RM) $(TARGET) $(OBJS) tmp.*

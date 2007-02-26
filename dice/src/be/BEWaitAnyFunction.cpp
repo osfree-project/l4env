@@ -5,7 +5,7 @@
  *	\date	01/21/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,7 +37,7 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEUserDefinedType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 
 IMPLEMENT_DYNAMIC(CBEWaitAnyFunction);
@@ -76,19 +76,25 @@ bool CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext *
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
 
     if (!CBEInterfaceFunction::CreateBackEnd(pFEInterface, pContext))
+	{
+        VERBOSE("%s failed because base function could not be created\n", __PRETTY_FUNCTION__);
         return false;
+	}
 
     // return type -> set to opcode
     // if return var is parameter do not delete it
     String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
     if (!SetReturnVar(pContext->GetClassFactory()->GetNewOpcodeType(), sOpcodeVar, pContext))
     {
-        VERBOSE("CBEWaitAnyFunction::CreateBE failed because return var could not be set\n");
+        VERBOSE("%s failed because return var could not be created\n", __PRETTY_FUNCTION__);
         return false;
     }
     // add parameters
     if (!AddMessageBuffer(pFEInterface, pContext))
+	{
+        VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
         return false;
+	}
 
     return true;
 }
@@ -189,7 +195,7 @@ bool CBEWaitAnyFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEWaitAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
@@ -206,7 +212,7 @@ void CBEWaitAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pCon
  */
 void CBEWaitAnyFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
@@ -247,10 +253,10 @@ bool CBEWaitAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContex
 {
     // get class's message buffer
     CBEClass *pClass = GetClass();
-    ASSERT(pClass);
+    assert(pClass);
     // get message buffer type
     CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
-    ASSERT(pMsgBuffer);
+    assert(pMsgBuffer);
     // msg buffer not initialized yet
     pMsgBuffer->InitCounts(pClass, pContext);
     // create own message buffer

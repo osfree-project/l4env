@@ -5,7 +5,7 @@
  *	\date	07/05/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -35,7 +35,39 @@
 #define MAX_INDENT	80 /**< the maximum possible indent */
 #define STD_INDENT	04 /**< the standard indentation value */
 
+/**	\class IncludeFile
+ *	\ingroup base
+ *	\brief helper class tomanage included files
+ */
+class IncludeFile : public CObject
+{
+DECLARE_DYNAMIC(IncludeFile);
+public:
+	/** default constructor */
+	IncludeFile();
+	virtual ~IncludeFile();
+
+public:
+	/**	\var bool bIDLFile
+	 *	\brief true if this is an IDL file
+	 */
+	bool bIDLFile;
+	/** \var bool bIsStandardInclude
+	 *  \brief true if this is included as a standard include file (using '<' and '>')
+	 */
+	bool bIsStandardInclude;
+	/** \var bool bPrivate
+	 *  \brief true if this include statement should not appear in target file
+	 */
+	bool bPrivate;
+	/**	\var String sFileName
+	 *	\brief the name of the file to include
+	 */
+	String sFileName;
+};
+
 /**	\class CFile
+ *  \ingroup base
  *	\brief base class for all file classes
  */
 class CFile : public CObject
@@ -70,8 +102,8 @@ DECLARE_DYNAMIC(CFile);
     virtual String GetFileName();
     virtual void DecIndent(int by = STD_INDENT);
     virtual void IncIndent(int by = STD_INDENT);
-    virtual void PrintIndent(char *fmt, ...);
-    virtual void Print(char *fmt, ...);
+    virtual void PrintIndent(const char *fmt, ...);
+    virtual void Print(const char *fmt, ...);
     virtual bool Close();
     virtual bool Open(String sFileName, int nStatus);
 

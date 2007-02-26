@@ -7,6 +7,11 @@
  *
  * \brief	Linux program to list memory regions of DMphys */
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -25,7 +30,7 @@ int
 main(int argc, char **argv)
 {
   int i;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   if (argc < 2)
     {
@@ -60,10 +65,10 @@ main(int argc, char **argv)
 	  tid.id.lthread = 0;
 	}
 
-      if_l4dm_generic_list(dm_id, (if_l4dm_threadid_t *)&tid, L4DM_SAME_TASK, &exc);
-      if (exc._type != exc_l4_no_exception)
+      if_l4dm_generic_list_call(&dm_id, &tid, L4DM_SAME_TASK, &env);
+      if (env.major != CORBA_NO_EXCEPTION)
 	{
-	  printf("Error listing l4 task \"%s\" (exc %d)\n",argv[i],exc._type);
+	  printf("Error listing l4 task \"%s\" (exc %d)\n",argv[i],env.major);
 	  exit(-1);
 	}
     }

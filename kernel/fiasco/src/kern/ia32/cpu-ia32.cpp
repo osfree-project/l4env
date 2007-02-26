@@ -20,17 +20,11 @@ public:
 
   static void		init_sysenter(Address kernel_esp);
   static void		set_sysenter(void (*do_sysenter)(void));
-  static Unsigned64	rdtsc();
   static Unsigned64	rdmsr(Unsigned32 reg);
   static Unsigned64	rdpmc(Unsigned32 reg);
   static void		wrmsr(Unsigned32 low, Unsigned32 high, Unsigned32 reg);
   static void		wrmsr(Unsigned64 msr, Unsigned32 reg);
-  static Unsigned32	hz();
-  static Unsigned64	tsc_to_ns(Unsigned64 tsc);
-  static Unsigned64	ns_to_tsc(Unsigned64 ns);
-  static Unsigned32	get_scaler_tsc_to_ns();
-  static Unsigned32	get_scaler_tsc_to_us();
-  static Unsigned32	get_scaler_ns_to_tsc();
+  static void		enable_rdpmc();
   static void		enable_lbr();
   static void		disable_lbr();
   static Lbr const      lbr_type();
@@ -39,10 +33,9 @@ public:
 
 private:
   static Lbr cpu_lbr;
-  static Unsigned32 scaler_tsc_to_ns;
-  static Unsigned32 scaler_tsc_to_us;
-  static Unsigned32 scaler_ns_to_tsc;
   static Unsigned64 tsc_correction;
+  typedef void (Sysenter)(void);
+  static Sysenter *current_sysenter asm ("CURRENT_SYSENTER");
 
   static void calibrate_tsc();
 };
@@ -63,10 +56,8 @@ IMPLEMENTATION[ia32]:
 
 Cpu::Lbr Cpu::cpu_lbr;
 
-Unsigned32 Cpu::scaler_tsc_to_ns;
-Unsigned32 Cpu::scaler_tsc_to_us;
-Unsigned32 Cpu::scaler_ns_to_tsc;
 Unsigned64 Cpu::tsc_correction;
+Cpu::Sysenter *Cpu::current_sysenter;
 
 extern "C" void do_sysenter (void);
 extern "C" void do_sysenter_c (void);
@@ -77,31 +68,24 @@ void
 Cpu::bochs_tweaks()
 {
   multiboot_info *kmbi = reinterpret_cast<multiboot_info *>
-						(boot_info::mbi_phys());
+					(Boot_info::mbi_phys());
 
   if (kmbi->flags & MULTIBOOT_CMDLINE &&
       strstr (reinterpret_cast<char *>(kmbi->cmdline), " -bochs")) {
 
     puts ("configuring bochs compatibility");
 
-    config::hlt_works_ok	= false;
-    config::getchar_does_hlt	= false;
-    config::pic_prio_modify	= false;
+    Config::hlt_works_ok	   = false;
+    Config::pic_prio_modify	   = false;
+    Config::getchar_does_hlt	   = false;
+    Config::kinfo_timer_uses_rdtsc = false;
 
-    cpu_features &= ~FEAT_TSC;		// CPUID is broken!
+    /* Bochs is a bloody liar. Its CPUID returns feature flags that BOCHS
+     * doesn't support. If you try to enable them, you fault */
+    cpu_features &= ~(FEAT_TSC | FEAT_SSE);
   }
 }
 #endif
-
-IMPLEMENT inline
-Unsigned64
-Cpu::rdtsc (void)
-{
-  Unsigned64 tsc;
-
-  asm volatile ("rdtsc" : "=A" (tsc));
-  return tsc;
-}
 
 IMPLEMENT inline
 Unsigned64
@@ -137,6 +121,13 @@ Cpu::wrmsr (Unsigned64 msr, Unsigned32 reg)
   asm volatile ("wrmsr" : : "A" (msr), "c" (reg));
 }
 
+IMPLEMENT inline NEEDS[<flux/x86/proc_reg.h>]
+void
+Cpu::enable_rdpmc()
+{
+  set_cr4(get_cr4() | CR4_PCE);
+}
+
 IMPLEMENT
 Cpu::Lbr const
 Cpu::lbr_type()
@@ -157,8 +148,8 @@ Cpu::lbr_type()
 	    }
 	  else if (vendor() == VENDOR_AMD)
 	    {
-	      if (family() == 6)
-		cpu_lbr = LBR_P6; // K7
+	      if ((family() == 6) || (family() == 15))
+		cpu_lbr = LBR_P6; // K7/K8
 	    }
 	}
     }
@@ -193,7 +184,7 @@ void
 Cpu::tsc_stop (void)
 {
   if (Config::kinfo_timer_uses_rdtsc && (features() & FEAT_TSC))
-    tsc_correction += rdtsc();
+    tsc_correction -= rdtsc();
 }
 
 IMPLEMENT inline NEEDS["config.h"]
@@ -201,11 +192,7 @@ void
 Cpu::tsc_continue (void)
 {
   if (Config::kinfo_timer_uses_rdtsc && (features() & FEAT_TSC))
-    {
-      // on Intel processors, the high-order 32 bits are cleared to 0s
-      wrmsr(tsc_correction & 0xffffffff, 0, 0x10);
-      tsc_correction &= 0xffffffff00000000ULL;
-    }
+    tsc_correction += rdtsc();
 }
 
 IMPLEMENT FIASCO_INIT
@@ -214,11 +201,14 @@ Cpu::init (void)
 {
   identify();
 
-  calibrate_tsc();
-
 #ifdef BOCHS
   bochs_tweaks();
 #endif
+
+  calibrate_tsc();
+
+  if (scaler_tsc_to_ns)
+    cpu_frequency = (Unsigned32)(ns_to_tsc(1000000000UL));
 
   unsigned cr4 = get_cr4();
 
@@ -245,9 +235,9 @@ Cpu::init_sysenter (Address kernel_esp)
       wrmsr (GDT_CODE_KERNEL, 0, SYSENTER_CS_MSR);
       wrmsr ((Unsigned32) kernel_esp, 0, SYSENTER_ESP_MSR);
 #if !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
-      wrmsr ((Unsigned32) do_sysenter_c, 0, SYSENTER_EIP_MSR);
+      set_sysenter(do_sysenter_c);
 #else
-      wrmsr ((Unsigned32) do_sysenter, 0, SYSENTER_EIP_MSR);
+      set_sysenter(do_sysenter);
 #endif
     }
 }
@@ -258,20 +248,10 @@ Cpu::set_sysenter (void (*do_sysenter)(void))
 {
   // Check for Sysenter/Sysexit Feature
   if (features() & FEAT_SEP)
-    wrmsr ((Unsigned32) do_sysenter, 0, SYSENTER_EIP_MSR);
-}
-
-static inline
-unsigned long
-Cpu::muldiv (unsigned long a, unsigned long mul, unsigned long div)
-{
-  asm volatile ("mull %1 ; divl %2\n\t"
-               :"=a" (a)
-               :"d" (mul),
-                "c" (div),
-                "0" (a)
-               );
-  return a;
+    {
+      wrmsr ((Unsigned32) do_sysenter, 0, SYSENTER_EIP_MSR);
+      current_sysenter = do_sysenter;
+    }
 }
 
 // Return 2^32 / (tsc clocks per usec)
@@ -341,104 +321,8 @@ bad_ctc:
 
 IMPLEMENT inline
 Unsigned64
-Cpu::ns_to_tsc (Unsigned64 ns)
-{
-  Unsigned32 dummy;
-  Unsigned64 tsc;
-  asm volatile
-	("movl  %%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "movl	%%ecx, %%eax		\n\t"
-	 "movl	%%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "addl	%%ecx, %%eax		\n\t"
-	 "adcl	$0, %%edx		\n\t"
-	 "shld	$5, %%eax, %%edx	\n\t"
-	 "shll	$5, %%eax		\n\t"
-	:"=A" (tsc), "=c" (dummy)
-	: "0" (ns),  "b" (scaler_ns_to_tsc)
-	);
-  return tsc;
-}
-
-IMPLEMENT inline
-Unsigned64
-Cpu::tsc_to_ns (Unsigned64 tsc)
-{
-  Unsigned32 dummy;
-  Unsigned64 ns;
-  asm volatile
-	("movl  %%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "movl	%%ecx, %%eax		\n\t"
-	 "movl	%%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "addl	%%ecx, %%eax		\n\t"
-	 "adcl	$0, %%edx		\n\t"
-	 "shld	$5, %%eax, %%edx	\n\t"
-	 "shll	$5, %%eax		\n\t"
-	:"=A" (ns), "=c" (dummy)
-	: "0" (tsc), "b" (scaler_tsc_to_ns)
-	);
-  return ns;
-}
-
-IMPLEMENT inline
-Unsigned64
-Cpu::tsc_to_us (Unsigned64 tsc)
-{
-  Unsigned32 dummy;
-  Unsigned64 us;
-  asm volatile
-	("movl  %%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "movl	%%ecx, %%eax		\n\t"
-	 "movl	%%edx, %%ecx		\n\t"
-	 "mull	%3			\n\t"
-	 "addl	%%ecx, %%eax		\n\t"
-	 "adcl	$0, %%edx		\n\t"
-	 "shld	$5, %%eax, %%edx	\n\t"
-	 "shll	$5, %%eax		\n\t"
-	:"=A" (us), "=c" (dummy)
-	: "0" (tsc), "S" (scaler_tsc_to_us)
-	);
-  return us;
-}
-
-IMPLEMENT
-Unsigned32
-Cpu::hz (void)
-{
-  if (!scaler_tsc_to_ns)
-    return 0;
-
-  return (Unsigned32)(ns_to_tsc(1000000000UL));
-}
-
-IMPLEMENT inline
-Unsigned32
-Cpu::get_scaler_tsc_to_ns()
-{
-  return scaler_tsc_to_ns;
-}
-
-IMPLEMENT inline
-Unsigned32
-Cpu::get_scaler_tsc_to_us()
-{
-  return scaler_tsc_to_us;
-}
-
-IMPLEMENT inline
-Unsigned32
-Cpu::get_scaler_ns_to_tsc()
-{
-  return scaler_ns_to_tsc;
-}
-
-IMPLEMENT inline
-Unsigned64
 Cpu::time_us (void)
 {
-  return tsc_to_us ((tsc_correction & 0xffffffff00000000ULL) + rdtsc());
+  return tsc_to_us (rdtsc() - tsc_correction);
 }
+

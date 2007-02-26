@@ -1,10 +1,35 @@
+/*!
+ * \file   names/lib/src/names_waitfor_name.c
+ * \brief  Implementation of names_waitfor_name()
+ *
+ * \date   05/27/2003
+ * \author Uwe Dannowski <Uwe.Dannowski@ira.uka.de>
+ * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ *
+ */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #include <names.h>
 #include <l4/sys/syscalls.h>
 #include <l4/util/util.h>
+#include <l4/names/libnames.h>
 
-#include <l4/sys/kdebug.h>
-extern int names_query_name(const char* name, l4_threadid_t* id);
-
+/*!\brief Repeatedly query for a given name
+ * \ingroup clientapi
+ *
+ * \param  name		0-terminated name the ID should be returned for.
+ * \param  id		thread ID will be stored here.
+ * \param  timeout	timeout in ms,
+ *
+ * \retval 0		Error. The name was not registered within the timeout.
+ * \retval !=0		Success.
+ *
+ * The name service is repeatedly queried for the string name. If the
+ * name gets registered before timeout is over, the associated
+ * thread_id is copied into the buffer referenced by id.
+ */
 int
 names_waitfor_name(const char* name, l4_threadid_t* id,
 		   const int timeout)
@@ -18,16 +43,9 @@ names_waitfor_name(const char* name, l4_threadid_t* id,
   do
     {
       ret = names_query_name(name, id);
-#if 0
-      kd_display("ret="); outdec(ret); kd_display(" ");
-      kd_display("rem="); outdec(rem); kd_display("\\r\\n");
-#endif
 
       if ((rem == to) || (ret))
 	return ret;
-#if 0
-      kd_display("to="); outdec(to); kd_display(" ");
-#endif
       l4_sleep(to);
 
       rem -= to;

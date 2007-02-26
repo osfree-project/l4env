@@ -5,7 +5,7 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -38,11 +38,13 @@
 #include "be/BEImplementationFile.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEComponent.h"
+#include "be/BEExpression.h"
 
 #include "fe/FEAttribute.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 #include "fe/FEFile.h"
+#include "fe/FEExpression.h"
 
 IMPLEMENT_DYNAMIC(CBEComponentFunction);
 
@@ -75,7 +77,7 @@ CBEComponentFunction::~CBEComponentFunction()
  */
 bool CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
-    pContext->SetFunctionType(FUNCTION_SKELETON);
+    pContext->SetFunctionType(FUNCTION_TEMPLATE);
 	// set target file name
 	SetTargetFileName(pFEOperation, pContext);
     // get own name
@@ -85,7 +87,7 @@ bool CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext
         return false;
 
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
 
     // check the attribute
     if (pFEOperation->FindAttribute(ATTR_IN))
@@ -120,7 +122,7 @@ void CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext 
 {
     if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
     {
-		pFile->PrintIndent("#warnig \"%s is not implemented!\"\n", (const char*)GetName());
+		pFile->PrintIndent("#warning \"%s is not implemented!\"\n", (const char*)GetName());
    	    return;
 	}
 
@@ -129,9 +131,51 @@ void CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext 
     // check for temp
     if (m_pFunction->HasVariableSizedParameters() || m_pFunction->HasArrayParameters())
     {
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		VectorElement *pIter = m_pFunction->GetFirstParameter();
+		CBETypedDeclarator *pParameter;
+		int nVariableSizedArrayDimensions = 0;
+		while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
+		{
+			// now check each decl for array dimensions
+			VectorElement *pIDecl = pParameter->GetFirstDeclarator();
+			CBEDeclarator *pDecl;
+			while ((pDecl = pParameter->GetNextDeclarator(pIDecl)) != 0)
+			{
+				int nArrayDims = pDecl->GetStars();
+				// get array bounds
+				VectorElement *pIArray = pDecl->GetFirstArrayBound();
+				CBEExpression *pBound;
+				while ((pBound = pDecl->GetNextArrayBound(pIArray)) != 0)
+				{
+					if (!pBound->IsOfType(EXPR_INT))
+						nArrayDims++;
+				}
+				// calc max
+				nVariableSizedArrayDimensions = (nArrayDims > nVariableSizedArrayDimensions) ? nArrayDims : nVariableSizedArrayDimensions;
+			}
+			// if type of parameter is array, check that too
+			if (pParameter->GetType()->GetSize() < 0)
+				nVariableSizedArrayDimensions++;
+			// if array dims
+			// if parameter has size attributes, we assume
+			// that it is an array of some sort
+			if ((pParameter->FindAttribute(ATTR_SIZE_IS) ||
+				pParameter->FindAttribute(ATTR_LENGTH_IS)) &&
+				(nVariableSizedArrayDimensions == 0))
+				nVariableSizedArrayDimensions = 1;
+		}
+
+		// for variable sized arrays we need a temporary variable
+		String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+		for (int i=0; i<nVariableSizedArrayDimensions; i++)
+		{
+			pFile->PrintIndent("unsigned %s%d __attribute__ ((unused));\n", (const char*)sTmpVar, i);
+		}
+
+		// need a "pure" temp var as well
+		pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
+
         String sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
         pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
     }
 }
@@ -163,7 +207,7 @@ void CBEComponentFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, b
    	    return;
 
     CBETestFunction *pTestFunc = pContext->GetClassFactory()->GetNewTestFunction();
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
@@ -198,7 +242,7 @@ void CBEComponentFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset,
         return;
 
     CBETestFunction *pTestFunc = pContext->GetClassFactory()->GetNewTestFunction();
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
@@ -232,7 +276,7 @@ void CBEComponentFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 void CBEComponentFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
 {
     if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-	return;
+		return;
     CBEOperationFunction::WriteReturn(pFile, pContext);
 }
 
@@ -246,7 +290,7 @@ void CBEComponentFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
 void CBEComponentFunction::WriteFunctionDefinition(CBEFile * pFile, CBEContext * pContext)
 {
     if (!pFile->IsOpen())
-	return;
+		return;
 
     WriteGlobalVariableDeclaration(pFile, pContext);
     pFile->Print("\n");
@@ -266,7 +310,7 @@ void CBEComponentFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CBECo
     if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
         return;
 
-    ASSERT(m_pFunction);
+    assert(m_pFunction);
     VectorElement *pIter = m_pFunction->GetFirstParameter();
     CBETypedDeclarator *pParameter;
     while ((pParameter = m_pFunction->GetNextParameter(pIter)) != 0)
@@ -292,7 +336,7 @@ void CBEComponentFunction::WriteGlobalVariableDeclaration(CBEFile * pFile, CBECo
 bool CBEComponentFunction::AddToFile(CBEImplementationFile * pImpl, CBEContext * pContext)
 {
 	if (!pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE) &&
-		!pContext->IsOptionSet(PROGRAM_GENERATE_SKELETON))
+		!pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
 		return true;  // fake success, without adding function
 	return CBEOperationFunction::AddToFile(pImpl, pContext);
 }
@@ -302,12 +346,12 @@ bool CBEComponentFunction::AddToFile(CBEImplementationFile * pImpl, CBEContext *
  *  \param pContext the context of this operation
  *
  * The implementation file for a component-function (server skeleton) is
- * the FILETYPE_SKELETON file.
+ * the FILETYPE_TEMPLATE file.
  */
 void CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext)
 {
 	CBEOperationFunction::SetTargetFileName(pFEObject, pContext);
-	pContext->SetFileType(FILETYPE_SKELETON);
+	pContext->SetFileType(FILETYPE_TEMPLATE);
 	if (pFEObject->IsKindOf(RUNTIME_CLASS(CFEFile)))
 		m_sTargetImplementation = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
 	else
@@ -338,7 +382,7 @@ bool CBEComponentFunction::IsTargetFile(CBEImplementationFile * pFile)
  *  \return true if successful
  *
  * A component function is written to an implementation file only if the options
- * PROGRAM_GENERATE_SKELETON or  PROGRAM_GENERATE_TESTSUITE are set. It is always
+ * PROGRAM_GENERATE_TEMPLATE or  PROGRAM_GENERATE_TESTSUITE are set. It is always
  * written to an header file. These two conditions are only true for the component's
  * side. (The function would not have been created if the attributes (IN,OUT) were
  * not empty).
@@ -353,7 +397,7 @@ bool CBEComponentFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContex
 	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
 		if (!IsTargetFile((CBEImplementationFile*)pFile))
 			return false;
-	return ( ( (pContext->IsOptionSet(PROGRAM_GENERATE_SKELETON) || pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE)) &&
+	return ( ( (pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE) || pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE)) &&
                pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile))) ||
                pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)));
 }

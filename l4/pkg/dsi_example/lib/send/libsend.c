@@ -46,7 +46,7 @@ __get_component_id(void)
       /* request send component id */
       if (!names_waitfor_name(DSI_EXAMPLE_SEND_NAMES,&send_id,10000))
         {
-          Panic("send component (\"%s\") not found!\n",
+          Panic("send component (\"%s\") not found!",
 		DSI_EXAMPLE_SEND_NAMES);
           send_id = L4_INVALID_ID;
           return -1;
@@ -70,19 +70,19 @@ static int
 __send_connect(dsi_component_t * comp, dsi_socket_ref_t * remote)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to connect socket */
-  ret = dsi_example_send_connect(send_id,
+  ret = dsi_example_send_connect_call(&send_id,
   				 (dsi_example_send_socket_t *)&comp->socketref,
-				 (dsi_example_send_socket_t *)remote,&_exc); 
-  if (ret || (_exc._type != exc_l4_no_exception))
+				 (dsi_example_send_socket_t *)remote,&env); 
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("connect failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("connect failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
 
@@ -102,19 +102,19 @@ static int
 __send_start(dsi_component_t * comp)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to start transfer */
-  ret = dsi_example_send_start(send_id,
+  ret = dsi_example_send_start_call(&send_id,
   			       (dsi_example_send_socket_t *)&comp->socketref,
-			       &_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+			       &env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("start failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("start failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
   
@@ -135,19 +135,19 @@ static int
 __send_stop(dsi_component_t * comp)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to stop transfer */
-  ret = dsi_example_send_stop(send_id,
+  ret = dsi_example_send_stop_call(&send_id,
   			      (dsi_example_send_socket_t *)&comp->socketref,
-			       &_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+			       &env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("stop failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("stop failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
   
@@ -168,19 +168,19 @@ static int
 __send_close(dsi_component_t * comp)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to stop transfer */
-  ret = dsi_example_send_close(send_id,
+  ret = dsi_example_send_close_call(&send_id,
   			       (dsi_example_send_socket_t *)&comp->socketref,
-			       &_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+			       &env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("close failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("close failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
   
@@ -208,19 +208,19 @@ send_open(dsi_component_t * sender, l4dm_dataspace_t * ctrl_ds,
 {
   int ret;
   dsi_example_send_socket_t socket_ref;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
   
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to create socket */
-  ret = dsi_example_send_open(send_id,&socket_ref,
+  ret = dsi_example_send_open_call(&send_id,&socket_ref,
 			      (dsi_example_send_dataspace_t *)ctrl_ds,
-			      (dsi_example_send_dataspace_t *)data_ds,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+			      (dsi_example_send_dataspace_t *)data_ds,&env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("open socket failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("open socket failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
 

@@ -4,8 +4,9 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= pslim_drv.o
 MODE		= host
 LIBS		= -lcon -ldm_generic -ldm_mem -lnames -ll4util -lrmgr
-LIBCINCDIR	= $(addprefix -I,$(L4INCDIR))
+LIBCINCDIR	= $(addprefix -I,$(L4INCDIR) $(GCCINCDIR))
 LDFLAGS		= -r -nostdlib -nostartfiles
+LDSCRIPT	= $(call findfile,main_rel.ld,$(L4LIBDIR))
 
 XF86TREE	= ..
 
@@ -24,6 +25,10 @@ CPPFLAGS_pslim.c = -Dlinux -D__i386__ \
 		  -DX_BYTE_ORDER=X_LITTLE_ENDIAN -DNDEBUG \
 		  -DFUNCPROTO=15 -DNARROWPROTO -DIN_MODULE -DXFree86Module
 CPPFLAGS_emul_l4rm.c = $(CPPFLAGS_pslim.c)
+CPPFLAGS_helper.c = -DXFree86LOADER -DIN_MODULE
+
+# don't include Linux headers!
+CPPFLAGS	= -nostdinc
 
 ifeq ($(XF86TREE),..)
 PRIVATE_INCDIR	= ../include \
@@ -45,8 +50,10 @@ PRIVATE_INCDIR	= $(XF86TREE)/include \
 		  $(XF86TREE)/include/xserver \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/common \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/os-support \
+		  $(XF86TREE)/programs/Xserver/hw/xfree86/os-support/bus \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/xaa \
+		  $(XF86TREE)/programs/Xserver/hw/xfree86 \
 		  $(XF86TREE)/programs/Xserver/include \
 		  $(XF86TREE)/programs/Xserver/fb \
 		  $(XF86TREE)/programs/Xserver/mi \

@@ -1,7 +1,7 @@
 IMPLEMENTATION[nosmas]:
 
 IMPLEMENT inline
-bool Thread::handle_smas_page_fault (Address, unsigned, L4_msgdope*)
+bool Thread::handle_smas_page_fault ( Address, Mword, L4_msgdope & )
 {
   return false;
 }
@@ -29,7 +29,7 @@ Mword Thread::small_space( void )
  * Move the task this thread belongs to to the given small address space
  */
 IMPLEMENT inline
-void Thread::set_small_space( Mword nr)
+void Thread::set_small_space( Mword /*nr*/)
 {
   // nothing
 }

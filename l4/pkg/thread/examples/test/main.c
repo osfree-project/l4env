@@ -6,23 +6,13 @@
  *
  * \date   09/11/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -48,14 +38,15 @@ char LOG_tag[9] = "th_test";
 void test_fn1(void * data);
 void test_fn1(void * data)
 {
-  l4_addr_t esp,addr,ds_map_addr;
+  l4_addr_t esp,ds_map_addr;
   l4dm_dataspace_t ds;
   l4_offs_t offs;
   l4_size_t ds_map_size;
   int ret;
+  void *addr;
 
   asm("movl   %%esp, %0\n\t" : "=r" (esp) : );
-  LOGI("stack at 0x%08x\n",esp);
+  LOGL("stack at 0x%08x",esp);
 
   ret = l4rm_lookup((void *)esp,&ds,&offs,&ds_map_addr,&ds_map_size);
   if(ret < 0)
@@ -67,13 +58,13 @@ void test_fn1(void * data)
 	 ds.id,ds.manager.id.task,ds.manager.id.lthread,offs,
 	 ds_map_addr,ds_map_addr + ds_map_size);
 
-  ret = l4rm_attach(&ds,L4_PAGESIZE,0,L4DM_RO,(void **)&addr);
+  ret = l4rm_attach(&ds,L4_PAGESIZE,0,L4DM_RO,&addr);
   if (ret < 0)
     {
       printf("l4rm_attach failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
-  printf("  attached to addr 0x%08x\n",addr);
+  printf("  attached to addr 0x%08x\n",(unsigned)addr);
 }
 
 /*****************************************************************************/
@@ -92,7 +83,7 @@ void test_fn(void * data)
   l4thread_sleep(100);
   id1 = l4thread_data_get(id,data_key);
 
-  LOGI("id = %d, id1 = %d\n",id,*id1);
+  LOGL("id = %d, id1 = %d",id,*id1);
 
   l4thread_exit();
   l4thread_sleep(10000);

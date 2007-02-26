@@ -1,3 +1,15 @@
+/*!
+ * \file	pci.c
+ * \brief	Handling of PCI devices
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <stdio.h>
 #include <l4/env/errno.h>
 
@@ -8,17 +20,17 @@
 
 struct pci_driver
 {
-  struct pci_device_id *dev;
+  const struct pci_device_id *dev;
   int (*probe)(unsigned int bus, unsigned int devfn,
-	       struct pci_device_id *dev, con_accel_t *accel);
+	       const struct pci_device_id *dev, con_accel_t *accel);
 };
 
 static struct pci_driver pci_drv[MAX_DRIVERS];
 
 void
-pci_register(struct pci_device_id *tbl, 
+pci_register(const struct pci_device_id *tbl, 
 	     int(*probe)(unsigned int bus, unsigned int devfn,
-			 struct pci_device_id *dev, con_accel_t *accel))
+			 const struct pci_device_id *dev, con_accel_t *accel))
 {
   struct pci_driver *drv;
 
@@ -55,7 +67,7 @@ pci_probe(con_accel_t *accel)
 	  for (devfn = 0; devfn < 0xff; ++devfn)
 	    {
 	      struct pci_driver *drv;
-	      struct pci_device_id *dev;
+	      const struct pci_device_id *dev;
 
 	      if (PCI_FUNC (devfn) == 0)
 		pcibios_read_config_byte (bus, devfn, PCI_HEADER_TYPE, &hdr_type);
@@ -83,7 +95,8 @@ pci_probe(con_accel_t *accel)
 	      if (class != PCI_BASE_CLASS_DISPLAY)
 		continue;
 
-	      pcibios_read_config_word (bus, devfn, PCI_SUBSYSTEM_VENDOR_ID, &svid);
+	      pcibios_read_config_word (bus, devfn, PCI_SUBSYSTEM_VENDOR_ID, 
+					&svid);
 	      pcibios_read_config_word (bus, devfn, PCI_SUBSYSTEM_ID, &sid);
 
 	      for (drv = pci_drv; drv->dev; drv++)
@@ -115,11 +128,12 @@ pci_probe(con_accel_t *accel)
       for (;;)
 	{
 	  struct pci_driver *drv;
-	  struct pci_device_id *dev;
+	  const struct pci_device_id *dev;
 
 	  /* only scan for graphics cards */
 	  ret = l4io_pci_find_class(PCI_CLASS_DISPLAY_VGA<<8, start, &new);
-	  if (ret) return ret;
+	  if (ret)
+	    return ret;
 
 	  for (drv = pci_drv; drv->dev; drv++)
 	    {
@@ -131,11 +145,13 @@ pci_probe(con_accel_t *accel)
 		    if (dev->device != new.device)
 		      continue;
 		  if (dev->svid != 0)
-		    if ((dev->svid != new.sub_vendor) || (dev->sid != new.sub_device))
+		    if ((dev->svid != new.sub_vendor) || 
+			(dev->sid != new.sub_device))
 		      continue;
 
 		  /* found appropriate driver ... */
-		  if ((ret = drv->probe(new.handle>>8, new.handle&0xff, dev, accel)) != 0)
+		  if ((ret = drv->probe(new.handle>>8, 
+					new.handle&0xff, dev, accel)) != 0)
 		    /* ... YES */
 		    continue;
 

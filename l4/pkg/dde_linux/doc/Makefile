@@ -1,6 +1,6 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = dde_linux
+SRC_DOX_REF = dde_linux.cfg
 
 include $(L4DIR)/mk/doc.mk

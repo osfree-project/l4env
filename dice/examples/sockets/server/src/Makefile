@@ -5,7 +5,7 @@ TARGET		= $(PKGNAME)-server
 # comment the followin two rulesif building for L4
 MODE		= host
 SYSTEMS		= x86
-DEFINES		= -DSOCKETAPI
+L4API		= linux
 # and uncomment these
 #DEFAULT_RELOC	= 0x00980000
 

@@ -1,5 +1,5 @@
 
-Welcome to Fiasco 1.0!
+Welcome to Fiasco 1.1!
 ----------------------
 
 Fiasco is a new microkernel intended to be compatible with the L4 microkernel
@@ -12,56 +12,65 @@ and time-sharing applications concurrently on one computer. However, Fiasco
 is not only suitable for big and complex systems, but also for small,
 embedded applications.
 
-Fiasco is freely redistributable under the GPL (see l4/kernel/fiasco/COPYING).
-For different licensing schemes please contact us at:
-  fiasco-core@os.inf.tu-dresden.de
-
-For more details, see our webpage at: http://os.inf.tu-dresden.de/fiasco/
-
-
-Currently Fiasco supports the following architectures:
-
-  - Intel and AMD IA-32 CPUs, i486 and above
-  - A Linux usermode emulation of Fiasco/L4 (Fiasco-UX)
-
-The following L4 ABIs are supported:
-
-  - L4/v2 (version 2 of the L4 ABI)
-  - L4/x0 (experimental version x0 of the L4 ABI)
-
-
-Additional features like I/O-Flexpages and Small Address Spaces are also
-implemented.
-
-This distribution contains the Fiasco 1.0 microkernel, plus recent versions
+This distribution contains the Fiasco 1.1 microkernel, plus recent versions
 of the following L4 software packages:
 
 sigma0   - The L4 root pager
 rmgr     - The L4 resource manager
 hello    - A simple L4 application
 
-For your convenience we also provide binaries from these packages for both
-the X0 and V2 ABIs in the fiasco-1.0/l4/bin/ subdirectories.
+For your convenience we also provide precompiled binaries from these packages
+for all supported architectures and ABIs in the l4/bin/ subdirectories.
 
-Building Fiasco
----------------
+Licensing
+---------
 
-To compile Fiasco you need gcc 2.95 or gcc 3.2, GNU binutils 2.12 or later,
+Fiasco is freely redistributable under the GPL (see l4/kernel/fiasco/COPYING).
+For different licensing schemes please contact us at:
+  fiasco-core@os.inf.tu-dresden.de
+
+For more details, see our webpage at: http://os.inf.tu-dresden.de/fiasco/
+
+Supported architectures and ABIs
+--------------------------------
+
+  * IA32 (Intel, AMD and compatible CPUs, i486 and above)
+  * ARM  (ARM SA1110 CPU)
+  * UX   (Linux usermode emulation of Fiasco/L4)
+
+  The following L4 ABIs are supported:
+
+  * L4/v2 (stable version 2)
+  * L4/x0 (experimental version 0)
+
+A list of changes since the last release can be found in the CHANGES file.
+
+Building the Fiasco kernel
+--------------------------
+
+To compile Fiasco you need gcc 2.95, 3.2 or 3.3, GNU binutils 2.12 or later,
 GNU make and Perl version 5.6 or later. For the configuration tool you also
-need python version 2.
+need Python version 2.
 
-Change to the directory fiasco-1.0/l4/kernel/fiasco/build and simply type
-"make" without the quotes. This will build a standard IA-32 kernel. For other
-configurations use "make menuconfig" to run the configuration tool.
+Change to the directory fiasco-1.1/l4/kernel/fiasco/ and optionally modify
+the default configuration using "make menuconfig". Then compile the kernel
+by typing "make".
+
+The kernel image can then be found in fiasco-1.1/l4/kernel/fiasco/build/.
 
 For further information refer to: http://os.inf.tu-dresden.de/fiasco/use.html
 
-Building custom L4 binaries
----------------------------
+Building L4 userland binaries
+-----------------------------
 
-If you intend to build your own L4 binaries, you will also need the OSKIT
-tarball shipped with this version and flex and byacc. First build the OSKIT,
-then build the L4 packages in fiasco-1.0/l4/pkg/ by typing "make".
+If you intend to build your own L4 binaries, you must also unpack the OSKIT
+tarball shipped with this version, and you will need flex and byacc. 
+
+Change to the directory fiasco-1.1/l4/ and run "make config" to configure
+your settings. Then build the userland packages by typing "make". This will
+first compile the OSKIT libraries and then the L4 programs.
+
+The userland binaries can then be found in fiasco-1.1/l4/bin/ subdirectories.
 
 Mailing List
 ------------

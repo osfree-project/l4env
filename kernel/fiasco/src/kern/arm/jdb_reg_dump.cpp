@@ -3,7 +3,12 @@ IMPLEMENTATION:
 #include <cstdio>
 #include "jdb.h"
 
-
+/**
+ * @brief 'Reg-Dump' module.
+ * 
+ * This module handles the 'r' command that
+ * dumps the register contents at kernel entry.
+ */
 class J_reg_dump : public Jdb_module
 {
 public:

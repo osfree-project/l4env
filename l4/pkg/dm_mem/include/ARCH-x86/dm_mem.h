@@ -7,23 +7,14 @@
  *
  * \date    11/23/2001
  * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _DM_MEM_DM_MEM_H
 #define _DM_MEM_DM_MEM_H
 
@@ -196,7 +187,7 @@ l4dm_mem_ds_phys_addr(l4dm_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 int
-l4dm_mem_phys_addr(void * ptr, 
+l4dm_mem_phys_addr(const void * ptr, 
 		   l4_size_t size, 
 		   l4dm_mem_addr_t addrs[], 
 		   int num, 

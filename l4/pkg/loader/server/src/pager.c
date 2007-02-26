@@ -1,18 +1,23 @@
 /* $Id$ */
 /**
  * \file	loader/server/src/pager.c
+ * \brief	Application pager. Should be moved to an own L4 server.
  *
  * \date	10/06/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Application pager. Should be moved to an own L4 server. */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include "pager.h"
 #include "dm-if.h"
 #include "app.h"
+#include "emulate.h"
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
@@ -25,11 +30,10 @@
 #include <l4/loader/loader-client.h>
 #include <l4/dm_phys/dm_phys.h>
 
-#ifdef DEBUG_PAGER_PF
-#define debug_pf(x)	x
-#else
-#define debug_pf(x)
-#endif
+#define dbg_pf(x...)		//app_msg(app, x)
+#define dbg_io_pf(x...)		//app_msg(app, x)
+#define dbg_emu_pf(x...)	//app_msg(app, x)
+#define dbg_incoming(x...)	//printf(x)
 
 l4_threadid_t app_pager_id = L4_INVALID_ID; 	/**< pager thread */
 
@@ -41,11 +45,10 @@ static l4_addr_t dummy_map_addr    = 0;		/**< address of dummy page */
 
 /** Return <>0 if address lays inside an application area.
  *
- * \param tid		id of thread the page fault occured in
  * \param addr		address of the page fault occured where
  * \retval app_area	pointer to area the address is situated in */
-static int
-pf_in_app(l4_threadid_t tid, l4_addr_t addr, app_t *app, app_area_t **app_area)
+static int inline
+pf_in_app(l4_addr_t addr, app_t *app, app_area_t **app_area)
 {
   int i;
   app_area_t *aa;
@@ -62,6 +65,19 @@ pf_in_app(l4_threadid_t tid, l4_addr_t addr, app_t *app, app_area_t **app_area)
 	}
     }
   
+  return 0;
+}
+
+/** translate app address into here address */
+l4_addr_t
+addr_app_to_here(app_t *app, l4_addr_t addr)
+{
+  app_area_t *aa;
+
+  if (pf_in_app(addr, app, &aa))
+    return aa->beg.here + addr - aa->beg.app;
+
+  /* not found */
   return 0;
 }
 
@@ -115,7 +131,7 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw0, l4_umword_t *dw1,
   for (;;)
     {
       /* we could get l4_thread_ex_regs'd ... */
-      error = l4_i386_ipc_call(rmgr_pager_id,
+      error = l4_ipc_call(rmgr_pager_id,
 			       L4_IPC_SHORT_MSG, *dw0 | rw, 0,
 			       L4_IPC_MAPMSG(map_addr, log2_size), 
 			         &dummy, &dummy,
@@ -128,7 +144,7 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw0, l4_umword_t *dw1,
     {
       if (*dw0 >= 0x40000000)
 	{
-	  app_msg(app, "RMGR denied mapping of adapter page at %08x eip %08x\n",
+	  app_msg(app, "RMGR denied mapping of adapter page at %08x eip %08x",
 	          *dw0, *dw1);
 	  enter_kdebug("app_pager");
 	}
@@ -149,7 +165,7 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw0, l4_umword_t *dw1,
   *reply = L4_IPC_SHORT_FPAGE;
 }
 
-/** Forward a pagefault to dataspace
+/** Forward a pagefault to dataspace manager
  *
  * \param app		application descriptor
  * \param dw0		pagefault address
@@ -170,7 +186,6 @@ forward_pf_ds(app_t *app, app_area_t *aa,
 
   do
     {
-#if 1 // 4MB support on Fiasco was broken
       /* first test if we can send a 4MB page */
       pfa       = *dw0 & L4_SUPERPAGEMASK;
       
@@ -189,7 +204,7 @@ forward_pf_ds(app_t *app, app_area_t *aa,
 					     L4_LOG2_SUPERPAGESIZE,
 					     &ok)))
 	    {
-	      app_msg(app, "Error %d doing memphys_pagesize\n", error);
+	      app_msg(app, "Error %d doing memphys_pagesize", error);
 	      return;
 	    }
 
@@ -197,7 +212,6 @@ forward_pf_ds(app_t *app, app_area_t *aa,
 	    /* well, map as 4MB page */
 	    break;
 	}
-#endif
 
       /* 4MB test failed, send as 4K page */
       pfa       = *dw0 & L4_PAGEMASK;
@@ -223,14 +237,14 @@ forward_pf_ds(app_t *app, app_area_t *aa,
     }
   else if (*dw0 & 2)
     {
-      app_msg(app, "R/W pagefault at %08x in R/O dataspace\n", *dw0 & ~3);
+      app_msg(app, "R/W pagefault at %08x in R/O dataspace", *dw0 & ~3);
       enter_kdebug("app_pager");
     }
 
   if ((error = l4dm_map_pages(&aa->ds, offset, size, map_addr, log2_size, 0,
 			      flags, &fpage_addr, &fpage_size)))
     {
-      app_msg(app, "Error %d mapping page of dataspace\n", error);
+      app_msg(app, "Error %d mapping page of dataspace", error);
       return;
     }
   
@@ -241,7 +255,7 @@ forward_pf_ds(app_t *app, app_area_t *aa,
   *reply = L4_IPC_SHORT_FPAGE;
 }
 
-/** Map kernel info page */
+/** Map kernel info page from rmgr */
 static int
 map_kernel_info_page(void)
 {
@@ -257,7 +271,7 @@ map_kernel_info_page(void)
       return error;
     }
   
-  error = l4_i386_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, 1, 1,
+  error = l4_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, 1, 1,
                            L4_IPC_MAPMSG((l4_umword_t)ki_map_addr,
                                          L4_LOG2_PAGESIZE),
                            &fpage.snd_base, &fpage.fpage.fpage,
@@ -272,7 +286,16 @@ map_kernel_info_page(void)
   return 0;
 }
 
-/** Map dummy page */
+int
+is_fiasco(void)
+{
+  return (ki_map_addr != 0) && 
+	 (((l4_uint32_t*)ki_map_addr)[1] == 0x01004444);
+}
+
+/** Map dummy page. To deny direkt VGA access the dummy page is mapped in
+ * place of the whole video memory (9F000-BF000) to make the application
+ * happy. (see app_t flag APP_NOVGA) */
 static int
 map_dummy_page(void)
 {
@@ -290,7 +313,6 @@ map_dummy_page(void)
 
   return 0;
 }
-
 
 extern void my_pc_reset(void);
 
@@ -322,13 +344,17 @@ app_pager_thread(void *data)
       enter_kdebug("app_pager");
     }
 
+#ifdef EMULATE_MMIO
+  init_mmio_emu();
+#endif
+
   /* shake hands with creator */
   l4thread_started(NULL);
 
   for (;;)
     {
       /* wait for a page fault */
-      int error = l4_i386_ipc_wait(&src_tid,
+      int error = l4_ipc_wait(&src_tid,
 				   L4_IPC_SHORT_MSG, &dw1, &dw2,
 				   L4_IPC_NEVER, &result);
       while (!error)
@@ -337,10 +363,10 @@ app_pager_thread(void *data)
 	  app_t *app;
 	  app_area_t *aa;
 
-#ifdef DEBUG_PAGER
-	  printf("pf: %x.%x pfa=%08x eip=%08x\n",
-	      src_tid.id.task, src_tid.id.lthread, dw1, dw2);
-#endif
+	  if (dw1 >= 0x40000000)
+	    dbg_incoming("pf: %x.%x pfa(dw1)=%08x eip(dw2)=%08x\n",
+			  src_tid.id.task, src_tid.id.lthread, dw1, dw2);
+
 	  reply = L4_IPC_SHORT_MSG;
 	  
 	  /* page fault belonging to one of our tasks? */
@@ -349,39 +375,53 @@ app_pager_thread(void *data)
 	      rw    = dw1 & 2;
 	      reply = L4_IPC_SHORT_FPAGE;
 	     
-	      if ((dw1 == 0xfffffffc)
-		  && !(app->flags & APP_NOSIGMA0))
-
+	      if ((dw1 == 0xfffffffc) && !(app->flags & APP_NOSIGMA0))
 		{
 		  /* XXX sigma0 protocol: free page requested. We should
 		   * deliver a page of an dataspace pool here. */
 		  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
-		  app_msg(app, "GOT 0xfffffffc REQUEST, RMGR SENT %08x %08x\n",
+		  app_msg(app, "GOT 0xfffffffc REQUEST, RMGR SENT %08x %08x",
 		      dw1, dw2);
 		}
-	      else if ((dw1 >= 0x40000000)
-		       && !(app->flags & APP_NOSIGMA0))
+	      else if ((dw1 >= 0x40000000) && !(app->flags & APP_NOSIGMA0))
 		{
-		  /* sigma0 protocol: adapter space requested. */
-    		  debug_pf(printf("PF (%c) %08x in adapter space. "
-				  "Forwarding to RMGR.\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
-	      
-		  /* forward pf in adapter space to RMGR */
-		  forward_pf_rmgr(app, &dw1, &dw2, &reply, 
-				  L4_LOG2_SUPERPAGESIZE);
+#ifdef EMULATE_MMIO
+		  if (dw1 & 1)
+		    {
+		      dbg_emu_pf("Emulate mmio dw1=%08x dw2=%08x", dw1, dw2);
+		      /* emulate adapter space page */
+		      /* dw1 = emu_addr_t, dw2 = value */
+		      handle_mmio_emu(app, (emu_addr_t){ .raw=dw1 }, dw2,
+					    &dw1, &dw2, &reply);
+		    }
+		  else
+#endif
+		    {
+		      /* sigma0 protocol: adapter space requested. */
+		      dbg_io_pf("PF (%c) %08x in adapter space. "
+				"Forwarding to RMGR.",
+				dw1 & 2 ? 'w' : 'r', dw1 & ~3);
+	     
+		      /* forward pf in adapter space to RMGR */
+		      forward_pf_rmgr(app, &dw1, &dw2, &reply, 
+					   L4_LOG2_SUPERPAGESIZE);
+#ifdef EMULATE_MMIO
+		      /* check if page is under emulation. If yes,
+		       * we must not map the page writeable */
+		      check_mmio_emu(app, dw1, (l4_fpage_struct_t*)&dw2, reply);
+#endif
+		    }
 		}
-	      else if (pf_in_app(src_tid, dw1, app, &aa))
+	      else if (pf_in_app(dw1, app, &aa))
 		{
 		  /* consider section attributes (ro or rw) */
-
 		  if (aa->flags & APP_AREA_PAGE)
 		    {
 		      /* forward pagefault to dataspace manager */
-		      debug_pf(printf("PF (%c) %08x in app area %08x-%08x. "
-				      "Forwarding to ds.\n",
-				      dw1 & 2 ? 'w' : 'r', dw1 & ~3, 
-				      aa->beg.app, aa->beg.app+aa->size));
+		      dbg_pf("PF (%c) %08x in app area %08x-%08x. "
+			     "Forwarding to ds.",
+			     dw1 & 2 ? 'w' : 'r', dw1 & ~3, 
+			     aa->beg.app, aa->beg.app+aa->size);
 		      
 		      forward_pf_ds(app, aa, &dw1, &dw2, &reply);
 		    }
@@ -390,11 +430,11 @@ app_pager_thread(void *data)
 		      /* Handle pagefault ourself since we own the dataspace. */
 		      send_addr = aa->beg.here+(dw1 & L4_PAGEMASK)-aa->beg.app;
 		      
-		      debug_pf(printf("PF (%c) %08x in app area %08x-%08x. "
-				      "Sending %08x.\n",
-				      dw1 & 2 ? 'w' : 'r', dw1 & ~3, 
-				      aa->beg.app, aa->beg.app+aa->size, 
-				      send_addr));
+		      dbg_pf("PF (%c) %08x in app area %08x-%08x. "
+			     "Sending %08x.",
+	       		     dw1 & 2 ? 'w' : 'r', dw1 & ~3, 
+			     aa->beg.app, aa->beg.app+aa->size, 
+			     send_addr);
 
 		      /* We can simply touch the target address here because
 		       * our region mapper will abort with error if the page
@@ -418,8 +458,8 @@ app_pager_thread(void *data)
 	      else if (dw1 == 1 && (dw2 & 0xff) == 1)
 		{
 		  /* sigma0 protocol: KI page requested */
-		  debug_pf(printf("PF (%c) %08x in KI page. Sending KI page.\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		  dbg_pf("PF (%c) %08x in KI page. Sending KI page.",
+			  dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 	      
 		  /* pf in KI page -> request read-only from rmgr */
 		  dw1 = 0;
@@ -431,9 +471,10 @@ app_pager_thread(void *data)
 		  /* graphics memory requested */
 		  if (app->flags & APP_NOVGA)
 		    {
-		      debug_pf(printf("PF (%c) %08x in video memory. "
-				      "Sending dummy page.\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		      /* deny direct access */
+		      dbg_pf("PF (%c) %08x in video memory. "
+			     "Sending dummy page.",
+		   	     dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 		      
 		      dw1 &= L4_PAGEMASK;
 		      dw2 = l4_fpage(dummy_map_addr, L4_LOG2_PAGESIZE,
@@ -441,9 +482,9 @@ app_pager_thread(void *data)
 		    }
 		  else
 		    {
-		      debug_pf(printf("PF (%c) %08x in video memory. "
-				      "Forwarding to RMGR.\n",
-				      dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		      dbg_pf("PF (%c) %08x in video memory. "
+			     "Forwarding to RMGR.",
+	       		     dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 		      forward_pf_rmgr(app, &dw1, &dw2, &reply, 
 				      L4_LOG2_PAGESIZE);
 		    }
@@ -451,24 +492,24 @@ app_pager_thread(void *data)
 	      else if (dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF)
 		{
 		  /* BIOS requested */
-		  debug_pf(printf("PF (%c) %08x in BIOS area. "
-				  "Forwarding to RMGR.\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		  dbg_pf("PF (%c) %08x in BIOS area. "
+			 "Forwarding to RMGR.",
+	       		 dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 		  
 		  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
 		}
 	      else if (dw1 == 0x3ffff000)
 		{
-		  sm_exc_t exc;
+		  CORBA_Environment env = dice_default_environment;
 	      
 		  /* XXX Special hook: L4Linux wants to reboot. */
-		  debug_pf(printf("PF (%c) %08x. Reboot request. "
-				  "Killing task\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		  dbg_pf("PF (%c) %08x. Reboot request. "
+			 "Killing task",
+	       		 dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 
 		  if ((error =
-			l4loader_app_kill(app->env->loader_id,
-					  src_tid.id.task, 0, &exc)))
+			l4loader_app_kill_call(&(app->env->loader_id),
+					  src_tid.id.task, 0, &env)))
 		    {
 		      app_msg(app, "Error %d (%s) killing task %x",
 				   error, l4env_errstr(error), src_tid.id.task);
@@ -488,8 +529,8 @@ app_pager_thread(void *data)
 	      else
 		{
 		  /* unknown pagefault */
-		  debug_pf(printf("PF (%c) %08x. Can't handle.\n",
-				  dw1 & 2 ? 'w' : 'r', dw1 & ~3));
+		  dbg_pf("PF (%c) %08x. Can't handle.",
+			  dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 
 		  /* check for double page faults */
 		  if (dw1 == app->last_pf && dw2 == app->last_pf_eip)
@@ -515,7 +556,7 @@ app_pager_thread(void *data)
 	    break;
 	  else
 	    {
-	      error = l4_i386_ipc_reply_and_wait(
+	      error = l4_ipc_reply_and_wait(
 		  			src_tid, reply, dw1, dw2,
 					&src_tid, L4_IPC_SHORT_MSG, &dw1, &dw2,
 					L4_IPC_TIMEOUT(0,1,0,0,0,0),

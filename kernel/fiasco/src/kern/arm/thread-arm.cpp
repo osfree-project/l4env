@@ -4,7 +4,10 @@ IMPLEMENTATION[arm]:
 #include <cstdio>
 
 #include "globals.h"
+#include "sa_1100.h"
+#include "timer.h"
 #include "thread_state.h"
+#include "types.h"
 #include "vmem_alloc.h"
 
 
@@ -62,6 +65,7 @@ Thread::initialize(Address ip, Address sp,
   if (ip != 0xffffffff)
     {
       r->pc( ip );
+      r->psr = 0x010;
       if (! (state() & Thread_dead))
 	{
 #if 0
@@ -89,22 +93,33 @@ Thread::initialize(Address ip, Address sp,
 PROTECTED static 
 void Thread::user_invoke() 
 {
-//   while (! (current()->state() & Thread_running))
-//     current()->schedule();
-  assert (current()->state() & Thread_running);
-  printf("user_invoke of %p @ %08x\n",current(),nonull_static_cast<Return_frame*>(current()->regs())->pc );
+  //  printf("Thread: %p [state=%08x, space=%p]\n", current(), current()->state(), current_space() );
 
+  assert (current()->state() & Thread_running);
+#if 0
+  printf("user_invoke of %p @ %08x sp=%08x\n",
+	 current(),current()->regs()->pc(),
+	 current()->regs()->sp() );
+  //current()->regs()->sp(0x30000);
+#endif
+
+#if 1
   asm volatile
-    ("  mov sp, %[stack_p] \n"    // set stack pointer to regs structure
+    ("  mov sp, %[stack_p]    \n"    // set stack pointer to regs structure
+     "  mov r1, sp            \n"
      // TODO clean out user regs
-     "  ldr lr, [sp], #4   \n"
-     "  msr spsr, lr       \n"
-     "  ldmia sp!, {pc}^   \n"
+     "  ldr lr, [r1], #4      \n"
+     "  msr spsr, lr          \n"
+     "  ldmia r1, {sp}^       \n"
+     "  ldmia r1, {r0}        \n"
+     "  add sp,sp, #20        \n"
+     "  ldr lr, [sp, #-4]     \n"
+     "  movs pc, lr           \n"
      :  
      : 
      [stack_p] "r" (nonull_static_cast<Return_frame*>(current()->regs()))
      );
-
+#endif
   puts("should never be reached");
   while(1) {
     current()->state_del(Thread_running);
@@ -124,14 +139,20 @@ void Thread::user_invoke()
 IMPLEMENT
 Thread::Thread(Space* space,
 	       L4_uid id,
-	       int init_prio, unsigned short mcp)
-  : Receiver (&_thread_lock, space), 
-    Sender (id, 0)           // select optimized version of constructor
+	       unsigned short init_prio, unsigned short mcp)
+  : Receiver (&_thread_lock, space, init_prio, mcp, Config::default_time_slice), 
+    Sender         (id),	// select optimized version of constructor
+    _preemption    (id),
+    _sched_timeout (this)
 {
+
   // set a magic value -- we use it later to verify the stack hasn't
   // been overrun
   _magic = magic;
-
+  _space = space;
+  _irq = 0;
+  _recover_jmpbuf = 0;
+  _timeout = 0;
   Lock_guard <Thread_lock> guard (thread_lock());
 
   if (state() != Thread_invalid)
@@ -140,25 +161,14 @@ Thread::Thread(Space* space,
 
   *reinterpret_cast<void(**)()> (--kernel_sp) = user_invoke;
 
-  _space = space;
-  _irq = 0;
-  _recover_jmpbuf = 0;
-  _timeout = 0;
-
-  sched()->set_prio (init_prio);
-  sched()->set_mcp (mcp);
-  sched()->set_timeslice (Config::default_time_slice);
-  sched()->set_ticks_left (Config::default_time_slice);
-  sched()->reset_cputime ();
-  
   // clear out user regs that can be returned from the thread_ex_regs
   // system call to prevent covert channel
   Entry_frame *r = regs();
   r->sp(0);
   r->pc(0);
 
-#warning _space->kmem_update(reinterpret_cast<Address>(this)); unimplemented
- // make sure the thread's kernel stack is mapped in its address space
+  _space->kmem_update(this);
+  // make sure the thread's kernel stack is mapped in its address space
   //  _space->kmem_update(reinterpret_cast<Address>(this));
   
   _pager = _preempter = _ext_preempter = nil_thread;
@@ -184,292 +194,123 @@ Thread::Thread(Space* space,
   // ok, we're ready to go!
 }
 
-
-/** 
- * The global page fault handler switch.
- * Handles page-fault monitoring, classification of page faults based on
- * virtual-memory area they occured in, page-directory updates for kernel
- * faults, IPC-window updates, and invocation of paging function for
- * user-space page faults (handle_page_fault_pager).
- * @param pfa page-fault virtual address
- * @param error_code CPU error code
- * @return true if page fault could be resolved, false otherwise
- * @exception longjmp longjumps to recovery location if page-fault
- *                    handling fails (i.e., return value would be false),
- *                    but recovery location has been installed           
- */
-PUBLIC /*inline NEEDS ["config.h", "kdb_ke.h", "kmem.h", "vmem_alloc.h"]*/
-bool Thread::handle_page_fault (Address pfa,
-				Mword error_code,
-				Mword eip)
+IMPLEMENT inline NEEDS["space.h", <cstdio>, "types.h" ,"config.h"]
+bool Thread::handle_sigma0_page_fault( Address pfa )
 {
-  /* Only by reading the instruction and checking for the L-bit (20)
-     we can find out whether we had a read or a write pagefault.  
-     Inside the kernel we'll never have instruction fetch faults. */
-  Mword read_fault = *((Mword*)eip) & (1 << 20);
-
-  printf("Pagefault: @%08x, (%08x), ip=%08x\n", pfa, error_code,eip);
-  if (Config::monitor_page_faults)
+  if(pfa<0xc0000000 && pfa>=0xe0000000)
     {
-      if (_last_pf_address == pfa && _last_pf_error_code == error_code)
-        {
-	  printf("P[%x,%x,%x]\n", pfa, error_code & 0xffff, eip);
-          kdb_ke("PF happened twice");
-        }
-
-      _last_pf_address = pfa;
-      _last_pf_error_code = error_code;
-
-      // (See also corresponding code in Thread::handle_ipc_page_fault()
-      //                          and in Thread::handle_slow_trap.)
+      printf("BAD Sigma0 access @%08x\n",pfa);
+      return false;
     }
-
-  L4_msgdope ipc_code(0);
-
-  // Check for page fault in user memory area
-  if (EXPECT_TRUE (Kmem::mem_user_max > pfa))
+#if 0
+  if(pfa>=0x80000000) 
+    { // adapter area
+      printf("MAP adapter area: %08x\n",pfa & Config::SUPERPAGE_MASK);
+      return (space()->v_insert((pfa & Config::SUPERPAGE_MASK),
+				(pfa & Config::SUPERPAGE_MASK),
+				Config::SUPERPAGE_SIZE, 
+				Space::Page_writable    
+				| Space::Page_user_accessible
+				| Space::Page_noncacheable)
+	      != Space::Insert_err_nomem);
+    } 
+  else
+#endif
     {
-      // Make sure that we do not handle page faults that do
-      // belong to this thread.
-      assert (space() == current_space());
-
-      if (EXPECT_FALSE (space_index() == Config::sigma0_taskno))
-        {
-          // special case: sigma0 can map in anything from the kernel
-
-          if (space()->v_insert((pfa & Config::SUPERPAGE_MASK),
+      return (space()->v_insert((pfa & Config::SUPERPAGE_MASK),
 				(pfa & Config::SUPERPAGE_MASK),
 				Config::SUPERPAGE_SIZE, 
 				Space::Page_writable    
 				| Space::Page_user_accessible)
-	      != Space::Insert_err_nomem)
-            return true;
-
-          ipc_code.error (L4_msgdope::REMAPFAILED);
-          goto error;
-        }
-
-      // user mode page fault -- send pager request
-      if (!(ipc_code = handle_page_fault_pager(pfa, error_code)).has_error())
-        return true;
-
-      goto error;
+	      != Space::Insert_err_nomem);
     }
-#warning HAVE TO Check for page fault in kernel memory region caused by user mode
-#if 0
-  else if (EXPECT_FALSE ((error_code & PF_ERR_USERMODE)))
-    return false;             // disallow access after mem_user_max
-
-  // We're in kernel code faulting on a kernel memory region
-
-  // Check for page fault in IPC window. Mappings for this should never
-  // be present in the global master page dir (case below), because the
-  // IPC window mappings are always flushed on context switch.
-  else if (EXPECT_TRUE (Kmem::ipcw_fault_addr (pfa, error_code)))
-    {
-      if (!(ipc_code = handle_ipc_page_fault(pfa)).has_error())
-        return true;
-
-      goto error;
-    }
-
-  // A page is not present but a mapping exists in the global page dir.
-  // Update our page directory by copying from the master pdir
-  // This is the only path that should be executed with interrupts
-  // disabled if the page faulter also had interrupts disabled.   
-  // thread_page_fault() takes care of that.
-  else if ((!(error_code & PF_ERR_PRESENT)) &&
-           Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff)
-    {
-      current_space()->kmem_update(pfa);
-      return true;
-    }
-#endif
-
-  // Check for page fault in kernel's TCB area
-  else if ((pfa >=Kmem::mem_tcbs) 
-	   && (pfa <Kmem::mem_tcbs_end))
-    {
-      if ((error_code & FSR_STATUS_MASK)!=FSR_PERMISSION)   // page not present
-        {
-          // in case of read fault, just map in the shared zero page
-          // otherwise -> allocate
-	  printf("Allocate TCB: read_fault: %s\n", read_fault 
-		 ? "yes (zero map)" 
-		 : "no (alloc + zero fill)" );
- 
-          if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,
-                                      read_fault 
-				      ? Vmem_alloc::ZERO_MAP 
-				      : Vmem_alloc::ZERO_FILL)) 
-            panic("can't alloc kernel page");
-        }
-      else
-        { 
-          // protection fault
-          // this can only be because we have the zero page mapped
-          Vmem_alloc::page_free(reinterpret_cast<void*>(pfa & Config::PAGE_MASK), 0);
-          if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,  
-                                       Vmem_alloc::ZERO_FILL))
-            {
-              // error could mean: someone else was faster allocating
-              // a page there, or we just don't have any pages left; verify
-              if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
-                  == (void*)0xffffffff)
-                panic("can't alloc kernel page");
-
-              // otherwise, there's a page mapped.  continue
-            }
-        }
-#warning      current_space()->kmem_update(pfa);
-      return true;
-
-    }
-
-     
-  printf ("KERNEL: no page fault handler for 0x%x, error 0x%x, eip %08x\n",
-          pfa, error_code, eip);
-
-  // An error occurred.  Our last chance to recover is an exception
-  // handler a kernel function may have set.
- error:
-
-  if (_recover_jmpbuf)
-    longjmp (*_recover_jmpbuf, ipc_code.raw());
-
-  return false;
 }
 
 
-#if 0
-
-extern "C" Mword thread_page_fault(Mword pc, Mword psr)
-{
-  Thread *t = current_thread();
-
-  // interrupts are turned off
-  t->state_change_dirty(~Thread_cancel, 0);
-
-  // Pagefault in user mode or interrupts were enabled
-  //  if ((error_code & PF_ERR_USERMODE) || (eflags & EFLAGS_IF))
-  //    Proc::sti();
-
-  // Pagefault in kernel mode and interrupts were disabled
-  //  else {
-
-    // page fault in kernel memory region, not present, but mapping exists
-  if ((pfa >= Kmem::mem_user_max)
-        /*!(error_code & PF_ERR_PRESENT) &&*/
-        /*Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff*/) {
-
-      // We've interrupted a context in the kernel with disabled interrupts,
-      // the page fault address is in the kernel region, the error code is
-      // "not mapped" (as opposed to "access error"), and the region is
-      // actually valid (that is, mapped in Kmem's shared page directory,
-      // just not in the currently active page directory)
-      // Remain cli'd !!!
-
-    } else if (!Config::conservative &&
-               (pfa < Kmem::mem_user_max)) {
-      
-      // No error -- just enable interrupts.
-      Proc::sti();
-
-    } else {
-
-      // Error: We interrupted a cli'd kernel context touching kernel space
-      printf("PF[pfa=0x%x,pc=0x%x] ", pfa, pc);
-
-      kdb_ke ("page fault in cli mode");
-    }
-	       //}
-
-  return t->handle_page_fault (pfa, error, pc);
-
-};
-#endif
+static char *error_str[] =
+  {"Vector Exception",
+   "Alignment",
+   "Ext Abort on Linefetch",
+   "Translation",
+   "Ext Abort on non-Linefetch",
+   "Domain",
+   "Ext Abort on Translation",
+   "Permission"};
 
 extern "C" {
-  void user_pagefault() {}
 
-  void kernel_pagefault( Mword pfa, Mword error_code, Mword pc ) 
+  /**
+   * The low-level page fault handler called from entry.S.  We're invoked with
+   * interrupts turned off.  Apart from turning on interrupts in almost
+   * all cases (except for kernel page faults in TCB area), just forwards
+   * the call to Thread::handle_page_fault().
+   * @param pfa page-fault virtual address
+   * @param error_code CPU error code
+   * @return true if page fault could be resolved, false otherwise                      
+   */
+  void pagefault_entry(const Mword pfa, const Mword error_code, const Mword pc )
   {
-    puts("kernel_pagefault");
-    Thread *t = current_thread();
-    Mword read_fault = *((Mword*)pc) & (1 << 20);
-
-        // page fault in kernel memory region, not present, but mapping exists
-#if 0
-    if ((pfa >= Kmem::mem_user_max)
-	/*!(error_code & PF_ERR_PRESENT) &&*/
-	/*Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff*/) 
-      {
-      
-      // We've interrupted a context in the kernel with disabled interrupts,
-      // the page fault address is in the kernel region, the error code is
-      // "not mapped" (as opposed to "access error"), and the region is
-      // actually valid (that is, mapped in Kmem's shared page directory,
-      // just not in the currently active page directory)
-      // Remain cli'd !!!
-
-      } 
-  else 
-#endif
-    if (!Config::conservative &&
-	(pfa < Kmem::mem_user_max)) 
-      {
-	
-	// No error -- just enable interrupts.
-	Proc::sti();
-	t->handle_page_fault (pfa, error_code, pc);
-	return;
-	
-      } 
-    else if ((pfa >=Kmem::mem_tcbs) 
-	     && (pfa <Kmem::mem_tcbs_end))
-      {
-	if ((error_code & FSR_STATUS_MASK)!=FSR_PERMISSION)   // page not present
-	  {
-	    // in case of read fault, just map in the shared zero page
-	    // otherwise -> allocate
-	    printf("Allocate TCB: read_fault: %s\n", read_fault 
-		   ? "yes (zero map)" 
-		   : "no (alloc + zero fill)" );
-	    
-	    if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,
-					read_fault 
-					? Vmem_alloc::ZERO_MAP 
-					: Vmem_alloc::ZERO_FILL)) 
-	      panic("can't alloc kernel page");
-	  }
-	else
-	  { 
-	    // protection fault
-	    // this can only be because we have the zero page mapped
-	    Vmem_alloc::page_free(reinterpret_cast<void*>(pfa & Config::PAGE_MASK), 0);
-	    if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,  
-					 Vmem_alloc::ZERO_FILL))
-	      {
-		// error could mean: someone else was faster allocating
-		// a page there, or we just don't have any pages left; verify
-		if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
-		    == (void*)0xffffffff)
-		  panic("can't alloc kernel page");
-		
-		// otherwise, there's a page mapped.  continue
-	      }
-	  }
-#warning      current_space()->kmem_update(pfa);
-	
-      } 
-    else 
-      {
-	// Error: We interrupted a cli'd kernel context touching kernel space
-	printf("PF[pfa=0x%x,pc=0x%x] ", pfa, pc);
-	
-	kdb_ke ("page fault in cli mode");
-      }
-    
+    // Pagefault in user mode or interrupts were enabled
+    Proc::sti();
+    if(!current_thread()->handle_page_fault (pfa, error_code, pc)) {
+      printf("slow-trap: pfa=0x%08x, error=0x%08x (%s) , pc=0x%08x\n",
+	     pfa, error_code, error_str[(error_code & 1) | ((error_code >> 1) & 6)], pc);
+      kdb_ke("UNHANDLED SLOW TRAP");
+#warning MUST enter handle slow trap handler here
+    }
   }
-  void irq_handler() {}
+
+  void irq_handler(Unsigned32 pc) 
+  {
+    Unsigned32 irqs = Sa1100::hw_reg(Sa1100::ICIP);
+    if(irqs && (1 << 26)) {
+      Thread::handle_timer_interrupt();
+    }
+  }
 };
+
+/**
+ * Copy n Mwords from virtual user address usrc to virtual kernel address kdst.
+ * Normally this is done with GCC's memcpy. When using small address spaces,
+ * though, we us the GS segment for access to user space, so we don't mind
+ * being moved around address spaces while copying.
+ * @brief Copy between user and kernel address space
+ * @param kdst Destination address in kernel space
+ * @param usrc Source address in user space
+ * @param n Number of Mwords to copy
+ */
+IMPLEMENT inline
+template< typename T >
+void Thread::copy_from_user(T *kdst, T const *usrc, size_t n)
+{
+  assert (this == current());
+
+  // copy from user byte by byte
+  memcpy( kdst, usrc, n*sizeof(T) );
+}
+
+IMPLEMENT inline
+template < typename T >
+void Thread::poke_user( T *addr, T value)
+{
+  assert (this == current());
+
+  *addr = value;
+}
+
+IMPLEMENT inline
+template< typename T >
+T Thread::peek_user( T const *addr )
+{
+  assert (this == current());
+
+  return *addr;
+}
+
+PUBLIC
+int
+Thread::is_valid()
+{
+  return 1; /* XXX */
+}
+

@@ -94,11 +94,11 @@ send_thread(void * data)
   ret = dsi_socket_get_data_area(soc,&start_addr,&size);
   if (ret)
     {
-      Panic("get data area failed (%d)\n",ret);
+      Panic("get data area failed (%d)",ret);
       return;
     }
 
-  Msg("started\n");
+  LOGL("started");
 
   count = 0;
 
@@ -115,7 +115,7 @@ send_thread(void * data)
 #if DO_SANITY
 	  if (ret)
 	    {
-	      Panic("get packet failed (%d)\n",ret);
+	      Panic("get packet failed (%d)",ret);
 	      return;
 	    }
 #endif
@@ -129,7 +129,7 @@ send_thread(void * data)
 #if DO_SANITY
 	  if (ret)
 	    {
-	      Panic("add data failed (%d)\n",ret);
+	      Panic("add data failed (%d)",ret);
 	      return;
 	    }
 #endif
@@ -139,7 +139,7 @@ send_thread(void * data)
 #if DO_SANITY
 	  if (ret)  
 	    {
-	      Panic("set packet number failed (%d)\n",ret);
+	      Panic("set packet number failed (%d)",ret);
 	      return;
 	    }
 #endif
@@ -149,7 +149,7 @@ send_thread(void * data)
 #if DO_SANITY
 	  if (ret)
 	    {
-	      Panic("commit packet failed (%d)\n",ret);
+	      Panic("commit packet failed (%d)",ret);
 	      return;
 	    }
 #endif
@@ -165,7 +165,7 @@ send_thread(void * data)
       ret = dsi_packet_get(soc,&p);
       if (ret)
 	{
-	  Panic("get packet failed (%d)\n",ret);
+	  Panic("get packet failed (%d)",ret);
 	  return;
 	}
     }
@@ -175,8 +175,8 @@ send_thread(void * data)
   t_end = l4_rdtsc();
 
   ns_per_cycle = l4_tsc_to_ns(1000000ULL) / 1000000.0;
-  Msg("ns_per_cycle %u.%03u\n",(unsigned)ns_per_cycle,
-      (unsigned)((ns_per_cycle - (unsigned)ns_per_cycle) * 1000));
+  printf("ns_per_cycle %u.%03u\n",(unsigned)ns_per_cycle,
+         (unsigned)((ns_per_cycle - (unsigned)ns_per_cycle) * 1000));
 
   cycles = t_end - t_start;
   ns = cycles * ns_per_cycle;
@@ -184,25 +184,25 @@ send_thread(void * data)
   rate = ((double)count / (double)ms) * 1000;
 
 #if DSI_MAP
-  Msg("DSI type: map, %u byte packets\n",PACKET_SIZE);
+  printf("DSI type: map, %u byte packets\n",PACKET_SIZE);
 #elif DSI_COPY
-  Msg("DSI type: copy, %u byte packets\n",PACKET_SIZE);
+  printf("DSI type: copy, %u byte packets\n",PACKET_SIZE);
 #else
-  Msg("DSI type: standard, %u byte packets\n",PACKET_SIZE);
+  printf("DSI type: standard, %u byte packets\n",PACKET_SIZE);
 #endif
-  Msg("send done (%lu packets):\n",count);
-  Msg("t = %lums\n",ms);
-  Msg("cycles = %lu:%lu (%lu per packet)\n",
-      (unsigned long)(cycles / 0x100000000ULL),(unsigned long)cycles,
-      (unsigned long)(cycles / count));
-  Msg("rate %u.%03u packets/s\n",(unsigned)rate,
-      (unsigned)((rate - (unsigned)rate) * 1000));
+  printf("send done (%lu packets):\n",count);
+  printf("t = %lums\n",ms);
+  printf("cycles = %lu:%lu (%lu per packet)\n",
+         (unsigned long)(cycles / 0x100000000ULL),(unsigned long)cycles,
+         (unsigned long)(cycles / count));
+  printf("rate %u.%03u packets/s\n",(unsigned)rate,
+         (unsigned)((rate - (unsigned)rate) * 1000));
 
   /* signal end of stream */
   ret = dsi_socket_set_event(soc,DSI_EVENT_EOS);
   if (ret)
     {
-      Panic("signal end of stream failed (%d)\n",ret);
+      Panic("signal end of stream failed (%d)",ret);
       return;
     }
   l4thread_sleep(300000);
@@ -230,11 +230,11 @@ send_thread(void * data)
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_send_server_open(sm_request_t * request, 
-			     dsi_example_send_socket_t * s,  
-			     dsi_example_send_dataspace_t * ctrl_ds,
-			     dsi_example_send_dataspace_t * data_ds,
-			     sm_exc_t * _ev)
+dsi_example_send_open_component(CORBA_Object _dice_corba_obj,
+                                dsi_example_send_socket_t *s,
+                                dsi_example_send_dataspace_t *ctrl_ds,
+                                dsi_example_send_dataspace_t *data_ds,
+                                CORBA_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id,sync_id;
@@ -249,7 +249,7 @@ dsi_example_send_server_open(sm_request_t * request,
   ret = __allocate_ds(PACKET_SIZE * NUM_PACKETS,(l4dm_dataspace_t *)data_ds);
   if (ret < 0)
     {
-      Panic("allocation of data area failed!\n");
+      Panic("allocation of data area failed!");
       return -1;
     }
 
@@ -259,7 +259,7 @@ dsi_example_send_server_open(sm_request_t * request,
 			     L4THREAD_DEFAULT_PRIO,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
     {
-      Panic("start work thread failed\n");
+      Panic("start work thread failed");
       return -1;
     }
   work_id = l4thread_l4_id(ret);
@@ -281,7 +281,7 @@ dsi_example_send_server_open(sm_request_t * request,
                           work_id,&sync_id,flags,&soc);
   if (ret)
     {
-      Panic("create DSI socket failed\n");
+      Panic("create DSI socket failed");
       return -1;
     }
 
@@ -289,7 +289,7 @@ dsi_example_send_server_open(sm_request_t * request,
   ret = dsi_socket_get_ref(soc,(dsi_socket_ref_t *)s);
   if (ret)
     {
-      Panic("get socket ref failed\n");
+      Panic("get socket ref failed");
       return -1;
     }
 
@@ -297,12 +297,12 @@ dsi_example_send_server_open(sm_request_t * request,
   ret = dsi_socket_get_data_area(soc,&addr,&size);
   if (ret)
     {
-      Panic("get data area failed\n");
+      Panic("get data area failed");
       return -1;
     }
 
   /* share dataspaces with caller */
-  ret = dsi_socket_share_ds(soc,request->client_tid);
+  ret = dsi_socket_share_ds(soc,*_dice_corba_obj);
   if (ret < 0)
     {
       Panic("share dataspaces failed: %s (%d)!",l4env_errstr(ret),ret);
@@ -333,10 +333,10 @@ dsi_example_send_server_open(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_send_server_connect(sm_request_t * request, 
-				const dsi_example_send_socket_t * local, 
-				const dsi_example_send_socket_t * remote, 
-				sm_exc_t * _ev)
+dsi_example_send_connect_component(CORBA_Object _dice_corba_obj,
+                                   const dsi_example_send_socket_t *local,
+                                   const dsi_example_send_socket_t *remote,
+                                   CORBA_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -345,7 +345,7 @@ dsi_example_send_server_connect(sm_request_t * request,
   ret = dsi_socket_get_descriptor(local->socket,&s);
   if (ret)
     {
-      Panic("invalid socket\n");
+      Panic("invalid socket");
       return -1;
     }
 
@@ -353,7 +353,7 @@ dsi_example_send_server_connect(sm_request_t * request,
   ret = dsi_socket_connect(s,(dsi_socket_ref_t *)remote);
   if (ret)
     {
-      Panic("connect failed\n");
+      Panic("connect failed");
       return -1;
     }
 
@@ -372,9 +372,9 @@ dsi_example_send_server_connect(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_send_server_start(sm_request_t * request, 
-			      const dsi_example_send_socket_t * local, 
-			      sm_exc_t * _ev)
+dsi_example_send_start_component(CORBA_Object _dice_corba_obj,
+                                 const dsi_example_send_socket_t *local,
+                                 CORBA_Environment *_dice_corba_env)
 {
   /* start semaphore thread */
   l4semaphore_up(&sem);
@@ -395,11 +395,11 @@ dsi_example_send_server_start(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_send_server_stop(sm_request_t * request, 
-			     const dsi_example_send_socket_t * local, 
-			     sm_exc_t * _ev)
+dsi_example_send_stop_component(CORBA_Object _dice_corba_obj,
+                                const dsi_example_send_socket_t *local,
+                                CORBA_Environment *_dice_corba_env)
 {
-  Msg("stopped\n");
+  LOGL("stopped");
   
   /* done */
   return 0;
@@ -417,9 +417,9 @@ dsi_example_send_server_stop(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_send_server_close(sm_request_t * request, 
-			      const dsi_example_send_socket_t * local, 
-			      sm_exc_t * _ev)
+dsi_example_send_close_component(CORBA_Object _dice_corba_obj,
+                                 const dsi_example_send_socket_t *local,
+                                 CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dsi_socket_t * s;
@@ -427,12 +427,12 @@ dsi_example_send_server_close(sm_request_t * request,
   /* get socket descriptor */
   ret = dsi_socket_get_descriptor(local->socket,&s);
   if (ret)
-    Panic("get socket descriptor failed (%x)\n",-ret);
+    Panic("get socket descriptor failed (%x)",-ret);
 
   /* close socket */
   ret = dsi_socket_close(s);
   if (ret)
-    Panic("close socket failed (%x)\n",-ret);
+    Panic("close socket failed (%x)",-ret);
 
   /* done */
   return 0;
@@ -445,11 +445,6 @@ dsi_example_send_server_close(sm_request_t * request,
 /*****************************************************************************/ 
 int main(void)
 {
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-  int ret;
-
   /* init log lib */
   LOG_init("send");
 
@@ -462,44 +457,19 @@ int main(void)
   /* register at nameserver */
   if (!names_register(DSI_EXAMPLE_SEND_NAMES))
     {
-      Panic("failed to register sender!\n");
+      Panic("failed to register sender!");
       return -1;
     }
 
 #if 0
-  INFO("sender up.\n");
+  LOGL("sender up.");
 #endif
 
-  /* Flick server loop */
-  flick_init_request(&request, &ipc_buf);
-  while (1)
-    {
-      result = flick_server_wait(&request);
-
-      while (!L4_IPC_IS_ERROR(result))
-	{
-          /* dispatch request */
-          ret = dsi_example_send_server(&request);
-          switch(ret)
-            {
-            case DISPATCH_ACK_SEND:
-              /* reply and wait for next request */
-              result = flick_server_reply_and_wait(&request);
-              break;
-              
-            default:
-              INFO("Flick dispatch error (%d)!\n",ret);
-              
-              /* wait for next request */
-              result = flick_server_wait(&request);
-              break;
-            }
-        }
-      Msg("Flick IPC error (0x%08x)!\n",result.msgdope);
-    }
+  /* Dice server loop */
+  dsi_example_send_server_loop(NULL);
 
   /* this should never happen */
-  Panic("left send server loop...\n");
+  Panic("left send server loop...");
   return 0;
 }
   

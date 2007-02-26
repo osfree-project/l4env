@@ -9,6 +9,11 @@
  */
 /*****************************************************************************/
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /* L4/L4Env includes */
 #include <l4/slab/slab.h>
 #include <l4/dm_mem/dm_mem.h>
@@ -233,6 +238,8 @@ grow_only_heap(void)
 int
 main(void)
 {
+  LOGL("go..");
+
   // simple heap
   simple_heap();
 

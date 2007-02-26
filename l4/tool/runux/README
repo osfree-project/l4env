@@ -1,0 +1,14 @@
+
+This directory contains shell scripts (or examples) for Fiasco/UX.
+
+Users needs to have a "config.local" file for their configuration, a
+template can be found in the config.template file.
+
+The "fiasco" script is a bit special, it allows to start Fiasco/UX with
+just the binary names as arguments.
+
+
+Adam
+
+
+$Id$

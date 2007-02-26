@@ -5,16 +5,16 @@
 
 
 #line 208 "random.cpp"
-static void function60();
+static inline void function60();
 
 #line 211 "random.cpp"
-static void function61();
+static inline void function61();
 
 #line 214 "random.cpp"
-static void function62();
+static inline void function62();
 
 #line 217 "random.cpp"
-static void function63();
+static inline void function63();
 
 #line 220 "random.cpp"
 static void function64();

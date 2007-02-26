@@ -1,21 +1,36 @@
-#ifndef __L4_EXEC_SERVER_EXC_OBJ_STAB_H
-#define __L4_EXEC_SERVER_EXC_OBJ_STAB_H
+/*!
+ * \file	exc_obj_stab.h
+ * \brief	
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __EXC_OBJ_STAB_H_
+#define __EXC_OBJ_STAB_H_
+
+/** entry in stab section */
 typedef struct 
 {
-  unsigned long n_strx;         /* index into string table of name */
-  unsigned char n_type;         /* type of symbol */
-  unsigned char n_other;        /* misc info (usually empty) */
-  unsigned short n_desc;        /* description field */
-  unsigned long n_value;        /* value of symbol */
+  unsigned long n_strx;         /**< index into string table of name */
+  unsigned char n_type;         /**< type of symbol */
+  unsigned char n_other;        /**< misc info (usually empty) */
+  unsigned short n_desc;        /**< description field */
+  unsigned long n_value;        /**< value of symbol */
 } __attribute__ ((packed)) stab_entry_t;
 
+/** packet entry in lines info */
 typedef struct
 {
   unsigned long addr;
   unsigned short line;
 } __attribute__ ((packed)) stab_line_t;
 
+/** object for handling ELF stab sections */
 class exc_obj_stab_t
 {
   public:

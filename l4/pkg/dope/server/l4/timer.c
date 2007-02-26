@@ -1,10 +1,19 @@
 /*
- * \brief	DOpE timer module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE timer module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
-#include "dope-config.h"
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include "dopestd.h"
 
 #include <l4/util/rdtsc.h>
 #include <l4/util/macros.h>
@@ -26,9 +35,9 @@ static u32 get_time(void) {
   long long usecs;
   long long ns = l4_tsc_to_ns(l4_rdtsc());
 
-//	u32 usecs;
-//	u32 ns = (u32)(l4_tsc_to_ns(l4_rdtsc()) & 0xffffffff);
-		
+//  u32 usecs;
+//  u32 ns = (u32)(l4_tsc_to_ns(l4_rdtsc()) & 0xffffffff);
+
   usecs = ns / 1000;
 
 #if 0
@@ -40,9 +49,9 @@ static u32 get_time(void) {
      "S" (1000000000 / TICKS_PER_SEC)
      );
 #endif
-        
+
   return usecs & 0xffffffff;
-//	return usecs;
+//  return usecs;
 }
 
 
@@ -83,7 +92,7 @@ int init_timer(struct dope_services *d) {
 	u32 scaler;
 
 	if (!(scaler=l4_calibrate_tsc())) Panic("l4_calibrate_tsc: fucked up");
-	
+
 	d->register_module("Timer 1.0",&services);
 	return 1;
 }

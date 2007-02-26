@@ -24,6 +24,9 @@
 #include <assert.h>
 #include "types.h"
 
+typedef Address vm_offset_t;
+typedef size_t vm_size_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,9 +81,9 @@ typedef struct amm {
 
 /* amm_find attributes */
 #define AMM_FORWARD	0	/* search forward for entry */
-#define AMM_BACKWARD	1	/* search backward for entry */
+//#define AMM_BACKWARD	1	/* search backward for entry */
 #define AMM_FIRSTFIT	0	/* use first fit (default) */
-#define AMM_BESTFIT	2	/* use best fit */
+//#define AMM_BESTFIT	2	/* use best fit */
 #define AMM_EXACT_ADDR	4	/* match address exactly */
 
 #define amm_entry_start(e)	(e)->start

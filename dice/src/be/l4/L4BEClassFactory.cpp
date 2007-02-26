@@ -5,12 +5,12 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,8 +31,7 @@
 #include "be/l4/L4BESrvLoopFunction.h"
 #include "be/l4/L4BEUnmarshalFunction.h"
 #include "be/l4/L4BEWaitAnyFunction.h"
-#include "be/l4/L4BEReplyWaitFunction.h"
-#include "be/l4/L4BEReplyRcvFunction.h"
+#include "be/l4/L4BEReplyFunction.h"
 #include "be/l4/L4BESndFunction.h"
 #include "be/l4/L4BERcvFunction.h"
 #include "be/l4/L4BEWaitFunction.h"
@@ -45,8 +44,11 @@
 #include "be/l4/L4BETestFunction.h"
 #include "be/l4/L4BEReplyAnyWaitAnyFunction.h"
 #include "be/l4/L4BERcvAnyFunction.h"
+#include "be/l4/L4BEMarshalFunction.h"
 #include "be/l4/L4BETypedDeclarator.h"
 #include "be/l4/L4BEClass.h"
+#include "be/l4/L4BEIPC.h"
+#include "be/l4/L4BEDispatchFunction.h"
 
 #include "be/BEContext.h"
 
@@ -116,26 +118,6 @@ CBEWaitAnyFunction *CL4BEClassFactory::GetNewWaitAnyFunction()
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEWaitAnyFunction\n");
     return new CL4BEWaitAnyFunction();
-}
-
-/**	\brief creates a new instance of the class CBEReplyWaitFunction
- *	\return a reference to the new instance
- */
-CBEReplyWaitFunction *CL4BEClassFactory::GetNewReplyWaitFunction()
-{
-    if (m_bVerbose)
-        printf("CL4BEClassFactory: created class CL4BEReplyWaitFunction\n");
-    return new CL4BEReplyWaitFunction();
-}
-
-/**	\brief creates a new instance of the class CBEReplyRcvFunction
- *	\return a reference to the new instance
- */
-CBEReplyRcvFunction *CL4BEClassFactory::GetNewReplyRcvFunction()
-{
-    if (m_bVerbose)
-        printf("CL4BEClassFactory: created class CL4BEReplyRcvFunction\n");
-    return new CL4BEReplyRcvFunction();
 }
 
 /**	\brief creates a new instance of the class CBEHeaderFile
@@ -278,4 +260,44 @@ CBEClass * CL4BEClassFactory::GetNewClass()
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEClass\n");
     return new CL4BEClass;
+}
+
+/** \brief create new ipc class
+ *  \return a reference to the new ipc object
+ */
+CBECommunication* CL4BEClassFactory::GetNewCommunication()
+{
+    if (m_bVerbose)
+	    printf("CL4BEClassFactory: created class CL4BEIPC\n");
+    return new CL4BEIPC();
+}
+
+/** \brief creates a new reply function
+ *  \return a reference to the new instance
+ */
+CBEReplyFunction* CL4BEClassFactory::GetNewReplyFunction()
+{
+    if (m_bVerbose)
+        printf("CL4BEClassFactory: created class CL4BEReplyFunction\n");
+    return new CL4BEReplyFunction();
+}
+
+/** \brief creates a new marshal function
+ *  \return a reference to the new instance
+ */
+CBEMarshalFunction* CL4BEClassFactory::GetNewMarshalFunction()
+{
+    if (m_bVerbose)
+        printf("CL4BEClassFactory: created class CL4BEMarshalFunction\n");
+    return new CL4BEMarshalFunction();
+}
+
+/** \brief creates a new dispatch function
+ *  \return a reference to the new instance
+ */
+CBEDispatchFunction* CL4BEClassFactory::GetNewDispatchFunction()
+{
+    if (m_bVerbose)
+        printf("CL4BEClassFactory: created class CL4BEDispatchFunction\n");
+    return new CL4BEDispatchFunction();
 }

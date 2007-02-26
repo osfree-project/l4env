@@ -1,18 +1,18 @@
 INTERFACE:
 
 #include <sys/types.h>		// for pid_t
+#include "kmem.h"
 #include "linker_syms.h"
 
 EXTENSION class Space_context
 {
 public:
-  Space_context (unsigned taskno);
  ~Space_context();
   pid_t pid() const;
 
 private:
-  static const unsigned long pid_index =
-         (reinterpret_cast<unsigned long>(&_unused3_1) >> PDESHIFT) & PDEMASK;
+  static const unsigned long pid_index
+    = (Kmem::_unused4_1_addr >> PDESHIFT) & PDEMASK;
 };
 
 IMPLEMENTATION[ux]:
@@ -23,18 +23,7 @@ IMPLEMENTATION[ux]:
 #include "config.h"
 #include "cpu_lock.h"
 #include "emulation.h"
-#include "hostproc.h"
-#include "kmem.h"
 #include "lock_guard.h"
-#include "undef_oskit.h"
-
-IMPLEMENT
-Space_context::Space_context (unsigned taskno)
-{
-  memset(_dir, 0, Config::PAGE_SIZE);
-
-  _dir[pid_index] = Hostproc::create (taskno) << 8;
-}
 
 IMPLEMENT
 Space_context::~Space_context()

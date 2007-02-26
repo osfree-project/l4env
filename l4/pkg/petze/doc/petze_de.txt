@@ -1,0 +1,65 @@
+
+                    Petze - Minidokumentation
+
+                           Norman Feske
+
+Abstract
+########
+
+Petze ist ein simples Debug-Werkzeug zum Untersuchen von Programmen
+nach Memory-Leaks. Jeder #malloc()# und #free()# Aufruf wird zusammen
+mit zusätzlichen Informationen (Name der Quelldatei, Größe, Adresse)
+geloggt und kann und kann mit einem unabhängig laufenden Diagnosetool
+ausgewertet werden.
+
+Ziel
+####
+
+* Quelltext des zu untersuchenden Programmes darf nicht verändert werden
+* möglichst wenig Compiler-Magie
+
+Wie petzt Petze?
+################
+
+# Einbinden von #<stdlib.h># als Compiler-Option
+# Definition von PETZE_POOLNAME als Compiler-Option (z.B. der Name der Quelldatei)
+# Einbinden von #<petze.h>#
+  * #malloc(a)# wird mit Makro #petz_malloc(PETZE_POOLNAME,a)# überdefiniert
+  * #petz_malloc(char *,unsigned int)# wird deklariert
+# Der eigentliche Quellcode wird compiliert. Des Einbinden von #<stdlib.h>#
+  in der Quelldatei wird ignoriert da #<stdlib.h># bereits eingebunden ist.
+
+Was muß ein Anwender von Petze tun?
+###################################
+
+* für jede interessante Quelldatei im Makefile ein DEFINES_<filename> definieren. z.B.:
+  !DEFINES_buggy.c = -include stdlib.h \
+  !                  -D'PETZE_POOLNAME="buggy.c"' \
+  !                  -include petze.h
+* libpetze dazulinken
+oder einfach in das Makefile des zu untersuchenden Programmes folgende Zeile
+vor dem Einbinden des role.mk eintragen:
+!include $(L4DIR)/pkg/petze/mk/petze.mk
+In diesem Fall wird für alle Quelldateien, die in $(SRC_C) aufgeführt sind, gepetzt.
+
+Wie kommt man an die geloggten Daten?
+#####################################
+
+Der Petze-Server bietet hierfür IDL-Funktionen an. Momentan gibt es:
+
+:dump: die aktuelle Statistik würd mittels #printf()# vom Server
+  ausgegeben.
+
+:reset: alle aktuellen Statistiken werden verworfen.
+
+Mit _Olle_Petze_ gibt es einen kleinen DOpE client, der zwei Buttons zum
+Aufrufen dieser Funktionen zur Verfügung stellt. Der Client sollte natürlich
+um entsprechende Ausgabe-Funktionen und coole Analyse-Features erweitert werden.
+
+ToDo
+####
+
+* #calloc()#
+* nettes Visualisierungstool für DOpE natürlich (mit Diff-Funktion)
+* Erweiterung des IDL-Interfaces durch gezielte Abfragefunktionen
+

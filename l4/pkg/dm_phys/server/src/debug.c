@@ -6,23 +6,13 @@
  *
  * \date   11/22/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* standard includes */
 #include <stdio.h>
@@ -73,9 +63,9 @@ __ds_list_iterator(dmphys_dataspace_t * ds,
   l4_size_t * sum = data;
   l4_threadid_t ds_owner = dsmlib_get_owner(ds->desc);
 
-  Msg("%4d: size=%08x  owner=%02x.%02x  name=\"%s\"\n",
-      dmphys_ds_get_id(ds),ds->size,ds_owner.id.task,
-      ds_owner.id.lthread,dmphys_ds_get_name(ds));
+  printf("%4d: size=%08x  owner=%02x.%02x  name=\"%s\"\n",
+         dmphys_ds_get_id(ds),ds->size,ds_owner.id.task,
+         ds_owner.id.lthread,dmphys_ds_get_name(ds));
   *sum += ds->size;
 }
 
@@ -124,25 +114,25 @@ __ds_dump_iterator(dmphys_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_set_name(sm_request_t * request, 
-				l4_uint32_t ds_id, 
-				const char * name, 
-				sm_exc_t * _ev)
+if_l4dm_generic_set_name_component(CORBA_Object _dice_corba_obj,
+                                   l4_uint32_t ds_id,
+                                   const char* name,
+                                   CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
 
   /* get dataspace descriptor */
-  ret = dmphys_ds_get_check_owner(ds_id,request->client_tid,&ds);
+  ret = dmphys_ds_get_check_owner(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id %u, caller %x.%x",ds_id,
-	      request->client_tid.id.task,request->client_tid.id.lthread);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: client %x.%x does not own dataspace %u",
-	      request->client_tid.id.task,request->client_tid.id.lthread,
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,
 	      ds_id);
 #endif      
       return ret;
@@ -169,10 +159,10 @@ if_l4dm_memphys_server_set_name(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_get_name(sm_request_t * request, 
-				l4_uint32_t ds_id, 
-				char ** name, 
-				sm_exc_t * _ev)
+if_l4dm_generic_get_name_component(CORBA_Object _dice_corba_obj,
+                                   l4_uint32_t ds_id,
+                                   char* *name,
+                                   CORBA_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
   
@@ -181,7 +171,7 @@ if_l4dm_memphys_server_get_name(sm_request_t * request,
   if (ds == NULL)
     {
       ERROR("DMphys: invalid dataspace %u, caller %x.%x!",ds_id,
-	    request->client_tid.id.task,request->client_tid.id.lthread);
+	    _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       return -L4_EINVAL;
     }
 
@@ -205,9 +195,9 @@ if_l4dm_memphys_server_get_name(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_show_ds(sm_request_t * request, 
-			       l4_uint32_t ds_id, 
-			       sm_exc_t * _ev)
+if_l4dm_generic_show_ds_component(CORBA_Object _dice_corba_obj,
+                                  l4_uint32_t ds_id,
+                                  CORBA_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
   
@@ -216,7 +206,7 @@ if_l4dm_memphys_server_show_ds(sm_request_t * request,
   if (ds == NULL)
     {
       ERROR("DMphys: invalid dataspace %u, caller %x.%x!",ds_id,
-	    request->client_tid.id.task,request->client_tid.id.lthread);
+	    _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       return -L4_EINVAL;
     }
 
@@ -245,26 +235,25 @@ if_l4dm_memphys_server_show_ds(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_dump(sm_request_t * request, 
-			    const if_l4dm_threadid_t * owner, 
-			    l4_uint32_t flags, 
-			    if_l4dm_dataspace_t * dump_ds, 
-			    sm_exc_t * _ev)
+if_l4dm_generic_dump_component(CORBA_Object _dice_corba_obj,
+                               const l4_threadid_t *owner,
+                               l4_uint32_t flags,
+                               l4dm_dataspace_t *dump_ds,
+                               CORBA_Environment *_dice_corba_env)
 {
   int num,ret,printed;
   l4_size_t size;
   dmphys_dataspace_t * ds;
-  l4_threadid_t o = *(l4_threadid_t *)owner;
   dump_arg_t arg;
 
   /* calculate dataspace size */
-  num = dmphys_ds_count(o,flags);
+  num = dmphys_ds_count(*owner,flags);
   size = 80 * (num + 1);
 
   /* allocate dataspace */
-  ret = dmphys_open(request->client_tid,dmphys_get_default_pool(),
+  ret = dmphys_open(*_dice_corba_obj,dmphys_get_default_pool(),
 		    L4DM_MEMPHYS_ANY_ADDR,size,0,L4DM_CONTIGUOUS,
-		    "l4dm_ds_dump data",(l4dm_dataspace_t *)dump_ds);
+		    "l4dm_ds_dump data",dump_ds);
   if (ret < 0)
     {
       ERROR("DMphys: create dump dataspace failed: %d!",ret);
@@ -277,7 +266,7 @@ if_l4dm_memphys_server_dump(sm_request_t * request,
   arg.str_buf = (char *)AREA_MAP_ADDR(dmphys_ds_get_pages(ds));
 
   /* iterate dataspace list */
-  dmphys_ds_iterate(__ds_dump_iterator,&arg,o,flags);
+  dmphys_ds_iterate(__ds_dump_iterator,&arg,*owner,flags);
 
   if (arg.sum > 0)
     printed = 
@@ -312,27 +301,27 @@ if_l4dm_memphys_server_dump(sm_request_t * request,
  */
 /*****************************************************************************/ 
 void 
-if_l4dm_memphys_server_list(sm_request_t * request, 
-			    const if_l4dm_threadid_t * owner, 
-			    l4_uint32_t flags, 
-			    sm_exc_t * _ev)
+if_l4dm_generic_list_component(CORBA_Object _dice_corba_obj,
+                               const l4_threadid_t *owner,
+                               l4_uint32_t flags,
+                               CORBA_Environment *_dice_corba_env)
 {
   l4_size_t sum = 0;
-  l4_threadid_t o = *(l4_threadid_t *)owner;
 
-  if (l4_is_invalid_id(o))
-    Msg("DMphys dataspace list:\n");
+  if (l4_is_invalid_id(*owner))
+    printf("DMphys dataspace list:\n");
   else
-    Msg("DMphys dataspace list for client %x.%x:\n",o.id.task,o.id.lthread);
+    printf("DMphys dataspace list for client %x.%x:\n",
+           owner->id.task,owner->id.lthread);
 
   /* iterate dataspace list */
-  dmphys_ds_iterate(__ds_list_iterator,&sum,o,flags);
+  dmphys_ds_iterate(__ds_list_iterator,&sum,*owner,flags);
 
   if (sum > 0)
-    Msg("===========================================================\n"
-	"total size %08x (%dkB)\n", sum, sum/1024);
+    printf("===========================================================\n"
+           "total size %08x (%dkB)\n", sum, sum/1024);
   else
-    Msg("no suitable dataspace found\n");
+    printf("no suitable dataspace found\n");
 
   /* done */
 }

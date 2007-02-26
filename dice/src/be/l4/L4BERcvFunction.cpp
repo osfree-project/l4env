@@ -5,7 +5,7 @@
  *	\date	Sat Jun 1 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 
 #include "be/l4/L4BERcvFunction.h"
 #include "be/l4/L4BENameFactory.h"
+#include "be/l4/L4BEClassFactory.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEComponent.h"
@@ -34,10 +35,13 @@
 #include "be/BEDeclarator.h"
 #include "be/BEType.h"
 #include "be/BEClient.h"
+#include "be/BEMarshaller.h"
+#include "be/BEOpcodeType.h"
 #include "be/l4/L4BEMsgBufferType.h"
 #include "be/l4/L4BESizes.h"
+#include "be/l4/L4BEIPC.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BERcvFunction);
@@ -137,21 +141,29 @@ void CL4BERcvFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext *
  */
 void CL4BERcvFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
 {
-    if (((CL4BEMsgBufferType*) m_pMsgBuffer)->HasReceiveFlexpages())
+    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
+    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasReceiveFlexpages())
     {
-        // we have to always check if this was a flexpage IPC
-        String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-        pFile->PrintIndent("if (l4_ipc_fpage_received(%s))\n", (const char*)sResult);
-        WriteFlexpageOpcodePatch(pFile, pContext);  // does indent itself
-        pFile->PrintIndent("else\n");
-        pFile->IncIndent();
-        WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
-        pFile->DecIndent();
+        nStartOffset += pMarshaller->Unmarshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+    }
+
+    if (IsComponentSide())
+    {
+        // start after opcode
+        CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
+        pOpcodeType->SetParent(this);
+        if (pOpcodeType->CreateBackEnd(pContext))
+            nStartOffset += pOpcodeType->GetSize();
+        delete pOpcodeType;
     }
     else
     {
-        WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+        // first unmarshal return value
+        nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     }
+    // now unmarshal rest
+    pMarshaller->Unmarshal(pFile, this, -TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+    delete pMarshaller;
 }
 
 /** \brief writes a patch to find the opcode if flexpage were received
@@ -239,39 +251,6 @@ bool CL4BERcvFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBEType
  */
 void CL4BERcvFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
 {
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
-    if (IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
-    else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-
-    pFile->PrintIndent("l4_i386_ipc_receive(*%s,\n", (const char *) sServerID);
-    pFile->IncIndent();
-
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-
-    int nDirection = GetReceiveDirection();
-    bool bVarBuffer = m_pMsgBuffer->IsVariableSized(nDirection);
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(nDirection, pContext))
-        pFile->PrintIndent("L4_IPC_SHORT_MSG,\n");
-    else
-    {
-        if (bVarBuffer)
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
-        else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
-    }
-
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])),\n");
-
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
-    pFile->DecIndent();
+    assert(m_pComm);
+	((CL4BEIPC*)m_pComm)->WriteReceive(pFile, this, false, pContext);
 }

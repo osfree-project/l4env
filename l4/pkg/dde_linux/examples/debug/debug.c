@@ -1,11 +1,11 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/examples/debug/debug.c
+ * \file    dde_linux/examples/debug/debug.c
  *
- * \brief	DDE Example (debugging purposes)
+ * \brief   DDE Example (debugging purposes)
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * \author  Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
 /*****************************************************************************/
 
@@ -33,16 +33,16 @@ char LOG_tag[9] = "-DDESRV-\0";
 
 #if 1
 #define PCI_DEV(dev) \
-	Msg("DEBUG:\n" \
-	    "pci_dev  bus:devfn          %x:%02x.%x\n" \
-	    "         vendor               %04x\n" \
-	    "         device               %04x\n" \
-	    "         class            %08x\n" \
+        Msg("DEBUG:\n" \
+            "pci_dev  bus:devfn          %x:%02x.%x\n" \
+            "         vendor               %04x\n" \
+            "         device               %04x\n" \
+            "         class            %08x\n" \
             "         slotname          %s\n" \
-	    "         irq                     %x\n" \
+            "         irq                     %x\n" \
             "         res0    %08lx-%08lx (%08lx)\n" \
             "         res1    %08lx-%08lx (%08lx)\n", \
-	    (dev)->bus->number, PCI_SLOT((dev)->devfn), PCI_FUNC((dev)->devfn), \
+            (dev)->bus->number, PCI_SLOT((dev)->devfn), PCI_FUNC((dev)->devfn), \
             (dev)->vendor, (dev)->device, \
             (dev)->class, (dev)->slot_name, (dev)->irq, \
             (dev)->resource[0].start, (dev)->resource[0].end, (dev)->resource[0].flags, \
@@ -65,10 +65,10 @@ static void debug_all_pci_devs(void)
   if (!_pciinit)
     {
       if ((err=l4dde_pci_init()))
-	{
-	  Error("initializing pci (%d)", err);
-	  return;
-	}
+        {
+          Error("initializing pci (%d)", err);
+          return;
+        }
       ++_pciinit;
     }
 
@@ -77,7 +77,7 @@ static void debug_all_pci_devs(void)
       dev = pci_find_device(PCI_ANY_ID, PCI_ANY_ID, dev);
 
       if (!dev)
-	break;
+        break;
       PCI_DEV(dev);
     }
 }
@@ -122,10 +122,10 @@ static void debug_pci_module_init(void)
   if (!_pciinit)
     {
       if ((err=l4dde_pci_init()))
-	{
-	  Error("initializing pci (%d)", err);
-	  return;
-	}
+        {
+          Error("initializing pci (%d)", err);
+          return;
+        }
       ++_pciinit;
     }
 
@@ -183,7 +183,7 @@ static void debug_irq_handler(int irq, void *id, struct pt_regs *pt)
 
   if (!in_irq())
     Panic("DEBUG: in_irq() not set in interrupt handler");
-  
+
   if (in_softirq())
     Panic("DEBUG: in_softirq() set in interrupt handler");
 
@@ -207,7 +207,7 @@ static void debug_irq(void)
 {
   int err;
 
-  /* initialize irq module of dde_linux 
+  /* initialize irq module of dde_linux
      num < 16 RMGR
      num > 15 Omega0 */
   if ((err=l4dde_irq_init(irq_num & 0x10)))
@@ -264,7 +264,7 @@ static void __lock_grabbing(void *sleep)
     {
       /* child */
       if (l4thread_started(NULL))
-	l4thread_exit();
+        l4thread_exit();
       child = 1;
     }
 
@@ -273,8 +273,8 @@ static void __lock_grabbing(void *sleep)
       spin_lock_irqsave(&grabme, flags);
 
       if (!spin_is_locked(&grabme))
-	Panic("DEBUG: locked spinlock is NOT locked");
-      
+        Panic("DEBUG: locked spinlock is NOT locked");
+
       t0 = jiffies;
       l4thread_sleep(5 * sleep_time);
       t1 = jiffies;
@@ -283,7 +283,7 @@ static void __lock_grabbing(void *sleep)
 
       Msg("DEBUG: %6s| from %5ld\n"
           "       %6s|   to %5ld (%ld jiffies)\n",
-	  child ? "child" : "parent", t0, "", t1, t1 - t0);
+          child ? "child" : "parent", t0, "", t1, t1 - t0);
 
       if (child) --lock_num;
 
@@ -301,7 +301,7 @@ static int __fork(void)
 
   /* create child thread */
   tid = l4thread_create((l4thread_fn_t) __lock_grabbing,
-			(void *) &child_sleep, L4THREAD_CREATE_SYNC);
+                        (void *) &child_sleep, L4THREAD_CREATE_SYNC);
 
   return tid ? 0 : -1;
 }
@@ -326,7 +326,7 @@ static void __timer_func(unsigned long i)
 {
   if (!in_interrupt())
     Panic("DEBUG: in_interrupt() not set in timer handler");
-  
+
   if (!i)
     timers_expired++;
   if (i == TIMER_COOKIE)
@@ -376,8 +376,8 @@ static void debug_timers(void)
   Msg("DEBUG: waiting for timer expiration ...\n");
 
   while (!timers_expired)
-    l4thread_sleep(100);	/* wait for latest timer expiration as timers
-				   are on stack !!! */
+    l4thread_sleep(100); /* wait for latest timer expiration as timers
+                            are on stack !!! */
 
   /* now trigger bug #1 in old dde version:
    * remove last timer while we're waiting for it
@@ -402,11 +402,11 @@ static void debug_timers(void)
 
   /* now t0 is invalid, but time.c still used it ... */
 
-  t0.expires = 0;		/* be sure it will be processed */
-  t0.data = TIMER_COOKIE;	/* place a cookie */
+  t0.expires = 0;          /* be sure it will be processed */
+  t0.data = TIMER_COOKIE;  /* place a cookie */
   t0.list.next = &t1.list;
-  t0.list.prev = &t1.list;	/* now the "synthetic" _list entry_
-				   is valid again */
+  t0.list.prev = &t1.list; /* now the "synthetic" _list entry_
+                              is valid again */
 
   Msg("DEBUG: waiting for timer expiration ... (will wait a while)\n");
 
@@ -430,8 +430,8 @@ static void debug_timers(void)
   add_timer(&t0);
 
   while (!timers_expired)
-    l4thread_sleep(100);	/* wait for latest timer expiration as timers
-				   are on stack !!! */
+    l4thread_sleep(100); /* wait for latest timer expiration as timers
+                            are on stack !!! */
 }
 
 /*****************************************************************************/
@@ -446,7 +446,7 @@ static void __softirq_func(unsigned long i)
 
   if (in_irq())
     Panic("DEBUG: in_irq() set in softirq handler");
-  
+
   Msg("DEBUG: softirq [%ld] @ %ld jiffies (lthread %0x)\n",
       i, jiffies, l4thread_myself());
 }
@@ -515,18 +515,18 @@ static void usage(void)
 "usage: dde_debug [OPTION]...\n"
 "Debug dde_linux library functions. (Default is only library initialization.)\n"
 "\n"
-"  --irq[=n]		debug irq 0 at RMGR by default\n"
-"			if n is set and n<16 use irq n at RMGR\n"
-"			if n is set and n>15 use irq (n&0x0f) at Omega0\n"
-"  --jiffies[=n]	debug/measure 10 (or n) jiffies\n"
-"  --lock[=n]		debug 5 (or n) spinlocks\n"
-"  --malloc		debug memory allocations\n"
-"  --pcidevs		show all PCI devices\n"
-"  --pcimod		debug PCI module handling\n"
-"  --softirq		debug softirq handling\n"
-"  --timer		debug timers\n"
+"  --irq[=n]            debug irq 0 at RMGR by default\n"
+"                       if n is set and n<16 use irq n at RMGR\n"
+"                       if n is set and n>15 use irq (n&0x0f) at Omega0\n"
+"  --jiffies[=n]        debug/measure 10 (or n) jiffies\n"
+"  --lock[=n]           debug 5 (or n) spinlocks\n"
+"  --malloc             debug memory allocations\n"
+"  --pcidevs            show all PCI devices\n"
+"  --pcimod             debug PCI module handling\n"
+"  --softirq            debug softirq handling\n"
+"  --timer              debug timers\n"
 "\n"
-"  --help		display this help (Doesn't exit immediately!)\n"
+"  --help               display this help (Doesn't exit immediately!)\n"
 );
 }
 
@@ -559,55 +559,55 @@ static void do_args(int argc, char *argv[])
       c = getopt_long_only(argc, argv, "", long_options, &long_optind);
 
       if (c == -1)
-	break;
+        break;
 
       switch (c)
-	{
-	case 0:		/* long option */
-	  switch (long_check)
-	    {
-	    case 1:		/* debug jiffies */
-	      jiffies_flag = 1;
-	      if (optarg)
-		jiffies_num = atol(optarg);
-	      break;
-	    case 2:		/* debug irqs */
-	      irq_flag = 1;
-	      if (optarg)
-		irq_num = atol(optarg);
-	      break;
-	    case 3:		/* debug pci devs */
-	      pci_devs_flag = 1;
-	      break;
-	    case 4:		/* debug pci module init */
-	      pci_mod_flag = 1;
-	      break;
-	    case 5:		/* debug spinlocks */
-	      lock_flag = 1;
-	      if (optarg)
-		lock_num = atol(optarg);
-	      break;
-	    case 6:		/* debug timers */
-	      timer_flag = 1;
-	      break;
-	    case 7:		/* debug softirq */
-	      softirq_flag = 1;
-	      break;
-	    case 8:		/* debug memory allocations */
-	      malloc_flag = 1;
-	      break;
-	    case 99:		/* print usage */
-	      usage();
-	      break;
-	    default:
-	      /* ignore unknown */
-	      break;
-	    }
-	  break;
-	default:
-	  /* ignore unknown */
-	  break;
-	}
+        {
+        case 0: /* long option */
+          switch (long_check)
+            {
+            case 1: /* debug jiffies */
+              jiffies_flag = 1;
+              if (optarg)
+                jiffies_num = atol(optarg);
+              break;
+            case 2: /* debug irqs */
+              irq_flag = 1;
+              if (optarg)
+                irq_num = atol(optarg);
+              break;
+            case 3: /* debug pci devs */
+              pci_devs_flag = 1;
+              break;
+            case 4: /* debug pci module init */
+              pci_mod_flag = 1;
+              break;
+            case 5: /* debug spinlocks */
+              lock_flag = 1;
+              if (optarg)
+                lock_num = atol(optarg);
+              break;
+            case 6: /* debug timers */
+              timer_flag = 1;
+              break;
+            case 7: /* debug softirq */
+              softirq_flag = 1;
+              break;
+            case 8: /* debug memory allocations */
+              malloc_flag = 1;
+              break;
+            case 99: /* print usage */
+              usage();
+              break;
+            default:
+              /* ignore unknown */
+              break;
+            }
+          break;
+        default:
+          /* ignore unknown */
+          break;
+        }
     }
 }
 

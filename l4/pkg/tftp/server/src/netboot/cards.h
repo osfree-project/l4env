@@ -26,7 +26,10 @@ struct nic *
 t509_probe(struct nic *, unsigned short *, struct pci_device *);
 
 struct nic *
-rtl8139_probe(struct nic *nic, unsigned short *, struct pci_device *);
+rtl8139_probe(struct nic *, unsigned short *, struct pci_device *);
+
+struct nic *
+rhine_probe(struct nic *, unsigned short *, struct pci_device *pci);
 
 struct nic *
 oshkosh_probe(struct nic *, unsigned short *, struct pci_device *);

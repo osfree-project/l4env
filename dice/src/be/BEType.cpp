@@ -5,12 +5,12 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -29,8 +29,13 @@
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BETypedef.h"
+#include "be/BEDeclarator.h"
+#include "be/BEType.h"
+#include "be/BEExpression.h"
+#include "be/BEHeaderFile.h"
+#include "Vector.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
 
@@ -44,11 +49,12 @@ CBEType::CBEType()
     IMPLEMENT_DYNAMIC_BASE(CBEType, CBEObject);
 }
 
-CBEType::CBEType(CBEType & src):CBEObject(src)
+CBEType::CBEType(CBEType & src)
+: CBEObject(src),
+  m_sName(src.m_sName)
 {
     m_bUnsigned = src.m_bUnsigned;
     m_nSize = src.m_nSize;
-    m_sName = src.m_sName;
     m_nFEType = src.m_nFEType;
     IMPLEMENT_DYNAMIC_BASE(CBEType, CBEObject);
 }
@@ -76,6 +82,9 @@ bool CBEType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
         return false;
     }
 
+	// set target file name
+    SetTargetFileName(pFEType, pContext);
+
     if (pFEType->IsKindOf(RUNTIME_CLASS(CFESimpleType)))
     {
         m_bUnsigned = ((CFESimpleType *) pFEType)->IsUnsigned();
@@ -86,7 +95,7 @@ bool CBEType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
     if (m_sName.IsEmpty())
     {
         // user defined type overloads this function -> m_sName should always be set
-        VERBOSE("CBEType::CreateBE failed because no type name could be assigned\n");
+        VERBOSE("CBEType::CreateBE failed because no type name could be assigned for (%d)\n", pFEType->GetType());
         return false;
     }
 
@@ -107,7 +116,7 @@ bool CBEType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
 bool CBEType::CreateBackEnd(bool bUnsigned, int nSize, int nFEType, CBEContext * pContext)
 {
     m_bUnsigned = bUnsigned;
-    m_nSize = nSize;
+    m_nSize = pContext->GetSizes()->GetSizeOfType(nFEType, nSize);
     m_sName = pContext->GetNameFactory()->GetTypeName(nFEType, bUnsigned, pContext, m_nSize);
     m_nFEType = nFEType;
     return true;
@@ -182,11 +191,28 @@ CObject *CBEType::Clone()
  *	\param pContext the context of the write operation
  *
  * This operation simply casts a zero (0) to the appropriate type.
+ * We only need this cast if the type is not an integer type
+ * (TYPE_INTEGER, TYPE_BYTE, TYPE_CHAR). Type TYPE_FLOAT and TYPE_DOUBLE
+ * are initialized with 0.0 instead of 0.
  */
 void CBEType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
 {
-    WriteCast(pFile, false, pContext);
-    pFile->Print("0");
+    switch (m_nFEType)
+	{
+	case TYPE_INTEGER:
+	case TYPE_LONG:
+	case TYPE_BYTE:
+        pFile->Print("0");
+		break;
+	case TYPE_FLOAT:
+	case TYPE_DOUBLE:
+	    pFile->Print("0.0");
+		break;
+	default:
+		WriteCast(pFile, false, pContext);
+		pFile->Print("0");
+		break;
+	}
 }
 
 /**	\brief allows access to the m_nFEType member
@@ -247,7 +273,7 @@ void CBEType::WriteCast(CBEFile *pFile, bool bPointer, CBEContext *pContext)
             break;
         default:
             break;
-        }    
+        }
         String sName = pContext->GetNameFactory()->GetTypeName(nBaseType, false, pContext, nBaseSize);
         pFile->Print("(%s", (const char*)sName);
     }
@@ -281,7 +307,16 @@ CBETypedef* CBEType::GetTypedef()
  */
 bool CBEType::IsPointerType()
 {
-    return (m_nFEType == TYPE_CHAR_ASTERISK);
+    return (m_nFEType == TYPE_CHAR_ASTERISK) ||
+	       (m_nFEType == TYPE_VOID_ASTERISK);
+}
+
+/** \brief checks if this is a type, which has array dimensions
+ *  \return false, since only user defined type may have array dimensions
+ */
+bool CBEType::IsArrayType()
+{
+    return false;
 }
 
 /** \brief writes the type for declarations
@@ -319,7 +354,7 @@ bool CBEType::DoWriteZeroInit()
  */
 void CBEType::WriteGetSize(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext)
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /** \brief test if this is a simple type
@@ -330,4 +365,82 @@ void CBEType::WriteGetSize(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext 
 bool CBEType::IsSimpleType()
 {
     return true;
+}
+
+/** \brief write zero inits for array types
+ *  \param pFile the file to write to
+ *  \param pType the base type of the array type
+ *  \param pAlias the decl with the array dimensions
+ *  \param pIter the iterator pointing to the next level if there are multiple array dimensions
+ *  \param pContext the context of this write operation
+ */
+void CBEType::WriteZeroInitArray(CBEFile *pFile, CBEType *pType, CBEDeclarator *pAlias, VectorElement *pIter, CBEContext *pContext)
+{
+    CBEExpression *pBound = pAlias->GetNextArrayBound(pIter);
+	if (pBound == 0)
+	    return;
+	int nBound = pBound->GetIntValue();
+	if (nBound == 0)
+	    return;
+	pFile->Print("{ ");
+	for (int i=0; i<nBound; i++)
+	{
+	    // if there is another level, we have to step down into it,
+		// if there is no other level, we have to init the elements
+		if (pIter)
+		{
+		    pFile->Print("\n");
+			pFile->IncIndent(2);
+			pFile->PrintIndent("");
+		    WriteZeroInitArray(pFile, pType, pAlias, pIter, pContext);
+			pFile->DecIndent(2);
+		}
+		else
+		    pType->WriteZeroInit(pFile, pContext);
+		if (i < nBound-1)
+		{
+		    pFile->Print(", ");
+			if (pIter)
+			    pFile->Print("\n");
+		}
+	}
+	pFile->Print(" }");
+}
+
+/** \brief tries to get the maximum array dimension count of this type
+ *  \return the number of array dimensions (0 for this implementation)
+ */
+int CBEType::GetArrayDimensionCount()
+{
+    return 0;
+}
+
+/** \brief add tagged types to the header file
+ *  \param pHeader the header file to add this type to
+ *  \param pContext the context of this adding
+ *  \return if the adding succeeded
+ */
+bool CBEType::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
+{
+    if (IsTargetFile(pHeader))
+	    pHeader->AddTaggedType(this);
+    return true;
+}
+
+/** \brief writes the type for an indirect declaration
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return the levels of indirect removed for type
+ */
+void CBEType::WriteIndirect(CBEFile* pFile, CBEContext* pContext)
+{
+    Write(pFile, pContext);
+}
+
+/** \brief returns the number of indirections, in case this is a pointer type
+ *  \return the indirection level
+ */
+int CBEType::GetIndirectionCount()
+{
+    return 0;
 }

@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,11 +29,11 @@
 
 #include "be/sock/SockBECallFunction.h"
 #include "be/sock/SockBEWaitAnyFunction.h"
-#include "be/sock/SockBEReplyWaitFunction.h"
-#include "be/sock/SockBEReplyRcvFunction.h"
+#include "be/sock/SockBEMarshalFunction.h"
 #include "be/sock/SockBESrvLoopFunction.h"
 #include "be/sock/SockBEUnmarshalFunction.h"
 #include "be/sock/SockBESizes.h"
+#include "be/sock/BESocket.h"
 
 IMPLEMENT_DYNAMIC(CSockBEClassFactory);
 
@@ -85,26 +85,6 @@ CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
     return new CSockBEWaitAnyFunction();
 }
 
-/** \brief creates a new instance of the class CBEReplyWaitFunction
- *  \return a reference to the new object
- */
-CBEReplyWaitFunction * CSockBEClassFactory::GetNewReplyWaitFunction()
-{
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEReplyWaitFunction\n");
-    return new CSockBEReplyWaitFunction();
-}
-
-/** \brief creates a new instance of the class CBEReplyRcvFunction
- *  \return a reference to the new object
- */
-CBEReplyRcvFunction * CSockBEClassFactory::GetNewReplyRcvFunction()
-{
-    if (m_bVerbose)
-        printf("CSockBEClassFactory: created class CSockBEReplyRcvFunction\n");
-    return new CSockBEReplyRcvFunction();
-}
-
 /** \brief creates a new instance of the class CBESrvLoopFunction
  *  \return a reference to the new object
  */
@@ -123,4 +103,24 @@ CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
     if (m_bVerbose)
         printf("CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
     return new CSockBEUnmarshalFunction();
+}
+
+/** \brief creates a new instance of the class CBEMarshalFunction
+ *  \return a reference to the new object
+ */
+CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
+{
+    if (m_bVerbose)
+        printf("CSockBEClassFactory: created class CSockBEMarshalFunction\n");
+    return new CSockBEMarshalFunction();
+}
+
+/** \brief creates a new instance of the class CBESocket
+ *  \return a reference to the new object
+ */
+CBECommunication * CSockBEClassFactory::GetNewCommunication()
+{
+    if (m_bVerbose)
+        printf("CSockBEClassFactory: created class CBESocket\n");
+    return new CBESocket();
 }

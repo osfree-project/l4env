@@ -7,12 +7,11 @@ IMPLEMENTATION[ux]:
 #include <sys/mman.h>
 #include "boot_info.h"
 #include "panic.h"
-#include "undef_oskit.h"
 
 IMPLEMENT inline NEEDS [<errno.h>, <string.h>, <unistd.h>, <sys/mman.h>,
-                        "boot_info.h", "config.h", "panic.h", "undef_oskit.h"]
+                        "boot_info.h", "config.h", "panic.h"]
 void
-Vmem_alloc::page_map (void *address, int order, Zero_fill zf, vm_offset_t phys)
+Vmem_alloc::page_map (void *address, int order, Zero_fill zf, Address phys)
 {
   if (mmap (address, (1 << order) * Config::PAGE_SIZE,
             PROT_READ | (zf == ZERO_FILL ? PROT_WRITE : 0),
@@ -22,7 +21,7 @@ Vmem_alloc::page_map (void *address, int order, Zero_fill zf, vm_offset_t phys)
 }
 
 IMPLEMENT inline NEEDS [<errno.h>, <string.h>, <unistd.h>, <sys/mman.h>,
-                        "boot_info.h", "config.h", "panic.h", "undef_oskit.h"]
+                        "boot_info.h", "config.h", "panic.h"]
 void
 Vmem_alloc::page_unmap (void *address, int order)
 {

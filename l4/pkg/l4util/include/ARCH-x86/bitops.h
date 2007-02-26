@@ -6,8 +6,9 @@
  * \ingroup bitops
  *
  * \date    07/03/2001
- * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de> */
+
+/*
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
@@ -28,8 +29,14 @@
 #define _L4UTIL_BITOPS_H
 
 /* L4 includes */
-#include <l4/sys/types.h>
+#include <l4/sys/l4int.h>
 #include <l4/sys/compiler.h>
+
+/** define some more usual names */
+#define l4util_test_and_clear_bit(b, dest)	l4util_btr(b, dest)
+#define l4util_test_and_set_bit(b, dest)	l4util_bts(b, dest)
+#define l4util_test_and_change_bit(b, dest)	l4util_btc(b, dest)
+#define l4util_log2(word)			l4util_bsr(word)
 
 /*****************************************************************************
  *** Prototypes
@@ -37,106 +44,92 @@
 
 EXTERN_C_BEGIN;
 
-/*****************************************************************************/
+/** \defgroup bitops Bit Manipulation Functions */
+
 /**
- * \brief Set bit
+ * \brief Set bit in memory
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  */
-/*****************************************************************************/ 
 L4_INLINE void
-set_bit(l4_uint32_t * dest, int b);
+l4util_set_bit(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
- * \brief Clear bit
+ * \brief Clear bit in memory
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  */
-/*****************************************************************************/ 
 L4_INLINE void
-clear_bit(l4_uint32_t * dest, int b);
+l4util_clear_bit(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
- * \brief Complement bit
+ * \brief Complement bit in memory
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  */
-/*****************************************************************************/ 
 L4_INLINE void
-complement_bit(l4_uint32_t * dest, int b);
+l4util_complement_bit(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
  * \brief Test bit (return value of bit)
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  *	
  * \return Value of bit \em b.
  */
-/*****************************************************************************/ 
 L4_INLINE int
-test_bit(l4_uint32_t * dest, int b);
+l4util_test_bit(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
  * \brief Bit test and set
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  *	
  * \return Old value of bit \em b.
  *
  * Set the \em b bit of \em dest to 1 and return the old value.
  */
-/*****************************************************************************/ 
 L4_INLINE int 
-bts(l4_uint32_t * dest, int b);
+l4util_bts(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
  * \brief Bit test and reset
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  *	
  * \return Old value of bit \em b.
  *
  * Rest bit \em b and return old value.
  */
-/*****************************************************************************/ 
 L4_INLINE int
-btr(l4_uint32_t * dest, int b);
+l4util_btr(int b, volatile l4_uint32_t * dest);
 
-/*****************************************************************************/
 /**
  * \brief Bit test and complement
  * \ingroup bitops
  * 
- * \param  dest          destination operand
  * \param  b             bit position
+ * \param  dest          destination operand
  *	
  * \return Old value of bit \em b.
  *
  * Complement bit \em b and return old value.
  */
-/*****************************************************************************/ 
 L4_INLINE int
-btc(l4_uint32_t * dest, int b);
+l4util_btc(int b, volatile l4_uint32_t * dest);
 
-
-/*****************************************************************************/
 /**
  * \brief Bit scan reverse
  * \ingroup bitops
@@ -148,11 +141,9 @@ btc(l4_uint32_t * dest, int b);
  *
  * "bit scan reverse", find most significant set bit in word (-> LOG2(word))
  */
-/*****************************************************************************/ 
 L4_INLINE int
-bsr(l4_uint32_t word);
+l4util_bsr(l4_uint32_t word);
 
-/*****************************************************************************/
 /**
  * \brief Bit scan forward
  * \ingroup bitops
@@ -164,9 +155,35 @@ bsr(l4_uint32_t word);
  *
  * "bit scan forward", find least significant bit set in word.
  */
-/*****************************************************************************/ 
 L4_INLINE int
-bsf(l4_uint32_t word);
+l4util_bsf(l4_uint32_t word);
+
+/**
+ * \brief Find the first set bit in a memory region
+ * \ingroup bitops
+ * 
+ * \param  dest          bitstring
+ * \param  size          size of string in bits
+ *
+ * \return number of the first set bit,
+ *         > size if no bit is set
+ */
+L4_INLINE int
+l4util_find_first_set_bit(void * dest, l4_size_t size);
+
+/**
+ * \brief Find the first zero bit in a memory region
+ * \ingroup bitops
+ * 
+ * \param  dest          bitstring
+ * \param  size          size of string in bits
+ *
+ * \return number of the first zero bit, 
+ *         > size if no bit is set
+ */
+L4_INLINE int
+l4util_find_first_zero_bit(void * dest, l4_size_t size);
+
 
 EXTERN_C_END;
 
@@ -176,7 +193,7 @@ EXTERN_C_END;
 
 /* set bit */
 L4_INLINE void
-set_bit(l4_uint32_t * dest, int b)
+l4util_set_bit(int b, volatile l4_uint32_t * dest)
 {
   __asm__ __volatile__
     (
@@ -184,7 +201,7 @@ set_bit(l4_uint32_t * dest, int b)
      :
      :
      "m"   (*dest),   /* 0 mem, destination operand */ 
-     "r"   (b)        /* 1,     bit number */
+     "Ir"  (b)       /* 1,     bit number */
      :
      "memory", "cc"
      );
@@ -192,7 +209,7 @@ set_bit(l4_uint32_t * dest, int b)
 
 /* clear bit */
 L4_INLINE void
-clear_bit(l4_uint32_t * dest, int b)
+l4util_clear_bit(int b, volatile l4_uint32_t * dest)
 {
   __asm__ __volatile__
     (
@@ -200,7 +217,7 @@ clear_bit(l4_uint32_t * dest, int b)
      :
      :
      "m"   (*dest),   /* 0 mem, destination operand */ 
-     "r"   (b)        /* 1,     bit number */
+     "Ir"  (b)        /* 1,     bit number */
      :
      "memory", "cc"
      );
@@ -208,7 +225,7 @@ clear_bit(l4_uint32_t * dest, int b)
 
 /* change bit */
 L4_INLINE void
-complement_bit(l4_uint32_t * dest, int b)
+l4util_complement_bit(int b, volatile l4_uint32_t * dest)
 {
   __asm__ __volatile__
     (
@@ -216,7 +233,7 @@ complement_bit(l4_uint32_t * dest, int b)
      :
      :
      "m"   (*dest),   /* 0 mem, destination operand */ 
-     "r"   (b)        /* 1,     bit number */
+     "Ir"  (b)        /* 1,     bit number */
      :
      "memory", "cc"
      );
@@ -224,7 +241,7 @@ complement_bit(l4_uint32_t * dest, int b)
 
 /* test bit */
 L4_INLINE int
-test_bit(l4_uint32_t * dest, int b)
+l4util_test_bit(int b, volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -236,7 +253,7 @@ test_bit(l4_uint32_t * dest, int b)
      "=r"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */ 
-     "r"   (b)        /* 2,     bit number */
+     "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
      );
@@ -246,7 +263,7 @@ test_bit(l4_uint32_t * dest, int b)
 
 /* bit test and set */
 L4_INLINE int 
-bts(l4_uint32_t * dest, int b)
+l4util_bts(int b, volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -258,7 +275,7 @@ bts(l4_uint32_t * dest, int b)
      "=r"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */ 
-     "r"   (b)        /* 2,     bit number */
+     "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
      );
@@ -268,7 +285,7 @@ bts(l4_uint32_t * dest, int b)
 
 /* bit test and reset */
 L4_INLINE int
-btr(l4_uint32_t * dest, int b)
+l4util_btr(int b, volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -280,7 +297,7 @@ btr(l4_uint32_t * dest, int b)
      "=r"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */ 
-     "r"   (b)        /* 2,     bit number */
+     "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
      );
@@ -290,7 +307,7 @@ btr(l4_uint32_t * dest, int b)
 
 /* bit test and complement */
 L4_INLINE int
-btc(l4_uint32_t * dest, int b)
+l4util_btc(int b, volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -302,7 +319,7 @@ btc(l4_uint32_t * dest, int b)
      "=r"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */ 
-     "r"   (b)        /* 2,     bit number */
+     "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
      );
@@ -312,7 +329,7 @@ btc(l4_uint32_t * dest, int b)
 
 /* bit scan reverse */
 L4_INLINE int
-bsr(l4_uint32_t word)
+l4util_bsr(l4_uint32_t word)
 {
   int tmp;
 
@@ -333,7 +350,7 @@ bsr(l4_uint32_t word)
 
 /* bit scan forwad */
 L4_INLINE int
-bsf(l4_uint32_t word)
+l4util_bsf(l4_uint32_t word)
 {
   int tmp;
 
@@ -350,6 +367,59 @@ bsf(l4_uint32_t word)
      );
 
   return tmp;
+}
+
+L4_INLINE int
+l4util_find_first_set_bit(void * dest, l4_size_t size)
+{
+  l4_mword_t dummy0, dummy1, res;
+
+  __asm__ __volatile__
+    (
+     "xorl  %%eax,%%eax		\n\t"
+     "repe; scasl		\n\t"
+     "jz    1f			\n\t"
+     "leal  -4(%%edi),%%edi	\n\t"
+     "bsfl  (%%edi),%%eax	\n"
+     "1:			\n\t"
+     "subl  %%ebx,%%edi		\n\t"
+     "shll  $3,%%edi		\n\t"
+     "addl  %%edi,%%eax		\n\t"
+     :
+     "=a" (res), "=&c" (dummy0), "=&D" (dummy1)
+     :
+     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+
+  return res;
+}
+
+L4_INLINE int
+l4util_find_first_zero_bit(void * dest, l4_size_t size)
+{
+  l4_mword_t dummy0, dummy1, dummy2, res;
+
+  if (!size)
+    return 0;
+
+  __asm__ __volatile__
+    (
+     "movl   $-1,%%eax		\n\t"
+     "xorl   %%edx,%%edx	\n\t"
+     "repe;  scasl		\n\t"
+     "je     1f			\n\t"
+     "xorl   -4(%%edi),%%eax	\n\t"
+     "subl   $4,%%edi		\n\t"
+     "bsfl   %%eax,%%edx	\n"
+     "1:			\n\t"
+     "subl   %%ebx,%%edi	\n\t"
+     "shll   $3,%%edi		\n\t"
+     "addl   %%edi,%%edx	\n\t"
+     :
+     "=d" (res), "=&c" (dummy0), "=&D" (dummy1), "=&a" (dummy2)
+     :
+     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+
+  return res;
 }
 
 #endif /* !_L4UTIL_BITOPS_H */

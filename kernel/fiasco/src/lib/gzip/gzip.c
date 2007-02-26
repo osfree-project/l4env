@@ -6,18 +6,28 @@
 #include "gzip.h"
 #include "panic.h"
 
-static z_stream gz_stream;
-static char gz_out_buffer[45];
+static z_stream      gz_stream;
+static char          gz_out_buffer[45];
 static unsigned long gz_crc = 0;
-static int gz_magic[2] = {0x1f, 0x8b};
+static int           gz_magic[2] = {0x1f, 0x8b};
+static void          (*raw_write)(const char *s, size_t len);
 
 /* ENC is the basic 1 character encoding function to make a char printing */
 #define	ENC(c) ((c) ? ((c) & 077) + ' ': '`')
 
 static void
-uu_open(const char *name, int mode)
+raw_putchar(int c)
 {
-  printf("begin %o %s\n", mode, name);
+  const char s[] = { c };
+  raw_write(s, 1);
+}
+
+static void
+uu_open(const char *name)
+{
+  raw_write("begin 644 ", 10);
+  raw_write(name, strlen(name));
+  raw_write("\n", 1);
 }
 
 static void
@@ -25,9 +35,8 @@ uu_close(void)
 {
   char ch = ENC('\0');
 
-  putchar(ch);
-  putchar('\n');
-  printf("end\n");
+  raw_putchar(ch);
+  raw_write("\nend\n", 5);
 }
 
 static void
@@ -53,23 +62,23 @@ uu_write(const char *in, int len)
       in += n;
       
       ch = ENC(n);
-      putchar(ch);
+      raw_putchar(ch);
       for (p = buf; n > 0; n -= 3, p += 3)
 	{
 	  ch = *p >> 2;
 	  ch = ENC(ch);
-	  putchar(ch);
+	  raw_putchar(ch);
 	  ch = ((*p << 4) & 060) | ((p[1] >> 4) & 017);
 	  ch = ENC(ch);
-	  putchar(ch);
+	  raw_putchar(ch);
 	  ch = ((p[1] << 2) & 074) | ((p[2] >> 6) & 03);
 	  ch = ENC(ch);
-	  putchar(ch);
+	  raw_putchar(ch);
 	  ch = p[2] & 077;
 	  ch = ENC(ch);
-	  putchar(ch);
+	  raw_putchar(ch);
 	}
-      putchar('\n');
+      raw_putchar('\n');
     }
 }
 
@@ -125,8 +134,10 @@ gzip_free(void *ptr)
 }
 
 void
-gz_init(void *ptr, unsigned size)
+gz_init(void *ptr, unsigned size,
+	void (*_raw_write)(const char *s, size_t len))
 {
+  raw_write   = _raw_write;
   malloc_ptr  = malloc_init_ptr  = ptr;
   malloc_size = malloc_init_size = size;
   memset(malloc_ptr, 0, size);
@@ -148,7 +159,7 @@ gz_open(const char *fname)
   malloc_ptr  = malloc_init_ptr;
   malloc_size = malloc_init_size;
   
-  uu_open(fname, 0666);
+  uu_open(fname);
   
   sprintf(gz_out_buffer, "%c%c%c%c%c%c%c%c%c%c",
           gz_magic[0], gz_magic[1], Z_DEFLATED, 

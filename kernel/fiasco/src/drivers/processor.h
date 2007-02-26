@@ -28,8 +28,8 @@ namespace Proc {
   /// Block external interrupts and save the old state
   Status cli_save();
 
-  /// Conditionally unblock ext. interrupts
-  void   sti_restore( Status );
+  /// Conditionally unblock external interrupts
+  void sti_restore( Status );
 
   void pause();
 

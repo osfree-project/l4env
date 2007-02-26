@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 #
 # This script is derived from Linux Configure.
 #
@@ -169,11 +169,11 @@ function define_tristate () {
 		;;
 
 	 "n")
-	 	echo "DROPSCONF_UNDEF=$DROPSCONF_UNDEF"
-		echo "# $1 is not set" >>$CONFIG
 		if [ -n "$DROPSCONF_UNDEF" ] ; then
+		    echo "# $1 is not set" >>$CONFIG
 		    echo "#undef  $1" >>$CONFIG_H
 		else
+		    echo "$1=n" >>$CONFIG
 		    echo "#define $1 0" >>$CONFIG_H
 		fi
 		;;

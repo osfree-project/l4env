@@ -1,0 +1,6 @@
+interface presenter {
+
+	int load([in, string] char *pathname);
+	int show([in] int presentation_id);
+
+};

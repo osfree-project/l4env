@@ -5,7 +5,7 @@
  *	\date	Tue Jul 23 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,6 +54,7 @@ public: // Public methods
 	virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
 	virtual void WriteZeroInit(CBEFile * pFile, CBEContext * pContext);
 	virtual void Write(CBEFile * pFile, CBEContext * pContext);
+	virtual void WriteCast(CBEFile* pFile,  bool bPointer,  CBEContext* pContext);
     virtual bool HasTag(String sTag);
 
 protected: // Protected attributes

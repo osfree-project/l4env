@@ -1,11 +1,14 @@
 /* $Id$ */
 /**
- * \file	loader/include/l4/loader/loader.h
+ * \file	loader/include/ARCH-x86/loader/loader.h
+ * \brief	Loader library interface
  * 
  * \date	06/15/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Loader library interface */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #ifndef _LOADER_LOADER_H
 #define _LOADER_LOADER_H

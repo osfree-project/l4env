@@ -9,6 +9,7 @@ public:
   static Space_context *current();
   void make_current();
 
+  using Page_table::lookup;
   Address lookup( void * ) const;
   void switchin_context();
 
@@ -25,10 +26,10 @@ Space_context *Space_context::current()
   return nonull_static_cast<Space_context*>(Page_table::current());
 }
 
-IMPLEMENT /*inline*/
+IMPLEMENT inline
 void Space_context::make_current()
 {
-#warning not yet implemented
+  Page_table::activate();
 }
 
 IMPLEMENT inline
@@ -37,6 +38,7 @@ Address Space_context::lookup( void *a ) const
   P_ptr<void> ph = Page_table::lookup( a, 0, 0 );
   return ph.get_unsigned();
 }
+
 
 IMPLEMENT inline 
 void Space_context::switchin_context()

@@ -5,14 +5,13 @@ INTERFACE:
 class Kconsole : public Mux_console
 {
 public:
-
-  int getchar( bool blocking = true );
+  int  getchar( bool blocking = true );
+  void getchar_chance();
 
   static Mux_console *console();
 
 private:
   static bool initialized;
-
 };
 
 IMPLEMENTATION:
@@ -26,13 +25,13 @@ IMPLEMENTATION:
 IMPLEMENT
 int Kconsole::getchar( bool blocking )
 {
-  if(!blocking)
+  if (!blocking)
     return Mux_console::getchar(false);
 
-  while(1) 
+  while(1)
     {
-      int c = Mux_console::getchar(false);
-      if(c!=-1)
+      int c;
+      if ((c = Mux_console::getchar(false)) != -1)
 	return c;
 
       if(Config::getchar_does_hlt)
@@ -43,20 +42,20 @@ int Kconsole::getchar( bool blocking )
 }
 
 
+
 bool Kconsole::initialized = false;
 
 IMPLEMENT 
 Mux_console *Kconsole::console()
 {
   static Kconsole cons;
-  if(!initialized) {
-    initialized = true;
-    Console::stdout = &cons;
-    Console::stderr = &cons;
-    Console::stdin  = &cons;
-  }
-    
+  if (!initialized) 
+    {
+      initialized = true;
+      Console::stdout = &cons;
+      Console::stderr = &cons;
+      Console::stdin  = &cons;
+    }
   return &cons;
 }
-
 

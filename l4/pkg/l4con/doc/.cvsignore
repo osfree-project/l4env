@@ -1,1 +1,3 @@
-internal refman
+*.flags
+*.title
+con con-internal

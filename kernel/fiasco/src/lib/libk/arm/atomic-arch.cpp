@@ -6,7 +6,7 @@ INTERFACE:
 IMPLEMENTATION[arch]:
 
 inline
-bool up_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
+bool up_cas_unsafe( Mword *ptr, Mword oldval, Mword newval )
 {
   Mword ret;
   asm volatile ( "    mrs    r5, cpsr    \n"
@@ -29,7 +29,7 @@ bool up_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
 }
 
 inline
-bool up_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
+bool up_cas2_unsafe( Mword *ptr, Mword *oldval, Mword *newval )
 {
   Mword ret;
   asm volatile ( "    mrs    r5, cpsr    \n"
@@ -56,15 +56,15 @@ bool up_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
 }
 
 inline 
-bool smp_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
+bool smp_cas_unsafe( Mword *ptr, Mword oldval, Mword newval )
 {
-  return up_cas_unsave(ptr,oldval,newval);
+  return up_cas_unsafe(ptr,oldval,newval);
 }
 
 inline 
-bool smp_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
+bool smp_cas2_unsafe( Mword *ptr, Mword *oldval, Mword *newval )
 {
-  return up_cas2_unsave(ptr,oldval,newval);
+  return up_cas2_unsafe(ptr,oldval,newval);
 }
 
 

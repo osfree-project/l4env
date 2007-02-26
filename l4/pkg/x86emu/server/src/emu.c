@@ -151,12 +151,12 @@ map_emu_page(unsigned get_address, unsigned map_address)
   l4_umword_t dummy;
   l4_msgdope_t result;
   
-  error = l4_i386_ipc_call(rmgr_pager_id,
-			   L4_IPC_SHORT_MSG, get_address, 0,
-			   L4_IPC_MAPMSG((l4_umword_t)emu_mem+map_address,
-				         L4_LOG2_PAGESIZE),
-			   &dummy, &dummy,
-			   L4_IPC_NEVER, &result);
+  error = l4_ipc_call(rmgr_pager_id,
+		      L4_IPC_SHORT_MSG, get_address, 0,
+		      L4_IPC_MAPMSG((l4_umword_t)emu_mem+map_address,
+				    L4_LOG2_PAGESIZE),
+		      &dummy, &dummy,
+		      L4_IPC_NEVER, &result);
   if (error)
     {
       printf("Error %02x receiving page at %08x\n", error, get_address);
@@ -269,9 +269,9 @@ main(int argc, char **argv)
 	  msg.size_dope = L4_IPC_DOPE(12, 0);
 	  msg.send_dope = L4_IPC_DOPE(12, 0);
   
-	  error = l4_i386_ipc_wait(&sender, 
-				   &msg, &msg.dw[0], &msg.dw[1],
-				   L4_IPC_NEVER, &result);
+	  error = l4_ipc_wait(&sender, 
+			      &msg, &msg.dw[0], &msg.dw[1],
+			      L4_IPC_NEVER, &result);
 
 	  while (!error)
 	    {
@@ -329,12 +329,12 @@ main(int argc, char **argv)
 	      msg.dw[10] = M.x86.R_DS;
 	      msg.dw[11] = M.x86.R_ES;
 	      
-	      error = l4_i386_ipc_reply_and_wait(sender, 
-						 &msg, msg.dw[0], msg.dw[1],
-						 &sender,
-						 &msg, &msg.dw[0], &msg.dw[1],
-						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
-						 &result);
+	      error = l4_ipc_reply_and_wait(sender, 
+					    &msg, msg.dw[0], msg.dw[1],
+					    &sender,
+					    &msg, &msg.dw[0], &msg.dw[1],
+					    L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					    &result);
 	    }
 	}
     }

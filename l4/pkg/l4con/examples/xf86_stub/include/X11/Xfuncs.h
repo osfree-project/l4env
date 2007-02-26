@@ -37,7 +37,7 @@ void bzero();
 int bcmp();
 #else
 #if (__STDC__ && !defined(X_NOT_STDC_ENV) && !defined(sun) && !defined(macII) && !defined(apollo)) || defined(SVR4) || defined(hpux) || defined(_IBMR2) || defined(_SEQUENT_)
-#include <string.h>
+//#include <string.h>
 #define _XFUNCS_H_INCLUDED_STRING_H
 #define bcopy(b1,b2,len) memmove(b2, b1, (size_t)(len))
 #define bzero(b,len) memset(b, 0, (size_t)(len))

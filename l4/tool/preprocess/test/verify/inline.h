@@ -17,13 +17,13 @@ public:
   // This inline funtion is public only because it is needed by an
   // extern-"C" function.  So we do not want to export it.
   
-  void 
+  inline void 
   bar();
   
 #line 48 "inline.cpp"
   // Try both NOEXPORT and NEEDED.
   
-  void 
+  inline void 
   baz();
 
 private:  
@@ -31,7 +31,7 @@ private:
   // Test dependency-chain resolver
   
   
-  bool 
+  inline bool 
   private_func();
 };
 #line 6 "inline.cpp"
@@ -41,22 +41,25 @@ class Bar
 
 public:  
 #line 34 "inline.cpp"
-  void
+  inline void
   public_func();
 
 private:  
 #line 22 "inline.cpp"
-  bool 
+  inline bool 
   private_func();
   
 #line 28 "inline.cpp"
-  void 
+  inline void 
   another_private_func();
 };
 
 #line 55 "inline.cpp"
 extern "C" 
 void function(Foo* f);
+
+#line 61 "inline.cpp"
+template <typename T> inline void* xcast(T* t);
 
 //
 // IMPLEMENTATION of inline functions (and needed classes)
@@ -95,6 +98,13 @@ Bar::another_private_func()
 inline void
 Bar::public_func()
 {
+}
+
+#line 60 "inline.cpp"
+
+ template <typename T> inline void* xcast(T* t)
+{
+  return (void*) t;
 }
 
 #endif // inline_h

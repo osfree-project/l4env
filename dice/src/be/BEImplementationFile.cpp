@@ -5,7 +5,7 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -90,7 +90,7 @@ bool CBEImplementationFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pConte
     m_nFileType = pContext->GetFileType();
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
-        AddIncludedFileName(pHeader->GetFileName(), true);
+        AddIncludedFileName(pHeader->GetFileName(), true, false);
     return true;
 }
 
@@ -105,7 +105,7 @@ bool CBEImplementationFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * 
     m_nFileType = pContext->GetFileType();
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
-        AddIncludedFileName(pHeader->GetFileName(), true);
+        AddIncludedFileName(pHeader->GetFileName(), true, false);
     return true;
 }
 
@@ -120,7 +120,7 @@ bool CBEImplementationFile::CreateBackEnd(CFEInterface * pFEInterface, CBEContex
     m_nFileType = pContext->GetFileType();
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
-        AddIncludedFileName(pHeader->GetFileName(), true);
+        AddIncludedFileName(pHeader->GetFileName(), true, false);
     return true;
 }
 
@@ -135,7 +135,7 @@ bool CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation, CBEContex
     m_nFileType = pContext->GetFileType();
     CBEHeaderFile *pHeader = GetHeaderFile();
     if (pHeader)
-        AddIncludedFileName(pHeader->GetFileName(), true);
+        AddIncludedFileName(pHeader->GetFileName(), true, false);
 
     return true;
 }
@@ -154,6 +154,8 @@ void CBEImplementationFile::Write(CBEContext * pContext)
          fprintf(stderr, "Could not open implementation file %s\n", (const char *) GetFileName());
          return;
      }
+	 // write intro
+	 WriteIntro(pContext);
      // write includes
      WriteIncludesBeforeTypes(pContext);
      WriteIncludesAfterTypes(pContext);

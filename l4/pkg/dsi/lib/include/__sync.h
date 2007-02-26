@@ -109,11 +109,9 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
       old = *semaphore;
       tmp = old - 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
-#if DEBUG_PACKET_MAP
-  INFO("rcv = 0x%08x\n",(unsigned)msg.rcv);
-#endif
+  LOGdL(DEBUG_MAP_PACKET,"rcv = 0x%08x",(unsigned)msg.rcv);
 
   /* check new value of semaphore counter */
   if (tmp >= 0)
@@ -122,17 +120,14 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
   else
     {
       /* semaphore already locked (counter < 0), call sync thread */
-      ret = l4_i386_ipc_call(msg.sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_WAIT,
+      ret = l4_ipc_call(msg.sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_WAIT,
 			     msg.packet,msg.rcv,&dummy,&dummy,
 			     L4_IPC_NEVER,&result);
 
-#if DEBUG_PACKET_MAP
-      INFO("result 0x%08x\n",result.msgdope);
-#endif
+      LOGdL(DEBUG_MAP_PACKET,"result 0x%08x",result.msgdope);
 
       if (ret)
-	  LOG_Error("DSI sync message IPC error (0x%02x)!\n",ret);
-	  ;
+        LOG_Error("DSI sync message IPC error (0x%02x)!\n",ret);
 
       /* return error code */
       return ret;
@@ -170,17 +165,17 @@ dsi_up(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
       old = *semaphore;
       tmp = old + 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
   /* check new value of semaphore counter */
   if (tmp <= 0)
     {
       /* remote work thread is waiting, wakeup our sync thread to do reply */
-      ret = l4_i386_ipc_send(msg.sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_COMMITED,
+      ret = l4_ipc_send(msg.sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_COMMITED,
 			     msg.packet,L4_IPC_NEVER,&result);
       if (ret)
-	  //Panic("DSI sync message IPC error (0x%02x)!\n",ret);
-	  ;
+        //Panic("DSI sync message IPC error (0x%02x)!\n",ret);
+        ;
       return ret;
     } 
   return 0;
@@ -214,7 +209,7 @@ dsi_trylock(dsi_semaphore_t * semaphore)
       /* set new semaphore value */
       tmp = old - 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
   /* got the lock */
   return 1;

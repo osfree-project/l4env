@@ -32,7 +32,7 @@
 #include "be/l4/L4BENameFactory.h"
 
 #include "fe/FEAttribute.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CL4BEClass);
 

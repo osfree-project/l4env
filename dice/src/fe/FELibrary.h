@@ -5,7 +5,7 @@
  *	\date	02/22/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,25 +30,27 @@
 #define __DICE_FE_FELIBRARY_H__
 
 #include "fe/FEFileComponent.h"
-#include "fe/FEAttribute.h"
+#include "Vector.h"
+#include "CString.h"
 
 class CFEIdentifier;
 class CFETypedDeclarator;
 class CFEConstDeclarator;
 class CFETypedDeclarator;
 class CFEinterface;
+class CFEAttribute;
 
 /**	\class CFELibrary
  *	\ingroup frontend
  *	\brief describes the front-end library
  */
-class CFELibrary : public CFEFileComponent  
+class CFELibrary : public CFEFileComponent
 {
 DECLARE_DYNAMIC(CFELibrary);
 
 // standard constructor/destructor
 public:
-	/** constructs a library object 
+	/** constructs a library object
 	 *	\param sName the name of the library
 	 *	\param pAttributes the attributes of the library
 	 *	\param pElements the elements (components) of the library*/

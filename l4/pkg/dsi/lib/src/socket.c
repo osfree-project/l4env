@@ -83,7 +83,8 @@ __allocate_socket(void)
   /* search unused socket descriptor */
   do
     {
-      if (cmpxchg32(&sockets[i].flags,DSI_SOCKET_UNUSED,DSI_SOCKET_USED))
+      if (l4util_cmpxchg32(&sockets[i].flags,
+			   DSI_SOCKET_UNUSED,DSI_SOCKET_USED))
 	{
 	  /* found */
 	  next_socket = (i + 1) % DSI_MAX_SOCKETS;
@@ -110,10 +111,8 @@ __allocate_socket(void)
 int
 dsi_is_valid_socket(dsi_socket_t * socket)
 {
-#if DEBUG_SOCKET
 #if 0
-  INFO("socket at 0x%08x\n",(dword_t) socket);
-#endif
+  LOGdL(DEBUG_SOCKET,"socket at 0x%08x",(dword_t) socket);
 #endif
 
   if (socket == NULL)
@@ -171,9 +170,8 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
       Error("DSI: invalid data area!");
       return -L4_EINVAL;
     }
-#if DEBUG_SOCKET
-  INFO("data_ds: %d at %t\n", data_ds->id, data_ds->manager);
-#endif
+
+  LOGdL(DEBUG_SOCKET,"data_ds: %d at %t", data_ds->id, data_ds->manager);
 
   if (l4_is_invalid_id(work_id))
     {
@@ -219,9 +217,8 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
   if (l4dm_is_invalid_ds(*ctrl_ds))
     {
       /* create new one */
-#if DEBUG_SOCKET
-      INFO("create control area");
-#endif
+      LOGdL(DEBUG_SOCKET,"create control area");
+
       ret = dsi_create_ctrl_area(s,jcp_stream,cfg);
       if(ret)
 	{
@@ -231,9 +228,9 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
 	}
       s->flags |= DSI_SOCKET_FREE_CTRL;
       *ctrl_ds = s->ctrl_ds;
-#if DEBUG_SOCKET
-      INFO("control dataspace: %d at %t\n", ctrl_ds->id, ctrl_ds->manager);
-#endif
+
+      LOGdL(DEBUG_SOCKET,"control dataspace: %d at "IdFmt, 
+            ctrl_ds->id, IdStr(ctrl_ds->manager));
     }
   else 
     {
@@ -253,9 +250,9 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
     }
 
   /* setup data area */
-#if DEBUG_SOCKET
-  INFO("setting data area (%d at %t)...", data_ds->id, data_ds->manager);
-#endif
+  LOGdL(DEBUG_SOCKET,"setting data area (%d at "IdFmt")...", 
+        data_ds->id, IdStr(data_ds->manager));
+
   ret = dsi_set_data_area(s,*data_ds);
   if (ret)
     {
@@ -385,20 +382,18 @@ dsi_socket_connect(dsi_socket_t * socket, dsi_socket_ref_t * remote_socket)
       l4_is_invalid_id(remote_socket->sync_th) || 
       !l4_task_equal(remote_socket->work_th,remote_socket->sync_th))
     {
-      Msg("work %x.%x, sync %x.%x\n",
-	  remote_socket->work_th.id.task,remote_socket->work_th.id.lthread,
-	  remote_socket->sync_th.id.task,remote_socket->sync_th.id.lthread);
+      printf("work %x.%x, sync %x.%x\n",
+             remote_socket->work_th.id.task,remote_socket->work_th.id.lthread,
+             remote_socket->sync_th.id.task,remote_socket->sync_th.id.lthread);
       Error("DSI: invalid data in socket descriptor");
       return -L4_EINVAL;
     }
 
-#if DEBUG_CONNECT
-  INFO("connecting socket %d\n",socket->socket_id);
-  INFO("remote: %d, %x.%x, %x.%x\n",
-       remote_socket->socket,
-       remote_socket->work_th.id.task, remote_socket->work_th.id.lthread,
-       remote_socket->sync_th.id.task, remote_socket->sync_th.id.lthread);
-#endif
+  LOGdL(DEBUG_CONNECT,"connecting socket %d",socket->socket_id);
+  LOGdL(DEBUG_CONNECT,"remote: %d, %x.%x, %x.%x",
+        remote_socket->socket,
+        remote_socket->work_th.id.task, remote_socket->work_th.id.lthread,
+        remote_socket->sync_th.id.task, remote_socket->sync_th.id.lthread);
 
   /* set remote socket */
   socket->remote_socket.socket = remote_socket->socket;
@@ -662,10 +657,51 @@ dsi_socket_set_event(dsi_socket_t * socket, l4_uint32_t events)
   if (!dsi_is_valid_socket(socket))
     return -L4_EINVAL;
 
-#if DEBUG_EVENT
-  INFO("set events 0x%08x\n",events);
-#endif
+  LOGdL(DEBUG_EVENT,"set events 0x%08x",events);
+
   /* set event */
   return dsi_event_set(socket->socket_id,events);
 }
 
+/*****************************************************************************/
+/**
+ * \brief   Return number of packets in ring list
+ * \ingroup socket
+ * 
+ * \param   socket       Socket descriptor
+ *	
+ * \return  Number of packest in socket ring list (> 0), error code otherwise:
+ *          - -#L4_EINVAL invalid socket descriptor
+ */
+/*****************************************************************************/ 
+int
+dsi_socket_get_packet_num(dsi_socket_t * socket)
+{
+  /* check socket descriptor */
+  if (!dsi_is_valid_socket(socket))
+    return -L4_EINVAL;
+
+  return socket->num_packets;
+}
+
+/*****************************************************************************/
+/**
+ * \brief   Return number of committed send packets in ring list
+ * \ingroup socket
+ *
+ * \param   socket       Socket descriptor
+ *	
+ * \return  Number of committed send packets in ring list (> 0),
+ *          error code otherwise:
+ *          - -#L4_EINVAL invalid socket descriptor
+ */
+/*****************************************************************************/ 
+int
+dsi_socket_get_num_committed_packets(dsi_socket_t * socket)
+{
+  /* check socket descriptor */
+  if (!dsi_is_valid_socket(socket))
+    return -L4_EINVAL;
+
+  return socket->header->packets_committed;
+}

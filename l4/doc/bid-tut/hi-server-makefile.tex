@@ -1,0 +1,10 @@
+PKGDIR          ?= ../..
+L4DIR           ?= $(PKGDIR)/../..
+
+TARGET          = hiserver
+DEFAULT_RELOC   = 0x01800000
+
+SRC_C           = server.c
+SERVERIDL       = hiworld.idl
+
+include $(L4DIR)/mk/prog.mk

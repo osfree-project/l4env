@@ -1,9 +1,12 @@
-/*
- *  dropscon.h -- DROPS textbased console driver
- */
+/*!
+ * \file	con/examples/linux_stub/dropscon.h
+ * \brief	
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-#ifndef _DROPSCON_H
-#define _DROPSCON_H
+#ifndef __CON_EXAMPLES_LINUX_STUB_DROPSCON_H_
+#define __CON_EXAMPLES_LINUX_STUB_DROPSCON_H_
 
 #include <linux/version.h>
 

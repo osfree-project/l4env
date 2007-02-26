@@ -115,11 +115,9 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
       old = *semaphore;
       tmp = old - 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
-#if DEBUG_PACKET_MAP
-  INFO("rcv = 0x%08x\n",(unsigned)msg.rcv);
-#endif
+  LOGdL(DEBUG_MAP_PACKET,"rcv = 0x%08x",(unsigned)msg.rcv);
 
   /* check new value of semaphore counter */
   if (tmp >= 0)
@@ -129,7 +127,7 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
     {
       /* semaphore already locked (counter < 0), wait for someone, hopefully
 	 our peer. */
-      ret = l4_i386_ipc_wait(&msg.work_th,
+      ret = l4_ipc_wait(&msg.work_th,
 			     msg.rcv,
 			     &dw0, &dw1,
 			     L4_IPC_NEVER,
@@ -138,13 +136,11 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
 	  LOG_Error("Received IPC (%x,%x) from %x.%x, expected DSI-1 waktup",
 		    dw0, dw1, msg.work_th.id.task,msg.work_th.id.lthread);
       }
-
-#if DEBUG_PACKET_MAP
-      INFO("result 0x%08x\n",result.msgdope);
-#endif
-
+      
+      LOGdL(DEBUG_MAP_PACKET,"result 0x%08x",result.msgdope);
+      
       if (ret){
-	  LOG_Error("DSI sync message IPC error (0x%02x)!\n",ret);
+	  LOG_Error("DSI sync message IPC error (0x%02x)!",ret);
 	  enter_kdebug("ipc error");;
       }
 
@@ -184,19 +180,19 @@ dsi_up(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
       old = *semaphore;
       tmp = old + 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
   /* check new value of semaphore counter */
   if (tmp <= 0)
     {
       /* remote work thread is hopefully waiting, wake it up */
-      ret = l4_i386_ipc_send(msg.work_th,
+      ret = l4_ipc_send(msg.work_th,
 			     L4_IPC_SHORT_MSG,
 			     0xffee3489,
 			     msg.packet,DSI_SYNC_1IPC_TIMEOUT,
 			     &result);
       if (ret){
-	  LOG_Error("DSI sync message IPC error (0x%02x)!\n",ret);
+	  LOG_Error("DSI sync message IPC error (0x%02x)!",ret);
       }
       return ret;
     } 
@@ -231,7 +227,7 @@ dsi_trylock(dsi_semaphore_t * semaphore)
       /* set new semaphore value */
       tmp = old - 1;
     }
-  while (!cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
+  while (!l4util_cmpxchg8((l4_uint8_t *)semaphore,old,tmp));
 
   /* got the lock */
   return 1;

@@ -7,27 +7,17 @@
  * \date   08/30/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
- *
  * Stack memory allocation. The memory is requested at the default dataspace
  * manager definied by the L4 environment (see l4th_env_dm()).
  *
  * \todo Allow user specified dataspace managers.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -87,16 +77,14 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
     ret = l4dm_mem_open(L4DM_DEFAULT_DSM,size,0,0,name,&desc->ds);
   if (ret < 0)
     {
-      ERROR("l4thread: memory allocation failed: %s (%d)!",
-	    l4env_errstr(ret),ret);
+      LOG_Error("l4thread: memory allocation failed: %s (%d)!",
+                l4env_errstr(ret),ret);
       return ret;
     }
   desc->size = size;
 
-#if DEBUG_MEM_ALLOC
-  INFO("ds %d at "IdFmt"\n",desc->ds.id,IdStr(desc->ds.manager));
-  DMSG("  flags 0x%08x, owner "IdFmt"\n",flags,IdStr(owner));
-#endif
+  LOGdL(DEBUG_MEM_ALLOC,"ds %d at "IdFmt"\n  flags 0x%08x, owner "IdFmt,
+        desc->ds.id,IdStr(desc->ds.manager),flags,IdStr(owner));
 
   /* attach dataspace */
   attach_flags = L4DM_RW;
@@ -154,15 +142,15 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
 
   if (ret)
     {
-      ERROR("l4thread: attach dataspace failed: %s (%d)!",
-	    l4env_errstr(ret),ret);
+      LOG_Error("l4thread: attach dataspace failed: %s (%d)!",
+                l4env_errstr(ret),ret);
 
       l4dm_close(&desc->ds);
       return ret;
     }
 
 #if DEBUG_MEM_ALLOC
-  DMSG("  attached to region at 0x%08x\n",desc->map_addr);
+  printf("  attached to region at 0x%08x\n",desc->map_addr);
 #endif
 
   if (!l4_is_invalid_id(owner))
@@ -171,8 +159,8 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
       ret = l4dm_transfer(&desc->ds,owner);
       if (ret < 0)
 	{
-	  ERROR("l4thread: set dataspace owner failed: %s (%d)!",
-		l4env_errstr(ret),ret);
+	  LOG_Error("l4thread: set dataspace owner failed: %s (%d)!",
+                    l4env_errstr(ret),ret);
 
 	  l4rm_detach((void *)desc->map_addr);
 	  l4dm_close(&desc->ds);
@@ -202,24 +190,18 @@ l4th_pages_free(l4th_mem_desc_t * desc)
 {
   int ret;
   
-#if DEBUG_MEM_FREE
-  INFO("free ds %d at "IdFmt"\n",desc->ds.id,IdStr(desc->ds.manager));
-  DMSG("  mapped to 0x%08x, size %u\n",desc->map_addr,desc->size);
-#endif
-
+  LOGdL(DEBUG_MEM_FREE,"free ds %d at "IdFmt"\n  mapped to 0x%08x, size %u",
+        desc->ds.id,IdStr(desc->ds.manager),desc->map_addr,desc->size);
+  
   /* detach vm region */
   ret = l4rm_detach((void *)desc->map_addr);
 
-#if DEBUG_MEM_FREE
-  INFO("detach done (ret %d)\n",ret);
-#endif
+  LOGdL(DEBUG_MEM_FREE,"detach done (ret %d)",ret);
 
   /* close dataspace */
   ret = l4dm_close(&desc->ds);
 
-#if DEBUG_MEM_FREE
-  INFO("close done (ret %d)\n",ret);
-#endif
+  LOGdL(DEBUG_MEM_FREE,"close done (ret %d)",ret);
 
   /* done */
   return ret;

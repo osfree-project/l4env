@@ -1,9 +1,18 @@
-#ifndef __TRAMPOLINE_H
-#define __TRAMPOLINE_H
+/*!
+ * \file	loader/server/src/trampoline.h
+ * \brief	startup code of a sigma0 application
+ *
+ * \date	2001
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-struct grub_multiboot_info;
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
-void task_trampoline(l4_addr_t entry, struct grub_multiboot_info *mbi);
+#ifndef __TRAMPOLINE_H_
+#define __TRAMPOLINE_H_
+
+void task_trampoline(l4_addr_t entry, void *mbi);
 extern char _task_trampoline_end;
 
 #endif

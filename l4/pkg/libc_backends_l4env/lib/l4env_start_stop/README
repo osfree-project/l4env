@@ -1,0 +1,2 @@
+Very simple backend, just containing the startup and shutdown
+stuff. It uses printf() to output return codes.

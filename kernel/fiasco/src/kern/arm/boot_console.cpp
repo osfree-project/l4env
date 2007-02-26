@@ -21,19 +21,9 @@ IMPLEMENTATION:
 #include "kernel_console.h"
 #include "kernel_uart.h"
 
-
-
-Console *Boot_console::_c;
-
-
 IMPLEMENT
 void Boot_console::init()
 {
   Kconsole::console()->register_console(Kernel_uart::uart());
 }
 
-IMPLEMENT
-Console *const Boot_console::cons()
-{
-  return _c;
-}

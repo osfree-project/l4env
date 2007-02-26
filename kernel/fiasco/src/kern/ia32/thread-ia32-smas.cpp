@@ -12,13 +12,13 @@ IMPLEMENTATION[ia32-smas]:
 
 
 PRIVATE static inline 
-void Thread::memcpy_byte_gs_es(void *dst, void const *src, size_t n)
+void Thread::memcpy_byte_fs_es(void *dst, void const *src, size_t n)
 {
   unsigned dummy1, dummy2, dummy3;
   asm volatile ( " cld                                     \n"
-		 " repz movsl %%gs:(%%esi), %%es:(%%edi)   \n"
+		 " repz movsl %%fs:(%%esi), %%es:(%%edi)   \n"
 		 " mov %%edx, %%ecx                        \n"
-		 " repz movsb %%gs:(%%esi), %%es:(%%edi)   \n"
+		 " repz movsb %%fs:(%%esi), %%es:(%%edi)   \n"
 		 :
 		 "=c"(dummy1), "=S"(dummy2), "=D"(dummy3)
 		 :
@@ -28,11 +28,11 @@ void Thread::memcpy_byte_gs_es(void *dst, void const *src, size_t n)
 }
 
 PRIVATE static inline
-void Thread::memcpy_mword_gs_es(void *dst, void const *src, size_t n)
+void Thread::memcpy_mword_fs_es(void *dst, void const *src, size_t n)
 {
   unsigned dummy1, dummy2, dummy3;
   asm volatile ( " cld                                     \n"
-		 " repz movsl %%gs:(%%esi), %%es:(%%edi)   \n"
+		 " repz movsl %%fs:(%%esi), %%es:(%%edi)   \n"
 		 :
 		 "=c"(dummy1), "=S"(dummy2), "=D"(dummy3)
 		 :
@@ -98,11 +98,12 @@ void Thread::set_small_space( Mword nr)
 }
 
 
-IMPLEMENT inline NEEDS["smas.h"]
-bool Thread::handle_smas_page_fault ( Address pfa, unsigned error_code,
-                                         L4_msgdope *ipc_code)
+IMPLEMENT inline NEEDS ["smas.h"]
+bool
+Thread::handle_smas_page_fault( Address pfa, Mword error_code,
+				     L4_msgdope &ipc_code)
 {
-  vm_offset_t smaddr;          // for finding out about small spaces
+  Address smaddr;          // for finding out about small spaces
   Space_context *smspace;      // dito
 
   if ( smas.linear_to_small( pfa, &smspace, &smaddr ) )
@@ -116,24 +117,23 @@ bool Thread::handle_smas_page_fault ( Address pfa, unsigned error_code,
     //only interested in ourselves
     if ( space() == smspace)
     {
-      //lazy updating...
-      if (!(error_code & 1))
-      {
-         if ( current_space()->update( pfa, smspace, smaddr) )
-         {
-           return true;
-         }
-      }
+      bool writable;
 
-      //Didn't work? Seems the pager is needed.
-      if (!(*ipc_code = handle_page_fault_pager(
-                                smaddr, error_code)).has_error())
-      {
-         //now copy it in again
-         //strange but right: may not be the same space as before
-          current_space()->update( pfa, smspace, smaddr);
+      //lazy updating...
+      if (EXPECT_TRUE (smspace->lookup (smaddr, &writable) != (Address) -1 &&
+	                      (writable || !(error_code & PF_ERR_WRITE))))
+
+          {
+            current_space()->remote_update (pfa, smspace, smaddr, 1);
+            return true;
+          }
+
+      // Didn't work? Seems the pager is needed.
+      if (!(ipc_code = handle_page_fault_pager(smaddr, error_code)).has_error())
+        // now copy it in again
+        // strange but right: may not be the same space as before
+          current_space()->remote_update (pfa, smspace, smaddr, 1);
           return true;
-      }
     }
   }
   
@@ -148,7 +148,7 @@ bool Thread::handle_smas_gp_fault(Mword error_code)
        && space()->is_small_space()) 
   {
     smas.move( space(), 0 );
-    printf( "KERN: Space exceeded? Move task %u out of small space.\n",
+    printf( "KERNEL: Space exceeded? Move task %u out of small space.\n",
                   unsigned(space_index()) );
     return true;
   }
@@ -171,24 +171,24 @@ bool Thread::handle_smas_gp_fault(Mword error_code)
  * @param usrc Source address in user space
  * @param n Number of Mwords to copy
  */
-IMPLEMENT inline NEEDS[Thread::memcpy_byte_gs_es]
+IMPLEMENT inline NEEDS[Thread::memcpy_byte_fs_es]
 template< typename T >
-void Thread::copy_from_user(void *kdst, void const *usrc, size_t n)
+void Thread::copy_from_user(T *kdst, T const *usrc, size_t n)
 {
   assert (this == current());
 
   // copy from user byte by byte
-  memcpy_byte_gs_es( kdst, usrc, n*sizeof(T) );
+  memcpy_byte_fs_es( (void*)kdst, (void*)usrc, n*sizeof(T) );
 }
 
-IMPLEMENT inline NEEDS[Thread::memcpy_mword_gs_es]
+IMPLEMENT inline NEEDS[Thread::memcpy_mword_fs_es]
 template<>
-void Thread::copy_from_user<Mword>(void *kdst, void const *usrc, size_t n)
+void Thread::copy_from_user<Mword>(Mword *kdst, Mword const *usrc, size_t n)
 {
   assert (this == current());
 
   // copy from user word by word
-  memcpy_mword_gs_es( kdst, usrc, n );
+  memcpy_mword_fs_es( (void*)kdst, (void*)usrc, n );
 }
 
 
@@ -204,25 +204,25 @@ void Thread::copy_from_user<Mword>(void *kdst, void const *usrc, size_t n)
  */
 IMPLEMENT inline NEEDS[Thread::memcpy_byte_ds_es]
 template< typename T >
-void Thread::copy_to_user(void *udst, void const *ksrc, size_t n)
+void Thread::copy_to_user(T *udst, T const *ksrc, size_t n)
 {
   assert (this == current());
 
   // copy from user byte by byte
-  asm ("mov %%gs, %%eax; mov %%eax, %%es" : : : "eax");
-  memcpy_byte_ds_es( udst, ksrc, n * sizeof(T) );
+  asm ("mov %%fs, %%eax; mov %%eax, %%es" : : : "eax");
+  memcpy_byte_ds_es( (void*)udst, (void*)ksrc, n * sizeof(T) );
   asm ("mov %%ds, %%eax; mov %%eax, %%es" : : : "eax");
 }
 
 IMPLEMENT inline NEEDS[Thread::memcpy_mword_ds_es]
 template<>
-void Thread::copy_to_user<Mword>(void *udst, void const *ksrc, size_t n)
+void Thread::copy_to_user<Mword>(Mword *udst, Mword const *ksrc, size_t n)
 {
   assert (this == current());
 
   // copy from user word by word
-  asm ("mov %%gs, %%eax; mov %%eax, %%es" : : : "eax");
-  memcpy_mword_ds_es( udst, ksrc, n );
+  asm ("mov %%fs, %%eax; mov %%eax, %%es" : : : "eax");
+  memcpy_mword_ds_es( (void*)udst, (void*)ksrc, n );
   asm ("mov %%ds, %%eax; mov %%eax, %%es" : : : "eax");
 }
 
@@ -237,21 +237,21 @@ void Thread::poke_user( T *addr, T value)
   switch(sizeof(T)) 
     {
     case 1:
-      asm ("movb %b0, %%gs:(%1)"
+      asm ("movb %b0, %%fs:(%1)"
 	   :
 	   : "Nr"(value), "Nr"(addr)
 	   : "memory"
 	   );
       break;
     case 2:
-      asm ("movw %w0, %%gs:(%1)"
+      asm ("movw %w0, %%fs:(%1)"
 	   :
 	   : "Nr"(value), "Nr"(addr)
 	   : "memory"
 	   );
       break;
     case 4:
-      asm ("movl %0, %%gs:(%1)"
+      asm ("movl %0, %%fs:(%1)"
 	   :
 	   : "Nr"(value), "Nr"(addr)
 	   : "memory"
@@ -276,19 +276,19 @@ T Thread::peek_user( T const *addr )
   switch(sizeof(T)) 
     {
     case 1:
-      asm ("movb %%gs:(%1), %b0"
+      asm ("movb %%fs:(%1), %b0"
 	   : "=r"(ret)
 	   : "Nr"(addr)
 	   );
       break;
     case 2:
-      asm ("movw %%gs:(%1), %w0"
+      asm ("movw %%fs:(%1), %w0"
 	   : "=r"(ret)
 	   : "Nr"(addr)
 	   );
       break;
     case 4:
-      asm ("movl %%gs:(%1), %0"
+      asm ("movl %%fs:(%1), %0"
 	   : "=r"(ret)
 	   : "Nr"(addr)
 	   );

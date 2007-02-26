@@ -9,6 +9,9 @@
 
 
 #line 7 "comment_in_string.cpp"
-irq_init(unsigned char master_base, unsigned char slave_base);
+void irq_init(unsigned char master_base, unsigned char slave_base);
+
+#line 19 "comment_in_string.cpp"
+void bar();
 
 #endif // comment_in_string_h

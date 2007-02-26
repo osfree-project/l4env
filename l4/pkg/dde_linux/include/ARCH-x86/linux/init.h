@@ -5,7 +5,7 @@
 
 #include <linux/config.h>
 #ifdef DDE_LINUX
-#include <l4/env/init.h>
+#include <l4/dde_linux/ctor.h>
 #endif
 
 /* These macros are used to mark some functions or 
@@ -65,14 +65,14 @@ extern initcall_t __initcall_start, __initcall_end;
 
 #define __initcall(fn)	\
 	/* make an indirection for type compatibility */	\
-	static void dde_linux_initcall_##fn(void){fn();};	\
-	l4env_initcall(dde_linux_initcall_##fn)
+	static void l4dde_linux_initcall_##fn(void){fn();};	\
+	l4dde_initcall(l4dde_linux_initcall_##fn)
 
 // we do not provide exitcalls for dde_linux
 #define __exitcall(fn) \
-    	/* prevent warning only */				\
-	static void dde_linux_exitcall_##fn(void) __attribute__ ((unused));	\
-	static void dde_linux_exitcall_##fn() {fn();};
+	/* prevent warning only */				\
+	static void l4dde_linux_exitcall_##fn(void) __attribute__ ((unused));	\
+	static void l4dde_linux_exitcall_##fn() {fn();};
 #endif /* DDE_LINUX */
 
 /*

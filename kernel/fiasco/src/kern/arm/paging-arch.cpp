@@ -30,4 +30,40 @@ namespace Page {
 
 IMPLEMENTATION[arch]:
 
-//-
+IMPLEMENT inline
+Mword PF::is_translation_error( Mword error )
+{
+  return (error & 0x0d/*FSR_STATUS_MASK*/) == 0x05/*FSR_TRANSL*/;
+}
+
+IMPLEMENT inline
+Mword PF::is_usermode_error( Mword error )
+{
+  return (error & 0x00080000/*PF_USERMODE*/);
+}
+
+IMPLEMENT inline
+Mword PF::is_read_error( Mword error )
+{
+  return (error & 0x00100000/*PF_WRITE*/);
+}
+
+IMPLEMENT inline
+Mword PF::addr_to_msgword0( Address pfa, Mword error )
+{
+  Mword a = pfa & ~3;
+  if(is_translation_error( error ))
+    a |= 1;
+  if(!is_read_error(error))
+    a |= 2;
+  return a;
+}
+
+IMPLEMENT inline
+Mword PF::pc_to_msgword1( Address pc, Mword error )
+{
+  if(is_usermode_error(error))
+    return pc;
+  else 
+    return (Mword)-1;
+}

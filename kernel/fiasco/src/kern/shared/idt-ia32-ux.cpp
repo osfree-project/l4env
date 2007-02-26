@@ -7,9 +7,8 @@ INTERFACE:
 
 #include <flux/x86/seg.h>
 #include "initcalls.h"
+#include "kmem.h"
 #include "types.h"
-
-extern char _idt;
 
 class Idt
 {
@@ -40,7 +39,7 @@ public:
 /**
   * Virtual address of the Interrupt Descriptor Table (IDT)
   */  
-  static const Address idt = (Address) &_idt;
+  static const Address idt = (Address) Kmem::_idt_addr;
 
 private:
 
@@ -65,12 +64,12 @@ IMPLEMENT
 void
 Idt::set_writable (bool writable)
 {
-  const pd_entry_t *pde = Kmem::dir() + ((idt >> PDESHIFT) & PDEMASK);
+  const Pd_entry *pde = Kmem::dir() + ((idt >> PDESHIFT) & PDEMASK);
 
   // Make sure page directory entry is valid and not a 4MB page
   assert ((*pde & INTEL_PDE_VALID) && !(*pde & INTEL_PDE_SUPERPAGE));
 
-  pt_entry_t *pte = static_cast<pt_entry_t *>
+  Pt_entry *pte = static_cast<Pt_entry *>
                     (Kmem::phys_to_virt (*pde & Config::PAGE_MASK)) +
                     ((idt >> PTESHIFT) & PTEMASK);
 
@@ -116,3 +115,4 @@ Idt::set_vector (unsigned vector, Address func, bool user)
 
   set_writable (false);
 }
+

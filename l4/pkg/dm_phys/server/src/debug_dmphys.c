@@ -6,23 +6,13 @@
  *
  * \date   02/03/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -71,10 +61,10 @@ extern l4slab_cache_t dataspace_cache;
  */
 /*****************************************************************************/ 
 void 
-if_l4dm_memphys_server_dmphys_debug(sm_request_t * request, 
-				    l4_uint32_t key, 
-				    l4_uint32_t data, 
-				    sm_exc_t * _ev)
+if_l4dm_memphys_dmphys_debug_component(CORBA_Object _dice_corba_obj,
+    l4_uint32_t key,
+    l4_uint32_t data,
+    CORBA_Environment *_dice_corba_env)
 {
   page_pool_t * pool;
 
@@ -111,13 +101,13 @@ if_l4dm_memphys_server_dmphys_debug(sm_request_t * request,
 
     case L4DM_MEMPHYS_SHOW_SLABS:
       /* show descriptor slab cache information */
-      Msg("Memmap descriptor slab cache:\n");
+      printf("Memmap descriptor slab cache:\n");
       l4slab_dump_cache_free(&memmap_cache);
-      Msg("\n");
-      Msg("Page area slab cache:\n");
+      printf("\n");
+      printf("Page area slab cache:\n");
       l4slab_dump_cache_free(&area_cache);
-      Msg("\n");
-      Msg("Dataspace descriptor slab cache:\n");
+      printf("\n");
+      printf("Dataspace descriptor slab cache:\n");
       l4slab_dump_cache_free(&dataspace_cache);
       break;
 

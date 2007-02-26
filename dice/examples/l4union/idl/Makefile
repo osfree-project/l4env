@@ -1,11 +1,7 @@
 PKGDIR		?=	..
 L4DIR		?=	$(PKGDIR)/../../../..
 
-SYSTEMS		 =	x86_586-l4v2
-
-IDL			 =	test.idl
-#IDL_FLAGS	 =	-T
-#IDL_TYPE	 =	corba
+IDL		= test.idl
+SYSTEMS		= x86-l4v2 x86-l4x0
 
 include $(L4DIR)/mk/idl.mk
-

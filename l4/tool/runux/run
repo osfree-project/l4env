@@ -1,0 +1,18 @@
+#! /bin/bash
+
+[ -n "$UXRES" ] || UXRES=640x480@16
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-R ./rmgr-ux" task modname \"L4Linux task\"" \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l simple_ts \
+	-l fuxfprov \
+	-l con-ux \
+	-l l4exec \
+	-l loader" $CFGPATH/run" \
+	-n9 "$@"

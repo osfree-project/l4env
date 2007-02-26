@@ -5,7 +5,7 @@
  *	\date	07/05/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -125,14 +125,14 @@ bool CFile::Close()
  *
  * This function starts to write at the current position in the file.
  */
-void CFile::Print(char *fmt, ...)
+void CFile::Print(const char *fmt, ...)
 {
-    if (!m_fCurrent)
-	return;
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(m_fCurrent, fmt, args);
-    va_end(args);
+	if (!m_fCurrent)
+		return;
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(m_fCurrent, fmt, args);
+	va_end(args);
 }
 
 /**
@@ -142,18 +142,18 @@ void CFile::Print(char *fmt, ...)
  * This function starts to write the number of identify characters into the file
  * and then starts to print the line.
  */
-void CFile::PrintIndent(char *fmt, ...)
+void CFile::PrintIndent(const char *fmt, ...)
 {
-    if (!m_fCurrent)
-	return;
-    // print indent
-    for (int i = 0; i < m_nIndent; i++)
-	fprintf(m_fCurrent, " ");
-    // print
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(m_fCurrent, fmt, args);
-    va_end(args);
+	if (!m_fCurrent)
+		return;
+	// print indent
+	for (int i = 0; i < m_nIndent; i++)
+		fprintf(m_fCurrent, " ");
+	// print
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(m_fCurrent, fmt, args);
+	va_end(args);
 }
 
 /**

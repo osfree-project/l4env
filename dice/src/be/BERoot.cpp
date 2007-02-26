@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -184,14 +184,14 @@ bool CBERoot::CreateBE(CFEFile * pFEFile, CBEContext * pContext)
 int CBERoot::Optimize(int nLevel, CBEContext *pContext)
 {
     int nRet = 0;
-    if (m_pClient)
-	if ((nRet = m_pClient->Optimize(nLevel, pContext)) != 0)
+    if (m_pClient &&
+	    ((nRet = m_pClient->Optimize(nLevel, pContext)) != 0))
 	    return nRet;
-    if (m_pComponent)
-	if ((nRet = m_pComponent->Optimize(nLevel, pContext)) != 0)
+    if (m_pComponent &&
+	    ((nRet = m_pComponent->Optimize(nLevel, pContext)) != 0))
 	    return nRet;
-    if (m_pTestsuite)
-	if ((nRet = m_pTestsuite->Optimize(nLevel, pContext)) != 0)
+    if (m_pTestsuite &&
+	    ((nRet = m_pTestsuite->Optimize(nLevel, pContext)) != 0))
 	    return nRet;
     return 0;
 }
@@ -358,6 +358,23 @@ CBEConstant* CBERoot::FindConstant(String sConstantName)
         if (pConstant->GetName() == sConstantName)
             return pConstant;
     }
+	// search interfaces
+	pIter = GetFirstClass();
+	CBEClass *pClass;
+	while ((pClass = GetNextClass(pIter)) != 0)
+	{
+	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
+		    return pConstant;
+	}
+	// search libraries
+    pIter = GetFirstNameSpace();
+	CBENameSpace *pNameSpace;
+	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+	{
+	    if ((pConstant = pNameSpace->FindConstant(sConstantName)) != 0)
+		    return pConstant;
+    }
+	// nothing found
     return 0;
 }
 
@@ -509,9 +526,9 @@ CBENameSpace* CBERoot::FindNameSpace(String sNameSpaceName)
 bool CBERoot::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
 {
     // first search included files-> may contain base interfaces we need later
-    VectorElement *pIter = pFEFile->GetFirstIncludeFile();
+    VectorElement *pIter = pFEFile->GetFirstChildFile();
     CFEFile *pFEIncludedFile;
-    while ((pFEIncludedFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+    while ((pFEIncludedFile = pFEFile->GetNextChildFile(pIter)) != 0)
     {
         if (!CreateBackEnd(pFEIncludedFile, pContext))
             return false;
@@ -605,7 +622,7 @@ bool CBERoot::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
         if (!pNameSpace->CreateBackEnd(pFELibrary, pContext))
         {
             RemoveNameSpace(pNameSpace);
-            VERBOSE("CBERoot::CreateBackEnd failed because namespace could not be re-created\n",
+            VERBOSE("CBERoot::CreateBackEnd failed because namespace %s could not be re-created\n",
                     (const char*)pFELibrary->GetName());
             return false;
         }
@@ -672,6 +689,8 @@ bool CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContext
     return true;
 }
 
+#include "be/BEHeaderFile.h"
+
 /** \brief adds the members of the root to the header file
  *  \param pHeader the header file
  *  \param pContext the context of this operation
@@ -698,6 +717,14 @@ bool CBERoot::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
         if (!pTypedef->AddToFile(pHeader, pContext))
             return false;
     }
+	// tagged declarations
+	pIter = GetFirstTaggedType();
+    CBEType *pTaggedType;
+	while ((pTaggedType = GetNextTaggedType(pIter)) != 0)
+	{
+	    if (!pTaggedType->AddToFile(pHeader, pContext))
+		    return false;
+	}
     // Classs
     pIter = GetFirstClass();
     CBEClass *pClass;
@@ -770,9 +797,9 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile, CBECont
     // and because they may contain base interfaces, they come first
     if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
     {
-        VectorElement *pIter = pFEFile->GetFirstIncludeFile();
+        VectorElement *pIter = pFEFile->GetFirstChildFile();
         CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+        while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
         {
             if (!AddOpcodesToFile(pHeader, pIncFile, pContext))
                 return false;
@@ -780,7 +807,7 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile, CBECont
     }
     // get root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // classes
     VectorElement *pIter = pFEFile->GetFirstInterface();
     CFEInterface *pFEInterface;

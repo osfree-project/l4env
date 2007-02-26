@@ -25,15 +25,15 @@
 typedef struct blkclient_driver
 {
   /* driver handle */
-  l4blk_driver_handle_t handle;
+  l4blk_driver_id_t handle;
 
   /* driver threads */
-  l4_threadid_t         driver_id;
-  l4_threadid_t         cmd_id;
-  l4_threadid_t         notify_id; 
+  l4_threadid_t     driver_id;
+  l4_threadid_t     cmd_id;
+  l4_threadid_t     notify_id; 
 
   /* library stuff */
-  l4thread_t            notify_thread;
+  l4thread_t        notify_thread;
 } blkclient_driver_t;
 
 /* prototypes */

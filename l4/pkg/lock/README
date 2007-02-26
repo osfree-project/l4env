@@ -1,0 +1,5 @@
+L4Env Locks
+
+This package provides a simple lock implementation based on the L4Env
+semaphore. For further documentation see the reference manual in
+lock/doc.

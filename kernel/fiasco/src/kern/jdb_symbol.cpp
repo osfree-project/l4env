@@ -1,16 +1,18 @@
 INTERFACE:
 
+#include "l4_types.h"
+
 class Jdb_symbol
 {
 private:
   typedef struct
     {
       const char *str;
-      unsigned beg;
-      unsigned end;
-    } task_symbol_t;
+      Address    beg;
+      Address    end;
+    } Task_symbol;
   
-  static task_symbol_t task_symbols[2048];
+  static Task_symbol task_symbols[L4_uid::MAX_TASKS];
 };
 
 
@@ -20,29 +22,33 @@ IMPLEMENTATION:
 #include <cstring>
 #include "kmem.h"
 
-Jdb_symbol::task_symbol_t Jdb_symbol::task_symbols[2048];
+Jdb_symbol::Task_symbol Jdb_symbol::task_symbols[L4_uid::MAX_TASKS];
 
 // read address from current position and return its value
 static inline
-unsigned
+Address
 Jdb_symbol::string_to_addr(char *symstr)
 {
-  unsigned address = 0;
+  Address addr = 0;
 
   for (int i=0; i<= 7; i++)
     {
-      switch (unsigned c = *symstr++)
+      switch (Address c = *symstr++)
 	{
-	case 'a' ... 'f':
+	case 'a': case 'b': case 'c':
+	case 'd': case 'e': case 'f':
 	  c -= 'a' - '9' - 1;
-	case '0' ... '9':
+	case '0': case '1': case '2':
+	case '3': case '4': case '5':
+	case '6': case '7': case '8':
+	case '9':
 	  c -= '0';
-	  address <<= 4;
-	  address += c;
+	  addr <<= 4;
+	  addr += c;
 	}
     }
 
-  return address;
+  return addr;
 }
 
 // optimize symbol table to speed up address-to-symbol search
@@ -51,7 +57,7 @@ Jdb_symbol::string_to_addr(char *symstr)
 // next symbol (or 0 if end of list)
 static
 bool
-Jdb_symbol::set_symbols(unsigned task, unsigned addr)
+Jdb_symbol::set_symbols(Task_num task, Address addr)
 {
   if (addr == 0)
     {
@@ -80,19 +86,19 @@ Jdb_symbol::set_symbols(unsigned task, unsigned addr)
 	      return false;
 	    }
 
-	  ((unsigned*)sym)[-1] = 0;  // terminate list
-	  ((unsigned*)sym)[ 0] = 0;  // terminate list
+	  ((Address*)sym)[-1] = 0;  // terminate list
+	  ((Address*)sym)[ 0] = 0;  // terminate list
 	  *symstr = '\0';            // terminate string
 	  return true;
 	}
       
       // write binary address
-      unsigned address = string_to_addr(sym);
-      *((unsigned*)sym)++ = address;
+      Address addr = string_to_addr(sym);
+      *((Address*)sym)++ = addr;
       
       if (!*symstr || !*(symstr+1))
 	{
-	  *((unsigned*)sym) = 0;  // terminate list
+	  *((Address*)sym) = 0;  // terminate list
 	  *symstr = '\0';  // terminate string
 	  return true;
 	}
@@ -101,24 +107,14 @@ Jdb_symbol::set_symbols(unsigned task, unsigned addr)
       *symstr = '\0';
 
       // link address
-      *((unsigned*)sym)++ = (unsigned)(++symstr);
+      *((Address*)sym)++ = (Address)(++symstr);
     }
-}
-
-// determine if symbol is included in kernel symbols 
-// by checking the address
-static inline
-bool
-Jdb_symbol::addr_in_kernel(unsigned addr)
-{
-  return (   (task_symbols[0].str != 0)
-          && (task_symbols[0].beg <= addr));
 }
 
 // search symbol in task's symbols, return pointer to symbol name
 static
 const char*
-Jdb_symbol::match_symbol(const char *symbol, bool search_instr, unsigned task)
+Jdb_symbol::match_symbol(const char *symbol, bool search_instr, Task_num task)
 {
   const char *sym, *symnext;
 
@@ -139,13 +135,13 @@ Jdb_symbol::match_symbol(const char *symbol, bool search_instr, unsigned task)
 // Search a symbol in symbols of a specific task. If the symbol
 // was not found, search in kernel symbols too (if exists)
 PUBLIC static
-unsigned 
-Jdb_symbol::match_symbol_to_address(const char *symbol, bool search_instr,
-				    unsigned task)
+Address 
+Jdb_symbol::match_symbol_to_addr(const char *symbol, bool search_instr,
+				 Task_num task)
 {
   const char *sym;
-  
-  if (task >= 2048)
+
+  if (task >= L4_uid::MAX_TASKS)
     return 0;
 
   for (;;)
@@ -163,14 +159,14 @@ Jdb_symbol::match_symbol_to_address(const char *symbol, bool search_instr,
 	    return 0; // already searched in kernel symbols so we fail
 	}
 
-      return *(unsigned*)sym;
+      return *(Address*)sym;
     }
 }
 
 // try to search a possible symbol completion
 PUBLIC static
 bool
-Jdb_symbol::complete_symbol(char *symbol, unsigned size, unsigned task)
+Jdb_symbol::complete_symbol(char *symbol, unsigned size, Task_num task)
 {
   unsigned equal_len = 0xffffffff, symbol_len = strlen(symbol);
   const char *sym, *symnext, *equal_sym = 0;
@@ -179,7 +175,7 @@ Jdb_symbol::complete_symbol(char *symbol, unsigned size, unsigned task)
     return false;
 
 repeat:
-  if ((task <= 2048) && (task_symbols[task].str != 0))
+  if ((task <= L4_uid::MAX_TASKS) && (task_symbols[task].str != 0))
     {
       // walk through list of symbols
       for (sym=task_symbols[task].str; sym; sym=symnext)
@@ -252,22 +248,19 @@ repeat:
 // search symbol name that matches for a specific address
 PUBLIC static
 const char*
-Jdb_symbol::match_address_to_symbol(unsigned address, unsigned task)
+Jdb_symbol::match_addr_to_symbol(Address addr, Task_num task)
 {
-  if (addr_in_kernel(address))
-    task = 0;
-
-  if (task>=2048)
+  if (task>=L4_uid::MAX_TASKS)
     return 0;
 
   if (   (task_symbols[task].str != 0)
-      && (task_symbols[task].beg <= address)
-      && (task_symbols[task].end >= address))
+      && (task_symbols[task].beg <= addr)
+      && (task_symbols[task].end >= addr))
     {
       const char *sym;
       for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
 	{
-	  if ((*(unsigned*)sym == address)
+	  if ((*(Address*)sym == addr)
 	      && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
 	      && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
 	     )
@@ -281,13 +274,10 @@ Jdb_symbol::match_address_to_symbol(unsigned address, unsigned task)
 // search last symbol before eip
 PUBLIC static
 bool
-Jdb_symbol::match_eip_to_symbol(unsigned eip, unsigned task,
+Jdb_symbol::match_eip_to_symbol(Address eip, Task_num task, 
 				char *t_symbol, int s_symbol)
 {
-  if (addr_in_kernel(eip))
-    task = 0;
-
-  if (task>=2048)
+  if (task>=L4_uid::MAX_TASKS)
     return false;
 
   if (   (task_symbols[task].str != 0)
@@ -295,11 +285,11 @@ Jdb_symbol::match_eip_to_symbol(unsigned eip, unsigned task,
       && (task_symbols[task].end >= eip))
     {
       const char *sym, *max_sym = 0;
-      unsigned max_addr = 0;
+      Address max_addr = 0;
       
       for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
 	{
-	  unsigned addr = *(unsigned*)sym;
+	  Address addr = *(Address*)sym;
 	  if (   (addr > max_addr) && (addr <= eip)
 	      && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
 	      && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
@@ -338,12 +328,13 @@ Jdb_symbol::match_eip_to_symbol(unsigned eip, unsigned task,
 // register symbols for a specific task (called by user mode application)
 PUBLIC static
 void
-Jdb_symbol::register_symbols(unsigned addr, unsigned task)
+Jdb_symbol::register_symbols(Address addr, Task_num task)
 {
   // sanity check
-  if (task >= 2048)
+  if (task >= L4_uid::MAX_TASKS)
     {
-      printf("register_symbols: task value %d out of range (0-2047)\n", task);
+      printf("register_symbols: task value %d out of range (0-%d)\n", 
+	  task, L4_uid::MAX_TASKS-1);
       return;
     }
   
@@ -353,10 +344,10 @@ Jdb_symbol::register_symbols(unsigned addr, unsigned task)
   if (task == 0)
     {
       // kernel symbols are special
-      unsigned sym_start, sym_end;
+      Address sym_start, sym_end;
       
-      if (  !(sym_start = match_symbol_to_address("_start", false, 0))
-    	  ||!(sym_end   = match_symbol_to_address("_end", false, 0)))
+      if (  !(sym_start = match_symbol_to_addr("_start", false, 0))
+    	  ||!(sym_end   = match_symbol_to_addr("_end", false, 0)))
 	{
 	  printf("KERNEL: Missing \"_start\" or \"_end\" in kernel symbols "
 	      "-- disabling kernel symbols\n");
@@ -364,7 +355,7 @@ Jdb_symbol::register_symbols(unsigned addr, unsigned task)
 	  return;
 	}
 
-      if (sym_end != (unsigned)&_end)
+      if (sym_end != (Address)&_end)
 	{
 	  printf("KERNEL: Fiasco symbol table does not match kernel "
  	      "-- disabling kernel symbols\n");
@@ -377,12 +368,12 @@ Jdb_symbol::register_symbols(unsigned addr, unsigned task)
     }
   else
     {
-      unsigned min_addr = 0xffffffff, max_addr = 0;
+      Address min_addr = 0xffffffff, max_addr = 0;
       const char *sym;
 
       for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
 	{
-	  unsigned addr = *(unsigned*)sym;
+	  Address addr = *(Address*)sym;
 	  if (addr < min_addr)
 	    min_addr = addr;
 	  if (addr > max_addr)

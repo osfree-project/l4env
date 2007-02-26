@@ -5,7 +5,7 @@
  *	\date	Wed Jun 12 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -68,7 +68,7 @@ bool CBEReplyAnyWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEC
     // return type -> set to opcode
     // if return var is parameter do not delete it
     String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-    if (!SetReturnVar(pContext->GetClassFactory()->GetNewOpcodeType(), sOpcodeVar, pContext))
+    if (!SetReturnVar((CBEType*)pContext->GetClassFactory()->GetNewOpcodeType(), sOpcodeVar, pContext))
     {
         VERBOSE("CBEReplyAnyWaitAnyFunction::CreateBE failed because return var could not be set\n");
         return false;
@@ -164,7 +164,7 @@ bool CBEReplyAnyWaitAnyFunction::DoWriteFunction(CBEFile * pFile, CBEContext * p
  */
 void CBEReplyAnyWaitAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
@@ -181,7 +181,7 @@ void CBEReplyAnyWaitAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContex
  */
 void CBEReplyAnyWaitAnyFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
@@ -222,10 +222,10 @@ bool CBEReplyAnyWaitAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface, C
 {
     // get class's message buffer
     CBEClass *pClass = GetClass();
-    ASSERT(pClass);
+    assert(pClass);
     // get message buffer type
     CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
-    ASSERT(pMsgBuffer);
+    assert(pMsgBuffer);
     // msg buffer not initialized yet
     pMsgBuffer->InitCounts(pClass, pContext);
     // create own message buffer
@@ -262,3 +262,4 @@ int CBEReplyAnyWaitAnyFunction::GetReceiveDirection()
 {
     return DIRECTION_IN;
 }
+

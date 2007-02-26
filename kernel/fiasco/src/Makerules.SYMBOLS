@@ -1,0 +1,10 @@
+# -*- makefile -*-
+
+$(SYMBOLS):	$(KERNEL)
+		$(NM) $(KERNEL) | c++filt | sort > $@.new
+		mv $@.new $@
+		chmod 644 $@
+		$(call INSTALLFILE_RULE,$@,fiasco_symbols)
+
+clean-SYMBOLS:
+		rm -f $(SYMBOLS)

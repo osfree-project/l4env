@@ -7,56 +7,67 @@
  * \brief Generic task server interface
  */
 
-module l4
+import <l4/sys/types.h>
+
+/** \anchor ts l4 namespace */
+library l4
 {
+  /** generic task server interface */
   interface ts
     {
-      struct taskid_t
-	{
-	  unsigned long low;
-	  unsigned long high;
-	};
-
       /** Allocate a new task id. Returns -L4_ENOTASK if no task is available.
        * We have to split allocating and creating the task in two steps 
        * because creating a task means that the task starts immediatly. If
-       * the task starts before the task's pager doesn't know the task ID
-       * of the new task, the pager gets confused and should deny the page
-       * fault handling for that task. Therefore we allocate the task ID in
-       * the first step and can tell the new task ID in the next step. Finally
-       * we create the task. */
-      long allocate(out taskid_t taskid);
+       * the task starts before the task's pager knows the task ID of the new
+       * task, the pager gets confused and should deny the page fault handling
+       * for that task. Therefore we allocate the task ID in the first step
+       * and can tell the new task ID to the pager in the next step. Finally
+       * we create the task. 
+       * 
+       * \retval taskid		Id of new task assigned to calling client
+       * \return 		0 on success (\a taskid contains a valid id),
+       * 			error code otherwise:
+       * 			- -#L4_ENOTASK  no unused task id available */
+      long allocate([out] l4_taskid_t *taskid);
 
-      /** Create the task. The taskid must be owned by the client. */
-      long create(inout taskid_t taskid,
-		  in unsigned long entry, in unsigned long stack,
-	          in unsigned long mcp, in taskid_t pager,
-		  in long prio, in string resname, in unsigned long flags);
+      /** Create the task. The taskid must be owned by the client.
+       * 
+       * \param  taskid		Id of pre-allocated task belonging to client
+       * \param  entry		Initial instruction pointer of first thread
+       * \param  stack		Initial stack pointer of first thread
+       * \param  mcp		Maximum allowed priority
+       * \param  pager		Id of first thread's pager
+       * \param  prio		Priority of first thread
+       * \param  resname	Module name as reserved in RMGR.
+       * \param  flags		Flags */
+      long create([in,out] l4_taskid_t *taskid,
+		  [in] l4_addr_t entry,   [in] l4_addr_t stack,
+	          [in] unsigned long mcp, [in] l4_taskid_t pager,
+		  [in] long prio,
+		  [in, string] char* resname, [in] unsigned long flags);
 
       /**
-       * Free previously allocated task ID.
+       * Free previously allocated task id.
        *
-       * \param taskid	ID of the task to free.
-       * \return 0		 on success
-       *         -L4_ENOTFOUND   if invalid task
-       */
-      long free(in taskid_t taskid);
+       * \param  taskid		Id of the task to free.
+       * \return 		0 on success
+       *			-#L4_ENOTFOUND if invalid task */
+      long free([in] l4_taskid_t taskid);
 
-      /** Terminate task. */
-      long delete(in taskid_t taskid);
+      /** Terminate task. 
+       *
+       * \param  taskid		Id of task to kill */
+      long delete([in] l4_taskid_t taskid);
 
       /** terminate all tasks owned by caller */
       long delete_all();
 
-
-
-
       /** transmit right to create a task to the caller
        * E.g. L4Linux depends on it. */
-      long get_task(in unsigned long taskno);
+      long get_task([in] unsigned long taskno);
 
       /** transmit right to create a task back to the server */
-      long free_task(in unsigned long taskno);
+      long free_task([in] unsigned long taskno);
     };
 };
 

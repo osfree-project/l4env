@@ -34,7 +34,7 @@ clean cleanall:
 man:
 		set -e; for i in $(MANSUBDIRS); do $(MAKE) -C $$i; done
 
-fiasco:
+fiasco.builddir.create:
 		mkdir -p $(DFLBUILDDIR)
 		[ -f $(DFLBUILDDIR)/Makefile ] ||					\
 			cp $(TEMPLDIR)/Makefile.builddir.templ $(DFLBUILDDIR)/Makefile
@@ -44,6 +44,11 @@ fiasco:
 			cp  $(TEMPLDIR)/globalconfig.out.$(DFL_TEMPLATE)	\
 				$(DFLBUILDDIR)/globalconfig.out;			\
 		}
+
+config xconfig menuconfig: fiasco.builddir.create
+		$(MAKE) -C $(DFLBUILDDIR) $@
+
+fiasco: fiasco.builddir.create
 		$(MAKE) -C $(DFLBUILDDIR)
 
 l4check:
@@ -64,4 +69,4 @@ l4check:
 		[ "$$failed" ] && echo -e "\nFailed configurations:$$failed";	\
 		exit $$error;
 
-.PHONY:		man install clean cleanall fiasco l4check
+.PHONY:		man install clean cleanall fiasco.builddir.create fiasco l4check config

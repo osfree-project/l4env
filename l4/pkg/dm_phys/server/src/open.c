@@ -6,23 +6,13 @@
  *
  * \date   11/22/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -88,12 +78,10 @@ __create_ds(l4_threadid_t owner,
   if (align < DMPHYS_PAGESIZE)
     align = DMPHYS_PAGESIZE;
   else
-    align = 1UL << (bsr(align));
+    align = 1UL << (l4util_bsr(align));
 
-#if DEBUG_OPEN
-  INFO("size %u, pool %u\n",size,pool->pool);
-  DMSG("  alignment 0x%08x, flags 0x%08x\n",align,flags);
-#endif
+  LOGdL(DEBUG_OPEN,"size %u, pool %u\n  alignment 0x%08x, flags 0x%08x",
+        size,pool->pool,align,flags);
 
   /* create dataspace descriptor */
   desc = dmphys_ds_create(owner,name,flags);
@@ -123,7 +111,7 @@ __create_ds(l4_threadid_t owner,
   dmphys_ds_add_pages(desc,pages,pool);
 
 #if DEBUG_OPEN
-  INFO("id %u, memory areas:\n",dmphys_ds_get_id(desc));
+  LOGL("id %u, memory areas:",dmphys_ds_get_id(desc));
   dmphys_pages_list(pages);
 #endif
 
@@ -189,7 +177,7 @@ dmphys_open(l4_threadid_t owner,
 /**
  * \brief Open new dataspace (generic memory dataspace manager version)
  * 
- * \param  request       Flick request structure
+ * \param  _dice_corba_obj       Flick request structure
  * \param  size          Dataspace size
  * \param  align         Alignment
  * \param  flags         Flags
@@ -205,36 +193,36 @@ dmphys_open(l4_threadid_t owner,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_open(sm_request_t * request, 
-			    l4_uint32_t size, 
-			    l4_uint32_t align,
-			    l4_uint32_t flags, 
-			    const char * name, 
-			    if_l4dm_dataspace_t * ds, 
-			    sm_exc_t * _ev)
+if_l4dm_mem_open_component(CORBA_Object _dice_corba_obj,
+                           l4_uint32_t size,
+                           l4_uint32_t align,
+                           l4_uint32_t flags,
+                           const char* name,
+                           l4dm_dataspace_t *ds,
+                           CORBA_Environment *_dice_corba_env)
 {
   page_pool_t * p = dmphys_get_default_pool();
-  
+
 #if DEBUG_OPEN
-  INFO("owner %x.%x\n",request->client_tid.id.task,
-       request->client_tid.id.lthread);
+  LOGL("owner %x.%x",_dice_corba_obj->id.task,
+       _dice_corba_obj->id.lthread);
   if (name != NULL)
-    DMSG("  name \'%s\', size %u, align 0x%08x, flags 0x%08x\n",
-	 name,size,align,flags);
+    printf("  name \'%s\', size %u, align 0x%08x, flags 0x%08x\n",
+           name,size,align,flags);
   else
-    DMSG("  size %u, align 0x%08x, flags 0x%08x\n",size,align,flags);
+    printf("  size %u, align 0x%08x, flags 0x%08x\n",size,align,flags);
 #endif
 
   /* create dataspace */
-  return __create_ds(request->client_tid,p,L4DM_MEMPHYS_ANY_ADDR,
-		     size,align,flags, name,(l4dm_dataspace_t *)ds);
+  return __create_ds(*_dice_corba_obj,p,L4DM_MEMPHYS_ANY_ADDR,
+		     size,align,flags, name,ds);
 }
 
 /*****************************************************************************/
 /**
  * \brief Open new dataspace (extended DMphys version)
  * 
- * \param  request       Flick request structure
+ * \param  _dice_corba_obj       Flick request structure
  * \param  pool          Memory pool number
  * \param  addr          Memory area start address
  *                       (L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
@@ -254,15 +242,15 @@ if_l4dm_memphys_server_open(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_dmphys_open(sm_request_t * request, 
-				   l4_uint32_t pool, 
-				   l4_uint32_t addr, 
-				   l4_uint32_t size, 
-				   l4_uint32_t align, 
-				   l4_uint32_t flags, 
-				   const char * name, 
-				   if_l4dm_dataspace_t * ds, 
-				   sm_exc_t * _ev)
+if_l4dm_memphys_dmphys_open_component(CORBA_Object _dice_corba_obj,
+                                      l4_uint32_t pool,
+                                      l4_uint32_t addr,
+                                      l4_uint32_t size,
+                                      l4_uint32_t align,
+                                      l4_uint32_t flags,
+                                      const char* name,
+                                      l4dm_dataspace_t *ds,
+                                      CORBA_Environment *_dice_corba_env)
 {
   page_pool_t * p = dmphys_get_page_pool(pool);
 
@@ -274,7 +262,7 @@ if_l4dm_memphys_server_dmphys_open(sm_request_t * request,
     }
 
   /* create dataspace */
-  return __create_ds(request->client_tid,p,addr,size,align,flags,name,
-		     (l4dm_dataspace_t *)ds);
+  return __create_ds(*_dice_corba_obj,p,addr,size,align,flags,name,
+		     ds);
 }
 

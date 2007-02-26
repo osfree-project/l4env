@@ -5,7 +5,7 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -35,7 +35,10 @@
 #define STR_RESULT_VAR				0x00000001	/**< requests an IPC result variable */
 #define STR_THREAD_ID_VAR			0x00000002	/**< requests a variable name for a l4thread_t variable */
 #define STR_INIT_RCVSTRING_FUNC     0x00000003  /**< request name of function to init receive string */
+#define STR_MSGBUF_SIZE_CONST       0x00000004  /**< const name of size dope initializer of msg buffer */
 //@}
+
+class CBEMsgBufferType;
 
 /**	\class CL4BENameFactory
  *	\ingroup backend
@@ -68,6 +71,7 @@ public:
     virtual String GetResultName(CBEContext *pContext);
     virtual String GetMessageBufferMember(int nFEType, CBEContext * pContext);
     virtual String GetInitRcvStringFunction(CBEContext *pContext, String sFuncName);
+	virtual String GetMsgBufferSizeDopeConst(CBEMsgBufferType* pMsgBuffer);
 
 protected:
     virtual String GetL4TypeName(int nType, bool bUnsigned, CBEContext *pContext, int nSize);

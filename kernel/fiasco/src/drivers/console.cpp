@@ -11,6 +11,7 @@ INTERFACE:
 class Console
 {
 public:
+
   /**
    * @brief Write a string of len chacters to the output.
    * @param str the string to write (no zero termination is needed)
@@ -28,7 +29,7 @@ public:
    * This method must be implemented in every implementation, but
    * can simply return -1 for output only consoles.
    */
-  virtual int getchar( bool blocking = true ) = 0;
+  virtual int getchar( bool blocking = true );
 
   /**
    * @brief Is input available?
@@ -39,6 +40,11 @@ public:
    * no charachter is available.
    */
   virtual int char_avail() const;
+
+  char const *first_attribute() const;
+  virtual char const *next_attribute( bool restart = false ) const = 0;
+
+  bool check_attributes( char const *attr ) const;
 
   virtual ~Console();
 
@@ -61,9 +67,18 @@ public:
 
 IMPLEMENTATION:
 
+#include <cstring>
+#include <cctype>
+
 Console *Console::stdout = 0;
 Console *Console::stderr = 0;
 Console *Console::stdin  = 0;
+
+IMPLEMENT 
+char const *Console::first_attribute() const
+{
+  return next_attribute(true);
+}
 
 IMPLEMENT Console::~Console()
 {}
@@ -77,9 +92,61 @@ void Console::disable_all()
 }
 
 IMPLEMENT
+int Console::getchar( bool /* blocking */ )
+{
+  return -1; /* no input */
+}
+
+IMPLEMENT
 int Console::char_avail() const
 {
-  //write("+",1);
   return -1; /* unknown */
 }
 
+IMPLEMENT
+bool Console::check_attributes( char const *attr ) const
+{
+  char const *t = 0;
+  bool negate = false;
+  bool in_attrib = false;
+  if(!*attr)
+    return true;
+
+  do
+    {
+      if(*attr && !isspace(*attr))
+        {
+          if(!in_attrib && *attr=='!')
+            negate = true;
+          else
+            {
+              if(!in_attrib)
+                {
+                  t = attr;
+                  in_attrib = true;
+                }              
+            }
+        }
+      else if(in_attrib)
+        {
+          char const *a = first_attribute();
+          bool found = false;
+          while(a) {
+            if(strncmp(a,t,attr-t)==0)
+              {
+                found = true; 
+                break;
+              }
+            a = next_attribute();
+          }
+          if((found && negate) || (!found && !negate)) {
+            return false;
+          }
+
+          in_attrib = false;
+          negate = false;
+        }
+    }
+  while(*attr++);
+  return true;
+}

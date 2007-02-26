@@ -5,12 +5,12 @@
  *	\date	01/17/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,13 +21,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "be/BEExpression.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
+#include "be/BEType.h"
+#include "be/BERoot.h"
+#include "be/BETypedef.h"
 
 #include "fe/FEExpression.h"
 #include "fe/FEUserDefinedExpression.h"
@@ -35,6 +38,8 @@
 #include "fe/FEUnaryExpression.h"
 #include "fe/FEBinaryExpression.h"
 #include "fe/FEConditionalExpression.h"
+#include "fe/FESizeOfExpression.h"
+#include "fe/FETypeSpec.h"
 
 IMPLEMENT_DYNAMIC(CBEExpression);
 
@@ -44,6 +49,7 @@ CBEExpression::CBEExpression()
     m_pCondition = 0;
     m_pOperand1 = 0;
     m_pOperand2 = 0;
+	m_pType = 0;
     m_nIntValue = 0;
     m_fFloatValue = 0.0;
     m_nOperator = 0;
@@ -56,18 +62,50 @@ CBEExpression::CBEExpression(CBEExpression & src):CBEObject(src)
     m_nIntValue = src.m_nIntValue;
     m_fFloatValue = src.m_fFloatValue;
     m_cCharValue = src.m_cCharValue;
-    m_pOperand1 = src.m_pOperand1;
+	if (src.m_pOperand1)
+	{
+	    m_pOperand1 = (CBEExpression*)src.m_pOperand1->Clone();
+		m_pOperand1->SetParent(this);
+	}
+	else
+	    m_pOperand1 = 0;
     m_sStringValue = src.m_sStringValue;
     m_nOperator = src.m_nOperator;
-    m_pCondition = src.m_pCondition;
-    m_pOperand2 = src.m_pOperand2;
+	if (src.m_pCondition)
+	{
+	    m_pCondition = (CBEExpression*)src.m_pCondition->Clone();
+		m_pCondition->SetParent(this);
+	}
+	else
+	    m_pCondition = 0;
+    if (src.m_pOperand2)
+	{
+	    m_pOperand2 = (CBEExpression*)src.m_pOperand2->Clone();
+		m_pOperand2->SetParent(this);
+	}
+	else
+	    m_pOperand2 = 0;
+	if (src.m_pType)
+	{
+	    m_pType = (CBEType*)src.m_pType->Clone();
+		m_pType->SetParent(this);
+	}
+	else
+	    m_pType = 0;
     IMPLEMENT_DYNAMIC_BASE(CBEExpression, CBEObject);
 }
 
 /**	\brief destructor of this instance */
 CBEExpression::~CBEExpression()
 {
-
+    if (m_pOperand1)
+	    delete m_pOperand1;
+    if (m_pOperand2)
+	    delete m_pOperand2;
+    if (m_pCondition)
+	    delete m_pCondition;
+    if (m_pType)
+	    delete m_pType;
 }
 
 /**	\brief creates the back-end representation of an expression
@@ -112,6 +150,9 @@ bool CBEExpression::CreateBackEnd(CFEExpression * pFEExpression, CBEContext * pC
     case EXPR_PAREN:
         return CreateBackEndPrimary((CFEPrimaryExpression *) pFEExpression, pContext);
         break;
+    case EXPR_SIZEOF:
+	    return CreateBackEndSizeOf((CFESizeOfExpression *) pFEExpression, pContext);
+		break;
     }
     return true;
 }
@@ -123,6 +164,11 @@ bool CBEExpression::CreateBackEnd(CFEExpression * pFEExpression, CBEContext * pC
  */
 bool CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpression, CBEContext * pContext)
 {
+    if (!pFEExpression->GetCondition())
+	{
+	    VERBOSE("CBEExpression::CreateBackEndConditional failed because no condition\n");
+        return false;
+	}
     m_pCondition = pContext->GetClassFactory()->GetNewExpression();
     m_pCondition->SetParent(this);
     if (!m_pCondition->CreateBackEnd(pFEExpression->GetCondition(), pContext))
@@ -141,6 +187,11 @@ bool CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpres
  */
 bool CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression, CBEContext * pContext)
 {
+    if (!pFEExpression->GetOperand2())
+	{
+	    VERBOSE("CBEExpression::CreateBackEndBinary failed because no second operand\n");
+		return false;
+	}
     m_pOperand2 = pContext->GetClassFactory()->GetNewExpression();
     m_pOperand2->SetParent(this);
     if (!m_pOperand2->CreateBackEnd(pFEExpression->GetOperand2(), pContext))
@@ -187,6 +238,11 @@ bool CBEExpression::CreateBackEndUnary(int nOperator, CBEExpression *pOperand, C
 bool CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression, CBEContext * pContext)
 {
     CFEExpression *pFEOperand = pFEExpression->GetOperand();
+	if (!pFEOperand)
+	{
+	    VERBOSE("CBEExpression::CreateBackEndPrimary failed because no expression\n");
+		return false;
+	}
     CBEExpression *pExpression = pContext->GetClassFactory()->GetNewExpression();
     pExpression->SetParent(this);
     if (!pExpression->CreateBackEnd(pFEOperand, pContext))
@@ -240,6 +296,48 @@ bool CBEExpression::CreateBackEndPrimary(int nType, CBEExpression *pExpression, 
         break;
     }
     return true;
+}
+
+/** \brief create the size-of expression
+ *  \param pExpression the size of expression
+ *  \param pContext the context of the create
+ *  \return true if successful
+ */
+bool CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression, CBEContext *pContext)
+{
+    // can be type
+	CFETypeSpec *pFEType = pFEExpression->GetSizeOfType();
+	if (pFEType)
+	{
+	    CBEType *pType = pContext->GetClassFactory()->GetNewType(pFEType->GetType());
+		pType->SetParent(this);
+		if (!pType->CreateBackEnd(pFEType, pContext))
+		{
+		    delete pType;
+			VERBOSE("CBEExpression::CreateBackEndSizeOf failed because type could not be created.\n");
+			return false;
+        }
+		m_pType = pType;
+	    return true;
+	}
+	// can be expression
+	CFEExpression *pFESizeOfExpression = pFEExpression->GetSizeOfExpression();
+	if (pFESizeOfExpression)
+	{
+	    CBEExpression *pExpression = pContext->GetClassFactory()->GetNewExpression();
+		pExpression->SetParent(this);
+		if (!pExpression->CreateBackEnd(pFESizeOfExpression, pContext))
+		{
+		    delete pExpression;
+			VERBOSE("CBEExpression::CreateBackEndSizeOf failed because expression could not be created.\n");
+			return false;
+		}
+		m_pOperand1 = pExpression;
+	    return true;
+	}
+	// then it is a string
+    m_sStringValue = pFEExpression->GetString();
+	return true;
 }
 
 /**	\brief write the content of the expression to the target file
@@ -383,7 +481,7 @@ void CBEExpression::WriteBinary(CBEFile * pFile, CBEContext * pContext)
 	  pFile->Print(" || ");
 	  break;
       default:
-	  ASSERT(false);
+	  assert(false);
 	  break;
       }
     // write second operand
@@ -411,7 +509,7 @@ void CBEExpression::WriteUnary(CBEFile * pFile, CBEContext * pContext)
 	  pFile->Print("!");
 	  break;
       default:
-	  ASSERT(false);
+	  assert(false);
 	  break;
       }
     // write operand
@@ -466,43 +564,58 @@ int CBEExpression::GetIntValue()
     int nValue = 0;
 
     switch (m_nType)
-      {
-      case EXPR_NONE:
-      case EXPR_NULL:
-      case EXPR_STRING:
-      case EXPR_USER_DEFINED:
-	  break;
-      case EXPR_TRUE:
-	  nValue = (int) true;
-	  break;
-      case EXPR_FALSE:
-	  nValue = (int) false;
-	  break;
-      case EXPR_CHAR:
-	  nValue = (int) m_cCharValue;
-	  break;
-      case EXPR_INT:
-	  nValue = m_nIntValue;
-	  break;
-      case EXPR_FLOAT:
-	  nValue = (int) m_fFloatValue;
-	  break;
-      case EXPR_CONDITIONAL:
-	  if (m_pCondition->GetBoolValue() == true)
-	      nValue = m_pOperand1->GetIntValue();
-	  else
-	      nValue = m_pOperand2->GetIntValue();
-	  break;
-      case EXPR_BINARY:
-	  nValue = GetIntValueBinary();
-	  break;
-      case EXPR_UNARY:
-	  nValue = GetIntValueUnary();
-	  break;
-      case EXPR_PAREN:
-	  nValue = m_pOperand1->GetIntValue();
-	  break;
-      }
+	{
+	case EXPR_NONE:
+	case EXPR_NULL:
+	case EXPR_STRING:
+	case EXPR_USER_DEFINED:
+		break;
+	case EXPR_TRUE:
+		nValue = (int) true;
+		break;
+	case EXPR_FALSE:
+		nValue = (int) false;
+		break;
+	case EXPR_CHAR:
+		nValue = (int) m_cCharValue;
+		break;
+	case EXPR_INT:
+		nValue = m_nIntValue;
+		break;
+	case EXPR_FLOAT:
+		nValue = (int) m_fFloatValue;
+		break;
+	case EXPR_CONDITIONAL:
+		if (m_pCondition->GetBoolValue() == true)
+			nValue = m_pOperand1->GetIntValue();
+		else
+			nValue = m_pOperand2->GetIntValue();
+		break;
+	case EXPR_BINARY:
+		nValue = GetIntValueBinary();
+		break;
+	case EXPR_UNARY:
+		nValue = GetIntValueUnary();
+		break;
+	case EXPR_PAREN:
+		nValue = m_pOperand1->GetIntValue();
+		break;
+	case EXPR_SIZEOF:
+	    if (m_pOperand1)
+		    nValue = m_pOperand1->GetIntValue(); // cause that's what sizeof does
+	    else if (m_pType)
+		    nValue = m_pType->GetSize(); // sizeof(type)
+	    else
+		{
+		    // check for user defined type
+			CBERoot *pRoot = GetRoot();
+			assert(pRoot);
+			CBETypedef *pUserDefined = pRoot->FindTypedef(m_sStringValue);
+			assert(pUserDefined);
+			nValue = pUserDefined->GetSize();
+		}
+		break;
+	}
 
     return nValue;
 }
@@ -517,67 +630,67 @@ int CBEExpression::GetIntValueBinary()
     int nValue = 0;
 
     switch (m_nOperator)
-      {
-      case EXPR_MUL:
-	  nValue = nValue1 * nValue2;
-	  break;
-      case EXPR_DIV:
-	  if (nValue2)
-	      nValue = nValue1 / nValue2;
-	  break;
-      case EXPR_MOD:
-	  if (nValue2)
-	      nValue = nValue1 % nValue2;
-	  break;
-      case EXPR_PLUS:
-	  nValue = nValue1 + nValue2;
-	  break;
-      case EXPR_MINUS:
-	  nValue = nValue1 - nValue2;
-	  break;
-      case EXPR_LSHIFT:
-	  nValue = nValue1 << nValue2;
-	  break;
-      case EXPR_RSHIFT:
-	  nValue = nValue1 >> nValue2;
-	  break;
-      case EXPR_LT:
-	  nValue = (int) (nValue1 < nValue2);
-	  break;
-      case EXPR_GT:
-	  nValue = (int) (nValue1 > nValue2);
-	  break;
-      case EXPR_LTEQU:
-	  nValue = (int) (nValue1 <= nValue2);
-	  break;
-      case EXPR_GTEQU:
-	  nValue = (int) (nValue1 >= nValue2);
-	  break;
-      case EXPR_EQUALS:
-	  nValue = (int) (nValue1 == nValue2);
-	  break;
-      case EXPR_NOTEQUAL:
-	  nValue = (int) (nValue1 != nValue2);
-	  break;
-      case EXPR_BITAND:
-	  nValue = nValue1 & nValue2;
-	  break;
-      case EXPR_BITXOR:
-	  nValue = nValue1 ^ nValue2;
-	  break;
-      case EXPR_BITOR:
-	  nValue = nValue1 | nValue2;
-	  break;
-      case EXPR_LOGAND:
-	  nValue = (int) (nValue1 && nValue2);
-	  break;
-      case EXPR_LOGOR:
-	  nValue = (int) (nValue1 || nValue2);
-	  break;
-      default:
-	  ASSERT(false);
-	  break;
-      }
+	{
+	case EXPR_MUL:
+		nValue = nValue1 * nValue2;
+		break;
+	case EXPR_DIV:
+		if (nValue2)
+			nValue = nValue1 / nValue2;
+		break;
+	case EXPR_MOD:
+		if (nValue2)
+			nValue = nValue1 % nValue2;
+		break;
+	case EXPR_PLUS:
+		nValue = nValue1 + nValue2;
+		break;
+	case EXPR_MINUS:
+		nValue = nValue1 - nValue2;
+		break;
+	case EXPR_LSHIFT:
+		nValue = nValue1 << nValue2;
+		break;
+	case EXPR_RSHIFT:
+		nValue = nValue1 >> nValue2;
+		break;
+	case EXPR_LT:
+		nValue = (int) (nValue1 < nValue2);
+		break;
+	case EXPR_GT:
+		nValue = (int) (nValue1 > nValue2);
+		break;
+	case EXPR_LTEQU:
+		nValue = (int) (nValue1 <= nValue2);
+		break;
+	case EXPR_GTEQU:
+		nValue = (int) (nValue1 >= nValue2);
+		break;
+	case EXPR_EQUALS:
+		nValue = (int) (nValue1 == nValue2);
+		break;
+	case EXPR_NOTEQUAL:
+		nValue = (int) (nValue1 != nValue2);
+		break;
+	case EXPR_BITAND:
+		nValue = nValue1 & nValue2;
+		break;
+	case EXPR_BITXOR:
+		nValue = nValue1 ^ nValue2;
+		break;
+	case EXPR_BITOR:
+		nValue = nValue1 | nValue2;
+		break;
+	case EXPR_LOGAND:
+		nValue = (int) (nValue1 && nValue2);
+		break;
+	case EXPR_LOGOR:
+		nValue = (int) (nValue1 || nValue2);
+		break;
+	default:
+		assert(false);
+		break;
+	}
 
     return nValue;
 }
@@ -590,23 +703,23 @@ int CBEExpression::GetIntValueUnary()
     int nValue = m_pOperand1->GetIntValue();
 
     switch (m_nOperator)
-      {
-      case EXPR_SPLUS:
-	  nValue = +nValue;
-	  break;
-      case EXPR_SMINUS:
-	  nValue = -nValue;
-	  break;
-      case EXPR_TILDE:
-	  nValue = ~nValue;
-	  break;
-      case EXPR_EXCLAM:
-	  nValue = !nValue;
-	  break;
-      default:
-	  ASSERT(false);
-	  break;
-      }
+	{
+	case EXPR_SPLUS:
+		nValue = +nValue;
+		break;
+	case EXPR_SMINUS:
+		nValue = -nValue;
+		break;
+	case EXPR_TILDE:
+		nValue = ~nValue;
+		break;
+	case EXPR_EXCLAM:
+		nValue = !nValue;
+		break;
+	default:
+		assert(false);
+		break;
+	}
 
     return nValue;
 }
@@ -619,43 +732,44 @@ bool CBEExpression::GetBoolValue()
     bool bValue = false;
 
     switch (m_nType)
-      {
-      case EXPR_NONE:
-      case EXPR_NULL:
-      case EXPR_STRING:
-      case EXPR_USER_DEFINED:
-	  break;
-      case EXPR_TRUE:
-	  bValue = true;
-	  break;
-      case EXPR_FALSE:
-	  bValue = false;
-	  break;
-      case EXPR_CHAR:
-	  bValue = (bool) m_cCharValue;
-	  break;
-      case EXPR_INT:
-	  bValue = (bool) m_nIntValue;
-	  break;
-      case EXPR_FLOAT:
-	  bValue = (bool) m_fFloatValue;
-	  break;
-      case EXPR_CONDITIONAL:
-	  if (m_pCondition->GetBoolValue() == true)
-	      bValue = m_pOperand1->GetBoolValue();
-	  else
-	      bValue = m_pOperand2->GetBoolValue();
-	  break;
-      case EXPR_BINARY:
-	  bValue = GetBoolValueBinary();
-	  break;
-      case EXPR_UNARY:
-	  bValue = GetBoolValueUnary();
-	  break;
-      case EXPR_PAREN:
-	  bValue = m_pOperand1->GetBoolValue();
-	  break;
-      }
+	{
+	case EXPR_NONE:
+	case EXPR_NULL:
+	case EXPR_STRING:
+	case EXPR_USER_DEFINED:
+	case EXPR_SIZEOF:
+		break;
+	case EXPR_TRUE:
+		bValue = true;
+		break;
+	case EXPR_FALSE:
+		bValue = false;
+		break;
+	case EXPR_CHAR:
+		bValue = (bool) m_cCharValue;
+		break;
+	case EXPR_INT:
+		bValue = (bool) m_nIntValue;
+		break;
+	case EXPR_FLOAT:
+		bValue = (bool) m_fFloatValue;
+		break;
+	case EXPR_CONDITIONAL:
+		if (m_pCondition->GetBoolValue() == true)
+			bValue = m_pOperand1->GetBoolValue();
+		else
+			bValue = m_pOperand2->GetBoolValue();
+		break;
+	case EXPR_BINARY:
+		bValue = GetBoolValueBinary();
+		break;
+	case EXPR_UNARY:
+		bValue = GetBoolValueUnary();
+		break;
+	case EXPR_PAREN:
+		bValue = m_pOperand1->GetBoolValue();
+		break;
+	}
 
     return bValue;
 }
@@ -728,7 +842,7 @@ bool CBEExpression::GetBoolValueBinary()
 	  bValue = bValue1 || bValue2;
 	  break;
       default:
-	  ASSERT(false);
+	  assert(false);
 	  break;
       }
 
@@ -761,7 +875,7 @@ bool CBEExpression::GetBoolValueUnary()
 	  bValue = !bValue;
 	  break;
       default:
-	  ASSERT(false);
+	  assert(false);
 	  break;
       }
 
@@ -776,3 +890,12 @@ bool CBEExpression::IsOfType(int nFEType)
 {
     return (m_nType == nFEType);
 }
+
+/** \brief creates a new instance of the expression object
+ *  \return a reference to the new instance
+ */
+CObject* CBEExpression::Clone()
+{
+    return new CBEExpression(*this);
+}
+

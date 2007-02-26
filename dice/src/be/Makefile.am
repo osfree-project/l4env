@@ -1,9 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS=		l4 sock
+SUBDIRS=		l4 sock cdr
 
 noinst_LIBRARIES=	libbe.a
-libbe_a_SOURCES=	BEAttribute.cpp \
+libbe_a_SOURCES = BEAttribute.cpp \
 			BEInterfaceFunction.cpp \
 			BESrvLoopFunction.cpp \
 			BECallFunction.cpp \
@@ -22,7 +22,7 @@ libbe_a_SOURCES=	BEAttribute.cpp \
 			BEO1Marshaller.cpp \
 			BETestMainFunction.cpp \
 			BEComponentFunction.cpp \
-			BEObject.cpp  \
+			BEObject.cpp \
 			BETestServerFunction.cpp \
 			BEConstant.cpp \
 			BEOpcodeType.cpp \
@@ -40,10 +40,8 @@ libbe_a_SOURCES=	BEAttribute.cpp \
 			BEReplyAnyWaitAnyFunction.cpp \
 			BEUnionCase.cpp \
 			BEExpression.cpp \
-			BEReplyRcvFunction.cpp \
 			BEUnionType.cpp \
 			BEFile.cpp \
-			BEReplyWaitFunction.cpp \
 			BEUnmarshalFunction.cpp \
 			BEFunction.cpp \
 			BERoot.cpp \
@@ -53,8 +51,14 @@ libbe_a_SOURCES=	BEAttribute.cpp \
 			BEWaitAnyFunction.cpp \
 			BEImplementationFile.cpp \
 			BESndFunction.cpp \
-			BEWaitFunction.cpp
-			
+			BEWaitFunction.cpp \
+			BEReplyFunction.cpp \
+			BECPPClass.cpp \
+			BECommunication.cpp \
+			BEMarshalFunction.cpp \
+			BEDispatchFunction.cpp \
+			BEReplyCodeType.cpp
+
 noinst_HEADERS=		BEAttribute.h \
 			BEInterfaceFunction.h \
 			BESrvLoopFunction.h \
@@ -92,10 +96,8 @@ noinst_HEADERS=		BEAttribute.h \
 			BEReplyAnyWaitAnyFunction.h \
 			BEUnionCase.h \
 			BEExpression.h \
-			BEReplyRcvFunction.h \
 			BEUnionType.h \
 			BEFile.h \
-			BEReplyWaitFunction.h \
 			BEUnmarshalFunction.h \
 			BEFunction.h \
 			BERoot.h \
@@ -105,5 +107,11 @@ noinst_HEADERS=		BEAttribute.h \
 			BEWaitAnyFunction.h \
 			BEImplementationFile.h \
 			BESndFunction.h \
-			BEWaitFunction.h
-			
+			BEReplyFunction.h \
+			BEWaitFunction.h \
+			BECPPClass.h \
+			BECommunication.h \
+			BEMarshalFunction.h \
+			BEDispatchFunction.h \
+			BEReplyCodeType.h 
+

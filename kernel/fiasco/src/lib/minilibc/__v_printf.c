@@ -38,7 +38,8 @@ int __v_printf(struct output_op* fn, const unsigned char *format, va_list arg_pt
     if (*format=='%') {
       char buf[128];
 
-      unsigned char ch, *s, padwith=' ';
+      unsigned char ch, padwith=' ';
+      char *s;
 
       char flag_in_sign=0;
       char flag_upcase=0;
@@ -100,7 +101,7 @@ inn_printf:
       case '8':
       case '9':
 	if(flag_dot) return -1;
-	width=strtoul(format-1,(char**)&s,10);
+	width=strtoul(format-1,&s,10);
 	format=s;
 	goto inn_printf;
 
@@ -114,7 +115,7 @@ inn_printf:
 	  preci=va_arg(arg_ptr,int);
 	  ++format;
 	} else {
-	  long int tmp=strtol(format,(char**)&s,10);
+	  long int tmp=strtol(format,&s,10);
 	  preci=tmp<0?0:tmp;
 	  format=s;
 	}

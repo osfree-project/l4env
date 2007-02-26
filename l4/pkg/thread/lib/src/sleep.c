@@ -7,25 +7,15 @@
  * \date   12/28/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
- *
  * \todo Synchronize with L4 kernel timer (requires abstraction of the 
  *       kernel clock in l4env).
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -76,7 +66,7 @@ __micros2l4to(l4_uint32_t mus, l4_uint32_t * to_e, l4_uint32_t * to_m)
     } 
   else 
     { 
-      *to_e = 14 - bsr(mus / 256) / 2;
+      *to_e = 14 - l4util_log2(mus / 256) / 2;
       *to_m = mus / (1UL << (2 * (15 - *to_e)));
 
       /* sanity check */
@@ -88,9 +78,7 @@ __micros2l4to(l4_uint32_t mus, l4_uint32_t * to_e, l4_uint32_t * to_m)
 	}
     }
 
-#if DEBUG_SLEEP
-  INFO("mus = %u -> e = %u, m = %u\n",mus,*to_e,*to_m);
-#endif 
+  LOGdL(DEBUG_SLEEP,"mus = %u -> e = %u, m = %u",mus,*to_e,*to_m);
 }
 
 /*****************************************************************************/
@@ -113,19 +101,24 @@ __do_sleep(l4_uint32_t t)
   l4_umword_t dummy;
   l4_msgdope_t result;
 
-  /* calculate timeout */
-  __micros2l4to(t,&to_e,&to_m);
-
-  /* sanity check */
-  if (to_e && !to_m)
-    /* sleep(0us), nothing to do */
-    return;
-
-  to = L4_IPC_TIMEOUT(0,0,to_m,to_e,0,0);
-
+  if (t == (l4_uint32_t)-1)
+    to = L4_IPC_NEVER;
+  else
+    {
+      /* calculate timeout */
+      __micros2l4to(t,&to_e,&to_m);
+      
+      /* sanity check */
+      if (to_e && !to_m)
+        /* sleep(0us), nothing to do */
+        return;
+      
+      to = L4_IPC_TIMEOUT(0,0,to_m,to_e,0,0);
+    }
+  
   /* do wait */
-  error = l4_i386_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,
-                              &dummy,&dummy,to,&result);
+  error = l4_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,
+                         &dummy,&dummy,to,&result);
 
   if (error != L4_IPC_RETIMEOUT)
     Error("l4thread: sleep canceled!");
@@ -148,7 +141,10 @@ void
 l4thread_sleep(l4_uint32_t t)
 {
   /* sleep */
-  __do_sleep(t * 1000);
+  if (t == (l4_uint32_t)-1)
+    __do_sleep(-1);
+  else
+    __do_sleep(t * 1000);
 }
 
 /*****************************************************************************/
@@ -172,3 +168,14 @@ l4thread_usleep(l4_uint32_t t)
   __do_sleep(t);
 }
 
+/*****************************************************************************/
+/**
+ * \brief  Sleep forever
+ */
+/*****************************************************************************/ 
+void
+l4thread_sleep_forever(void)
+{
+  /* sleep */ 
+  __do_sleep(-1);
+}

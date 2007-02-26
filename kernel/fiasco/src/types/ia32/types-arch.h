@@ -26,11 +26,7 @@ enum {
 };
 
 /// (virtual or physical address) should be addr_t or something
-typedef Unsigned32 vm_offset_t;
 typedef Unsigned32 Address;
-
-/// (size type for memory)
-typedef Unsigned32 vm_size_t; 
 
 typedef Unsigned64 Cpu_time;
 

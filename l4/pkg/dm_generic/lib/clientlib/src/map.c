@@ -6,23 +6,13 @@
  *
  * \date   01/08/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -73,20 +63,21 @@ __do_map(l4dm_dataspace_t * ds,
 {
   int ret;
   l4_snd_fpage_t page;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-#if DEBUG_DO_MAP
-  INFO("ds %u at %x.%x, offset 0x%08x\n",ds->id,
-       ds->manager.id.task,ds->manager.id.lthread,offs);
-  DMSG("  receive window at 0x%08x, size2 %d, offset 0x%08x\n",
-       rcv_addr,rcv_size2,rcv_offs);
-#endif
+  LOGdL(DEBUG_DO_MAP,
+        "ds %u at %x.%x, offset 0x%08x\n" \
+        "  receive window at 0x%08x, size2 %d, offset 0x%08x",
+        ds->id,ds->manager.id.task,ds->manager.id.lthread,offs,
+        rcv_addr,rcv_size2,rcv_offs);
 
+  /* set receive fpage */
+  _env.rcv_fpage = l4_fpage(rcv_addr,rcv_size2,0,0);
   /* do map call */
-  ret = if_l4dm_generic_map(ds->manager,l4_fpage(rcv_addr,rcv_size2,0,0),
-			    ds->id,offs,size,rcv_size2,rcv_offs,flags,
-			    &page,&_exc);
-  if ((ret < 0) || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_map_call(&(ds->manager),
+                                 ds->id,offs,size,rcv_size2,rcv_offs,flags,
+                                 &page,&_env);
+  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
     {
       if (ret < 0)
 	return ret;
@@ -95,13 +86,12 @@ __do_map(l4dm_dataspace_t * ds,
     }
 
   /* analyze received fpage */
-#if DEBUG_DO_MAP
-  INFO("got fpage at 0x%08x, size2 %d\n",
-       page.fpage.fp.page << L4_LOG2_PAGESIZE,page.fpage.fp.size);
-  DMSG("  snd_base 0x%08x, mapped to 0x%08x\n",page.snd_base,
-       rcv_addr + page.snd_base);
-#endif
-       
+  LOGdL(DEBUG_DO_MAP,
+        "got fpage at 0x%08x, size2 %d\n" \
+        "  snd_base 0x%08x, mapped to 0x%08x",
+        page.fpage.fp.page << L4_LOG2_PAGESIZE,page.fpage.fp.size,
+        page.snd_base,rcv_addr + page.snd_base);
+  
   *fpage_addr = rcv_addr + page.snd_base;
   *fpage_size = 1UL << page.fpage.fp.size;
 
@@ -140,13 +130,13 @@ __max_addr_align(l4_addr_t start,
 		 l4_addr_t end)
 {
   if (start != end)
-    return bsr((start - 1) ^ end);
+    return l4util_bsr((start - 1) ^ end);
   else
     {
       if (start == 0)
 	return L4_WHOLE_ADDRESS_SPACE;
       else
-	return bsf(start);
+	return l4util_bsf(start);
     }
 }
 
@@ -203,10 +193,10 @@ l4dm_map_pages(l4dm_dataspace_t * ds,
   if (ret < 0)
     {
 #if DEBUG_ERRORS
-      DMSG("ds %u at %x.%x, offset 0x%08x\n",ds->id,
-	   ds->manager.id.task,ds->manager.id.lthread,offs);
-      DMSG("receive window at 0x%08x, size2 %d, offset 0x%08x\n",
-	   rcv_addr,rcv_size2,rcv_offs);
+      printf("ds %u at %x.%x, offset 0x%08x\n",ds->id,
+             ds->manager.id.task,ds->manager.id.lthread,offs);
+      printf("receive window at 0x%08x, size2 %d, offset 0x%08x\n",
+             rcv_addr,rcv_size2,rcv_offs);
       ERROR("libdm_generic: map page failed: %d!",ret);
 #endif
     }
@@ -264,11 +254,9 @@ l4dm_map(void * ptr,
   /* round addr / size to pagesize */
   addr = (l4_addr_t)ptr & L4_PAGEMASK;
   size = ((((l4_addr_t)ptr + size) + L4_PAGESIZE - 1) & L4_PAGEMASK) - addr;
-
-#if DEBUG_MAP
-  INFO("map VM area 0x%08x - 0x%08x\n",addr,addr + size);
-#endif
-
+  
+  LOGdL(DEBUG_MAP,"map VM area 0x%08x - 0x%08x",addr,addr + size);
+  
   /* map, repeat until the requested area is mapped completely */
   done = 0;
   while (!done)
@@ -289,13 +277,12 @@ l4dm_map(void * ptr,
 	}
       ds_map_end = ds_map_addr + ds_map_size;
 
-#if DEBUG_MAP
-      INFO("addr 0x%08x\n",addr);
-      DMSG("  ds %u at %x.%x, offs 0x%08x, map area 0x%08x-0x%08x\n",
-	   ds.id,ds.manager.id.task,ds.manager.id.lthread,offs,
-	   ds_map_addr,ds_map_end);
-#endif
-
+      LOGdL(DEBUG_MAP,
+            "addr 0x%08x\n",
+            "  ds %u at %x.%x, offs 0x%08x, map area 0x%08x-0x%08x",
+            addr,ds.id,ds.manager.id.task,ds.manager.id.lthread,offs,
+            ds_map_addr,ds_map_end);
+      
       /* calculate receive window */
       if (flags & L4DM_MAP_MORE)
 	{
@@ -312,20 +299,20 @@ l4dm_map(void * ptr,
 	  align_end = __max_addr_align(addr + L4_PAGESIZE,ds_map_end);
 	  rcv_size2 = (align_start < align_end) ? align_start : align_end;
 #if DEBUG_MAP
-	  DMSG("  align start %d, align end %d => receive window size %d\n",
-	       align_start,align_end,rcv_size2);
+	  printf("  align start %d, align end %d => receive window size %d\n",
+                 align_start,align_end,rcv_size2);
 #endif
 	}
       else
 	{
 	  /* calculate the max. receive window size with the start address at 
 	   * ptr in the dataspace map area. */
-	  align_size = bsr(ds_map_end - addr);
-	  align_addr = bsf(addr);
+	  align_size = l4util_bsr(ds_map_end - addr);
+	  align_addr = l4util_bsf(addr);
 	  rcv_size2 = (align_addr < align_size) ? align_addr : align_size;
 #if DEBUG_MAP
-	  DMSG("  align addr %d, align size %d => receive window size %d\n",
-	       align_addr,align_size,rcv_size2);
+	  printf("  align addr %d, align size %d => receive window size %d\n",
+                 align_addr,align_size,rcv_size2);
 #endif
 	}
       rcv_addr = addr & ~((1UL << rcv_size2) - 1);
@@ -337,9 +324,9 @@ l4dm_map(void * ptr,
 	map_size = size;
 
 #if DEBUG_MAP
-      DMSG("  receive window at 0x%08x-0x%08x, size %d\n",
-	   rcv_addr,rcv_end,rcv_size2);
-      DMSG("  rcv offs 0x%08x, map size 0x%08x\n",rcv_offs,map_size);
+      printf("  receive window at 0x%08x-0x%08x, size %d\n",
+             rcv_addr,rcv_end,rcv_size2);
+      printf("  rcv offs 0x%08x, map size 0x%08x\n",rcv_offs,map_size);
 #endif
       
       /* map, allow partial mapping */
@@ -358,23 +345,21 @@ l4dm_map(void * ptr,
 	    }
 
 #if DEBUG_ERRORS
-	  DMSG("l4dm_map: addr 0x%08x, ds %d at %x.%x, offs 0x%08x\n",
-	       addr,ds.id,ds.manager.id.task,ds.manager.id.lthread,offs);
-	  DMSG("  dataspace map area 0x%08x-0x%08x\n",ds_map_addr,ds_map_end);
-	  DMSG("  receive window at 0x%08x, size2 %d, rcv offs 0x%08x\n",
-	       rcv_addr,rcv_size2,rcv_offs);
+	  printf("l4dm_map: addr 0x%08x, ds %d at %x.%x, offs 0x%08x\n",
+                 addr,ds.id,ds.manager.id.task,ds.manager.id.lthread,offs);
+	  printf("  dataspace map area 0x%08x-0x%08x\n",ds_map_addr,ds_map_end);
+	  printf("  receive window at 0x%08x, size2 %d, rcv offs 0x%08x\n",
+                 rcv_addr,rcv_size2,rcv_offs);
 	  ERROR("libdm_generic: map failed: %d!",ret);
 #endif
 	  return ret;
 	}
       size_mapped = fpage_size - (addr - fpage_addr);
 
-#if DEBUG_MAP
-      INFO("got fpage\n");
-      DMSG("  fpage at 0x%08x, size 0x%08x, size mapped 0x%08x\n",
-	   fpage_addr,fpage_size,size_mapped);
-#endif
-
+      LOGdL(DEBUG_MAP,"got fpage\n" \
+            "  fpage at 0x%08x, size 0x%08x, size mapped 0x%08x",
+            fpage_addr,fpage_size,size_mapped);
+      
       if (size_mapped >= size)
 	done = 1;
       else

@@ -8,7 +8,7 @@ IMPLEMENTATION[arch]:
 // atomic operations
 
 inline 
-bool up_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
+bool up_cas_unsafe( Mword *ptr, Mword oldval, Mword newval )
 {
   Mword tmp;
 
@@ -22,13 +22,13 @@ bool up_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
 }
 
 inline 
-bool smp_cas_unsave( Mword *ptr, Mword oldval, Mword newval )
+bool smp_cas_unsafe( Mword *ptr, Mword oldval, Mword newval )
 {
-  return up_cas_unsave(ptr,oldval,newval);
+  return up_cas_unsafe(ptr,oldval,newval);
 }
 
 inline 
-bool up_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
+bool up_cas2_unsafe( Mword *ptr, Mword *oldval, Mword *newval )
 {
   char ret;
   asm volatile
@@ -48,9 +48,9 @@ bool up_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
 
 
 inline 
-bool smp_cas2_unsave( Mword *ptr, Mword *oldval, Mword *newval )
+bool smp_cas2_unsafe( Mword *ptr, Mword *oldval, Mword *newval )
 {
-  return up_cas2_unsave(ptr,oldval,newval);
+  return up_cas2_unsafe(ptr,oldval,newval);
 }
 
 

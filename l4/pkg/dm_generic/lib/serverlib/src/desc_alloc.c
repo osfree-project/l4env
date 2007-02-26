@@ -6,23 +6,13 @@
  *
  * \date   11/21/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/slab/slab.h>
@@ -79,9 +69,7 @@ __grow(l4slab_cache_t * cache,
 
   page = get_page(data);
 
-#if DEBUG_PAGE_ALLOC
-  INFO("got page at 0x%08x\n",(unsigned)page);
-#endif
+  LOGdL(DEBUG_PAGE_ALLOC,"got page at 0x%08x",(unsigned)page);
 
   return page;
 }
@@ -100,9 +88,7 @@ __release(l4slab_cache_t * cache,
 	  void * page, 
 	  void * data)
 {
-#if DEBUG_PAGE_ALLOC
-  INFO("release page at 0x%08x\n",(unsigned)page);
-#endif
+  LOGdL(DEBUG_PAGE_ALLOC,"release page at 0x%08x",(unsigned)page);
 
   free_page(page,data);
 }

@@ -88,7 +88,7 @@ touch_repeat(unsigned code, unsigned repeat)
   l4_umword_t dummy;
   int error;
 
-  error = l4_i386_ipc_call(btn_l4id, 
+  error = l4_ipc_call(btn_l4id, 
 			   L4_IPC_SHORT_MSG, code, repeat,
 			   L4_IPC_SHORT_MSG, &dummy, &dummy,
 			   L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
@@ -111,9 +111,9 @@ touch_repeat(unsigned code, unsigned repeat)
  * handle incoming events                                                     *
  *****************************************************************************/
 void 
-stream_io_server_push(sm_request_t *request, 
-		      const stream_io_input_event_t *event, 
-		      sm_exc_t *_ev)
+stream_io_push_component(CORBA_Object _dice_corba_obj,
+    const stream_io_input_event_t *event,
+    CORBA_Environment *_dice_corba_env)
 {
   l4input_t *input_ev = (l4input_t*) event;
 
@@ -200,6 +200,9 @@ stream_io_server_push(sm_request_t *request,
 static void
 evh_loop(void *data)
 {
+  l4thread_started(NULL);
+  stream_io_server_loop(data);
+#if 0
   int ret;
   l4_msgdope_t result;
   sm_request_t request;
@@ -238,6 +241,7 @@ evh_loop(void *data)
       LOGl(" Flick IPC error (%#x)", L4_IPC_ERROR(result));
       enter_kdebug("PANIC");
     }
+#endif
 }
 
 static void
@@ -251,10 +255,10 @@ btn_repeat(void *data)
       l4_msgdope_t result;
       int error;
 
-      error = l4_i386_ipc_receive(evh_l4id, 
+      error = l4_ipc_receive(evh_l4id, 
 				  L4_IPC_SHORT_MSG, &code, &repeat,
 				  L4_IPC_NEVER, &result);
-      error = l4_i386_ipc_send   (evh_l4id,
+      error = l4_ipc_send   (evh_l4id,
 				  L4_IPC_SHORT_MSG, 0, 0,
 				  L4_IPC_NEVER, &result);
       if (!repeat)
@@ -263,7 +267,7 @@ btn_repeat(void *data)
       for (;;)
 	{
 	  /* wait for around 250ms */
-	  error = l4_i386_ipc_receive(evh_l4id,
+	  error = l4_ipc_receive(evh_l4id,
 				      L4_IPC_SHORT_MSG, &new_code, &new_repeat,
 				      L4_IPC_TIMEOUT(0,0,244,10,0,0), &result);
 	  if (error == L4_IPC_RETIMEOUT && !key_pending)
@@ -299,7 +303,7 @@ btn_repeat(void *data)
 		    }
 
 		  /* wait for key up or other key down */
-		  error = l4_i386_ipc_receive(evh_l4id,
+		  error = l4_ipc_receive(evh_l4id,
 					      L4_IPC_SHORT_MSG, 
 					        &new_code, &repeat,
 					      L4_IPC_TIMEOUT(0,0,130,11,0,0),
@@ -319,7 +323,7 @@ btn_repeat(void *data)
     	      repeat = new_repeat;
 
 	      /* new key or key_up received -- only reply, do not repeat */
-	      error = l4_i386_ipc_send(evh_l4id,
+	      error = l4_ipc_send(evh_l4id,
 				       L4_IPC_SHORT_MSG, 0, 0,
 				       L4_IPC_TIMEOUT(0,0,0,0,0,0), &result);
 	      if (repeat)

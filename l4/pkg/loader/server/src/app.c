@@ -1,11 +1,14 @@
 /* $Id$ */
 /**
  * \file	loader/server/src/app.c
+ * \brief	start, stop, kill, etc. applications
  *
  * \date	06/10/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	application data */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #define DEALLOC_CON
 
@@ -21,9 +24,9 @@
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
 #include <l4/l4rm/l4rm.h>
+#include <l4/env/mb_info.h>
 #include <l4/exec/exec.h>
 #include <l4/exec/elf.h>
-#include <l4/exec/exec-client.h>
 #ifdef DEALLOC_CON
 #include <l4/con/con-client.h>
 #endif
@@ -32,12 +35,11 @@
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/generic_ts/generic_ts-client.h>
 #include <l4/loader/loader.h>
-#include <l4/loader/grub_mb_info.h>
-#include <l4/loader/grub_vbe_info.h>
 #include <l4/rmgr/librmgr.h>
 
 #include "fprov-if.h"
 #include "dm-if.h"
+#include "exec-if.h"
 #include "trampoline.h"
 #include "pager.h"
 #include "debug.h"
@@ -58,9 +60,6 @@
 #define APP_STACK	0x00008000
 /** potision of libloader.s.so in target application's address space */
 #define APP_LIBLOADER	0x0000E000
-/** potision of libloader.s.so in target application's address space
- * obsolete) */
-#define APP_LIBL4RM	0x00010000
 /*@}*/
 
 #define APP_MCP		255
@@ -71,7 +70,6 @@ static int app_next_free = 0;			/**< number of next free app_t
 static app_t app_array[MAX_APP];
 
 static l4_threadid_t ts_id   = L4_INVALID_ID;	/**< task server */
-static l4_threadid_t exec_id = L4_INVALID_ID;	/**< ELF interpreter */
 static l4_threadid_t con_id  = L4_INVALID_ID;	/**< con server */
 
 /** Return the address of the task struct
@@ -116,8 +114,15 @@ app_msg(app_t *app, const char *format, ...)
     sprintf(ftid, ",#%x", app->tid.id.task);
 
   va_start(list, format);
+  if (!l4_is_invalid_id(app->tid) && app->hi_first_msg)
+    printf("\033[36m");
   printf("%s%s: ", fname, ftid);
   vprintf(format, list);
+  if (!l4_is_invalid_id(app->tid) && app->hi_first_msg)
+    {
+      printf("\033[m");
+      app->hi_first_msg = 0;
+    }
   printf("\n");
   va_end(list);
 }
@@ -183,6 +188,7 @@ create_app_desc(app_t **new_app, const char *name)
 	      a->flags = 0;
 	      a->app_area_next_free = 0;
 	      a->tid = L4_INVALID_ID;		/* tid still unknown */
+	      a->hi_first_msg = is_fiasco();	/* highlight first message */
 	      a->symbols = 0;			/* has no symbols */
 	      a->lines = 0;			/* has no lines */
 	      a->last_pf = 0xffffffff;
@@ -265,7 +271,7 @@ sanity_check_app_area(app_t *app, app_area_t **check_aa)
 }
 
 /** Find a free virtual address range. This is only necessary for
- * old-style applications because in new-style applications, we let
+ * sigma0 applications because in l4env-style applications, we let
  * the region manager manager decide where a region lives. */
 static l4_addr_t
 app_find_free_virtual_area(app_t *app, l4_size_t size)
@@ -474,7 +480,7 @@ app_attach_startup_sections_to_pager(app_t *app)
 	{
 	  if (l4exc->info.type & L4_DSTYPE_RELOCME)
 	    {
-	      app_msg(app, "Startup section %d not yet relocated\n",
+	      app_msg(app, "Startup section %d not yet relocated",
 			   l4exc-env->section);
 	      return -L4_EINVAL;
 	    }
@@ -487,6 +493,7 @@ app_attach_startup_sections_to_pager(app_t *app)
 }
 
 /** Create dataspace of anonymous memory mapped into the new application.
+ * The dataspace is also mapped into this application.
  * 
  * \param app_addr	virtual address of dataspace in application
  *			may be L4_MAX_ADDRESS of area is not pageable to
@@ -529,7 +536,7 @@ app_create_infopage(app_t *app)
   char dbg_name[32];
   
   strcpy(dbg_name, "info ");
-  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name));
+  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name)-1);
   dbg_name[sizeof(dbg_name)-1] = '\0';
 
   /* create infopage */
@@ -542,101 +549,6 @@ app_create_infopage(app_t *app)
 }
 /*@}*/
 
-/** @name Manipulate Fiasco debug information */
-/*@{ */
-/** Request symbolic information for an application from the L4 exec layer */
-static int
-app_get_symbols(app_t *app)
-{
-  int error;
-  l4dm_dataspace_t ds;
-  l4_addr_t addr;
-  l4_size_t psize;
-  sm_exc_t exc;
-  
-  if ((error = l4exec_bin_get_symbols(exec_id, 
-				      (l4exec_envpage_t_slice*)app->env,
-				      (l4exec_dataspace_t*)&ds, &exc)))
-    {
-      app_msg(app, "Error %d (%s) getting symbols", 
-	      error, l4env_errstr(error));
-      return -L4_EINVAL;
-    }
-
-  if (l4dm_is_invalid_ds(ds))
-    {
-      app_msg(app, "No symbols");
-      return -L4_EINVAL;
-    }
-
-  if (!l4dm_mem_ds_is_contiguous(&ds))
-    {
-      app_msg(app, "ds %d not contiguous (bug at exec)!", ds.id);
-      l4dm_close(&ds);
-      return -L4_EINVAL;
-    }
-  
-  if ((error = l4dm_mem_ds_phys_addr(&ds, 0, L4DM_WHOLE_DS, &addr, &psize)))
-    {
-      app_msg(app, "Error %d (%s) requesting physical addr of ds %d", 
-	      error, l4env_errstr(error), ds.id);
-      l4dm_close(&ds);
-      return -L4_EINVAL;
-    }
-
-  app->symbols_ds = ds;   /* needed for transfering ownership to app when
-			   * we know the task_id */
-  app->symbols    = addr; /* physical address */
-
-  return 0;
-}
-
-/** Request line number information of an application by the L4 exec layer */
-static int
-app_get_lines(app_t *app)
-{
-  int error;
-  l4dm_dataspace_t ds;
-  l4_addr_t addr;
-  l4_size_t psize;
-  sm_exc_t exc;
-  
-  if ((error = l4exec_bin_get_lines(exec_id,
-				    (l4exec_envpage_t_slice*)app->env,
-				    (l4exec_dataspace_t*)&ds, &exc)))
-    {
-      app_msg(app, "Error %d (%s) getting lines", 
-	            error, l4env_errstr(error));
-      return -L4_EINVAL;
-    }
-
-  if (l4dm_is_invalid_ds(ds))
-    {
-      app_msg(app, "No lines");
-      return -L4_EINVAL;
-    }
-
-  if (!l4dm_mem_ds_is_contiguous(&ds))
-    {
-      app_msg(app, "ds %d not contiguous (bug at exec)!", ds.id);
-      l4dm_close(&ds);
-      return -L4_EINVAL;
-    }
-
-  if ((error = l4dm_mem_ds_phys_addr(&ds, 0, L4DM_WHOLE_DS, &addr, &psize)))
-    {
-      app_msg(app, "Error %d (%s) requesting physical addr of ds %d", 
-	            error, l4env_errstr(error), ds.id);
-      l4dm_close(&ds);
-      return -L4_EINVAL;
-    }
-
-  app->lines_ds = ds;   /* needed for transfering ownership to app when we
-			 * know the task_id */
-  app->lines    = addr; /* physical address */
-
-  return 0;
-}
 
 /** Make symbolic information known by Fiasco */
 static inline void
@@ -659,7 +571,7 @@ app_publish_lines_symbols(app_t *app)
 {
   if (app->flags & APP_SYMBOLS)
     {
-      if (app_get_symbols(app))
+      if (exec_if_get_symbols(app))
 	app->flags &= ~APP_SYMBOLS;
       else
 	{
@@ -671,7 +583,7 @@ app_publish_lines_symbols(app_t *app)
 
   if (app->flags & APP_LINES)
     {
-      if (app_get_lines(app))
+      if (exec_if_get_lines(app))
 	app->flags &= ~APP_LINES;
       else
 	{
@@ -710,11 +622,9 @@ app_unpublish_lines(app_t *app)
  *
  * \param app		app descriptor
  * \return		0 on success */
-static int
-app_init_infopage(app_t *app)
+int
+init_infopage(l4env_infopage_t *env)
 {
-  l4env_infopage_t *env = app->env;
-
   /* fill out infopage */
   env->stack_size  = APP_STACK_SIZE;
   env->stack_dm_id = app_stack_dm;
@@ -731,13 +641,12 @@ app_init_infopage(app_t *app)
 
   /* set library addresses */
   env->addr_libloader = APP_LIBLOADER;
-  env->addr_libl4rm   = APP_LIBL4RM;
 
   /* set default path for dynamic libraries */
   strcpy(env->binpath, cfg_binpath);
   strcpy(env->libpath, cfg_libpath);
 
-  env->vm_low = 0x1000;
+  env->vm_low  = 0x1000;
   env->vm_high = 0xC0000000;
 
   return 0;
@@ -772,16 +681,16 @@ alloc_from_tramp_page(l4_size_t size,
 static int
 load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	     app_addr_t *tramp_page, l4_addr_t *tramp_page_addr,
-	     struct grub_multiboot_info *mbi)
+	     l4util_mb_info_t *mbi)
 {
   if (ct->next_module > ct->module)
     {
       int mods_count = ct->next_module-ct->module;
-      struct grub_mod_list *mod;
+      l4util_mb_mod_t *mod;
       cfg_module_t *ct_mod = ct->module;
       
-      if (!(mod = (struct grub_mod_list*)
-	    alloc_from_tramp_page(mods_count*sizeof(struct grub_mod_list),
+      if (!(mod = (l4util_mb_mod_t*)
+	    alloc_from_tramp_page(mods_count*sizeof(l4util_mb_mod_t),
 				  tramp_page, tramp_page_addr)))
 	{
 	  app_msg(app, "No space left for multiboot modules in \
@@ -825,7 +734,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	  mod_size = l4_round_page(file_size);
 
 	  /* if application is direct mapped, obtain the start-address of the
-	   * module from dataspace manager (old-style or new-style) */
+	   * module from dataspace manager (sigma0-style or l4env-style) */
 	  if (app->flags & APP_DIRECTMAP)
 	    {
 	      /* Application is direct mapped so address of boot module should
@@ -855,7 +764,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
   
 	  if (app->flags & APP_OLDSTYLE)
 	    {
-	      /* old-style: make module accessible from application
+	      /* sigma0-style: make module accessible from application
 	       * -- paged by application pager.
 	       * XXX We could page modules by the applications region manager
 	       * but we don't pass the L4env infopage to the application so
@@ -869,7 +778,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	    }
 	  else
 	    {
-	      /* new-style: make module accessible from application
+	      /* l4env-style: make module accessible from application
 	       * -- additional program section */
 	      l4env_infopage_t *env = app->env;
 	      l4exec_section_t *l4exc;
@@ -923,7 +832,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 							tramp_page,
 						        tramp_page_addr)))
 		{
-		  app_msg(app, "No space left for command line of module "
+		  app_msg(app, "No space left for cmdline of module "
 			       "\"%s\"\n in trampoline page",
 			       ct_mod->args);
 		  return -L4_ENOMEM;
@@ -932,8 +841,25 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	      memcpy(args, ct_mod->args, args_len);
 	      mod->cmdline = HERE_TO_APP(args, *tramp_page);
 	    }
+	  else
+	    {
+	      /* mod->cmdline = "" */
+	      char *args;
+	      if (!(args = (char*)alloc_from_tramp_page(1,
+							tramp_page,
+							tramp_page_addr)))
+		{
+		  app_msg(app, "No space left for cmdline \"\" of module "
+			       "\"%s\"\n in trampoline page",
+			       ct_mod->args);
+		  return -L4_ENOMEM;
+		}
+
+	      *args = '\0';
+	      mod->cmdline = HERE_TO_APP(args, *tramp_page);
+	    }
 	}
-      mbi->flags |= MB_INFO_MODS;
+      mbi->flags |= L4UTIL_MB_MODS;
     }
 
   return 0;
@@ -942,38 +868,40 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 static void
 load_vbe_info(app_t *app,
 	      app_addr_t *tramp_page, l4_addr_t *tramp_page_addr,
-	      struct grub_multiboot_info *_mbi, struct grub_multiboot_info *mbi)
+	      l4util_mb_info_t *mbi)
 {
-  /* copy mb_info->vbe_mode and mb_info->vbe_controller */
-  if (mbi->flags & MB_INFO_VIDEO_INFO)
+  /* copy mb_info->vbe_mode and mb_info->vbe_ctrl */
+  if (l4env_multiboot_info->flags & L4UTIL_MB_VIDEO_INFO)
     {
       l4_addr_t tmp_tramp_page_addr = *tramp_page_addr;
-      struct vbe_mode *mbi_vbe_mode;
-      struct vbe_controller *mbi_vbe_cont;
+      l4util_mb_vbe_mode_t *vbe_mode;
+      l4util_mb_vbe_ctrl_t *vbe_ctrl;
 
-      if (mbi->vbe_mode_info)
+      if (l4env_multiboot_info->vbe_mode_info)
 	{
-	  if (   (mbi_vbe_mode = (struct vbe_mode*)
-		    alloc_from_tramp_page(sizeof(struct vbe_mode),
+	  if (   (vbe_mode = (l4util_mb_vbe_mode_t*)
+		    alloc_from_tramp_page(sizeof(l4util_mb_vbe_mode_t),
 					  tramp_page, &tmp_tramp_page_addr))
-	      && (mbi_vbe_cont = (struct vbe_controller*)
-		    alloc_from_tramp_page(sizeof(struct vbe_controller),
+	      && (vbe_ctrl = (l4util_mb_vbe_ctrl_t*)
+		    alloc_from_tramp_page(sizeof(l4util_mb_vbe_ctrl_t),
 					  tramp_page, &tmp_tramp_page_addr))
 	      )
 	    {
-    	      *mbi_vbe_mode = *((struct vbe_mode*)_mbi->vbe_mode_info);
-	      *mbi_vbe_cont = *((struct vbe_controller*)_mbi->vbe_control_info);
-	      mbi->vbe_mode_info    = HERE_TO_APP(mbi_vbe_mode, *tramp_page);
-	      mbi->vbe_control_info = HERE_TO_APP(mbi_vbe_cont, *tramp_page);
-	      *tramp_page_addr = tmp_tramp_page_addr;
+    	      *vbe_mode = *((l4util_mb_vbe_mode_t*)
+			     l4env_multiboot_info->vbe_mode_info);
+	      *vbe_ctrl = *((l4util_mb_vbe_ctrl_t*)
+			     l4env_multiboot_info->vbe_ctrl_info);
+	      mbi->vbe_mode_info = HERE_TO_APP(vbe_mode, *tramp_page);
+	      mbi->vbe_ctrl_info = HERE_TO_APP(vbe_ctrl, *tramp_page);
+	      mbi->flags        |= L4UTIL_MB_VIDEO_INFO;
+	      *tramp_page_addr   = tmp_tramp_page_addr;
 	    }
 	  else
 	    {
 	      app_msg(app, "Can't pass VBE video info to trampoline page \
 			   (needs %d bytes)",
-     			   sizeof(struct vbe_controller)+
-			   sizeof(struct vbe_mode));
-	      mbi->flags &= ~MB_INFO_VIDEO_INFO;
+     			   sizeof(l4util_mb_vbe_ctrl_t)+
+			   sizeof(l4util_mb_vbe_mode_t));
     	    }
 	}
     }
@@ -993,26 +921,35 @@ load_vbe_info(app_t *app,
 static int
 app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
 		   l4_addr_t *tramp_page_addr, l4_threadid_t fprov_id,
-		   struct grub_multiboot_info **mbi)
+		   l4util_mb_info_t **multiboot_info)
 {
   char *args;
-  int args_len;
-  struct grub_multiboot_info *mbi1;
-  extern struct grub_multiboot_info *_mbi;
-  int error;
+  int error, args_len;
+  l4util_mb_info_t *mbi;
 
   /* allocate space for multiboot info */
-  if (!(mbi1 = (struct grub_multiboot_info*)
-	alloc_from_tramp_page(sizeof(struct grub_multiboot_info),
-			      tramp_page, tramp_page_addr)))
+  if (!(mbi = (l4util_mb_info_t*)
+		    alloc_from_tramp_page(sizeof(l4util_mb_info_t),
+					  tramp_page, tramp_page_addr)))
     {
-      app_msg(app, "No space left for grub_multiboot_info in trampoline page");
+      app_msg(app, "No space left for multiboot_info in trampoline page");
       return -L4_ENOMEM;
     }
 
+  memset(mbi, 0, sizeof(l4util_mb_info_t));
+
   /* copy multiboot_info */
-  *mbi1 = *_mbi;
-  mbi1->flags &= MB_INFO_MEMORY|MB_INFO_BOOTDEV|MB_INFO_VIDEO_INFO;
+  if (l4env_multiboot_info->flags & L4UTIL_MB_MEMORY)
+    {
+      mbi->flags    |= L4UTIL_MB_MEMORY;
+      mbi->mem_lower = l4env_multiboot_info->mem_lower;
+      mbi->mem_upper = l4env_multiboot_info->mem_upper;
+    }
+  if (l4env_multiboot_info->flags & L4UTIL_MB_BOOTDEV)
+    {
+      mbi->flags      |= L4UTIL_MB_BOOTDEV;
+      mbi->boot_device = l4env_multiboot_info->boot_device;
+    }
 
   /* copy program arguments */
   args_len = strlen(ct->task.fname)+2; /* space between argv[0] and argv[1]
@@ -1020,15 +957,15 @@ app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
   if (ct->task.args)
     args_len += strlen(ct->task.args);
 
-  if (!(args = (char*)alloc_from_tramp_page(args_len, 
+  if (!(args = (char*)alloc_from_tramp_page(args_len,
 					    tramp_page, tramp_page_addr)))
     {
       app_msg(app, "No space left for command line in trampoline page");
       return -L4_ENOMEM;
     }
   
-  mbi1->flags |= MB_INFO_CMDLINE;
-  mbi1->cmdline = HERE_TO_APP(args, *tramp_page);
+  mbi->flags  |= L4UTIL_MB_CMDLINE;
+  mbi->cmdline = HERE_TO_APP(args, *tramp_page);
   strcpy(args, ct->task.fname);
 
   if (ct->task.args)
@@ -1038,14 +975,14 @@ app_create_mb_info(cfg_task_t *ct, app_t *app, app_addr_t *tramp_page,
     }
 
   /* load the VESA information about the current video mode as set by GRUB */
-  load_vbe_info(app, tramp_page, tramp_page_addr, _mbi, mbi1);
+  load_vbe_info(app, tramp_page, tramp_page_addr, mbi);
 
   /* load applications modules */
   if ((error = load_modules(ct, app, fprov_id, 
-			    tramp_page, tramp_page_addr, mbi1)) < 0)
+			    tramp_page, tramp_page_addr, mbi)) < 0)
     return error;
 
-  *mbi = mbi1;
+  *multiboot_info = mbi;
 
   return 0;
 }
@@ -1064,6 +1001,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags)
   const char *c;
   char ds_flags[20];
 
+  /* create dataspace name */
   if ((c = strrchr(app->fname, '/')))
     c++;
   else
@@ -1073,7 +1011,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags)
 
   if (!app->flags & APP_OLDSTYLE)
     {
-      app_msg(app, "Can't create physical memory for new-style application\n");
+      app_msg(app, "Can't create physical memory for l4env-style application");
       return -L4_EINVAL;
     }
 
@@ -1127,7 +1065,15 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags)
 				      L4_DSTYPE_READ | L4_DSTYPE_WRITE,
 				      L4DM_RW, "phys memory", &aa)))
     return error;
-  
+
+#ifdef EMULATE_MMIO
+  /* XXX Attach dataspace to this application. We need this if we want to
+   * trap linux pagefaults into reserved memory. */
+  if ((error = l4rm_attach(&ds, size, 0, L4DM_RW, (void*)&addr)))
+    return error;
+  aa->beg.here = addr;
+#endif
+
   app_msg(app, "Reserved %08x memory at %08x-%08x",
 	      size, aa->beg.app, aa->beg.app+aa->size);
 
@@ -1153,8 +1099,8 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
   app_area_t *tramp_page_aa;
   l4_addr_t esp, app_esp, app_eip;
   l4env_infopage_t *env = app->env;
-  struct grub_multiboot_info *mbi;
-  sm_exc_t exc;
+  l4util_mb_info_t *mbi;
+  CORBA_Environment _env = dice_default_environment;
   char dbg_name[32];
 
   app->flags &= ~APP_OLDSTYLE;
@@ -1173,16 +1119,16 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
     }
 
   /* ask task server to create new task */
-  if ((error = l4_ts_allocate(ts_id, (l4_ts_taskid_t*)&app->tid, &exc))
-      || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_allocate_call(&ts_id, &app->tid, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d (%s) allocating task at task server (exc=%d)\n",
-	      error, l4env_errstr(error), exc._type);
+	      error, l4env_errstr(error), _env.major);
       return error;
     }
 
   strcpy(dbg_name, "tramp ");
-  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name));
+  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name)-1);
   dbg_name[sizeof(dbg_name)-1] = '\0';
 
   /* create stack */
@@ -1240,17 +1186,17 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
   app_msg(app, "Starting at l4loader_init (%08x, libloader.s.so)", 
 		env->entry_1st);
 
-  if ((error = l4_ts_create(ts_id, (l4_ts_taskid_t*)&app->tid,
-			    (l4_umword_t)app_eip, (l4_umword_t)app_esp,
-			    APP_MCP, (l4_ts_taskid_t*)&app_pager_id,
-			    app->prio, app->fname, 0, &exc))
-      || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_create_call(&ts_id, &app->tid, app_eip, app_esp,
+				 APP_MCP, &app_pager_id, app->prio, 
+				 app->fname, 0, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d (%s) creating task %x at task server (exc=%d)\n",
-	      error, l4env_errstr(error), app->tid.id.task, exc._type);
-      if (l4_ts_free(ts_id, (l4_ts_taskid_t*)&app->tid, &exc)
-	  || exc._type != exc_l4_no_exception)
-	app_msg(app, "Error freeing task number at task server");
+	      error, l4env_errstr(error), app->tid.id.task, _env.major);
+      if (l4_ts_free_call(&ts_id, &app->tid, &_env)
+	  || _env.major != CORBA_NO_EXCEPTION)
+	app_msg(app, "Error freeing task number at task server (exc=%d)",
+	             _env.major);
       return error;
     }
 
@@ -1258,7 +1204,7 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
    * the loading process */
   for (;;)
     {
-      l4_i386_ipc_receive(app->tid, L4_IPC_SHORT_MSG, &dw0, &dw1,
+      l4_ipc_receive(app->tid, L4_IPC_SHORT_MSG, &dw0, &dw1,
 			  L4_IPC_NEVER, &result);
       if (dw0 == L4_LOADER_ERROR)
 	{
@@ -1278,20 +1224,16 @@ app_start_libloader(cfg_task_t *ct, app_t *app)
   dump_l4env_infopage(app);
 #endif
 
-  if ((error = l4exec_bin_link(exec_id, (l4exec_envpage_t_slice*)env, &exc)))
-    {
-      app_msg(app, "Error %d (%s) while finish linking",
-		   error, l4env_errstr(error));
-      return error;
-    }
+  if ((error = exec_if_link(app)))
+    return error;
 
   app_publish_lines_symbols(app);
  
-  app_msg(app, "Continue at l4env_init (%08x, libloader.s.so)", 
+  app_msg(app, "Continue at l4env_init (%08x, libloader.s.so)",
 		env->entry_2nd);
 
   /* signal the loader that we are ready */
-  l4_i386_ipc_send(app->tid, 
+  l4_ipc_send(app->tid, 
 		   L4_IPC_SHORT_MSG, L4_LOADER_COMPLETE, APP_ENVPAGE,
 		   L4_IPC_NEVER, &result);
 
@@ -1316,9 +1258,9 @@ app_start_static(cfg_task_t *ct, app_t *app)
   app_addr_t tramp_page;
   app_area_t *tramp_page_aa;
   l4env_infopage_t *env = app->env;
-  struct grub_multiboot_info *mbi;
+  l4util_mb_info_t *mbi;
   cfg_mem_t *ct_mem;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   char dbg_name[32];
 
   app->flags |= APP_OLDSTYLE;
@@ -1336,11 +1278,11 @@ app_start_static(cfg_task_t *ct, app_t *app)
 #endif
 
   /* first, allocate task number */
-  if ((error = l4_ts_allocate(ts_id, (l4_ts_taskid_t*)&app->tid, &exc))
-      || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_allocate_call(&ts_id, &app->tid, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d (%s) allocating task at task server (exc=%d)\n",
-	  error, l4env_errstr(error), exc._type);
+	  error, l4env_errstr(error), _env.major);
       return error;
     }
 
@@ -1373,13 +1315,9 @@ app_start_static(cfg_task_t *ct, app_t *app)
   
   if (relink)
     {
-      if ((error = l4exec_bin_link(exec_id,
-				   (l4exec_envpage_t_slice*)env, &exc)))
-	{
-	  app_msg(app, "Error %d (%s) while finish linking",
-		        error, l4env_errstr(error));
-	  return error;
-	}
+      if ((error = exec_if_link(app)))
+	return error;
+
       /* attach relocated sections (usual the application itself) */
       if ((error = app_attach_sections_to_pager(app)))
 	{
@@ -1392,7 +1330,7 @@ app_start_static(cfg_task_t *ct, app_t *app)
   app_publish_lines_symbols(app);
   
   strcpy(dbg_name, "tramp ");
-  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name));
+  strncat(dbg_name, app->fname, sizeof(dbg_name)-strlen(dbg_name)-1);
   dbg_name[sizeof(dbg_name)-1] = '\0';
 
   /* create trampoline page */
@@ -1445,25 +1383,28 @@ app_start_static(cfg_task_t *ct, app_t *app)
   *--((l4_umword_t*)esp) = env->entry_2nd;
   *--((l4_umword_t*)esp) = 0; /* fake return address */
 
+  app_msg(app, "Entry at %08x => %08x", app_eip, env->entry_2nd);
+
   /* adapt application's stack pointer */
   app_esp = HERE_TO_APP(esp, tramp_page);
 
   /* request task creating at task server */
-  if ((error = l4_ts_create(ts_id, (l4_ts_taskid_t*)&app->tid,
-			    (l4_umword_t)app_eip, (l4_umword_t)app_esp,
-			    APP_MCP, (l4_ts_taskid_t*)&app_pager_id,
-			    app->prio, app->fname, 0, &exc)))
+  if ((error = l4_ts_create_call(&ts_id, &app->tid, app_eip, app_esp,
+				 APP_MCP, &app_pager_id, app->prio, 
+				 app->fname, 0, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d (%s) creating task %x (exc=%d)\n",
-	      error, l4env_errstr(error), app->tid.id.task, exc._type);
-      if (l4_ts_free(ts_id, (l4_ts_taskid_t*)&app->tid, &exc)
-	  || exc._type != exc_l4_no_exception)
-	app_msg(app, "Error freeing task number at task server");
+	      error, l4env_errstr(error), app->tid.id.task, _env.major);
+      if (l4_ts_free_call(&ts_id, &app->tid, &_env)
+	  || _env.major != CORBA_NO_EXCEPTION)
+	app_msg(app, "Error freeing task number at task server (exc=%d)",
+	             _env.major);
       return -L4_ENOMEM;
     }
 
   app_msg(app, "Started");
-  
+
   return 0;
 }
 /*@}*/
@@ -1476,7 +1417,7 @@ static int
 app_cleanup(app_t *app)
 {
   int error;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   app_area_t *aa;
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
@@ -1484,20 +1425,20 @@ app_cleanup(app_t *app)
   if (!l4_is_invalid_id(app->tid))
     {
       /* kill L4 task at task server */
-      if ((error = l4_ts_delete(ts_id, (l4_ts_taskid_t*)&app->tid, &exc))
-	  || exc._type != exc_l4_no_exception)
+      if ((error = l4_ts_delete_call(&ts_id, &app->tid, &_env))
+	  || _env.major != CORBA_NO_EXCEPTION)
 	{
-	  app_msg(app, "Error %d (%s) deleting task at task server", 
-			error, l4env_errstr(error));
+	  app_msg(app, "Error %d (%s) deleting task at task server (exc=%d)", 
+			error, l4env_errstr(error), _env.major);
 	  return error;
 	}
 
       /* free task number from task */
-      if ((error = l4_ts_free(ts_id, (l4_ts_taskid_t*)&app->tid, &exc))
-	  || exc._type != exc_l4_no_exception)
+      if ((error = l4_ts_free_call(&ts_id, &app->tid, &_env))
+	  || _env.major != CORBA_NO_EXCEPTION)
         {
-	  app_msg(app, "Error %d (%s) freeing task number at task server",
-		       error, l4env_errstr(error));
+	  app_msg(app, "Error %d (%s) freeing task number (exc=%d)",
+		       error, l4env_errstr(error), _env.major);
 	  return error;
         }
 
@@ -1508,8 +1449,8 @@ app_cleanup(app_t *app)
       /* close vc at con */
       if (!l4_is_invalid_id(con_id))
 	{
-	  if ((error = con_if_close_all(con_id,
-					(con_threadid_t*)&app->tid, &exc)))
+	  if ((error = con_if_close_all_call(&con_id,
+					&app->tid, &_env)))
 	    app_msg(app, "Error %d (%s) closing console",
 		    error, l4env_errstr(error));
 	}
@@ -1517,13 +1458,8 @@ app_cleanup(app_t *app)
     }
 
   /* free program sections at exec server */
-  if ((error = l4exec_bin_close(exec_id,
-				(l4exec_envpage_t_slice*)app->env, &exc)))
-    {
-      app_msg(app, "Error %d (%s) deleting task at exec server", 
-		   error, l4env_errstr(error));
-      return error;
-    }
+  if ((error = exec_if_close(app)))
+    return error;
 
   /* go through the app_area list and omit all envpage program sections
    * from killing ds which are already killed by exec layer. Nevertheless,
@@ -1574,7 +1510,7 @@ app_cleanup(app_t *app)
   /* mark app descriptor as free */
   app->tid = L4_INVALID_ID;
   app->env = NULL;
-  
+
   return 0;
 }
 
@@ -1588,12 +1524,11 @@ app_start(cfg_task_t *ct, l4_threadid_t fprov_id)
 {
   int error, open_flags;
   app_t *app;
-  sm_exc_t exc;
   l4env_infopage_t *env;
 
   if (  (error = create_app_desc(&app, ct->task.fname))
       ||(error = app_create_infopage(app))
-      ||(error = app_init_infopage(app)))
+      ||(error = init_infopage(app->env)))
     {
       app_cleanup(app);
       return error;
@@ -1630,24 +1565,19 @@ app_start(cfg_task_t *ct, l4_threadid_t fprov_id)
     }
 
   /* open file image and separate sections */
-  if ((error = l4exec_bin_open(exec_id, ct->task.fname,
-			       (l4exec_envpage_t_slice*)env, open_flags, &exc)))
-    {
-      app_msg(app, "Error %d (%s) while loading",
-		  error, l4env_errstr(error));
-      return error;
-    }
+  if ((error = exec_if_open(app, ct->task.fname, &ct->ds, open_flags)))
+    return error;
 
   if (env->entry_1st == L4_MAX_ADDRESS)
     {
       /* Application is not linked against libloader.s -- Plan B */
-      app_msg(app, "Starting old-style application");
+      app_msg(app, "Starting sigma0-style application");
       error = app_start_static(ct, app);
     }
   else
     {
       /* libloader.s entry point found -- Plan A */
-      app_msg(app, "Starting new-style application");
+      app_msg(app, "Starting l4env-style application");
       error = app_start_libloader(ct, app);
     }
 
@@ -1826,14 +1756,6 @@ app_init(void)
     }
   ts_id = id;
   
-  /* ELF loader */
-  if (!names_waitfor_name("EXEC", &id, 5000))
-    {
-      printf("EXEC not found\n");
-      return -1;
-    }
-  exec_id = id;
-
   /* CON server */
   if (!names_waitfor_name("con", &id, 3000))
     /* ignore errors */

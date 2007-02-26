@@ -5,7 +5,7 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -107,7 +107,7 @@ bool CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pC
 {
     // get root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // find appropriate header file
     CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, pContext);
     if (!pHeader)
@@ -166,6 +166,7 @@ bool CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pC
         // wait function
         nOldType = pContext->SetFunctionType(FUNCTION_WAIT);
         sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+        pContext->SetFunctionType(nOldType);
         pFunction = pRoot->FindFunction(sFuncName);
         if (!pFunction)
         {
@@ -177,6 +178,8 @@ bool CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pC
         // receive function
         pContext->SetFunctionType(FUNCTION_RECV);
         sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+        pContext->SetFunctionType(nOldType);
+        pFunction = pRoot->FindFunction(sFuncName);
         if (!pFunction)
         {
             VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
@@ -187,8 +190,10 @@ bool CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation, CBEContext *pC
         // unmarshal function
         if (pContext->IsOptionSet(PROGRAM_GENERATE_MESSAGE))
         {
-            pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-            sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+			nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
+			sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+			pContext->SetFunctionType(nOldType);
+			pFunction = pRoot->FindFunction(sFuncName);
             if (!pFunction)
             {
                 VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
@@ -272,7 +277,7 @@ bool CBEClient::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
         // include opcode fie to included files
         // do not use include file name, since the opcode file is
         // assumed to be in the same directory
-        pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true);
+        pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false);
     }
     return true;
 }
@@ -354,7 +359,7 @@ bool CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEI
 {
     // get root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // iterate over interfaces and add them
     VectorElement *pIter = pFEFile->GetFirstInterface();
     CFEInterface *pFEInterface;
@@ -367,7 +372,9 @@ bool CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEI
                     (const char*)pFEInterface->GetName());
             return false;
         }
-        pClass->AddToFile(pImpl, pContext);
+		// if class has been added already, then skip it
+		if (pImpl->FindClass(pClass->GetName()) != pClass)
+            pClass->AddToFile(pImpl, pContext);
     }
     // iterate over libraries and add them
     pIter = pFEFile->GetFirstLibrary();
@@ -381,14 +388,16 @@ bool CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEContext * pContext, CBEI
                     (const char*)pFELibrary->GetName());
             return false;
         }
-        pNameSpace->AddToFile(pImpl, pContext);
+		// if this namespace is already added, skip it
+		if (pImpl->FindNameSpace(pNameSpace->GetName()) != pNameSpace)
+            pNameSpace->AddToFile(pImpl, pContext);
     }
     // if FILE_ALL: iterate over included files and call this function using them
     if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
     {
-        pIter = pFEFile->GetFirstIncludeFile();
+        pIter = pFEFile->GetFirstChildFile();
         CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+        while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
         {
             if (!CreateBackEndFile(pIncFile, pContext, pImpl))
                 return false;
@@ -420,7 +429,7 @@ bool CBEClient::CreateBackEndModule(CFEFile *pFEFile, CBEContext *pContext)
 
     // get root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // check if we have interfaces
 	VectorElement *pIter = pFEFile->GetFirstInterface();
     if (pIter)
@@ -477,7 +486,7 @@ bool CBEClient::CreateBackEndModule(CFELibrary *pFELibrary, CBEContext *pContext
 {
     // get the root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
 
     // find appropriate header file
     CBEHeaderFile *pHeader = FindHeaderFile(pFELibrary, pContext);
@@ -578,7 +587,7 @@ bool CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface, CBEContext *p
 {
     // get root
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
 
     // find appropriate header file
     CBEHeaderFile *pHeader = FindHeaderFile(pFEInterface, pContext);

@@ -47,4 +47,30 @@ public:
 
 
 IMPLEMENTATION[arm]:
-//-
+
+#include <cstdio>
+#include "l4_types.h"
+
+IMPLEMENT inline NEEDS["l4_types.h"]
+Mword const Kernel_info::max_threads() const
+{
+  return L4_uid::max_threads();
+}
+
+IMPLEMENT
+void Kernel_info::print() const
+{
+  
+  printf("magic: %.4s  version: 0x%x\n",(char*)&magic,version);
+  printf("sigma0 pc: "L4_PTR_FMT";   sp: "L4_PTR_FMT"\n"
+	 "sigma1 pc: "L4_PTR_FMT";   sp: "L4_PTR_FMT"\n"
+	 "root   pc: "L4_PTR_FMT";   sp: "L4_PTR_FMT"\n",
+
+	 L4_PTR_ARG(sigma0_pc), L4_PTR_ARG(sigma0_sp),
+	 L4_PTR_ARG(sigma1_pc), L4_PTR_ARG(sigma1_sp),
+	 L4_PTR_ARG(root_pc), L4_PTR_ARG(root_sp)
+	 );
+
+  printf("clock: " L4_X64_FMT "\n", clock);
+
+};

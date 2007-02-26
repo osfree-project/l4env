@@ -1,22 +1,28 @@
-#include <l4/env/init.h>
+#include <l4/crtx/ctor.h>
 #include <l4/log/l4log.h>
 
 char LOG_tag[9]="initcall";
 
-static void init1(void) {
+static void __attribute__((constructor)) init1(void) {
 	LOG_Enter();
 }
 
-static void init2(void) {
+static void __attribute__((constructor)) init2(void) {
 	LOG_Enter();
 }
 
-l4env_initcall(init1);
-l4env_initcall(init2);
+static void init3(void) {
+	LOG_Enter();
+}
+
+static void init4(void) {
+	LOG_Enter();
+}
+
+L4C_CTOR(init3, L4CTOR_AFTER_BACKEND);
+L4C_CTOR(init4, L4CTOR_AFTER_BACKEND);
 
 int main(int argc, char**argv){
-	LOG("Here I am, calling l4env_do_initcalls() now...");
-	l4env_do_initcalls();
-	LOG("Back we are. Finishing...");
+	LOG("This is the main function...");
 	return 0;
 }

@@ -6,23 +6,13 @@
  *
  * \date   02/21/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -68,9 +58,7 @@ l4rm_lookup(void * addr,
   /* lock region list */
   l4rm_lock_region_list();
 
-#if DEBUG_LOOKUP
-  INFO("lookup addr 0x%08x\n",a);
-#endif
+  LOGdL(DEBUG_LOOKUP,"lookup addr 0x%08x",a);
 
   /* lookup address */
   ret = l4rm_tree_lookup_region(a,&r);
@@ -80,13 +68,11 @@ l4rm_lookup(void * addr,
       l4rm_unlock_region_list();
       return ret;
     }
-
-#if DEBUG_LOOKUP
-  INFO("found region\n");
-  DMSG("  ds %u at %x.%x, attached to 0x%08x-0x%08x, offs 0x%08x\n",
-       r->ds.id,r->ds.manager.id.task,r->ds.manager.id.lthread,
-       r->start,r->end,r->offs);
-#endif
+  
+  LOGdL(DEBUG_LOOKUP,"found region\n" \
+        "  ds %u at %x.%x, attached to 0x%08x-0x%08x, offs 0x%08x",
+        r->ds.id,r->ds.manager.id.task,r->ds.manager.id.lthread,
+        r->start,r->end,r->offs);
 
   memcpy(ds,&r->ds,sizeof(l4dm_dataspace_t));
   *offset = (a - r->start) + r->offs;

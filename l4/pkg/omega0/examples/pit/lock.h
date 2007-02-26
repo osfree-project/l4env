@@ -57,12 +57,12 @@ inline int wq_lock_lock(wq_lock_queue_base*queue, wq_lock_queue_elem*q){
     //LOGL("locking %p, locked by %#t", queue, old->id);
     old->next = q;
     q->prev = old;
-    if((err=l4_i386_ipc_receive(old->id, L4_IPC_SHORT_MSG, &dummy, &dummy,
+    if((err=l4_ipc_receive(old->id, L4_IPC_SHORT_MSG, &dummy, &dummy,
                                 L4_IPC_NEVER, &result))!=0){
       //LOGl("error %#x receiving IPC from %#t", err, old->id);
       return err;
     }
-    if((err= l4_i386_ipc_send(old->id, L4_IPC_SHORT_MSG, 0,0,
+    if((err= l4_ipc_send(old->id, L4_IPC_SHORT_MSG, 0,0,
                                 L4_IPC_NEVER, &result))!=0){
       //LOGl("error %#x sending IPC to %#t", err, old->id);
       return err;
@@ -103,7 +103,7 @@ inline int wq_lock_unlock(wq_lock_queue_base*queue, wq_lock_queue_elem*q){
     }	/* while(q->next!=other */
     /* now we have the next in other */
     /* send an ipc, timeout never */
-    if((err = l4_i386_ipc_call(q->next->id, 
+    if((err = l4_ipc_call(q->next->id, 
                                L4_IPC_SHORT_MSG, 0,0,
                                L4_IPC_SHORT_MSG, &dummy, &dummy,
                                L4_IPC_NEVER,

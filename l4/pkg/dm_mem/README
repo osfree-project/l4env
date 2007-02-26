@@ -1,0 +1,7 @@
+L4Env Memory Dataspace Manager Interface
+
+This package contains the definition of the L4Env Memory Dataspace
+Manager Interface dm_mem. It provides the interface common for all
+dataspace manager which provide memory dataspaces. For further
+documentation see the reference manual of the L4Env Phys. Dataspace
+Manager DMphys in l4/pkg/dm_phys/doc. 

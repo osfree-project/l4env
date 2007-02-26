@@ -5,7 +5,7 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -35,8 +35,6 @@
 #include "be/BESndFunction.h"
 #include "be/BERcvFunction.h"
 #include "be/BEWaitFunction.h"
-#include "be/BEReplyRcvFunction.h"
-#include "be/BEReplyWaitFunction.h"
 #include "be/BERcvAnyFunction.h"
 #include "be/BEWaitAnyFunction.h"
 #include "be/BEConstant.h"
@@ -52,6 +50,8 @@
 #include "fe/FEOperation.h"
 #include "fe/FEFile.h"
 #include "fe/FEConstDeclarator.h"
+#include "fe/FETypedDeclarator.h"
+#include "fe/FEDeclarator.h"
 
 IMPLEMENT_DYNAMIC(CBETarget);
 
@@ -114,7 +114,7 @@ int CBETarget::Optimize(int nLevel, CBEContext *pContext)
  */
 void CBETarget::Write(CBEContext * pContext)
 {
-    ASSERTC(false);
+    assert(false);
 }
 
 /**	\brief adds another header file to the respective vector
@@ -278,11 +278,11 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEFile * pFEFile, CBEContext
             return false;
     }
 
-    if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
+    if (DoAddIncludedFiles(pContext))
     {
-        pIter = pFEFile->GetFirstIncludeFile();
+        pIter = pFEFile->GetFirstChildFile();
         CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+        while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
         {
             if (!AddConstantToFile(pFile, pIncFile, pContext))
                 return false;
@@ -370,7 +370,7 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEConstDeclarator * pFEConst
     if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
     {
         CBERoot *pRoot = GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
         if (!pConstant)
         {
@@ -432,11 +432,11 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFEFile * pFEFile, CBEContext 
             return false;
     }
 
-    if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
+    if (DoAddIncludedFiles(pContext))
     {
-        pIter = pFEFile->GetFirstIncludeFile();
+        pIter = pFEFile->GetFirstChildFile();
         CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+        while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
         {
             if (!AddTypedefToFile(pFile, pIncFile, pContext))
                 return false;
@@ -532,11 +532,11 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile,
     if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
     {
         CBERoot *pRoot = GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         VectorElement *pIter = pFETypedDeclarator->GetFirstDeclarator();
         CFEDeclarator *pDecl = pFETypedDeclarator->GetNextDeclarator(pIter);
         CBETypedef *pTypedef = pRoot->FindTypedef(pDecl->GetName());
-        ASSERT(pTypedef);
+        assert(pTypedef);
         ((CBEHeaderFile *) pFile)->AddTypedef(pTypedef);
     }
     return true;
@@ -707,20 +707,8 @@ bool CBETarget::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
     // if file is not IDL file we simply return "no error", because C files might also be included files
     if (!pFEFile->IsIDLFile())
     {
-        VERBOSE("CBETarget::CreateBackEnd aborted because front-end file is not IDL file\n");
+        VERBOSE("CBETarget::CreateBackEnd aborted because front-end file (%s) is not IDL file\n", (const char*)pFEFile->GetFileName());
         return true;
-    }
-
-    // create included files first, because they usually contain base interfaces
-    if (!pContext->IsOptionSet(PROGRAM_FILE_ALL))
-    {
-        VectorElement *pIter = pFEFile->GetFirstIncludeFile();
-        CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
-        {
-            if (!CreateBackEnd(pIncFile, pContext))
-                return false;
-        }
     }
 
     // create header file(s)
@@ -741,7 +729,7 @@ bool CBETarget::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
  */
 bool CBETarget::CreateBackEndHeader(CFEFile *pFEFile, CBEContext *pContext)
 {
-    ASSERTC(false);
+    assert(false);
     return false;
 }
 
@@ -754,7 +742,7 @@ bool CBETarget::CreateBackEndHeader(CFEFile *pFEFile, CBEContext *pContext)
  */
 bool CBETarget::CreateBackEndImplementation(CFEFile *pFEFile, CBEContext *pContext)
 {
-    ASSERTC(false);
+    assert(false);
     return false;
 }
 
@@ -817,4 +805,15 @@ bool CBETarget::HasFunctionWithUserType(String sTypeName, CBEContext *pContext)
             return true;
     }
     return false;
+}
+
+/** \brief check if we add the object of the included files to this target
+ *  \param pContext the context of the test
+ *  \return true if we add the objects of the included files
+ *
+ * The default implementation tests for PROGRAM_FILE_ALL.
+ */
+bool CBETarget::DoAddIncludedFiles(CBEContext *pContext)
+{
+    return pContext->IsOptionSet(PROGRAM_FILE_ALL);
 }

@@ -5,7 +5,7 @@
  *	\date	Tue Jun 25 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -74,6 +74,7 @@ public: // Public methods
     virtual VectorElement* GetFirstConstant();
     virtual void RemoveConstant(CBEConstant *pConstant);
     virtual void AddConstant(CBEConstant *pConstant);
+	virtual CBEConstant* FindConstant(String sConstantName);
 
     virtual CBETypedef* GetNextTypedef(VectorElement *&pIter);
     virtual VectorElement* GetFirstTypedef();

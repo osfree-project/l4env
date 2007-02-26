@@ -1,0 +1,24 @@
+/* -*- c -*- */ 
+import <l4/sys/types.h>
+import <l4/dietlibc/io-types.h>
+
+library io
+{
+    [uuid(1001), abstract]
+    interface name_space_provider
+    {
+        /* Register myself at the name server to provide some handle
+         * This could be called several times with different
+         * volume-ids if a server wants to. This might fail, if
+         * someone already registered for the given volume_id.
+         */
+        int           register_volume([in] volume_id_t volume_id);
+
+        /* Unregister myself at the name server to withdraw some
+         * handle. This could be called several times with different
+         * volume-ids if a server wants to. This might fail, if
+         * no one was registered for the given volume_id.
+         */
+        int           unregister_volume([in] volume_id_t volume_id);
+    };
+};

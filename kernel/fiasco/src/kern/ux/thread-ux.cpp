@@ -7,6 +7,7 @@ class trap_state;
 IMPLEMENTATION[ux]:
 
 #include <cstdio>
+#include <csignal>
 #include "boot_info.h"		// for boot_info
 #include "config.h"		// for page sizes
 #include "cpu.h"		// for cpu
@@ -18,73 +19,8 @@ IMPLEMENTATION[ux]:
 #include "panic.h"
 #include "processor.h"		// for cli/sti
 #include "regdefs.h"
+#include "sched_context.h"
 #include "vmem_alloc.h"
-
-// OSKIT crap
-#include "undef_oskit.h"
-
-IMPLEMENT
-Thread::Thread (Space* space, L4_uid id,
-		int init_prio, unsigned short mcp)
-	: Receiver (&_thread_lock, space), 
-          Sender (id, 0)           // select optimized version of constructor
-{
-  Lock_guard <Thread_lock> guard (thread_lock());
-
-  if (state() != Thread_invalid)	// Someone else was faster in initializing!
-    return;				// That's perfectly OK.
-
-  _magic          = magic;
-  _space          = space;
-  _irq            = 0;
-  _idt_limit      = 0;
-  _recover_jmpbuf = 0;
-  _timeout        = 0;
-
-  *reinterpret_cast<void(**)()> (--kernel_sp) = user_invoke;
-
-  sched()->set_prio (init_prio);
-  sched()->set_mcp (mcp);
-  sched()->set_timeslice (Config::default_time_slice);
-  sched()->set_ticks_left (Config::default_time_slice);
-  sched()->reset_cputime ();
-  
-  // Allocate FPU state now because it indirectly calls current()
-  // save_state runs on a signal stack and current() doesn't work there.
-  Fpu_alloc::alloc_state(fpu_state());
-  
-  // clear out user regs that can be returned from the thread_ex_regs
-  // system call to prevent covert channel
-  Return_frame *r = regs();
-  r->esp = 0;
-  r->eip = 0;
-  r->cs  = Emulation::get_kernel_cs() & ~1;		// force iret trap
-  r->ss  = Emulation::get_kernel_ss();
-
-  if(Config::enable_io_protection)
-    r->eflags = EFLAGS_IOPL_K | EFLAGS_IF | 2;
-  else
-    r->eflags = EFLAGS_IOPL_U | EFLAGS_IF | 2;     // XXX iopl=kernel
-
-  _pager = _preempter = _ext_preempter = nil_thread;
-
-  if (space_index() == Thread::lookup(thread_lock()->lock_owner())->space_index()) {
-
-    // same task -> enqueue after creator
-    present_enqueue (Thread::lookup(thread_lock()->lock_owner()));
-
-  } else { 
-
-    // other task -> enqueue in front of this task
-    present_enqueue (lookup_first_thread(Thread::lookup(thread_lock()
-                   ->lock_owner())->space_index())->present_prev);
-    // that's safe because thread 0 of a task is always present
-  }
-
-  state_add(Thread_dead);
-  
-  // ok, we're ready to go!
-}
 
 /** The global trap handler switch.
     This function handles CPU-exception reflection, emulation of CPU 
@@ -100,19 +36,21 @@ int
 Thread::handle_slow_trap (trap_state *ts)
 {
   extern unsigned gdb_trap_recover; // in OSKit's gdb_trap.c
-  unsigned eip;
+  Address eip;
 
-  if (gdb_trap_recover)   
-    goto generic; // we're in the GDB stub -- let generic handler handle it
+  if (EXPECT_FALSE (gdb_trap_recover))
+    goto generic_debug; // we're in the GDB stub -- let generic handler handle it
+  
+  LOG_TRAP;
 
-  if (! ((ts->cs & 3) || (ts->eflags & EFLAGS_VM)))
-    goto generic;               // we were in kernel mode -- nothing to emulate
+  if (EXPECT_FALSE (!((ts->cs & 3) || (ts->eflags & EFLAGS_VM))))
+    goto generic_debug;		// we were in kernel mode -- nothing to emulate
 
-  if (ts->trapno == 2)          // NMI?
-    goto generic;               // NMI always enters kernel debugger
+  if (EXPECT_FALSE (ts->trapno == 2))	// NMI?
+    goto generic_debug;			// NMI always enters kernel debugger
 
-  if (ts->trapno == 0xffffffff) // debugger interrupt
-    goto generic;         
+  if (EXPECT_FALSE (ts->trapno == 0xffffffff))		// debugger interrupt
+    goto generic_debug;         
 
   // so we were in user mode -- look for something to emulate
 
@@ -122,12 +60,12 @@ Thread::handle_slow_trap (trap_state *ts)
   // page fault, kill the thread.
   jmp_buf pf_recovery;    
   unsigned error;         
-  if ((error = setjmp(pf_recovery)) != 0)
+  if (EXPECT_FALSE ((error = setjmp(pf_recovery)) != 0))
     {
       printf ("KERNEL: %x.%x (tcb=0x%x) killed: unhandled page fault, "
-                   "code=0x%x\n",
-                   unsigned (space_index()), id().lthread(),
-                   (unsigned) this, error);
+	      "code=0x%x\n",
+	      debug_taskno(), debug_threadno(),
+	      (unsigned) this, error);
       goto fail_nomsg;    
     }
 
@@ -136,17 +74,12 @@ Thread::handle_slow_trap (trap_state *ts)
   eip = ts->eip;   
 
   // check for "invalid opcode" exception
-  if (Config::X2_LIKE_SYS_CALLS && ts->trapno == 6)
+  if ((Config::ABI_V4 || Config::X2_LIKE_SYS_CALLS) && ts->trapno == 6)
     {
-      if (peek_user ((Unsigned16 *) ts->eip) == 0x90f0)		// "lock; nop" opcode
+      if (peek_user ((Unsigned16 *) ts->eip) == 0x90f0)	// "lock; nop" opcode
 	{
 	  ts->eip += 2;			// step behind the opcode
-
-	  if (space_index() == Config::sigma0_taskno)
-            ts->eax = Kmem::virt_to_phys (Kmem::info());
-	  else
-            ts->eax = Config::AUTO_MAP_KIP_ADDRESS;
-
+	  ts->eax = space()->kip_address();
 	  goto success;
 	}
     }
@@ -167,8 +100,7 @@ Thread::handle_slow_trap (trap_state *ts)
                           255 : peek_user ((Unsigned16 *) ts->eax);
 
         if (limit >= Kmem::mem_user_max ||
-            reinterpret_cast<vm_offset_t>(idt) >= Kmem::mem_user_max -
-                                                  limit - 1)
+            reinterpret_cast<Address>(idt) >= Kmem::mem_user_max - limit - 1)
           goto fail;
 
         // OK; store descriptor
@@ -249,14 +181,13 @@ Thread::handle_slow_trap (trap_state *ts)
           ts->err = 0;    
         }
 
-      x86_gate g;
-      copy_from_user<Unsigned8>(&g, _idt + ts->trapno, sizeof (g));
+      x86_gate g = peek_user (_idt + ts->trapno);
 
       if (Config::backward_compatibility // backward compat.: don't check
           || ((g.word_count & 0xe0) == 0
               && (g.access & 0x1f) == 0x0f)) // gate descriptor ok?
         {
-          vm_offset_t handler = (g.offset_high << 16) | g.offset_low;
+          Address handler = (g.offset_high << 16) | g.offset_low;
 
           if ((handler != 0 || !Config::backward_compatibility) // bw compat.: != 0?
               && handler < Kmem::mem_user_max // in user space?
@@ -264,7 +195,7 @@ Thread::handle_slow_trap (trap_state *ts)
               && ts->esp > 4 * 4) // enough space on user stack?
             {
               // OK, reflect the trap to user mode
-              unsigned32_t esp = ts->esp;
+              Unsigned32 esp = ts->esp;
 
               if (! raise_exception(ts, handler))
                 {         
@@ -274,22 +205,25 @@ Thread::handle_slow_trap (trap_state *ts)
                   goto success;
                 }
 
-              unsigned32_t user_stack[4] = { ts->err,
-                                             eip,
-                                             Emulation::get_kernel_cs(),
-                                             ts->eflags };
-
-              // esp - ts->esp tells us how many bytes to copy to the stack
-              // This information comes from raise_exception above
-              // off tells us where to start in user_stack array,
-              // i.e. whether to skip the error code for some traps
-              unsigned len = esp - ts->esp;
-              unsigned off = (sizeof (user_stack) - len) / sizeof (*user_stack);
-              copy_to_user<char>((void *) ts->esp, user_stack + off, len);
+              esp -= sizeof (Mword);
+              poke_user ((Mword*) esp, ts->eflags);
+	      esp -= sizeof (Mword);
+              poke_user ((Mword*) esp, (Mword) Emulation::get_kernel_cs());
+	      esp -= sizeof (Mword);
+              poke_user ((Mword*) esp, eip);
 
               /* reset single trap flag to mirror cpu correctly */
               if (ts->trapno == 1)
                 ts->eflags &= ~EFLAGS_TF;
+
+              // need to push error code?
+              if ((ts->trapno >= 0x0a && ts->trapno <= 0x0e) ||
+                   ts->trapno == 0x08 ||
+                   ts->trapno == 0x11) 
+                {
+	          esp -= sizeof (Mword);
+                  poke_user ((Mword*) esp, ts->err);
+                }
 
               goto success;		// we've consumed the trap
             }
@@ -298,136 +232,31 @@ Thread::handle_slow_trap (trap_state *ts)
 
   // backward compatibility cruft: check for those insane "int3" debug
   // messaging command sequences
-  if (ts->trapno == 3     
-      /*&& (ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U*/) // only allow priv tasks
-    {
-      // no bounds checking here -- we assume privileged tasks are
-      // civilized citizens :-)
-      unsigned char todo = peek_user ((Unsigned8 *) eip);
-      bool enter_kdb = false;
-      char *buffer;
-
-      unsigned char len;
-
-      switch (todo) {
-
-        case 0xeb:              // jmp == enter_kdebug()
-
-          printf ("\nKDEBUG (EIP:%08x): ", eip);
-          
-          len = peek_user ((Unsigned8 *)(eip + 1));
-
-          if (len) {
-            buffer = (char *) alloca (len);
-            copy_from_user<char> (buffer, (char *)(eip + 2), len);
-            printf ("%.*s", len, buffer);
-          }
-
-          kdb_ke (NULL);
-          break;
-
-        case 0x90:              // nop == kd_display()
-          if (peek_user ((Unsigned8 *)(eip + 1)) != 0xeb || (len =
-              peek_user ((Unsigned8 *)(eip + 2))) == 0)
-            goto generic;
-
-          buffer = (char *) alloca (len);
-          copy_from_user<char>(buffer, (char *)(eip + 3), len);
-          printf ("%.*s", len, buffer);
-
-          break;          
-
-        case 0x3c:       	       // cmpb
-          todo = peek_user ((Unsigned8 *)(eip + 1));
-
-          switch (todo) { 
-
-            case 0:             // outchar
-              putchar (ts->eax & 0xff);
-              break;      
-
-            case 2:             // outstring
-              char c;
-              while ((c = peek_user ((Unsigned8 *)(ts->eax++))) != 0)
-                putchar (c);
-              break;      
-
-            case 5:             // outhex32
-              printf ("%08x", ts->eax);
-              break;      
-
-            case 6:             // outhex20
-              printf ("%05x", ts->eax & 0xfffff);
-              break;      
-
-            case 7:             // outhex16
-              printf ("%04x", ts->eax & 0xffff);
-              break;      
-
-            case 8:             // outhex12
-              printf ("%03x", ts->eax & 0xfff);
-              break;      
-
-            case 9:             // outhex8
-              printf ("%02x", ts->eax & 0xff);
-              break;      
-
-            case 11:            // outdec
-              printf ("%d", ts->eax);
-              break;      
-
-            case 24:            // start kernel profiling
-            case 25:            // stop kernel profiling, dump data to serial
-            case 26:            // stop kernel profiling; do not dump
-              break;      
-
-            case 30:            // register debug symbols/lines information
-              panic ("jdb_symbol::register_symbols called");
-              break;      
-
-            case 31:      	// watchdog
-              break;      
-
-            default:            // ko
-              if (todo < ' ')
-                goto nostr;
-
-              putchar (todo);
-          }
-          break;          
-
-        default:                // user breakpoint
-          goto nostr;     
-      }
-
-      if (enter_kdb) {
-        panic ("Enter kdb");
-        goto generic;       // panic
-      }
-
-      goto success;             // success -- consume int3
-
-    nostr:
-      puts ("KDB: int3");
-      goto generic;             // enter the kernel debugger
-    }
+  if (ts->trapno == 3)
+    goto generic_debug;
 
   // privileged tasks also may invoke the kernel debugger with a debug
   // exception
-  if (ts->trapno == 1 &&
-     (ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U) // only allow priv tasks
-    goto generic;       
+  if (ts->trapno == 1)
+    goto generic_debug;       
 
   // can't handle trap -- kill the thread
 
 fail:
-  printf ("KERNEL: %x.%x (tcb=0x%x) killed: unhandled trap\n",
-               unsigned(space_index()), id().lthread(), (unsigned) this);
+  printf ("KERNEL: %x.%x (tcb=%08x) killed:\n"
+         "\033[1mUnhandled trap\033[m\n",
+	  debug_taskno(), debug_threadno(),
+	  (unsigned) this);
+
 fail_nomsg:
-  trap_dump(ts);          
+  trap_dump (ts);
 
   if (Config::conservative)
-    kdb_ke("thread killed");
+    kdb_ke ("thread killed");
+
+  // Cancel must be cleared on all kernel entry paths. See slowtraps for
+  // why we delay doing it until here.
+  state_del (Thread_cancel);
 
   // we haven't been re-initialized (cancel was not set) -- so sleep
   if (state_change_safely (~Thread_running, Thread_cancel | Thread_dead))
@@ -435,17 +264,14 @@ fail_nomsg:
       schedule();       
 
 success:
-  _recover_jmpbuf = 0;    
+  _recover_jmpbuf = 0;
   return 0;
 
-generic:
+generic_debug:
   _recover_jmpbuf = 0;    
 
   if (!nested_trap_handler)
     return -1;
-
-  Proc::cli();
-  //  kdb::com_port_init();             // re-initialize the GDB serial port
 
   // run the nested trap handler on a separate stack
   // equiv of: return nested_trap_handler(ts) == 0 ? true : false;
@@ -471,179 +297,21 @@ generic:
        "2" (nested_trap_handler)
      : "memory");         
 
-  return (ret == 0) ? 0 : -1;
+  assert (_magic == magic);
+
+  // Do shutdown by switching to idle loop, unless we're already there
+  if (!running && current() != kernel_thread)
+    current()->switch_to (kernel_thread);
+
+  return ret == 0 ? 0 : -1;
 }
 
-/**
- * Return to user.
- * This function is the default routine run if a newly initialized context
- * is being switch_to()'ed.
- */                   
-PROTECTED static void Thread::user_invoke() {
-
-  assert (current()->state() & Thread_running);
-
-  asm volatile
-    ("	xorl %%ecx , %%ecx      \n\t"
-     "	xorl %%ebx , %%ebx      \n\t"
-     "	cmpl $2    , %%edx      \n\t"     // Sigma0
-     "	je 1f                   \n\t"
-     "  cmpl $4    , %%edx      \n\t"     // Rmgr
-     "  jne 2f                  \n\t"
-     "1:                        \n\t" 
-     "  movl %1    , %%ecx      \n\t"     // Kernel Info Page
-     "  movl %2    , %%ebx      \n\t"     // Multiboot Info  
-     "2:                        \n\t"
-     "  movl %%eax , %%esp      \n\t"
-     "  xorl %%edx , %%edx      \n\t"
-     "  xorl %%esi , %%esi      \n\t"     // clean out user regs      
-     "  xorl %%edi , %%edi      \n\t"                           
-     "  xorl %%ebp , %%ebp      \n\t"
-     "  xorl %%eax , %%eax      \n\t"
-     "  iret"                                                        
-     :                          	// no output
-     : "d" ((unsigned) Thread::lookup(current())->space_index()),
-       "m" (Kmem::virt_to_phys(Kmem::info())),
-       "m" (Kmem::virt_to_phys(Boot_info::mbi_virt())),
-       "a" (nonull_static_cast<Return_frame*>(current()->regs())));
-}
-
-/**
- * Translate a virtual address in a threads user address space into a virtual
- * address in the kernel address space. If no page mapping exists for this
- * address or the page has insufficient access rights for write access, fail.
- * @brief Translate user virtual to kernel virtual address
- * @param addr Virtual address which should be translated
- * @param write Write access to that address is desired
- * @return the virtual address in kernel space corresponding to that address
- */
-PUBLIC inline NEEDS ["undef_oskit.h","config.h"]
-char *
-Thread::uvirt_to_kvirt (Address addr, bool write) {
-
-  Address  phys;
-  size_t   size;
-  unsigned attr;
-
-  // See if there is a mapping for this address
-  if (space()->v_lookup (addr, &phys, &size, &attr)) {
-
-    // See if we want to write and are not allowed to
-    // Generic check because INTEL_PTE_WRITE == INTEL_PDE_WRITE
-    if (write && !(attr & INTEL_PTE_WRITE))
-      return (char *) -1;
-
-    // A frame was found, add the offset
-    if (size == Config::SUPERPAGE_SIZE)
-      phys |= (addr & ~Config::SUPERPAGE_MASK);
-    else
-      phys |= (addr & ~Config::PAGE_MASK);
-                                 
-    // Return the kvirt address for this frame
-    return (char *) Kmem::phys_to_virt (phys);         
-  }
-
-  return (char *) -1;
-}
-
-/**
- * Copy n bytes from virtual user address usrc to virtual kernel address kdst.
- * When crossing page boundaries, addresses must be translated anew
- * @brief Copy between user and kernel address space
- * @param kdst Destination address in kernel space
- * @param usrc Source address in user space
- * @param n Number of bytes to copy
- */
-PUBLIC
-void
-Thread::copy_user_to_kernel (void *kdst, Address usrc, size_t n)
+PUBLIC inline
+int
+Thread::is_mapped()
 {
-  Lock_guard<Cpu_lock> guard (&cpu_lock);
-
-  char *src = NULL;
-  char *dst = (char *) kdst;
-
-  while (n--) {
-
-    if (!src)
-      while ((src = uvirt_to_kvirt (usrc, false)) == (char *) -1)
-        handle_page_fault (usrc, PF_ERR_USERMODE, 0);
-
-    *dst++ = *src++;
-
-    if ((++usrc & (Config::PAGE_SIZE - 1)) == 0)
-      src = NULL;
-  }
+  return 1;
 }
-
-/**
- * Copy n bytes from virtual kernel address ksrc to virtual user address udst.
- * When crossing page boundaries, addresses must be translated anew
- * @brief Copy between kernel and user address space
- * @param udst Destination address in user space
- * @param ksrc Source address in kernel space
- * @param n Number of bytes to copy
- */
-PUBLIC
-void
-Thread::copy_kernel_to_user (Address udst, void *ksrc, size_t n)
-{
-  Lock_guard<Cpu_lock> guard (&cpu_lock);
-
-  char *dst = NULL;
-  char *src = (char *) ksrc;
-
-  while (n--) {
-
-    if (!dst)
-      while ((dst = uvirt_to_kvirt (udst, true)) == (char *) -1)
-        handle_page_fault (udst, PF_ERR_USERMODE, 0);
-
-    *dst++ = *src++;
-
-    if ((++udst & (Config::PAGE_SIZE - 1)) == 0)
-      dst = NULL;
-  }
-}
-
-/**
- * Copy n bytes from virtual user address usrc to virtual user address udst.
- * When crossing page boundaries, addresses must be translated anew
- * @brief Copy between two user address spaces
- * @param partner Destination thread we're copying to
- * @param udst Destination address in partner's user space
- * @param usrc Source address in user space
- * @param n Number of bytes to copy
- */
-PUBLIC
-void
-Thread::copy_user_to_user (Thread *partner, Address udst, Address usrc, size_t n)
-{
-  Lock_guard<Cpu_lock> guard (&cpu_lock);
-
-  char *src = NULL;
-  char *dst = NULL;
-
-  while (n--) {    
-
-    if (!src)
-      while ((src = uvirt_to_kvirt (usrc, false)) == (char *) -1)
-        handle_page_fault (usrc, PF_ERR_USERMODE, 0);
-
-    if (!dst)
-      while ((dst = partner->uvirt_to_kvirt (udst, true)) == (char *) -1)
-        handle_ipc_page_fault (udst);
-
-    *dst++ = *src++;
-
-    if ((++usrc & (Config::PAGE_SIZE - 1)) == 0)
-      src = NULL;
-
-    if ((++udst & (Config::PAGE_SIZE - 1)) == 0)
-      dst = NULL;
-  }
-}
-
 
 // The "FPU not available" trap entry point
 extern "C" void
@@ -654,7 +322,9 @@ thread_handle_fputrap(void)
 
 inline void
 thread_timer_interrupt_arch()
-{}
+{
+  LOG_TIMER_IRQ(0);
+}
 
 extern "C" void
 thread_timer_interrupt_stop()

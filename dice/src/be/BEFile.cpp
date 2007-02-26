@@ -5,12 +5,12 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -38,6 +38,15 @@
 #include "fe/FEInterface.h"
 #include "fe/FELibrary.h"
 #include "fe/FEFile.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+//@{
+/** some config variables */
+extern const char* dice_version;
+//@}
 
 IMPLEMENT_DYNAMIC(IncludeFile);
 
@@ -92,7 +101,7 @@ CBEFile::~CBEFile()
  */
 void CBEFile::Write(CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /**	\brief writes the functions of the file
@@ -103,19 +112,33 @@ void CBEFile::Write(CBEContext * pContext)
  */
 void CBEFile::WriteFunctions(CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
 }
 
 /** \brief adds another filename to the list of included files
  *  \param sFileName the new filename
  *  \param bIDLFile true if the file is an IDL file
  */
-void CBEFile::AddIncludedFileName(String sFileName, bool bIDLFile)
+void CBEFile::AddIncludedFileName(String sFileName, bool bIDLFile, bool bIsStandardInclude)
 {
     if (sFileName.IsEmpty())
         return;
+    // first check if we have this name already registered
+	VectorElement *pIter = m_vIncludedFiles.GetFirst();
+	while (pIter)
+	{
+	    if (pIter->GetElement())
+		{
+		    IncludeFile *pElement = (IncludeFile*)pIter->GetElement();
+			if (pElement->sFileName == sFileName)
+			    return;
+		}
+		pIter = pIter->GetNext();
+	}
+	// add new include file
     IncludeFile *pNew = new IncludeFile();
     pNew->bIDLFile = bIDLFile;
+	pNew->bIsStandardInclude = bIsStandardInclude;
     pNew->sFileName = sFileName;
     m_vIncludedFiles.Add(pNew);
 }
@@ -154,6 +177,18 @@ bool CBEFile::IsIDLFile(int nIndex)
     return false;
 }
 
+/** \brief returns whether the file named at index nIndex has been included as a standard header file
+ *  \param nIndex the index in the include table
+ *  \return true if the given file was included as a standard include file
+ */
+bool CBEFile::IsStandardInclude(int nIndex)
+{
+    IncludeFile *pElement = (IncludeFile *)m_vIncludedFiles.GetAt(nIndex);
+	if (pElement)
+	    return pElement->bIsStandardInclude;
+	return false;
+}
+
 /**	\brief creates the file name of this file
  *	\param pFEFile the front-end file to use for the file name
  *	\param pContext the context of the code generation
@@ -164,7 +199,7 @@ bool CBEFile::IsIDLFile(int nIndex)
  */
 bool CBEFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
     return true;
 }
 
@@ -178,7 +213,7 @@ bool CBEFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
  */
 bool CBEFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
     return true;
 }
 
@@ -192,7 +227,7 @@ bool CBEFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * pContext)
  */
 bool CBEFile::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
     return true;
 }
 
@@ -206,7 +241,7 @@ bool CBEFile::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
  */
 bool CBEFile::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
-    ASSERT(false);
+    assert(false);
     return true;
 }
 
@@ -321,16 +356,25 @@ void CBEFile::WriteIncludesAfterTypes(CBEContext *pContext)
     {
         String sFileName = GetIncludedFileName(i);
         bool bIDLFile = IsIDLFile(i);
+		bool bIsStandardInclude = IsStandardInclude(i);
         if (!sFileName.IsEmpty())
         {
+		    if (bIsStandardInclude)
+			    Print("#include <");
+		    else
+			    Print("#include \"");
             if (!bIDLFile || sPrefix.IsEmpty())
             {
-                Print("#include \"%s\"\n", (const char *) sFileName);
+                Print("%s", (const char *) sFileName);
             }
             else // bIDLFile && !sPrefix.IsEmpty()
             {
-                Print("#include \"%s/%s\"\n",(const char *) sPrefix, (const char *) sFileName);
+                Print("%s/%s",(const char *) sPrefix, (const char *) sFileName);
             }
+			if (bIsStandardInclude)
+			    Print(">\n");
+			else
+			    Print("\"\n");
         }
     }
     // pretty print: newline
@@ -473,7 +517,7 @@ CBENameSpace* CBEFile::FindNameSpace(String sNameSpaceName)
  */
 void CBEFile::WriteClasses(CBEContext *pContext)
 {
-    ASSERTC(false);
+    assert(false);
 }
 
 /** \brief writes the namespaces of this file
@@ -481,7 +525,7 @@ void CBEFile::WriteClasses(CBEContext *pContext)
  */
 void CBEFile::WriteNameSpaces(CBEContext *pContext)
 {
-    ASSERTC(false);
+    assert(false);
 }
 
 /** \brief adds a function to the file
@@ -577,4 +621,28 @@ bool CBEFile::HasFunctionWithUserType(String sTypeName, CBEContext *pContext)
         }
     }
     return false;
+}
+
+/** \brief writes an introductionary notice
+ *  \param pContext the context of the write
+ *
+ * This method should always be called first when writing into
+ * a file.
+ */
+void CBEFile::WriteIntro(CBEContext *pContext)
+{
+    Print("/*\n");
+	Print(" * This file is auto generated by Dice-%s", dice_version);
+	if (m_nFileType == FILETYPE_TEMPLATE)
+	{
+	    Print(".\n");
+		Print(" *\n");
+		Print(" * Implement the server templates here.\n");
+		Print(" * This file is regenerated with every run of 'dice -t ...'.\n");
+		Print(" * Move it to another location after changing to\n");
+		Print(" * keep your changes!\n");
+	}
+	else
+	    Print(",  DO NOT EDIT!\n");
+	Print(" */\n\n");
 }

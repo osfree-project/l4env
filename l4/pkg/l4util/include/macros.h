@@ -92,7 +92,7 @@
 #ifndef Kdebug
 #  define Kdebug(args...)  do                                            \
                              {                                           \
-                               LOGI(args);                               \
+                               LOGL(args);                               \
                                LOG_flush();                              \
                                enter_kdebug("KD");                       \
                              }                                           \
@@ -127,15 +127,15 @@
 
 #define DMSG(args...)   printf( args)
 
-//#define INFO(args...)   LOGI( args)
+//#define INFO(args...)   LOGL( args)
 #define INFO(args...)   do                                   \
                           {                                  \
-			                      printf("%s:%d (%s,"IdFmt"): ",   \
-				                           __FILE__,__LINE__,        \
-				                           __FUNCTION__,             \
-				                           IdStr(l4_myself()));      \
-			                             printf( args);            \
-			                    }                                  \
+			    printf("%s:%d (%s,"IdFmt"): ",   \
+                                   __FILE__,__LINE__,        \
+		                   __FUNCTION__,             \
+		                   IdStr(l4_myself()));      \
+			           printf( args);            \
+	                  }                                  \
                         while (0)
 
 #define KDEBUG(args...) do                                   \

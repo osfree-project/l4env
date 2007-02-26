@@ -5,12 +5,12 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -42,29 +42,6 @@ class CFEOperation;
 class CFEInterface;
 class CFELibrary;
 class CFEFile;
-
-/**	\class IncludeFile
- *	\ingroup backend
- *	\brief helper class tomanage included files
- */
-class IncludeFile : public CObject
-{
-DECLARE_DYNAMIC(IncludeFile);
-public:
-	/** default constructor */
-	IncludeFile();
-	virtual ~IncludeFile();
-
-public:
-	/**	\var bool bIDLFile
-	 *	\brief true if this is an IDL file
-	 */
-	bool bIDLFile;
-	/**	\var String sFileName
-	 *	\brief the name of the file to include
-	 */
-	String sFileName;
-};
 
 /**	\class CBEFile
  *	\ingroup backend
@@ -92,7 +69,6 @@ public:
     virtual CBETarget* GetTarget();
 
     virtual int Optimize(int nLevel, CBEContext *pContext);
-    virtual bool IsIDLFile(int nIndex);
 
     virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
     virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
@@ -114,8 +90,10 @@ public:
     virtual void AddNameSpace(CBENameSpace *pNameSpace);
 
     virtual String GetIncludedFileName(int nIndex);
+    virtual bool IsIDLFile(int nIndex);
+	virtual bool IsStandardInclude(int nIndex);
     virtual int GetIncludedFileNameSize();
-    virtual void AddIncludedFileName(String sFileName, bool bIDLFile);
+    virtual void AddIncludedFileName(String sFileName, bool bIDLFile, bool bIsStandardInclude);
     virtual CBEFunction* GetNextFunction(VectorElement *&pIter);
     virtual VectorElement* GetFirstFunction();
     virtual void RemoveFunction(CBEFunction *pFunction);
@@ -129,6 +107,7 @@ protected:
     virtual void WriteIncludesBeforeTypes(CBEContext *pContext);
     virtual void WriteNameSpaces(CBEContext *pContext);
     virtual void WriteClasses(CBEContext *pContext);
+	virtual void WriteIntro(CBEContext *pContext);
 
 protected:
     /**	\var Vector m_vIncludedFiles

@@ -21,6 +21,8 @@
 #define TASKS 10
 #define STACKSIZE 4096
 
+asm(".globl printf;");
+
 char stack[STACKSIZE*TASKS];
 
 static void work(void*data){

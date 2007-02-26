@@ -22,7 +22,6 @@ ________________________________________________________________________________
 - virtual console switching is Linux-like: ALTGR + [F1..F10]
 - enter kernel debugger with: ALTGR + SYSRQ
 - mind the event distribution in `evdemo'
-- DSI demonstration is in `dsidemo'
 
 ________________________________________________________________________________
 

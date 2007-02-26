@@ -6,23 +6,13 @@
  *
  * \date   01/29/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -65,16 +55,16 @@ __get_phys_addr(l4dm_dataspace_t * ds,
 		l4_size_t * psize)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_mem_phys_addr(ds->manager,ds->id,offset,size,paddr,psize,
-			      &_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_mem_phys_addr_call(&(ds->manager),ds->id,offset,size,paddr,psize,
+			      &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_mem: get address of dataspace %u at %x.%x failed "
 	    "(ret %d, exc %d)!",ds->id,ds->manager.id.task,
-	    ds->manager.id.lthread,ret,_exc._type);
+	    ds->manager.id.lthread,ret,_env.major);
       if (ret)
         return ret;
       else
@@ -141,7 +131,7 @@ l4dm_mem_ds_phys_addr(l4dm_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 int
-l4dm_mem_phys_addr(void * ptr, 
+l4dm_mem_phys_addr(const void * ptr, 
 		   l4_size_t size, 
 		   l4dm_mem_addr_t addrs[], 
 		   int num, 
@@ -163,10 +153,7 @@ l4dm_mem_phys_addr(void * ptr,
   i = 0;
   while ((left > 0) && (i < num))
     {
-#if DEBUG_PHYS_ADDR
-      INFO("\n");
-      DMSG("  addr 0x%08x, left 0x%08x\n",addr,left);
-#endif
+      LOGdL(DEBUG_PHYS_ADDR,"\n  addr 0x%08x, left 0x%08x",addr,left);
 
       /* lookup addr */
       ret = l4rm_lookup((void *)addr,&ds,&ds_offs,&ds_map_addr,&ds_map_size);
@@ -178,13 +165,12 @@ l4dm_mem_phys_addr(void * ptr,
       map_remain = ds_map_size - ds_offs;
       if (map_remain > left)
 	map_remain = left;
-
-#if DEBUG_PHYS_ADDR
-      INFO("ds %u at %x.%x\n",ds.id,ds.manager.id.task,ds.manager.id.lthread);
-      DMSG("  ds map area 0x%08x-0x%08x, offs 0x%08x\n",
-	   ds_map_addr,ds_map_addr + ds_map_size,ds_offs);
-      DMSG("  request region size 0x%08x\n",map_remain);
-#endif
+      
+      LOGdL(DEBUG_PHYS_ADDR,"ds %u at %x.%x\n" \
+            "  ds map area 0x%08x-0x%08x, offs 0x%08x\n" \
+            "  request region size 0x%08x",
+            ds.id,ds.manager.id.task,ds.manager.id.lthread,
+            ds_map_addr,ds_map_addr + ds_map_size,ds_offs,map_remain);
 
       /* get phys. addr */
       ret = __get_phys_addr(&ds,ds_offs,map_remain,
@@ -192,9 +178,9 @@ l4dm_mem_phys_addr(void * ptr,
       if (ret < 0)
 	{
 #if DEBUG_ERRORS
-	  DMSG("ds %u at %x.%x, offset 0x%08x, size 0x%08x\n",
-	       ds.id,ds.manager.id.task,ds.manager.id.lthread,ds_offs,
-	       map_remain);
+	  printf("ds %u at %x.%x, offset 0x%08x, size 0x%08x\n",
+                 ds.id,ds.manager.id.task,ds.manager.id.lthread,ds_offs,
+                 map_remain);
 	  ERROR("get phys. address failed: %d!",ret);
 #endif
 	  if ((ret == -L4_EINVAL) || (ret == -L4_EINVAL_OFFS))
@@ -204,10 +190,8 @@ l4dm_mem_phys_addr(void * ptr,
 	    return ret;
 	}
       
-#if DEBUG_PHYS_ADDR
-      INFO("addr index %d:\n",i);
-      DMSG("  addr 0x%08x, size 0x%08x\n",addrs[i].addr,addrs[i].size);
-#endif
+      LOGdL(DEBUG_PHYS_ADDR,"addr index %d:\n  addr 0x%08x, size 0x%08x",
+            i,addrs[i].addr,addrs[i].size);
 
       left -= addrs[i].size;
       addr += addrs[i].size;
@@ -234,18 +218,18 @@ int
 l4dm_mem_ds_is_contiguous(l4dm_dataspace_t * ds)
 {
   int ret,is_cont;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (ds == NULL)
     return 0;
 
   /* call dataspace manager */
-  ret = if_l4dm_mem_is_contiguous(ds->manager,ds->id,&is_cont,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_mem_is_contiguous_call(&(ds->manager),ds->id,&is_cont,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_mem: check dataspace %u at %x.%x failed "
 	    "(ret %d, exc %d)!",ds->id,ds->manager.id.task,
-	    ds->manager.id.lthread,ret,_exc._type);
+	    ds->manager.id.lthread,ret,_env.major);
       return 0;
     }
   

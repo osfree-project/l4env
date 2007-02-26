@@ -1,0 +1,117 @@
+Server / Einheiten:
+===================
+ - "name server": spannt einen hierarchischen namensraum auf, in den
+   verschiedene Server teilbäume einmounten können
+ - verschiedene "object server", die Objekte in hierarchischen räumen anbieten
+ - "clienten": nutzen mit Hilfe einer "libc" Objekte im Namensraum
+
+
+Datentypen / Begriffe:
+======================
+ - Thread-Ids
+    * zum adressieren von einzelnen Threads
+ - lokale Object-Ids
+    * bestimmen ein Objekt eindeutig pro Volume (wie eine Inode auf
+      ext2), sollte möglichst lange konstant sein
+ - globale Object-Ids
+    * Kombination aus lokaler Object-Id und Volume-Id
+ - Volume-Ids
+    * Schlüssel für eine Teilnamensraum
+    * sollten eindeutig sein
+    * sollten möglichst lange konstant sein
+    * für permanente Namensräume (z.B. Dateisysteme) bietet sich
+      z.B. die Volume-Id auf der Platte an, die Partitionsnummer, eine
+      Kombination aus major-minor Nummer oder etwas ähnlich
+      persistentes
+    * für dynamische Namensräume sollte entweder der name server
+      dynamisch Volume-Id vergeben, oder der Server eine konstante
+      bekommen
+ - Volume
+    * ist ein Teilnamensraum der _typischerweise_ von genau einem
+      Server angeboten wird
+    * ein Server könnte auch mehrere Volumes anbieten
+    * jedes Volume hat genau eine Wurzel
+    * so ähnlich wie ein Dateisystem unter Linux (z.B. /dev/hda1)
+ - Object-Handle (lokal)
+    * Handle als Ergebnis eines open() / creat()
+    * serverlokal
+ - Object-Handle (global)
+    * Handle als Ergebnis eines open() / creat() + Serveradresse
+      (z.B. Thread-Id)
+
+
+stories:
+========
+
+cd ..
+-----
+
+Irgendwo muss der aktuelle Pfad der Clienten gespeichert werden,
+z.B. beim Clienten. (globale Object-ID)
+
+".." muss bestimmt werden. (Nameserver?)
+
+global Object-Id cwd, new_cwd;
+char * new_rel_path = "..";
+
+new_cwd = chdir(cwd, new_rel_path)
+
+-> Der name server sollte sowas wie chdir() anbieten und entsprechend
+   weiterpropagieren. Die Funktion liefert zu einem Bezugs Object-Id
+   und einem relativen Pfad eine neue Object-ID.
+
+
+open("/xyz/abc", ...)
+---------------------
+
+Object-Id zum Pfad bestimmen.
+Open mit Object-Id an Zielserver, Ergebnis Object-Handle.
+
+-> Es wird eine Funktion benötigt, die aus einem absoluten Pfadnamen
+   eine Object-Id generiert. Startpunkt dafür ist vermutlich der name
+   server.
+-> Aus der Object-Id sollte der Server ermittelbar sein. Dieser
+   Zusammenhang kann im name server gespeichert werden.
+
+
+open("abc", ...)
+----------------
+
+Object-Id zum Pfad bestimmen. Dazu ist der cwd des Clienten notwendig.
+Open mit Object-Id, Ergebnis Object-Handle.
+
+Im Unterschied zum vorherigen Beispiel wird hier eine Funktion
+benötigt, die aus einem relativen Namen und einem Bezugspunkt
+(Object-Id) eine neue Object-Id generiert.
+
+
+fstat(fd, ...)
+--------------
+
+Normale Object-Adressierung über fd.
+
+
+stat("abc", ...)
+----------------
+
+Zuerst ist eine Umwandlung der relativen Namens in einen Object-Id
+notwendig. Mithilfe dieser wird das Object adressiert.
+
+
+Name server API:
+================
+
+Object-Id resolve_rel(Object-Id cwd, char *rel_path)
+Object-Id resolve_abs(char *abs_path)
+//Object-Id chdir(Object-Id cwd, char *new_rel_path)
+
+Thread-Id finde_server_zu_Object-Id(Object-Id) oder
+Thread-Id finde_server_zu_Volume-Id(Volume-Id)
+
+int mount(Volume-Id, char * Mount-Dir, Server-Id, char * Mount-Point)
+
+int register(Volume-id)
+
+Vermutlich sollte der "name server" zusätzlich über eine Art
+Dateisystemschnittstelle verfügen, damit Verzeichnisse (Mount-Points)
+erzeugt werden können.

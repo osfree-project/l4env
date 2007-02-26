@@ -1,0 +1,5 @@
+The ultimate L4 killer application.
+
+The server of this package measures the IPC performance of L4 kernels 
+implementing version 2 and version X.0 of the L4 specification. It has
+nothing to do with a game :-)

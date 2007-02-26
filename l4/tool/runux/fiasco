@@ -1,0 +1,14 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+for i in "$@"; do
+  if [ "${i#-}" = "$i" ];
+  then
+   A="$A -l $i"
+  else
+   A="$A $i"
+  fi
+done
+
+fiasco $A

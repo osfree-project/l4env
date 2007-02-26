@@ -22,7 +22,7 @@ public:
   static void page_free( void *page, int order = 0 );
 
   static void page_map (void *address, int order, Zero_fill zf,
-                        vm_offset_t phys);
+                        Address phys);
 
   static void page_unmap (void *address, int order);
 };

@@ -1,3 +1,15 @@
+/*!
+ * \file	matrox.c
+ * \brief	Hardware Acceleration for Matrox Gxx cards
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 /* most stuff taken from Linux 2.2.21: drivers/video/matroxfb.c */
 
 #include <stdio.h>
@@ -253,7 +265,7 @@ static struct board_t matrox_boards[] =
       &vbG400, "G550"}
 };
 
-static struct pci_device_id matrox_pci_tbl[] =
+static const struct pci_device_id matrox_pci_tbl[] =
 {
     {PCI_VENDOR_ID_MATROX, PCI_DEVICE_ID_MATROX_MIL, 0,	0,
      CH_MILLENNIUM},
@@ -442,7 +454,7 @@ matrox_init(int accelID)
 
 static int
 matrox_probe(unsigned int bus, unsigned int devfn,
-	     struct pci_device_id *dev, con_accel_t *accel)
+	     const struct pci_device_id *dev, con_accel_t *accel)
 {
   struct board_t *b = &matrox_boards[dev->driver_data];
   unsigned char rev;

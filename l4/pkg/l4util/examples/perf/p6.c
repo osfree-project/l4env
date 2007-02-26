@@ -6,6 +6,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/util/util.h>
 #include <l4/util/perform.h>

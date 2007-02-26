@@ -1,3 +1,18 @@
+/*
+ * \brief   Linux specific DOpE VScreen library
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
 #include <vscreen.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -8,7 +23,7 @@
 
 #define MAX_VSCREENS 32
 
-struct vscr_struct {
+struct vscr {
 	char *name;
 } vscreens[MAX_VSCREENS];
 
@@ -43,7 +58,7 @@ static void release_index(int i) {
 }
 
 
-void *vscr_get_server_id(char *ident) {
+void *vscr_connect_server(char *ident) {
 	int i;
 	
 	if ((i = get_new_index()) <0) return NULL;
@@ -74,7 +89,7 @@ static unsigned long hex2u32(char *s) {
 }
 
 
-void *vscr_get_fb(char *smb_ident) {
+void *vscr_map_smb(char *smb_ident) {
 	int fh;
 	void *addr;
 	
@@ -83,8 +98,11 @@ void *vscr_get_fb(char *smb_ident) {
 	            MAP_SHARED, fh, 0);
 	printf("libVScreen(get_fb): mmap file %s to addr 0x%x\n", smb_ident+21,
 	                                                          (int)addr);
+	if ((int)addr == -1) return NULL;
 	return addr;
 }
 
 
 void vscr_server_waitsync(void *id) { }
+
+void vscr_server_refresh(void *id, int x, int y, int w, int h) { }

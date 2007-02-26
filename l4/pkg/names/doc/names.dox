@@ -1,0 +1,52 @@
+/*!
+\mainpage names - DROPS Name Service
+
+\section desc Description
+
+Names is a simple name service for DROPS. It provides a mapping of names
+(strings) to L4 <code>thread_id</code>s and vice versa.
+
+\section features Features
+
+Names implements the following primitives:
+- register a name with a thread_id
+- unregister name
+- unregister all names registered for a certain task
+- query thread_id of a name
+- query name of a thread_id
+- query all registered thread_id's
+
+Names enforces a string being registered at most once at a certain time.
+
+\section limit Limitations
+
+The number of names that can be registered is ::NAMES_MAX_ENTRIES, the
+maximum name length is ::NAMES_MAX_NAME_LEN. These values are defined in
+libnames.h.
+
+Security is currently not a big thing in names. A thread can register a name
+for an arbitrary thread_id - and unregister it as well.
+
+\section usage Usage
+
+The DROPS Name Service is implemented as an L4 server. Currently it has only
+one command line option:
+
+\par -verbose <verbosity>
+If <verbosity> is 1 all register and unregister requests are logged.
+With <verbosity> set to 2 also all query requests are logged.
+
+The library \ref clientapi provides a convenient way to access
+the DROPS Name Service through a set of C function calls.
+
+*/
+/*!\defgroup clientapi libnames.a - names client API library
+ *
+ * \brief Functions to communicate with the names server
+ *
+ * The function-prototypes can be found in <l4/names/libnames.>.
+ */
+/*!\defgroup internal libnames.a - names client API library, internal functions
+ *
+ * \brief Intrenal functions of libnames
+ */

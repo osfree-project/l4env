@@ -30,182 +30,33 @@ IMPLEMENTATION[ia32-ux]:
 #include "regdefs.h"
 #include "std_macros.h"
 #include "thread.h"
+#include "timeout.h"
 #include "vmem_alloc.h"
 
 int (*Thread::nested_trap_handler)(trap_state *state);
 
-/** 
- * The global page fault handler switch.
- * Handles page-fault monitoring, classification of page faults based on
- * virtual-memory area they occured in, page-directory updates for kernel
- * faults, IPC-window updates, and invocation of paging function for
- * user-space page faults (handle_page_fault_pager).
- * @param pfa page-fault virtual address
- * @param error_code CPU error code
- * @return true if page fault could be resolved, false otherwise
- * @exception longjmp longjumps to recovery location if page-fault
- *                    handling fails (i.e., return value would be false),
- *                    but recovery location has been installed           
- */
-PUBLIC inline NEEDS ["config.h", "cpu.h", "kdb_ke.h", "kmem.h", "vmem_alloc.h"]
-bool 
-Thread::handle_page_fault (Address pfa,
-                           unsigned error_code,
-                           unsigned eip)
+
+/** Check if the pagefault occured at a special place: At some places in the
+    kernel we want to ensure that a specific address is mapped. The regular
+    case is "mapped", the exception or slow case is "not mapped". The fastest
+    way to check this is to touch into the memory. If there is no mapping for
+    the address we get a pagefault. Now the pagefault exception handler can
+    recognize that situation by scanning the code. The trick is that the
+    assembler instruction "andl $0xffffffff, (%ecx)" _clears_ the carry flag
+    normally (see Intel reference manual). The pager wants to inform the
+    code that there was a pagefault and therefore _sets_ the carry flag. So
+    the code has only to check if the carry flag is set. If yes, there was
+    a pagefault at this instruction.
+    @param eip pagefault address */
+PUBLIC inline NOEXPORT
+int
+Thread::pagein_tcb_request (Address eip)
 {
-  if (Config::monitor_page_faults)
-    {
-      if (_last_pf_address == pfa && _last_pf_error_code == error_code)
-        {
-          if (!log_page_fault)
-            printf("*P[%x,%x,%x]\n", pfa, error_code & 0xffff, eip);
-          else
-            putchar('\n');
-
-          kdb_ke("PF happened twice");
-        }
-
-      _last_pf_address = pfa;
-      _last_pf_error_code = error_code;
-
-      // (See also corresponding code in Thread::handle_ipc_page_fault()
-      //                          and in Thread::handle_slow_trap.)
-    }
-
-  // TODO: put this into a debug_page_fault_handler
-  if (EXPECT_FALSE (log_page_fault))
-    page_fault_log (pfa, error_code, eip);
-
-  L4_msgdope ipc_code(0);
-
-  // Check for page fault in user memory area
-  if (EXPECT_TRUE (Kmem::user_fault_addr (pfa, error_code)))
-    {
-      // Make sure that we do not handle page faults that do
-      // belong to this thread.
-      assert (space() == current_space());
-
-      if (EXPECT_FALSE (space_index() == Config::sigma0_taskno))
-        {
-          // special case: sigma0 can map in anything from the kernel
-
-          if (((Cpu::features() & FEAT_PSE)
-               ? space()->v_insert((pfa & Config::SUPERPAGE_MASK),
-                                   (pfa & Config::SUPERPAGE_MASK),
-                                   Config::SUPERPAGE_SIZE, 
-                                   Space::Page_writable    
-                                   | Space::Page_user_accessible)
-               : space()->v_insert((pfa & Config::PAGE_MASK),    
-                                   (pfa & Config::PAGE_MASK),    
-                                   Config::PAGE_SIZE, 
-                                   Space::Page_writable
-                                   | Space::Page_user_accessible))
-              != Space::Insert_err_nomem)
-            return true;
-
-          ipc_code.error (L4_msgdope::REMAPFAILED);
-          goto error;
-        }
-
-      // user mode page fault -- send pager request
-      if (!(ipc_code = handle_page_fault_pager(pfa, error_code)).has_error())
-        return true;
-
-      goto error;
-    }
-
-  // Check for page fault in small address space
-  else if (EXPECT_FALSE (Kmem::smas_fault_addr (pfa)))
-    {
-      if (handle_smas_page_fault (pfa, error_code, &ipc_code))
-        return true;
-
-      goto error;
-    }
-  
-  // Check for page fault in kernel memory region caused by user mode
-  else if (EXPECT_FALSE ((error_code & PF_ERR_USERMODE)))
-    return false;             // disallow access after mem_user_max
-
-  // Check for page fault in IO bit map or in delimiter byte behind IO bitmap
-  // assume it is caused by an input/output instruction and fall through to
-  // handle_slow_trap
-  else if (EXPECT_FALSE (Kmem::iobm_fault_addr (pfa)))
-    return false;
-
-  // We're in kernel code faulting on a kernel memory region
-
-  // Check for page fault in IPC window. Mappings for this should never
-  // be present in the global master page dir (case below), because the
-  // IPC window mappings are always flushed on context switch.
-  else if (EXPECT_TRUE (Kmem::ipcw_fault_addr (pfa, error_code)))
-    {
-      if (!(ipc_code = handle_ipc_page_fault(pfa)).has_error())
-        return true;
-
-      goto error;
-    }
-
-  // A page is not present but a mapping exists in the global page dir.
-  // Update our page directory by copying from the master pdir
-  // This is the only path that should be executed with interrupts
-  // disabled if the page faulter also had interrupts disabled.   
-  // thread_page_fault() takes care of that.
-  else if ((!(error_code & PF_ERR_PRESENT)) &&
-           Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff)
-    {
-      current_space()->kmem_update(pfa);
-      return true;
-    }
-
-  // Check for page fault in kernel's TCB area
-  else if (Kmem::tcbs_fault_addr (pfa))
-    {
-      if (!(error_code & PF_ERR_PRESENT))   // page not present
-        {
-          // in case of read fault, just map in the shared zero page
-          // otherwise -> allocate
-          if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,
-                                      (error_code & PF_ERR_WRITE) ?
-                                            Vmem_alloc::ZERO_FILL :
-                                            Vmem_alloc::ZERO_MAP)) 
-            panic("can't alloc kernel page");
-        }
-      else
-        { 
-          // protection fault
-          // this can only be because we have the zero page mapped
-          Vmem_alloc::page_free(reinterpret_cast<void*>(pfa & Config::PAGE_MASK), 0);
-          if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,  
-                                       Vmem_alloc::ZERO_FILL))
-            {
-              // error could mean: someone else was faster allocating
-              // a page there, or we just don't have any pages left; verify
-              if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
-                  == 0xffffffff)
-                panic("can't alloc kernel page");
-
-              // otherwise, there's a page mapped.  continue
-            }
-        }
-
-      current_space()->kmem_update(pfa);
-      return true;
-    }
-
-     
-  printf ("KERNEL: no page fault handler for 0x%x, error 0x%x, eip %08x\n",
-          pfa, error_code, eip);
-
-  // An error occurred.  Our last chance to recover is an exception
-  // handler a kernel function may have set.
- error:
-
-  if (_recover_jmpbuf)
-    longjmp (*_recover_jmpbuf, ipc_code.raw());
-
-  return false;
+  return (   *(Unsigned8*) eip    == 0x83
+ 	  && *(Unsigned8*)(eip+1) == 0x21
+	  && *(Unsigned8*)(eip+2) == 0xff);
 }
+
 
 /**
  * The low-level page fault handler called from entry.S.  We're invoked with
@@ -240,46 +91,45 @@ thread_page_fault (      Mword * const esp,
     Proc::sti();
 
   // Pagefault in kernel mode and interrupts were disabled
-  else {
-
-    // page fault in kernel memory region, not present, but mapping exists
-    if (!Kmem::user_fault_addr (pfa, error_code) &&
-        !(error_code & PF_ERR_PRESENT) &&
-        Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff) {
-
-      // We've interrupted a context in the kernel with disabled interrupts,
-      // the page fault address is in the kernel region, the error code is
-      // "not mapped" (as opposed to "access error"), and the region is
-      // actually valid (that is, mapped in Kmem's shared page directory,
-      // just not in the currently active page directory)
-      // Remain cli'd !!!
-
-      // Test for special case
-      if (Kmem::pagein_tcb_request(eip))
+  else 
+    {
+      // page fault in kernel memory region, not present, but mapping exists
+      if (   Kmem::is_kmem_page_fault( pfa, error_code ) 
+	  && !(error_code & PF_ERR_PRESENT))
 	{
-	  // skip faulting instruction
-	  esp[6] += 2;		// eip
-	  // tell program that a pagefault occured we cannot handle
-	  esp[4] = 0xffffffff;	// eax
+	  // We've interrupted a context in the kernel with disabled interrupts,
+	  // the page fault address is in the kernel region, the error code is
+	  // "not mapped" (as opposed to "access error"), and the region is
+	  // actually valid (that is, mapped in Kmem's shared page directory,
+	  // just not in the currently active page directory)
+	  // Remain cli'd !!!
 
-	  return true;
+	  // Test for special case -- see function documentation
+	  if (current_thread()->pagein_tcb_request(eip))
+	    {
+	      // skip faulting instruction
+	      esp[6] += 3;		// eip
+	      // tell program that a pagefault occured we cannot handle
+	      esp[8] |= 1;		// set carry flag in EFLAGS
+
+	      return true;
+	    }
+	} 
+      else if (!Config::conservative &&
+	       !Kmem::is_kmem_page_fault (pfa, error_code)) 
+	{
+      	  // No error -- just enable interrupts.
+	  Proc::sti();
+	} 
+      else 
+	{
+       	  // Error: We interrupted a cli'd kernel context touching kernel space
+	  if (!Thread::log_page_fault())
+	    printf("*P[%x,%x,%x] ", pfa, error_code & 0xffff, eip);
+
+	  kdb_ke ("page fault in cli mode");
 	}
-
-    } else if (!Config::conservative &&
-               Kmem::user_fault_addr (pfa, error_code)) {
-      
-      // No error -- just enable interrupts.
-      Proc::sti();
-
-    } else {
-
-      // Error: We interrupted a cli'd kernel context touching kernel space
-      if (!Thread::log_page_fault)
-        printf("*P[%x,%x,%x] ", pfa, error_code & 0xffff, eip);
-
-      kdb_ke ("page fault in cli mode");
     }
-  }
 
   return current_thread()->handle_page_fault (pfa, error_code, eip);
 }
@@ -296,7 +146,7 @@ thread_page_fault (      Mword * const esp,
  */
 PUBLIC inline NEEDS [<flux/x86/base_trap.h>]
 bool
-Thread::raise_exception(trap_state *ts, vm_offset_t handler)
+Thread::raise_exception(trap_state *ts, Address handler)
 {
   Lock_guard <Thread_lock> guard (thread_lock());
 
@@ -328,24 +178,17 @@ thread_handle_trap(trap_state *state)
 }
 
 // We are entering with disabled interrupts!
-extern "C" void
-thread_timer_interrupt(void)
+extern "C"
+void
+thread_timer_interrupt (void)
 {
-
   thread_timer_interrupt_arch();
 
 #if defined(CONFIG_IA32) && defined(CONFIG_PROFILE)
   cpu_lock.lock();
 #endif
 
-  // update clock and handle timeouts
-  timer::update_system_clock();
-
-  // unlock; also, re-enable interrupts
-  cpu_lock.clear();
-
-  // need to reschedule?
-  Context::timer_tick();
+  Thread::handle_timer_interrupt();
 }
 
 // 
@@ -365,13 +208,11 @@ thread_timer_interrupt(void)
  */
 PUBLIC
 bool
-Thread::initialize(vm_offset_t eip, vm_offset_t esp,
-		     Thread* pager, Thread* preempter,
-		     vm_offset_t *o_eip = 0, 
-		     vm_offset_t *o_esp = 0,
-		     Thread* *o_pager = 0, 
-		     Thread* *o_preempter = 0,
-		     vm_offset_t *o_eflags = 0)
+Thread::initialize(Address eip, Address esp,
+		   Thread* pager, Thread* preempter,
+		   Address *o_eip = 0, Address *o_esp = 0,
+		   Thread* *o_pager = 0, Thread* *o_preempter = 0,
+		   Address *o_eflags = 0)
 {
   Lock_guard <Thread_lock> guard (thread_lock());
 
@@ -393,7 +234,7 @@ Thread::initialize(vm_offset_t eip, vm_offset_t esp,
 	{
 	  // this cannot happen in Fiasco UX
 	  extern Mword leave_from_sysenter_by_iret;
-	  Mword **ret_from_disp_syscall = reinterpret_cast<Mword**>(regs())-4;
+	  Mword **ret_from_disp_syscall = reinterpret_cast<Mword**>(regs())-1;
 	  r->cs &= ~0x80;
 	  *ret_from_disp_syscall = &leave_from_sysenter_by_iret;
 	}
@@ -410,8 +251,61 @@ Thread::initialize(vm_offset_t eip, vm_offset_t esp,
   if (pager != 0) _pager = pager;
   if (preempter != 0) _preempter = preempter;
   if (esp != 0xffffffff) r->esp = esp;
-  
+
   state_change(~Thread_dead, Thread_running);
 
   return true;
+}
+
+IMPLEMENT inline
+bool Thread::handle_sigma0_page_fault( Address pfa ) 
+{
+  if (((Cpu::features() & FEAT_PSE)
+       ? space()->v_insert((pfa & Config::SUPERPAGE_MASK),
+			   (pfa & Config::SUPERPAGE_MASK),
+			   Config::SUPERPAGE_SIZE, 
+			   Space::Page_writable    
+			   | Space::Page_user_accessible)
+       : space()->v_insert((pfa & Config::PAGE_MASK),    
+			   (pfa & Config::PAGE_MASK),    
+			   Config::PAGE_SIZE, 
+			   Space::Page_writable
+			   | Space::Page_user_accessible))
+      != Space::Insert_err_nomem)
+    return true;
+
+  return false;
+}
+
+
+IMPLEMENT inline NEEDS ["config.h", "space_context.h", "std_macros.h"]
+Mword
+Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error_code)
+{
+  Space_context *remote = receiver()->space_context();
+  bool writable;
+  
+  // If the remote address space has a mapping for the page fault address and
+  // it is writable or we didn't want to write to it, then we can simply copy
+  // the mapping into our address space via space()->remote_update().
+  // Otherwise return 0 to trigger a pagein_request upstream.
+  
+  if (EXPECT_TRUE (remote->lookup (remote_pfa, &writable) != (Address) -1 &&
+                  (writable || !(error_code & PF_ERR_WRITE))))
+    {
+      //careful: for SMAS current_space() != space()
+      current_space()->remote_update (pfa, remote, remote_pfa, 1);
+
+      // It's OK if the PF occurs again: This can happen if we're
+      // preempted after the call to remote_update() above.  (This code
+      // corresponds to code in Thread::handle_page_fault() that
+      // checks for double page faults.)
+
+      if (Config::monitor_page_faults)
+        _last_pf_address = (Address) -1;
+
+      return 1;
+    }
+
+  return 0;
 }

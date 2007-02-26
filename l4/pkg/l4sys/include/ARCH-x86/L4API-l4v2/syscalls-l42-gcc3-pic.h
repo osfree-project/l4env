@@ -18,7 +18,7 @@ l4_fpage_unmap(l4_fpage_t fpage,
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(fpage_unmap)
+	  L4_SYSCALL(fpage_unmap)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl  %%ebx  	\n\t"
@@ -46,7 +46,7 @@ l4_myself(void)
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl  %%ebx		\n\t"
@@ -73,7 +73,7 @@ l4_nchief(l4_threadid_t destination,
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl  %%ebx		\n\t"
@@ -116,7 +116,7 @@ l4_thread_ex_regs(l4_threadid_t destination,
 	  "movl	4(%%ebx), %%ebp	\n\t"	/* load new preempter id */
 	  "movl	 (%%ebx), %%ebx	\n\t"
 
-	  SYS_CALL(lthread_ex_regs)
+	  L4_SYSCALL(lthread_ex_regs)
 
 	  "xchgl (%%esp), %%ebx	\n\t"	/* save old preempter.lh.low
 					   and get address of preempter */
@@ -153,7 +153,7 @@ l4_thread_switch(l4_threadid_t destination)
 	  "pushl %%ebx		\n\t"
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  SYS_CALL(thread_switch)
+	  L4_SYSCALL(thread_switch)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl  %%ebx		\n\t"
@@ -185,7 +185,11 @@ l4_thread_schedule(l4_threadid_t dest,
 	  "pushl %%ecx		\n\t"	/* save address of preempter */
 	  "movl  (%%ecx), %%ebx	\n\t"	/* load preempter id.low */
 	  "movl 4(%%ecx), %%ebp	\n\t"	/* load preempter id.high */
-	  SYS_CALL(thread_schedule)
+	  "cmpl $-1,%%eax	\n\t"
+	  "jz   1f		\n\t"	/* don't change if invalid */
+	  "andl $0xfff0ffff, %%eax\n\t"	/* mask bits that must be zero */
+	  "1:			\n\t"
+	  L4_SYSCALL(thread_schedule)
 	  "xchgl (%%esp), %%ebx	\n\t"	/* save old preempter.lh.low
 					   and get address of preempter */
 	  "popl  (%%ebx)	\n\t"	/* write preempter.lh.low */
@@ -231,7 +235,7 @@ l4_task_new(l4_taskid_t destination,
 	  "movl   (%%edi), %%ebx\n\t"
 	  "movl  4(%%esi), %%edi\n\t"	/* load pager id */
 	  "movl   (%%esi), %%esi\n\t"
-	  SYS_CALL(task_new)
+	  L4_SYSCALL(task_new)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
 	  "popl	 %%ebx		\n\t"

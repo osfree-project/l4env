@@ -13,6 +13,10 @@
  * 		programs. All output is buffered and may be backscrolled
  * 		by using SHIFT PgUp and SHIFT PgDn. */
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/l4rm/l4rm.h>
@@ -26,12 +30,15 @@
 #include <l4/thread/thread.h>
 #include <l4/semaphore/semaphore.h>
 #include <l4/exec/exec.h>
-#include <l4/oskit10_l4env/support.h>
+#include <l4/log/l4log.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 char LOG_tag[9] = "run";		/**< tell log library who we are */
+l4_ssize_t l4libc_heapsize = -128*1024;
+const int l4thread_max_threads = 6;
 
 static l4_threadid_t loader_id;		/**< L4 thread id of L4 loader */
 static l4_threadid_t tftp_id;		/**< L4 thread id of TFTP daemon */
@@ -57,6 +64,30 @@ help(void)
 "  r ... dump rmgr memory info to L4 debug console\n"
 "  ^ ... reboot machine\n");
 }
+
+#if 0
+static void
+test_scroll(void)
+{
+  extern int vtc_cols __attribute__((weak));
+  extern int contxt_trygetchar(void) __attribute__((weak));
+  
+  if (vtc_cols)
+    {
+      while (contxt_trygetchar() == -1)
+	{
+	  int i, j;
+	  for (j=0; j<50; j++)
+	    {
+	      for (i=0; i<vtc_cols-2; i++)
+		putchar((i & 0x3f) + ' ');
+
+    	      l4thread_sleep(10);
+    	    }
+	}
+    }
+}
+#endif
 
 /** attach dataspace to our address space */
 static int
@@ -124,7 +155,7 @@ dump_l4env_infopage(l4env_infopage_t *env)
       printf("\n");
     }
 }
-  
+
 static void
 dump_task_info(unsigned int task)
 {
@@ -133,10 +164,10 @@ dump_task_info(unsigned int task)
   char *fname = fname_buf;
   l4dm_dataspace_t ds;
   l4_addr_t addr;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
-  if ((error = l4loader_app_info(loader_id, task, 0, &fname,
-				 (l4loader_dataspace_t*)&ds, &exc)))
+  if ((error = l4loader_app_info_call(&loader_id, task, 0, &fname,
+				      &ds, &env)))
     {
       printf("Error %d (%s) dumping l4 task %x\n", 
 	  error, l4env_errstr(error), task);
@@ -162,11 +193,11 @@ show_app_info(void)
   char *fname = fname_buf;
   l4dm_dataspace_t ds;
   l4_addr_t addr;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   unsigned int *ptr;
 						   
-  if ((error = l4loader_app_info(loader_id, 0, 0, &fname,
-				 (l4loader_dataspace_t*)&ds, &exc)))
+  if ((error = l4loader_app_info_call(&loader_id, 0, 0, &fname,
+				      &ds, &env)))
     {
       printf("Error %d (%s) getting l4 task list\n", 
 	  error, l4env_errstr(error));
@@ -237,16 +268,19 @@ load_app(void)
 {
   static char command[60];
   int error;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   static int ihb_init = 0;
   static contxt_ihb_t ihb;
+  static char error_msg[1024];
+  char *ptr = error_msg;
 
   if (!ihb_init)
     {
       contxt_init_ihb(&ihb, 128, sizeof(command)-1);
       ihb_init = 1;
+      contxt_add_ihb(&ihb, "(nd)/tftpboot/" USERNAME "/cfg_linux");
     }
-  
+
   printf("  Load application: ");
   contxt_read(command, sizeof(command), &ihb);
   printf("\n");
@@ -254,11 +288,13 @@ load_app(void)
   if (command[0] == 0)
     return 0;
 
-  if ((error = l4loader_app_open(loader_id, command,
-				 (l4loader_threadid_t*)&tftp_id, 0, &exc)))
+  if ((error = l4loader_app_open_call(&loader_id, command,
+				      &tftp_id, 0, &ptr, &env)))
     {
       printf("  Error %d (%s) loading application\n", 
 	  error, l4env_errstr(error));
+      if (*error_msg)
+	printf("  (Loader says:'%s')\n", error_msg);
       return error;
     }
 
@@ -274,7 +310,7 @@ kill_app(void)
   static char number[10];
   int error;
   long nr;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   static int ihb_init = 0;
   static contxt_ihb_t ihb;
 
@@ -296,7 +332,7 @@ kill_app(void)
     }
   else if (nr != 0)
     {
-      if ((error = l4loader_app_kill(loader_id, nr, 0, &exc)))
+      if ((error = l4loader_app_kill_call(&loader_id, nr, 0, &env)))
 	{
 	  printf("Error %d (%s) killing application\n", 
 	      error, l4env_errstr(error));
@@ -313,7 +349,6 @@ kill_app(void)
 static void
 show_names_info(void)
 {
-#define NAMES_MAX_ENTRIES 128
   int i;
   static char name[60];
   l4_threadid_t tid;
@@ -331,7 +366,6 @@ show_names_info(void)
 static void
 set_file_provider(void)
 {
-#define NAMES_MAX_ENTRIES 128
   int i, j=0, n;
   static char name[60];
   static char threadid[10];
@@ -380,6 +414,8 @@ command_loop(void)
       do
 	{
 	  c = getchar();
+	  if (c == 0xd)
+      	    printf("\n<cmd>: ");
 	} while (c < 0x20);
 
       putchar(c);
@@ -416,6 +452,15 @@ command_loop(void)
 	case 'p':
 	  printf("  DM_PHYS memory pools to debugging console\n");
 	  l4dm_memphys_show_pools();
+	  l4dm_memphys_show_pool_free(0);
+	  break;
+#if 0
+	case '_':
+	  test_scroll();
+	  break;
+#endif
+	case ' ':
+	  contxt_clrscr();
 	  break;
 	case '?':
 	case 'h':
@@ -442,8 +487,6 @@ main(int argc, char *argv[])
 {
   int error;
 
-  OSKit_libc_support_init(128*1024);
-  
   if ((error = contxt_init(4096, 200)))
     {
       printf("Error %d opening contxt lib\n", error);

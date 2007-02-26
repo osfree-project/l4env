@@ -1,26 +1,14 @@
 /* $Id$ */
-/*****************************************************************************/
 /**
  * \file   loader/linux/dump-l4/l4env_dummies.c
  * \brief  Dummmy implementations for some unused L4Env functions
  *
  * \date   02/15/2002
- * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- */
-/*****************************************************************************/
-/*
- * $Log$
- * Revision 1.2  2002/11/25 03:27:52  reuther
- * - adapted to new L4 integer types
- * - adapted to l4sys/l4util/l4env/dm_generic include changes
- *
- * Revision 1.1  2002/09/24 11:38:25  fm3
- * - moved here from linux subdir
- *
- * Revision 1.1  2002/02/18 03:48:12  reuther
- * Emulate some l4env functions.
- *
- */
+ * \author Lars Reuther <reuther@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>

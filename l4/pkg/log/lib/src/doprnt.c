@@ -219,16 +219,16 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 {
 	int		length;
 	int		prec;
-	bool_t	ladjust;
+	bool_t		ladjust;
 	char		padc;
-	long		n, m;
-	unsigned long	u;
+	long long	n, m;
+	unsigned long long u;
 	int		plus_sign;
 	int		sign_char;
-	bool_t	altfmt, truncate;
+	bool_t		altfmt, truncate;
 	int		base;
 	char		c;
-	bool_t	longopt;
+	int		longopt;
 #ifdef DOPRNT_FLOATS
 	int		float_hack;
 	char		*p;
@@ -254,7 +254,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 	    plus_sign = 0;
 	    sign_char = 0;
 	    altfmt = FALSE;
-	    longopt = FALSE;
+	    longopt = 0;
 
 	    while (TRUE) {
 		if (*fmt == '#') {
@@ -309,9 +309,9 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		}
 	    }
 
-	    if (*fmt == 'l'){
-	        longopt = TRUE;
-		fmt++;	/* need it if sizeof(int) < sizeof(long) */
+	    while (*fmt == 'l') {
+	        longopt++;
+		fmt++;
 	    }
 
 	    truncate = FALSE;
@@ -664,7 +664,10 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_unsigned;
 
 		print_signed:
-		    n = va_arg(args, long);
+		    if (longopt>1)
+			n = va_arg(args, long long);
+		    else
+			n = va_arg(args, long);
 		    if (n >= 0) {
 			u = n;
 			sign_char = plus_sign;
@@ -676,7 +679,10 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_num;
 
 		print_unsigned:
-		    u = va_arg(args, unsigned long);
+		    if (longopt>1)
+			u = va_arg(args, unsigned long long);
+		    else
+			u = va_arg(args, unsigned long);
 		    goto print_num;
 
 		print_num:

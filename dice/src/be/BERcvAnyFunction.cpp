@@ -5,7 +5,7 @@
  *	\date	01/21/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,7 +37,7 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEUserDefinedType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 
 IMPLEMENT_DYNAMIC(CBERcvAnyFunction);
@@ -92,8 +92,39 @@ bool CBERcvAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * 
     }
     // add parameters (sender, message buffer)
     if (!AddMessageBuffer(pFEInterface, pContext))
-        return false;                                     
+        return false;
 
+    return true;
+}
+
+/** \brief adds the specific message buffer parameter for this function
+ *  \param pFEInterface the respective front-end interface to use as reference
+ *  \param pContext the context of the create process
+ *  \return true if the create process was successful
+ *
+ * Instead of creating a whole new message buffer type, we use the existing type
+ * of the class as a user defined type.
+ */
+bool CBERcvAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext)
+{
+    // get class's message buffer
+    CBEClass *pClass = GetClass();
+    assert(pClass);
+    // get message buffer type
+    CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
+    assert(pMsgBuffer);
+    // msg buffer not yet initialized
+    pMsgBuffer->InitCounts(pClass, pContext);
+    // create own message buffer
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+    m_pMsgBuffer->SetParent(this);
+    if (!m_pMsgBuffer->CreateBackEnd(pMsgBuffer, pContext))
+    {
+        delete m_pMsgBuffer;
+        m_pMsgBuffer = 0;
+        VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
+        return false;
+    }
     return true;
 }
 
@@ -158,18 +189,6 @@ bool CBERcvAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, CBEC
     return false;
 }
 
-/** \brief writes the name of a parameter for a function declaration/definition
- *  \param pFile the file to write to
- *  \param pDeclarator the name to write
- *  \param pContext the context of the write operation
- */
-void CBERcvAnyFunction::WriteParameterName(CBEFile * pFile, CBEDeclarator * pDeclarator, CBEContext * pContext)
-{
-    if (pDeclarator->GetStars() == 0)
-        pFile->Print("*");
-    pDeclarator->WriteDeclaration(pFile, pContext);
-}
-
 /** \brief writes the unmarshalling code of this function
  *  \param pFile the file to write to
  *  \param nStartOffset the offset into the message buffer to start at
@@ -207,7 +226,7 @@ bool CBERcvAnyFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
  */
 void CBERcvAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
@@ -224,7 +243,7 @@ void CBERcvAnyFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pCont
  */
 void CBERcvAnyFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");

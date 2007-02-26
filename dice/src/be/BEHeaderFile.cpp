@@ -5,12 +5,12 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -29,10 +29,13 @@
 #include "be/BEContext.h"
 #include "be/BEConstant.h"
 #include "be/BETypedef.h"
+#include "be/BEType.h"
 #include "be/BEFunction.h"
 #include "be/BEDeclarator.h"
 #include "be/BENameSpace.h"
 #include "be/BEClass.h"
+#include "be/BEStructType.h"
+#include "be/BEUnionType.h"
 
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -43,7 +46,8 @@ IMPLEMENT_DYNAMIC(CBEHeaderFile);
 
 CBEHeaderFile::CBEHeaderFile()
 : m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedef))
+  m_vTypedefs(RUNTIME_CLASS(CBETypedef)),
+  m_vTaggedTypes(RUNTIME_CLASS(CBEType))
 {
     IMPLEMENT_DYNAMIC_BASE(CBEHeaderFile, CBEFile);
 }
@@ -51,7 +55,8 @@ CBEHeaderFile::CBEHeaderFile()
 CBEHeaderFile::CBEHeaderFile(CBEHeaderFile & src)
 : CBEFile(src),
   m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedef))
+  m_vTypedefs(RUNTIME_CLASS(CBETypedef)),
+  m_vTaggedTypes(RUNTIME_CLASS(CBEType))
 {
     m_sIncludeName = src.m_sIncludeName;
     IMPLEMENT_DYNAMIC_BASE(CBEHeaderFile, CBEFile);
@@ -88,15 +93,27 @@ bool CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
     m_sIncludeName = pContext->GetNameFactory()->GetIncludeFileName(pFEFile, pContext);
     m_nFileType = pContext->GetFileType();
 
-    VectorElement *pIter = pFEFile->GetFirstIncludeFile();
-    CFEFile *pIncFile;
-    while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+    VectorElement *pIter = pFEFile->GetFirstInclude();
+    IncludeFile *pInclude;
+    while ((pInclude = pFEFile->GetNextInclude(pIter)) != 0)
     {
-        String sIncName = pContext->GetNameFactory()->GetIncludeFileName(pIncFile, pContext);
+	    // check if we shall add an include statement
+        if (pInclude->bPrivate)
+		    continue;
+        // find the corresponding file
+		CFEFile *pFERoot = pFEFile->GetRoot();
+		assert(pFERoot);
+        CFEFile *pIncFile = pFERoot->FindFile(pInclude->sFileName);
+        // get name for include (with prefix, etc.)
+        String sIncName;
+        if (pIncFile)
+            sIncName = pContext->GetNameFactory()->GetIncludeFileName(pIncFile, pContext);
+		else
+		    sIncName = pContext->GetNameFactory()->GetIncludeFileName(pInclude->sFileName, pContext);
         // if the compiler option is FILE_ALL, then we only add non-IDL files
-        if (pContext->IsOptionSet(PROGRAM_FILE_ALL) && (pIncFile->IsIDLFile()))
+        if (pContext->IsOptionSet(PROGRAM_FILE_ALL) && pInclude->bIDLFile)
             continue;
-        AddIncludedFileName(sIncName, pIncFile->IsIDLFile());
+        AddIncludedFileName(sIncName, pInclude->bIDLFile, pInclude->bIsStandardInclude);
     }
 
     return true;
@@ -249,6 +266,8 @@ void CBEHeaderFile::Write(CBEContext * pContext)
         fprintf(stderr, "Could not open header file %s\n", (const char *) GetFileName());
         return;
     }
+	// write intro
+	WriteIntro(pContext);
     // write include define
     String sDefine = pContext->GetNameFactory()->GetHeaderDefine(GetFileName(), pContext);
     if (!sDefine.IsEmpty())
@@ -262,6 +281,7 @@ void CBEHeaderFile::Write(CBEContext * pContext)
     WriteIncludesBeforeTypes(pContext);
     // write type definitions
     WriteTypedefs(pContext);
+	WriteTaggedTypes(pContext);
     // pretty print: newline
 
     // write includes
@@ -391,7 +411,7 @@ void CBEHeaderFile::WriteFunctions(CBEContext * pContext)
 		{
 			pFunction->Write(this, pContext);
 		}
-    }        
+    }
 }
 
 /** \brief writes includes, which have to appear before any type definition
@@ -410,4 +430,87 @@ void CBEHeaderFile::WriteIncludesBeforeTypes(CBEContext * pContext)
 String CBEHeaderFile::GetIncludeFileName()
 {
     return m_sIncludeName;
+}
+
+/** \brief returns a pointer to the first tagged type
+ *  \return a pointer to the first tagged type
+ */
+VectorElement* CBEHeaderFile::GetFirstTaggedType()
+{
+    return m_vTaggedTypes.GetFirst();
+}
+
+/** \brief return reference to next tagged type
+ *  \param the pointer to the next tagged type
+ *  \return reference to next tagged type
+ */
+CBEType* CBEHeaderFile::GetNextTaggedType(VectorElement* &pIter)
+{
+    if (!pIter)
+        return 0;
+    CBEType *pRet = (CBEType *) pIter->GetElement();
+    pIter = pIter->GetNext();
+    if (!pRet)
+        return GetNextTaggedType(pIter);
+    return pRet;
+
+}
+
+/** \brief adds a tagged type
+ *  \param pTaggedType the tagged type to add
+ */
+void CBEHeaderFile::AddTaggedType(CBEType *pTaggedType)
+{
+    m_vTaggedTypes.Add(pTaggedType);
+}
+
+/** \brief removes a tagged type from the header file
+ *  \param pTaggedType the tagged type to remove
+ */
+void CBEHeaderFile::RemoveTaggedType(CBEType *pTaggedType)
+{
+    m_vTaggedTypes.Remove(pTaggedType);
+}
+
+/** \brief searches for a tagged type
+ *  \param sTypeName the name of the type to search
+ *  \return a reference to the tagged type if found
+ *
+ * A tagged type always has a tagged, which is used to compare names
+ */
+CBEType *CBEHeaderFile::FindTaggedType(String sTypeName)
+{
+    VectorElement *pIter = GetFirstTaggedType();
+	CBEType *pTaggedType;
+	while ((pTaggedType = GetNextTaggedType(pIter)) != 0)
+	{
+	    if (pTaggedType->HasTag(sTypeName))
+		    return pTaggedType;
+	}
+	return 0;
+}
+
+/** \brief write the tagged types of the file
+ *  \param pContext the context of the write operation
+ */
+void CBEHeaderFile::WriteTaggedTypes(CBEContext *pContext)
+{
+    VectorElement *pIter = GetFirstTaggedType();
+	CBEType *pTaggedType;
+	while ((pTaggedType = GetNextTaggedType(pIter)) != 0)
+	{
+	    // get tag
+		String sTag;
+		if (pTaggedType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
+		    sTag = ((CBEStructType*)pTaggedType)->GetTag();
+		if (pTaggedType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
+		    sTag = ((CBEUnionType*)pTaggedType)->GetTag();
+		sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
+		Print("#ifndef %s\n", (const char*)sTag);
+		Print("#define %s\n", (const char*)sTag);
+	    pTaggedType->Write(this, pContext);
+        Print(";\n");
+		Print("#endif /* !%s */\n", (const char*)sTag);
+		Print("\n");
+	}
 }

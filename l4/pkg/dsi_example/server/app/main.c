@@ -52,14 +52,14 @@ int main(void)
   dsi_init();
 
 #if 0
-  Msg("app up.\n");
+  printf("app up.\n");
 #endif
 
   /* open send socket */
   ret = send_open(&sender,&ctrl1,&data1);
   if (ret)
     {
-      Panic("open send socket failed\n");
+      Panic("open send socket failed");
       return -1;
     }
 
@@ -68,7 +68,7 @@ int main(void)
   ret = filter_open(ctrl1,data1,&rcv_filter,&snd_filter,&ctrl2,&data2);
   if (ret)
     {
-      Panic("open filter failed\n");
+      Panic("open filter failed");
       return -1;
     }
 
@@ -76,7 +76,7 @@ int main(void)
   ret = receive_open(ctrl2,data2,&receiver);
   if (ret)
     {
-      Panic("open receive socket failed\n");
+      Panic("open receive socket failed");
       return -1;
     }
 
@@ -84,14 +84,14 @@ int main(void)
   ret = dsi_stream_create(&sender,&rcv_filter,ctrl1,data1,&s1);
   if (ret)
     {
-      Panic("creat stream1 failed\n");
+      Panic("creat stream1 failed");
       return -1;
     }
 
   ret = dsi_stream_create(&snd_filter,&receiver,ctrl2,data2,&s2);
   if (ret)
     {
-      Panic("creat stream2 failed\n");
+      Panic("creat stream2 failed");
       return -1;
     }
 
@@ -101,7 +101,7 @@ int main(void)
   ret = receive_open(ctrl1,data1,&receiver);
   if (ret)
     {
-      Panic("open receive socket failed\n");
+      Panic("open receive socket failed");
       return -1;
     }
 
@@ -109,7 +109,7 @@ int main(void)
   ret = dsi_stream_create(&sender,&receiver,ctrl1,data1,&s1);
   if (ret)
     {
-      Panic("create stream1 failed\n");
+      Panic("create stream1 failed");
       return -1;
     }
 #endif
@@ -117,11 +117,11 @@ int main(void)
   l4thread_sleep(2000);
   
   /* start transfer */
-  INFO("start stream...\n");
+  LOGL("start stream...");
   ret = dsi_stream_start(s1);
   if (ret)
     {
-      Panic("start failed\n");
+      Panic("start failed");
       return -1;
     }
 
@@ -135,24 +135,24 @@ int main(void)
   ret = dsi_stream_select(s_select,2,s_events,&num_events);
   if (ret)
     {
-      Panic("select failed (%d)\n",ret);
+      Panic("select failed (%d)",ret);
       return -1;
     }
 
-  INFO("number of events: %d\n",num_events);
+  LOGL("number of events: %d",num_events);
   for (i = 0; i < num_events; i++)
     {
       if (s_events[i].events & DSI_EVENT_EOS)
 	{
-	  INFO("EOS, close stream...\n");
+	  LOGL("EOS, close stream...");
 	  ret = dsi_stream_close(s_events[i].stream);
 	  if (ret)
-	    Panic("stream close failed (%d)\n",ret);
+	    Panic("stream close failed (%d)",ret);
 
 	}
     }
 
-  KDEBUG("done.\n");
+  KDEBUG("done.");
 
   /* done */
   return 0;

@@ -42,6 +42,7 @@
  */
 static l4env_err_msg_t err_msg[] =
 {
+  /* L4Env Errors */
   { L4_EUNKNOWN,        "unkwon error" },
   { L4_ENOMEM,          "out of memory" },
   { L4_EINVAL,          "invalid argument" },
@@ -68,7 +69,9 @@ static l4env_err_msg_t err_msg[] =
   { L4_EOPEN,           "open failed" },
   { L4_EIOCTL,          "ioctl failed" },
   { L4_ENOTAVAIL,       "item not available" },
-  { L4_ENODEV,          "no such device" }
+  { L4_ENODEV,          "no such device" },
+  { L4_EMFILE,          "too many open files" },
+  { L4_ENOSPC,          "no space left on device"}, 
 };
 
 /**

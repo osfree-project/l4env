@@ -1,13 +1,15 @@
 INTERFACE:
 
+extern "C" void kern_kdebug_entry(void) __attribute__((long_call));
+
 IMPLEMENTATION:
 
 #include <cstdio>
-#include "jdb.h"
 
-inline NEEDS [<cstdio>,"jdb.h"]
+inline NEEDS [<cstdio>]
 bool kdb_ke(const char *msg)
 {
   printf("\nKDB: %s\n",msg);
-  return Jdb::enter_jdb();
+  kern_kdebug_entry();
+  return true;
 }

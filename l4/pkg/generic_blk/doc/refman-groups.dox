@@ -1,0 +1,59 @@
+/* -*- c -*- */
+
+/**
+ * \defgroup api Generic Block Interface Client API
+ * Documentation of the Generic Block Interface client library API.
+ */
+
+/**
+ * \defgroup api_driver Open/Close Driver Instances
+ * \ingroup  api
+ * \brief    Handling of driver instances
+ */
+
+/**
+ * \defgroup api_stream Create/Close/Start Real-Time Streams
+ * \ingroup  api
+ * \brief    Handling of real-time streams
+ */
+
+/**
+ * \defgroup api_cmd Requests
+ * \ingroup  api
+ * \brief    Deliver block requests
+ */
+
+/**
+ * \defgroup api_ctrl Driver Setup
+ * \ingroup  api
+ * \brief    Control various driver settings
+ */
+
+/**
+ * \defgroup api_init Initialization
+ * \ingroup  api
+ * \brief    Library initialization
+ */
+
+/**
+ * \defgroup idl IDL Interface 
+ * Documentation of the Generic Block IDL interace
+ */
+
+/**
+ * \defgroup idl_driver Driver Interface
+ * \ingroup  idl
+ * \brief    Handling of driver instances
+ */
+
+/**
+ * \defgroup idl_cmd Request Interface
+ * \ingroup  idl
+ * \brief    Request and stream handling 
+ */
+
+/**
+ * \defgroup idl_wait Notification Interface
+ * \ingroup  idl
+ * \brief    Client notification handling
+ */

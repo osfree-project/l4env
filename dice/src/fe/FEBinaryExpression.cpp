@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,6 +26,7 @@
  */
 
 #include "fe/FEBinaryExpression.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEBinaryExpression) 
 
@@ -137,51 +138,59 @@ long CFEBinaryExpression::GetIntValue()
 bool CFEBinaryExpression::IsOfType(TYPESPEC_TYPE nType)
 {
     switch (GetOperator())
-      {
-      case EXPR_MUL:
-      case EXPR_DIV:
-      case EXPR_MOD:
-      case EXPR_PLUS:
-      case EXPR_MINUS:
-      case EXPR_LSHIFT:
-      case EXPR_RSHIFT:
-	  return (nType == TYPE_INTEGER) && GetOperand()->IsOfType(nType)
-	      && GetOperand2()->IsOfType(nType);
-	  break;
-      case EXPR_LT:
-      case EXPR_GT:
-      case EXPR_LTEQU:
-      case EXPR_GTEQU:
-	  return (nType == TYPE_BOOLEAN) && (GetOperand()->IsOfType(TYPE_INTEGER)
-		  || GetOperand()->IsOfType(TYPE_CHAR)
-		  || GetOperand()->IsOfType(TYPE_CHAR_ASTERISK))
-	      && (GetOperand2()->IsOfType(TYPE_INTEGER)
-		  || GetOperand2()->IsOfType(TYPE_CHAR)
-		  || GetOperand()->IsOfType(TYPE_CHAR_ASTERISK));
-	  break;
-      case EXPR_EQUALS:
-      case EXPR_NOTEQUAL:
-	  return (nType == TYPE_BOOLEAN) && 
-	  	((GetOperand()->IsOfType(TYPE_INTEGER) && GetOperand2()->IsOfType(TYPE_INTEGER))
-		|| (GetOperand()->IsOfType(TYPE_CHAR) && GetOperand2()->IsOfType(TYPE_CHAR))
-		|| (GetOperand()->IsOfType(TYPE_BOOLEAN) && GetOperand2()->IsOfType(TYPE_BOOLEAN))
-		|| (GetOperand()->IsOfType(TYPE_VOID_ASTERISK) && GetOperand2()->IsOfType(TYPE_VOID_ASTERISK))
-		|| (GetOperand()->IsOfType(TYPE_CHAR_ASTERISK) && GetOperand2()->IsOfType(TYPE_CHAR_ASTERISK)));
-	  break;
-      case EXPR_BITAND:
-      case EXPR_BITXOR:
-      case EXPR_BITOR:
-	  return (nType == TYPE_INTEGER) && GetOperand()->IsOfType(nType)
-	      && GetOperand2()->IsOfType(nType);
-	  break;
-      case EXPR_LOGAND:
-      case EXPR_LOGOR:
-	  return (nType == TYPE_BOOLEAN) && GetOperand()->IsOfType(nType)
-	      && GetOperand2()->IsOfType(nType);
-	  break;
-      default:
-	  break;
-      }
+	{
+	case EXPR_MUL:
+	case EXPR_DIV:
+	case EXPR_MOD:
+	case EXPR_PLUS:
+	case EXPR_MINUS:
+	case EXPR_LSHIFT:
+	case EXPR_RSHIFT:
+		return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG))
+				&& GetOperand()->IsOfType(nType)
+				&& GetOperand2()->IsOfType(nType);
+		break;
+	case EXPR_LT:
+	case EXPR_GT:
+	case EXPR_LTEQU:
+	case EXPR_GTEQU:
+		return (nType == TYPE_BOOLEAN) && (GetOperand()->IsOfType(TYPE_INTEGER)
+		    || GetOperand()->IsOfType(TYPE_LONG)
+			|| GetOperand()->IsOfType(TYPE_CHAR)
+			|| GetOperand()->IsOfType(TYPE_CHAR_ASTERISK))
+			&& (GetOperand2()->IsOfType(TYPE_INTEGER)
+			|| GetOperand2()->IsOfType(TYPE_LONG)
+			|| GetOperand2()->IsOfType(TYPE_CHAR)
+			|| GetOperand2()->IsOfType(TYPE_CHAR_ASTERISK));
+		break;
+	case EXPR_EQUALS:
+	case EXPR_NOTEQUAL:
+		return (nType == TYPE_BOOLEAN) &&
+			((GetOperand()->IsOfType(TYPE_INTEGER) && GetOperand2()->IsOfType(TYPE_INTEGER))
+			|| (GetOperand()->IsOfType(TYPE_INTEGER) && GetOperand2()->IsOfType(TYPE_LONG))
+			|| (GetOperand()->IsOfType(TYPE_LONG) && GetOperand2()->IsOfType(TYPE_INTEGER))
+			|| (GetOperand()->IsOfType(TYPE_LONG) && GetOperand2()->IsOfType(TYPE_LONG))
+			|| (GetOperand()->IsOfType(TYPE_CHAR) && GetOperand2()->IsOfType(TYPE_CHAR))
+			|| (GetOperand()->IsOfType(TYPE_BOOLEAN) && GetOperand2()->IsOfType(TYPE_BOOLEAN))
+			|| (GetOperand()->IsOfType(TYPE_VOID_ASTERISK) && GetOperand2()->IsOfType(TYPE_VOID_ASTERISK))
+			|| (GetOperand()->IsOfType(TYPE_CHAR_ASTERISK) && GetOperand2()->IsOfType(TYPE_CHAR_ASTERISK)));
+		break;
+	case EXPR_BITAND:
+	case EXPR_BITXOR:
+	case EXPR_BITOR:
+		return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG))
+		    && GetOperand()->IsOfType(nType)
+			&& GetOperand2()->IsOfType(nType);
+		break;
+	case EXPR_LOGAND:
+	case EXPR_LOGOR:
+		return ((nType == TYPE_BOOLEAN) || (nType == TYPE_LONG))
+		    && GetOperand()->IsOfType(nType)
+			&& GetOperand2()->IsOfType(nType);
+		break;
+	default:
+		break;
+	}
     return false;
 }
 
@@ -277,3 +286,80 @@ void CFEBinaryExpression::Serialize(CFile * pFile)
 	  pFile->PrintIndent("</binary_expression>\n");
       }
 }
+
+/** \brief print the object to a string
+ *  \return a string with the content of the object
+ */
+String CFEBinaryExpression::ToString()
+{
+    String ret;
+	if (GetOperand())
+        ret += GetOperand()->ToString();
+	else
+	    ret += "(no 1st operand)";
+	switch (GetOperator())
+	{
+	case EXPR_MUL:
+	    ret += "*";
+		break;
+	case EXPR_DIV:
+	    ret += "/";
+		break;
+	case EXPR_MOD:
+	    ret += "%";
+		break;
+	case EXPR_PLUS:
+	    ret += "+";
+		break;
+	case EXPR_MINUS:
+	    ret += "-";
+		break;
+	case EXPR_LSHIFT:
+	    ret += "<<";
+		break;
+	case EXPR_RSHIFT:
+	    ret += ">>";
+		break;
+	case EXPR_LT:
+	    ret += "<";
+		break;
+	case EXPR_GT:
+	    ret += ">";
+		break;
+	case EXPR_LTEQU:
+	    ret += "<=";
+		break;
+	case EXPR_GTEQU:
+	    ret += ">=";
+		break;
+	case EXPR_EQUALS:
+	    ret += "==";
+		break;
+	case EXPR_NOTEQUAL:
+	    ret += "!=";
+		break;
+	case EXPR_BITAND:
+	    ret += "&";
+		break;
+	case EXPR_BITXOR:
+	    ret += "^";
+		break;
+	case EXPR_BITOR:
+	    ret += "|";
+		break;
+	case EXPR_LOGAND:
+	    ret += "&&";
+		break;
+	case EXPR_LOGOR:
+	    ret += "||";
+		break;
+	default:
+		break;
+	}
+	if (GetOperand2())
+		ret += GetOperand2()->ToString();
+	else
+	    ret += "(no 2nd operand)";
+	return ret;
+}
+

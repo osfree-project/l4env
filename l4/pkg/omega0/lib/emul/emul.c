@@ -43,10 +43,9 @@ int omega0_attach(omega0_irqdesc_t desc){
   }
 
   if(rmgr_get_irq(irq)) return -2;
-  irq_th.lh.low = irq + 1;
-  irq_th.lh.high = 0;
+  l4_make_taskid_from_irq(irq, &irq_th);
   
-  error = l4_i386_ipc_receive(irq_th, 0, &dummy, &dummy,
+  error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
                               L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
 
   if(error!=L4_IPC_RETIMEOUT) return -3;
@@ -77,9 +76,8 @@ int omega0_request(int handle, omega0_request_t request){
     if(masked & (1<<(irq))){
       irq_unmask(irq);
     }
-    irq_th.lh.low = handle;
-    irq_th.lh.high = 0;
-    err = l4_i386_ipc_receive(irq_th, L4_IPC_SHORT_MSG, &dummy, &dummy,
+    l4_make_taskid_from_irq(handle-1, &irq_th);
+    err = l4_ipc_receive(irq_th, L4_IPC_SHORT_MSG, &dummy, &dummy,
                               L4_IPC_NEVER, &result);
     irq_mask(handle-1);
     irq_ack(handle-1);
@@ -92,52 +90,37 @@ int omega0_request(int handle, omega0_request_t request){
 /***************************************************************************
  * PIC functions
  **************************************************************************/
-unsigned char extern inline l4_cli (void);
-unsigned char extern inline l4_cli (void){
-  int r;
-  __asm__ ("cli"
-           );
-  return r;
-}
-
-unsigned char extern inline l4_sti (void);
-unsigned char extern inline l4_sti (void){
-  int r;
-  __asm__ ("sti"
-           );
-  return r;
-}
 
 static void irq_mask(int irq){
-  l4_cli();
+  l4util_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) | (1<<irq));  
+    l4util_out8(l4util_in8(0x21) | (1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) | (1<<(irq-8)));  
+    l4util_out8(l4util_in8(0xa1) | (1<<(irq-8)), 0xa1);  
   }
   masked |= 1<<irq;
-  l4_sti();
+  l4util_sti();
 }
 
 void irq_unmask(int irq){
-  l4_cli();
+  l4util_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) & ~(1<<irq));  
+    l4util_out8(l4util_in8(0x21) & ~(1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) & ~(1<<(irq-8)));
+    l4util_out8(l4util_in8(0xa1) & ~(1<<(irq-8)), 0xa1);
   }
   masked &= ~(1<<irq);
-  l4_sti();
+  l4util_sti();
 }
 
 static void irq_ack(int irq){
-  l4_cli();
+  l4util_cli();
     if (irq > 7){
-      __l4_outb(0xA0,0x60|(irq&7));
-      __l4_outb(0xA0,0x0B);
-      if (__l4_inb(0xA0) == 0)  __l4_outb(0x20, 0x62);
+      l4util_out8(0x60|(irq&7), 0xA0);
+      l4util_out8(0x0B, 0xA0);
+      if (l4util_in8(0xA0) == 0)  l4util_out8(0x62, 0x20);
     }else{
-      __l4_outb(0x20,0x60|irq);
+      l4util_out8(0x60|irq, 0x20);
     }
-  l4_sti();
+  l4util_sti();
 }

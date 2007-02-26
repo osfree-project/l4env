@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -76,7 +76,7 @@ long CFEUserDefinedExpression::GetIntValue()
     // find const with root and interface and get its int value
     // because of scope we have to search interface first
     CFEInterface *pInterface = GetParentInterface();
-    ASSERT(pInterface);
+    assert(pInterface);
     CFEConstDeclarator *pConst;
     // for all interface to top most base interface
     while (pInterface)
@@ -107,7 +107,7 @@ bool CFEUserDefinedExpression::IsOfType(TYPESPEC_TYPE nType)
     // find const with root and interface and get its int value
     // because of scope we have to search interface first
     CFEInterface *pInterface = GetParentInterface();
-    ASSERT(pInterface);
+    assert(pInterface);
     CFEConstDeclarator *pConst;
     // for all interface to top most base interface
     while (pInterface)

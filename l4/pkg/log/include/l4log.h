@@ -5,6 +5,10 @@
  * \date   03/14/2001
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #ifndef __LOG_INCLUDE_L4LOG_H_
 #define __LOG_INCLUDE_L4LOG_H_
@@ -74,8 +78,6 @@ extern void LOG_logl(const char*file, int line, const char*function,
 		     const char*format,...);
 extern void LOG_logL(const char*file, int line, const char*function,
 		     const char*format,...);
-extern void LOG_logI(const char*file,int line,const char*func,
-		     const char*format,...);
 
 #define STRINGIFY_HELPER(nr)		#nr
 #define LINE_PRESCAN_SUBST(ln)		STRINGIFY_HELPER(ln)
@@ -90,9 +92,6 @@ extern void LOG_logI(const char*file,int line,const char*func,
 #define LOGL(a...)	\
   LOG_logL(__FILE__,__LINE__,__FUNCTION__, a)
 
-#define LOGI(a...)      \
-  LOG_logI(__FILE__,__LINE__,__FUNCTION__,a)
-
 #define LOG_Enter(a...)	\
   LOG_log(__FUNCTION__, "called "a)
 
@@ -100,13 +99,12 @@ extern void LOG_logI(const char*file,int line,const char*func,
 #define LOGd(doit, msg...) if(doit) LOG(msg)
 #define LOGdl(doit,msg...) if(doit) LOGl(msg)
 #define LOGdL(doit,msg...) if(doit) LOGL(msg)
-#define LOG_Error(msg...) LOGl("Error: " msg)
+#define LOG_Error(msg...) LOGL("Error: " msg)
 
 #else
 #define LOG(a...)
 #define LOGl(a...)
 #define LOGL(a...)
-#define LOGI(a...)
 #define LOG_Enter(a...)
 #define LOGd_Enter(doit, msg...)
 #define LOGd(doit, msg...)

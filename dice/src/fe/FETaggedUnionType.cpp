@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,11 +26,21 @@
  */
 
 #include "fe/FETaggedUnionType.h"
+#include "fe/FEFile.h"
 
 IMPLEMENT_DYNAMIC(CFETaggedUnionType) 
 
 CFETaggedUnionType::CFETaggedUnionType(String sTag, CFEUnionType * pUnionTypeHeader)
-:CFEUnionType(*pUnionTypeHeader)
+: CFEUnionType(*pUnionTypeHeader)
+{
+    IMPLEMENT_DYNAMIC_BASE(CFETaggedUnionType, CFEUnionType);
+
+    m_nType = TYPE_TAGGED_UNION;
+    m_sTag = sTag;
+}
+
+CFETaggedUnionType::CFETaggedUnionType(String sTag)
+: CFEUnionType((Vector*)0)
 {
     IMPLEMENT_DYNAMIC_BASE(CFETaggedUnionType, CFEUnionType);
 
@@ -39,7 +49,7 @@ CFETaggedUnionType::CFETaggedUnionType(String sTag, CFEUnionType * pUnionTypeHea
 }
 
 CFETaggedUnionType::CFETaggedUnionType(CFETaggedUnionType & src)
-:CFEUnionType(src)
+: CFEUnionType(src)
 {
     IMPLEMENT_DYNAMIC_BASE(CFETaggedUnionType, CFEUnionType);
     m_sTag = src.m_sTag;
@@ -66,3 +76,22 @@ String CFETaggedUnionType::GetTag()
 {
     return m_sTag;
 }
+
+/** \brief checks the integrity of an union
+ *  \return true if everything is fine
+ *
+ * A union is consistent if it has a union body and the elements of this body are
+ * consistent.
+ */
+bool CFETaggedUnionType::CheckConsistency()
+{
+    if (!m_pUnionBody)
+    {
+	    // check if this is an alias
+        CFEFile *pRoot = GetRoot();
+		if (pRoot->FindTaggedDecl(GetTag()))
+		    return true;
+    }
+	return CFEUnionType::CheckConsistency();
+}
+

@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -191,6 +191,16 @@ void CFEBase::Dump()
 void CFEBase::Serialize(CFile * pFile)
 {
     // empty, because base has no data to store
+	TRACE("not serializing\n");
+}
+
+/** \brief print the object to a string
+ *  \return a string with the content of the object
+ */
+String CFEBase::ToString()
+{
+    // empty ecause this object is nothing
+	return String();
 }
 
 /**	\brief sets the source line number of this element

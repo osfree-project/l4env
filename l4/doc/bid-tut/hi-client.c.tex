@@ -1,0 +1,17 @@
+#include <stdio.h>
+#include <l4/hiworld/hiworld.h>
+
+char LOG_tag[9]="hiclient";
+
+int main(void){
+  int count;
+
+  hiworld_print();
+  count = hiworld_count();
+  if(count>=0){
+      printf("Hello world server returned %d.\n", count);
+  } else {
+      printf("Some problem with the hello world server occurred\n");
+  }
+  return 0;
+}

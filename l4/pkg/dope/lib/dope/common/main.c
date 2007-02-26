@@ -1,6 +1,19 @@
-#include "dopelib-config.h"
-#include <stdio.h>
-#include <stdlib.h>
+/*
+ * \brief   DOpE client library
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include "dopestd.h"
 #include <dopelib.h>
 #include "listener.h"
 #include "sync.h"
@@ -12,9 +25,9 @@ extern struct dopelib_mutex *dopelib_cmd_mutex;
 /*** BIND AN EVENT TO A DOpE WIDGET ***/
 void dope_bind(long id,char *var,char *event_type,
                void (*callback)(dope_event *,void *),void *arg) {
-	static char cmdbuf[256];
-	sprintf(cmdbuf,"%s.bind(\"%s\",\"#! %lx %lx\")",
-	        var,event_type,(uint32)callback,(uint32)arg);
+	static char cmdbuf[257];
+	snprintf(cmdbuf,256,"%s.bind(\"%s\",\"#! %lx %lx\")",
+	         var,event_type, (u32)callback, (u32)arg);
 	dope_cmd(id,cmdbuf);
 }
 
@@ -30,8 +43,8 @@ void dope_eventloop(long id) {
 		if ((bindarg[0]=='#') && (bindarg[1]=='!')) {
 		
 			/* determine callback adress and callback argument */
-			uint32 num1 = 0;
-			uint32 num2 = 0;
+			u32 num1 = 0;
+			u32 num2 = 0;
 			char  *s = bindarg + 3;
 			
 			while (*s == ' ') s++;

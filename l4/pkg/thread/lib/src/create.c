@@ -6,23 +6,13 @@
  *
  * \date   09/03/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -66,8 +56,8 @@ l4th_thread_start(void)
   if (ret < 0)
     {
       /* ignore error, but print error message */
-      Error("l4thread: set priority for new thread failed: %s (%d)!",
-	    l4env_errstr(ret),ret);
+      LOG_Error("l4thread: set priority for new thread failed: %s (%d)!",
+                l4env_errstr(ret),ret);
     }
 
   /* make new thread visible to other threads */
@@ -109,26 +99,25 @@ __send_startup_notification(l4th_tcb_t * tcb)
 
   if (tcb->parent == NULL)
     {
-      Error("l4thread: failed to get parent thread!");
+      LOG_Error("l4thread: failed to get parent thread!");
       return -L4_EINVAL;
     }
 
-#if DEBUG_STARTUP
-  INFO("child:  %2d ("IdFmt")\n",tcb->id,IdStr(tcb->l4_id));
-  INFO("parent: %2d ("IdFmt")\n",tcb->parent->id,IdStr(tcb->parent->l4_id));
-#endif
+  LOGdL(DEBUG_STARTUP,"child:  %2d ("IdFmt")",tcb->id,IdStr(tcb->l4_id));
+  LOGdL(DEBUG_STARTUP,"parent: %2d ("IdFmt")",tcb->parent->id,
+        IdStr(tcb->parent->l4_id));
 
   /* send IPC to parent */
-  error = l4_i386_ipc_call(tcb->parent->l4_id,L4_IPC_SHORT_MSG,
-			   L4THREAD_STARTUP_MAGIC,0,
-			   L4_IPC_SHORT_MSG,&dw0,&dw1,
-			   L4_IPC_NEVER,&result);
+  error = l4_ipc_call(tcb->parent->l4_id,L4_IPC_SHORT_MSG,
+		      L4THREAD_STARTUP_MAGIC,0,
+		      L4_IPC_SHORT_MSG,&dw0,&dw1,
+		      L4_IPC_NEVER,&result);
   if (error || (dw0 != ~L4THREAD_STARTUP_MAGIC))
     {
-      Msg("l4thread: Error sending startup notification (%d -> %d)\n",
-	  tcb->id,tcb->parent->id);
-      Error("l4thread: IPC error %02x, magic 0x%08x -> 0x%08x",
-	    error,L4THREAD_STARTUP_MAGIC,~dw0);
+      printf("l4thread: Error sending startup notification (%d -> %d)\n",
+             tcb->id,tcb->parent->id);
+      LOG_Error("l4thread: IPC error %02x, magic 0x%08x -> 0x%08x",
+                error,L4THREAD_STARTUP_MAGIC,~dw0);
       return -L4_EIPC;
     }
 
@@ -154,15 +143,15 @@ __wait_for_startup_notification(l4_threadid_t child)
   l4_msgdope_t result;
   
   /* wait */
-  error = l4_i386_ipc_receive(child,L4_IPC_SHORT_MSG,&magic,&dummy,
-			      L4_IPC_NEVER,&result);
+  error = l4_ipc_receive(child,L4_IPC_SHORT_MSG,&magic,&dummy,
+			 L4_IPC_NEVER,&result);
   if (!error)
-    error = l4_i386_ipc_send(child,L4_IPC_SHORT_MSG,~magic,0,
-			     L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+    error = l4_ipc_send(child,L4_IPC_SHORT_MSG,~magic,0,
+			L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
   if (error)
     {
-      Error("l4thread: Error waiting for startup of thread "IdFmt" (%02x)",
-	    IdStr(child),error);
+      LOG_Error("l4thread: Error waiting for startup of thread "IdFmt" (%02x)",
+                IdStr(child),error);
       return -L4_EIPC;
     }
 
@@ -258,9 +247,9 @@ __create(l4thread_t thread, l4thread_fn_t func, l4_addr_t stack_pointer,
       if (ret < 0)
 	{
 	  /* stack allocation failed */
-	  ERROR("l4thread: stack allocation failed: %s (%d)!",
-		l4env_errstr(ret),ret);
-
+	  LOG_Error("l4thread: stack allocation failed: %s (%d)!",
+                    l4env_errstr(ret),ret);
+          
 	  l4th_tcb_free(tcb);
 	  l4th_tcb_unlock(me);
 	  return ret;
@@ -268,7 +257,8 @@ __create(l4thread_t thread, l4thread_fn_t func, l4_addr_t stack_pointer,
 
       /* prefill the stack for sanity reasons */
 #ifdef DEBUG_SANITY
-      if(tcb->id>=3) memset(tcb->stack.map_addr, 0x99, tcb->stack.size);
+      if (tcb->id >= 3) 
+        memset((void *)tcb->stack.map_addr, 0x99, tcb->stack.size);
 #endif
 
       tcb->flags |= TCB_ALLOCATED_STACK;
@@ -285,11 +275,9 @@ __create(l4thread_t thread, l4thread_fn_t func, l4_addr_t stack_pointer,
 			       tcb->l4_id,flags);
 
   /* start thread */
-#if DEBUG_CREATE
-  INFO("\n  create thread %d ("IdFmt")\n",tcb->id,IdStr(tcb->l4_id));
-  DMSG("  fn at 0x%08x, stack high at 0x%08x, data 0x%08x\n",
-       (unsigned)func,sp,(unsigned)data);
-#endif
+  LOGdL(DEBUG_CREATE,"create thread %d ("IdFmt")\n" \
+        "  fn at 0x%08x, stack high at 0x%08x, data 0x%08x\n",
+        tcb->id,IdStr(tcb->l4_id),(unsigned)func,sp,(unsigned)data);
 
   tcb->func = func;
   tcb->startup_data = data;
@@ -303,7 +291,7 @@ __create(l4thread_t thread, l4thread_fn_t func, l4_addr_t stack_pointer,
       ret = __wait_for_startup_notification(tcb->l4_id);
       if (ret < 0)
 	/* error waiting for startup notification */
-	Error("l4thread: IPC error waiting for startup notification");
+	LOG_Error("l4thread: IPC error waiting for startup notification");
     }
 
   /* done */
@@ -415,7 +403,7 @@ l4thread_started(void * data)
   tcb = l4th_tcb_get_current_locked();
   if ((tcb == NULL) || (tcb->state != TCB_ACTIVE))
     {
-      Error("l4thread: failed to get current tcb!");
+      LOG_Error("l4thread: failed to get current tcb!");
       return -L4_EINVAL;
     }
 
@@ -476,11 +464,9 @@ l4thread_setup(l4_threadid_t l4_id, l4_addr_t stack_low,
   l4thread_t id;
   l4th_tcb_t * tcb;  
   int ret;
-
-#if DEBUG_CREATE
-  INFO("thread "IdFmt"\n",IdStr(l4_id));
-  DMSG("  stack 0x%08x-0x%08x\n",stack_low,stack_high);
-#endif
+  
+  LOGdL(DEBUG_CREATE,"thread "IdFmt"\n  stack 0x%08x-0x%08x\n",
+        IdStr(l4_id),stack_low,stack_high);
 
   /* setup tcb */
   id = l4th_l4_from_l4id(l4_id);

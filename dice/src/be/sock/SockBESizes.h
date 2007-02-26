@@ -5,7 +5,7 @@
  *	\date	11/28/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -53,6 +53,7 @@ protected:
 
 public:
     virtual int GetMaxSizeOfType(int nFEType);
+	virtual int GetSizeOfEnvType(String sName);
 
 };
 

@@ -1,8 +1,6 @@
-#include <l4/util/string.h>
 #include <l4/util/getopt.h>
+#include <string.h>
 
-extern char *strchr(const char *s, int c);
-extern int strncmp(const char *s1, const char *s2, int n);
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,

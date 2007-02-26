@@ -6,23 +6,13 @@
  *
  * \date   11/22/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* Standard includes */
 #include <string.h>    /* memcpy / memset */
@@ -103,11 +93,9 @@ __create_copy(dmphys_dataspace_t * src,
     }
   dst = dmphys_ds_get(copy->id);
 
-#if DEBUG_COPY
-  INFO("copy ds: %u at %x.%x\n",copy->id,
-       copy->manager.id.task,copy->manager.id.lthread);
-#endif
-
+  LOGdL(DEBUG_COPY,"copy ds: %u at %x.%x",copy->id,
+        copy->manager.id.task,copy->manager.id.lthread);
+  
   d_offs = 0;
   if (dst_offs > 0)
     {
@@ -125,7 +113,7 @@ __create_copy(dmphys_dataspace_t * src,
 	    n = fill;
 
 #if DEBUG_COPY
-	  DMSG("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
+	  printf("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
 #endif
 	  memset((void *)d_addr,0,n);
 
@@ -153,8 +141,8 @@ __create_copy(dmphys_dataspace_t * src,
 	n = num;
 
 #if DEBUG_COPY
-      DMSG("  copy 0x%08x-0x%08x -> 0x%08x-0x%08x (0x%x)\n",
-	   s_addr,s_addr + n - 1,d_addr,d_addr + n - 1,n);
+      printf("  copy 0x%08x-0x%08x -> 0x%08x-0x%08x (0x%x)\n",
+             s_addr,s_addr + n - 1,d_addr,d_addr + n - 1,n);
 #endif
 
       memcpy((void *)d_addr,(void *)s_addr,n);
@@ -180,7 +168,7 @@ __create_copy(dmphys_dataspace_t * src,
 	    n = fill;
 
 #if DEBUG_COPY
-	  DMSG("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
+	  printf("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
 #endif
 	  memset((void *)d_addr,0,n);
 
@@ -226,38 +214,36 @@ __create_copy(dmphys_dataspace_t * src,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_copy(sm_request_t * request, 
-			    l4_uint32_t ds_id, 
-			    l4_uint32_t src_offs, 
-			    l4_uint32_t dst_offs, 
-			    l4_uint32_t num, 
-			    l4_uint32_t flags, 
-			    const char * name, 
-			    if_l4dm_dataspace_t * copy, 
-			    sm_exc_t * _ev)
+if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
+                               l4_uint32_t ds_id,
+                               l4_uint32_t src_offs,
+                               l4_uint32_t dst_offs,
+                               l4_uint32_t num,
+                               l4_uint32_t flags,
+                               const char* name,
+                               l4dm_dataspace_t *copy,
+                               CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   l4_size_t src_size,dst_size;
   l4_size_t num_copy;
   page_pool_t * pool;
   
-#if DEBUG_COPY
-  INFO("ds %u, caller %x.%x\n",ds_id,caller.id.task,caller.id.lthread);
-#endif
+  LOGdL(DEBUG_COPY,"ds %u, caller %x.%x",ds_id,
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
 
   /* get source dataspace descriptor, caller must be a client */
-  ret = dmphys_ds_get_check_client(ds_id,caller,&ds);
+  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      caller.id.task,caller.id.lthread,ds_id);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
 #endif
       return ret;
     }
@@ -294,17 +280,15 @@ if_l4dm_memphys_server_copy(sm_request_t * request,
     dst_size = num + dst_offs;
   dst_size = (dst_size + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK;
 
-#if DEBUG_COPY
-  INFO("copy %u bytes\n",num_copy);
-  DMSG("  source size 0x%08x, offset 0x%08x\n",src_size,src_offs);
-  DMSG("  destination size 0x%08x, offset 0x%08x, num 0x%08x\n",
-       dst_size,dst_offs,num);
-#endif
+  LOGdL(DEBUG_COPY,"copy %u bytes\n" \
+        "  source size 0x%08x, offset 0x%08x\n" \
+        "  destination size 0x%08x, offset 0x%08x, num 0x%08x",
+        num_copy,src_size,src_offs,dst_size,dst_offs,num);
 
   /* create copy */
-  return __create_copy(ds,caller,pool,L4DM_MEMPHYS_ANY_ADDR,dst_size,
+  return __create_copy(ds,*_dice_corba_obj,pool,L4DM_MEMPHYS_ANY_ADDR,dst_size,
 		       DMPHYS_PAGESIZE,src_offs,dst_offs,num_copy,flags,
-		       name,(l4dm_dataspace_t *)copy);
+		       name,copy);
 }
  
 /*****************************************************************************/
@@ -338,38 +322,37 @@ if_l4dm_memphys_server_copy(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_dmphys_copy(sm_request_t * request, 
-				   l4_uint32_t ds_id, 
-				   l4_uint32_t src_offs, 
-				   l4_uint32_t dst_offs, 
-				   l4_uint32_t num, 
-				   l4_uint32_t dst_pool, 
-				   l4_uint32_t dst_addr, 
-				   l4_uint32_t dst_size, 
-				   l4_uint32_t dst_align, 
-				   l4_uint32_t flags, 
-				   const char * name, 
-				   if_l4dm_dataspace_t * copy, 
-				   sm_exc_t *_ev)
+if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
+                                      l4_uint32_t ds_id,
+                                      l4_uint32_t src_offs,
+                                      l4_uint32_t dst_offs,
+                                      l4_uint32_t num,
+                                      l4_uint32_t dst_pool,
+                                      l4_uint32_t dst_addr,
+                                      l4_uint32_t dst_size,
+                                      l4_uint32_t dst_align,
+                                      l4_uint32_t flags,
+                                      const char* name,
+                                      l4dm_dataspace_t *copy,
+                                      CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   l4_size_t src_size,dst_ds_size;
   l4_size_t num_copy;
   page_pool_t * pool;
 
   /* get source dataspace descriptor, caller must be a client */
-  ret = dmphys_ds_get_check_client(ds_id,caller,&ds);
+  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      caller.id.task,caller.id.lthread,ds_id);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
 #endif
       return ret;
     }
@@ -410,17 +393,16 @@ if_l4dm_memphys_server_dmphys_copy(sm_request_t * request,
   if (dst_size > dst_ds_size)
     dst_ds_size = dst_size;
 
-#if DEBUG_COPY
-  INFO("\n");
-  DMSG("ds %u, caller %x.%x, copy %u bytes\n",ds_id,
-       caller.id.task,caller.id.lthread,num_copy);
-  DMSG("  source size 0x%08x, offset 0x%08x\n",src_size,src_offs);
-  DMSG("  destination offset 0x%08x, num 0x%08x\n",dst_offs,num);
-  DMSG("  destination size 0x%08x (caller 0x%08x)\n",dst_ds_size,dst_size);
-  DMSG("  destination at 0x%08x, align 0x%08x\n",dst_addr,dst_align);
-#endif
+  LOGdL(DEBUG_COPY,"\n  ds %u, caller %x.%x, copy %u bytes\n" \
+        "  source size 0x%08x, offset 0x%08x\n" \
+        "  destination offset 0x%08x, num 0x%08x\n" \
+        "  destination size 0x%08x (caller 0x%08x)\n" \
+        "  destination at 0x%08x, align 0x%08x",ds_id,
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,num_copy,
+        src_size,src_offs,dst_offs,num,dst_ds_size,dst_size,dst_addr,
+        dst_align);
 
   /* create copy */
-  return __create_copy(ds,caller,pool,dst_addr,dst_ds_size,dst_align,src_offs,
-		       dst_offs,num_copy,flags,name,(l4dm_dataspace_t *)copy);
+  return __create_copy(ds,*_dice_corba_obj,pool,dst_addr,dst_ds_size,dst_align,
+                       src_offs,dst_offs,num_copy,flags,name,copy);
 }

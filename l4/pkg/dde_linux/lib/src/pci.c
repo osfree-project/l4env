@@ -1,13 +1,18 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/lib/src/pci.c
+ * \file   dde_linux/lib/src/pci.c
+ * \brief  PCI Support
  *
- * \brief	PCI Support
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 /** \ingroup mod_common
  * \defgroup mod_pci PCI Bus/Device Support
  *
@@ -29,7 +34,7 @@
  * -# functions for Linux backward compatibility
  *
  * Requirements: (additionally to \ref pg_req)
- * 
+ *
  * - initialized libio
  *
  * Configuration:
@@ -37,7 +42,6 @@
  * - setup #PCI_DEVICES to configure number of supported PCI devices (default
  * 12)
  */
-/*****************************************************************************/
 
 /* L4 */
 #include <l4/env/errno.h>
@@ -52,18 +56,15 @@
 /* local */
 #include "internal.h"
 #include "__config.h"
-#include "__macros.h"
 
-/*****************************************************************************/
-/**
- * \name Module variables
+/** \name Module variables
  * @{ */
-/*****************************************************************************/
+
 /** PCI device structure array */
 static struct pcidevs
 {
-  struct pci_dev linus;		/**< Linux device structure */
-  l4io_pdev_t l4;		/**< l4io device handle */
+  struct pci_dev linus;  /**< Linux device structure */
+  l4io_pdev_t l4;        /**< l4io device handle */
 } pcidevs[PCI_DEVICES];
 
 /** list of all PCI devices (must be global) */
@@ -72,41 +73,34 @@ LIST_HEAD(pci_devices);
 /** virtual PCI bus */
 static struct pci_bus pcibus =
 {
-  name:		"LINUX DDE PCI BUS",
-  number:	0,
+  name:    "LINUX DDE PCI BUS",
+  number:  0,
 };
 
 /** initialization flag */
 static int _initialized = 0;
 
 /** @} */
-/*****************************************************************************/
 /** Get L4IO device handle for given device
  *
- * \param  linus	Linux device
+ * \param  linus  Linux device
  *
  * \return l4io handle for device or 0 if not found
  */
-/*****************************************************************************/
 static inline l4io_pdev_t __pci_get_handle(struct pci_dev *linus)
 {
-  /* XXX must be tested */
   return ((struct pcidevs*)linus)->l4;
-
-/*   return *(l4io_pdev_t*)((l4_addr_t)linus+sizeof(struct pci_dev)); */
 }
 
-/*****************************************************************************/
 /** Convert IO's pci_dev to Linux' pci_dev struct
  *
- * \param  l4io		IO device
- * \param  linus	Linux device
+ * \param  l4io   IO device
+ * \param  linus  Linux device
  *
  * \krishna don't know about `struct resource' pointers?
  */
-/*****************************************************************************/
 static inline void __pci_io_to_linux(l4io_pci_dev_t *l4io,
-				     struct pci_dev *linus)
+                                     struct pci_dev *linus)
 {
   int i;
 
@@ -142,47 +136,41 @@ static inline void __pci_io_to_linux(l4io_pci_dev_t *l4io,
   list_add_tail(&linus->bus_list, &pcibus.devices);
 }
 
-/*****************************************************************************/
 /** \name Exploration of bus/attached devices and drivers
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Check device against ID table
  *
- * \param ids		ID table
- * \param dev		target device
+ * \param ids  ID table
+ * \param dev  target device
  *
  * \return matching device id
  *
  * Simple helper for device id matching check.
  */
-/*****************************************************************************/
 const struct pci_device_id *pci_match_device(const struct pci_device_id *ids,
-					     const struct pci_dev *dev)
+                                             const struct pci_dev *dev)
 {
   while (ids->vendor || ids->subvendor || ids->class_mask)
     {
       if ((ids->vendor == PCI_ANY_ID || ids->vendor == dev->vendor) &&
-	  (ids->device == PCI_ANY_ID || ids->device == dev->device) &&
-	  (ids->subvendor == PCI_ANY_ID || ids->subvendor == dev->subsystem_vendor) &&
-	  (ids->subdevice == PCI_ANY_ID || ids->subdevice == dev->subsystem_device) &&
-	  !((ids->class ^ dev->class) & ids->class_mask))
-	return ids;
+          (ids->device == PCI_ANY_ID || ids->device == dev->device) &&
+          (ids->subvendor == PCI_ANY_ID || ids->subvendor == dev->subsystem_vendor) &&
+          (ids->subdevice == PCI_ANY_ID || ids->subdevice == dev->subsystem_device) &&
+          !((ids->class ^ dev->class) & ids->class_mask))
+        return ids;
       ids++;
     }
   return NULL;
 }
 
-/*****************************************************************************/
 /** Check device - driver compatibility
  *
- * \param drv		device driver structure
- * \param dev		PCI device structure
+ * \param drv  device driver structure
+ * \param dev  PCI device structure
  *
  * \return 1 if driver claims device; 0 otherwise
  */
-/*****************************************************************************/
 static int pci_announce_device(struct pci_driver *drv, struct pci_dev *dev)
 {
   const struct pci_device_id *id;
@@ -192,10 +180,10 @@ static int pci_announce_device(struct pci_driver *drv, struct pci_dev *dev)
     {
       id = pci_match_device(drv->id_table, dev);
       if (!id)
-	{
-	  ret = 0;
-	  goto out;
-	}
+        {
+          ret = 0;
+          goto out;
+        }
     }
   else
     id = NULL;
@@ -211,15 +199,13 @@ out:
   return ret;
 }
 
-/*****************************************************************************/
 /** Get PCI driver of given device
  * \ingroup mod_pci
  *
- * \param dev		device to query
+ * \param dev  device to query
  *
  * \return appropriate pci_driver structure or NULL
  */
-/*****************************************************************************/
 struct pci_driver *pci_dev_driver(const struct pci_dev *dev)
 {
   if (dev->driver)
@@ -227,11 +213,10 @@ struct pci_driver *pci_dev_driver(const struct pci_dev *dev)
   return NULL;
 }
 
-/*****************************************************************************/
 /** Register PCI driver
  * \ingroup mod_pci
  *
- * \param drv		device driver structure
+ * \param drv  device driver structure
  *
  * \return number of pci devices which were claimed by the driver
  *
@@ -241,7 +226,6 @@ struct pci_driver *pci_dev_driver(const struct pci_dev *dev)
  * pci_register/unregister_driver() are helpers for these and have to be
  * implemented.
  */
-/*****************************************************************************/
 int pci_register_driver(struct pci_driver *drv)
 {
   struct pci_dev *dev;
@@ -255,15 +239,13 @@ int pci_register_driver(struct pci_driver *drv)
   return count;
 }
 
-/*****************************************************************************/
 /** Unregister PCI driver
  * \ingroup mod_pci
  *
- * \param drv		device driver structure
+ * \param drv  device driver structure
  *
  * \sa pci_register_driver()
  */
-/*****************************************************************************/
 void pci_unregister_driver(struct pci_driver *drv)
 {
   struct pci_dev *dev;
@@ -271,27 +253,25 @@ void pci_unregister_driver(struct pci_driver *drv)
   pci_for_each_dev(dev)
     {
       if (dev->driver == drv)
-	{
-	  if (drv->remove)
-	    drv->remove(dev);
-	  dev->driver = NULL;
-	}
+        {
+          if (drv->remove)
+            drv->remove(dev);
+          dev->driver = NULL;
+        }
     }
 }
 
-/*****************************************************************************/
 /** Find PCI Device on vendor and device IDs
  * \ingroup mod_pci
  *
- * \param vendor	vendor id of desired device
- * \param device	device id of desired device
- * \param from		PCI device in list to start at (incremental calls)
+ * \param vendor  vendor id of desired device
+ * \param device  device id of desired device
+ * \param from    PCI device in list to start at (incremental calls)
  *
  * \return PCI device found or NULL on error
  */
-/*****************************************************************************/
 struct pci_dev *pci_find_device(unsigned int vendor, unsigned int device,
-				const struct pci_dev *from)
+                                const struct pci_dev *from)
 {
   struct list_head *n = from ? from->global_list.next : pci_devices.next;
 
@@ -299,30 +279,28 @@ struct pci_dev *pci_find_device(unsigned int vendor, unsigned int device,
     {
       struct pci_dev *dev = pci_dev_g(n);
       if ((vendor == PCI_ANY_ID || dev->vendor == vendor) &&
-	  (device == PCI_ANY_ID || dev->device == device))
-	return dev;
+          (device == PCI_ANY_ID || dev->device == device))
+        return dev;
       n = n->next;
     }
 
   return NULL;
 }
 
-/*****************************************************************************/
 /** Find PCI Device on vendor, subvendor, device and subdevice IDs
  * \ingroup mod_pci
  *
- * \param vendor	vendor id of desired device
- * \param device	device id of desired device
- * \param ss_vendor	subsystem vendor id of desired device
- * \param ss_device	subsystem device id of desired device
- * \param from		PCI device in list to start at (incremental calls)
+ * \param vendor     vendor id of desired device
+ * \param device     device id of desired device
+ * \param ss_vendor  subsystem vendor id of desired device
+ * \param ss_device  subsystem device id of desired device
+ * \param from       PCI device in list to start at (incremental calls)
  *
  * \return PCI device found or NULL on error
  */
-/*****************************************************************************/
 struct pci_dev * pci_find_subsys(unsigned int vendor, unsigned int device,
-				 unsigned int ss_vendor, unsigned int ss_device,
-				 const struct pci_dev *from)
+                                 unsigned int ss_vendor, unsigned int ss_device,
+                                 const struct pci_dev *from)
 {
   struct list_head *n = from ? from->global_list.next : pci_devices.next;
 
@@ -330,26 +308,24 @@ struct pci_dev * pci_find_subsys(unsigned int vendor, unsigned int device,
     {
       struct pci_dev *dev = pci_dev_g(n);
       if ((vendor == PCI_ANY_ID || dev->vendor == vendor) &&
-	  (device == PCI_ANY_ID || dev->device == device) &&
-	  (ss_vendor == PCI_ANY_ID || dev->subsystem_vendor == ss_vendor) &&
-	  (ss_device == PCI_ANY_ID || dev->subsystem_device == ss_device))
-	return dev;
+          (device == PCI_ANY_ID || dev->device == device) &&
+          (ss_vendor == PCI_ANY_ID || dev->subsystem_vendor == ss_vendor) &&
+          (ss_device == PCI_ANY_ID || dev->subsystem_device == ss_device))
+        return dev;
       n = n->next;
     }
 
   return NULL;
 }
 
-/*****************************************************************************/
 /** Find PCI Device on Slot
  * \ingroup mod_pci
  *
- * \param bus		target PCI bus
- * \param devfn		device and function number
+ * \param bus    target PCI bus
+ * \param devfn  device and function number
  *
  * \return PCI device found or NULL on error
  */
-/*****************************************************************************/
 struct pci_dev *pci_find_slot(unsigned int bus, unsigned int devfn)
 {
   struct pci_dev *dev;
@@ -357,22 +333,20 @@ struct pci_dev *pci_find_slot(unsigned int bus, unsigned int devfn)
   pci_for_each_dev(dev)
     {
       if (dev->bus->number == bus && dev->devfn == devfn)
-	return dev;
+        return dev;
     }
 
   return NULL;
 }
 
-/*****************************************************************************/
 /** Find PCI Device on Class
  * \ingroup mod_pci
  *
- * \param class		class id of desired device
- * \param from		PCI device in list to start at (incremental calls)
+ * \param class  class id of desired device
+ * \param from   PCI device in list to start at (incremental calls)
  *
  * \return PCI device found or NULL on error
  */
-/*****************************************************************************/
 struct pci_dev *pci_find_class(unsigned int class, const struct pci_dev *from)
 {
   struct list_head *n = from ? from->global_list.next : pci_devices.next;
@@ -381,7 +355,7 @@ struct pci_dev *pci_find_class(unsigned int class, const struct pci_dev *from)
     {
       struct pci_dev *dev = pci_dev_g(n);
       if (dev->class == class)
-	return dev;
+        return dev;
       n = n->next;
     }
 
@@ -395,20 +369,16 @@ int pci_find_capability (struct pci_dev *dev, int cap)
 }
 
 /** @} */
-/*****************************************************************************/
 /** \name Device setup (bus mastering, enable/disable)
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Enable PCI Device
  * \ingroup mod_pci
  *
- * \param dev		target PCI device
+ * \param dev  target PCI device
  *
  * \return 0 on success; error code otherwise
  */
-/*****************************************************************************/
 int pci_enable_device(struct pci_dev *dev)
 {
   int err;
@@ -432,13 +402,11 @@ int pci_enable_device(struct pci_dev *dev)
   return err;
 }
 
-/*****************************************************************************/
 /** Disable PCI Device
  * \ingroup mod_pci
  *
- * \param dev		target PCI device
+ * \param dev  target PCI device
  */
-/*****************************************************************************/
 void pci_disable_device(struct pci_dev *dev)
 {
   int err;
@@ -460,15 +428,13 @@ void pci_disable_device(struct pci_dev *dev)
 #endif
 }
 
-/*****************************************************************************/
 /** Set Busmastering for PCI Device
  * \ingroup mod_pci
  *
- * \param dev		target PCI device
+ * \param dev  target PCI device
  *
  * \todo Who panics if it fails?
  */
-/*****************************************************************************/
 void pci_set_master(struct pci_dev *dev)
 {
   l4io_pdev_t pdev;
@@ -485,21 +451,17 @@ void pci_set_master(struct pci_dev *dev)
 }
 
 /** @} */
-/*****************************************************************************/
 /** \name Power Management related functions
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Set PM State for PCI Device
  * \ingroup mod_pci
  *
- * \param dev		target PCI device
- * \param state		PM state
+ * \param dev    target PCI device
+ * \param state  PM state
  *
  * \return old PM state
  */
-/*****************************************************************************/
 int pci_set_power_state(struct pci_dev *dev, int state)
 {
   l4io_pdev_t pdev;
@@ -516,65 +478,60 @@ int pci_set_power_state(struct pci_dev *dev, int state)
 }
 
 /** @} */
-/*****************************************************************************/
 /** \name PCI device related resources
  *
  * \todo implementation
  * @{ */
-/*****************************************************************************/
 
 /** @} */
-/*****************************************************************************/
 /** \name Hotplugging (not supported yet)
  * @{ */
-/*****************************************************************************/
 
 /** @} */
-/*****************************************************************************/
 /** \name PCI memory pools (consistent DMA mappings...)
  *
  * Pool allocator ... wraps the pci_alloc_consistent page allocator, so
  * small blocks are easily used by drivers for bus mastering controllers.
  * This should probably be sharing the guts of the slab allocator.
  * @{ */
-/*****************************************************************************/
 
 /** the pool */
 struct pci_pool
 {
-  struct list_head	page_list;
-  spinlock_t		lock;
-  size_t		blocks_per_page;
-  size_t		size;
-  int			flags;
-  struct pci_dev	*dev;
-  size_t		allocation;
-  char			name [32];
-  wait_queue_head_t	waitq;
+  struct list_head page_list;
+  spinlock_t lock;
+  size_t blocks_per_page;
+  size_t size;
+  int flags;
+  struct pci_dev *dev;
+  size_t allocation;
+  char name [32];
+  wait_queue_head_t waitq;
 };
 
 /** cacheable header for 'allocation' bytes */
 struct pci_page
 {
-  struct list_head	page_list;
-  void			*vaddr;
-  dma_addr_t		dma;
-  unsigned long		bitmap [0];
+  struct list_head page_list;
+  void *vaddr;
+  dma_addr_t dma;
+  unsigned long bitmap [0];
 };
 
-#define	POOL_TIMEOUT_JIFFIES	((100 /* msec */ * HZ) / 1000)
-#define	POOL_POISON_BYTE	0xa7
+#define POOL_TIMEOUT_JIFFIES ((100 /* msec */ * HZ) / 1000)
+#define POOL_POISON_BYTE     0xa7
 
 // #define CONFIG_PCIPOOL_DEBUG
 
-/**
- * pci_pool_create - Creates a pool of pci consistent memory blocks, for dma.
- * @name: name of pool, for diagnostics
- * @pdev: pci device that will be doing the DMA
- * @size: size of the blocks in this pool.
- * @align: alignment requirement for blocks; must be a power of two
- * @allocation: returned blocks won't cross this boundary (or zero)
- * @flags: SLAB_* flags (not all are supported).
+/** Create a pool of pci consistent memory blocks, for dma.
+ * \ingroup mod_pci
+ *
+ * \param name         name of pool, for diagnostics
+ * \param pdev        pci device that will be doing the DMA
+ * \param size        size of the blocks in this pool.
+ * \param align       alignment requirement for blocks; must be a power of two
+ * \param allocation  returned blocks won't cross this boundary (or zero)
+ * \param flags       SLAB_* flags (not all are supported).
  *
  * Returns a pci allocation pool with the requested characteristics, or
  * null if one can't be created.  Given one of these pools, pci_pool_alloc()
@@ -588,251 +545,258 @@ struct pci_page
  * addressing restrictions on individual DMA transfers, such as not crossing
  * boundaries of 4KBytes.
  */
-struct pci_pool *
-pci_pool_create (const char *name, struct pci_dev *pdev,
-	size_t size, size_t align, size_t allocation, int flags)
+struct pci_pool * pci_pool_create(const char *name, struct pci_dev *pdev,
+                                  size_t size, size_t align, size_t allocation,
+                                  int flags)
 {
-	struct pci_pool		*retval;
+  struct pci_pool *retval;
 
-	if (align == 0)
-		align = 1;
-	if (size == 0)
-		return 0;
-	else if (size < align)
-		size = align;
-	else if ((size % align) != 0) {
-		size += align + 1;
-		size &= ~(align - 1);
-	}
+  if (align == 0)
+    align = 1;
+  if (size == 0)
+    return 0;
+  else if (size < align)
+    size = align;
+  else if ((size % align) != 0)
+    {
+      size += align + 1;
+      size &= ~(align - 1);
+    }
 
-	if (allocation == 0) {
-		if (PAGE_SIZE < size)
-			allocation = size;
-		else
-			allocation = PAGE_SIZE;
-		// FIXME: round up for less fragmentation
-	} else if (allocation < size)
-		return 0;
+  if (allocation == 0)
+    {
+      if (PAGE_SIZE < size)
+        allocation = size;
+      else
+        allocation = PAGE_SIZE;
+    // FIXME: round up for less fragmentation
+    }
+  else if (allocation < size)
+    return 0;
 
-	if (!(retval = kmalloc (sizeof *retval, flags)))
-		return retval;
-
-#ifdef	CONFIG_PCIPOOL_DEBUG
-	flags |= SLAB_POISON;
-#endif
-
-	strncpy (retval->name, name, sizeof retval->name);
-	retval->name [sizeof retval->name - 1] = 0;
-
-	retval->dev = pdev;
-	INIT_LIST_HEAD (&retval->page_list);
-	spin_lock_init (&retval->lock);
-	retval->size = size;
-	retval->flags = flags;
-	retval->allocation = allocation;
-	retval->blocks_per_page = allocation / size;
-	init_waitqueue_head (&retval->waitq);
+  if (!(retval = kmalloc(sizeof *retval, flags)))
+    return retval;
 
 #ifdef CONFIG_PCIPOOL_DEBUG
-	printk (KERN_DEBUG "pcipool create %s/%s size %d, %d/page (%d alloc)\n",
-		pdev ? pdev->slot_name : NULL, retval->name, size,
-		retval->blocks_per_page, allocation);
+  flags |= SLAB_POISON;
 #endif
 
-	return retval;
+  strncpy(retval->name, name, sizeof retval->name);
+  retval->name [sizeof retval->name - 1] = 0;
+
+  retval->dev = pdev;
+  INIT_LIST_HEAD(&retval->page_list);
+  spin_lock_init(&retval->lock);
+  retval->size = size;
+  retval->flags = flags;
+  retval->allocation = allocation;
+  retval->blocks_per_page = allocation / size;
+  init_waitqueue_head(&retval->waitq);
+
+#ifdef CONFIG_PCIPOOL_DEBUG
+  printk(KERN_DEBUG "pcipool create %s/%s size %d, %d/page(%d alloc)\n",
+         pdev ? pdev->slot_name : NULL, retval->name, size,
+         retval->blocks_per_page, allocation);
+#endif
+
+  return retval;
 }
 
 /** */
-static struct pci_page *
-pool_alloc_page (struct pci_pool *pool, int mem_flags)
+static struct pci_page * pool_alloc_page(struct pci_pool *pool, int mem_flags)
 {
-	struct pci_page	*page;
-	int		mapsize;
+  struct pci_page *page;
+  int mapsize;
 
-	mapsize = pool->blocks_per_page;
-	mapsize = (mapsize + BITS_PER_LONG - 1) / BITS_PER_LONG;
-	mapsize *= sizeof (long);
+  mapsize = pool->blocks_per_page;
+  mapsize = (mapsize + BITS_PER_LONG - 1) / BITS_PER_LONG;
+  mapsize *= sizeof(long);
 
-	page = (struct pci_page *) kmalloc (mapsize + sizeof *page, mem_flags);
-	if (!page)
-		return 0;
-	page->vaddr = pci_alloc_consistent (pool->dev,
-					    pool->allocation,
-					    &page->dma);
-	if (page->vaddr) {
-		memset (page->bitmap, 0xff, mapsize);	// bit set == free
-		if (pool->flags & SLAB_POISON)
-			memset (page->vaddr, POOL_POISON_BYTE, pool->allocation);
-		list_add (&page->page_list, &pool->page_list);
-	} else {
-		kfree (page);
-		page = 0;
-	}
-	return page;
+  page = (struct pci_page *) kmalloc(mapsize + sizeof *page, mem_flags);
+  if (!page)
+    return 0;
+  page->vaddr = pci_alloc_consistent(pool->dev, pool->allocation, &page->dma);
+  if (page->vaddr)
+    {
+      memset(page->bitmap, 0xff, mapsize); // bit set == free
+      if (pool->flags & SLAB_POISON)
+        memset(page->vaddr, POOL_POISON_BYTE, pool->allocation);
+      list_add(&page->page_list, &pool->page_list);
+    }
+  else
+    {
+      kfree(page);
+      page = 0;
+    }
+  return page;
 }
 
 
 /** */
-static inline int
-is_page_busy (int blocks, unsigned long *bitmap)
+static inline int is_page_busy(int blocks, unsigned long *bitmap)
 {
-	while (blocks > 0) {
-		if (*bitmap++ != ~0UL)
-			return 1;
-		blocks -= BITS_PER_LONG;
-	}
-	return 0;
+  while (blocks > 0)
+    {
+      if (*bitmap++ != ~0UL)
+        return 1;
+      blocks -= BITS_PER_LONG;
+    }
+  return 0;
 }
 
 /** */
-static void
-pool_free_page (struct pci_pool *pool, struct pci_page *page)
+static void pool_free_page(struct pci_pool *pool, struct pci_page *page)
 {
-	dma_addr_t	dma = page->dma;
+  dma_addr_t dma = page->dma;
 
-	if (pool->flags & SLAB_POISON)
-		memset (page->vaddr, POOL_POISON_BYTE, pool->allocation);
-	pci_free_consistent (pool->dev, pool->allocation, page->vaddr, dma);
-	list_del (&page->page_list);
-	kfree (page);
+  if (pool->flags & SLAB_POISON)
+    memset(page->vaddr, POOL_POISON_BYTE, pool->allocation);
+  pci_free_consistent(pool->dev, pool->allocation, page->vaddr, dma);
+  list_del(&page->page_list);
+  kfree(page);
 }
 
 
-/**
- * pci_pool_destroy - destroys a pool of pci memory blocks.
- * @pool: pci pool that will be destroyed
+/** Destroy a pool of pci memory blocks.
+ * \ingroup mod_pci
+ *
+ * \param pool  pci pool that will be destroyed
  *
  * Caller guarantees that no more memory from the pool is in use,
  * and that nothing will try to use the pool after this call.
  */
-void
-pci_pool_destroy (struct pci_pool *pool)
+void pci_pool_destroy(struct pci_pool *pool)
 {
-	unsigned long		flags;
+  unsigned long flags;
 
 #ifdef CONFIG_PCIPOOL_DEBUG
-	printk (KERN_DEBUG "pcipool destroy %s/%s\n",
-		pool->dev ? pool->dev->slot_name : NULL,
-		pool->name);
+  printk(KERN_DEBUG "pcipool destroy %s/%s\n",
+         pool->dev ? pool->dev->slot_name : NULL,
+         pool->name);
 #endif
 
-	spin_lock_irqsave (&pool->lock, flags);
-	while (!list_empty (&pool->page_list)) {
-		struct pci_page		*page;
-		page = list_entry (pool->page_list.next,
-				struct pci_page, page_list);
-		if (is_page_busy (pool->blocks_per_page, page->bitmap)) {
-			printk (KERN_ERR "pci_pool_destroy %s/%s, %p busy\n",
-				pool->dev ? pool->dev->slot_name : NULL,
-				pool->name, page->vaddr);
-			/* leak the still-in-use consistent memory */
-			list_del (&page->page_list);
-			kfree (page);
-		} else
-			pool_free_page (pool, page);
-	}
-	spin_unlock_irqrestore (&pool->lock, flags);
-	kfree (pool);
+  spin_lock_irqsave(&pool->lock, flags);
+  while (!list_empty(&pool->page_list))
+    {
+      struct pci_page *page;
+      page = list_entry(pool->page_list.next,
+                        struct pci_page, page_list);
+      if (is_page_busy(pool->blocks_per_page, page->bitmap))
+        {
+          printk(KERN_ERR "pci_pool_destroy %s/%s, %p busy\n",
+                 pool->dev ? pool->dev->slot_name : NULL,
+          pool->name, page->vaddr);
+          /* leak the still-in-use consistent memory */
+          list_del(&page->page_list);
+          kfree(page);
+        }
+      else pool_free_page(pool, page);
+    }
+  spin_unlock_irqrestore(&pool->lock, flags);
+  kfree(pool);
 }
 
 
-/**
- * pci_pool_alloc - get a block of consistent memory
- * @pool: pci pool that will produce the block
- * @mem_flags: SLAB_KERNEL or SLAB_ATOMIC
- * @handle: pointer to dma address of block
+/** Get a block of consistent memory
+ * \ingroup mod_pci
+ *
+ * \param pool       pci pool that will produce the block
+ * \param mem_flags  SLAB_KERNEL or SLAB_ATOMIC
+ * \param handle     pointer to dma address of block
  *
  * This returns the kernel virtual address of a currently unused block,
  * and reports its dma address through the handle.
  * If such a memory block can't be allocated, null is returned.
  */
-void *
-pci_pool_alloc (struct pci_pool *pool, int mem_flags, dma_addr_t *handle)
+void * pci_pool_alloc(struct pci_pool *pool, int mem_flags, dma_addr_t *handle)
 {
-	unsigned long		flags;
-	struct list_head	*entry;
-	struct pci_page		*page;
-	int			map, block;
-	size_t			offset;
-	void			*retval;
+  unsigned long flags;
+  struct list_head *entry;
+  struct pci_page *page;
+  int map, block;
+  size_t offset;
+  void *retval;
 
 restart:
-	spin_lock_irqsave (&pool->lock, flags);
-	list_for_each (entry, &pool->page_list) {
-		int		i;
-		page = list_entry (entry, struct pci_page, page_list);
-		/* only cachable accesses here ... */
-		for (map = 0, i = 0;
-				i < pool->blocks_per_page;
-				i += BITS_PER_LONG, map++) {
-			if (page->bitmap [map] == 0)
-				continue;
-			block = ffz (~ page->bitmap [map]);
-			if ((i + block) < pool->blocks_per_page) {
-				clear_bit (block, &page->bitmap [map]);
-				offset = (BITS_PER_LONG * map) + block;
-				offset *= pool->size;
-				goto ready;
-			}
-		}
-	}
-	if (!(page = pool_alloc_page (pool, mem_flags))) {
-		if (mem_flags == SLAB_KERNEL) {
-			DECLARE_WAITQUEUE (wait, current);
+  spin_lock_irqsave(&pool->lock, flags);
+  list_for_each(entry, &pool->page_list)
+    {
+      int i;
+      page = list_entry(entry, struct pci_page, page_list);
+      /* only cachable accesses here ... */
+      for (map = 0, i = 0; i < pool->blocks_per_page; i += BITS_PER_LONG, map++)
+        {
+          if (page->bitmap [map] == 0)
+            continue;
+          block = ffz(~ page->bitmap [map]);
+          if ((i + block) < pool->blocks_per_page)
+            {
+              clear_bit(block, &page->bitmap [map]);
+              offset = (BITS_PER_LONG * map) + block;
+              offset *= pool->size;
+              goto ready;
+            }
+        }
+    }
+  if (!(page = pool_alloc_page(pool, mem_flags)))
+    {
+      if (mem_flags == SLAB_KERNEL)
+        {
+          DECLARE_WAITQUEUE(wait, current);
 
-			current->state = TASK_INTERRUPTIBLE;
-			add_wait_queue (&pool->waitq, &wait);
-			spin_unlock_irqrestore (&pool->lock, flags);
+          current->state = TASK_INTERRUPTIBLE;
+          add_wait_queue(&pool->waitq, &wait);
+          spin_unlock_irqrestore(&pool->lock, flags);
 
-			schedule_timeout (POOL_TIMEOUT_JIFFIES);
+          schedule_timeout(POOL_TIMEOUT_JIFFIES);
 
-			current->state = TASK_RUNNING;
-			remove_wait_queue (&pool->waitq, &wait);
-			goto restart;
-		}
-		retval = 0;
-		goto done;
-	}
+          current->state = TASK_RUNNING;
+          remove_wait_queue(&pool->waitq, &wait);
+          goto restart;
+        }
+      retval = 0;
+      goto done;
+    }
 
-	clear_bit (0, &page->bitmap [0]);
-	offset = 0;
+  clear_bit(0, &page->bitmap [0]);
+  offset = 0;
 ready:
-	retval = offset + page->vaddr;
-	*handle = offset + page->dma;
+  retval = offset + page->vaddr;
+  *handle = offset + page->dma;
 done:
-	spin_unlock_irqrestore (&pool->lock, flags);
-	return retval;
+  spin_unlock_irqrestore(&pool->lock, flags);
+  return retval;
 }
 
 
 /** */
 static struct pci_page *
-pool_find_page (struct pci_pool *pool, dma_addr_t dma)
+pool_find_page(struct pci_pool *pool, dma_addr_t dma)
 {
-	unsigned long		flags;
-	struct list_head	*entry;
-	struct pci_page		*page;
+  unsigned long flags;
+  struct list_head *entry;
+  struct pci_page *page;
 
-	spin_lock_irqsave (&pool->lock, flags);
-	list_for_each (entry, &pool->page_list) {
-		page = list_entry (entry, struct pci_page, page_list);
-		if (dma < page->dma)
-			continue;
-		if (dma < (page->dma + pool->allocation))
-			goto done;
-	}
-	page = 0;
+  spin_lock_irqsave(&pool->lock, flags);
+  list_for_each(entry, &pool->page_list)
+    {
+      page = list_entry(entry, struct pci_page, page_list);
+      if (dma < page->dma)
+        continue;
+      if (dma < (page->dma + pool->allocation))
+        goto done;
+    }
+  page = 0;
 done:
-	spin_unlock_irqrestore (&pool->lock, flags);
-	return page;
+  spin_unlock_irqrestore(&pool->lock, flags);
+  return page;
 }
 
 
-/**
- * pci_pool_free - put block back into pci pool
- * @pool: the pci pool holding the block
- * @vaddr: virtual address of block
- * @dma: dma address of block
+/** Put block back into pci pool
+ * \param pool   the pci pool holding the block
+ * \param vaddr  virtual address of block
+ * \param dma    dma address of block
  *
  * Caller promises neither device nor driver will again touch this block
  * unless it is first re-allocated.
@@ -840,62 +804,63 @@ done:
 void
 pci_pool_free (struct pci_pool *pool, void *vaddr, dma_addr_t dma)
 {
-	struct pci_page		*page;
-	unsigned long		flags;
-	int			map, block;
+  struct pci_page *page;
+  unsigned long flags;
+  int map, block;
 
-	if ((page = pool_find_page (pool, dma)) == 0) {
-		printk (KERN_ERR "pci_pool_free %s/%s, %p/%x (bad dma)\n",
-			pool->dev ? pool->dev->slot_name : NULL,
-			pool->name, vaddr, (int) (dma & 0xffffffff));
-		return;
-	}
-#ifdef	CONFIG_PCIPOOL_DEBUG
-	if (((dma - page->dma) + (void *)page->vaddr) != vaddr) {
-		printk (KERN_ERR "pci_pool_free %s/%s, %p (bad vaddr)/%x\n",
-			pool->dev ? pool->dev->slot_name : NULL,
-			pool->name, vaddr, (int) (dma & 0xffffffff));
-		return;
-	}
+  if ((page = pool_find_page (pool, dma)) == 0)
+    {
+      printk(KERN_ERR "pci_pool_free %s/%s, %p/%x (bad dma)\n",
+             pool->dev ? pool->dev->slot_name : NULL,
+             pool->name, vaddr, (int) (dma & 0xffffffff));
+      return;
+    }
+#ifdef  CONFIG_PCIPOOL_DEBUG
+  if (((dma - page->dma) + (void *)page->vaddr) != vaddr)
+    {
+      printk(KERN_ERR "pci_pool_free %s/%s, %p (bad vaddr)/%x\n",
+             pool->dev ? pool->dev->slot_name : NULL,
+             pool->name, vaddr, (int) (dma & 0xffffffff));
+      return;
+    }
 #endif
 
-	block = dma - page->dma;
-	block /= pool->size;
-	map = block / BITS_PER_LONG;
-	block %= BITS_PER_LONG;
+  block = dma - page->dma;
+  block /= pool->size;
+  map = block / BITS_PER_LONG;
+  block %= BITS_PER_LONG;
 
-#ifdef	CONFIG_PCIPOOL_DEBUG
-	if (page->bitmap [map] & (1UL << block)) {
-		printk (KERN_ERR "pci_pool_free %s/%s, dma %x already free\n",
-			pool->dev ? pool->dev->slot_name : NULL,
-			pool->name, dma);
-		return;
-	}
+#ifdef  CONFIG_PCIPOOL_DEBUG
+  if (page->bitmap [map] & (1UL << block))
+    {
+      printk(KERN_ERR "pci_pool_free %s/%s, dma %x already free\n",
+             pool->dev ? pool->dev->slot_name : NULL,
+             pool->name, dma);
+      return;
+    }
 #endif
-	if (pool->flags & SLAB_POISON)
-		memset (vaddr, POOL_POISON_BYTE, pool->size);
+  if (pool->flags & SLAB_POISON)
+    memset(vaddr, POOL_POISON_BYTE, pool->size);
 
-	spin_lock_irqsave (&pool->lock, flags);
-	set_bit (block, &page->bitmap [map]);
-	if (waitqueue_active (&pool->waitq))
-		wake_up (&pool->waitq);
-	/*
-	 * Resist a temptation to do
-	 *    if (!is_page_busy(bpp, page->bitmap)) pool_free_page(pool, page);
-	 * it is not interrupt safe. Better have empty pages hang around.
-	 */
-	spin_unlock_irqrestore (&pool->lock, flags);
+  spin_lock_irqsave(&pool->lock, flags);
+  set_bit(block, &page->bitmap [map]);
+  if (waitqueue_active(&pool->waitq))
+    wake_up(&pool->waitq);
+  /*
+   * Resist a temptation to do
+   *    if (!is_page_busy(bpp, page->bitmap)) pool_free_page(pool, page);
+   * it is not interrupt safe. Better have empty pages hang around.
+   */
+  spin_unlock_irqrestore(&pool->lock, flags);
 }
 
-/*****************************************************************************/
 /** Allocation of PCI consistent DMA Memory
  * \ingroup mod_pci
  *
  * \todo Is this really a PCI issue?!
  */
-/*****************************************************************************/
 void *pci_alloc_consistent(struct pci_dev *hwdev,
-			   size_t size, dma_addr_t * dma_handle)
+                           size_t size, dma_addr_t * dma_handle)
 {
   void *ret;
   int gfp = GFP_ATOMIC;
@@ -917,15 +882,13 @@ void *pci_alloc_consistent(struct pci_dev *hwdev,
   return ret;
 }
 
-/*****************************************************************************/
 /** Deallocation of PCI consistent DMA Memory
  * \ingroup mod_pci
  *
  * \todo Is this really a PCI issue?!
  */
-/*****************************************************************************/
 void pci_free_consistent(struct pci_dev *hwdev, size_t size,
-			 void *vaddr, dma_addr_t dma_handle)
+                         void *vaddr, dma_addr_t dma_handle)
 {
   free_pages((unsigned long) vaddr, get_order(size));
 #if DEBUG_PALLOC
@@ -942,19 +905,16 @@ int pci_set_dma_mask(struct pci_dev *dev, u64 mask)
 }
 
 /** @} */
-/*****************************************************************************/
 /** \name Configuration space access
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** PCI Configuration Space access - read byte
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
+ * \param dev   PCI device
+ * \param pos   configuration register
  *
- * \retval val	register contents
+ * \retval val  register contents
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
@@ -981,17 +941,15 @@ int pci_read_config_byte(struct pci_dev *dev, int pos, l4_uint8_t * val)
   return err ? -EIO : 0;
 }
 
-/*****************************************************************************/
 /** PCI Configuration Space access - read word
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
+ * \param dev   PCI device
+ * \param pos   configuration register
  *
- * \retval val	register contents
+ * \retval val  register contents
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int pci_read_config_word(struct pci_dev *dev, int pos, l4_uint16_t * val)
 {
   int err;
@@ -1015,17 +973,15 @@ int pci_read_config_word(struct pci_dev *dev, int pos, l4_uint16_t * val)
   return err ? -EIO : 0;
 }
 
-/*****************************************************************************/
 /** PCI Configuration Space access - read double word
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
+ * \param dev   PCI device
+ * \param pos   configuration register
  *
- * \retval val	register contents
+ * \retval val  register contents
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int pci_read_config_dword(struct pci_dev *dev, int pos, l4_uint32_t * val)
 {
   int err;
@@ -1049,17 +1005,15 @@ int pci_read_config_dword(struct pci_dev *dev, int pos, l4_uint32_t * val)
   return err ? -EIO : 0;
 }
 
-/*****************************************************************************/
 /** PCI Configuration Space access - write byte
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
- * \param val	new value
+ * \param dev  PCI device
+ * \param pos  configuration register
+ * \param val  new value
  *
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int pci_write_config_byte(struct pci_dev *dev, int pos, l4_uint8_t val)
 {
   int err;
@@ -1083,17 +1037,15 @@ int pci_write_config_byte(struct pci_dev *dev, int pos, l4_uint8_t val)
   return err ? -EIO : 0;
 }
 
-/*****************************************************************************/
 /** PCI Configuration Space access - write word
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
- * \param val	new value
+ * \param dev  PCI device
+ * \param pos  configuration register
+ * \param val  new value
  *
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int pci_write_config_word(struct pci_dev *dev, int pos, l4_uint16_t val)
 {
   int err;
@@ -1117,17 +1069,15 @@ int pci_write_config_word(struct pci_dev *dev, int pos, l4_uint16_t val)
   return err ? -EIO : 0;
 }
 
-/******************************************************************************/
 /** PCI Configuration Space access - write double word
  * \ingroup mod_pci
  *
- * \param dev	PCI device
- * \param pos	configuration register
- * \param val	new value
+ * \param dev  PCI device
+ * \param pos  configuration register
+ * \param val  new value
  *
  * \return 0 on success; negative error code otherwise
  */
-/*****************************************************************************/
 int pci_write_config_dword(struct pci_dev *dev, int pos, l4_uint32_t val)
 {
   int err;
@@ -1152,17 +1102,15 @@ int pci_write_config_dword(struct pci_dev *dev, int pos, l4_uint32_t val)
 }
 
 /** @} */
-/*****************************************************************************/
 /** \name Functions for Linux backward compatibility
  * This is from drivers/pci/compat.c
  * @{ */
-/*****************************************************************************/
 
 #if 0
 /** Find ... (old interface)
  * \ingroup mod_pci */
 int pcibios_find_class(unsigned int class, unsigned short index,
-		       unsigned char *bus, unsigned char *devfn)
+                       unsigned char *bus, unsigned char *devfn)
 {
   const struct pci_dev *dev = NULL;
   int cnt = 0;
@@ -1170,9 +1118,9 @@ int pcibios_find_class(unsigned int class, unsigned short index,
   while ((dev = pci_find_class(class, dev)))
     if (index == cnt++)
       {
-	*bus = dev->bus->number;
-	*devfn = dev->devfn;
-	return PCIBIOS_SUCCESSFUL;
+        *bus = dev->bus->number;
+        *devfn = dev->devfn;
+        return PCIBIOS_SUCCESSFUL;
       }
 
   return PCIBIOS_DEVICE_NOT_FOUND;
@@ -1182,8 +1130,8 @@ int pcibios_find_class(unsigned int class, unsigned short index,
 /** Find ... (old interface)
  * \ingroup mod_pci */
 int pcibios_find_device(unsigned short vendor, unsigned short device,
-			unsigned short index, unsigned char *bus,
-			unsigned char *devfn)
+                        unsigned short index, unsigned char *bus,
+                        unsigned char *devfn)
 {
   const struct pci_dev *dev = NULL;
   int cnt = 0;
@@ -1191,9 +1139,9 @@ int pcibios_find_device(unsigned short vendor, unsigned short device,
   while ((dev = pci_find_device(vendor, device, dev)))
     if (index == cnt++)
       {
-	*bus = dev->bus->number;
-	*devfn = dev->devfn;
-	return PCIBIOS_SUCCESSFUL;
+        *bus = dev->bus->number;
+        *devfn = dev->devfn;
+        return PCIBIOS_SUCCESSFUL;
       }
 
   return PCIBIOS_DEVICE_NOT_FOUND;
@@ -1201,13 +1149,13 @@ int pcibios_find_device(unsigned short vendor, unsigned short device,
 
 /** Configuration space access function creation (old interface)
  * \ingroup mod_pci */
-#define PCI_OP(rw,size,type)							\
-int pcibios_##rw##_config_##size (unsigned char bus, unsigned char dev_fn,	\
-				  unsigned char where, unsigned type val)	\
-{										\
-	struct pci_dev *dev = pci_find_slot(bus, dev_fn);			\
-	if (!dev) return PCIBIOS_DEVICE_NOT_FOUND;				\
-	return pci_##rw##_config_##size(dev, where, val);			\
+#define PCI_OP(rw,size,type)                                                \
+int pcibios_##rw##_config_##size (unsigned char bus, unsigned char dev_fn,  \
+                                  unsigned char where, unsigned type val)   \
+{                                                                           \
+  struct pci_dev *dev = pci_find_slot(bus, dev_fn);                         \
+  if (!dev) return PCIBIOS_DEVICE_NOT_FOUND;                                \
+  return pci_##rw##_config_##size(dev, where, val);                         \
 }
 
 PCI_OP(read, byte, char *)
@@ -1218,7 +1166,6 @@ PCI_OP(write, word, short)
 PCI_OP(write, dword, int)
 
 /** @} */
-/*****************************************************************************/
 /** Initalize PCI module
  * \ingroup mod_pci
  *
@@ -1228,7 +1175,6 @@ PCI_OP(write, dword, int)
  *
  * \todo consider pcibus no as parameter
  */
-/*****************************************************************************/
 int l4dde_pci_init()
 {
   struct pci_dev *dev = NULL;
@@ -1246,35 +1192,36 @@ int l4dde_pci_init()
   for (;;)
     {
       if (dev && !(start=__pci_get_handle((struct pci_dev*)dev)))
-	{
+        {
 #if DEBUG_PCI
-	  PANIC("device %p not found", dev);
+          PANIC("device %p not found -- Maybe you have to setup PCI_DEVICES"
+                "properly (default is 12 devices maximum).", dev);
 #endif
-	  return -L4_EUNKNOWN;
-	}
+          return -L4_EUNKNOWN;
+        }
 
       err = l4io_pci_find_device(PCI_ANY_ID, PCI_ANY_ID, start, &new);
 
       if (err)
-	{
-	  if (err == -L4_ENOTFOUND) break;
+        {
+          if (err == -L4_ENOTFOUND) break;
 #if DEBUG_PCI
-	  ERROR("locate PCI device (%d)", err);
+          ERROR("locate PCI device (%d)", err);
 #endif
-	  return err;
-	}
+          return err;
+        }
 
       /* look for free slot */
       for (i=0; i < PCI_DEVICES; i++)
-	if (!pcidevs[i].l4)
-	  break;
+        if (!pcidevs[i].l4)
+          break;
       if (i == PCI_DEVICES)
-	{
+        {
 #if DEBUG_PCI
-	  PANIC("all PCI device slots occupied");
+          PANIC("all PCI device slots occupied");
 #endif
-	  return -L4_EUNKNOWN;
-	}
+          return -L4_EUNKNOWN;
+        }
 
       /* save information */
       __pci_io_to_linux(&new, &pcidevs[i].linus);

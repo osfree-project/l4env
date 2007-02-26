@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,8 +30,6 @@
 #define __DICE_FE_FETAGGEDUNIONTYPE_H__
 
 #include "fe/FEUnionType.h"
-#include "fe/FEIdentifier.h"
-#include "defines.h"
 
 /**	\class CFETaggedUnionType
  *	\ingroup frontend
@@ -45,8 +43,13 @@ DECLARE_DYNAMIC(CFETaggedUnionType);
 public:
 	/** constructs a tagged union type
 	 *	\param sTag the tag of the union
-	 *	\param pUnionTypeHeader the union type header for this union */
-	CFETaggedUnionType(String sTag, CFEUnionType *pUnionTypeHeader = 0);
+	 *	\param pUnionTypeHeader the union type header for this union
+	 */
+	CFETaggedUnionType(String sTag, CFEUnionType *pUnionTypeHeader);
+	/** constructs a tagged union type
+	 *  \param sTag the tag of the union
+	 */
+	CFETaggedUnionType(String sTag);
 	virtual ~CFETaggedUnionType();
 
 protected:
@@ -59,6 +62,7 @@ protected:
 public:
 	virtual String GetTag();
 	virtual CObject* Clone();
+	virtual bool CheckConsistency();
 
 // attribute
 protected:

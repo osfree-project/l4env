@@ -5,20 +5,20 @@ INTERFACE:
 
 class Kmem
 {
-
   friend class Jdb;
-  friend class Jdb_kern_info;
+  friend class Jdb_kern_info_misc;
 
 private:
-  
   static Address stupid_alloc( Address *border );
   static Address alloc_from_page( Address *from, Address size );
+  static void setup_gs0_page();
+  static void setup_kip_generic (Kernel_info *);
 
 public:
   static void init();
   static Kernel_info *info();
-  static const pd_entry_t *dir();
-  static pd_entry_t pde_global();
+  static const Pd_entry *dir();
+  static Pd_entry pde_global();
   static Address himem();
   static Address volatile *kernel_esp();
 
@@ -26,12 +26,11 @@ public:
   static void *linear_virt_to_phys( const void *addr );
   static void *phys_to_virt( Address addr );
 
-  static bool tcbs_fault_addr( Address addr);
-  static bool iobm_fault_addr( Address addr);
-  static bool smas_fault_addr( Address addr);
-  static bool ipcw_fault_addr( Address addr, Mword error );
-  static bool user_fault_addr( Address addr, Mword error );
-  static bool pagein_tcb_request( Address eip );
+  static Mword is_kmem_page_fault( Mword pfa, Mword error );
+  static Mword is_tcb_page_fault( Mword pfa, Mword error );
+  static Mword is_ipc_page_fault( Mword pfa, Mword error );
+  static Mword is_smas_page_fault( Mword pfa, Mword error );
+  static Mword is_io_bitmap_page_fault( Mword pfa, Mword error );
 };
 
 typedef Kmem Kmem_space;
@@ -39,11 +38,12 @@ typedef Kmem Kmem_space;
 IMPLEMENTATION[ia32-ux]:
 
 IMPLEMENT inline                                              
-bool
-Kmem::tcbs_fault_addr (Address addr)
+Mword Kmem::is_tcb_page_fault( Address addr, Mword /*error*/ )
 {
-  return (addr >= Kmem::mem_tcbs && addr < Kmem::mem_tcbs +
-                                           (Config::thread_block_size << 18));
+  return (   addr >= Kmem::mem_tcbs
+	  && addr <  Kmem::mem_tcbs
+		     + (Config::thread_block_size 
+			* Kmem::info()->max_threads()) );
 }
 
 /**
@@ -65,7 +65,7 @@ Kmem::info()
  * @return kernel's global page directory
  */
 IMPLEMENT inline
-const pd_entry_t *
+const Pd_entry *
 Kmem::dir()
 {
   return kdir;
@@ -79,7 +79,7 @@ Kmem::dir()
  * @return global page-table--entry flags
  */    
 IMPLEMENT inline
-pd_entry_t
+Pd_entry
 Kmem::pde_global()
 {
   return cpu_global;
@@ -106,35 +106,35 @@ Kmem::kernel_esp()
  * Compute physical address from a kernel-virtual address.
  * @param addr a virtual address
  * @return corresponding physical address if a mappings exists.
- *         0xffffffff otherwise.
+ *         -1 otherwise.
  */
 IMPLEMENT
 Address
-Kmem::virt_to_phys(const void *addr)
+Kmem::virt_to_phys (const void *addr)
 {
   Address a = reinterpret_cast<Address>(addr);
 
   if ((a & 0xf0000000) == mem_phys)
     return a - mem_phys;
 
-  pd_entry_t p = kdir[(a >> PDESHIFT) & PDEMASK];
+  Pd_entry p = kdir[(a >> PDESHIFT) & PDEMASK];
 
   if (!(p & INTEL_PDE_VALID))
-    return 0xffffffff;
+    return (Address) -1;
 
   if (p & INTEL_PDE_SUPERPAGE)
     return (p & Config::SUPERPAGE_MASK) | (a & ~Config::SUPERPAGE_MASK);
 
-  pt_entry_t t = reinterpret_cast<pt_entry_t *>
+  Pt_entry t = reinterpret_cast<Pt_entry *>
     ((p & Config::PAGE_MASK) + mem_phys)[(a >> PTESHIFT) & PTEMASK];
  
   return (t & INTEL_PTE_VALID) ?
-         (t & Config::PAGE_MASK) | (a & ~Config::PAGE_MASK) : 0xffffffff;
+         (t & Config::PAGE_MASK) | (a & ~Config::PAGE_MASK) : (Address) -1;
 }
 
 IMPLEMENT inline
 void * 
-Kmem::linear_virt_to_phys(const void *addr)
+Kmem::linear_virt_to_phys (const void *addr)
 {
   Address a = reinterpret_cast<Address>(addr);
 
@@ -168,4 +168,21 @@ Kmem::alloc_from_page(Address *from, Address size)
   *from += (size + 0xf) & ~0xf;
 
   return ret;
+}
+
+/**
+ * ABI and ia32/ux generic KIP initialization code
+ */
+IMPLEMENT FIASCO_INIT
+void
+Kmem::setup_kip_generic (Kernel_info* kinfo)
+{
+  kinfo->magic		= L4_KERNEL_INFO_MAGIC;
+  kinfo->version	= Config::kernel_version_id;
+  kinfo->frequency_cpu  = Cpu::frequency() / 1000;
+
+  kinfo->offset_version_strings = 0x10;
+  strcpy(reinterpret_cast<char*>(kinfo) 
+	 + (kinfo->offset_version_strings << 4), 
+	 Config::kernel_version_string);
 }

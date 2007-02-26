@@ -1,50 +1,50 @@
 IMPLEMENTATION[arm]:
 
+#include "config.h"
 #include "kip.h"
 #include "irq_alloc.h"
+#include "pic.h"
+#include "sa_1100.h"
+
+static unsigned const timer_diff = (36864 * Config::microsec_per_tick)/10000; // 36864MHz*1ms
+
+#include <cstdio>
 
 IMPLEMENT
 void Timer::init()
 {
+  Sa1100::hw_reg(1,          Sa1100::OIER); // enable OSMR0
+  Sa1100::hw_reg(0,          Sa1100::OWER); // disable Watchdog
+  Sa1100::hw_reg(timer_diff, Sa1100::OSMR0);
+  Sa1100::hw_reg(0,          Sa1100::OSCR); // set timer counter to zero
+  Sa1100::hw_reg(~0U,        Sa1100::OSSR); // clear all status bits
 
-#warning MUST allocate IRQ
-  //Irq_alloc::lookup(8)->alloc( (Receiver*)-1, false );
-
-  // set up timer interrupt (~ 1ms)
-  
-  init_done = true;
-
+  Irq_alloc::lookup(26)->alloc( (Receiver*)-1, false );
 }
 
-IMPLEMENT inline //NEEDS["rtc.h","pic.h"]
+IMPLEMENT inline NEEDS["sa_1100.h","pic.h"]
 void Timer::acknowledge()
 {
-#warning MUST ack timer IRQ
-  // periodic scheduling is triggered by irq 8 connected with RTC
-  //  Pic::disable_locked(8);  
-  //  Rtc::ack_reset();
-  //  Pic::enable_locked(8);
+  Sa1100::hw_reg(0, Sa1100::OSCR);
+  Sa1100::hw_reg(1, Sa1100::OSSR); // clear all status bits
+  Pic::enable_locked(26);  
 }
 
-IMPLEMENT inline //NEEDS["pic.h"]
+IMPLEMENT //inline NEEDS["pic.h"]
 void Timer::enable()
 {
-#warning MUST enable timer IRQ
-  //  Pic::enable(8);
-  //  Pic::enable(2); // cascade
+  Pic::enable(26);
 }
 
-IMPLEMENT inline //NEEDS["pic.h"]
+IMPLEMENT //inline NEEDS["pic.h"]
 void Timer::disable()
 {
-#warning MUST disable timer IRQ
-  //  Pic::disable(8);
+  Pic::disable(26);
 }
 
-PUBLIC static inline NEEDS ["kip.h"]
+IMPLEMENT inline NEEDS ["config.h", "kip.h"]
 void
-timer::update_system_clock()
+Timer::update_system_clock()
 {
   Kernel_info::kip()->clock += Config::microsec_per_tick;
-  do_timeouts();
 }

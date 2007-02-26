@@ -11,7 +11,7 @@
 .PP
 \fBstatic inline l4_taskid_t\fP 
 .br
-\fBl4_task_new(l4_taskid_t\fP \fIdest\fP \fB, dword_t\fP \fImcp_or_new_chief\fP \fB, dword_t\fP \fIesp\fP \fB, dword_t\fP
+\fBl4_task_new(l4_taskid_t\fP \fIdest\fP \fB, l4_umword_t\fP \fImcp_or_new_chief\fP \fB, l4_umword_t\fP \fIesp\fP \fB, l4_umword_t\fP
 \fIeip\fP \fB, l4_threadid_t\fP \fIpager\fP \fB);\fP
 
 .SH " Description"

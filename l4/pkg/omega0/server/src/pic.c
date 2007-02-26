@@ -25,13 +25,13 @@ void irq_mask(int irq){
   if(wq_lock_lock(&pic_wq, &wqe)) LOGl("error locking pic-waitqueue");
 #endif
 
-  __l4_cli();
+  l4util_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) | (1<<irq));  
+    l4util_out8(l4util_in8(0x21) | (1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) | (1<<(irq-8)));  
+    l4util_out8(l4util_in8(0xa1) | (1<<(irq-8)), 0xa1);  
   }
-  __l4_sti();
+  l4util_sti();
   
 #ifdef OMEGA0_USE_PIC_LOCKING
   if(wq_lock_unlock(&pic_wq, &wqe)) LOGl("error unlocking pic-waitqueue");
@@ -51,13 +51,13 @@ void irq_unmask(int irq){
   wq_lock_lock(&pic_wq, &wqe);
 #endif
   
-  __l4_cli();
+  l4util_cli();
   if(irq<8){
-    __l4_outb(0x21, __l4_inb(0x21) & ~(1<<irq));  
+    l4util_out8(l4util_in8(0x21) & ~(1<<irq), 0x21);  
   } else {
-    __l4_outb(0xa1, __l4_inb(0xa1) & ~(1<<(irq-8)));
+    l4util_out8(l4util_in8(0xa1) & ~(1<<(irq-8)), 0xa1);
   }
-  __l4_sti();
+  l4util_sti();
   
 #ifdef OMEGA0_USE_PIC_LOCKING
   wq_lock_unlock(&pic_wq, &wqe);
@@ -77,25 +77,25 @@ void irq_ack(int irq){
   wq_lock_lock(&pic_wq, &wqe);
 #endif
   
-  __l4_cli();
+  l4util_cli();
   #ifdef OMEGA0_STRATEGY_SPECIFIC_EOI
     if (irq > 7){
-      __l4_outb(0xA0,0x60|(irq&7));
-      __l4_outb(0xA0,0x0B);
-      if (__l4_inb(0xA0) == 0)  __l4_outb(0x20, 0x62);
+      l4util_out8(0x60|(irq&7),0xA0);
+      l4util_out8(0x0B,0xA0);
+      if (l4util_in8(0xA0) == 0)  l4util_out8(0x62, 0x20);
     }else{
-      __l4_outb(0x20,0x60|irq);
+      l4util_out8(0x60|irq,0x20);
     }
   #else
     if (irq > 7){
-      __l4_outb(0xA0,0x20);
-      __l4_outb(0xA0,0x0B);
-      if (__l4_inb(0xA0) == 0)  __l4_outb(0x20, 0x20);
+      l4util_out8(0x20, 0xA0);
+      l4util_out8(0x0B, 0xA0);
+      if (l4util_in8(0xA0) == 0)  l4util_out8(0x20, 0x20);
     }else{
-      __l4_outb(0x20,0x20);
+      l4util_out8(0x20,0x20);
     }
   #endif
-  __l4_sti();
+  l4util_sti();
   
 #ifdef OMEGA0_USE_PIC_LOCKING
   wq_lock_unlock(&pic_wq, &wqe);
@@ -115,15 +115,15 @@ int pic_isr(int master){
   wq_lock_lock(&pic_wq, &wqe);
 #endif
   
-  __l4_cli();
+  l4util_cli();
   if (master){
-    __l4_outb(0xA0,0xb);
-    dat = __l4_inb(0xa0);
+    l4util_out8(0xb,0xA0);
+    dat = l4util_in8(0xa0);
   }else{
-    __l4_outb(0x20,0xb);
-    dat = __l4_inb(0x20);
+    l4util_out8(0xb,0x20);
+    dat = l4util_in8(0x20);
   }
-  __l4_sti();
+  l4util_sti();
 
 #ifdef OMEGA0_USE_PIC_LOCKING
   wq_lock_unlock(&pic_wq, &wqe);
@@ -145,15 +145,15 @@ int pic_irr(int master){
   wq_lock_lock(&pic_wq, &wqe);
 #endif
   
-  __l4_cli();
+  l4util_cli();
   if (master){
-    __l4_outb(0xA0,0xa);
-    dat = __l4_inb(0xa0);
+    l4util_out8(0xa,0xA0);
+    dat = l4util_in8(0xa0);
   }else{
-    __l4_outb(0x20,0xa);
-    dat = __l4_inb(0x20);
+    l4util_out8(0xa,0x20);
+    dat = l4util_in8(0x20);
   }
-  __l4_sti();
+  l4util_sti();
 
 #ifdef OMEGA0_USE_PIC_LOCKING
   wq_lock_unlock(&pic_wq, &wqe);
@@ -174,13 +174,13 @@ int pic_imr(int master){
   wq_lock_lock(&pic_wq, &wqe);
 #endif
   
-  __l4_cli();
+  l4util_cli();
   if (master){
-    dat = __l4_inb(0xa1);
+    dat = l4util_in8(0xa1);
   }else{
-    dat = __l4_inb(0x21);
+    dat = l4util_in8(0x21);
   }
-  __l4_sti();
+  l4util_sti();
 
 #ifdef OMEGA0_USE_PIC_LOCKING
   wq_lock_unlock(&pic_wq, &wqe);

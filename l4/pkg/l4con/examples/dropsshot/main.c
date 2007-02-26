@@ -315,7 +315,7 @@ static void get_fb(void)
 {
   l4_addr_t fpage_addr, fpage_size;
   l4dm_dataspace_t ds;
-  sm_exc_t _ev;
+  CORBA_Environment env = dice_default_environment;
   int i, pages, error;
   struct stat st;
 
@@ -335,8 +335,8 @@ static void get_fb(void)
 
   PRINT("Screenshot'ing, please smile... ;-)\n");
   /* get screenshot */
-  if (con_if_screenshot(con_l4id, get_vc, (con_dataspace_t *)&ds, 
-			&xres, &yres, &bpp, &_ev)) {
+  if (con_if_screenshot_call(&con_l4id, get_vc, &ds, 
+			&xres, &yres, &bpp, &env)) {
     fprintf(stderr, "Could not get screenshot\n");
     exit(1);
   }

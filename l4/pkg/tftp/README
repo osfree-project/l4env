@@ -1,0 +1,9 @@
+Simple file provider using the TFTP protocol.
+
+This package implements the file provider interface as defined by the
+generic_fprov package (see documentation of that package for details).
+The network stuff was taken from GRUB. Currently we support DEC Tulip,
+VMware pcnet32, 3COM 3c595, 3COM 3x90x, 3COM 3x509, NE2000, Realtek 8139m,
+Intel EEPro 100 and the OshKosh network package. Implementing additional
+drivers should be very easy.
+

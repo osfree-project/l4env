@@ -1,0 +1,5 @@
+L4Env Region Mapper
+
+This package contains the L4Env Region Mapper l4rm. It provides
+virtual-memory management functions for L4Env tasks. For further
+documentation see the Region Mapper Reference Manual in l4rm/doc.

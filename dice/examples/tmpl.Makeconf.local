@@ -1,0 +1,30 @@
+
+FIASCOUXDIRV2	= $(L4DIR)/kernel/fiasco/build-ux-v2
+FIASCOUXDIRX0	= $(L4DIR)/kernel/fiasco/build-ux-x0
+#FIASCOUX	= ./fiasco -0 -c -p -l log -l names -l dm_phys
+FIASCOUX	= ./fiasco -l log -l names -l dm_phys
+
+test:: $(TARGET)
+	for i in $(SINGLES); do \
+		cd $(FIASCOUXDIRV2) ; \
+		$(FIASCOUX) \
+		-l $(L4DIR)/tool/dice/examples/$$i/server/src/OBJ-x86_586-l4v2/$$i-test; \
+		done; \
+	for i in $(COUPLES); do \
+		cd $(FIASCOUXDIRV2) ; \
+		$(FIASCOUX) \
+		-l $(L4DIR)/tool/dice/examples/$$i/server/src/OBJ-x86_586-l4v2/$$i-server \
+		-l $(L4DIR)/tool/dice/examples/$$i/client/src/OBJ-x86_586-l4v2/$$i-client; \
+		done; \
+	for i in $(SINGLES); do \
+		cd $(FIASCOUXDIRX0) ; \
+		$(FIASCOUX) \
+		-l $(L4DIR)/tool/dice/examples/$$i/server/src/OBJ-x86_586-l4x0/$$i-test; \
+		done; \
+	for i in $(COUPLES); do \
+		cd $(FIASCOUXDIRX0) ; \
+		$(FIASCOUX) \
+		-l $(L4DIR)/tool/dice/examples/$$i/server/src/OBJ-x86_586-l4x0/$$i-server \
+		-l $(L4DIR)/tool/dice/examples/$$i/client/src/OBJ-x86_586-l4x0/$$i-client; \
+		done; \
+	killall -9 fiasco

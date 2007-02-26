@@ -1,5 +1,17 @@
-#ifndef __CON_HW_INIT_H__
-#define __CON_HW_INIT_H__
+/*!
+ * \file	init.h
+ * \brief	init stuff
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __INIT_H_
+#define __INIT_H_
 
 #include "vidix.h"
 
@@ -27,7 +39,7 @@ typedef struct
 int
 con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits, 
 	    unsigned int vid_mem_addr, unsigned int vid_mem_size, int l4io,
-	    con_accel_t *accel, unsigned int *map_vid_mem_addr);
+	    con_accel_t *accel, void **map_vid_mem_addr);
 
 extern unsigned int   hw_vid_mem_addr, hw_vid_mem_size;
 extern unsigned int   hw_map_vid_mem_addr;

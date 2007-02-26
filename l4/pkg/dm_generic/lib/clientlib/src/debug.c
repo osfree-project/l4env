@@ -6,23 +6,13 @@
  *
  * \date   01/31/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -55,14 +45,14 @@ l4dm_ds_set_name(l4dm_dataspace_t * ds,
 		 const char * name)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_set_name(ds->manager,ds->id,name,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_set_name_call(&(ds->manager),ds->id,name,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: set dataspace name failed (ret %d, exc %d)",
-	    ret,_exc._type);
+	    ret,_env.major);
       if (ret)
 	return ret;
       else
@@ -89,24 +79,20 @@ int
 l4dm_ds_get_name(l4dm_dataspace_t * ds, 
 		 char * name)
 {
-  char * n;
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_get_name(ds->manager,ds->id,&n,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_get_name_call(&(ds->manager),ds->id,&name,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: get dataspace name failed (ret %d, exc %d)",
-	    ret,_exc._type);
+	    ret,_env.major);
       if (ret)
 	return ret;
       else
 	return -L4_EIPC;
     }
- 
-  /* copy name */
-  strcpy(name,n);
 
   /* done */
   return 0;
@@ -123,13 +109,13 @@ void
 l4dm_ds_show(l4dm_dataspace_t * ds)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_show_ds(ds->manager,ds->id,&_exc);
-  if ((ret < 0) || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_show_ds_call(&(ds->manager),ds->id,&_env);
+  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
     ERROR("libdm_generic: show dataspace failed (ret %d, exc %d)",
-	  ret,_exc._type);
+	  ret,_env.amjor);
 }
 
 /*****************************************************************************/
@@ -156,7 +142,7 @@ l4dm_ds_dump(l4_threadid_t dsm_id,
 	     l4dm_dataspace_t * ds)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (l4_thread_equal(dsm_id,L4DM_DEFAULT_DSM))
     {
@@ -170,12 +156,12 @@ l4dm_ds_dump(l4_threadid_t dsm_id,
     }
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_dump(dsm_id,(if_l4dm_threadid_t *)&owner,flags,
-			     (if_l4dm_dataspace_t *)ds,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_dump_call(&dsm_id,&owner,flags,
+                                  ds,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: dump dataspaces failed (ret %d, exc %d)",
-	    ret,_exc._type);
+	    ret,_env.major);
       if (ret)
 	return ret;
       else
@@ -205,7 +191,7 @@ l4dm_ds_list(l4_threadid_t dsm_id,
 	     l4_threadid_t owner, 
 	     l4_uint32_t flags)
 {
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
  
   if (l4_thread_equal(dsm_id,L4DM_DEFAULT_DSM))
     {
@@ -219,10 +205,10 @@ l4dm_ds_list(l4_threadid_t dsm_id,
     }
 
   /* call dataspace manager */
-  if_l4dm_generic_list(dsm_id,(if_l4dm_threadid_t *)&owner,flags,&_exc);
-  if (_exc._type != exc_l4_no_exception)
+  if_l4dm_generic_list_call(&dsm_id,&owner,flags,&_env);
+  if (_env.major != CORBA_NO_EXCEPTION)
     {
-      ERROR("libdm_generic: list dataspaces failed (exc %d)",_exc._type);
+      ERROR("libdm_generic: list dataspaces failed (exc %d)",_env.major);
       return -L4_EIPC;
     }
 

@@ -1,0 +1,25 @@
+#include <stdio.h>
+#include <l4/names/libnames.h>
+#include "hiworld-server.h"
+
+char LOG_tag[9]="hiserver";
+static int count;
+
+CORBA_void hi_print_component(CORBA_Object *_dice_corba_obj,
+                              CORBA_Environment *_dice_corba_env){
+    printf("Hi world\n");
+    count++;
+}
+
+CORBA_int hi_count_component(CORBA_Object *_dice_corba_obj,
+                             CORBA_Environment *_dice_corba_env){
+    return count;
+}
+
+int main(void){
+    if(names_register("hiworld")==0){
+      printf("Error registering at nameserver\n");
+      return 1;
+    }
+    hi_server_loop(0);
+}

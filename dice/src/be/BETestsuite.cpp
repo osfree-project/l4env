@@ -5,7 +5,7 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -124,14 +124,14 @@ bool CBETestsuite::CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * p
     // do not use include text file names, since these files are in same directory
     pContext->SetFileType(FILETYPE_CLIENTHEADER);
     String sHeader = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
-    pImplementation->AddIncludedFileName(sHeader, true);
+    pImplementation->AddIncludedFileName(sHeader, true, false);
     pContext->SetFileType(FILETYPE_COMPONENTHEADER);
     sHeader = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
-    pImplementation->AddIncludedFileName(sHeader, true);
+    pImplementation->AddIncludedFileName(sHeader, true, false);
 
     // add functions
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     if (!pRoot->AddToFile(pImplementation, pContext))
     {
         RemoveFile(pImplementation);

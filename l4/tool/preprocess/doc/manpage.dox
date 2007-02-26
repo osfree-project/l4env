@@ -1,9 +1,29 @@
 /*! <!-- -*- html-helper -*- -->
 
-\page preprocess A preprocessor for C++ modules
+\page preprocess Preprocess - A preprocessor for C and C++ modules
 
-\if man
-\else
+\ifnot man
+
+Do you hate writing C or C++ header files?
+
+Do you always forget where to place those <code>inline</code>,
+<code>virtual</code>, <code>static</code>, and <code>explicit</code>
+modifiers -- to the member-function definition or declaration?
+
+Do you often find yourself avoiding to factor out a new method because
+you also need to add a method declaration to the class declaration in
+the header file?
+
+Do you hate putting inline function into header files, in a special
+order?
+
+If so, Preprocess may be your answer.  With this tool, you write
+<b>unit-style single-source-file modules</b> in C++, from which it
+automatically generates header and implementation files.
+
+<p>
+<hr>
+
 <h3>Table of contents:</h3>
 
 <ul>
@@ -15,9 +35,13 @@
   <li>\ref MAKEFILE
   <li>\ref BUGS
   <li>\ref DOWNLOAD
+  <li>\ref LIST
   <li>\ref AUTHOR
   <li>\ref SEE
 </ul>
+
+<p>
+
 \endif
 
 \section SYNOPSIS Synopsis
@@ -514,6 +538,19 @@ from the DROPS project's remote-CVS server.  Please refer to the <a
 href="http://os.inf.tu-dresden.de/drops/download.html">download
 instructions</a> on DROPS' website.
 
+\section LIST Mailing list
+
+There is a mailing list to which CVS-commit messages for changes made
+to preprocess are posted.  Please ask me if you would like to be put
+on this list (see Section \ref AUTHOR \if man AUTHOR \endif).
+
+New releases are periodically announced on <a
+href=http://freshmeat.net/projects/preprocess/"">the Freshmeat
+website</a>.  If you are a registered Freshmeat user, you can <a
+href="http://freshmeat.net/subscribe/36508/">subscribe to these
+release announcements</a>\if man at
+http://freshmeat.net/subscribe/36508/\endif.
+
 \section AUTHOR Author
 
 Michael Hohmuth <hohmuth@inf.tu-dresden.de>
@@ -524,9 +561,10 @@ Michael Hohmuth <hohmuth@inf.tu-dresden.de>
 : http://os.inf.tu-dresden.de/~hohmuth/prj/preprocess/move-if-change
 \endif
 
+\if man
 <a
 href="http://os.inf.tu-dresden.de/~hohmuth/prj/preprocess/">Preprocess
-project web page</a>\if man
+project web page</a>
 : http://os.inf.tu-dresden.de/~hohmuth/prj/preprocess/
 \endif
 

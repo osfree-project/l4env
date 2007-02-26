@@ -3,12 +3,11 @@ INTERFACE:
 EXTENSION class Thread
 {
 private:
-
   /**
    * Compute remote pagefault address from the local pagefault address
    * in the local Long-IPC window.
    * @param pfa Local pagefault address in IPC window
-   * @returns Remote pagefault address in partner's address space
+   * @return Remote pagefault address in partner's address space
    */
   Address remote_fault_addr (Address pfa);
 
@@ -17,10 +16,10 @@ private:
    * partner's address space.
    * @param pfa Local pagefault address in IPC window
    * @param remote_pfa Remote pagefault address in partner's address space
-   * @returns true if the partner had the page mapped and we could copy
-   *          false if the partner needs to map the page himself first
+   * @return true if the partner had the page mapped and we could copy
+   *         false if the partner needs to map the page himself first
    */
-  Mword update_ipc_window (Address pfa, Address remote_pfa);
+  Mword update_ipc_window (Address pfa, Mword error_code, Address remote_pfa);
 };
 
 IMPLEMENTATION [msg]:
@@ -56,23 +55,23 @@ IMPLEMENTATION [msg]:
 #include "config.h"
 #include "cpu_lock.h"
 #include "map_util.h"
-
-// OSKIT crap
-#include "undef_oskit.h"
+#include "space_context.h"
+#include "std_macros.h"
 
 
 /** Handle a page fault that occurred in one of the ``IPC-window'' 
     virtual-address-space regions.
     @param pfa virtual address of page fault
+    @param error_code page fault error code
     @return IPC error code if an error occurred during page-fault handling,
             0 if page fault was handled successfully
     @pre current_thread() == this
  */
 PRIVATE
 L4_msgdope
-Thread::handle_ipc_page_fault (Address pfa)
+Thread::handle_ipc_page_fault (Address pfa, Mword error_code)
 {
-  vm_offset_t remote_pfa = remote_fault_addr (pfa);
+  Address remote_pfa = remote_fault_addr (pfa);
   L4_msgdope err;
 
   for (;;)
@@ -86,15 +85,19 @@ Thread::handle_ipc_page_fault (Address pfa)
 
       // If the receiver has mapped the page in his address space already,
       // we can just copy the mapping into our IPC window.
-      if (update_ipc_window (pfa, remote_pfa))
-        return 0;		// Success
+      if (update_ipc_window (pfa, remote_pfa, error_code))
+	{
+	  cpu_lock.clear();
+	  return 0;		// Success
+	}
 
       cpu_lock.clear();
       
       // The receiver didn't have it mapped, so it needs to page in data
       state_add(Thread_polling_long);
 
-      if ((err = ipc_pagein_request(receiver(), remote_pfa)).has_error())
+      if ((err = ipc_pagein_request(receiver(), remote_pfa,
+                                    error_code)).has_error())
 	return err;
 
       // XXX ipc_pagein_request could already put us to sleep...  This
@@ -117,8 +120,8 @@ Thread::handle_ipc_page_fault (Address pfa)
 	}
 
       // Find receiver's error code
-      if (_pagein_error_code)
-	return _pagein_error_code;
+      if (_pagein_status_code)
+	return _pagein_status_code;
     }
 }
 
@@ -135,13 +138,15 @@ Thread::handle_ipc_page_fault (Address pfa)
 PRIVATE
 L4_msgdope Thread::ipc_send_fpage(Thread* receiver,
 				  L4_fpage from_fpage, L4_fpage to_fpage, 
-				  vm_offset_t offset, bool finish)
+				  Address offset, bool finish)
 {
   Lock_guard <Thread_lock> guard (receiver->thread_lock());
 
-  if (((receiver->state() & (Thread_rcvlong_in_progress|Thread_ipc_in_progress)) 
-       != (Thread_rcvlong_in_progress|Thread_ipc_in_progress))
-      || receiver->partner() != this)
+  if (EXPECT_FALSE (((receiver->state() & (Thread_rcvlong_in_progress|
+					   Thread_ipc_in_progress))
+				       != (Thread_rcvlong_in_progress|
+					   Thread_ipc_in_progress))
+	|| receiver->partner() != this) )
     return L4_msgdope(L4_msgdope::SEABORTED);
 
   L4_msgdope ret = fpage_map(space(), from_fpage,
@@ -153,9 +158,8 @@ L4_msgdope Thread::ipc_send_fpage(Thread* receiver,
       // if we must finish the IPC operation, set the receiver's return code
       // and return the sender's return code (instead of the receiver's)
       receiver->receive_regs()->msg_dope( ret );
-      ret = ret.has_error() 
-	? L4_msgdope(ret.error() | L4_msgdope::SEND_ERROR)
-	: L4_msgdope(0);
+      ret = ret.has_error() ? L4_msgdope(ret.error() | L4_msgdope::SEND_ERROR)
+			    : L4_msgdope(0);
 
       state_del(Thread_send_in_progress);
       
@@ -179,9 +183,11 @@ L4_msgdope Thread::ipc_finish(Thread* receiver, L4_msgdope new_state)
 {
   Lock_guard <Thread_lock> guard (receiver->thread_lock());
 
-  if (((receiver->state() & (Thread_rcvlong_in_progress|Thread_ipc_in_progress)) 
-       != (Thread_rcvlong_in_progress|Thread_ipc_in_progress))
-      || receiver->partner() != this)
+  if (EXPECT_FALSE (((receiver->state() & (Thread_rcvlong_in_progress|
+					   Thread_ipc_in_progress)) 
+				       != (Thread_rcvlong_in_progress|
+					   Thread_ipc_in_progress))
+	|| receiver->partner() != this) )
     return L4_msgdope(L4_msgdope::SEABORTED);
 
   receiver->receive_regs()->msg_dope( new_state );
@@ -192,17 +198,16 @@ L4_msgdope Thread::ipc_finish(Thread* receiver, L4_msgdope new_state)
   receiver->thread_lock()->set_switch_hint(SWITCH_ACTIVATE_RECEIVER);
 
   return (new_state.has_error())
-    ? L4_msgdope(new_state.error() | L4_msgdope::SEND_ERROR)
-    : L4_msgdope(0);
+		? L4_msgdope(new_state.error() | L4_msgdope::SEND_ERROR)
+		: L4_msgdope(0);
 }
 
 /** Wake up sender.
     A receiver wants to wake up a sender after a page-in request.
-    @param ipc_code IPC error code that should be signaled to sender.  
-                    This error code flags error conditions that occurred
+    @param ipc_code IPC status code that should be signalled to sender.
+                    This status code flags error conditions that occurred
 		    during a page-in in the receiver.
-    @return 0 if successful.  Receiver's error code if sender was not
-            in IPC anymore.
+    @return 0 if successful, REABORTED if sender was not in IPC anymore.
  */
 PUBLIC
 L4_msgdope Thread::ipc_continue(L4_msgdope ipc_code)
@@ -217,7 +222,7 @@ L4_msgdope Thread::ipc_continue(L4_msgdope ipc_code)
     return L4_msgdope(L4_msgdope::REABORTED);
 
   // Tell it the error code
-  _pagein_error_code = ipc_code.raw();
+  _pagein_status_code = ipc_code.raw();
 
   // Resume sender.
   state_change(~Thread_polling_long, Thread_running);
@@ -232,18 +237,20 @@ L4_msgdope Thread::ipc_continue(L4_msgdope ipc_code)
     to copy data into the receiver's address space.
     @param receiver the receiver of our message
     @param address page fault's virtual address in receiver's address space
+    @param error_code page fault's error code
     @return 0 if request could be sent.  IPC error code if receiver
             was in incorrect state.
  */
 PRIVATE
-L4_msgdope Thread::ipc_pagein_request(Receiver* receiver, vm_offset_t address)
+L4_msgdope Thread::ipc_pagein_request(Receiver* receiver,
+                                      Address address, Mword error_code)
 {
   Lock_guard<Thread_lock> guard (receiver->thread_lock());
 
   if (! receiver->in_long_ipc(this))
     return L4_msgdope(L4_msgdope::SEABORTED);
 
-  receiver->set_pagein_request (address, this);
+  receiver->set_pagein_request (address, error_code, this);
   receiver->thread_lock()->set_switch_hint(SWITCH_ACTIVATE_RECEIVER);
 
   return L4_msgdope(0);

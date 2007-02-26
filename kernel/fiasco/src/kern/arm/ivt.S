@@ -1,5 +1,7 @@
 /* -*- asm -*- */
 
+#include "config_tcbsize.h"
+
 #define S_FRAME_SIZE	36
 
 #define S_PSR           28
@@ -17,8 +19,7 @@
 	ldr	lr, s_spsr
 	msr	spsr, lr
 	ldr	lr, s_lr
-.endm	
-
+.endm
 
 /*	
  * Stack layout:
@@ -79,8 +80,7 @@
 	nop			
         mrs	lr, spsr        
         str     lr, [sp, #-12]!	
-	stmib	sp, {sp}^	
-	nop
+	stmib	sp, {sp}^
 .endm
 
 
@@ -151,22 +151,35 @@ swi_entry:
 inst_abort_entry:
 
 	switch_to_kernel
-	cmn	lr, #(7*4)		@ Range Check !!! UNSIGNED !!!
+	cmn	lr, #0x28		@ Range Check !!! UNSIGNED !!!
 	bls	prefetch_abort		@ no syscall
-	b	syscall
+	cmn	lr, #0x08
+	bhi	prefetch_abort
+	syscallframe			
+	stmdb   sp, {r0 - r12}^
+        nop
+        sub     sp, sp, #13*4
+	ldr	r0, s_lr
+	adr	r1, sys_call_table
+	sub	r0, r1, r0
+	adr	lr, 2f
+        msr	cpsr_c, #0x13 // enable IRQs
+1:	ldr	pc, [r0]
+2:      nop
+        ldmia   sp, {r0 - r12}^
+        nop
+        msr	cpsr_c, #0xd3 // disable IRQs
+        add     sp, sp, #13*4
 
-#if 0
-	nop
-	b	prefetch_abort		@ NULL pointer access ?
-	b	ipc_entry		@ abort_lr = 0x08
-	b	id_nearest_entry	@ abort_lr = 0x0C
-	b	fpage_unmap_entry	@ abort_lr = 0x10
-	b	thread_switch_entry	@ abort_lr = 0x14
-	b	thread_schedule_entry	@ abort_lr = 0x18
-	b	lthread_ex_regs_entry	@ abort_lr = 0x1C
-	b	create_thread_entry	@ abort_lr = 0x20
-	b	user_kdebug_entry	@ abort_lr = 0x24
-#endif
+	/* Return */			
+	ldr	lr, [sp]		
+	msr	spsr, lr		
+	ldmib	sp, {sp,lr}^		
+	nop				
+	add	sp, sp, #20		
+	ldr	lr, [sp, #-4]		
+	movs	pc, lr	
+	
 prefetch_abort:
 	exceptionframe 4
 
@@ -177,20 +190,14 @@ prefetch_abort:
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
 	bne	kernel_prefetch_abort	@ Kernel abort?
 	/* user prefetch abort */
-	mrc     p15, 0, r0, c5, c0, 0	@ Load FSR into r0
-	ldr	r1, [sp, #68]
-	mov	r2, r1
+	mrc     p15, 0, r1, c5, c0, 0	@ Load FSR into r1
+	bic	r1, r1, #0x00ff0000
+	orr	r1, r1, #0x00100000
+	ldr	r0, [sp, #68]
+	mov	r2, r0
 
 	adr	lr, exception_return
-#if 0 /*EXCEPTION_VECTOR_RELOCATED*/
-	b	user_pagefault
-#else
-	ldr	pc, 1f			@ Jump to C code
-#endif
-
-#if 1 /*ndef EXCEPTION_VECTOR_RELOCATED*/
-1:	.word	user_pagefault
-#endif
+	ldr	pc,  .LCpagefault_entry	@ Jump to C code
 
 kernel_prefetch_abort:			@ Kernel generated IAbort
 					@ Should not get IAborts in kernel
@@ -238,31 +245,26 @@ data_abort_entry:
 	switch_to_kernel
 
 	exceptionframe 8
-	stmdb   sp, {r0 - r12}^ 	@ Stack rest of user state
+	stmdb   sp, {r0 - r12}^         @ Stack rest of user state
 	nop
 	sub	sp, sp, #(13*4)
 
-	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
-					@ NE -> kernel
 	/* user data abort */
 	mrc     p15, 0, r1, c5, c0, 0	@ Load FSR into r1
+	bic	r1, r1, #0x00ff0000
 	mrc     p15, 0, r0, c6, c0, 0	@ Load FAR into r0
 	ldr	r2, [sp, #68]
-
+	ldr	r3, [r2]		@ Load faulting insn
+	tst	r3, #(1<<20)
+	orrne	r1, r1, #0x00100000	@ Set read fault bit
+	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
+					@ NE -> kernel
+	orreq	r1, r1, #0x00080000
 	adr	lr, exception_return	@ set return address
-#if 0 /*def EXCEPTION_VECTOR_RELOCATED*/
-	bne	kernel_pagefault
-	b	user_pagefault
-#else
-	ldrne	pc, 1f			@ kernel pagefault
-	ldr	pc, 2f			@ user pagefault
-#endif
-	b	kern_kdebug_entry
 
-#if 1	
-1:	.word	kernel_pagefault
-2:	.word	user_pagefault
-#endif
+	ldr	pc, .LCpagefault_entry	@ page fault	
+
+.LCpagefault_entry:	.word	pagefault_entry
 
 
 /*
@@ -306,7 +308,7 @@ exception_return:
 	add	sp, sp, #8		@ Read return address
 	ldr	lr, [sp, #-4]		@ Read return address
 	moveqs	pc, lr			@ return and switch mode
-
+        ldrne   lr, [sp, #-8]           @ load old kernel lr
 	ldmdb	sp, {pc}^		@ switches mode - doesnt do anything
 	nop
 
@@ -315,17 +317,18 @@ exception_return:
  * Exception irq ()
  *
  *    Exception is an interrupt.  Generate interrupt IPC.
- *
+
+         *
  */
 irq_entry:	
 	switch_to_kernel
 	exceptionframe 4
 
-	stmdb   sp, {r0 - r12}^ 	@ Stack rest of user state
+	stmdb   sp, {r0 - r12}^   	@ Stack rest of user state
 	nop
 	sub	sp, sp, #(13*4)
-
-	mov	r0, lr
+        mov     r0, sp
+//	ldr	r0, [sp, #68]
 #if 0 /*def EXCEPTION_VECTOR_RELOCATED*/
         bl      irq_handler
 #else
@@ -350,50 +353,41 @@ fiq_entry:
 	mov	r0,#0xFD
 	b	kern_kdebug_entry
 
+#if 0
+#define SYSCALL(name)			  \
+sys_##name##_entry:			  \
+	syscallframe			; \
+	stmdb   sp!, {r0 - r12}^	; \
+	bl	sys_##name##_wrapper	; \
+	ldmia   sp!, {r0 - r12}^	; \
+	/* Return */			; \
+	ldr	lr, [sp]		; \
+	msr	spsr, lr		; \
+	ldmib	sp, {sp,lr}^		; \
+	nop				; \
+	add	sp, sp, #20		; \
+	ldr	lr, [sp, #-4]		; \
+	movs	pc, lr			;
 
+#else
+
+#define SYSCALL(name)			\
+	.word sys_##name##_wrapper
+#endif
 	
-/*
-**
-** Syscall entry points
-**
-*/
+sys_call_table:
+	.word sys_kdb_ke
+	.word sys_kdb_ke
+SYSCALL(ipc)
+/*	.word ipc_short_cut_wrapper*/
+SYSCALL(id_nearest)
+SYSCALL(fpage_unmap)
+SYSCALL(thread_switch)
+SYSCALL(thread_schedule)
+SYSCALL(thread_ex_regs)
+SYSCALL(task_new)
+	.word sys_kdb_ke
 	
-		
-/*
- * Syscall ipc ()
- *
- *    Pre:	r0 = destination thread id
- *		r1 = Snd descriptor,
- *		r2 = Rcv descriptor,
- *		r3 = timeout
- *		r4 - r12 = 9 msg words to send
- *    Post:	r0 = Msg dope + cc,
- *		r1 = Source thread ID,
- *		r4 - r12 = 9 msg words received (or undefined).
- *
- */
-syscall:
-	syscallframe
-	stmdb   sp, {r0 - r12}^
-	mvn	r0, lr, lsl #2
-	adr	lr, 1f
-	ldr	pc, 2f			@ Jump to C code
-1:	
-
-	ldmia   sp, {r0 - r12}^	
-	/* Return */
-	ldr	lr, [sp]		@ Unstack SPSR
-	msr	spsr, lr		@ Load SPSR from abort_lr
-	ldmib	sp, {sp,lr}^		@ restore user sp and lr
-	nop
-	add	sp, sp, #20
-	ldr	lr, [sp, #-4]		@ Read return address
-	movs	pc, lr			@ return and switch mode
-
-2:	.word dispatch_syscall
-
-
-
 /**********************************************************************
 	kdebug entry
  **********************************************************************/
@@ -402,39 +396,27 @@ syscall:
 	
 	.globl	kern_kdebug_entry
 kern_kdebug_entry:
-	sub	sp, sp, #12
-	str	sp, [sp, #-0x10]
-	str	lr, [sp, #-0x0C]
-	mrs	lr, cpsr
-	str	lr, [sp, #-0x08]
-//	str	lr, [sp, #-0x04] /* Store cpsr in frame->spsr ??? */ 
-	mrs	lr, spsr
-	str	lr, [sp, #-0x04] /* Store spsr in frame->spsr */ 
-	str	lr, [sp, # 0x04] /* Store spsr on stack */
-	sub	sp, sp, #(15*4 + 16)
-	stmia	sp, {r0-r14}^
-	nop
-	mov	r0, sp
-	
-	/* use kdebug's own stack */
-	ldr	sp, _kdebug_stack_top
-	stmdb	sp!, {r0}
+        str     sp,_kdebug_stack_top-8
+        str     lr,_kdebug_stack_top-4
+        mrs	lr, cpsr
+	str	lr,_kdebug_stack_top-12
+        mrs	lr, spsr
+	str	lr,_kdebug_stack_top-16
+        adr     sp,_kdebug_stack_top-(15*4 + 16)
+        stmia   sp,{r0-r14}^
+        nop
+        mov     r0, sp
 	adr	lr, 1f
 	ldr	pc, 3b
 1:
-	ldr	sp, _kdebug_stack_top
-	ldr	sp, [sp, #-4]
-	ldmia	sp, {r0-r14}^
-	nop
-	add	sp, sp, #(15*4 + 16)
-	ldr	lr, [sp, #-0x08]
-	msr	cpsr, lr
-	ldr	lr, [sp, # 0x04] /* Restore spsr from stack */
-	msr	spsr, lr
-	ldr	lr, [sp, #-0x0C]
-	ldr	sp, [sp, #-0x10]
-	add	sp, sp, #12
-	mov	pc, lr
+        ldmia   sp,{r0-r14}^
+	ldr	lr,_kdebug_stack_top-12
+        msr	cpsr, lr
+        ldr     lr,_kdebug_stack_top-16
+        msr	spsr, lr
+        ldr     sp,_kdebug_stack_top-8
+	ldr	lr,_kdebug_stack_top-4
+	mov	pc, lr			@ return and switch mode
 
 	.globl	_kdebug_stack_bottom
 _kdebug_stack_bottom:

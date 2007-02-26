@@ -1,37 +1,20 @@
-/* -*- c -*- */
 /* $Id$ */
 /*****************************************************************************/
 /**
  * \file	generic_io/idl/generic_io.idl
- *
  * \brief	Common L4 Environment I/O Server Interface
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #if 0
-#include <types.h>		/* would be the common way ... */
-#else
-/* ... owing to FLICK we have to typedef it again here */
-
-#if 0
-/* ... lucky another weakness of FLICK is the lack of bitarrays */
+/* XXX DICE lacks bitarrays? */
 typedef struct l4_io_drv {
   unsigned src:2;
   unsigned dsi:8;
@@ -63,8 +46,8 @@ typedef unsigned short l4_io_pdev_t;
  * PCI device struct
  */
 typedef struct l4_io_pci_dev {
-  octet bus;		/* PCI bus number */
-  octet devfn;		/* encoded device & function index */
+  byte bus;		/* PCI bus number */
+  byte devfn;		/* encoded device & function index */
   unsigned short vendor;
   unsigned short device;
   unsigned short sub_vendor;
@@ -83,12 +66,11 @@ typedef struct l4_io_pci_dev {
 
   l4_io_pdev_t handle;		/* handle for this device */
 } l4_io_pci_dev_t;
-#endif
 
 /**
  * Generic L4 Interface
  */
-module l4 
+library l4 
 {
   /**
    * I/O Server Interface
@@ -113,7 +95,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long register_client(in l4_io_drv_t type);
+      long register_client([in] l4_io_drv_t type);
 
       /***********************************************************************/
       /**
@@ -133,7 +115,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long map_info(out fpage info);
+      long map_info([out] fpage *info);
       /** @} */
 
       /** 
@@ -158,7 +140,7 @@ module l4
        * FAIL!
        */
       /***********************************************************************/
-      long request_region(in unsigned long addr, in unsigned long len);
+      long request_region([in] unsigned long addr, [in] unsigned long len);
 
       /***********************************************************************/
       /**
@@ -168,7 +150,7 @@ module l4
        * \param  len	length of IO port region
        */
       /***********************************************************************/
-      long release_region(in unsigned long addr, in unsigned long len);
+      long release_region([in] unsigned long addr, [in] unsigned long len);
 
       /***********************************************************************/
       /**
@@ -186,9 +168,10 @@ module l4
        * \krishna This is Linux' request_mem_region()+ioremap().
        */
       /***********************************************************************/
-      long request_mem_region(in unsigned long addr,
-			      in unsigned long len,
-			      out fpage region, out unsigned long offset);
+      long request_mem_region([in] unsigned long addr,
+			      [in] unsigned long len,
+			      [out] fpage *region, 
+			      [out] unsigned long *offset);
 
       /***********************************************************************/
       /**
@@ -204,7 +187,7 @@ module l4
        * \todo check if flushing works
        */
       /***********************************************************************/
-      long release_mem_region(in unsigned long addr, in unsigned long len);
+      long release_mem_region([in] unsigned long addr, [in] unsigned long len);
 
       /***********************************************************************/
       /**
@@ -215,7 +198,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long request_dma(in unsigned long channel);
+      long request_dma([in] unsigned long channel);
 
       /***********************************************************************/
       /** 
@@ -224,7 +207,7 @@ module l4
        * \param  channel	DMA channel number
        */
       /***********************************************************************/
-      long release_dma(in unsigned long channel);
+      long release_dma([in] unsigned long channel);
       /** @} */
 
       /**
@@ -249,8 +232,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_find_slot(in unsigned long bus, in unsigned long slot,
-			 out l4_io_pci_dev_t pci_dev);
+      long pci_find_slot([in] unsigned long bus, [in] unsigned long slot,
+			 [out] l4_io_pci_dev_t *pci_dev);
 
       /***********************************************************************/
       /**
@@ -265,10 +248,10 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_find_device(in unsigned short vendor_id,
-			   in unsigned short device_id,
-			   in l4_io_pdev_t start_at,
-			   out l4_io_pci_dev_t pci_dev);
+      long pci_find_device([in] unsigned short vendor_id,
+			   [in] unsigned short device_id,
+			   [in] l4_io_pdev_t start_at,
+			   [out] l4_io_pci_dev_t *pci_dev);
 
       /***********************************************************************/
       /**
@@ -282,9 +265,9 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_find_class(in unsigned long class_id,
-			  in l4_io_pdev_t start_at,
-			  out l4_io_pci_dev_t pci_dev);
+      long pci_find_class([in] unsigned long class_id,
+			  [in] l4_io_pdev_t start_at,
+			  [out] l4_io_pci_dev_t *pci_dev);
 
       /***********************************************************************/
       /**
@@ -295,7 +278,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_enable_device(in l4_io_pdev_t pdev);
+      long pci_enable_device([in] l4_io_pdev_t pdev);
 
       /***********************************************************************/
       /**
@@ -306,7 +289,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_disable_device(in l4_io_pdev_t pdev);
+      long pci_disable_device([in] l4_io_pdev_t pdev);
 
       /***********************************************************************/
       /**
@@ -317,7 +300,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_set_master(in l4_io_pdev_t pdev);
+      long pci_set_master([in] l4_io_pdev_t pdev);
 
       /***********************************************************************/
       /**
@@ -331,7 +314,7 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_set_power_state(in l4_io_pdev_t pdev, inout long state);
+      long pci_set_power_state([in] l4_io_pdev_t pdev, [in, out] long *state);
 
       /***********************************************************************/
       /**
@@ -346,8 +329,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_read_config_byte(in l4_io_pdev_t pdev, in long offset,
-				out octet val);
+      long pci_read_config_byte([in] l4_io_pdev_t pdev, [in] long offset,
+				[out] byte *val);
 
       /***********************************************************************/
       /**
@@ -361,8 +344,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_read_config_word(in l4_io_pdev_t pdev,
-				in long offset, out unsigned short val);
+      long pci_read_config_word([in] l4_io_pdev_t pdev,
+				[in] long offset, [out] unsigned short *val);
 
       /***********************************************************************/
       /**
@@ -376,8 +359,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_read_config_dword(in l4_io_pdev_t pdev,
-				 in long offset, out unsigned long val);
+      long pci_read_config_dword([in] l4_io_pdev_t pdev,
+				 [in] long offset, [out] unsigned long *val);
 
       /***********************************************************************/
       /**
@@ -390,8 +373,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_write_config_byte(in l4_io_pdev_t pdev, in long offset,
-				 in octet val);
+      long pci_write_config_byte([in] l4_io_pdev_t pdev, [in] long offset,
+				 [in] byte val);
 
       /***********************************************************************/
       /**
@@ -404,8 +387,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_write_config_word(in l4_io_pdev_t pdev,
-				 in long offset, in unsigned short val);
+      long pci_write_config_word([in] l4_io_pdev_t pdev,
+				 [in] long offset, [in] unsigned short val);
 
       /***********************************************************************/
       /**
@@ -418,8 +401,8 @@ module l4
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
-      long pci_write_config_dword(in l4_io_pdev_t pdev,
-				  in long offset, in unsigned long val);
+      long pci_write_config_dword([in] l4_io_pdev_t pdev,
+				  [in] long offset, [in] unsigned long val);
       /** @} */
   };
 };

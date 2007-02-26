@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= l4io
 DEFAULT_RELOC	= 0x00b00000
-SYSTEMS		= x86-l4v2
+SYSTEMS		= x86-l4v2 x86-l4x0
 
 SRC_C		= main.c res.c pci.c jiffies.c
 PRIVATE_INCDIR	= $(PKGDIR)/server/include \
@@ -13,7 +13,7 @@ PRIVATE_INCDIR	= $(PKGDIR)/server/include \
 PRIVATE_LIBDIR	= $(PKGDIR)/server/lib-omega0/src/OBJ-$(SYSTEM) \
 		  $(PKGDIR)/server/lib-pci/src/OBJ-$(SYSTEM)
 
-LIBS		= -lpci24 -lomega0 -lgeneric_io-server
+LIBS		= -lio-pci24 -lio-omega0 -lgeneric_io-server 
 
 include $(L4DIR)/mk/prog.mk
 

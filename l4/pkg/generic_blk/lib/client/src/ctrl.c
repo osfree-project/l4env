@@ -12,7 +12,7 @@
 /* L4/DROPS includes */
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
-#include <l4/util/macros.h>
+#include <l4/log/l4log.h>
 
 /* Library includes */
 #include <l4/generic_blk/blk.h>
@@ -51,36 +51,28 @@ l4blk_ctrl(l4blk_driver_t driver,
 {
   blkclient_driver_t * drv;
   int ret;
-  sm_exc_t exc;
-  l4_strdope_t strdope;
+  CORBA_Environment _env = dice_default_environment;
 
   /* get driver descriptor */
   drv = blkclient_get_driver(driver);
   if (drv == NULL)
     {
-      Error("Invalid driver handle (%d)",driver);
+      LOG_Error("invalid driver handle (%d)", driver);
       return -L4_EINVAL;
     }
 
-  /* set input/output buffer */
-  strdope = sndrcv_refstring(in_size,in,out_size,out);
-  if (in == NULL)
-    strdope.snd_size = 0;
-  if (out == NULL)
-    strdope.rcv_size = 0;
-
   /* call driver */
-  ret = l4blk_cmd_ctrl(drv->cmd_id,drv->handle,cmd,&strdope,&exc);
-  if (exc._type != exc_l4_no_exception)
+  if (in == NULL)
+    in_size = 0;
+  if (out == NULL)
+    out_size = 0;
+  ret = l4blk_cmd_ctrl_call(&drv->cmd_id, drv->handle, cmd, in, in_size, 
+                            &out, &out_size, &_env);
+  if (_env.major != CORBA_NO_EXCEPTION)
     {
-      Error("IPC error calling driver: 0x%02x",exc._type);
+      LOG_Error("IPC error calling driver: 0x%02x", _env.major);
       return -L4_EIPC;
     }
-
-#if 0
-  LOGI("out at 0x%08x, rcv_str at 0x%08x",(unsigned)out,strdope.rcv_str);
-  enter_kdebug("-");
-#endif
 
   /* done */
   return ret;

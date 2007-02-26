@@ -6,7 +6,7 @@ class Boot_console
 {
 public:
   static void init();
-  static Console *const cons();
+  static inline Console *const cons();
 
 private:
   static Console *_c;
@@ -17,7 +17,7 @@ IMPLEMENTATION:
 #include <cstring>
 #include <cstdio>
 
-#include "boot_info.h"
+#include "cmdline.h"
 #include "kernel_console.h"
 #include "keyb.h"
 #include "mux_console.h"
@@ -48,7 +48,7 @@ void Boot_console::init()
   static Keyb k;
   Kconsole::console()->register_console(&k);
 
-  if( strstr( Boot_info::cmdline(), " -noscreen" ) ) 
+  if( strstr (Cmdline::cmdline(), " -noscreen" ) ) 
       return;
 
   char const *s;
@@ -57,7 +57,7 @@ void Boot_console::init()
   if(c->is_working())
     Kconsole::console()->register_console(c);
   
-  if((s = strstr(Boot_info::cmdline(), " -hercules")) )
+  if((s = strstr (Cmdline::cmdline(), " -hercules")) )
     {
       Vga_console *c = (Vga_console*)herc_console();
       if(c->is_working())
@@ -65,11 +65,9 @@ void Boot_console::init()
       else
 	puts("Requested hercules console not available!");
     }
-  
- 
 };
 
-IMPLEMENT
+IMPLEMENT inline
 Console *const Boot_console::cons()
 {
   return _c;

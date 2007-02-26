@@ -2,40 +2,14 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/port_io.h>
+#include <l4/util/irq.h>
 #include <l4/util/apic.h>
 
 
 unsigned long apic_map_base = 0;
 unsigned long apic_timer_divisor = 1;
-
-#define no_interrupts(s)\
-asm volatile("pushfl ; popl %0 ; cli":"=g" (s): :"memory")
-
-#define restore_interrupts(s)\
-asm volatile("pushl %0 ; popfl": :"g" (s):"memory")
-
 unsigned long l4_scaler_apic_to_ms = 0;
-
-static inline unsigned char
-inb(unsigned short port)
-{
-  unsigned char _v;
-  asm volatile ("inb   %w1, %b0\n\t"
-               :"=a" (_v)
-               :"Nd" (port));
-  return _v;
-}
-
-
-static inline void
-outb(unsigned char value, unsigned short port) 
-{
-  asm volatile ("outb  %b0, %w1\n\t"
-               : 
-               :"a" (value), 
-                "Nd" (port));
-}
-
 
 void
 apic_show_registers(void)
@@ -125,18 +99,18 @@ apic_check_working(void)
   apic_timer_write(1000000000);
 
   /* Set the Gate high, disable speaker */
-  outb((inb(0x61) & ~0x02) | 0x01, 0x61);
+  l4util_out8((l4util_in8(0x61) & ~0x02) | 0x01, 0x61);
   
-  outb(0xb0, 0x43);  /* binary, mode 0, LSB/MSB, Ch 2 */
-  outb(calibrate_latch & 0xff, 0x42); /* LSB of count */
-  outb(calibrate_latch >> 8,   0x42); /* MSB of count */
+  l4util_out8(0xb0, 0x43);  /* binary, mode 0, LSB/MSB, Ch 2 */
+  l4util_out8(calibrate_latch & 0xff, 0x42); /* LSB of count */
+  l4util_out8(calibrate_latch >> 8,   0x42); /* MSB of count */
 
   tt1=apic_timer_read();
   count = 0;
   do 
     {
       count++;
-    } while ((inb(0x61) & 0x20) == 0);
+    } while ((l4util_in8(0x61) & 0x20) == 0);
     
   tt2=apic_timer_read();
   return (tt1-tt2) != 0;
@@ -151,14 +125,16 @@ apic_activate_by_io(void)
 {
   char old_21, old_A1;
   unsigned long tmp_val;
-  unsigned long flags;
+  l4_uint32_t flags;
 
   /* mask 8259 interrupts */
-  old_21 = inb(0x21); 
-  outb(0xff, 0x21);
-  old_A1 = inb(0xA1);
-  outb(0xff, 0xA1);
-  no_interrupts(flags);
+  old_21 = l4util_in8(0x21); 
+  l4util_out8(0xff, 0x21);
+  old_A1 = l4util_in8(0xA1);
+  l4util_out8(0xff, 0xA1);
+
+  l4util_flags_save(&flags);
+  l4util_cli();
 
   apic_soft_enable();
 
@@ -175,9 +151,9 @@ apic_activate_by_io(void)
   apic_write(APIC_LVT1, tmp_val);
     
   /* unmask 8259 interrupts */
-  restore_interrupts(flags);
-  outb(old_A1, 0xA1);
-  outb(old_21, 0x21);
+  l4util_flags_restore(&flags);
+  l4util_out8(old_A1, 0xA1);
+  l4util_out8(old_21, 0x21);
 }
 
 /*
@@ -197,11 +173,11 @@ l4_calibrate_apic (void)
   apic_timer_write(1000000000);
     
   /* Set the Gate high, disable speaker */
-  outb((inb(0x61) & ~0x02) | 0x01, 0x61);
+  l4util_out8((l4util_in8(0x61) & ~0x02) | 0x01, 0x61);
 
-  outb(0xb0, 0x43);  /* binary, mode 0, LSB/MSB, Ch 2 */
-  outb(calibrate_latch & 0xff, 0x42); /* LSB of count */
-  outb(calibrate_latch >> 8,   0x42); /* MSB of count */
+  l4util_out8(0xb0, 0x43);  /* binary, mode 0, LSB/MSB, Ch 2 */
+  l4util_out8(calibrate_latch & 0xff, 0x42); /* LSB of count */
+  l4util_out8(calibrate_latch >> 8,   0x42); /* MSB of count */
 
     {
       unsigned long count;
@@ -213,7 +189,7 @@ l4_calibrate_apic (void)
       do 
 	{
       	  count++;
-      	} while ((inb(0x61) & 0x20) == 0);
+      	} while ((l4util_in8(0x61) & 0x20) == 0);
       tt2=apic_timer_read();
         
       result = (tt1-tt2)*apic_timer_divisor;

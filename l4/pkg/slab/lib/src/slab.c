@@ -11,23 +11,13 @@
  * It's a very simple implementation, restrictions are:
  * - the size of a single slab is one page, thus the max. size of an object 
  *   is the pages size minus the size of the slab descriptor
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4env includes */
 #include <l4/sys/types.h>
@@ -185,9 +175,7 @@ __grow_cache(l4slab_cache_t * cache)
   if (page == NULL)
     return -1;
 
-#if DEBUG_SLAB_GROW
-  INFO("new slab at 0x%08x\n",(unsigned)page);
-#endif
+  LOGdL(DEBUG_SLAB_GROW,"new slab at 0x%08x",(unsigned)page);
 
   /* add page to slab cache */
   __add_page(cache,page,data);
@@ -303,8 +291,8 @@ __shrink_cache(l4slab_cache_t * cache)
 /*****************************************************************************/ 
 int
 l4slab_cache_init(l4slab_cache_t * cache, l4_size_t size,
-		      unsigned int max_free, l4slab_grow_fn_t grow_fn,
-		      l4slab_release_fn_t release_fn)
+                  unsigned int max_free, l4slab_grow_fn_t grow_fn,
+                  l4slab_release_fn_t release_fn)
 {
   /* sanity checks */
   if ((size > L4SLAB_MAX_SIZE) || (cache == NULL))
@@ -328,12 +316,10 @@ l4slab_cache_init(l4slab_cache_t * cache, l4_size_t size,
 
   cache->data = NULL;
 
-#if DEBUG_SLAB_INIT
-  INFO("object size = %u\n",size);
-  DMSG("  max size = %u, objects per slab = %d\n",
-       L4SLAB_MAX_SIZE,cache->num_objs);
-#endif
-
+  LOGdL(DEBUG_SLAB_INIT,"object size = %u\n" \
+        "  max size = %u, objects per slab = %d",size,
+        L4SLAB_MAX_SIZE,cache->num_objs);
+  
   /* done */
   return 0;
 }
@@ -548,15 +534,15 @@ l4slab_dump_cache(l4slab_cache_t * cache, int dump_free)
   if (cache == NULL)
     return;
 
-  Msg("  L4slab cache list, cache at 0x%08x\n",(unsigned)cache);
-  Msg("  object size %u, %u per slab, %d slab(s), %d free\n",
-      cache->obj_size,cache->num_objs,cache->num_slabs,
-      cache->num_free);
+  printf("  L4slab cache list, cache at 0x%08x\n",(unsigned)cache);
+  printf("  object size %u, %u per slab, %d slab(s), %d free\n",
+         cache->obj_size,cache->num_objs,cache->num_slabs,
+         cache->num_free);
 
   slab = cache->slabs;
   while (slab != NULL)
     {
-      Msg("    slab at 0x%08x, %d free object(s):\n",
+      printf("    slab at 0x%08x, %d free object(s):\n",
 	     (unsigned)slab,slab->num_free);
 
       if (dump_free)
@@ -564,7 +550,7 @@ l4slab_dump_cache(l4slab_cache_t * cache, int dump_free)
 	  p = slab->free_objs;
 	  while (p != NULL)
 	    {
-	      Msg("      free at 0x%08x\n",(unsigned)p);
+	      printf("      free at 0x%08x\n",(unsigned)p);
 	      p = (unsigned int *)*p;
 	    }
 	}
@@ -587,15 +573,15 @@ l4slab_dump_cache_free(l4slab_cache_t * cache)
   if (cache == NULL)
     return;
 
-  Msg("  L4slab cache free list, cache at 0x%08x\n",(unsigned)cache);
-  Msg("  object size %u, %u per slab, %d slab(s), %d free\n",
-      cache->obj_size,cache->num_objs,cache->num_slabs,
-      cache->num_free);
+  printf("  L4slab cache free list, cache at 0x%08x\n",(unsigned)cache);
+  printf("  object size %u, %u per slab, %d slab(s), %d free\n",
+         cache->obj_size,cache->num_objs,cache->num_slabs,
+         cache->num_free);
 
   slab = cache->slabs_free;
   while (slab != NULL)
     {
-      Msg("    slab at 0x%08x, %3d free object(s)\n",
+      printf("    slab at 0x%08x, %3d free object(s)\n",
 	     (unsigned)slab,slab->num_free);
       slab = slab->free_next;
     }

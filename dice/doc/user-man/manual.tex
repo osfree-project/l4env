@@ -1,0 +1,74 @@
+\documentclass[letter, 11pt]{book}
+%\documentclass[a4paper, 11pt]{book}
+\usepackage[latin1]{inputenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\input{version}
+\input{commands}
+
+% Mehr Toleranz beim zweiten Umbruch
+\tolerance = 1000
+
+% Dritten Umbruch ausführen
+\emergencystretch = 10pt
+
+% Disable single lines at the start of a paragraph (Schusterjungen)
+\clubpenalty = 10000
+
+% Disable single lines at the end of a paragraph (Hurenkinder)
+\widowpenalty = 10000 \displaywidowpenalty = 10000
+
+\author{Ronald Aigner\\
+Technische Universit\"{a}t Dresden, Germany\\
+Ronald.Aigner@os.inf.tu-dresden.de}
+\title{\dice{} Version \Version\\User's Manual}
+\date{May~2003}
+
+\begin{document}
+
+\maketitle
+
+\chapter*{Preface}
+{\em
+This documentation is still under heavy construction.
+}
+
+\tableofcontents
+
+% gives a short introduction on what the IDL file is
+% what the generated code looks like and how to use
+% it
+% describes some L4 specific scenarios and how to make
+% the IDL compiler do what you want
+\include{section1}
+
+\include{section2}
+
+% is a short description of the options, you can
+% specify when calling dice, and what they do
+\include{section3}
+
+\begin{appendix}
+{\small
+
+\include{appendix3}
+
+% page fault handler code
+\include{appendix1}
+
+% message buffer access macros
+\include{appendix2}
+
+}
+\end{appendix}
+
+%
+% Bibliography
+%
+\bibliographystyle{plain}
+{\small
+\bibliography{manual}
+}
+
+\end{document}
+ 

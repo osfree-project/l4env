@@ -1,16 +1,18 @@
 /**
- * \file        loader/server/src/app.h
+ * \file	loader/server/src/app.h
+ * \brief	application descriptor
  *
- * \date        06/10/2001
- * \author      Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief       application data */
+ * \date	06/10/2001
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-#ifndef __LOADER_APP_H_
-#define __LOADER_APP_H_
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
+#ifndef __APP_H_
+#define __APP_H_
 
 #include <l4/sys/types.h>
-#include <l4/env/env.h>
 #include <l4/l4rm/l4rm.h>
 
 #include "cfg.h"
@@ -46,6 +48,7 @@ typedef struct
 typedef struct 
 {
   l4_threadid_t		tid;		/**< L4 task id */
+  int			hi_first_msg;	/**< true if first message */
   l4env_infopage_t	*env;		/**< ptr to environment infopage */
   app_area_t		app_area[MAX_APP_AREA]; /**< pager regions */
   int			app_area_next_free;	/**< number of pager regions */
@@ -84,6 +87,8 @@ int  app_dump(unsigned long task_id);
 int  app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds, 
 	      l4_threadid_t client, char **fname);
 int  app_init(void);
+
+int  init_infopage(l4env_infopage_t *env);
 
 #endif
 

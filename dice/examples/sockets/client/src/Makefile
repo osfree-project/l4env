@@ -5,7 +5,7 @@ TARGET		= $(PKGNAME)-client
 # commentthe following two rules if building for L4
 MODE		= host
 SYSTEMS		= x86
-DEFINES		= -DSOCKETAPI
+L4API		= linux
 # and uncomment these
 #DEFAULT_RELOC	= 0x00980000
 

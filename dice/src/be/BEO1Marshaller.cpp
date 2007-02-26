@@ -5,7 +5,7 @@
  *	\date	05/16/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,7 +36,7 @@
 #include "be/BEAttribute.h"
 
 #include "fe/FEAttribute.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CBEO1Marshaller);
 
@@ -55,48 +55,53 @@ CBEO1Marshaller::~CBEO1Marshaller()
  *  \param nStartOffset the starting offset in the message buffer
  *  \param bUseConstOffset true if the nStartOffset can be used to determine a constant offset
  *  \param bLastParameter true if this is the last parameter to be marshalled
+ *  \param pIter the iterator pointing to the next array dimensions
+ *  \param nLevel the level reached with the current array boundary
  *  \param pContext the context of the marshalling
  *  \return the size of the marshalled data in bytes
  *
  * We optimize this marshalling by using memcpy
  */
-int CBEO1Marshaller::MarshalConstArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
+int CBEO1Marshaller::MarshalConstArray(CBEType *pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, VectorElement *pIter, int nLevel, CBEContext *pContext)
 {
-    int nSize = 0;
     CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
     CBEDeclarator *pDecl = pCurrent->pDeclarator;
-    // for each dimension
-    VectorElement *pIter = pDecl->GetFirstArrayBound();
+    // calculate total array size
     CBEExpression *pBound;
+	int nBound = 1;
     while ((pBound = pDecl->GetNextArrayBound(pIter)) != 0)
-    {
-        pCurrent->nIndex = -1;
-        m_pFile->PrintIndent("memcpy(");
-        if (m_bMarshal)
-        {
-            // now marshal array
-            WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
-            m_pFile->Print(", ");
-            m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
-        }
-        else
-        {
-            // now unmarshal array
-            m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
-            m_pFile->Print(", ");
-            WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
-        }
-        m_pFile->Print(", %d", pBound->GetIntValue());
-        if (pType->GetSize() > 1)
-        {
-            m_pFile->Print("*sizeof");
-            pType->WriteCast(m_pFile, false, pContext);
-        }
-        m_pFile->Print(");\n");
-        nSize += pBound->GetIntValue()*pType->GetSize();
-    }
+	{
+	    pCurrent->SetIndex(-1, nLevel++);
+	    nBound *= pBound->GetIntValue();
+	}
+	m_pFile->PrintIndent("memcpy(");
+	if (m_bMarshal)
+	{
+		// now marshal array
+		WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
+		m_pFile->Print(", ");
+		m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
+	}
+	else
+	{
+		// now unmarshal array
+		m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
+		m_pFile->Print(", ");
+		WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
+	}
+	m_pFile->Print(", ");
+	if (nBound > 1)
+	    m_pFile->Print("%d", nBound);
+	if (pType->GetSize() > 1)
+	{
+	    if (nBound > 1)
+		    m_pFile->Print("*");
+		m_pFile->Print("sizeof");
+		pType->WriteCast(m_pFile, false, pContext);
+	}
+	m_pFile->Print(");\n");
     // return size
-    return nSize;
+    return nBound*pType->GetSize();
 }
 
 /** \brief marshals a variable sized array
@@ -111,7 +116,10 @@ int CBEO1Marshaller::MarshalConstArray(CBEType * pType, int nStartOffset, bool &
 int CBEO1Marshaller::MarshalVariableArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
 {
     CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
-    pCurrent->nIndex = -1;
+	// disable arrays
+	for (int i=0; i < pCurrent->GetUsedIndexCount(); i++)
+	    pCurrent->SetIndex(-1, i);
+    // test if we need a pointer of this variable
     bool bUsePointer = !pType->IsPointerType();
     // test if we can reference directly into message buffer
     // we do so if:
@@ -128,49 +136,20 @@ int CBEO1Marshaller::MarshalVariableArray(CBEType * pType, int nStartOffset, boo
     //   (if there are array dimensions, they contains values, and the
     //    parameter has them too)
 	// - no INIT_WITH_IN attribute
+	// - no directly reference into the message buffer
     if (!m_bMarshal && (pCurrent->pDeclarator->GetArrayDimensionCount() == 0) &&
-	    !m_pParameter->FindAttribute(ATTR_INIT_WITH_IN))
+	    !m_pParameter->FindAttribute(ATTR_PREALLOC) && !bRefMsgBuf)
     {
-        if (pContext->IsWarningSet(PROGRAM_WARNING_PREALLOC))
-        {
-            if (m_pFunction)
-                CCompiler::Warning("CORBA_alloc is used to allocate memory for %s in %s.\n",
-                                   (const char*)pCurrent->pDeclarator->GetName(), (const char*)m_pFunction->GetName());
-            else
-                CCompiler::Warning("CORBA_alloc is used to allocate memory for %s.\n", (const char*)pCurrent->pDeclarator->GetName());
-        }
         // var = (type*)malloc(size);
         m_pFile->PrintIndent("");
         m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
         m_pFile->Print(" = ");
         pType->WriteCast(m_pFile, true, pContext);
-		if (((pContext->IsOptionSet(PROGRAM_SERVER_PARAMETER) && m_pFunction->IsComponentSide()) ||
-			  !m_pFunction->IsComponentSide()) &&
-			  !pContext->IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC))
-		{
-			CBETypedDeclarator* pEnv = m_pFunction->GetEnvironment();
-			CBEDeclarator *pDecl = 0;
-			if (pEnv)
-			{
-				VectorElement* pIter = pEnv->GetFirstDeclarator();
-				pDecl = pEnv->GetNextDeclarator(pIter);
-			}
-			if (pDecl)
-			{
-				m_pFile->Print("(%s", (const char*)pDecl->GetName());
-				if (pDecl->GetStars())
-					m_pFile->Print("->malloc)(");
-				else
-					m_pFile->Print(".malloc)(");
-			}
-			else
-				m_pFile->Print("CORBA_alloc(");
-		}
-		else
-		    m_pFile->Print("CORBA_alloc(");
+		pContext->WriteMalloc(m_pFile, m_pFunction);
+		m_pFile->Print("(");
         if (pType->GetSize() > 1)
             m_pFile->Print("(");
-        m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
+        m_pParameter->WriteGetSize(m_pFile, &m_vDeclaratorStack, pContext);
         if (pType->GetSize() > 1)
         {
             m_pFile->Print(")");
@@ -208,7 +187,7 @@ int CBEO1Marshaller::MarshalVariableArray(CBEType * pType, int nStartOffset, boo
         m_pFile->Print(", ");
         if (pType->GetSize() > 1)
             m_pFile->Print("(");
-        m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
+        m_pParameter->WriteGetSize(m_pFile, &m_vDeclaratorStack, pContext);
         if (pType->GetSize() > 1)
         {
             m_pFile->Print(")");
@@ -227,7 +206,7 @@ int CBEO1Marshaller::MarshalVariableArray(CBEType * pType, int nStartOffset, boo
     else
         m_pFile->Print(" += ");
     m_pFile->Print("(");
-    m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
+    m_pParameter->WriteGetSize(m_pFile, &m_vDeclaratorStack, pContext);
     m_pFile->Print(")");
     if (pType->GetSize() > 1)
     {
@@ -268,21 +247,19 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
     bool bUsePointer = !(pType->IsPointerType());
     bool bHasSizeAttr = m_pParameter->HasSizeAttr(ATTR_SIZE_IS) ||
             m_pParameter->HasSizeAttr(ATTR_LENGTH_IS);
+	CBEAttribute *pMax = m_pParameter->FindAttribute(ATTR_MAX_IS);
+	int nMax = -1;
+	// if no max attribute, we have to use global max values
+	if (pMax)
+	{
+		if (pMax->IsOfType(ATTR_CLASS_INT))
+			nMax = pMax->GetIntValue();
+	}
+	else
+		nMax = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
     // if we have a max attribute we test the length value against this value
     if (m_bMarshal)
     {
-        CBEAttribute *pMax = m_pParameter->FindAttribute(ATTR_MAX_IS);
-        int nMax = -1;
-        // if no max attribute, we have to use global max values
-        if (pMax)
-        {
-            if (pMax->IsOfType(ATTR_CLASS_INT))
-                nMax = pMax->GetIntValue();
-        }
-        else
-        {
-            nMax = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
-        }
         CBEAttribute *pLen = m_pParameter->FindAttribute(ATTR_SIZE_IS);
         if (!pLen)
             pLen = m_pParameter->FindAttribute(ATTR_LENGTH_IS);
@@ -292,7 +269,7 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
             //   len = max;
             // we cannot access the string, because it surely is const
             VectorElement *pI;
-            CBEDeclarator *pDMax = NULL, *pDLen = NULL;
+            CBEDeclarator *pDMax = NULL;
             m_pFile->PrintIndent("if (");
             m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
             m_pFile->Print(" > ");
@@ -305,9 +282,8 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
                 m_pFile->Print("%s",  (const char*)pDMax->GetName());
             }
             m_pFile->Print(")\n");
-//            m_pFile->PrintIndent("{\n");
             m_pFile->IncIndent();
-            
+
             m_pFile->PrintIndent("");
             m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
             m_pFile->Print(" = ");
@@ -320,48 +296,8 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
                 m_pFile->Print("%s",  (const char*)pDMax->GetName());
             }
             m_pFile->Print(";\n");
-
-//            m_pFile->PrintIndent("");
-//            m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
-//            m_pFile->Print("[");
-//            m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
-//            m_pFile->Print("] = 0;\n");
-//
             m_pFile->DecIndent();
-//            m_pFile->PrintIndent("}\n");
         }
-        // cannot do this, because string surely is const
-//        else
-//        {
-//            VectorElement *pI;
-//            CBEDeclarator *pD = NULL;
-//            // if no length attribute:
-//            // if (strlen(var) >= max)
-//            //   str[max] = 0;
-//            m_pFile->PrintIndent("if (strlen(");
-//            m_vDeclaratorStack.Write(m_pFile, false, false, pContext);
-//            m_pFile->Print(") >= ");
-//            if (nMax >= 0)
-//                m_pFile->Print("%d", nMax);
-//            else
-//            {
-//                pI = pMax->GetFirstIsAttribute();
-//                pD = pMax->GetNextIsAttribute(pI);
-//                m_pFile->Print("%s", (const char*)pD->GetName());
-//            }
-//            m_pFile->Print(")\n");
-//
-//            m_pFile->IncIndent();
-//            m_pFile->PrintIndent("");
-//            m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
-//            m_pFile->Print("[");
-//            if (nMax >= 0)
-//                m_pFile->Print("%d", nMax);
-//            else
-//                m_pFile->Print("%s", (const char*)pD->GetName());
-//            m_pFile->Print("] = 0;\n");
-//            m_pFile->DecIndent();
-//        }
     }
     // if size attribute then attributes declarator is marshalled as well, we don't care about it here
     // if no size attribute and string attribute we marshal strlen size
@@ -369,7 +305,7 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
     // transmitted and we want to know how much.
     if (!bHasSizeAttr && (m_pParameter->FindAttribute(ATTR_STRING)))
     {
-        String sLong = pContext->GetNameFactory()->GetTypeName(TYPE_INTEGER, false, pContext, 4);
+        String sLong = pContext->GetNameFactory()->GetTypeName(TYPE_LONG, false, pContext, 4);
         if (m_bMarshal)
         {
             // marshal strlen
@@ -385,7 +321,7 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
             WriteBuffer(sLong, nStartOffset, bUseConstOffset, true, pContext);
             m_pFile->Print(";\n");
         }
-        nStartOffset += pContext->GetSizes()->GetSizeOfType(TYPE_INTEGER, 4);
+        nStartOffset += pContext->GetSizes()->GetSizeOfType(TYPE_LONG, 4);
         if (!bUseConstOffset)
         {
             String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
@@ -419,47 +355,16 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
         }
         else
         {
-		    if (!m_pParameter->FindAttribute(ATTR_INIT_WITH_IN))
+		    if (!m_pParameter->FindAttribute(ATTR_PREALLOC))
 			{
-				if (pContext->IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				{
-					CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
-					if (m_pFunction)
-						CCompiler::Warning("CORBA_alloc is used to allocate memory for %s in %s.",
-										(const char*)pCurrent->pDeclarator->GetName(), (const char*)m_pFunction->GetName());
-					else
-						CCompiler::Warning("CORBA_alloc is used to allocate memory for %s.", (const char*)pCurrent->pDeclarator->GetName());
-				}
 				// var = (type*)malloc(size)
 				m_pFile->PrintIndent("");
 				m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
 				m_pFile->Print(" = ");
 				pType->WriteCast(m_pFile, true, pContext);
-				if (((pContext->IsOptionSet(PROGRAM_SERVER_PARAMETER) && m_pFunction->IsComponentSide()) ||
-					!m_pFunction->IsComponentSide()) &&
-					!pContext->IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC))
-				{
-					CBETypedDeclarator* pEnv = m_pFunction->GetEnvironment();
-					CBEDeclarator *pDecl = 0;
-					if (pEnv)
-					{
-						VectorElement* pIter = pEnv->GetFirstDeclarator();
-						pDecl = pEnv->GetNextDeclarator(pIter);
-					}
-					if (pDecl)
-					{
-						m_pFile->Print("(%s", (const char*)pDecl->GetName());
-						if (pDecl->GetStars())
-							m_pFile->Print("->malloc)(");
-						else
-							m_pFile->Print(".malloc)(");
-					}
-					else
-						m_pFile->Print("CORBA_alloc(");
-				}
-				else
-					m_pFile->Print("CORBA_alloc(");
+				pContext->WriteMalloc(m_pFile, m_pFunction);
 				// exclude max_is attribute, because in this case we have the actual size
+				m_pFile->Print("(");
 				if (bHasSizeAttr)
 					m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
 				else
@@ -470,7 +375,8 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
     }
     // marshal/unmarshal
     CDeclaratorStackLocation *pCurrent = m_vDeclaratorStack.GetTop();
-    pCurrent->nIndex = -1;
+	for (int i=0; i<pCurrent->GetUsedIndexCount(); i++)
+	    pCurrent->SetIndex(-1, i);
     // if unmarshalling at server side, use pointer into message buffer
     if (!m_bMarshal && m_pFunction->IsComponentSide())
     {
@@ -482,33 +388,38 @@ int CBEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUs
     }
     else
     {
-         // if size attributes: use strncpy with size instead of strcpy
-         // we exclude max_is attribute, because the actually transmitted size
-         // can be smaller than the maximum size, so we have no guarantee to copy the
-         // correct size, we use strcpy instead which looks for the end of the string
-         if (bHasSizeAttr)
-             m_pFile->PrintIndent("memcpy(");
-         else
-             m_pFile->PrintIndent("strcpy(");
-         if (m_bMarshal)
-         {
-             // now marshal array
-             WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
-             m_pFile->Print(", ");
-             m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
-         }
-         else
-         {
-             m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
-             m_pFile->Print(", ");
-             WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
-         }
-         if (bHasSizeAttr)
-         {
-             m_pFile->Print(", ");
-             m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
-         }
-         m_pFile->Print(");\n");
+		// if size attributes: use strncpy with size instead of strcpy
+		// we exclude max_is attribute, because the actually transmitted size
+		// can be smaller than the maximum size, so we have no guarantee to copy the
+		// correct size, we use strcpy instead which looks for the end of the string
+		if (bHasSizeAttr || !m_bMarshal)
+			m_pFile->PrintIndent("memcpy(");
+		else
+			m_pFile->PrintIndent("strcpy(");
+		if (m_bMarshal)
+		{
+			// now marshal array
+			WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
+			m_pFile->Print(", ");
+			m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
+		}
+		else
+		{
+			m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
+			m_pFile->Print(", ");
+			WriteBuffer(pType, nStartOffset, bUseConstOffset, false, pContext);
+		}
+		if (bHasSizeAttr)
+		{
+			m_pFile->Print(", ");
+			m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
+		}
+		else if (!m_bMarshal)
+		{
+			m_pFile->Print(", (%s>%d)?%d:%s", (const char*)sTemp,
+				nMax, nMax, (const char*)sTemp);
+	    }
+		m_pFile->Print(");\n");
     }
     // if unmarshaling: terminate with 0
     // if we use size attribute, we already copied the terminating 0

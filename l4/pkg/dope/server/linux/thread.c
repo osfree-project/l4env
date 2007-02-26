@@ -1,19 +1,28 @@
 /*
- * \brief	DOpE thread handling module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE thread handling module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
- * Component that provides functions to  handle 
- * threads and related things (e.g. semaphores) 
+ * Component that provides functions to  handle
+ * threads and related things (e.g. semaphores)
  * to the other components of DOpE.
- */ 
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 #define THREAD SDL_Thread
 #define MUTEX  SDL_mutex
 
 #include "SDL/SDL.h"
 #include "SDL/SDL_thread.h"
-#include "dope-config.h"
+#include "dopestd.h"
 #include "thread.h"
 
 int init_thread(struct dope_services *d);
@@ -46,8 +55,8 @@ static s8 mutex_is_down(MUTEX *m) {
 	return 0;
 }
 
-static THREAD *ident2thread(u8 *ident) {
-	return NULL;
+static int ident2thread(u8 *ident, THREAD *t) {
+	return 0;
 }
 
 /****************************************/
@@ -60,7 +69,7 @@ static struct thread_services services = {
 	destroy_mutex,
 	lock_mutex,
 	unlock_mutex,
-	mutex_is_down,	
+	mutex_is_down,
 	ident2thread,
 };
 
@@ -70,7 +79,7 @@ static struct thread_services services = {
 /**************************/
 
 int init_thread(struct dope_services *d) {
-	
+
 	d->register_module("Thread 1.0",&services);
 	return 1;
 }

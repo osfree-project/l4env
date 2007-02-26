@@ -1,13 +1,17 @@
 /*!
- * \file   examples/l4l-reserve/snd/emul_l4rm.c
+ * \file   con/examples/xf86_stub/emul_l4rm.c
  * \brief  sample-program controlling the rtrcvclnt - l4rm emulation part.
  *
  * \date   06/19/2001
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  * This file contains the rm_* emulation functions, because we cannot run
- * the region mapper with Linux (yes, we could. Somehow.).
- */
+ * the region mapper with Linux (yes, we could. Somehow.). */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include "xf86_ansic.h"
 #include "xf86_libc.h"
@@ -266,6 +270,7 @@ l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used)
 void
 l4rm_service_loop(void)
 {
+  for (;;);
 }
 
 void

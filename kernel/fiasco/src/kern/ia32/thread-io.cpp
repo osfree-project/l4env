@@ -18,7 +18,7 @@ IMPLEMENTATION [io]:
 */
 
 bool
-Thread::get_ioport(vm_offset_t eip, trap_state * ts, 
+Thread::get_ioport(Address eip, trap_state * ts, 
 		     unsigned * port, unsigned * size)
 {
   // handle 1 Byte IO
@@ -37,7 +37,7 @@ Thread::get_ioport(vm_offset_t eip, trap_state * ts,
     case 0x6f:			// outd
       *size = 2;
       *port = ts->edx & 0xffff;
-      if(*port +4 <= L4_fpage::IO_PORT_MAX)
+      if (*port +4 <= L4_fpage::IO_PORT_MAX)
 	return true;
       else		   // Access beyond L4_IOPORT_MAX
 	return false;
@@ -59,11 +59,11 @@ Thread::get_ioport(vm_offset_t eip, trap_state * ts,
       *size = 0;
       *port = * reinterpret_cast<unsigned char *>(eip + 1);
       return true;
-    case 0xed:			// in imm8, eax
+    case 0xe5:			// in imm8, eax
     case 0xe7:			// out eax, imm8
       *size = 2;
       *port = * reinterpret_cast<unsigned char *>(eip + 1);
-      if(*port +4 <= L4_fpage::IO_PORT_MAX)
+      if (*port +4 <= L4_fpage::IO_PORT_MAX)
 	return true;
       else		   // Access beyond L4_IOPORT_MAX
 	return false;
@@ -77,9 +77,17 @@ Thread::get_ioport(vm_offset_t eip, trap_state * ts,
 	case 0x6f:			// outw
 	  *size = 1;
 	  *port = ts->edx & 0xffff;
-	  if(*port +2 <= L4_fpage::IO_PORT_MAX)
+	  if (*port +2 <= L4_fpage::IO_PORT_MAX)
 	    return true;
 	  else		   // Access beyond L4_IOPORT_MAX
+	    return false;
+	case 0xe5:			// in imm8, ax
+	case 0xe7:			// out ax,imm8
+	  *size = 1;
+	  *port = *reinterpret_cast<unsigned char*>(eip + 2);
+	  if (*port +2 <= L4_fpage::IO_PORT_MAX)
+	    return true;
+	  else
 	    return false;
 	}
 

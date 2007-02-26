@@ -1,9 +1,6 @@
-# directories we need to know
 PKGDIR ?= 	..
 L4DIR ?= 	$(PKGDIR)/../..
 
-# targets
-TARGET = slab
+SRC_DOX_REF = slab.cfg
 
-# include doc role
 include $(L4DIR)/mk/doc.mk

@@ -11,8 +11,8 @@ date="27.06.96"
 <verb>#include <l4/sys/syscalls.h></verb>
 
 <code/static inline l4_taskid_t/ <nl>
-<code/l4_task_new(l4_taskid_t/ <var/dest/ <code/, dword_t/ <var/
-mcp_or_new_chief/ <code/, dword_t/ <var/esp/ <code/, dword_t/
+<code/l4_task_new(l4_taskid_t/ <var/dest/ <code/, l4_umword_t/ <var/
+mcp_or_new_chief/ <code/, l4_umword_t/ <var/esp/ <code/, l4_umword_t/
 <var/eip/ <code/, l4_threadid_t/ <var/pager/ <code/);/
 
 <sect> Description

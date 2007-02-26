@@ -1,11 +1,11 @@
 /**
- *	\file	dice/src/fe/FEOperation.h 
+ *	\file	dice/src/fe/FEOperation.h
  *	\brief	contains the declaration of the class CFEOperation
  *
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -29,19 +29,21 @@
 #ifndef __DICE_FE_FEOPERATION_H__
 #define __DICE_FE_FEOPERATION_H__
 
-#include "defines.h"
 #include "fe/FEInterfaceComponent.h"
-#include "fe/FETypeSpec.h"
-#include "fe/FEIdentifier.h"
-#include "fe/FETypedDeclarator.h"
-#include "fe/FEAttribute.h"
-#include "fe/FEArrayDeclarator.h"
+#include "fe/FEAttribute.h" // needed for ATTR_TYPE
+#include "CString.h"
+
+class CFEIdentifier;
+class CFETypeSpec;
+class CFETypedDeclarator;
+class Vector;
+class VectorElement;
 
 /**	\class CFEOperation
  *	\ingroup frontend
  *	\brief the description of a function in an interface
  *
- * This class is used to represent the functions of an interface. Do not mix with 
+ * This class is used to represent the functions of an interface. Do not mix with
  * CFEFunction.
  */
 class CFEOperation : public CFEInterfaceComponent
@@ -93,6 +95,7 @@ public:
 	virtual CFETypeSpec* GetReturnType();
 
 protected:
+    virtual bool CheckAttributeParameters(CFETypedDeclarator *pParameter, ATTR_TYPE nAttribute, const char* sAttribute);
 
 // attributes
 protected:

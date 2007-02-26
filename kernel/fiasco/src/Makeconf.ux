@@ -3,6 +3,11 @@
 L4STD_INCDIR	:=
 CPPFLAGS	+= -D_GNU_SOURCE
 
+ifeq ($(CONFIG_IA32_486),y)
+  CFLAGS += -march=i486
+  CXXFLAGS += -march=i486
+endif
+
 ifeq ($(CONFIG_IA32_586),y)
   CFLAGS += -march=i586
   CXXFLAGS += -march=i586
@@ -68,6 +73,10 @@ endif
 
 ifeq ($(CONFIG_NO_FRAME_PTR),y)
   CPPFLAGS += -fomit-frame-pointer
+endif
+
+ifeq ($(CONFIG_GSTABS),y)
+  SHARED_FLAGS += -gstabs+
 endif
 
 SHARED_FLAGS	+= -mpreferred-stack-boundary=2

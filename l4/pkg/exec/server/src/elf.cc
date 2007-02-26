@@ -3,11 +3,16 @@
  * \file	exec/server/src/elf.cc
  * \brief	Some sharable functions for ELF handling
  *
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include "elf.h"
 
+/** Determine ELF hash value from symbol name as described in ELF standard */
 unsigned long
 elf_hash(const unsigned char *name)
 {

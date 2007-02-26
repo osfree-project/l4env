@@ -117,11 +117,7 @@ in_scan:
 	case 'u':
 	case 'i':
 	  {
-#ifdef WANT_LONGLONG_SCANF
 	    unsigned long long v=0;
-#else
-	    unsigned long v=0;
-#endif
 	    unsigned int consumedsofar=consumed;
 	    int neg=0;
 	    while(isspace(tpch)) tpch=A_GETC(fn);

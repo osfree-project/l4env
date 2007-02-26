@@ -1,13 +1,17 @@
 /* $Id$ */
 /*!
  * \file server/src/exc_obj.cc
+ * \brief exec object implementation.
  *
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
- * \brief exec object implementation.
- *
- * An exec object holds either an ELF binary or an ELF library.
- */
+ * An exec object holds either an ELF binary or an ELF library. */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <l4/env/errno.h>
 #include <l4/exec/exec.h>
 
@@ -177,8 +181,7 @@ exc_obj_t::range_psec(l4_addr_t addr, l4_size_t size)
   for (i=0; i<psecs_num; i++)
     {
       psec = psecs[i];
-      if (addr      >= psec->l4exc.addr &&
-	  addr+size <= psec->l4exc.addr+psec->l4exc.size)
+      if (psec->contains(addr, size))
 	/* address found */
 	return psec;
     }
@@ -226,6 +229,7 @@ exc_obj_t::env_reloc_addr(l4exec_section_t *l4exc, l4env_infopage_t *env)
 
 /** Link EXC objects of environment page.
  * 
+ * \param reloc_addr	relocation address
  * \param env		L4 environment infopage
  * \return		0 on success
  * 			- \c -L4_EINVAL section(s) already relocated */
@@ -262,7 +266,7 @@ exc_obj_t::set_section_type(l4_uint16_t type, l4env_infopage_t *env)
 {
   int i;
 
-  msg("Set section type to %04x", type);
+  msg("Setting section flag %04x", type);
 
   /* relocate all program sections */
   for (i=0; i<psecs_num; i++)
@@ -287,17 +291,17 @@ exc_obj_alloc_sect(void)
 }
 
 
-extern int 
-elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
-	      l4_uint32_t _id);
-
-extern int 
-elf64_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
-	      l4_uint32_t _id);
+// don't include elf32.h here to prevent circular dependencies */
+extern int elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, 
+			 l4env_infopage_t *env, l4_uint32_t _id);
+// don't include elf64.h here to prevent circular dependencies */
+extern int elf64_obj_new(exc_img_t *img, exc_obj_t **exc_obj, 
+    			 l4env_infopage_t *env, l4_uint32_t _id);
 
 /* create new exc object according to file format */
 int
-exc_obj_load_bin(const char *fname, int force_load, l4_threadid_t client,
+exc_obj_load_bin(const char *fname, const l4dm_dataspace_t *img_ds,
+		 int force_load, l4_threadid_t client,
 		 int flags, exc_obj_t **exc_obj, l4env_infopage_t *env)
 {
   int error = 0;
@@ -312,7 +316,7 @@ exc_obj_load_bin(const char *fname, int force_load, l4_threadid_t client,
   if (   force_load
       || !(*exc_obj = static_cast<exc_obj_t*>(exc_objs->find(fname))))
     {
-      exc_img_t img(fname, env);
+      exc_img_t img(fname, img_ds, env);
       l4_uint32_t  id;
       
       /* Do we still have enough exc_obj entries? */
@@ -352,5 +356,25 @@ exc_obj_load_bin(const char *fname, int force_load, l4_threadid_t client,
     }
 
   return error;
+}
+
+
+// don't include elf32.h here to prevent circular dependencies */
+int elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
+// don't include elf64.h here to prevent circular dependencies */
+int elf64_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
+
+int
+exc_obj_check_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env)
+{
+  exc_img_t img("dummy", ds, env);
+
+  if (   !::elf32_obj_check_ftype(&img, env, /*verbose=*/0)
+      || !::elf64_obj_check_ftype(&img, env, /*verbose=*/0))
+    /* valid ELF object found */
+    return 1;
+
+  /* not valid ELF object found */
+  return 0;
 }
 

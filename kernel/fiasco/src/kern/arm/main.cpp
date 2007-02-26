@@ -14,9 +14,9 @@ IMPLEMENTATION:
 #include "pagetable.h"
 #include "kdb_ke.h"
 #include "kernel_thread.h"
+#include "kernel_console.h"
 #include "sa_1100.h"
-
-#include "jdb.h"
+#include "space.h"
 
 #include "processor.h"
 
@@ -48,7 +48,7 @@ static void exit_question()
   while(1) {
     puts("\nReturn reboots, \"k\" enters L4 kernel debugger...");
 
-    char c = getchar();
+    char c = Kconsole::console()->getchar();
     
     if (c == 'k' || c == 'K') 
       {
@@ -82,20 +82,17 @@ int main()
 
   Kmem_alloc::allocator();
 
-
-  printf("Interrupts: %i\n", Proc::interrupts());
-
-  
   // disallow all interrupts before we selectively enable them 
   //  pic_disable_all();
   
   // create kernel thread
   static Kernel_thread *kernel = new (&Config::kernel_id) Kernel_thread;
   nil_thread = kernel_thread = kernel; // fill public variable
-
+  Space::kernel_space( current_space() );
   //  unsigned dummy;
 
-  puts("switch to thread stack");
+  kdb_ke("init");
+
   // switch to stack of kernel thread and bootstrap the kernel
   asm volatile
     ("	str sp,%0	        \n"	// save stack pointer in safe register

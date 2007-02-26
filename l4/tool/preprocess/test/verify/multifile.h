@@ -31,11 +31,11 @@ public:
 
 protected:  
 #line 15 "multifile1.cpp"
-  void
+  inline void
   baz();
   
 #line 20 "multifile2.cpp"
-  void 
+  inline void 
   rambo();
 
 private:  

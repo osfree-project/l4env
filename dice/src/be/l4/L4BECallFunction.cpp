@@ -5,7 +5,7 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -27,6 +27,7 @@
 
 #include "be/l4/L4BECallFunction.h"
 #include "be/l4/L4BENameFactory.h"
+#include "be/l4/L4BEClassFactory.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEOpcodeType.h"
@@ -36,8 +37,9 @@
 #include "be/BEMarshaller.h"
 #include "be/l4/L4BEMsgBufferType.h"
 #include "be/l4/L4BESizes.h"
+#include "be/l4/L4BEIPC.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BECallFunction);
@@ -82,10 +84,31 @@ void CL4BECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * p
  */
 void CL4BECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
+    int nSendDirection = GetSendDirection();
+	bool bHasSizeIsParams = (GetParameterCount(ATTR_SIZE_IS, ATTR_REF, nSendDirection) > 0) ||
+	    (GetParameterCount(ATTR_LENGTH_IS, ATTR_REF, nSendDirection) > 0) ||
+		(GetParameterCount(ATTR_STRING, ATTR_REF, nSendDirection) > 0);
     // set dopes
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, DIRECTION_IN, pContext);
+    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nSendDirection, bHasSizeIsParams, pContext);
     // invocate
+    if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+	{
+		// sometimes it's possible to abort a call of a client.
+		// but the client wants his call made, so we try until
+		// the call completes
+		pFile->PrintIndent("do\n");
+		pFile->PrintIndent("{\n");
+		pFile->IncIndent();
+	}
     WriteIPC(pFile, pContext);
+	if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+	{
+		// now check if call has been canceled
+		String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+		pFile->DecIndent();
+		pFile->PrintIndent("} while ((L4_IPC_ERROR(%s) == L4_IPC_SEABORTED) || (L4_IPC_ERROR(%s) == L4_IPC_SECANCELED));\n",
+							(const char*)sResult, (const char*)sResult);
+	}
 	// check for errors
     WriteIPCErrorCheck(pFile, pContext);
 }
@@ -98,14 +121,14 @@ void CL4BECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CL4BECallFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
-    // if we have send flexpages marshal them first
-    CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    nStartOffset += pMarshaller->Marshal(pFile, this, TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
-    // marshal opcode
-    nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
-    // marshal rest
-    pMarshaller->Marshal(pFile, this, -TYPE_FLEXPAGE, nStartOffset, bUseConstOffset, pContext);
-    delete pMarshaller;
+	// if we have send flexpages marshal them first
+	CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
+	nStartOffset += pMarshaller->Marshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+	// marshal opcode
+	nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
+	// marshal rest
+	pMarshaller->Marshal(pFile, this, -TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+	delete pMarshaller;
 }
 
 /**	\brief write the error checking code for the IPC
@@ -127,13 +150,17 @@ void CL4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContex
     pFile->PrintIndent("{\n");
     pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
-    pFile->PrintIndent("");
+	// env.repos_id = DICE_IPC_ERROR;
+    pFile->PrintIndent("CORBA_exception_set(");
+    if (pDecl->GetStars() == 0)
+	    pFile->Print("&");
     pDecl->WriteName(pFile, pContext);
-    if (pDecl->GetStars())
-        pFile->Print("->");
-    else
-        pFile->Print(".");
-    pFile->Print("major = CORBA_SYSTEM_EXCEPTION;\n");
+    pFile->Print(",\n");
+	pFile->IncIndent();
+	pFile->PrintIndent("CORBA_SYSTEM_EXCEPTION,\n");
+	pFile->PrintIndent("CORBA_DICE_EXCEPTION_IPC_ERROR,\n");
+	pFile->PrintIndent("0);\n");
+	pFile->DecIndent();
     // env.ipc_error = L4_IPC_ERROR(result);
     pFile->PrintIndent("");
     pDecl->WriteName(pFile, pContext);
@@ -142,93 +169,11 @@ void CL4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContex
     else
         pFile->Print(".");
     pFile->Print("ipc_error = L4_IPC_ERROR(%s);\n", (const char*)sResult);
+	// return
+	WriteReturn(pFile, pContext);
     // close }
     pFile->DecIndent();
     pFile->PrintIndent("}\n");
-
-return;
-    String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
-
-    pFile->PrintIndent("/* test for IPC errors */\n");
-    pFile->PrintIndent("while (L4_IPC_IS_ERROR(%s))\n", (const char *) sResult);
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-    {
-        String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-        pFile->PrintIndent("LOG(\"An IPC error occurred (0x%%x)\\n\", L4_IPC_ERROR(%s));\n",
-                           (const char*)sResult);
-        pFile->PrintIndent("LOG(\"  while sending to %%x.%%x \\n\", %s->id.task, %s->id.lthread);\n",
-                           (const char*)sObj, (const char*)sObj);
-    }
-
-    pFile->PrintIndent("switch(L4_IPC_IS_ERROR(%s))\n", (const char *) sResult);
-    pFile->PrintIndent("{\n");
-
-    // reply errors
-    pFile->PrintIndent("case L4_IPC_ENOT_EXISTENT: // client does not exist\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("// panic(\"cannot wait for not existing client\");\n");
-    if (GetReturnType()->IsVoid())
-		pFile->PrintIndent("return;\n");
-    else
-		pFile->PrintIndent("return %s;\n", (const char *) sReturn);	// should be unset
-    pFile->PrintIndent("break;\n");
-    pFile->DecIndent();
-
-    pFile->PrintIndent("case L4_IPC_SETIMEOUT: // client didn't respond\n");
-    pFile->PrintIndent("case L4_IPC_REMSGCUT: // client didn't expect this message size\n");
-    // receive errors
-    pFile->PrintIndent("case L4_IPC_RETIMEOUT: // response timed out\n");
-    pFile->PrintIndent("case L4_IPC_SEMSGCUT: // client send too much\n");
-    pFile->IncIndent();
-    // ignore reply and simply receive message
-    WriteIPCReceiveOnly(pFile, pContext);
-    pFile->PrintIndent("break;\n");
-    pFile->DecIndent();
-    // default
-    pFile->PrintIndent("}\n");
-
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-}
-
-/**	\brief writes the wait operation in case of an error
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
- */
-void CL4BECallFunction::WriteIPCReceiveOnly(CBEFile * pFile, CBEContext * pContext)
-{
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-
-    pFile->PrintIndent("l4_i386_ipc_receive(*%s,\n", (const char *) sServerID);
-    pFile->IncIndent();
-
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(GetReceiveDirection(), pContext))
-        pFile->PrintIndent("L4_IPC_SHORT_MSG,\n ");
-    else
-    {
-        if (m_pMsgBuffer->HasReference())
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
-        else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
-    }
-
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])),\n");
-
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
-
-    pFile->DecIndent();
 }
 
 /** \brief initializes message size dopes
@@ -238,6 +183,8 @@ void CL4BECallFunction::WriteIPCReceiveOnly(CBEFile * pFile, CBEContext * pConte
 void CL4BECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     CBECallFunction::WriteVariableInitialization(pFile, pContext);
+	if (pContext->IsOptionSet(PROGRAM_ZERO_MSGBUF))
+		((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSetZero(pFile, pContext);
     ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSizeDopeInit(pFile, pContext);
     ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteReceiveIndirectStringInitialization(pFile, pContext);
 }
@@ -252,7 +199,8 @@ void CL4BECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext 
  */
 void CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
 {
-    int nFlexSize = 0;
+	// check flexpages
+	int nFlexSize = 0;
     if (((CL4BEMsgBufferType*) m_pMsgBuffer)->HasReceiveFlexpages())
     {
         // we have to always check if this was a flexpage IPC
@@ -260,17 +208,39 @@ void CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bo
         pFile->PrintIndent("if (l4_ipc_fpage_received(%s))\n", (const char*)sResult);
         nFlexSize = WriteFlexpageReturnPatch(pFile, nStartOffset, bUseConstOffset, pContext);
         pFile->PrintIndent("else\n");
+		pFile->PrintIndent("{\n");
         // since we should always get receive flexpages we expect, this is the error case
         // therefore we do not add this size to the offset, since we cannot trust it
         pFile->IncIndent();
-        WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+		// unmarshal exception first
+		WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+		// test for exception and return
+		WriteExceptionCheck(pFile, pContext);
+		// unmarshal return
+		//WriteUnmarshalReturn(pFile, nStartOffset+nExceptionSize, bUseConstOffset, pContext);
+		// even though there are no flexpages send, the marshalling didn't know if the flexpages
+		// are valid. Though it reserved space for them. Therefore we have to apply the opcode
+		// path here as well. The return code might return the reason for the invalid flexpages.
+		pFile->DecIndent();
+        nFlexSize = WriteFlexpageReturnPatch(pFile, nStartOffset, bUseConstOffset, pContext);
+		pFile->IncIndent();
+		// return
+		// because this means error and we want to skip the rest of the unmarshalling
+		WriteReturn(pFile, pContext);
         pFile->DecIndent();
+		pFile->PrintIndent("}\n");
     }
     else
     {
+		// unmarshal exception first
+		nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+		// test for exception and return
+		WriteExceptionCheck(pFile, pContext);
+	    // unmarshal return
         nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     }
     // unmarshal rest (skip CBECallFunction)
+	// unmarshals flexpages if there are any...
     CBEOperationFunction::WriteUnmarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
     // add the size of the flexpage unmarshalling to offset
     nStartOffset += nFlexSize;
@@ -377,55 +347,6 @@ bool CL4BECallFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETyp
  */
 void CL4BECallFunction::WriteIPC(CBEFile* pFile, CBEContext* pContext)
 {
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-
-    pFile->PrintIndent("l4_i386_ipc_call(*%s,\n", (const char *) sServerID);
-    pFile->IncIndent();
-    pFile->PrintIndent("");
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasSendFlexpages())
-        pFile->Print("(%s*)((%s)", (const char*)sMWord, (const char*)sMWord);
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(GetSendDirection(), pContext))
-        pFile->Print("L4_IPC_SHORT_MSG");
-    else
-    {
-        if (m_pMsgBuffer->HasReference())
-            pFile->Print("%s", (const char *) sMsgBuffer);
-        else
-            pFile->Print("&%s", (const char *) sMsgBuffer);
-    }
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasSendFlexpages())
-        pFile->Print("|2)");
-    pFile->Print(",\n");
-
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0]))),\n");
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4]))),\n");
-
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(GetReceiveDirection(), pContext))
-        pFile->PrintIndent("L4_IPC_SHORT_MSG,\n");
-    else
-    {
-        if (m_pMsgBuffer->HasReference())
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
-        else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
-    }
-
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    m_pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])),\n");
-
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
-
-    pFile->DecIndent();
+    assert(m_pComm);
+	((CL4BEIPC*)m_pComm)->WriteCall(pFile, this, pContext);
 }

@@ -5,7 +5,7 @@
  *	\date	02/13/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -72,9 +72,10 @@ public:
     virtual int GetFixedCount(int nDirection = 0);
     virtual int GetVariableCount(int nDirection = 0);
     virtual int GetStringCount(int nDirection = 0);
-    virtual void WriteMemberAccess(CBEFile *pFile, int nMemberType, CBEContext *pContext);
+    virtual void WriteMemberAccess(CBEFile *pFile, int nMemberType, CBEContext *pContext, String sOffset = String());
     virtual void InitCounts(CBEFunction *pFunction, CBEContext *pContext);
     virtual void InitCounts(CBEClass *pClass, CBEContext *pContext);
+	virtual bool NeedCast(int nFEType, CBEContext *pContext);
 
 protected:
     virtual CFETypeSpec* GetMsgBufferType(CFEInterface *pFEInterface, CFEDeclarator* &pFEDeclarator, CBEContext *pContext);

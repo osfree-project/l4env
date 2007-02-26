@@ -36,8 +36,10 @@
  * helpers
  *****************************************************************************/
 
-static void do_socket_longjmp(dsi_socket_t *socket){
-    _longjmp(socket->packet_get_abort_env, 1);
+static void 
+do_socket_longjmp(dsi_socket_t *socket)
+{
+  _longjmp(socket->packet_get_abort_env, 1);
 }
 
 /*****************************************************************************/
@@ -120,12 +122,11 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
   l4_umword_t dummy;
 #endif
 
-#if DEBUG_RECEIVE_PACKET
-  INFO("packet %d\n",packet->no);
-  INFO("remote sync %x.%x\n",socket->remote_socket.sync_th.id.task,
-       socket->remote_socket.sync_th.id.lthread);
-#endif
-
+  LOGdL(DEBUG_RECEIVE_PACKET,"packet %d",packet->no);
+  LOGdL(DEBUG_RECEIVE_PACKET,"remote sync %x.%x",
+        socket->remote_socket.sync_th.id.task,
+        socket->remote_socket.sync_th.id.lthread);
+  
   /* get packet index */
   p = __get_packet_index(socket,packet);
 
@@ -134,11 +135,11 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
     {
       /* call send component */
 #if RELEASE_DO_CALL
-      ret = l4_i386_ipc_call(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
+      ret = l4_ipc_call(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
 			     DSI_SYNC_RELEASE,p,L4_IPC_SHORT_MSG,&dummy,
 			     &dummy,L4_IPC_NEVER,&result);
 #else
-      ret = l4_i386_ipc_send(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
+      ret = l4_ipc_send(socket->remote_socket.sync_th,L4_IPC_SHORT_MSG,
 			     DSI_SYNC_RELEASE,p,L4_IPC_NEVER,&result);
 #endif
 
@@ -187,8 +188,8 @@ __get_sg_elem(dsi_socket_t * socket, int * sg_elem)
   /* search packet */
   do
     {
-      if (cmpxchg32(&socket->sg_lists[i].flags,
-		    DSI_SG_ELEM_UNUSED,DSI_SG_ELEM_USED))
+      if (l4util_cmpxchg32(&socket->sg_lists[i].flags,
+			   DSI_SG_ELEM_UNUSED,DSI_SG_ELEM_USED))
 	{
 	  /* found */
 	  socket->next_sg_elem = (i + 1) % socket->header->num_sg_elems;
@@ -239,57 +240,55 @@ __get_send_packet(dsi_socket_t * socket, int * packet)
   dsi_sync_msg_t msg;
   dsi_packet_t * p = &socket->packets[socket->next_packet];
   int err;
-
-#if DEBUG_SEND_PACKET
-  INFO("trying to get packet %d\n",socket->next_packet);
-#endif
+  
+  LOGdL(DEBUG_SEND_PACKET,"trying to get packet %d",socket->next_packet);
 
   /* Abort-Flag set in between? */
   if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
   if (!dsi_trylock(&p->tx_sem)){
-      /* We did not get the packet. This is not the normal case. */
-      if (SOCKET_BLOCK(socket)) {
-	  /* Blocking socket. Prepare for waiting. Our peer will not
-	     see that we block until we are inside dsi_down(). This
-	     means, the preparation might be for nothing, and that our
-	     threads must not count on our blocking only because it
-	     sees the sync_callback or the DSI_SOCKET_BLOCKING_IN_GET
-	     flag set. */
+    /* We did not get the packet. This is not the normal case. */
+    if (SOCKET_BLOCK(socket)) {
+      /* Blocking socket. Prepare for waiting. Our peer will not
+         see that we block until we are inside dsi_down(). This
+         means, the preparation might be for nothing, and that our
+         threads must not count on our blocking only because it
+         sees the sync_callback or the DSI_SOCKET_BLOCKING_IN_GET
+         flag set. */
 
-	  if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
+      if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
 
-	  /* Tell our threads we are blocking */
-	  set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
+      /* Tell our threads we are blocking */
+      set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
 
-	  /* After(!) setting the blocking flag, check again if we should
-	     abort. */
-	  if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
+      /* After(!) setting the blocking flag, check again if we should
+         abort. */
+      if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
 
-	  if (SOCKET_SYNC_CALLBACK(socket)){
-	      /* packet not available, call synchronization callback */
-	      socket->sync_callback(socket,socket->packet_count,
-				    DSI_SYNC_NO_SEND_PACKET);
-	  }
-
-	  /* block now */
-	  msg.sync_th = socket->remote_socket.sync_th;
-	  msg.packet = socket->next_packet;
-	  msg.rcv = L4_IPC_SHORT_MSG;
-	  err = dsi_down(&p->tx_sem,msg);
-
-	  /* Not waiting anymore */
-	  reset_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
-
-	  if(err!=-1 && err){
-	  	return ((err & L4_IPC_ERROR_MASK) == L4_IPC_ENOT_EXISTENT)?
-	  	        -DSI_ECONNECT:-DSI_ENOPACKET;
-	  }
+      if (SOCKET_SYNC_CALLBACK(socket)){
+        /* packet not available, call synchronization callback */
+        socket->sync_callback(socket,socket->packet_count,
+                              DSI_SYNC_NO_SEND_PACKET);
       }
-      else {
-	  /* Most unusual case: nonblocking socket which does not get a
-	     packet. */
-	  return -DSI_ENOPACKET;
+
+      /* block now */
+      msg.sync_th = socket->remote_socket.sync_th;
+      msg.packet = socket->next_packet;
+      msg.rcv = L4_IPC_SHORT_MSG;
+      err = dsi_down(&p->tx_sem,msg);
+
+      /* Not waiting anymore */
+      reset_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
+
+      if(err!=-1 && err){
+        return ((err & L4_IPC_ERROR_MASK) == L4_IPC_ENOT_EXISTENT)?
+          -DSI_ECONNECT:-DSI_ENOPACKET;
       }
+    }
+    else {
+      /* Most unusual case: nonblocking socket which does not get a
+         packet. */
+      return -DSI_ENOPACKET;
+    }
   }
 
   /* got the packet */
@@ -307,7 +306,7 @@ __get_send_packet(dsi_socket_t * socket, int * packet)
 
   return 0;
 
-e_eeos:
+ e_eeos:
   reset_socket_flag(socket,
 		    DSI_SOCKET_BLOCKING_IN_GET |
 		    DSI_SOCKET_BLOCK_ABORT);
@@ -332,12 +331,10 @@ __map_receive_data(dsi_socket_t * socket, int packet_idx)
   l4_umword_t dummy;
   l4_msgdope_t result;
 
-#if DEBUG_MAP_PACKET
-  INFO("map packet %d\n",packet_idx);
-#endif
+  LOGdL(DEBUG_MAP_PACKET,"map packet %d",packet_idx);
 
   /* call send dync thread */
-  ret = l4_i386_ipc_call(socket->remote_socket.sync_th,
+  ret = l4_ipc_call(socket->remote_socket.sync_th,
 			 L4_IPC_SHORT_MSG,DSI_SYNC_MAP,packet_idx,
 			 L4_IPC_MAPMSG((l4_addr_t)socket->data_area,
 				       socket->data_map_size),
@@ -371,9 +368,7 @@ __copy_receive_data(dsi_socket_t * socket, int packet_idx)
   l4_umword_t dummy;
   l4_msgdope_t result;
 
-#if DEBUG_COPY_PACKET
-  INFO("copy packet %d\n",packet_idx);
-#endif
+  LOGdL(DEBUG_COPY_PACKET,"copy packet %d",packet_idx);
 
   /* call send sync thread */
   msg_buf.rcv_fpage = 0;
@@ -382,7 +377,7 @@ __copy_receive_data(dsi_socket_t * socket, int packet_idx)
   msg_buf.buf.rcv_str = (l4_addr_t)socket->data_area;
   msg_buf.buf.rcv_size = socket->data_size;
  
-  ret = l4_i386_ipc_call(socket->remote_socket.sync_th,
+  ret = l4_ipc_call(socket->remote_socket.sync_th,
 			 L4_IPC_SHORT_MSG,DSI_SYNC_COPY,packet_idx,
 			 &msg_buf,&dummy,&dummy,L4_IPC_NEVER,&result);
   if (ret || (result.md.strings != 1))
@@ -433,79 +428,75 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
     l4_strdope_t buf;
   } msg_buf;
 
-#if DEBUG_RECEIVE_PACKET
-  INFO("trying to get packet %d\n",socket->next_packet);
-#endif
+  LOGdL(DEBUG_RECEIVE_PACKET,"trying to get packet %d",socket->next_packet);
 
   /* Abort-Flag set in between? */
   if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
   if(!dsi_trylock(&socket->packets[socket->next_packet].rx_sem)){
-      if (SOCKET_BLOCK(socket)) {
-	  /* Blocking socket. Prepare for waiting */
+    if (SOCKET_BLOCK(socket)) {
+      /* Blocking socket. Prepare for waiting */
 
-	  /* Setup synchronization message */
-	  msg.sync_th = socket->remote_socket.sync_th;
-	  msg.packet = socket->next_packet;
-	  if (socket->flags & DSI_SOCKET_MAP) {
-	      /* set receive descriptor to receive fpage */
-	      msg.rcv = L4_IPC_MAPMSG((l4_addr_t)socket->data_area,
-				      socket->data_map_size);
+      /* Setup synchronization message */
+      msg.sync_th = socket->remote_socket.sync_th;
+      msg.packet = socket->next_packet;
+      if (socket->flags & DSI_SOCKET_MAP) 
+        {
+          /* set receive descriptor to receive fpage */
+          msg.rcv = L4_IPC_MAPMSG((l4_addr_t)socket->data_area,
+                                  socket->data_map_size);
 
-#if DEBUG_MAP_PACKET
-	      INFO("rcv fpage 0x%08x\n",(unsigned)msg.rcv);
-#endif
-	  } else if (socket->flags & DSI_SOCKET_COPY) {
-	      /* set receive descriptor to copy message */
-	      msg_buf.rcv_fpage = 0;
-	      msg_buf.size_dope = L4_IPC_DOPE(2,1);
-	      msg_buf.send_dope = L4_IPC_DOPE(2,0);
-	      msg_buf.buf.rcv_str = (l4_addr_t)socket->data_area;
-	      msg_buf.buf.rcv_size = socket->data_size;
+          LOGdL(DEBUG_MAP_PACKET,"rcv fpage 0x%08x",(unsigned)msg.rcv);
+        } 
+      else if (socket->flags & DSI_SOCKET_COPY) 
+        {
+          /* set receive descriptor to copy message */
+          msg_buf.rcv_fpage = 0;
+          msg_buf.size_dope = L4_IPC_DOPE(2,1);
+          msg_buf.send_dope = L4_IPC_DOPE(2,0);
+          msg_buf.buf.rcv_str = (l4_addr_t)socket->data_area;
+          msg_buf.buf.rcv_size = socket->data_size;
 
-#if DEBUG_COPY_PACKET
-	      INFO("rcv str at 0x%08x\n",msg_buf.buf.rcv_str);
-	      INFO("size %u\n",socket->data_size);
-#endif
+          LOGdL(DEBUG_COPY_PACKET,"rcv str at 0x%08x",msg_buf.buf.rcv_str);
+          LOGdL(DEBUG_COPY_PACKET,"size %u",socket->data_size);
 
-	      msg.rcv = &msg_buf;
-	  } else
-	      msg.rcv = L4_IPC_SHORT_MSG;
+          msg.rcv = &msg_buf;
+        } 
+      else
+        msg.rcv = L4_IPC_SHORT_MSG;
 
-	  if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
+      if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
 
-	  /* Tell our threads we are blocking */
-	  set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
+      /* Tell our threads we are blocking */
+      set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
 
-	  /* After(!) setting the blocking flag, check again if we should
-	     abort. */
-	  if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
+      /* After(!) setting the blocking flag, check again if we should
+         abort. */
+      if(socket->flags & DSI_SOCKET_BLOCK_ABORT) goto e_eeos;
 
-	  if (SOCKET_SYNC_CALLBACK(socket)) {
-	      socket->sync_callback(socket,
-				    socket->packets[socket->next_packet].no,
-				    DSI_SYNC_NO_RECEIVE_PACKET);
-	  }
-
-	  /* block */
-	  result = dsi_down(&socket->packets[socket->next_packet].rx_sem,msg);
-
-	  /* Not waiting anymore */
-	  reset_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
-
-	  if(result!=-1 && result)
-	  	return ((result & L4_IPC_ERROR_MASK)==L4_IPC_ENOT_EXISTENT)?
-	  		-DSI_ECONNECT:-DSI_ENOPACKET;
-
-      }	else {
-	  /* Most unusual case: nonblocking socket which does not get a
-	     packet. */
-	  return -DSI_ENOPACKET;
+      if (SOCKET_SYNC_CALLBACK(socket)) {
+        socket->sync_callback(socket,
+                              socket->packets[socket->next_packet].no,
+                              DSI_SYNC_NO_RECEIVE_PACKET);
       }
+
+      /* block */
+      result = dsi_down(&socket->packets[socket->next_packet].rx_sem,msg);
+
+      /* Not waiting anymore */
+      reset_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
+
+      if(result!=-1 && result)
+        return ((result & L4_IPC_ERROR_MASK)==L4_IPC_ENOT_EXISTENT)?
+          -DSI_ECONNECT:-DSI_ENOPACKET;
+
+    }	else {
+      /* Most unusual case: nonblocking socket which does not get a
+         packet. */
+      return -DSI_ENOPACKET;
+    }
   } /* got the packet */
       
-#if DEBUG_RECEIVE_PACKET
-  INFO("got packet %d\n",socket->next_packet);
-#endif
+  LOGdL(DEBUG_RECEIVE_PACKET,"got packet %d",socket->next_packet);
 
   /* got the packet */
   *packet = socket->next_packet;
@@ -550,7 +541,7 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
   /* done */
   return 0;
 
-  e_eeos:
+ e_eeos:
   reset_socket_flag(socket,
 		    DSI_SOCKET_BLOCKING_IN_GET |
 		    DSI_SOCKET_BLOCK_ABORT);
@@ -597,14 +588,16 @@ __commit_send_packet(dsi_socket_t * socket, dsi_packet_t * packet)
   msg.sync_th = socket->sync_th; /* the receiver is waiting for our sync thread */
   msg.packet = __get_packet_index(socket,packet);
 
-#if DEBUG_SEND_PACKET
-  INFO("commiting packet %d\n",msg.packet);
-  INFO("message to %x.%x\n",msg.sync_th.id.task,msg.sync_th.id.lthread);
-#endif
+  LOGdL(DEBUG_SEND_PACKET,"commiting packet %d",msg.packet);
+  LOGdL(DEBUG_SEND_PACKET,"message to %x.%x",
+        msg.sync_th.id.task,msg.sync_th.id.lthread);
+
+  socket->header->packets_committed++;
 
   /* commit packet, the rx_sem counter of the packet is used to synchronize 
    * valid send data (see __get_receive_packet) */
-  if(dsi_up(&packet->rx_sem,msg)) return -DSI_ENOPACKET;
+  if(dsi_up(&packet->rx_sem,msg)) 
+    return -DSI_ENOPACKET;
 
   /* done */
   return 0;
@@ -655,9 +648,8 @@ __commit_receive_packet(dsi_socket_t * socket, dsi_packet_t * packet)
       while (sg_elem != DSI_SG_ELEM_LAST)
 	{
 	  /* unmap packet data */
-#if DEBUG_MAP_PACKET
-	  INFO("unmap packet %u\n",packet->no);
-#endif	  
+	  LOGdL(DEBUG_MAP_PACKET,"unmap packet %u",packet->no);
+
 	  a = 12;
 	  while (socket->sg_lists[sg_elem].size > (1U << a))
 	    a++;
@@ -681,6 +673,8 @@ __commit_receive_packet(dsi_socket_t * socket, dsi_packet_t * packet)
   msg.sync_th = socket->sync_th; /* the sender is waiting for our sync thread */
   msg.packet = __get_packet_index(socket,packet);
 
+  socket->header->packets_committed--;
+  
   /* release scatter gather list elements */
   sg_elem = packet->sg_list;
   for (i = 0; i < packet->sg_len; i++)
@@ -737,10 +731,6 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
 {
   int ret,i;
 
-#if 0
-  INFO("socket at 0x%08x\n",(unsigned)socket);
-#endif
-
 #if DO_SANITY
   /* check socket descriptor */
   if (!dsi_is_valid_socket(socket))
@@ -758,10 +748,6 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
       return -L4_EINVAL;
     }
 
-#if 0
-  INFO("ret = %d\n",ret);
-#endif
-
   if (ret && (ret != -DSI_ENOPACKET) && ret!=-DSI_EEOS)
     {
       Error("DSI: get packet failed: %s (%d)\n",l4env_errstr(ret),ret);
@@ -769,11 +755,9 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
     }
 
   if (ret) return ret;
-
-#if 0
+  
 #if (DEBUG_SEND_PACKET || DEBUG_RECEIVE_PACKET)
-  INFO("got packet %d\n",i);
-#endif
+  LOGL("got packet %d",i);
 #endif
 
   /* setup packet descriptor */
@@ -829,20 +813,20 @@ dsi_packet_get_abort(dsi_socket_t * socket)
   set_socket_flag(socket, DSI_SOCKET_BLOCK_ABORT);
 
   if(socket->flags & DSI_SOCKET_BLOCKING_IN_GET){
-      /* it is actually inside a packet get. The longjmp-environment is
-	 therefore valid. ex-regs the thread to the longjump-function.
-      */
-      l4_threadid_t preempter = L4_INVALID_ID, pager=L4_INVALID_ID;
-      l4_umword_t	*stack = socket->abort_stack+sizeof(socket->abort_stack);
-      l4_umword_t	dummy;
+    /* it is actually inside a packet get. The longjmp-environment is
+       therefore valid. ex-regs the thread to the longjump-function.
+    */
+    l4_threadid_t preempter = L4_INVALID_ID, pager=L4_INVALID_ID;
+    l4_umword_t	*stack = socket->abort_stack+sizeof(socket->abort_stack);
+    l4_umword_t	dummy;
 
-      *--stack=(l4_umword_t)socket;	// the argument
-      *--stack=0;	// faked return address
+    *--stack=(l4_umword_t)socket;	// the argument
+    *--stack=0;	// faked return address
       
-      l4_thread_ex_regs(socket->work_th, (l4_umword_t)do_socket_longjmp,
-			(l4_umword_t)stack, &preempter, &pager,
-			&dummy, &dummy, &dummy);
-      return 0;
+    l4_thread_ex_regs(socket->work_th, (l4_umword_t)do_socket_longjmp,
+                      (l4_umword_t)stack, &preempter, &pager,
+                      &dummy, &dummy, &dummy);
+    return 0;
   }
 
   return -DSI_ENOPACKET;
@@ -927,7 +911,7 @@ dsi_packet_commit(dsi_socket_t * socket, dsi_packet_t * packet)
   
   if (ret)
     {
-      Error("DSI: commit packet failed: %s (%d)\n",l4env_errstr(ret),ret);
+      Error("DSI: commit packet failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -983,7 +967,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
   if (packet->sg_len >= socket->header->max_sg_len)
     {
       /* exceeded max scatter gather list length */
-      Error("DSI: scatter gather list too long (%d)\n",packet->sg_len + 1);
+      Error("DSI: scatter gather list too long (%d)",packet->sg_len + 1);
       return -DSI_ESGLIST;
     }
 
@@ -1000,7 +984,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
 	  (size == 0))
 	{
 	  /* invalid data area */
-	  Error ("DSI: invalid data area (addr 0x%08x, size %u)\n",
+	  Error ("DSI: invalid data area (addr 0x%08x, size %u)",
 		 (l4_addr_t)addr,size);
 	  return -L4_EINVAL;
 	}
@@ -1097,17 +1081,17 @@ dsi_packet_get_data(dsi_socket_t * socket, dsi_packet_t * packet,
 					  DSI_DATA_AREA_EOS |
 	                                  DSI_DATA_AREA_PHYS);
     if(flags & DSI_DATA_AREA_PHYS)
-	{
+      {
 	*addr = (void*)socket->sg_lists[nr].addr;
 	return -DSI_EPHYS;
-	}
+      }
     else
-	{
+      {
 	*addr = socket->data_area + socket->sg_lists[nr].addr;
 	if(!flags) return 0;
 	if(flags & DSI_DATA_AREA_GAP) return -DSI_EGAP;
 	return -DSI_EEOS;
-	}
+      }
   } // normal case, packet had valid sg-number
   
   /* check if packet contains more data */

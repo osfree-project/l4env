@@ -9,8 +9,8 @@
 namespace std {
   using ::putchar;
   using ::puts;
-  using ::putstr;
-  using ::putnstr;
+  //  using ::putstr;
+  //  using ::putnstr;
   using ::printf;
   using ::sprintf;
   using ::snprintf;
@@ -20,12 +20,8 @@ namespace std {
   using ::vprintf;
   using ::vsprintf;
   using ::vsnprintf;
-  using ::getchar;
-  using ::gets;
-  using ::fgets;
   using ::vscanf;
   using ::vsscanf;
-
 };
 #endif
 

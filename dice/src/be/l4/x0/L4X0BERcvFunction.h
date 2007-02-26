@@ -33,15 +33,12 @@ class CL4X0BERcvFunction : public CL4BERcvFunction
 DECLARE_DYNAMIC(CL4X0BERcvFunction);
 
 public:
-  CL4X0BERcvFunction();
-  ~CL4X0BERcvFunction();
+	CL4X0BERcvFunction();
+	~CL4X0BERcvFunction();
 
 protected:
-    virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmLongIPC(CBEContext *pContext);
-    virtual bool UseAsmShortIPC(CBEContext *pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

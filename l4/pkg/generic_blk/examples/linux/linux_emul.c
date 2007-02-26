@@ -115,3 +115,4 @@ l4blk_release_stack(void * sp)
   /* we cannot release the stack, there is a race in destroy_thread which 
    * might cause further stack accesses */
 }
+

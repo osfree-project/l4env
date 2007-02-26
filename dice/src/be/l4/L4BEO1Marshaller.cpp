@@ -5,7 +5,7 @@
  *	\date	05/17/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,7 +34,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BEMsgBufferType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CL4BEO1Marshaller);
@@ -177,6 +177,7 @@ int CL4BEO1Marshaller::Marshal(CBEFile * pFile, CBETypedDeclarator * pParameter,
  *  \param pFile the file to marshal to
  *  \param pFunction the function to marshal
  *  \param nFEType the type of the parameters to marshal (negative if not this type, zero if all)
+ *  \param nNumber the number of parameters to marshal (0 if all, negative if all after abs(nNumber) parameters)
  *  \param nStartOffset the starting offset in the message buffer
  *  \param bUseConstOffset true if nStartOffset can be used to index message buffer
  *  \param pContext the context of the marshalling
@@ -185,7 +186,7 @@ int CL4BEO1Marshaller::Marshal(CBEFile * pFile, CBETypedDeclarator * pParameter,
  * This implementation has to count the total number of flexpages first and init the
  * current counter.
  */
-int CL4BEO1Marshaller::Marshal(CBEFile * pFile, CBEFunction * pFunction, int nFEType, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
+int CL4BEO1Marshaller::Marshal(CBEFile * pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
 {
     m_nTotalFlexpages = 0;
     VectorElement *pIter = pFunction->GetFirstSortedParameter();
@@ -200,7 +201,7 @@ int CL4BEO1Marshaller::Marshal(CBEFile * pFile, CBEFunction * pFunction, int nFE
     if (m_nTotalFlexpages > 0)
         m_nCurrentFlexpages = 0;
     // call base class
-    return CBEO1Marshaller::Marshal(pFile, pFunction, nFEType, nStartOffset, bUseConstOffset, pContext);
+    return CBEO1Marshaller::Marshal(pFile, pFunction, nFEType, nNumber, nStartOffset, bUseConstOffset, pContext);
 }
 
 /** \brief marshals an indirect string parameter
@@ -253,7 +254,7 @@ int CL4BEO1Marshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, 
     // marshal into l4_strdope_t members, but have to marshal directly into the byte buffer
     bool bVarSized = pMsgBuffer->IsVariableSized();
     // if first ref-string in var-sized buffer: l4_strdope_t-align the offset
-    if (bVarSized && (m_nCurrentString == 0) && !bUseConstOffset)
+    if (bVarSized && (m_nCurrentString == 0)/* && !bUseConstOffset*/)
     {
         String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
         String sTmpOffset = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
@@ -276,11 +277,13 @@ int CL4BEO1Marshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, 
             WriteBuffer(String("l4_strdope_t"), nStartOffset, bUseConstOffset, true, pContext);
             m_pFile->Print(")");
         }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
+        else if (m_pFunction && m_pFunction->IsComponentSide())
+			pMsgBuffer->WriteIndirectPartAccess(m_pFile, m_nCurrentString, pContext);
+		else
+		{
+		    pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
+			m_pFile->Print("[%d]", m_nCurrentString);
+		}
         m_pFile->Print(".snd_str = (%s)(", (const char*)sMWord);
         m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
         m_pFile->Print(");\n");
@@ -292,16 +295,28 @@ int CL4BEO1Marshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, 
             WriteBuffer(String("l4_strdope_t"), nStartOffset, bUseConstOffset, true, pContext);
             m_pFile->Print(")");
         }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
+        else if (m_pFunction && m_pFunction->IsComponentSide())
+		    pMsgBuffer->WriteIndirectPartAccess(m_pFile, m_nCurrentString, pContext);
+		else
+		{
+		    pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
+			m_pFile->Print("[%d]", m_nCurrentString);
+		}
         m_pFile->Print(".snd_size = ");
         // first test size attributes
         if ((m_pParameter->FindAttribute(ATTR_SIZE_IS)) ||
             (m_pParameter->FindAttribute(ATTR_LENGTH_IS)))
-            m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
+        {
+			if (pType->GetSize() > 1)
+				m_pFile->Print("(");
+			m_pParameter->WriteGetSize(m_pFile, &m_vDeclaratorStack, pContext);
+			if (pType->GetSize() > 1)
+			{
+				m_pFile->Print(")");
+				m_pFile->Print("*sizeof");
+				pType->WriteCast(m_pFile, false, pContext);
+			}
+        }
         // then test string attribute
         else if (m_pParameter->FindAttribute(ATTR_STRING))
         {
@@ -322,40 +337,34 @@ int CL4BEO1Marshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, 
         m_pFile->PrintIndent("");
         m_vDeclaratorStack.Write(m_pFile, bUsePointer, false, pContext);
         m_pFile->Print(" = ");
-        pType->WriteCast(m_pFile, true, pContext);
-        m_pFile->Print("");
+		// we have to use the type of the original parameter,
+		// because this is the variable we fill with the values from
+		// the message buffer and it is decalred with the original typed
+        m_pParameter->GetType()->WriteCast(m_pFile, true, pContext);
         if (bVarSized)
         {
+		    bool bUseConst = false;
             m_pFile->Print("(");
-            WriteBuffer(String("l4_strdope_t"), nStartOffset, bUseConstOffset, true, pContext);
+            WriteBuffer(String("l4_strdope_t"), nStartOffset, bUseConst, true, pContext);
             m_pFile->Print(")");
         }
-        else
-        {
-            pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
-            m_pFile->Print("[%d]", m_nCurrentString);
-        }
+        else if (m_pFunction && m_pFunction->IsComponentSide())
+		    pMsgBuffer->WriteIndirectPartAccess(m_pFile, m_nCurrentString, pContext);
+		else
+		{
+		    pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
+			m_pFile->Print("[%d]", m_nCurrentString);
+		}
         m_pFile->Print(".rcv_str;\n");
-        // write rcv size
-        if (!(m_pParameter->FindAttribute(ATTR_STRING)))
-        {
-            m_pFile->PrintIndent("");
-            m_pParameter->WriteGetSize(m_pFile, NULL, pContext);
-            m_pFile->Print(" = ");
-            if (bVarSized)
-            {
-                m_pFile->Print("(");
-                WriteBuffer(String("l4_strdope_t"), nStartOffset, bUseConstOffset, true, pContext);
-                m_pFile->Print(")");
-            }
-            else
-            {
-                pMsgBuffer->WriteMemberAccess(m_pFile, TYPE_REFSTRING, pContext);
-                m_pFile->Print("[%d]", m_nCurrentString);
-            }
-            m_pFile->Print(".rcv_size;\n", m_nCurrentString);
-        }
-        // go to next string
+
+		// we do not unmarshal the receive size, because:
+		// it contains the number of bytes of the array, but we
+		// want the size parameter to contain the number of
+		// elements, and the rcv_size member of the indirect part
+		// contains the size of the receive buffer, not the actual
+		// received number of bytes
+
+		// go to next string
         m_nCurrentString++;
     }
     // if last string restore offset, because we need it for send dope calculation
@@ -368,20 +377,4 @@ int CL4BEO1Marshaller::MarshalIndirectString(CBEType * pType, int nStartOffset, 
     if (bVarSized)
         return pContext->GetSizes()->GetSizeOfEnvType(String("l4_strdope_t"));
     return 0;
-}
-
-/** \brief marshals a string
- *  \param pType the type of the string (usually CHAR_ASTERISK)
- *  \param nStartOffset the place where to start the string in the msg-buffer
- *  \param bUseConstOffset true if nStartOffset can be used
- *  \param bLastParameter true if this is the last parameter to be marshalled
- *  \param pContext the context of the marshalling
- *  \return the number of marshalled bytes if any
- */
-int CL4BEO1Marshaller::MarshalString(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext)
-{
-    // check for indirect strings
-    // indirect string if attributes [ref] exist
-    // marshal/unmarshal
-    return CBEO1Marshaller::MarshalString(pType, nStartOffset, bUseConstOffset, bLastParameter, pContext);
 }

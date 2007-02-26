@@ -1,5 +1,17 @@
-#ifndef _DROPSCON_COMH_H
-#define _DROPSCON_COMH_H
+/*!
+ * \file	con/examples/linux_stub/comh.h
+ * \brief	
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __CON_EXAMPLES_LINUX_STUB_COMH_H_
+#define __CON_EXAMPLES_LINUX_STUB_COMH_H_
 
 #include <l4/con/l4con_pslim.h>
 #include <l4/con/con-client.h>
@@ -30,7 +42,7 @@ typedef struct {
 } comh_redraw_t;
 
 typedef struct {
-   con_pslim_rect_t rect;
+   l4con_pslim_rect_t rect;
    int color;
 } comh_fill_t;
 
@@ -49,7 +61,7 @@ typedef struct {
 } comh_putc_t;
 
 typedef struct {
-   con_pslim_rect_t rect;
+   l4con_pslim_rect_t rect;
    int dx;
    int dy;
 } comh_copy_t;

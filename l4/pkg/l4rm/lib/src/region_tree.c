@@ -11,23 +11,13 @@
  * interface. To avoid pagefaults in the IPC-call, all arguments are passed 
  * to the RM thread in global variables. Synchronizing the accesses to these
  * variables is not done, it must be done at a higher level.
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -37,11 +27,13 @@
 /* L4RM includes */
 #include "l4rm-server.h"
 #include "l4rm-client.h"
-#include "__libl4rm.h"
 #include "__avl_tree.h"
 #include "__region.h"
 #include "__alloc.h"
 #include "__debug.h"
+
+// was in __libl4rm.h
+extern l4_threadid_t l4rm_service_id;
 
 /*****************************************************************************
  *** Global data
@@ -73,12 +65,9 @@ __add_region(void)
 {
   int ret;
 
-#if DEBUG_REGION_TREE
-  INFO("\n");
-  DMSG("  adding region 0x%08x-0x%08x, desc at 0x%08x\n",
-       arg_key.start,arg_key.end,(unsigned)arg_data);
-#endif
-
+  LOGdL(DEBUG_REGION_TREE,"\n  adding region 0x%08x-0x%08x, desc at 0x%08x",
+        arg_key.start,arg_key.end,(unsigned)arg_data);
+  
   /* insert entry */
   ret = avlt_insert(arg_key,arg_data);
   if (ret < 0)
@@ -109,10 +98,7 @@ __remove_region(void)
   int ret;
   avlt_key_t key;
 
-#if DEBUG_REGION_TREE
-  INFO("\n");
-  DMSG("  removing region at addr 0x%08x\n",arg_addr);
-#endif
+  LOGdL(DEBUG_REGION_TREE,"\n  removing region at addr 0x%08x",arg_addr);
 
   /* find entry */
   key.start = key.end = arg_addr;
@@ -121,8 +107,8 @@ __remove_region(void)
     return -L4_ENOTFOUND;
 
 #if DEBUG_REGION_TREE
-  DMSG("  region 0x%08x-0x%08x\n",((l4rm_region_desc_t *)arg_data)->start,
-       ((l4rm_region_desc_t *)arg_data)->end);
+  printf("  region 0x%08x-0x%08x\n",((l4rm_region_desc_t *)arg_data)->start,
+         ((l4rm_region_desc_t *)arg_data)->end);
 #endif
 
   /* remove entry */
@@ -170,9 +156,16 @@ __add_client(void)
  */
 /*****************************************************************************/ 
 l4_int32_t 
-l4_rm_server_add(sm_request_t * request, 
-		 sm_exc_t * _ev)
+l4_rm_add_component(CORBA_Object _dice_corba_obj,
+                    CORBA_Environment *_dice_corba_env)
 {
+  if (!l4_task_equal(*_dice_corba_obj, l4rm_service_id))
+    {
+      printf("L4RM: blocked message from outside ("IdFmt")!\n",
+             IdStr(*_dice_corba_obj));
+      return DICE_NO_REPLY;
+    }
+
   /* add region */
   return __add_region();
 }
@@ -191,9 +184,16 @@ l4_rm_server_add(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-l4_rm_server_remove(sm_request_t * request, 
-		    sm_exc_t * _ev)
+l4_rm_remove_component(CORBA_Object _dice_corba_obj,
+                       CORBA_Environment *_dice_corba_env)
 {
+  if (!l4_task_equal(*_dice_corba_obj, l4rm_service_id))
+    {
+      printf("L4RM: blocked message from outside ("IdFmt")!\n",
+             IdStr(*_dice_corba_obj));
+      return DICE_NO_REPLY;
+    }
+
   /* remove region */
   return __remove_region();
 }
@@ -211,16 +211,20 @@ l4_rm_server_remove(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-l4_rm_server_lookup(sm_request_t * request, 
-		    sm_exc_t * _ev)
+l4_rm_lookup_component(CORBA_Object _dice_corba_obj,
+                       CORBA_Environment *_dice_corba_env)
 {
   int ret;
   avlt_key_t key;
 
-#if DEBUG_REGION_TREE
-  INFO("\n");
-  DMSG("  searching region at addr 0x%08x\n",arg_addr);
-#endif
+  if (!l4_task_equal(*_dice_corba_obj, l4rm_service_id))
+    {
+      printf("L4RM: blocked message from outside ("IdFmt")!\n",
+             IdStr(*_dice_corba_obj));
+      return DICE_NO_REPLY;
+    }
+
+  LOGdL(DEBUG_REGION_TREE,"\n  searching region at addr 0x%08x",arg_addr);
 
   /* find entry */
   key.start = key.end = arg_addr;
@@ -243,9 +247,16 @@ l4_rm_server_lookup(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-l4_rm_server_add_client(sm_request_t * request, 
-			sm_exc_t * _ev)
+l4_rm_add_client_component(CORBA_Object _dice_corba_obj,
+                           CORBA_Environment *_dice_corba_env)
 {
+  if (!l4_task_equal(*_dice_corba_obj, l4rm_service_id))
+    {
+      printf("L4RM: blocked message from outside ("IdFmt")!\n",
+             IdStr(*_dice_corba_obj));
+      return DICE_NO_REPLY;
+    }
+
   /* add client */
   return __add_client();
 }
@@ -261,9 +272,17 @@ l4_rm_server_add_client(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-l4_rm_server_remove_client(sm_request_t * request, 
-			   sm_exc_t * _ev)
+l4_rm_remove_client_component(CORBA_Object _dice_corba_obj,
+                              CORBA_Environment *_dice_corba_env)
 {
+  if (!l4_task_equal(*_dice_corba_obj, l4rm_service_id))
+    {
+      printf("L4RM: blocked message from outside ("IdFmt")!\n",
+             IdStr(*_dice_corba_obj));
+      return DICE_NO_REPLY;
+    }
+
+  /* remove client from region mapper heap dataspace clients */
   l4rm_heap_remove_client(arg_client);
 
   return 0;
@@ -293,7 +312,7 @@ l4rm_tree_insert_region(l4rm_region_desc_t * region,
 			l4_uint32_t flags)
 {
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* set argument buffers */
   arg_key.start = region->start;
@@ -306,11 +325,11 @@ l4rm_tree_insert_region(l4rm_region_desc_t * region,
   else
     {
       /* call region mapper thread */
-      ret = l4_rm_add(l4rm_service_id,&exc);
-      if (ret || (exc._type != exc_l4_no_exception))
+      ret = l4_rm_add_component(&l4rm_service_id,&env);
+      if (ret || (env.major != CORBA_NO_EXCEPTION))
 	{
 	  ERROR("L4RM: call region mapper failed: ret %d, exc %d!",
-		ret,exc._type);
+		ret,env.major);
 	  if (ret)
 	    return ret;
 	  else
@@ -346,7 +365,7 @@ l4rm_tree_remove_region(l4_addr_t addr,
 			l4rm_region_desc_t ** region)
 {
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* set argument buffer */
   arg_addr = addr;
@@ -357,12 +376,12 @@ l4rm_tree_remove_region(l4_addr_t addr,
   else
     {
       /* call region mapper thread */
-      ret = l4_rm_remove(l4rm_service_id,&exc);
-      if (ret || (exc._type != exc_l4_no_exception))
+      ret = l4_rm_remove_component(&l4rm_service_id,&env);
+      if (ret || (env.major != CORBA_NO_EXCEPTION))
 	{
 	  *region = NULL;
 	  ERROR("L4RM: call region mapper failed: ret %d, exc %d!",
-		ret,exc._type);
+		ret,env.major);
 	  if (ret)
 	    return ret;
 	  else
@@ -394,17 +413,17 @@ l4rm_tree_lookup_region(l4_addr_t addr,
 			l4rm_region_desc_t ** region)
 {
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* set argument buffer */
   arg_addr = addr;
 
   /* call region mapper thread */
-  ret = l4_rm_lookup(l4rm_service_id,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4_rm_lookup_component(&l4rm_service_id,&env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
       *region = NULL;
-      ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,exc._type);
+      ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,env.major);
       if (ret)
 	return ret;
       else
@@ -434,7 +453,7 @@ l4rm_tree_add_client(l4_threadid_t client,
 		     l4_uint32_t flags)
 {
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* grab region list lock, it also protects the IPC argument buffers */
   l4rm_lock_region_list_direct(flags);
@@ -448,10 +467,10 @@ l4rm_tree_add_client(l4_threadid_t client,
   else
     {
       /* call region mapper thread */
-      ret = l4_rm_add_client(l4rm_service_id,&exc);
-      if (ret || (exc._type != exc_l4_no_exception))
+      ret = l4_rm_add_client_component(&l4rm_service_id,&env);
+      if (ret || (env.major != CORBA_NO_EXCEPTION))
 	{
-	  ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,exc._type);
+	  ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,env.major);
 	  if (!ret)
 	    ret = -L4_EIPC;
 	}
@@ -477,7 +496,7 @@ int
 l4rm_tree_remove_client(l4_threadid_t client)
 {
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* grab region list lock, it also protects the IPC argument buffers */
   l4rm_lock_region_list();
@@ -486,10 +505,10 @@ l4rm_tree_remove_client(l4_threadid_t client)
   arg_client = client;
 
   /* call region mapper thread */
-  ret = l4_rm_remove_client(l4rm_service_id,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4_rm_remove_client_component(&l4rm_service_id,&env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,exc._type);
+      ERROR("L4RM: call region mapper failed: ret %d, exc %d!",ret,env.major);
       if (!ret)
 	ret = -L4_EIPC;
     }

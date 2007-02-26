@@ -1,12 +1,12 @@
 INTERFACE:
+
 class Sys_ipc_frame;
 
 EXTENSION class Thread
 {
-private:
-  bool ipc_short_cut( Sys_ipc_frame*) asm ("call_ipc_short_cut");
+public:
+  inline bool ipc_short_cut();
 };
-
 
 IMPLEMENTATION [ipc]:
 
@@ -37,18 +37,13 @@ IMPLEMENTATION [ipc]:
 #include "l4_types.h"
 
 #include "config.h"
-#include "timer.h"
 #include "cpu_lock.h"
 #include "dirq.h"
+#include "ipc_timeout.h"
 #include "lock_guard.h"
-#include "map_util.h"
 #include "logdefs.h"
+#include "map_util.h"
 #include "processor.h"
-//#include "regdefs.h"
-
-// OSKIT crap
-#include "undef_oskit.h"
-
 
 /** IPC rendezvous. 
     This method sets up an IPC.  It also finishes the IPC if it was a short
@@ -59,27 +54,24 @@ IMPLEMENTATION [ipc]:
             If the IPC could not be set up because of a transient error
 	    (e.g., IPC partner not ready to receive), returns 0x80000000.
  */
-PRIVATE 
-Mword Thread::ipc_send_regs(Thread* receiver,
-			    Sys_ipc_frame const *sender_regs)
+PRIVATE inline NOEXPORT
+Mword
+Thread::ipc_send_regs (Thread* receiver, Sys_ipc_frame const *sender_regs)
 {
   Mword ret;
 
   ret = receiver->ipc_try_lock (nonull_static_cast<Sender*>(current_thread()));
  
-  if (EXPECT_FALSE (ret) )
+  if (EXPECT_FALSE (ret))
     {
-      if ((Smword)ret < 0)
+      if ((Smword) ret < 0)
 	return 0x80000000;	// transient error -- partner not ready
 
       return ret;
     }
 
-  if (! Config::deceit_bit_disables_switch 
-      && (sender_regs->snd_desc().deceite()))
-    {
-      panic("deceiving ipc");	// XXX unimplemented
-    }
+  if (!Config::deceit_bit_disables_switch && sender_regs->snd_desc().deceite())
+    panic ("deceiving ipc");	// XXX unimplemented
 
   Sys_ipc_frame* dest_regs = receiver->receive_regs();
   const L4_msgdope ret_dope(Sys_ipc_frame::num_reg_words(), 0);
@@ -88,13 +80,13 @@ Mword Thread::ipc_send_regs(Thread* receiver,
   dest_regs->msg_dope (ret_dope);	// status code: rcv'd 2 dw
 
   // dequeue from sender queue if enqueued
-  sender_dequeue(receiver->sender_list()); 
+  sender_dequeue (receiver->sender_list()); 
 
   // Reset sender's timeout, if any.  Once we're here, we don't want
   // the timeout to reset the sender's ipc_in_progress state bit
   // (which it still needs for a subsequent receive operation).
-  timeout_t *t = _timeout;
-  if (EXPECT_FALSE (t != 0) )
+  Timeout *t = _timeout;
+  if (EXPECT_FALSE (t != 0))
     {
       t->reset();
       if (t->has_hit())		// too late?
@@ -102,19 +94,17 @@ Mword Thread::ipc_send_regs(Thread* receiver,
 	  // Fix: re-set the Thread_ipc_in_progress flag.  The
 	  // following algorithm makes sure we only set this flag if
 	  // Thread_cancel has not been set in-between.
-	  state_add(Thread_ipc_in_progress);
+	  state_add (Thread_ipc_in_progress);
  	  if (state() & Thread_cancel)
-	    {
-	      state_del(Thread_ipc_in_progress);
-	    }
+	    state_del (Thread_ipc_in_progress);
 	}
     }
 
   // copy message register contents
-  sender_regs->copy_msg( dest_regs );
+  sender_regs->copy_msg (dest_regs);
 
   // copy sender ID
-  dest_regs->rcv_source( id() );
+  dest_regs->rcv_source (id());
 
   // is this a fast (registers-only) receive operation?
   // the following operations can be short-cut here:
@@ -189,7 +179,7 @@ Mword Thread::ipc_send_regs(Thread* receiver,
       // may have deleted -- but only if the Thread_cancel flag has
       // not been set in-between.
 
-      receiver->reset_receive_timeout();
+      receiver->reset_timeout();
       
       // set up page-fault timeouts
       L4_timeout t = sender_regs->timeout();
@@ -259,15 +249,16 @@ Mword Thread::ipc_send_regs(Thread* receiver,
 	    used instead.
  */
 
-IMPLEMENT
-bool Thread::ipc_short_cut(Sys_ipc_frame *regs)
+#if defined (CONFIG_JDB_LOGGING) || defined (CONFIG_JDB) \
+    || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
+IMPLEMENT inline NOEXPORT
+bool Thread::ipc_short_cut()
 {
+  Sys_ipc_frame *regs = sys_frame_cast<Sys_ipc_frame>(this->regs());
   L4_timeout t;
 
-  state_change_dirty(~Thread_cancel, 0);
-  
   // Locate the receiver of the send part
-  threadid_t dst_id(regs->snd_dest());
+  Threadid dst_id(regs->snd_dest());
 
   if (EXPECT_FALSE (
       // Check send options:
@@ -303,19 +294,18 @@ bool Thread::ipc_short_cut(Sys_ipc_frame *regs)
   // Touch the state to page in the TCB. If we get a pagefault here,
   // the handler doesn't handle it but returns immediatly after
   // setting eax to 0xffffffff
-  Mword pagefault_if_0xffffffff;
+  Mword pagefault_if_0;
   asm volatile (".globl c_short_cut		\n\t"
 	        "c_short_cut:			\n\t"
-	        ".globl pagein_tcb_request3	\n\t"
-		"pagein_tcb_request3:		\n\t"
-		"movl (%1),%%eax		\n\t"
-		: "=a" (pagefault_if_0xffffffff) : "r" (&dest->_state));
-
+		"xorl %%eax,%%eax		\n\t"
+		"andl $0xffffffff, (%%ecx)	\n\t"
+		"setnc %%al			\n\t"
+		: "=a" (pagefault_if_0) : "c" (&dest->_state));
 
   // From now on, we need a consistent receiver state.  Lock it down.
   // We don't need the cpu_lock because we are still cli'd.
 
-  if (EXPECT_FALSE(    (pagefault_if_0xffffffff == 0xffffffff)
+  if (EXPECT_FALSE(    (pagefault_if_0 == 0)
 		    || (! dest->sender_ok (this))
 		    || dest->thread_lock()->test()) )  // destination locked?
     {
@@ -382,6 +372,7 @@ bool Thread::ipc_short_cut(Sys_ipc_frame *regs)
 
   return true;
 }
+#endif
 
 
 /** Receiver-ready callback.  
@@ -405,84 +396,143 @@ void Thread::ipc_receiver_ready()
   _thread_lock.set_switch_hint(SWITCH_ACTIVATE_RECEIVER);
 }
 
-/** Send an IPC message.  Block until we can send the message or the timeout
-    hits.
-    @param partner the receiver of our message
-    @param t a timeout specifier
-    @param regs sender's IPC registers
-    @return sender's IPC error code
+/**
+ * @brief Compute thread's send timeout
+ * @param t timeout descriptor
+ * @param regs ipc registers
+ * @return 0 if timeout expired, absolute timeout value otherwise
  */
-PRIVATE 
-L4_msgdope Thread::do_send(Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
+PRIVATE inline NOEXPORT
+Unsigned64
+Thread::send_timeout (L4_timeout *t, Sys_ipc_frame *regs)
 {
-  if (!partner || partner->state() == Thread_invalid // partner nonexistent?
-      || partner == nil_thread) // special case: must not send to L4_NIL_ID
-    return L4_msgdope(L4_msgdope::ENOT_EXISTENT);
+  // zero timeout
+  if (t->snd_man() == 0)
+    return 0;
+
+  // absolute timeout
+  if (EXPECT_FALSE (regs->has_abs_snd_timeout()))
+    {
+      Unsigned64 tval = t->snd_microsecs_abs (Kernel_info::kip()->clock,
+                                              regs->abs_snd_clock());
+
+      // check if timeout already expired
+      return tval <= Kernel_info::kip()->clock ? 0 : tval;
+    }
+
+  // relative timeout
+  return t->snd_microsecs_rel (Kernel_info::kip()->clock);
+}
+
+/**
+ * @brief Compute thread's receive timeout
+ * @param t timeout descriptor
+ * @param regs ipc registers
+ * @return 0 if timeout expired, absolute timeout value otherwise
+ */
+PRIVATE inline NOEXPORT
+Unsigned64
+Thread::recv_timeout (L4_timeout *t, Sys_ipc_frame *regs)
+{
+  // zero timeout
+  if (t->rcv_man() == 0)
+    return 0;
+
+  // absolute timeout
+  if (EXPECT_FALSE (regs->has_abs_rcv_timeout()))
+    {
+      Unsigned64 tval = t->rcv_microsecs_abs (Kernel_info::kip()->clock,
+                                              regs->abs_rcv_clock());
+
+      // check if timeout already expired
+      return tval <= Kernel_info::kip()->clock ? 0 : tval;
+    }
+
+  // relative timeout
+  return t->rcv_microsecs_rel (Kernel_info::kip()->clock);
+}
+
+/**
+ * @brief Send an IPC message.
+ *        Block until we can send the message or the timeout hits.
+ * @param partner the receiver of our message
+ * @param t a timeout specifier
+ * @param regs sender's IPC registers
+ * @return sender's IPC error code
+ */
+PRIVATE inline NOEXPORT
+L4_msgdope
+Thread::do_send (Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
+{
+  if (!partner ||
+       partner->state() == Thread_invalid ||	// partner nonexistent?
+       partner == nil_thread)			// must not send to L4_NIL_ID
+    return L4_msgdope (L4_msgdope::ENOT_EXISTENT);
       
   Mword error_ret;
 
   // register partner so that we can be dequeued by kill()
   set_receiver (partner);
 
-  state_add(Thread_polling | Thread_ipc_in_progress 
-	    | Thread_send_in_progress);
+  state_add (Thread_polling | Thread_ipc_in_progress | Thread_send_in_progress);
 
-  if (EXPECT_FALSE (state() & Thread_cancel) )
+  if (EXPECT_FALSE (state() & Thread_cancel))
     {
-      state_del(Thread_ipc_sending_mask | Thread_ipc_in_progress);
-      return L4_msgdope(L4_msgdope::SECANCELED);
+      state_del (Thread_ipc_sending_mask | Thread_ipc_in_progress);
+      return L4_msgdope (L4_msgdope::SECANCELED);
     }
 
-  sender_enqueue(partner->sender_list());
+  sender_enqueue (partner->sender_list());
 
   // try a rendezvous with the partner
-  error_ret = ipc_send_regs(partner, regs);
+  error_ret = ipc_send_regs (partner, regs);
 
-  if (EXPECT_FALSE (error_ret & 0x80000000) )	// transient error
+  if (EXPECT_FALSE (error_ret & 0x80000000))		// transient error
     {
       // in case of a transient error, try sleeping
-      
-      timeout_t timeout;
-      
-      if (t.snd_exp() != 0) // not sleep forever?
+      IPC_timeout timeout (this);
+
+      // we're not sleeping forever
+      if (t.snd_exp())
 	{
-	  if (t.snd_man() == 0) // timeout = zero?
+          Unsigned64 tval = send_timeout (&t, regs);
+
+          // Zero timeout or timeout expired already -- give up
+          if (tval == 0)
 	    {
-	      state_del(Thread_polling | Thread_ipc_in_progress
-			| Thread_send_in_progress);
-	      sender_dequeue(partner->sender_list());
-	      return L4_msgdope(L4_msgdope::SETIMEOUT); // give up
-	    }      
-	  
-	  // enqueue a timeout
-	  _timeout = &timeout;
-	  timeout.set(Kernel_info::kip()->clock + t.snd_microsecs());
+	      state_del (Thread_polling | Thread_ipc_in_progress |
+                         Thread_send_in_progress);
+	      sender_dequeue (partner->sender_list());
+	      return L4_msgdope (L4_msgdope::SETIMEOUT);
+	    }
+
+          // enqueue timeout
+          set_timeout (&timeout);
+          timeout.set (tval);
 	}
       
       do 
 	{
-	  // detect a reset thread here (before scheduling)
+	  // check if thread has been reset
 	  if (state() & Thread_cancel)
 	    {
-	      // we've presumably been reset!
-	      sender_dequeue(partner->sender_list());
+	      sender_dequeue (partner->sender_list());
 	      error_ret = L4_msgdope::SECANCELED;
 	      break;
 	    }
 
 	  // go to sleep
-	  if (state_change_safely(~(Thread_ipc_in_progress
-				    | Thread_polling | Thread_running), 
-				  Thread_ipc_in_progress | Thread_polling))
+	  if (state_change_safely (~(Thread_ipc_in_progress | Thread_polling |
+                                     Thread_running),
+				     Thread_ipc_in_progress | Thread_polling))
 	    schedule();
 	  
-	  state_add(Thread_polling);
+	  state_add (Thread_polling);
 	  
-	  // detect if we have been reset meanwhile
-	  if (state() & Thread_cancel)
+	  // check if thread has been reset
+          if (state() & Thread_cancel)
 	    {
-	      // we've presumably been reset!
-	      sender_dequeue(partner->sender_list());
+	      sender_dequeue (partner->sender_list());
 	      error_ret = L4_msgdope::SECANCELED;
 	      break;
 	    }
@@ -490,38 +540,32 @@ L4_msgdope Thread::do_send(Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
 	  // detect if we have timed out
 	  if (timeout.has_hit())
 	    {
-	      sender_dequeue(partner->sender_list());
+	      sender_dequeue (partner->sender_list());
 	      error_ret = L4_msgdope::SETIMEOUT;
 	      break;
 	    }
 	  
 	  // OK, it's our turn to try again to send the message
-	  error_ret = ipc_send_regs(partner, regs);	      
+	  error_ret = ipc_send_regs (partner, regs);
 	}
       while ((error_ret & 0x80000000)); // transient error
 				// re-enter loop even if !(state&polling)
 				// for error handling
-      assert(! in_sender_list());
   
       if (timeout.is_set())
 	timeout.reset();
-
-      _timeout = 0;
     }
 
-  assert(! in_sender_list());
+  assert (!in_sender_list());
   
-  L4_msgdope ret(error_ret);
+  L4_msgdope ret (error_ret);
 
   // are we in the middle of a long IPC?
-  if (EXPECT_FALSE( error_ret == 0 && (state() & Thread_send_in_progress)) )
-    {
-      // long IPC
-      ret = do_send_long(partner, regs);
-    }
+  if (EXPECT_FALSE (error_ret == 0 && (state() & Thread_send_in_progress)))
+    ret = do_send_long (partner, regs);
 
   // Do not delete ipc_in_progress flag if we're still receiving.
-  state_del(Thread_ipc_sending_mask | ((state() & Thread_ipc_receiving_mask)
+  state_del (Thread_ipc_sending_mask | ((state() & Thread_ipc_receiving_mask)
 				       ? 0 
 				       : Thread_ipc_in_progress));
 
@@ -535,7 +579,7 @@ L4_msgdope Thread::do_send(Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
                    we accept IPC from any partner (``open wait'').
     @param regs receiver's IPC registers
  */
-PRIVATE 
+PRIVATE inline NOEXPORT
 void Thread::prepare_receive(Sender *partner,
 			     Sys_ipc_frame *regs)
 {
@@ -571,14 +615,14 @@ void Thread::prepare_receive(Sender *partner,
     @param regs receiver's IPC registers
  */
 PRIVATE 
-L4_msgdope Thread::do_receive(Sender *sender, L4_timeout t, 
-			 Sys_ipc_frame *regs)
+L4_msgdope
+Thread::do_receive (Sender *sender, L4_timeout t, Sys_ipc_frame *regs)
 {
   assert(! (state() & Thread_ipc_sending_mask));
 
   unsigned ipc_state = sender ? Thread_receiving : Thread_waiting;
 
-  timeout_t timeout;
+  IPC_timeout timeout (this);
 
   while ((state() & (ipc_state | Thread_ipc_in_progress | Thread_cancel))
 	 == (ipc_state | Thread_ipc_in_progress))
@@ -606,20 +650,26 @@ L4_msgdope Thread::do_receive(Sender *sender, L4_timeout t,
 	    sender->ipc_receiver_ready(); // wake it up
 	}
       
-      // Program timeout.
-      if (! _timeout && t.rcv_exp() != 0)
-	{
-	  if (t.rcv_man() == 0) // zero timeout
-	    {
-	      state_del (Thread_ipc_in_progress|Thread_busy);
-	      break;
-	    }
+      // Program timeout
+      if (!_timeout)
+        {
+          // we're not sleeping forever
+          if (t.rcv_exp())
+            {
+              Unsigned64 tval = recv_timeout (&t, regs);
 
-	  set_receive_timeout(&timeout);
-      
-	  timeout.set(Kernel_info::kip()->clock + t.rcv_microsecs());
-	  
-	}
+              // Zero timeout or timeout expired already -- give up
+              if (tval == 0)
+	        {
+                  state_del (Thread_ipc_in_progress | Thread_busy);
+                  break;
+                }
+
+              // enqueue timeout
+              set_timeout (&timeout);
+              timeout.set (tval);
+            }
+        }
 
       if (! state_change_safely(~(Thread_ipc_in_progress | ipc_state 
 				  | Thread_running | Thread_busy), 
@@ -636,19 +686,18 @@ L4_msgdope Thread::do_receive(Sender *sender, L4_timeout t,
   if (timeout.is_set())
     timeout.reset();
 
-  set_receive_timeout(0);
-  
   while ((state() & (ipc_state | Thread_rcvlong_in_progress 
 			       | Thread_ipc_in_progress))
 	 == (Thread_rcvlong_in_progress | Thread_ipc_in_progress)) // long IPC?
     {
       // XXX handle cancel: should notify sender -- even if we're killed!
 
-      assert (pagein_request () != 0xffffffff);
+      assert (pagein_addr() != (Address) -1);
 
-      L4_msgdope ipc_code = handle_page_fault_pager(pagein_request(), 2);
+      L4_msgdope ipc_code = handle_page_fault_pager (pagein_addr(),
+                                                     pagein_error_code());
 
-      clear_pagein_request ();
+      clear_pagein_request();
       
       state_add (Thread_busy_long);
 
@@ -671,7 +720,8 @@ L4_msgdope Thread::do_receive(Sender *sender, L4_timeout t,
 
   assert(! (state() & (Thread_ipc_in_progress | Thread_ipc_sending_mask)));
 
-  if (state() & Thread_ipc_receiving_mask) // abnormal termination
+  // abnormal termination?
+  if (EXPECT_FALSE (state() & Thread_ipc_receiving_mask) )
     {
       // the IPC has not been finished.  could be timeout or cancel
       // XXX should only modify the error-code part of the status code
@@ -701,31 +751,25 @@ L4_msgdope Thread::do_receive(Sender *sender, L4_timeout t,
     @param error_code page-fault error code.
  */
 PRIVATE 
-L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
+L4_msgdope Thread::handle_page_fault_pager(Address pfa, Mword error_code)
 {
   // do not handle user space page faults from kernel mode if we're
   // already handling a request
-#warning X86 Stuff in arch independent code
-#if defined(CONFIG_IA32) || defined(CONFIG_UX)
-  if (EXPECT_FALSE( !(error_code & PF_ERR_USERMODE) && thread_lock()->test()) )
+  if (EXPECT_FALSE( !PF::is_usermode_error(error_code)
+		    && thread_lock()->test()) )
     {
       panic("page fault in locked operation");
     }
-#endif
 
   // set up a register block used as an IPC parameter block for the
   // page fault IPC
 
   Sys_ipc_frame r;
   
+  r.set_msg_word(0, PF::addr_to_msgword0(pfa, error_code));
+  r.set_msg_word(1, PF::pc_to_msgword1(regs()->pc(), error_code));
   r.set_msg_word(2, 0); // nop in V2
-#warning X86 Stuff in arch independent code
-#if defined(CONFIG_IA32) || defined(CONFIG_UX)
-  r.set_msg_word(0, (pfa & ~3) | (error_code & (PF_ERR_PRESENT | PF_ERR_WRITE)));
-  r.set_msg_word(1, (error_code & PF_ERR_USERMODE) ? regs()->pc() : (Mword)-1);
-#endif
-  r.snd_desc(0);			// snd descriptor = short msg
-  // rcv descriptor = map msg
+  r.snd_desc(0);	// short msg
   r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage(0,0,L4_fpage::WHOLE_SPACE,0))); 
 
   L4_timeout timeout( L4_timeout::NEVER );
@@ -737,7 +781,7 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
   save_receiver_state (&orig_partner, &orig_receive_regs);
 
   Receiver *orig_send_partner = receiver();
-  timeout_t *orig_timeout = _timeout;
+  Timeout *orig_timeout = _timeout;
   if (orig_timeout)
     orig_timeout->reset();
   unsigned orig_ipc_state = state() & Thread_ipc_mask;
@@ -761,10 +805,8 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
       // skipped receive operation
       state_del(Thread_ipc_receiving_mask);
 
-#warning X86 Stuff in arch independent code
-#if defined(CONFIG_IA32) || defined(CONFIG_UX)
       // PF from kernel mode? -> always abort
-      if (! (error_code & PF_ERR_USERMODE))
+      if (!PF::is_usermode_error(error_code))
 	{
 	  // Translate a number of error codes so that they make sense
 	  // in the long-IPC page-in case.
@@ -782,7 +824,6 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
 	ret = (state() & Thread_cancel)
 	  ? L4_msgdope(0) // retry user insn after thread_ex_regs
 	  : err;
-#endif
       // else ret = 0 -- that's the default, and it means: retry
     }
   else
@@ -796,10 +837,8 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
 	      printf("page fault rcv error = 0x%x\n", err.raw());
 	      kdb_ke("rcv from pager failed");
 	    }
-#warning X86 Stuff in arch independent code
-#if defined(CONFIG_IA32) || defined(CONFIG_UX)
 	  // PF from kernel mode? -> always abort
-	  if (! (error_code & PF_ERR_USERMODE))
+	  if (!PF::is_usermode_error(error_code))
 	    {
 	      // Translate a number of error codes so that they make sense
 	      // in the long-IPC page-in case.
@@ -813,7 +852,6 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
 		  ret = err;
 		}
 	    }
-#endif
 	  // XXX currently, we (Jochen-compatibly) ignore receive errors here
 	  // and just retry the page fault.  However, maybe it would make
 	  // sense to start exception handling (return false) when the pager
@@ -834,51 +872,50 @@ L4_msgdope Thread::handle_page_fault_pager(vm_offset_t pfa, unsigned error_code)
   return ret;
 }
 
-
-extern "C" void here_a_big_cast_problem_occurs(void);
 /** L4 IPC system call.
     This is the `normal'' version of the IPC system call.  It usually only
     gets called if ipc_short_cut() has failed.
     @param regs system-call arguments.
     @return value to be returned in %eax register.
  */     
-IMPLEMENT
-Mword Thread::sys_ipc(Syscall_frame *i_regs)
+IMPLEMENT inline NOEXPORT
+void
+Thread::sys_ipc()
 {
-  Sys_ipc_frame *regs = static_cast<Sys_ipc_frame*>(i_regs);
+  Sys_ipc_frame *regs = sys_frame_cast<Sys_ipc_frame>(this->regs());
   
-  if((unsigned)i_regs!=(unsigned)regs)
-    here_a_big_cast_problem_occurs();
-
   L4_msgdope ret(0);
   L4_timeout t = regs->timeout();
 
   // find the ipc partner thread belonging to the destination thread
-  threadid_t dst_id(regs->snd_dest());
+  Threadid dst_id(regs->snd_dest());
   Thread *partner = dst_id.lookup(); // XXX no clans & chiefs for now!
 
   // first, before starting a send, we must prepare a pending receive
   // so that we can atomically switch from send mode to receive mode
   
   bool have_receive_part = regs->rcv_desc().has_receive();
-  bool have_send_part = regs->snd_desc().has_send();
-  bool have_sender = false;
-  Sender *sender = 0;
-  Irq_alloc *interrupt = 0;
+  bool have_send_part    = regs->snd_desc().has_send();
+  bool have_sender       = false;
+  Sender *sender         = 0;
+  Irq_alloc *interrupt   = 0;
 
-  if (have_receive_part)
+  if (EXPECT_TRUE (have_receive_part))
     {
-      if (regs->rcv_desc().open_wait())        // open wait ?
+      if (regs->rcv_desc().open_wait())    // open wait ?
         {
-          sender = 0;
+	  // sender already 0
           have_sender = true;
         }
 
       // not an open wait
-      else if (! dst_id.is_nil()) // not nil thread, and not irq id?
+      else if (!dst_id.is_nil()) // not nil thread, and not irq?
         {
-          if (! partner)
-            return L4_msgdope(L4_msgdope::ENOT_EXISTENT).raw();
+          if (EXPECT_FALSE (!partner))
+	    {
+	      regs->msg_dope (L4_msgdope::ENOT_EXISTENT);
+	      return;
+	    }
 
           sender = partner;
           have_sender = true;
@@ -899,23 +936,27 @@ Mword Thread::sys_ipc(Syscall_frame *i_regs)
         {  
           interrupt = Irq_alloc::lookup(regs->irq());
 
-	  if (!interrupt)
-	    return L4_msgdope(L4_msgdope::ENOT_EXISTENT).raw(); 
-
+	  if (EXPECT_FALSE (!interrupt))
+	    {
+	      regs->msg_dope (L4_msgdope::ENOT_EXISTENT);
+	      return;
+	    }
 
           if (_irq != interrupt)
             {
               // a receive with a timeout != 0 from a non-associated
               // interrupt is illegal
-              if (t.rcv_exp() == 0 || t.rcv_man() != 0) // t/o != 0
-                return L4_msgdope(L4_msgdope::ENOT_EXISTENT).raw();
+              if (t.rcv_exp() == 0 || t.rcv_man() != 0) { // t/o != 0
+                regs->msg_dope (L4_msgdope::ENOT_EXISTENT);
+                return;
+              }
             }
 
           if (_irq)
             {
 	      // we always try to receive from the
       	      // assoc'd irq first, not from the spec. one
-              sender = nonull_static_cast<irq_t*>(_irq);    
+              sender = nonull_static_cast<Irq*>(_irq);    
               have_sender = true;
             }
         }
@@ -931,28 +972,28 @@ Mword Thread::sys_ipc(Syscall_frame *i_regs)
   // activates the receive part).  That's why, we save that parameter 
   // early (have_send_part).
 
-  if (have_send_part)           // do we do a send operation?
-    {
-      ret = do_send(partner, t, regs);
-    }
+  if (EXPECT_TRUE (have_send_part))		// do we do a send operation?
+    ret = do_send (partner, t, regs);
 
   // send done, receive operation follows
 
-  if (have_receive_part         // do we do a receive operation?
-      && !ret.has_error()) // no send error
+  if (EXPECT_TRUE (have_receive_part         // do we do a receive operation?
+		   && !ret.has_error()) )    // no send error
     {
       if (have_sender)
         {
           // do the receive operation
-          ret = do_receive(sender, t, regs);
+          ret = do_receive (sender, t, regs);
 
           // if this was a receive from an interrupt and the timeout was 0,
           // this is a re-associate operation
-          if (ret.error() != L4_msgdope::RETIMEOUT
-              || ! interrupt
-              || (t.rcv_exp() == 0 || t.rcv_man() != 0)) // t/o != 0
+          if (EXPECT_TRUE (   ret.error() != L4_msgdope::RETIMEOUT
+			   || ! interrupt
+	     		   || (   t.rcv_exp() == 0 
+			       || t.rcv_man() != 0)) ) // t/o != 0
             {
-              return ret.raw();
+              regs->msg_dope (ret);
+              return;
             }
         }
 
@@ -967,7 +1008,8 @@ Mword Thread::sys_ipc(Syscall_frame *i_regs)
               _irq = 0;
             }
 
-          return L4_msgdope(L4_msgdope::RETIMEOUT).raw();
+          regs->msg_dope (L4_msgdope::RETIMEOUT);
+          return;
         }
 
       //
@@ -982,16 +1024,46 @@ Mword Thread::sys_ipc(Syscall_frame *i_regs)
           _irq = interrupt;
 
 	  // success
-          return L4_msgdope(L4_msgdope::RETIMEOUT).raw();
+          regs->msg_dope (L4_msgdope::RETIMEOUT);
+          return;
         }
 
       // failed -- could not associate new irq
-      return L4_msgdope(L4_msgdope::ENOT_EXISTENT).raw();
+      regs->msg_dope(L4_msgdope::ENOT_EXISTENT);
+      return;
     }
 
   // skipped receive operation
   state_del(Thread_ipc_receiving_mask);
 
-  return ret.raw();
+  regs->msg_dope (ret);
 }
 
+extern "C"
+void
+sys_ipc_wrapper()
+{
+  // Don't allow interrupts before we've got a call frame with a return
+  // address on our stack, so that we can tweak the return address for
+  // sysenter + sys_ex_regs to the iret path.
+  Proc::sti();
+
+  current_thread()->sys_ipc();
+
+  // If we return with a modified return address, we must not be interrupted
+  Proc::cli();
+}
+
+#if defined (CONFIG_JDB_LOGGING)	|| \
+    defined (CONFIG_JDB)		|| \
+    defined (CONFIG_PROFILE)		|| \
+   !defined (CONFIG_ASSEMBLER_IPC_SHORTCUT)
+
+extern "C"
+bool
+ipc_short_cut_wrapper()
+{
+  return current_thread()->ipc_short_cut();
+}
+
+#endif

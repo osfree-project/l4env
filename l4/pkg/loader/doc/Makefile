@@ -1,6 +1,7 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = loader loader-internal
+SRC_DOX_GUIDE = loader.cfg
+SRC_DOX_INT   = loader-internal.cfg
 
 include $(L4DIR)/mk/doc.mk

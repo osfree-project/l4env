@@ -3,7 +3,7 @@ IMPLEMENTATION:
 #include <cstdio>
 #include <cstring>
 
-#include "boot_info.h"
+#include "cmdline.h"
 #include "config.h"
 #include "filter_console.h"
 #include "kernel_console.h"
@@ -18,26 +18,32 @@ STATIC_INITIALIZER_P(uart_console_init ,UART_INIT_PRIO);
 static void uart_console_init()
 {
   
-  if(strstr(Boot_info::cmdline(), " -noserial")) // do not use serial uart 
+  if(strstr (Cmdline::cmdline(), " -noserial")) // do not use serial uart 
     return;
 
   static Filter_console fcon(Kernel_uart::uart());
-  
-  int i = Kernel_uart::uart()->irq();
-  if(i!=-1) 
-    { 
-      Kernel_uart::uart()->enable_rcv_irq();
-      printf("SERIAL ESC: allocated IRQ %d for serial uart\n",i);
-      puts("Do not use serial hack in slow timer handler, use direct IRQ instead.");
+  int irq = -1;
 
-      // not needed because serial has its own IRQ
-      // Config::serial_esc = Config::SERIAL_ESC_IRQ;
-    }
-  else if (Config::serial_esc)
+  if (Config::serial_esc == Config::SERIAL_ESC_IRQ)
     {
-      puts("SERIAL ESC: No IRQ for specified uart port.");
-      puts("Use serial hack in slow timer handler.");
+      if ((irq = Kernel_uart::uart()->irq()) == -1)
+	Config::serial_esc = Config::SERIAL_ESC_NOIRQ;
     }
 
-  Kconsole::console()->register_console(&fcon);
+  switch (Config::serial_esc)
+    {
+    case Config::SERIAL_ESC_NOIRQ:
+      puts("SERIAL ESC: No IRQ for specified uart port.");
+      puts("Using serial hack in slow timer handler.");
+      break;
+
+    case Config::SERIAL_ESC_IRQ:
+      Kernel_uart::uart()->enable_rcv_irq();
+      printf("SERIAL ESC: allocated IRQ %d for serial uart\n", irq);
+      puts("Not using serial hack in slow timer handler.");
+      break;
+    }
+
+  Kconsole::console()->register_console(&fcon, 0);
 }
+

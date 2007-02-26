@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <alloca.h>
 #include <l4/util/getopt.h> 
 #include <l4/util/parse_cmd.h>
 

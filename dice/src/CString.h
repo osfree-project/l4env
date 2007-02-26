@@ -1,11 +1,11 @@
 /**
- *	\file	dice/src/String.h
+ *	\file	dice/src/CString.h
  *	\brief	contains the declaration of the class String
  *
  *	\date	04/12/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -79,6 +79,10 @@ class String
     virtual void Concat(const String & add);
     virtual void Concat(const char *add);
     virtual void Concat(char ch);
+	virtual void Concat(int nValue);
+	virtual void Concat(float fValue);
+	virtual void Concat(double dValue);
+	virtual void Concat(long double dValue);
     // have to be friend so we can use char and char* as first arguments
     friend String operator +(const String & s1, const String & s2);
     friend String operator +(const String & s1, char ch);
@@ -89,6 +93,7 @@ class String
     const String & operator +=(const String & src);
     const String & operator +=(char ch);
     const String & operator +=(const char *str);
+	const String & operator +=(int nValue);
     // compare
     int Compare(const char *str) const;
     int CompareNoCase(const char *str) const;
@@ -132,8 +137,8 @@ class String
     void MakeUpper();
     void MakeLower();
     void MakeReverse();
-    int Replace(char ch1, char ch2);
-    int Replace(const char *str1, const char *s2);
+    int Replace(char ch1, char ch2, int start = 0);
+    int Replace(const char *str1, const char *s2, int start = 0);
     int ReplaceIncluding(const char *str1, char ch2);
     int ReplaceExcluding(const char *str1, char ch2);
     int Remove(char ch);
@@ -146,6 +151,10 @@ class String
     void TrimRight();
     void TrimRight(char ch);
     void TrimRight(const char *str);
+	int ToInt();
+	float ToFloat();
+	double ToDouble();
+	long double ToLongDouble();
 
 // Attributes
   protected:

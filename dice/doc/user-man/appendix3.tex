@@ -1,0 +1,79 @@
+\chapter{Pagefault Handling}
+\label{app:pagefault-handling}
+
+L4 servers imply special semantics with certain {\em opcodes}. One is the pagefault
+IPC. \dice{} provides some mechanisms to deal with these special semantics.
+
+\section{L4 version 2}
+A pagefault IPC consists of two double word values. The first contains the
+pagefault address and the second the current instruction pointer. Since by 
+convention there are no pagefaults in the micro-kernel's portion of the 
+address space, any pagefault address above \verb|0xC000'0000| is not possible,
+or handled by the kernel directly (will not involve an IPC). \dice{} generated 
+code uses the first double word for its opcode.
+
+This knowledge can be used to write a server, which is able to handle 
+pagefault IPC. As described in section~\ref{sec:uuid}, you may specify that
+the interface identifier and thus the base opcode is \verb|0xC00|, which
+generates opcodes larger than \verb|0xC000'0000|.
+
+The server loop now ``accepts'' only opcodes larger than \verb|0xC000'0000|.
+To handle the pagefaults, one has to specify a callback function, which is
+invoked for every ``unknown'' opcode --- which are all opcodes smaller
+than \verb|0xC000'0000|. This is done using the \verb|default_function|
+attribute for interfaces:
+
+\begin{verbatim}
+[uuid(0xC00), default_function(pf_handler)]
+interface pagefault
+{
+...
+\end{verbatim}
+
+The callback function has to have the format:
+
+\begin{verbatim}
+CORBA_int pf_handler(CORBA_Object src,
+    <interface>_msg_buffer_t* msg_buffer,
+    CORBA_Environment *env)
+\end{verbatim}
+
+This is basically the format of a normal \verb|<function>_component|
+function, but instead of parameters it receives the message buffer.
+The implementation can access the members of the message buffer using
+the macros described in appendix~\ref{app:msgbuf_macros}. An example
+implementation of the pagefault handler is provided in 
+appendix~\ref{app:pf_handler}.
+
+The default function has a return value. This is used to determine
+whether the server loop should respond to the message or not. If you 
+return \verb|DICE_REPLY| the server loop will send a reply message.
+To skip the reply message, the default function returns \verb|DICE_NO_REPLY|.
+
+\section{L4 version X.0}
+The handling of pagefaults in version X.0 is similar to the handling
+of pagefaults in version 2. A pagefault is here determined by the
+first double word of a message being zero. The second double word
+is the pagefault address and the third the instruction pointer. This
+implies two differences:
+
+\begin{enumerate}
+\item the server loop determines a pagefault by the opcode 0 and
+\item the pagefault handler function has to extract the address and
+instruction pointer from a different position.
+\end{enumerate}
+
+The second problem is solved by using a different implementation of the
+default function for the two L4 version. The example in appendix~\ref{app:pf_handler}
+already includes code for version X.0.
+
+The first problem is solved ``by accident''. The default function
+is called for every opcode the server loop cannot match to one of its
+own opcodes. Since it only knows opcodes starting with \verb|0xC000'0001|
+and increasing, it does not know opcode 0. Thus it calls the callback
+for this opcode as well.
+
+Therefore you may use the same IDL with the shown adaptations in
+the pagefault handler function to write a pager for L4 version 2 and
+L4 version X.0.
+

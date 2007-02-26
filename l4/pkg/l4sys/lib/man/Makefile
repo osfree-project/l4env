@@ -22,10 +22,10 @@ endif
 SYSCALLS = l4_fpage_unmap.man l4_myself.man l4_nchief.man l4_task_new.man \
            l4_thread_ex_regs.man l4_thread_switch.man l4_thread_schedule.man 
 
-IPC = l4_i386_ipc_call.man l4_i386_ipc_send_deceiting.man l4_ipc.man \
-      l4_i386_ipc_wait.man l4_i386_ipc_reply_deceiting_and_wait.man \
-      l4_i386_ipc_reply_and_wait.man l4_i386_ipc_receive.man  \
-      l4_i386_ipc_send.man 
+IPC = l4_ipc_call.man l4_ipc_send_deceiting.man l4_ipc.man \
+      l4_ipc_wait.man l4_ipc_reply_deceiting_and_wait.man \
+      l4_ipc_reply_and_wait.man l4_ipc_receive.man  \
+      l4_ipc_send.man 
 
 man all: $(SYSCALLS) $(IPC)
 

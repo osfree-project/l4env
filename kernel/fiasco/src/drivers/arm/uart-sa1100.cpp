@@ -74,6 +74,7 @@ IMPLEMENTATION[sa1100]:
 
 
 #include "assert.h"
+#include "processor.h"
 
 
 PRIVATE INLINE static Address Uart::_utcr0( Address a ) 
@@ -198,14 +199,15 @@ IMPLEMENT void Uart::shutdown()
 IMPLEMENT bool Uart::change_mode(TransferMode m, BaudRate baud)
 {
   unsigned old_utcr3, quot;
+  Proc::Status st;
   if(baud == (BaudRate)-1) return false;
   if(baud != BAUD_NC && (baud>115200 || baud<96)) return false;
   if(m == (TransferMode)-1) return false;
-
-#warning have to disable interrupts here
+  
+  st = Proc::cli_save();
   old_utcr3 = utcr3();
   utcr3(old_utcr3 & ~(UTCR3_RIE|UTCR3_TIE));
-#warning have to enable interrupts here
+  Proc::sti_restore(st);
 
   while(utsr1() & UTSR1_TBY);
 
@@ -239,6 +241,8 @@ IMPLEMENT
 int Uart::write( const char *s, unsigned count )
 {
   unsigned old_utcr3;
+  Proc::Status st;
+  st = Proc::cli_save();
   old_utcr3 = utcr3();
   utcr3( (old_utcr3 & ~(UTCR3_RIE|UTCR3_TIE)) | UTCR3_TXE );
 
@@ -257,6 +261,7 @@ int Uart::write( const char *s, unsigned count )
 
 
   utcr3(old_utcr3);
+  Proc::sti_restore(st);
   return 1;
 }
 

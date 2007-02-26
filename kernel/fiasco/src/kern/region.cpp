@@ -22,16 +22,16 @@ IMPLEMENTATION:
 #include "amm.h"
 #include "panic.h"
 
-static vm_offset_t mem_alloc_region;
-static vm_offset_t mem_alloc_region_end;
+static Address mem_alloc_region;
+static Address mem_alloc_region_end;
 
 // 
 // helpers for the address map library
 // 
 
-static kmem_slab_simple_t *amm_entry_cache;
+static Kmem_slab_simple *amm_entry_cache;
 
-static amm_entry_t *amm_alloc_func(amm_t *, vm_offset_t, vm_size_t, int)
+static amm_entry_t *amm_alloc_func(amm_t *, Address, vm_size_t, int)
 {
   return reinterpret_cast<amm_entry_t *>(amm_entry_cache->alloc());
 }
@@ -46,7 +46,7 @@ static void amm_free_func(amm_t *, amm_entry_t *entry)
 // 
 
 static amm_t region_amm;
-static vm_offset_t end_of_last_region;
+static Address end_of_last_region;
 static Helping_lock region_lock;
 
 /** Initialize the region manager.  This function is called once at
@@ -55,7 +55,7 @@ static Helping_lock region_lock;
     @param end end of the virtual-memory region
  */
 PUBLIC static void
-region::init (vm_offset_t begin, vm_offset_t end)
+region::init (Address begin, Address end)
 {
   mem_alloc_region = begin;
   mem_alloc_region_end = end;
@@ -63,7 +63,7 @@ region::init (vm_offset_t begin, vm_offset_t end)
   // Make sure our slab cache only uses single-page slabs (slab_size =
   // PAGE_SIZE).  See note above declaration of amm_entry_cache for
   // more information.
-  amm_entry_cache = new kmem_slab_simple_t(sizeof(amm_entry_t), 4);
+  amm_entry_cache = new Kmem_slab_simple(sizeof(amm_entry_t), 4);
 
   amm_init_gen(&region_amm, AMM_FREE, 0, amm_alloc_func, amm_free_func, 0, 0);
   check ( amm_modify(&region_amm, 0, mem_alloc_region, AMM_RESERVED, 0) == 0 );
@@ -82,12 +82,12 @@ region::init (vm_offset_t begin, vm_offset_t end)
     @return virtual address of the allocated virtual-memory region, 
             or 0 if an error occurred.
  */
-PUBLIC static vm_offset_t
-region::reserve_pages(vm_size_t size, unsigned long alignment)
+PUBLIC static Address
+region::reserve_pages(size_t size, unsigned long alignment)
 {
   Helping_lock_guard guard(&region_lock);
 
-  vm_offset_t address = end_of_last_region;
+  Address address = end_of_last_region;
 
   int align_bits = 0;
   while ((alignment >>= 1) != 0)
@@ -115,7 +115,7 @@ region::reserve_pages(vm_size_t size, unsigned long alignment)
     @param size      size of the allocated region, in bytes.  
  */
 PUBLIC static void 
-region::return_pages(vm_offset_t address, vm_size_t size)
+region::return_pages(Address address, size_t size)
 {
   Helping_lock_guard guard(&region_lock);
 

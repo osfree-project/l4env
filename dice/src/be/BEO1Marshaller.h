@@ -5,7 +5,7 @@
  *	\date	05/16/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -42,7 +42,7 @@ public:
 	virtual ~CBEO1Marshaller();
 
 protected: // Protected methods
-    virtual int MarshalConstArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
+    virtual int MarshalConstArray(CBEType *pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, VectorElement *pIter, int nLevel, CBEContext *pContext);
     virtual int MarshalVariableArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
     virtual int MarshalString(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
     virtual int MarshalStruct(CBEStructType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);

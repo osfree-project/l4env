@@ -2,6 +2,7 @@ PKGDIR		?= ../../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libcon_yuv2rgb.a
+SYSTEMS		= x86
 NOTARGETSTOINSTALL = 1
 
 MODE		= l4env

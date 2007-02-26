@@ -11,8 +11,6 @@
 #ifndef _DSI___DEBUG_H
 #define _DSI___DEBUG_H
 
-#ifdef DEBUG
-
 /* enable debug assertions */
 #define DEBUG_ASSERTIONS      1
 
@@ -38,7 +36,5 @@
 #define DEBUG_COPY_PACKET     0
 #define DEBUG_EVENT           0
 #define DEBUG_SELECT          0
-
-#endif /* DEBUG */
 
 #endif /* !_DSI___DEBUG_H */

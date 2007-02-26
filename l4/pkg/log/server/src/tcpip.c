@@ -32,7 +32,12 @@
  * binary data was tried to send. The LOG_channel_open() at the client
  * will return -L4_EBUSY in this case.
  * 
- * This file requires: do_flush_buffer() */
+ * This file requires: do_flush_buffer()
+ */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <oskit/dev/dev.h>
 #include <oskit/dev/osenv.h>

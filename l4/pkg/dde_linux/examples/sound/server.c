@@ -1,11 +1,11 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	dde_linux/examples/sound/server.c
+ * \file    dde_linux/examples/sound/server.c
  *
- * \brief	Sound Server
+ * \brief   Sound Server
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * \author  Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  * Insert configuration parameters into my_cfg.h before compilation.
  */
@@ -13,24 +13,20 @@
 
 /* L4 */
 #include <l4/sys/types.h>
-#include <l4/env/init.h>
 #include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
 #include <l4/dde_linux/dde.h>
 #include <l4/dde_linux/sound.h>
+#include <l4/dde_linux/ctor.h>
+#include <l4/env/mb_info.h>
 
 /* Linux */
 #include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/soundcard.h>
 
-/* OSKit */
-#include <l4/oskit10/grub_mb_info.h>
-
 /* local */
 #include "my_cfg.h"
-
-extern struct grub_multiboot_info *_mbi;
 
 l4_addr_t sample[4][2];
 int sample_no = 0;
@@ -45,13 +41,14 @@ static int init_mods(void)
 {
   int err;
 
-  Msg("%ld module(s) (only 4 or less usable):\n", _mbi->mods_count);
+  Msg("%d module(s) (only 4 or less usable):\n",
+      l4env_multiboot_info->mods_count);
 
-  for (err = 0; err < _mbi->mods_count; err++)
+  for (err = 0; err < l4env_multiboot_info->mods_count; err++)
     {
-      struct grub_mod_list *mod =
-	(struct grub_mod_list *) (_mbi->mods_addr +
-				  (err * sizeof(struct grub_mod_list)));
+      l4util_mb_mod_t *mod =
+        (l4util_mb_mod_t *) (l4env_multiboot_info->mods_addr +
+                            (err * sizeof(l4util_mb_mod_t)));
 
       Msg("  [%d] @ %p\n", err, (void *) mod->mod_start);
 
@@ -60,7 +57,7 @@ static int init_mods(void)
       sample_no++;
 
       if (err == 3)
-	break;
+        break;
     }
 
   return 0;
@@ -70,7 +67,7 @@ static int cfg_mixer(int choice)
 {
   int ret, mixer;
   int vol;
-  
+
   /* 8 bits per channel:
      31:16 undefined  15:8 right  7:0 left */
   switch (choice)
@@ -103,18 +100,19 @@ static int cfg_mixer(int choice)
   Msg("volume set to %x\n", vol);
 
   l4dde_snd_close(mixer);
-  
+
   return 0;
 }
 
 static int cfg_card(void)
 {
   int ret;
+  int num = 0;
   unsigned long arg;
 
-  if ((snddev = l4dde_snd_open_dsp(1)) < 0)
+  if ((snddev = l4dde_snd_open_dsp(num)) < 0)
     {
-      Error("opening DSP (%d)", snddev);
+      Error("opening DSP %d (%d)", num, snddev);
       return 1;
     }
   Msg("opened\n");
@@ -171,17 +169,17 @@ static int play_sound(void)
     {
       /* break before playing last short frame */
       if (fpos + FRAME > fsize)
-	break;
+        break;
       count = FRAME;
 
       ret = l4dde_snd_write(snddev, (void *) sample[0][0] + fpos, count);
       if (ret < 0)
-	{
-	  Error("on write (%d)", ret);
-	  return 1;
-	}
+        {
+          Error("on write (%d)", ret);
+          return 1;
+        }
       if (ret < FRAME)
-	Msg("frame truncated\n");
+        Msg("frame truncated\n");
 
       fpos += ret;
     }
@@ -207,7 +205,7 @@ void demo(void)
       Assert(!play_sound());
       Assert(!close_card());
       if (count-1)
-	enter_kdebug("Play again? Hit g");
+        enter_kdebug("Play again? Hit g");
     }
 
   Msg("released, goodbye...\n");
@@ -224,7 +222,7 @@ int main(void)
     exit(-1);
 
   ASSERT(io_info_addr);
-  
+
   /* initialize all DDE modules required ... */
   if ((err=l4dde_mm_init(VMEM_SIZE, KMEM_SIZE)))
     {
@@ -265,7 +263,8 @@ int main(void)
       Error("initializing sound (%d)", err);
       exit(-1);
     }
-  l4env_do_initcalls();
+
+  l4dde_do_initcalls();
   DMSG("sound initialized\n");
 
   demo();

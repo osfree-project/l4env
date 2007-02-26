@@ -5,14 +5,8 @@
 #include <l4/log/l4log.h>
 #include <l4/semaphore/semaphore.h>
 
-#ifdef USE_DSI
-#include "contxtdsi.h"
-#include <l4/con/con-client.h>
-#include <l4/con/l4contxtdsi.h>
-#else
 #include <l4/con/con-client.h>
 #include <l4/con/l4contxt.h>
-#endif
 
 #include "contxt_macros.h"
 
@@ -27,8 +21,8 @@
 #define CONTXT_KEYLIST_SIZE       15   /* key buffer size */
 
 /* color definition */
-extern con_pslim_color_t	bg_color;
-extern con_pslim_color_t	fg_color;
+extern l4con_pslim_color_t	bg_color;
+extern l4con_pslim_color_t	fg_color;
 
 #define OFS_LINES(x)	(((x)+sb_lines) % sb_lines)
 #define BITX(x)		((x) * fn_x)

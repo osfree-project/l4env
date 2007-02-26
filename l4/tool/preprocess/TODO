@@ -1,11 +1,17 @@
 BUGS:
 
-- Namespaces are unsupported.
+- Namespace declarations are unsupported.
 
 - Forward-declared, out-of-line defined nested classes are
   unsupported.
 
-- Conditional compilation (preprocessor) is unsupported.
+- Preprocess does not automatically export declarations of public
+  variables and static class data to the generated header file.
+
+- Conditional compilation (preprocessor) is unsupported on file
+  top-level (preprocessor expressions inside blocks are OK), with the
+  exception that code commented out using "#if 0" is detected
+  correctly and deleted.
 
 IDEAS:
 

@@ -13,6 +13,7 @@ public:
     SUPERPAGE_SIZE  = 1 << SUPERPAGE_SHIFT,
     SUPERPAGE_MASK  = ~( SUPERPAGE_SIZE -1 ),
 
+    MAX_NUM_IRQ = 20,
   };
 
   enum {

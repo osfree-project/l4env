@@ -81,14 +81,15 @@
 #define FEAT_SS		0x08000000	/* Self Snoop			*/
 #define FEAT_HTT	0x10000000	/* Hyper-Threading Technology	*/
 #define FEAT_TM		0x20000000	/* Thermal Monitor		*/
-#define FEAT_PBE	0x80000000	/* Pending Break Enable		*/
+#define FEAT_SBF	0x80000000	/* Signal Break on FERR		*/
 
 /* CPU Extended Feature Flags */
 #define FEATX_PNI	0x00000001	/* Prescott New Instructions	*/
 #define FEATX_MONITOR	0x00000008	/* MONITOR/MWAIT Support	*/
 #define FEATX_DSCPL	0x00000010	/* CPL Qualified Debug Store	*/
+#define FEATX_EST	0x00000080	/* Enhanced SpeedStep Techn.	*/
 #define FEATX_TM2	0x00000100	/* Thermal Monitor 2		*/
-#define FEATX_CNXTID	0x00000400	/* L1 Context ID (adapt/shared)	*/
+#define FEATX_CID	0x00000400	/* L1 Context ID (adapt/shared)	*/
 
 /* Page Fault Error Codes */
 /* PF_ERR_REMTADDR and PF_ERR_USERADDR are UX-emulation only */

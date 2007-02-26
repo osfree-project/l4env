@@ -1,15 +1,15 @@
 # -*- Makefile -*-
 
-TARGET		= con
+TARGET		= con con-ux
 DEFAULT_RELOC	= 0x00b00000
-SYSTEMS		= x86-l4v2 x86-l4x0
 
 PRIVATE_INCDIR	= ../../include
-LIBS		= -ldsi -linput \
-		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw \
-		  -L../con_yuv2rgb/OBJ-$(SYSTEM) -lcon_yuv2rgb \
+LIBS_ALL	= -L../con_hw/OBJ-$(SYSTEM) -lcon_hw \
+		  -L../con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
 		  -lpci -lio -lomega0
-SRC_C		= main.c pslim.c ev.c vc.c dsi_vc.c
+LIBS_con	= -linput $(LIBS_ALL)
+LIBS_con-ux	= -linput-ux $(LIBS_ALL)
+SRC_C		= main.c pslim.c ev.c vc.c
 CPPFLAGS	+= -DL4_MAX_RPC_STRING_DOPES=3 -DDEBUG
 
 OBJS		+= font.o
@@ -22,7 +22,7 @@ all::
 vpath %.psf $(PKGDIR)/server/src
 
 %.o: %.psf
-	$(COMP_MESSAGE)
+	@$(COMP_MESSAGE)
 	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
 
 font.psf: lat0-14.psf

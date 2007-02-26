@@ -135,9 +135,8 @@ dsi_create_sync_thread(dsi_socket_t * socket)
   /* start synchronization thread */
   if (IS_SEND_SOCKET(socket))
     {
-#if DEBGU_THREAD
-      INFO("send sync thread...\n");
-#endif
+      LOGdL(DEBUG_THREAD,"send sync thread...");
+
       t = l4thread_create_long(L4THREAD_INVALID_ID,dsi_sync_thread_send,
 			       L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			       sync_thread_prio, (void *)socket,
@@ -145,9 +144,8 @@ dsi_create_sync_thread(dsi_socket_t * socket)
     }
   else
     {
-#if DEBUG_THREAD
-      INFO("receive sync thread...\n");
-#endif
+      LOGdL(DEBUG_THREAD,"receive sync thread...");
+
       t = l4thread_create_long(L4THREAD_INVALID_ID,dsi_sync_thread_receive,
 			       L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			       sync_thread_prio, (void *)socket,
@@ -160,9 +158,7 @@ dsi_create_sync_thread(dsi_socket_t * socket)
       return t;
     }
 
-#if DEBUG_THREAD
-  INFO("created sync thread %d\n",t);
-#endif
+  LOGdL(DEBUG_THREAD,"created sync thread %d",t);
 
   /* setup socket descriptor */
   socket->sync_id = t;
@@ -184,9 +180,7 @@ dsi_create_sync_thread(dsi_socket_t * socket)
 int
 dsi_shutdown_sync_thread(dsi_socket_t * socket)
 {
-#if DEBUG_THREAD
-  INFO("shutdown sync thread...\n");
-#endif
+  LOGdL(DEBUG_THREAD,"shutdown sync thread...");
 
   /* shutdown synchronization thread */
   return l4thread_shutdown(socket->sync_id);
@@ -276,6 +270,6 @@ dsi_shutdown_select_thread(l4thread_t thread)
   ret = l4thread_shutdown(thread);
 
   if (ret)
-    Error("DSI: shutdown select thread failed: %s (%d)\n",
+    Error("DSI: shutdown select thread failed: %s (%d)",
 	  l4env_errstr(ret),ret);
 }

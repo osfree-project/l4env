@@ -5,7 +5,7 @@
  *	\date	06/08/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -29,7 +29,6 @@
 #ifndef __DICE_FE_FEENUMDECLARATOR_H__
 #define __DICE_FE_FEENUMDECLARATOR_H__
 
-#include "defines.h"
 #include "fe/FEDeclarator.h"
 
 class CFEExpression;
@@ -41,7 +40,7 @@ class CFEExpression;
  * This class is used to describe a enumeration's declarator. A declarator can be, for instance,
  * a variable declaration, or a parameter. An enumeration's declarator can be assigned a value.
  */
-class CFEEnumDeclarator : public CFEDeclarator  
+class CFEEnumDeclarator : public CFEDeclarator
 {
 DECLARE_DYNAMIC(CFEEnumDeclarator);
 protected:

@@ -11,7 +11,9 @@
 #include <l4/util/util.h>
 #include <l4/sys/kdebug.h>
 #include <l4/con/l4contxt.h>
-#include <l4/oskit10_l4env/support.h>
+
+char LOG_tag[9] = "txtdemo";
+l4_ssize_t l4libc_heapsize = 64 * 1024;
 
 void prompt_test(void);
 void scroll_test(void);
@@ -47,9 +49,6 @@ int main(void)
   contxt_ihb_t hb;
   int hbs = 11; /* history buffer size in lines */
   
-  OSKit_libc_support_init(64 * 1024);
-  
-  LOG_init("contxtdemo");
   contxt_init(65536, hbs);
   contxt_init_ihb(&hb, 50, sizeof(input));
 

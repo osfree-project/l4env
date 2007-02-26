@@ -1,2 +1,4 @@
-refman
-internal
+*.title
+*.flags
+loader
+loader-internal

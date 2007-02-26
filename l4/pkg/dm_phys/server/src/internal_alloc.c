@@ -7,22 +7,7 @@
  * \date   02/04/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
- *
- * DMphys uses the L4Env slab allocator (l4/l4env/slab.h) for the dynamic 
+ * DMphys uses the L4Env slab allocator (l4/slab/slab.h) for the dynamic 
  * allocation of various descriptors:
  * - memory map area (memmap.c)
  * - page pool memory area (pages.c)
@@ -47,6 +32,11 @@
  * this will refill the memory pool.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -122,9 +112,9 @@ __allocate(page_area_t ** area)
 	{
 	  ASSERT(mem_pool[i].map_addr != -1);
 
-#if DEBUG_INT_ALLOC
-	  INFO("using page %2d at 0x%08x\n",i,mem_pool[i].map_addr);
-#endif
+	  LOGdL(DEBUG_INT_ALLOC,"using page %2d at 0x%08x",
+                i,mem_pool[i].map_addr);
+
 	  page = (void *)mem_pool[i].map_addr;
 	  mem_pool[i].available = 0;
 
@@ -168,9 +158,7 @@ __release(void * page,
   l4_addr_t addr = (l4_addr_t)page;
   int i;
 
-#if DEBUG_INT_ALLOC
-  INFO("release page at 0x%08x\n",addr);
-#endif
+  LOGdL(DEBUG_INT_ALLOC,"release page at 0x%08x",addr);
 
   if (area != NULL)
     {
@@ -193,7 +181,7 @@ __release(void * page,
 	  num_free++;
 
 #if DEBUG_INT_ALLOC
-	  DMSG("  reuse area at pool page %2d\n",i);
+	  printf("  reuse area at pool page %2d\n",i);
 #endif
 	}
       else
@@ -204,14 +192,14 @@ __release(void * page,
 	   * call it recursively (the page area list might be in an 
 	   * inconsistent state) */
 	  if (num_freed_areas >= DMPHYS_INT_MAX_FREED)
-	    Msg("DMphys: to many freed areas in internal memory pool!");
+	    printf("DMphys: to many freed areas in internal memory pool!");
 	  else
 	    {
 	      freed_areas[num_freed_areas] = area;
 	      num_freed_areas++;
 	    }
 #if DEBUG_INT_ALLOC
-	  DMSG("  inserted area into freed table\n");
+	  printf("  inserted area into freed table\n");
 #endif
 	}
     }
@@ -224,7 +212,7 @@ __release(void * page,
 	  if (mem_pool[i].map_addr == addr)
 	    {
 #if DEBUG_INT_ALLOC
-	      DMSG("  mark pool page %2d free\n",i);
+	      printf("  mark pool page %2d free\n",i);
 #endif
 	      mem_pool[i].available = 1;
 	      break;
@@ -232,7 +220,7 @@ __release(void * page,
 	}
 
       if (i == DMPHYS_INT_POOL_INITIAL)
-	Msg("DMphys: not a page from memory pool (0x%08x)",addr);
+	printf("DMphys: not a page from memory pool (0x%08x)",addr);
     }
 }
 
@@ -268,14 +256,13 @@ __refill(void)
 	  mem_pool[i].area = pa;
 	  num_free++;
 
-#if DEBUG_INT_ALLOC
-	  INFO("pool page %2d at 0x%08x\n",i,mem_pool[i].map_addr);
-#endif
+	  LOGdL(DEBUG_INT_ALLOC,"pool page %2d at 0x%08x",
+                i,mem_pool[i].map_addr);
 	}
     }
 
   if (num_free < DMPHYS_INT_POOL_MIN)
-    Msg("DMphys: running low on internal memory!\n");
+    printf("DMphys: running low on internal memory!\n");
 
   /* done */
   update_in_progress = 0;
@@ -313,10 +300,8 @@ dmphys_internal_alloc_init(void)
       page = dmphys_sigma0_map_any_page();
       if (page != NULL)
 	{
-#if DEBUG_INT_ALLOC
-	  INFO("\n");
-	  DMSG("  got page at 0x%08x\n",(l4_addr_t)page);
-#endif
+	  LOGdL(DEBUG_INT_ALLOC,"\n  got page at 0x%08x",(l4_addr_t)page);
+
 	  mem_pool[i].map_addr = (l4_addr_t)page;
 	  mem_pool[i].available = 1;
 	  num_free++;
@@ -375,10 +360,7 @@ dmphys_internal_alloc_update_free(void)
       num_freed_areas--;
       pa = freed_areas[num_freed_areas];
 
-#if DEBUG_INT_ALLOC
-      INFO("\n");
-      DMSG("  free area at 0x%08x\n",AREA_MAP_ADDR(pa));
-#endif
+      LOGdL(DEBUG_INT_ALLOC,"\n  free area at 0x%08x",AREA_MAP_ADDR(pa));
 
       dmphys_pages_release(pool,pa);
     }
@@ -421,7 +403,7 @@ dmphys_internal_alloc_grow(l4slab_cache_t * cache,
   char * name = (char *)l4slab_get_data(cache);
 
   if (name != NULL)
-    INFO("%s\n",name);
+    LOGL("%s",name);
 #endif
 
   /* allocate page */
@@ -448,7 +430,7 @@ dmphys_internal_alloc_release(l4slab_cache_t * cache,
   char * name = (char *)l4slab_get_data(cache);
 
   if (name != NULL)
-    INFO("%s\n",name);
+    LOGL("%s",name);
 #endif
 
   /* release page */
@@ -468,9 +450,7 @@ dmphys_internal_alloc_release(l4slab_cache_t * cache,
 void *
 dmphys_internal_allocate(void ** data)
 {
-#if DEBUG_INT_ALLOC
-  INFO("allocate\n");
-#endif
+  LOGdL(DEBUG_INT_ALLOC,"allocate");
 
   /* allocate page */
   return __allocate((page_area_t **)data);  
@@ -489,9 +469,7 @@ void
 dmphys_internal_release(void * page, 
 			void * data)
 {
-#if DEBUG_INT_ALLOC
-  INFO("release\n");
-#endif
+  LOGdL(DEBUG_INT_ALLOC,"release");
 
   /* release page */
   __release(page,(page_area_t *)data);

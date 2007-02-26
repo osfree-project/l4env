@@ -1,0 +1,5 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco -l ktest-ux "$@"

@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	generic_io/lib/src/req_rel.c
+ * \file   generic_io/lib/clientlib/req_rel.c
+ * \brief  L4Env I/O Client Library Request/Release Wrapper
  *
- * \brief	L4Env I/O Client Library Request/Release Wrapper
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -58,7 +47,7 @@ l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
 
   l4_fpage_t rfp;		/* rcv fpage desc */
   l4_snd_fpage_t region;	/* rcvd fpage */
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
   unsigned int poss_phys;
 
   /* reserve appropriate area */
@@ -82,9 +71,10 @@ l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
 
   /* request mem region */
   rfp = l4_fpage(vaddr, area_len, L4_FPAGE_RW, 0);
+  _env.rcv_fpage = rfp;
 
-  err = l4_io_request_mem_region(io_l4id, rfp, start, len, &region, offset, &_exc);
-  if (FLICK_ERR(err, &_exc))
+  err = l4_io_request_mem_region_call(&io_l4id, start, len, &region, offset, &_env);
+  if (DICE_ERR(err, &_env))
     return 0;
 
   poss_phys = start - *offset;
@@ -110,13 +100,13 @@ int l4io_request_region(l4_addr_t start, l4_size_t len)
 {
   int err;
 
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* request port region */
-  err = l4_io_request_region(io_l4id, start, len, &_exc);
+  err = l4_io_request_region_call(&io_l4id, start, len, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 /*****************************************************************************/
@@ -136,13 +126,13 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len)
 {
   int err;
 
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* request port region */
-  err = l4_io_release_mem_region(io_l4id, start, len, &_exc);
+  err = l4_io_release_mem_region_call(&io_l4id, start, len, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 /*****************************************************************************/
@@ -161,13 +151,13 @@ int l4io_release_region(l4_addr_t start, l4_size_t len)
 {
   int err;
 
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* request port region */
-  err = l4_io_release_region(io_l4id, start, len, &_exc);
+  err = l4_io_release_region_call(&io_l4id, start, len, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 /*****************************************************************************/

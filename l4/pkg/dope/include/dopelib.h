@@ -1,65 +1,149 @@
-#define EVENT_TYPE_UNDEFINED	0
-#define EVENT_TYPE_COMMAND		1
-#define EVENT_TYPE_MOTION		2
-#define EVENT_TYPE_PRESS		3
-#define EVENT_TYPE_RELEASE		4
+/*
+ * \brief   Interface of DOpE client library
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
 
-typedef struct command_event_struct {
-	long	type;					/* must be EVENT_TYPE_COMMAND */
-	char	*cmd;					/* command string */
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#define EVENT_TYPE_UNDEFINED    0
+#define EVENT_TYPE_COMMAND      1
+#define EVENT_TYPE_MOTION       2
+#define EVENT_TYPE_PRESS        3
+#define EVENT_TYPE_RELEASE      4
+
+typedef struct command_event {
+	long  type;                     /* must be EVENT_TYPE_COMMAND */
+	char *cmd;                      /* command string */
 } command_event;
 
-typedef struct motion_event_struct {
-	long	type;					/* must be EVENT_TYPE_MOTION */
-	long	rel_x,rel_y;			/* relative movement in x and y direction */
-	long	abs_x,abs_y;			/* current position inside the widget */
+typedef struct motion_event {
+	long type;                      /* must be EVENT_TYPE_MOTION */
+	long rel_x,rel_y;               /* relative movement in x and y direction */
+	long abs_x,abs_y;               /* current position inside the widget */
 } motion_event;
 
-typedef struct press_event_struct {
-	long	type;					/* must be EVENT_TYPE_PRESS */
-	long	code;					/* code of key/button that is pressed */
+typedef struct press_event {
+	long type;                      /* must be EVENT_TYPE_PRESS */
+	long code;                      /* code of key/button that is pressed */
 } press_event;
 
-typedef struct release_event_struct {
-	long	type;					/* must be EVENT_TYPE_RELEASE */
-	long	code;					/* code of key/button that is released */
+typedef struct release_event {
+	long type;                      /* must be EVENT_TYPE_RELEASE */
+	long code;                      /* code of key/button that is released */
 } release_event;
 
 typedef union dopelib_event_union {
 	long type;
-	command_event	command;
-	motion_event	motion;
-	press_event		press;
-	release_event	release;
+	command_event   command;
+	motion_event    motion;
+	press_event     press;
+	release_event   release;
 } dope_event;
 
 
 /*** INITIALISE DOpE LIBRARY ***/
 extern long  dope_init(void);
 
+
 /*** DEINITIALISE DOpE LIBRARY ***/
 extern void  dope_deinit(void);
 
-/*** REGISTER DOpE CLIENT APPLICATION ***/
+
+/*** REGISTER DOpE CLIENT APPLICATION ***
+ *
+ * \param appname  name of the DOpE application
+ * \return         DOpE application id
+ */
 extern long  dope_init_app(char *appname);
 
-/*** UNREGISTER DOpE CLIENT APPLICATION ***/
+
+/*** UNREGISTER DOpE CLIENT APPLICATION ***
+ *
+ * \param app_id  DOpE application to unregister
+ * \return        0 on success
+ */
 extern long  dope_deinit_app(long app_id);
 
-/*** EXECUTE DOpE COMMAND ***/
-extern char *dope_cmd(long app_id,char *command);
 
-/*** EXECUTE DOpE FORMAT STRING COMMAND ***/
-extern char *dope_cmdf(long app_id, char *command_format, ...);
+/*** EXECUTE DOpE COMMAND ***
+ *
+ * \param app_id  DOpE application id
+ * \param cmd     command to execute
+ * \return        0 on success
+ */
+extern int dope_cmd(long app_id,char *cmd);
 
-/*** BIND AN EVENT TO A DOpE WIDGET ***/
+
+/*** EXECUTE DOpE FORMAT STRING COMMAND ***
+ *
+ * \param app_id  DOpE application id
+ * \param cmdf    command to execute specified as format string
+ * \return        0 on success
+ */
+extern int dope_cmdf(long app_id, char *cmdf, ...);
+
+
+/*** REQUEST RESULT OF A DOpE COMMAND ***
+ *
+ * \param app_id    DOpE application id
+ * \param dst       destination buffer for storing the result string
+ * \param dst_size  size of destination buffer in bytes
+ * \param cmd       command to execute
+ * \return          0 on success
+ */
+extern int dope_req(long app_id, char *dst, int dst_size, char *cmd);
+
+
+/*** REQUEST RESULT OF A DOpE COMMAND SPECIFIED AS FORMAT STRING ***
+ *
+ * \param app_id    DOpE application id
+ * \param dst       destination buffer for storing the result string
+ * \param dst_size  size of destination buffer in bytes
+ * \param cmd       command to execute - specified as format string
+ * \return          0 on success
+ */
+extern int dope_reqf(long app_id, char *dst, int dst_size, char *cmdf, ...);
+
+
+/*** BIND AN EVENT TO A DOpE WIDGET ***
+ *
+ * \param app_id      DOpE application id
+ * \param var         widget to bind an event to
+ * \param event_type  identifier for the event type
+ * \param callback    callback function to be called for incoming events
+ * \param arg         additional argument for the callback function
+ */
 extern void dope_bind(long app_id,char *var,char *event_type,void (*callback)(dope_event *,void *),void *arg);
 
-/*** ENTER DOPE EVENTLOOP ***/
+
+/*** ENTER DOPE EVENTLOOP ***
+ *
+ * \param app_id  DOpE application id
+ */
 extern void dope_eventloop(long app_id);
 
-/*** REQUEST KEY OR BUTTON STATE ***/
+
+/*** REQUEST KEY OR BUTTON STATE ***
+ *
+ * \param app_id   DOpE application id
+ * \param keycode  keycode of the requested key
+ * \return         1 if key is currently pressed
+ */
 extern long dope_get_keystate(long app_id, long keycode);
 
-/*** REQUEST CURRENT ASCII KEYBOARD STATE ***/
+
+/*** REQUEST CURRENT ASCII KEYBOARD STATE ***
+ *
+ * \param app_id   DOpE application id
+ * \param keycode  keycode of the requested key
+ * \return         ASCII value of the currently pressed key combination
+ */
 extern char dope_get_ascii(long app_id, long keycode);

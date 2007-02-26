@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -31,10 +31,14 @@
 #include "fe/FEStructType.h"
 #include "fe/FEIsAttribute.h"
 #include "fe/FETypedDeclarator.h"
+#include "fe/FEDeclarator.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUnionType.h"
 #include "fe/FEArrayType.h"
 #include "fe/FEInterface.h"
+#include "Vector.h"
+#include "Compiler.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEOperation)
     
@@ -285,6 +289,47 @@ CFEAttribute *CFEOperation::FindAttribute(ATTR_TYPE eAttrType)
     return 0;
 }
 
+/** \brief checks if the parameter of IS attributes are declared somewhere
+ *  \param pParameter this parameter's attributes should be checked
+ *  \param nAttribute the attribute to check
+ *  \param sAttribute a string describing the attribute
+ *  \return true if no errors
+ */
+bool CFEOperation::CheckAttributeParameters(CFETypedDeclarator *pParameter, ATTR_TYPE nAttribute, const char* sAttribute)
+{
+    assert(pParameter);
+    VectorElement *pIter = pParameter->GetFirstDeclarator();
+	CFEDeclarator *pDecl = pParameter->GetNextDeclarator(pIter);
+	assert(pDecl);
+	CFEFile *pRoot = GetRoot();
+	assert(pRoot);
+	CFEAttribute *pAttr;
+	if ((pAttr = pParameter->FindAttribute(nAttribute)) != 0)
+	{
+	    if (!pAttr->IsKindOf(RUNTIME_CLASS(CFEIsAttribute)))
+		    return true;
+        CFEIsAttribute *pIsAttr = (CFEIsAttribute*)pAttr;
+		// check if it has a declarator
+		VectorElement *pIAttr = pIsAttr->GetFirstAttrParameter();
+		CFEDeclarator *pAttrParam;
+		while ((pAttrParam = pIsAttr->GetNextAttrParameter(pIAttr)) != 0)
+		{
+			// check if parameter exists
+			if (FindParameter(pAttrParam->GetName()))
+				continue;
+			// check if it is a const
+			if (pRoot->FindConstDeclarator(pAttrParam->GetName()))
+				continue;
+			// nothing found, assume its wrongly used
+			CCompiler::GccError(this, 0, "The argument \"%s\" of attribute %s for parameter %s is not declared as a parameter or constant.\n",
+				(const char*)pAttrParam->GetName(), sAttribute, (const char*)pDecl->GetName());
+			return false;
+		}
+	}
+	return true;
+}
+
+
 /** \brief checks the consitency of the operation
  *  \return true if this operation is consistent, false if not
  *
@@ -392,7 +437,23 @@ bool CFEOperation::CheckConsistency()
             pParam->AddAttribute(new CFEAttribute(ATTR_IN));
         }
     }
-
+    ////////////////////////////////////////////////////////////////
+	// check if [out] parameters are referenced
+	pIter = GetFirstParameter();
+	while ((pParam = GetNextParameter(pIter)) != 0)
+	{
+	    if (pParam->FindAttribute(ATTR_OUT))
+		{
+		    // get declarator
+			VectorElement *pI = pParam->GetFirstDeclarator();
+			CFEDeclarator *pD = pParam->GetNextDeclarator(pI);
+			if (pD && !pD->IsReference())
+			{
+			    CCompiler::GccError(pParam, 0, "[out] parameter (%s) must be reference", (const char*)pD->GetName());
+				return false;
+			}
+		}
+	}
     ////////////////////////////////////////////////////////////////
     // check if return value is of type refstring
     if (m_pReturnType->GetType() == TYPE_REFSTRING)
@@ -401,6 +462,19 @@ bool CFEOperation::CheckConsistency()
                             (const char *) GetName());
         return false;
     }
+	///////////////////////////////////////////////////////////
+	// check if all identifiers in _is attributes are defined
+	// as parameters.
+	pIter = GetFirstParameter();
+	while ((pParam = GetNextParameter(pIter)) != 0)
+	{
+	    if (!CheckAttributeParameters(pParam, ATTR_SIZE_IS, "[size_is]"))
+		    return false;
+	    if (!CheckAttributeParameters(pParam, ATTR_LENGTH_IS, "[length_is]"))
+		    return false;
+	    if (!CheckAttributeParameters(pParam, ATTR_MAX_IS, "[max_is]"))
+		    return false;
+	}
     ////////////////////////////////////////////////////////////////
     // check the parameters
     pIter = GetFirstParameter();

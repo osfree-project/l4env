@@ -9,6 +9,11 @@
  */
 /*****************************************************************************/
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <l4/lock/lock.h>
 #include <l4/thread/thread.h>
 #include <l4/log/l4log.h>
@@ -39,7 +44,7 @@ test_fn(void * data)
 
       x = x + 1;
 
-      wait = (int)(WAIT_MAX * ((float)l4_rand()/(float)L4_RAND_MAX));
+      wait = (int)(WAIT_MAX * ((float)l4util_rand()/(float)L4_RAND_MAX));
       l4thread_sleep(wait);
 
 #if 1
@@ -50,7 +55,7 @@ test_fn(void * data)
       l4lock_unlock(&lock);
 
 #if 1
-      wait = (int)(WAIT_MAX * ((float)l4_rand()/(float)L4_RAND_MAX));
+      wait = (int)(WAIT_MAX * ((float)l4util_rand()/(float)L4_RAND_MAX));
       l4thread_sleep(wait);
 #endif
     }

@@ -5,7 +5,7 @@
  *	\date	01/19/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -33,13 +33,12 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BETypedef.h"
 #include "be/BEUnmarshalFunction.h"
-#include "be/BEReplyWaitFunction.h"
-#include "be/BEWaitAnyFunction.h"
+#include "be/BEMarshalFunction.h"
 #include "be/BEComponentFunction.h"
 #include "be/BERoot.h"
 
 #include "fe/FEOperation.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FETaggedStructType.h"
 
 IMPLEMENT_DYNAMIC(CBESwitchCase);
@@ -47,7 +46,7 @@ IMPLEMENT_DYNAMIC(CBESwitchCase);
 CBESwitchCase::CBESwitchCase()
 {
     m_pUnmarshalFunction = 0;
-    m_pReplyWaitFunction = 0;
+    m_pMarshalFunction = 0;
     m_pComponentFunction = 0;
     IMPLEMENT_DYNAMIC_BASE(CBESwitchCase, CBEOperationFunction);
 }
@@ -56,7 +55,7 @@ CBESwitchCase::CBESwitchCase(CBESwitchCase & src):CBEOperationFunction(src)
 {
     m_sOpcode = src.m_sOpcode;
     m_pUnmarshalFunction = src.m_pUnmarshalFunction;
-    m_pReplyWaitFunction = src.m_pReplyWaitFunction;
+    m_pMarshalFunction = src.m_pMarshalFunction;
     m_pComponentFunction = src.m_pComponentFunction;
     IMPLEMENT_DYNAMIC_BASE(CBESwitchCase, CBEOperationFunction);
 }
@@ -71,12 +70,18 @@ CBESwitchCase::~CBESwitchCase()
  *	\param pFEOperation the corresponding front-end operation
  *	\param pContext the context of the code generation
  *	\return true is successful
- *	
+ *
  * This implementation calls the base class' implementation and then sets the name
  * of the function.
  */
 bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
+    // we skip OUT functions
+    if (pFEOperation->FindAttribute(ATTR_OUT))
+	{
+	    VERBOSE("CBESwitchCase::CreateBackEnd failed because it has been called for an OUT function (%s)\n", (const char*)pFEOperation->GetName());
+	    return true;
+	}
     // set name
     pContext->SetFunctionType(FUNCTION_SWITCH_CASE);
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
@@ -91,7 +96,7 @@ bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCon
     m_sOpcode = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
 
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     String sFunctionName;
     CBENameFactory *pNF = pContext->GetNameFactory();
     int nOldType = pContext->GetFunctionType();
@@ -103,19 +108,18 @@ bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCon
     while (((pFEParameter = pFEOperation->GetNextParameter(pIter)) != 0)
            && !bNeedUnmarshalling)
     {
-        if ((pFEParameter->FindAttribute(ATTR_IN)))
+        if (pFEParameter->FindAttribute(ATTR_IN))
             bNeedUnmarshalling = true;
     }
     if (bNeedUnmarshalling)
     {
-        // create references to unmarshal and reply function
+        // create references to unmarshal function
         pContext->SetFunctionType(FUNCTION_UNMARSHAL);
         sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
         m_pUnmarshalFunction = (CBEUnmarshalFunction *) pRoot->FindFunction(sFunctionName);
         if (!m_pUnmarshalFunction)
         {
-             m_pUnmarshalFunction = 0;
-             VERBOSE("CBESwitchCase::CreateBE failed because unmarshal function could not be found\n");
+             VERBOSE("CBESwitchCase::CreateBE failed because unmarshal function (%s) could not be found\n", (const char*)sFunctionName);
              return false;
         }
         // set the call parameters: this is simple, since we use the same names and reference counts
@@ -127,67 +131,40 @@ bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCon
             CBEDeclarator *pName = pParameter->GetNextDeclarator(pIterD);
             m_pUnmarshalFunction->SetCallVariable(pName->GetName(), pName->GetStars(), pName->GetName(), pContext);
         }
-        // set the reference count for the  corba object and environment
-// FIXME
     }
-    // reply or wait-any function
-    if (pFEOperation->FindAttribute(ATTR_IN))
-    {
-        // use wait any
-        pContext->SetFunctionType(FUNCTION_WAIT_ANY);
-        sFunctionName = pNF->GetFunctionName(pFEOperation->GetParentInterface(), pContext);
-        m_pReplyWaitFunction = pRoot->FindFunction(sFunctionName);
-        if (!m_pReplyWaitFunction)
-        {
-            m_pReplyWaitFunction = 0;
-            VERBOSE("CBESwitchCase::CreateBE failed because reply-wait (IN) function could not be created\n");
-            return false;
-        }
-        // set the call parameters: this is simple, since we use the same names and reference counts
-        VectorElement *pIter = m_pReplyWaitFunction->GetFirstParameter();
+	// check if we need marshalling function
+	// basically we alwas need marshalling, because we at least transfer
+	// that there was no exception
+	// the only exception is if the function is a oneway (IN) function
+	if (!pFEOperation->FindAttribute(ATTR_IN))
+	{
+	    // create reference to marshal function
+		pContext->SetFunctionType(FUNCTION_MARSHAL);
+		sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
+		m_pMarshalFunction = (CBEMarshalFunction*) pRoot->FindFunction(sFunctionName);
+		if (!m_pMarshalFunction)
+		{
+		    VERBOSE("CBESwitchCase::CreateBE failed because marshal function (%s) could not be found\n", (const char*)sFunctionName);
+			return false;
+		}
+		// set call parameters
+        VectorElement *pIter = m_pMarshalFunction->GetFirstParameter();
         CBETypedDeclarator *pParameter;
-        while ((pParameter = m_pReplyWaitFunction->GetNextParameter(pIter)) != 0)
+        while ((pParameter = m_pMarshalFunction->GetNextParameter(pIter)) != 0)
         {
             VectorElement *pIterD = pParameter->GetFirstDeclarator();
             CBEDeclarator *pName = pParameter->GetNextDeclarator(pIterD);
-            m_pReplyWaitFunction->SetCallVariable(pName->GetName(), pName->GetStars(), pName->GetName(), pContext);
+            m_pMarshalFunction->SetCallVariable(pName->GetName(), pName->GetStars(), pName->GetName(), pContext);
         }
-        // set the reference count for the  corba object and environment
-// FIXME
-    }
-    else
-    {
-        // use reply-wait
-        pContext->SetFunctionType(FUNCTION_REPLY_WAIT);
-        sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
-        m_pReplyWaitFunction = pRoot->FindFunction(sFunctionName);
-        if (!m_pReplyWaitFunction)
-        {
-            m_pReplyWaitFunction = 0;
-            VERBOSE("CBESwitchCase::CreateBE failed because reply-wait (OUT) function could not be found\n");
-            return false;
-        }
-        // set the call parameters: this is simple, since we use the same names and reference counts
-        VectorElement *pIter = m_pReplyWaitFunction->GetFirstParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = m_pReplyWaitFunction->GetNextParameter(pIter)) != 0)
-        {
-            VectorElement *pIterD = pParameter->GetFirstDeclarator();
-            CBEDeclarator *pName = pParameter->GetNextDeclarator(pIterD);
-            m_pReplyWaitFunction->SetCallVariable(pName->GetName(), pName->GetStars(), pName->GetName(), pContext);
-        }
-        // set the reference count for the  corba object and environment
-// FIXME
-    }
-
+	}
     // create reference to component function
-    pContext->SetFunctionType(FUNCTION_SKELETON);
+    pContext->SetFunctionType(FUNCTION_TEMPLATE);
     sFunctionName = pNF->GetFunctionName(pFEOperation, pContext);
     m_pComponentFunction = (CBEComponentFunction *) pRoot->FindFunction(sFunctionName);
     if (!m_pComponentFunction)
     {
         m_pComponentFunction = 0;
-        VERBOSE("CBESwitchCase::CreateBE failed because component function could not be found\n");
+        VERBOSE("CBESwitchCase::CreateBE failed because component function (%s) could not be found\n", (const char*)sFunctionName);
         return false;
     }
     // set the call parameters: this is simple, since we use the same names and reference counts
@@ -199,8 +176,6 @@ bool CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCon
         CBEDeclarator *pName = pParameter->GetNextDeclarator(pIterD);
         m_pComponentFunction->SetCallVariable(pName->GetName(), pName->GetStars(), pName->GetName(), pContext);
     }
-    // set the reference count for the  corba object and environment
-// FIXME
 
     pContext->SetFunctionType(nOldType);
     return true;
@@ -218,7 +193,7 @@ void CBESwitchCase::Write(CBEFile * pFile, CBEContext * pContext)
     pFile->IncIndent();
 
     WriteVariableDeclaration(pFile, pContext);
-    WriteVariableInitialization(pFile, pContext);
+    WriteVariableInitialization(pFile, DIRECTION_IN, pContext);
 
     if (m_pUnmarshalFunction)
     {
@@ -227,6 +202,8 @@ void CBESwitchCase::Write(CBEFile * pFile, CBEContext * pContext)
         m_pUnmarshalFunction->WriteCall(pFile, String(), pContext);
         pFile->Print("\n");
     }
+	// initialize parameters which depend on IN values
+	WriteVariableInitialization(pFile, DIRECTION_OUT, pContext);
 
     if (m_pComponentFunction)
     {
@@ -237,12 +214,12 @@ void CBESwitchCase::Write(CBEFile * pFile, CBEContext * pContext)
         pFile->Print("\n");
     }
 
-    // write reply or wait-any
-    if (m_pReplyWaitFunction)
+    // write marshalling
+    if (m_pMarshalFunction)
     {
-        String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
+        String sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
         pFile->PrintIndent("");
-        m_pReplyWaitFunction->WriteCall(pFile, sOpcodeVar, pContext);
+        m_pMarshalFunction->WriteCall(pFile, sReply, pContext);
         pFile->Print("\n");
     }
 
@@ -292,28 +269,61 @@ void CBESwitchCase::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCont
 
 /**	\brief initialize local variables
  *	\param pFile the file to write to
+ *  \param nDirection the direction of the parameters to initailize
  *	\param pContext the context of the write operation
  *
  * This function takes care of the initialization of the indirect variables.
  */
-void CBESwitchCase::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void CBESwitchCase::WriteVariableInitialization(CBEFile * pFile, int nDirection, CBEContext * pContext)
 {
     // initailize indirect variables
     VectorElement *pIter = GetFirstParameter();
-    CBETypedDeclarator *pParam;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    CBETypedDeclarator *pParameter;
+	// first simply do dereferences
+    while ((pParameter = GetNextParameter(pIter)) != 0)
     {
-        pParam->WriteIndirectInitialization(pFile, pContext);
+	    if (!pParameter->IsDirection(nDirection))
+		    continue;
+        if ((nDirection == DIRECTION_OUT) &&
+		    (pParameter->FindAttribute(ATTR_IN)))
+			continue;
+        pParameter->WriteIndirectInitialization(pFile, pContext);
     }
+	// now initilize variables with dynamic memory
+	pIter = GetFirstParameter();
+	while ((pParameter = GetNextParameter(pIter)) != 0)
+	{
+	    if (!pParameter->IsDirection(nDirection))
+		    continue;
+		// only allocate memory for "pure" OUT parameter, because
+		// IN's are referenced into the message buffer
+		if (pParameter->FindAttribute(ATTR_IN))
+		    continue;
+		pParameter->WriteIndirectInitializationMemory(pFile, pContext);
+	}
 }
 
 /**	\brief writes the clean up code
  *	\param pFile the file to write to
  *	\param pContext the context of the write operation
+ *
+ * We only need to cleanup OUT parameters, which are not IN,
+ * because only for those parameters a memory allocation took
+ * place.
  */
 void CBESwitchCase::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-
+    // initailize indirect variables
+    VectorElement *pIter = GetFirstParameter();
+    CBETypedDeclarator *pParameter;
+    while ((pParameter = GetNextParameter(pIter)) != 0)
+    {
+	    if (!pParameter->IsDirection(DIRECTION_OUT))
+		    continue;
+        if (pParameter->FindAttribute(ATTR_IN))
+			continue;
+        pParameter->WriteCleanup(pFile, pContext);
+    }
 }
 
 /** \brief resets the message buffer type of the respective functions
@@ -326,8 +336,8 @@ void CBESwitchCase::SetMessageBufferType(CBEContext *pContext)
 {
     if (m_pUnmarshalFunction)
         m_pUnmarshalFunction->SetMsgBufferCastOnCall(true);
-    if (m_pReplyWaitFunction)
-        m_pReplyWaitFunction->SetMsgBufferCastOnCall(true);
+    if (m_pMarshalFunction)
+        m_pMarshalFunction->SetMsgBufferCastOnCall(true);
 }
 
 /** \brief propagates the SetCallVariable call if the internal variables are Corba object and environment
@@ -343,8 +353,8 @@ void CBESwitchCase::SetCallVariable(String sOriginalName, int nStars, String sCa
 {
     if (m_pUnmarshalFunction)
         m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
-    if (m_pReplyWaitFunction)
-        m_pReplyWaitFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
+    if (m_pMarshalFunction)
+        m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
     if (m_pComponentFunction)
         m_pComponentFunction->SetCallVariable(sOriginalName, nStars, sCallName, pContext);
 }

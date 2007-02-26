@@ -1,0 +1,6 @@
+Task server interface.
+
+This package provides an interface for starting tasks in the L4 environment
+rather than providing binaries. The task server is needed when additional
+address spaces (L4 tasks) should be created at runtime. The L4 loader depends
+on it.

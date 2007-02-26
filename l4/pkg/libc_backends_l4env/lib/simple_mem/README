@@ -1,0 +1,2 @@
+This backend provides very simple mmap functionality, as such backing
+malloc & co. It uses dm_phys for dataspaces and log for debug output.

@@ -1,3 +1,15 @@
+/* $Id$ */
+/**
+ * \file        exec/server/src/check.cc
+ * \brief       Some assert like functions
+ *
+ * \date        10/2000
+ * \author      Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include "check.h"
 
@@ -6,6 +18,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+/** Check error and give message if != 0 */
 int
 check(int error, const char *format, ...)
 {

@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,15 +30,14 @@
 #define __DICE_FE_FEBASE_H__
 
 #include "Object.h"
-#include "Vector.h"
-#include "File.h"
-#include "Compiler.h"
 
+class CFile;
 class CFEFile;
 class CFEInterface;
 class CFEOperation;
 class CFELibrary;
 class CFEConstructedType;
+class String;
 
 /** \class CFEBase
  *	\ingroup frontend
@@ -53,7 +52,7 @@ DECLARE_DYNAMIC(CFEBase);
 
 // standard constructor/destructor
 public:
-	/** constructs a front-end base object 
+	/** constructs a front-end base object
 	 *	\param pParent the parent object of this one */
 	CFEBase(CObject* pParent = 0);
     virtual ~CFEBase();
@@ -70,6 +69,7 @@ public:
 	void SetSourceLine(int nLineNb);
 	virtual void Serialize(CFile *pFile);
 	virtual void Dump();
+	virtual String ToString();
 	virtual CFEConstructedType* GetParentConstructedType();
 	virtual CFEFile* GetFile();
 	virtual CFELibrary* GetParentLibrary();

@@ -1,33 +1,53 @@
 /*!
  * \file	con/include/l4/con/l4contxt_common.h
- *
  * \brief	libcontxt common client interface (intern)
  *
- * \author	Mathias Noack <mn3@os.inf.tu-dresden.de>
- *
- */
+ * \date	2002
+ * \author	Mathias Noack <mn3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #ifndef _L4CONTXT_COMMON_L4CONTXT_COMMON_H
 #define _L4CONTXT_COMMON_L4CONTXT_COMMON_H
 
 /* con includes */
 #include <l4/con/l4con.h>
 
-/******************************************************************************
- * data types
- ******************************************************************************/
-/*!\brief	contxt input history buffer
- */
+/** input history buffer */
 typedef struct contxt_ihb
 {
-  char *buffer;		/*!< input history buffer head */
-  int  first, last;	/*!< first and last history line */
-  int  lines;		/*!< history buffer size in lines */
-  int  length;		/*!< max number of characters per line */
+  char *buffer;		/**< input history buffer head */
+  int  first;		/**< first history line */
+  int  last;		/**< last history line */
+  int  lines;		/**< history buffer size in lines */
+  int  length;		/**< max number of characters per line */
 } contxt_ihb_t;
 
-/*****************************************************************************/
-/**
- * \brief   Reads a maxcount of character
+/** Initialize input history buffer.
+ * \ingroup contxt_if
+ *
+ * \param   ihb            ... input history buffer structure
+ * \param   count          ... number of lines
+ * \param   length         ... number of characters per line
+ *          
+ * This is the init-function of the input history buffer. The history
+ * buffer has to be already allocated. See the \b run example of the
+ * loader. */
+int contxt_init_ihb(contxt_ihb_t* ihb, int count, int length);
+
+/** Add string to history buffer
+ * \ingroup contxt_if
+ *
+ * \param   ihb            ... input history buffer structure
+ * \param   s              ... string to add
+ */
+void contxt_add_ihb(contxt_ihb_t* ihb, const char *s);
+
+/** Reads a maximum amount of count of characters from keyboard
+ * \ingroup contxt_if
  *
  * \param   maxlen         ... size of return string buffer
  *
@@ -35,152 +55,103 @@ typedef struct contxt_ihb
  * \retval  ihb            ... used input history buffer
  *                             if 0, no input history buffer will be used
  *
- * This function reads a number (maximum maxlen) of character. 
- */
-/*****************************************************************************/
+ * This function reads a number (maximum maxlen) of character. */
 void contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb);
 
-/*****************************************************************************/
-/**
- * \brief   Init of input history buffer
- *
- * \param   ihb            ... input history buffer
- * \param   count          ... number of lines
- * \param   length         ... number of characters per line
- *          
- * This is the init-function of the input history buffer. It allocates the
- * history buffer.
- */
-/*****************************************************************************/
-int contxt_init_ihb(contxt_ihb_t* ihb, int count, int length);
-
-/*****************************************************************************/
-/**
- * \brief   Read a character
+/** Read a character from keyboarde
+ * \ingroup contxt_if
  *
  * \return  a character
  *
- * This function reads a character. (libc) 
- */
-/*****************************************************************************/
+ * This function reads a character. (libc) */
 int getchar(void);
 
 /** Try to get next character. Return -1 if no character is available */
 int trygetchar(void);
 
-/*****************************************************************************/
-/**
- * \brief   Read a character
+/** Read a character
+ * \ingroup contxt_if
  *
  * \return  a character
  *
- * This function reads a character.
- */
-/*****************************************************************************/
+ * This function reads a character. */
 int contxt_getchar(void);
 
-/** Try to get next character. Return -1 no character is available. */
+/** Try to get next character.
+ * \return -1 if no character is available. */
 int contxt_trygetchar(void);
 
-/*****************************************************************************/
-/**
- * \brief   Read a character
+/** Read a character
+ * \ingroup contxt_if
  *
  * \return  a character
  *
- * This function reads a character. (OSKit)
- */
-/*****************************************************************************/
+ * This function reads a character. (OSKit) */
 int direct_cons_getchar(void);
 
 /** Try to get next character. Return -1 no character is available. */
 int direct_cons_trygetchar(void);
 
-/*****************************************************************************/
-/**
- * \brief   Write a character
- * \ingroup libcontxt
+/** Write a character
+ * \ingroup contxt_if
  *
  * \param   c        ... character
  *
  * \return  a character
  *
- * This function writes a character. (libc)
- */
-/*****************************************************************************/
+ * This function writes a character. (libc) */
 int putchar(int c);
 
-/*****************************************************************************/
-/**
- * \brief   Write a character
- * \ingroup libcontxt
+/** Write a character
+ * \ingroup contxt_if
  *
  * \param   c        ... character
  *
  * \return  a character
  *
- * This function writes a character.
- */
-/*****************************************************************************/
+ * This function writes a character. */
 int contxt_putchar(int c);
 
-/*****************************************************************************/
-/**
- * \brief   Write a string + \n
- * \ingroup libcontxt
+/** Write a string + \n
+ * \ingroup contxt_if
  *
  * \param   s        ... string
  * \return  >=0 ok, EOF else
  *
- * This function writes a string + \n. (libc)
- */
-/*****************************************************************************/
-int puts(const char*s);
+ * This function writes a string + \n. (libc) */
+int puts(const char *s);
 
-/*****************************************************************************/
-/**
- * \brief   Write a string + \n
- * \ingroup libcontxt
+/** Write a string + \n
+ * \ingroup contxt_if
  *
  * \param   s        ... string
  * \return  >=0 ok, EOF else
  *
- * This function writes a string.
- */
-/*****************************************************************************/
-int contxt_puts(const char*s);
+ * This function writes a string to the virtual console. */
+int contxt_puts(const char *s);
 
-/*****************************************************************************/
-/**
- * \brief   set graphic mode
+/** set graphic mode
+ * \ingroup contxt_if
  * 
  * \param   gmode  ... coded graphic mode
  *
  * \return  0 on success (set graphic mode)
  *          
- * empty
- */
-/*****************************************************************************/
+ * Does nothing since the graphics mode is initialized at boot time. */
 int contxt_set_graphmode(long gmode);
 
-/*****************************************************************************/
-/**
- * \brief   get graphic mode
+/** get graphic mode
+ * \ingroup contxt_if
  * 
  * \return  gmode (graphic mode)
  *          
- * empty
- */
-/*****************************************************************************/
+ * Does nothing since the graphics mode is initialized at boot time. */
 int contxt_get_graphmode(void);
 
-/*****************************************************************************/
-/**
- * \brief   clear screen
+/** clear screen
+ * \ingroup contxt_if
  *          
- * This function fills the screen with the current background color
- */
-/*****************************************************************************/
+ * This function fills the screen with the current background color */
 void contxt_clrscr(void);
 
 

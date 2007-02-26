@@ -5,7 +5,7 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -28,6 +28,8 @@
 #include "be/l4/v2/L4V2BEClassFactory.h"
 
 #include "be/l4/v2/L4V2BECallFunction.h"
+#include "be/l4/v2/L4V2BESndFunction.h"
+#include "be/l4/v2/L4V2BEO1Marshaller.h"
 #include "be/l4/v2/L4V2BESizes.h"
 
 #include "be/BEContext.h"
@@ -72,3 +74,22 @@ CBESizes * CL4V2BEClassFactory::GetNewSizes()
     return new CL4V2BESizes();
 }
 
+/** \brief create a new send function class
+ *  \return a reference to the new instance
+ */
+CBESndFunction* CL4V2BEClassFactory::GetNewSndFunction()
+{
+    if (m_bVerbose)
+	    printf("CL4V2BEClassFactory: created class CL4V2BESndFunction\n");
+    return new CL4V2BESndFunction();
+}
+
+/** \brief create a new marshaller class
+ *  \return a reference to the new instance
+ */
+CBEMarshaller* CL4V2BEClassFactory::GetNewMarshaller(CBEContext* pContext)
+{
+    if (m_bVerbose)
+	    printf("CL4V2BEClassFactory: created class CL4V2BEO1Marshaller\n");
+    return new CL4V2BEO1Marshaller();
+}

@@ -1,20 +1,20 @@
 INTERFACE:
 
 #include "config.h"             // for MAGIC_CONST
+#include "kmem.h"               // for "_unused_*" virtual memory regions
 #include "linker_syms.h"
 
 EXTENSION class Space_context
 {
 protected:
   static const unsigned long smas_index
-    = (reinterpret_cast<unsigned long>(&_smas_area_1) >> PDESHIFT) & PDEMASK;
+    = (Kmem::_smas_area_1_addr >> PDESHIFT) & PDEMASK;
   static const unsigned long smas_version
-    = (reinterpret_cast<unsigned long>(&_smas_version_1) >> PDESHIFT) & PDEMASK;
+    = (Kmem::_smas_version_1_addr >> PDESHIFT) & PDEMASK;
 };
 
 IMPLEMENTATION[ia32-smas]:
 
-#include "kmem.h"               // for "_unused_*" virtual memory regions
 #include "atomic.h"
 #include <cassert>
 
@@ -23,8 +23,8 @@ IMPLEMENTATION[ia32-smas]:
 PUBLIC inline
 unsigned Space_context::small_space_base() const
 {
-      return unsigned( (_dir[smas_index] & 0xFF000000) |
-                         ((_dir[smas_index] << 16) & 0xFF0000));
+  return unsigned( (_dir[smas_index] & 0xFF000000) |
+                  ((_dir[smas_index] << 16) & 0xFF0000));
 
 }
 
@@ -33,7 +33,7 @@ unsigned Space_context::small_space_base() const
 PUBLIC inline
 unsigned Space_context::small_space_size() const
 {
-      return ((unsigned(_dir[smas_index]) & 0xFFF00) << 12);
+  return ((unsigned(_dir[smas_index]) & 0xFFF00) << 12);
 }
 
 /** Assigns data segment dimension.
@@ -79,16 +79,25 @@ Space_context::set_pdir_version(unsigned version)
  *  counter.
  */
 PUBLIC inline NEEDS["kmem.h"]
-void 
+bool 
 Space_context::update_smas ()
 {
-  for ( unsigned i =  ((Kmem::smas_start >> PDESHIFT) & PDEMASK);
-         i < ((Kmem::smas_end - Kmem::smas_start) >> PDESHIFT) & PDEMASK;
-         i++ ) {
-    _dir[i] = Kmem::dir()[i];
-  }
+  // XXX Selective update disabled as there is still a versioning
+  // problem.
+  if ( (Pd_entry volatile) Kmem::dir()[smas_version] != 
+                        (Pd_entry volatile) _dir[smas_version] ) 
+  {
+    for ( unsigned i =  ((Kmem::smas_start >> PDESHIFT) & PDEMASK);
+           i < (Kmem::smas_end >> PDESHIFT) & PDEMASK;
+           i++ ) {
+      _dir[i] = Kmem::dir()[i];
+    }
 
-  _dir[smas_version] = Kmem::dir()[smas_version];
+    _dir[smas_version] = Kmem::dir()[smas_version];
+    return true;
+  } 
+
+  return false;
 }
 
 IMPLEMENT inline NEEDS["kmem.h"]
@@ -118,12 +127,7 @@ Space_context::switchin_context()
 
   if (is_small_space()) 
   {
-    if ( Kmem::dir()[smas_version] > _dir[smas_version] ) 
-    {
-      update_smas();
-    }
-      
-    if (need_flush_tlb) 
+    if (Space_context::current()->update_smas() || need_flush_tlb) 
     {
       Kmem::tlb_flush();
     }

@@ -27,75 +27,106 @@
 # actually build files (in subdirs for multi-arch case, in the same dir in
 # the single-arch case).
 
+ifeq ($(origin _L4DIR_MK_MAKECONF),undefined)
+_L4DIR_MK_MAKECONF=y
+
 # the default target is all
 all::
 
 # make .general.d dependent on the role-file
 $(if $(ROLE),.general.d: $(L4DIR)/mk/$(ROLE))
 
-SYSTEM_TARGET = $(SYSTEM_TARGET_$(ARCH))
+SYSTEM_TARGET	= $(SYSTEM_TARGET_$(ARCH))
+SYSTEM_TARGET_arm = arm-linux-
 SYSTEM_TARGET_ia64 = /usr/local/ia64-linux/bin/
+IDL_SYSTEMS 	= x86-l4v2 x86-l4x0
 
-AR=     $(SYSTEM_TARGET)ar
-AS=     $(SYSTEM_TARGET)as
-AWKP=	gawk --posix
-CC=     $(SYSTEM_TARGET)gcc
-CXX=    $(SYSTEM_TARGET)g++
-CP=     cp
-DICE=	$(firstword $(wildcard $(L4DIR)/tool/dice/src/dice \
-				 /usr/local/bin/dice \
+AR		= $(SYSTEM_TARGET)ar
+AS		= $(SYSTEM_TARGET)as
+AWKP		= gawk --posix
+CC		= $(CC_$(ARCH))
+CC_		= $(error C-Compiler needs target arch. Maybe you mean HOST_CC)
+CXX		= $(CXX_$(ARCH))
+CXX_		= $(error C++-Compiler needs target arch. Maybe you mean HOST_CXX)
+CP		= cp
+DICE		= $(firstword $(wildcard $(L4DIR)/tool/dice/src/dice \
+				$(DROPS_STDDIR)/tool/bin/dice \
 				 $(shell which dice) ) false )
 
-FLICK_BIN_DIR= $(L4DIR)/tool/flick-$(SYSTEM_TARGET)obj/bin
+FLICK_BIN_DIR	= $(L4DIR)/tool/flick-$(SYSTEM_TARGET)obj/bin
 ifeq ($(shell test -x $(FLICK_BIN_DIR)/flick-fe-newcorba && echo y),)
-FLICK_BIN_DIR = $(DROPS_STDDIR)/tool/bin
+FLICK_BIN_DIR	= $(DROPS_STDDIR)/tool/bin
 endif
 
-DROPS_CC= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-gcc\
+DROPS_CC	= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-gcc\
                                  $(DROPS_STDDIR)/tool/bin/drops-gcc\
                                  ) false )
-DROPS_CXX= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-c++ \
+DROPS_CXX	= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-c++ \
                                  $(DROPS_STDDIR)/tool/bin/drops-c++\
                                  ) false )
-ECHO=	echo
-FLICK_CPP_NAME = $(INT_CPP_NAME)
-INDENT= indent -sob
-INSTALL=$(SYSTEM_TARGET)install
-INT_CPP_NAME = cpp0
-LD=     $(SYSTEM_TARGET)ld
-LATEX=	latex
-LEX=	flex
-LN=	ln
-MKDIR=	mkdir -p
-NM=	$(SYSTEM_TARGET)nm
-OBJCOPY=$(SYSTEM_TARGET)objcopy
-PWD=    pwd
-RANLIB= $(SYSTEM_TARGET)ranlib
-RM=     rm -f
-SCRUB=	$(RM) $(wildcard *.old) $(wildcard *~) $(wildcard *.bak) \
+ECHO		= echo
+FLICK_CPP_NAME =  $(INT_CPP_NAME)
+HOST_CC		= gcc
+HOST_CXX	= g++
+IDL_SYSTEMS	= 
+INDENT		= indent -sob
+INSTALL		= install
+# the following two variables should be overwritten in Makeconf.bid.local
+INT_CPP_NAME	= $(INT_CPP_$(ARCH)_NAME)
+INT_CXX_NAME	= $(INT_CXX_$(ARCH)_NAME)
+LD		= $(SYSTEM_TARGET)ld
+LATEX		= latex
+LEX		= flex
+LN		= ln
+MKDIR		= mkdir -p
+MKFLAGS		+=$(MKFLAGS_$@)
+NM		= $(SYSTEM_TARGET)nm
+OBJCOPY		= $(SYSTEM_TARGET)objcopy
+PWD		= pwd
+RANLIB		= $(SYSTEM_TARGET)ranlib
+RM		= rm -f
+SCRUB		= $(RM) $(wildcard *.old) $(wildcard *~) $(wildcard *.bak) \
                         $(wildcard \#*\#)
-SED=	sed
-SIZE=   $(SYSTEM_TARGET)size
-STRIP=  $(SYSTEM_TARGET)strip
-TR=	tr
-YACC=	byacc
+SED		= sed
+SHELL		= /bin/bash
+SIZE		= $(SYSTEM_TARGET)size
+STRIP		= $(SYSTEM_TARGET)strip
+TR		= tr
+YACC		= byacc
 
 # functions that are handy
 absfilename     = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&pwd)))
 findfile	= $(firstword $(wildcard $(addsuffix /$(1),$(2))))
 
+# a nasty workaround for make-3.79/make-3.80. The former needs an additional
+# $$ for $-quotation when calling a function.
+BID_IDENT	= $(1)
+ifeq ($(call BID_IDENT,$$),)
+BID_DOLLARQUOTE	= $$
+endif
+
 # Makeconf.local handling
+# dont use -include here, as we have special build conditions in $(L4DIR)/
+BID_ROOT_CONF ?= $(call absfilename, $(L4DIR))/Makeconf.bid.local
+ifeq ($(wildcard $(BID_ROOT_CONF)),)
+ifeq ($(BID_IGN_ROOT_CONF),)
+$(error Please run "make config" in "$(L4DIR)")
+endif
+else
+include $(BID_ROOT_CONF)
+endif
 -include $(L4DIR)/Makeconf.local
-# if it is not already set, we use this in the local dir
-MAKECONFLOCAL ?= Makeconf.local
--include $(MAKECONFLOCAL)
 ifneq ($(PKGDIR),)
 -include $(PKGDIR)/Makeconf.local
 endif
+# if it is not already set, we use this in the local dir
+MAKECONFLOCAL ?= Makeconf.local
+-include $(MAKECONFLOCAL)
 
 DROPS_STDDIR	?= /home/drops
 STATICFILE	?= $(L4DIR)/pkg/STATIC
-HAVE_LDSO	?= y
+
+include $(L4DIR)/mk/config.inc
 
 ifneq ($(HAVE_LDSO),)
 # MAKEDEP-call:
@@ -103,33 +134,39 @@ ifneq ($(HAVE_LDSO),)
 # arg2 - [opt] compiler target. Will be written as target within the
 # 	       dependency file
 # arg3 - [opt] name of the dependency file. If unset, .<arg2>.d will be used.
-MAKEDEP=LD_PRELOAD=$(firstword $(wildcard $(call absfilename, \
-				 $(L4DIR)/tool/gendep/libgendep.so \
-				 $(DROPS_STDDIR)/tool/lib/libgendep.so ))) \
-		GENDEP_TARGET=$(if $(2),$(2),$@) GENDEP_BINARY=$(1) \
-		$(if $(3),GENDEP_DEPFILE=$(3))
+ifeq ($(origin BID_LIBGENDEP), undefined)
+BID_LIBGENDEP := $(firstword $(wildcard $(call absfilename, \
+				$(L4DIR)/tool/gendep/libgendep.so \
+				$(DROPS_STDDIR)/tool/lib/libgendep.so )))
+endif
+MAKEDEP=LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
+		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3))
 endif
 
-# the gcc specific variables: include dir and gcc lib
-ifeq ($(origin GCCDIR), undefined)
-export GCCDIR := $(shell $(CC) -print-search-dirs|grep ^install:|cut -f2 -d' ')
-endif
-ifeq ($(origin GCCLIB), undefined)
-export GCCLIB	 := $(shell $(CC) -print-libgcc-file-name)
-endif
-GCCINCDIR = $(GCCDIR)/include
+# the gcc specific variables: version, base dir, include dir, gcc lib
+# note: determining these variables is slow, and the values should
+#       be set in Makeconf.bid.local. However, this is the place were
+#       they are determined on a 'make config' in $(L4DIR)
+GCCVERSION_f	= $(shell $(CC_$(1)) -dumpversion)
+GCCDIR_f	= $(shell $(CC_$(1)) -print-search-dirs|sed -ne 's+^install: \(.*[^/][^/]*\)/\?+\1+p' )
+GCCLIB_f	= $(shell $(CC_$(1)) -print-libgcc-file-name)
+GCCLIB_EH_f	= $(filter /%,$(shell $(CC_$(1)) -print-file-name=libgcc_eh.a))
+GCCINCDIR_f	= $(call GCCDIR_f, $(1))/include
+
+GCCVERSION	= $(GCCVERSION_$(ARCH))
+GCCDIR		= $(GCCDIR_$(ARCH))
+GCCLIB		= $(GCCLIB_$(ARCH))
+GCCLIB_EH	= $(GCCLIB_EH_$(ARCH))
+GCCINCDIR	= $(GCCDIR)/include
 
 ifneq ($(PKGDIR),)
   PKGNAME ?= $(notdir $(shell cd $(PKGDIR);pwd))
 endif
 
-# we have at least one architecture
-ARCHS ?= x86-v2
-
-
 #
-# SUBDIR handling
+# SUBDIR handling, not within the OBJ-*/ dirs
 #
+ifeq ($(SYSTEM),)
 ifneq ($(SUBDIRS),)
 .PHONY: $(SUBDIRS)
 $(SUBDIRS):
@@ -137,7 +174,17 @@ $(SUBDIRS):
 
 # we know that SUBDIRS isn't empty, hence we can avoid the dir-test
 scrub clean cleanall::
-	set -e; for i in $(SUBDIRS) ; do $(MAKE) -C $$i $@ ; done
+	set -e; $(foreach i,$(SUBDIRS), \
+		$(MAKE) -C $i $@ $(MKFLAGS) $(MKFLAGS_$i);)
+
+install:: $(SUBDIRS)
+	set -e; $(foreach i,$(SUBDIRS), \
+		$(MAKE) -C $i $@ $(MKFLAGS) $(MKFLAGS_$i);)
+
+endif
+else
+# we are within an OBJ-*/ dir, create dummy target
+$(SUBDIRS):
 endif
 
 #
@@ -147,28 +194,29 @@ endif
 
 # the general dependencies: All generated files depend on ".general.d".
 # ".general.d" itself depends on the mk-Makeconf, the optional
-# Makeconf.local, the packet-Makeconf.local and the Makeconf.local. This
-# ensures a rebuilt if any of the configuration- or make-files changes.
+# Makeconf.local, the Makeconf.bid.local, the packet-Makeconf.local and the
+# Makeconf.local. This ensures a rebuilt if any of the configuration-
+# or make-files changes.
 #
 # We have this nasty if-readable-magic to allow the files to disappear
 # or to appear. Depending on if the according makeconf exists now, the
 # if-readable magic .general.d is used on existance or non-existence.
 
-DEPEND_GENERAL_D_COND = \
+BID_DEPEND_GENERAL_D_COND = \
 	if [ -r $(1) ] ; then echo -e '$@: $(1)\n$(1):\n' >>$@ ; \
 	  else echo '$$(if $$(wildcard $(1)), $@: FORCE)' >>$@; fi
 
 .general.d: $(L4DIR)/mk/Makeconf
-	$(BUILD_MESSAGE)
+	@$(BUILD_MESSAGE)
 	$(DEPEND_VERBOSE)echo '$@:	Makefile ' > $@
-	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(L4DIR)/Makeconf.bid.local)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(L4DIR)/Makeconf.local)
-	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
+	$(if $(PKGDIR),$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(PKGDIR)/Makeconf.local))
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(MAKECONFLOCAL))
-ifneq ($(PKGDIR),)
-	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
-		$(PKGDIR)/Makeconf.local)
-endif
 
 DEPS	+= .general.d
 
@@ -176,12 +224,12 @@ DEPS	+= .general.d
 # Messages
 #
 
-# set SHOWMESSAGES=false to prevent textual action description
+# set SHOWMESSAGES=true or 'y' to print textual action descriptions
 SHOWMESSAGES ?= true
 
 # coloring on vt100-, xterm-, linux- and console-consoles
-# enbaled by setting USE_EMPHASIZE_PHASES to true
-ifeq ($(USE_EMPHASIZE_PHASES),true)
+# enbaled by setting BID_COLORED_PHASES to y
+ifeq ($(BID_COLORED_PHASES),y)
 ifneq (,$(findstring ${TERM},vt100 xterm linux console))
   EMPHSTART = '\033[34m'
   EMPHSTOP  = '\033[0m'
@@ -192,23 +240,23 @@ endif
 endif
 
 
-ifeq "$(SHOWMESSAGES)" "true"
-AR_MESSAGE=	@echo -e "  ==> Archiving into $@"
-BUILD_MESSAGE=	@echo -e "  ... Building $@"
-BUILT_MESSAGE=  @echo -e $(EMPHSTART)'  ==> "$@" built'$(EMPHSTOP)
-COMP_MESSAGE=	@echo -e "  ... Compiling $@"
-COMP_P_MESSAGE=	@echo -e "  ... Compiling PIC $@"
-COMP_PR_MESSAGE=@echo -e "  ... Compiling PROFILE $@"
-GEN_MESSAGE=	@echo -e "  ... Generating $@"
-LINK_MESSAGE=	@echo -e "  ==> Linking $@"
-DEP_MESSAGE=	@echo -e "  ... Building dependencies for $<"
-CLEAN_MESSAGE=	@echo -e "  ... Removing created files"
-CLEANALL_MESSAGE=@echo -e "  ... Removing all created files"
-INSTALL_DOC_MESSAGE=   @echo -e "  ==> Installing $(<) documentation"
-INSTALL_DOC_LOCAL_MESSAGE = @echo -e "  ==> Installing $(<) documentation locally"
-INSTALL_MESSAGE=   @echo -e "  ==> Installing $^"
-INSTALL_LOCAL_MESSAGE = @echo -e "  ==> Installing $(<) to local build-tree"
-UPDATE_HTML_MESSAGE = @echo -e "  ! You should remake you doc directory in $(1)"
+ifneq (,$(filter y true, $(SHOWMESSAGES)))
+AR_MESSAGE=	echo -e "  ==> Archiving into $@"
+BUILD_MESSAGE=	echo -e "  ... Building $@"
+BUILT_MESSAGE=  echo -e $(EMPHSTART)'  ==> "$@" built'$(EMPHSTOP)
+COMP_MESSAGE=	echo -e "  ... Compiling $@"
+COMP_P_MESSAGE=	echo -e "  ... Compiling PIC $@"
+COMP_PR_MESSAGE=echo -e "  ... Compiling PROFILE $@"
+GEN_MESSAGE=	echo -e "  ... Generating $@"
+LINK_MESSAGE=	echo -e "  ==> Linking $@"
+DEP_MESSAGE=	echo -e "  ... Building dependencies for $<"
+CLEAN_MESSAGE=	echo -e "  ... Removing created files"
+CLEANALL_MESSAGE=echo -e "  ... Removing all created files"
+INSTALL_DOC_MESSAGE=   echo -e "  ==> Installing $(<) documentation"
+INSTALL_DOC_LOCAL_MESSAGE = echo -e "  ==> Installing $(<) documentation locally"
+INSTALL_MESSAGE=   echo -e "  ==> Installing $^"
+INSTALL_LOCAL_MESSAGE = echo -e "  ==> Installing $(<) to local build-tree"
+UPDATE_HTML_MESSAGE = echo -e "  ! You should remake your doc directory in $(1)"
 endif
 
 
@@ -228,3 +276,4 @@ reloc::
 
 .PHONY: reloc FORCE
 
+endif	# _L4DIR_MK_MAKECONF undefined

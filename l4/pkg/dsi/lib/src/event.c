@@ -87,10 +87,10 @@ __client_wakeup(l4_threadid_t client, l4_uint32_t events, int error)
   l4_msgdope_t result;
 
   /* send notification */
-  ret = l4_i386_ipc_send(client,L4_IPC_SHORT_MSG,error,events,
+  ret = l4_ipc_send(client,L4_IPC_SHORT_MSG,error,events,
 			 L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
   if ((ret == 0) || (ret == L4_IPC_SETIMEOUT)) 
-      return 0;
+    return 0;
   else 
     {
       Error("DSI: send event notification failed (0x%02x)",ret);
@@ -122,9 +122,7 @@ __set_event(dsi_socketid_t id, l4_uint32_t events)
   dsi_event_client_t * c;
   dsi_event_client_t * tmp;
 
-#if DEBUG_EVENT
-  INFO("socket %d, events 0x%08x\n",id,events);
-#endif
+  LOGdL(DEBUG_EVENT,"socket %d, events 0x%08x",id,events);
 
   /* get socket descriptor */
   ret = dsi_socket_get_descriptor(id,&s);
@@ -206,9 +204,7 @@ __reset_event(l4_threadid_t client, dsi_socketid_t id, l4_uint32_t events)
   dsi_socket_t * s;
   int ret,i,error;
 
-#if DEBUG_EVENT
-  INFO("socket %d, events 0x%08x\n",id,events);
-#endif
+  LOGdL(DEBUG_EVENT,"socket %d, events 0x%08x",id,events);
 
   /* get socket descriptor */
   ret = dsi_socket_get_descriptor(id,&s);
@@ -360,20 +356,16 @@ __event_thread(void * data)
   l4_msgdope_t result;
   int cmd;
 
-#if DEBUG_EVENT
-  INFO("signalling thread up.\n");
-#endif
+  LOGdL(DEBUG_EVENT,"signalling thread up.");
 
   /* thread loop */
   while (1)
     {
-      ret = l4_i386_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
+      ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
 			     L4_IPC_NEVER,&result);
       while (!ret)
 	{
-#if DEBUG_EVENT
-	  INFO("request: dw0 0x%08x, dw1 %d\n",dw0,dw1);
-#endif
+	  LOGdL(DEBUG_EVENT,"request: dw0 0x%08x, dw1 %d",dw0,dw1);
 
 	  reply = 1;
 	  cmd = dw0 & ~EVENT_MASK;
@@ -408,20 +400,20 @@ __event_thread(void * data)
 	    }
 
 	  if (reply)
-	    ret = l4_i386_ipc_reply_and_wait(src,L4_IPC_SHORT_MSG,error,0,
+	    ret = l4_ipc_reply_and_wait(src,L4_IPC_SHORT_MSG,error,0,
 					     &src,L4_IPC_SHORT_MSG,&dw0,&dw1,
 					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
 					     &result);
 	  else
-	    ret = l4_i386_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
+	    ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
 				   L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
 	}
 
-      Error("DSI: event signalling thread IPC error 0x%02x\n",ret);
+      Error("DSI: event signalling thread IPC error 0x%02x",ret);
     }
 
   /* this should never happen */
-  Panic("left event signalling thread!\n"); 
+  Panic("left event signalling thread!"); 
 }
 
 /*****************************************************************************/
@@ -449,7 +441,7 @@ dsi_event_set(dsi_socketid_t socket_id, l4_uint32_t events)
   l4_msgdope_t result;
 
   /* call signalling thread */
-  ret = l4_i386_ipc_call(dsi_component_event_id,L4_IPC_SHORT_MSG,
+  ret = l4_ipc_call(dsi_component_event_id,L4_IPC_SHORT_MSG,
 			 EVENT_SET | (events & EVENT_MASK),socket_id,
 			 L4_IPC_SHORT_MSG,&error,&dummy,
 			 L4_IPC_NEVER,&result);
@@ -505,7 +497,7 @@ dsi_event_reset(l4_threadid_t event_thread, dsi_socketid_t socket_id,
   l4_msgdope_t result;
 
   /* call component */
-  ret = l4_i386_ipc_call(event_thread,L4_IPC_SHORT_MSG,
+  ret = l4_ipc_call(event_thread,L4_IPC_SHORT_MSG,
 			 EVENT_RESET | (events & EVENT_MASK),socket_id,
 			 L4_IPC_SHORT_MSG,&error,&dummy,
 			 L4_IPC_NEVER,&result);
@@ -548,13 +540,13 @@ dsi_event_wait(l4_threadid_t event_thread, dsi_socketid_t socket_id,
   l4_msgdope_t result;
 
   /* call component */
-  ret = l4_i386_ipc_call(event_thread,L4_IPC_SHORT_MSG,
+  ret = l4_ipc_call(event_thread,L4_IPC_SHORT_MSG,
 			 EVENT_WAIT | (events & EVENT_MASK),socket_id,
 			 L4_IPC_SHORT_MSG,&error,&mask,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
-       Error("DSI: error calling components event signalling thread (0x%02x)!",
+      Error("DSI: error calling components event signalling thread (0x%02x)!",
 	    ret);
       return -L4_EIPC;
     }

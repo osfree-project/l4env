@@ -46,7 +46,7 @@ Helping_lock::test_and_set ()
     If the lock is occupied, enqueue in list of helpers and lend CPU 
     to current lock owner until we are the lock owner.
  */
-PUBLIC 
+PUBLIC inline NEEDS ["panic.h"]
 void 
 Helping_lock::lock ()
 {

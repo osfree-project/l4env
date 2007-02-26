@@ -71,16 +71,14 @@ dsi_sync_thread_send(void * data)
   l4_msgdope_t result;
   l4_threadid_t src;
 
-#if DEBUG_SYNC_SEND
-  INFO("up, parent %x.%x\n",parent.id.task,parent.id.lthread);
-#endif
+  LOGdL(DEBUG_SYNC_SEND,"up, parent %x.%x",parent.id.task,parent.id.lthread);
 
   /* sanity checks */
   Assert(data != NULL);
   socket = (dsi_socket_t *)data;
 
   /* wait for parent to send connect message */ 
-  ret = l4_i386_ipc_receive(parent,L4_IPC_SHORT_MSG,&dw0,&dw1,
+  ret = l4_ipc_receive(parent,L4_IPC_SHORT_MSG,&dw0,&dw1,
 			    L4_IPC_NEVER,&result);
   if (ret || (dw0 != DSI_SYNC_CONNECTED))
     {
@@ -89,25 +87,23 @@ dsi_sync_thread_send(void * data)
     }
   Assert(data == (void *)dw1);
   
-#if DEBUG_SYNC_SEND
-  INFO("connected.\n");
-  INFO("remote socket %d, work %x.%x\n",socket->remote_socket.socket,
-       socket->remote_socket.work_th.id.task,
-       socket->remote_socket.work_th.id.lthread);
-#endif
+  LOGdL(DEBUG_SYNC_SEND,"connected.");
+  LOGdL(DEBUG_SYNC_SEND,"remote socket %d, work %x.%x",
+        socket->remote_socket.socket,
+        socket->remote_socket.work_th.id.task,
+        socket->remote_socket.work_th.id.lthread);
 
   /* snychronization loop */
   while (1)
     {
-      ret = l4_i386_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
+      ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
 			     L4_IPC_NEVER,&result);
 
       if (!ret)
 	{
-#if DEBUG_SYNC_SEND
-	  INFO("msg from %x.%x\n",src.id.task,src.id.lthread);
-	  INFO("dw0 = %u, dw1 = %u\n",dw0,dw1);
-#endif
+	  LOGdL(DEBUG_SYNC_SEND,"msg from %x.%x",src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_SEND,"dw0 = %u, dw1 = %u",dw0,dw1);
+
 	  switch (dw0)
 	    {
 	    case DSI_SYNC_COMMITED:
@@ -122,26 +118,24 @@ dsi_sync_thread_send(void * data)
 	           ********************************************************/
 	          /* packet commited (dw1 -> packet index), wakeup receiver 
 	           * work thread */
-#if DEBUG_SYNC_SEND
-	          INFO("wakeup receiver, packet %d\n",dw1);
-#endif
+	          LOGdL(DEBUG_SYNC_SEND,"wakeup receiver, packet %d",dw1);
+
 		  packet = &socket->packets[dw1];
 
 		  /* check if receiver is already waiting */
 		  if (packet->flags & DSI_PACKET_RX_WAITING)
 		    {
-#if DEBUG_SYNC_SEND
-		      INFO("receiver already waiting\n");
-		      INFO("wakeup %x.%x\n",
+		      LOGdL(DEBUG_SYNC_SEND,"receiver already waiting");
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
 			   socket->remote_socket.work_th.id.task,
 			   socket->remote_socket.work_th.id.lthread);
-#endif
+
 		      if (socket->flags & DSI_SOCKET_MAP ||
 			  socket->flags & DSI_SOCKET_COPY){
 			  LOG_Error("Mapping/Copying sockets not supported");
 		      } else {
 			  /* wakeup */
-			  ret = l4_i386_ipc_send(socket->remote_socket.work_th,
+			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
 						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
 						 &result);
@@ -155,9 +149,8 @@ dsi_sync_thread_send(void * data)
 		  else
 		    {
 		      /* receiver not waiting yet */
-#if DEBUG_SYNC_SEND
-		      INFO("receiver not yet waiting\n");
-#endif
+		      LOGdL(DEBUG_SYNC_SEND,"receiver not yet waiting");
+
 		      /* mark wakeup notification pending */
 		      packet->flags |= DSI_PACKET_RX_PENDING;
 		      
@@ -176,25 +169,24 @@ dsi_sync_thread_send(void * data)
 		   * message from remote work thread
 		   *********************************************************/
 		  /* wait for packet (dw1 -> packet index) */
-#if DEBUG_SYNC_SEND
-		  INFO("receiver waits for packet %d\n",dw1);
-#endif
+		  LOGdL(DEBUG_SYNC_SEND,"receiver waits for packet %d",dw1);
+
 		  packet = &socket->packets[dw1];
 
 		  /* check if wakeup notification is already pending */
 		  if (packet->flags & DSI_PACKET_RX_PENDING)
 		    {
-#if DEBUG_SYNC_SEND
-		      INFO("notification pending\n");
-		      INFO("wakeup %x.%x\n",src.id.task,src.id.lthread);
-#endif
+		      LOGdL(DEBUG_SYNC_SEND,"notification pending");
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
+                            src.id.task,src.id.lthread);
+
 		      if (socket->flags & DSI_SOCKET_MAP ||
 			  socket->flags & DSI_SOCKET_COPY){
 			  LOG_Error("Mapping/Copying sockets not supported");
 			  continue;
 		      } else {
 			  /* wakeup */
-			  ret = l4_i386_ipc_send(socket->remote_socket.work_th,
+			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
 						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
 						 &result);
@@ -208,9 +200,8 @@ dsi_sync_thread_send(void * data)
 		  else
 		    {
 		      /* no notification yet */
-#if DEBUG_SYNC_SEND
-		      INFO("set wait flag\n");
-#endif
+		      LOGdL(DEBUG_SYNC_SEND,"set wait flag");
+
 		      packet->flags |= DSI_PACKET_RX_WAITING;
 		      /* and set the work-thread to that of the sender
 		         of this message, as it can be changed. */
@@ -226,16 +217,16 @@ dsi_sync_thread_send(void * data)
 		   * notification callback */
 
 		  packet = &socket->packets[dw1];
-#if DEBUG_SYNC
-		  INFO("released packet %u (idx %u)\n",packet->no,dw1);
-#endif
+
+		  LOGdL(DEBUG_SYNC,"released packet %u (idx %u)",packet->no,dw1);
+
 		  /* call release callback function */
 		  if (socket->release_callback)
 		    socket->release_callback(socket,packet);
 
 #if RELEASE_DO_CALL
 		  /* reply */
-		  ret = l4_i386_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
+		  ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
 					 L4_IPC_TIMEOUT(0,1,0,0,0,0),
 					 &result);
 		  if (ret)
@@ -283,16 +274,14 @@ dsi_sync_thread_receive(void * data)
   l4_msgdope_t result;
   l4_threadid_t src;
 
-#if DEBUG_SYNC_RECEIVE
-  INFO("up, parent %x.%x\n",parent.id.task,parent.id.lthread);
-#endif
+  LOGdL(DEBUG_SYNC_RECEIVE,"up, parent %x.%x",parent.id.task,parent.id.lthread);
 
   /* sanity checks */
   Assert(data != NULL);
   socket = (dsi_socket_t *)data;
 
   /* wait for parent to send connect message */ 
-  ret = l4_i386_ipc_receive(parent,L4_IPC_SHORT_MSG,&dw0,&dw1,
+  ret = l4_ipc_receive(parent,L4_IPC_SHORT_MSG,&dw0,&dw1,
 			    L4_IPC_NEVER,&result);
   if (ret || (dw0 != DSI_SYNC_CONNECTED))
     {
@@ -301,25 +290,22 @@ dsi_sync_thread_receive(void * data)
     }
   Assert(data == (void *)dw1);
   
-#if DEBUG_SYNC_RECEIVE
-  INFO("connected.\n");
-  INFO("remote socket %d, work %x.%x\n",socket->remote_socket.socket,
+  LOGdL(DEBUG_SYNC_RECEIVE,"connected.");
+  LOGdL(DEBUG_SYNC_RECEIVE,"remote socket %d, work %x.%x",socket->remote_socket.socket,
        socket->remote_socket.work_th.id.task,
        socket->remote_socket.work_th.id.lthread);
-#endif
 
   /* synchronization thread loop */
   while (1)
     {
-      ret = l4_i386_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
+      ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
 			     L4_IPC_NEVER,&result);      
 
       if (!ret)
 	{
-#if DEBUG_SYNC_RECEIVE
-	  INFO("msg from %x.%x\n",src.id.task,src.id.lthread);
-	  INFO("dw0 = %u, dw1 = %u\n",dw0,dw1);
-#endif
+	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from %x.%x",src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_RECEIVE,"dw0 = %u, dw1 = %u",dw0,dw1);
+
 	  switch (dw0)
 	    {
 	    case DSI_SYNC_COMMITED:
@@ -333,22 +319,20 @@ dsi_sync_thread_receive(void * data)
 		   ***************************************************************/
 		  /* packet commited (dw1 -> packet index), wakeup sender
 		   * work thread */
-#if DEBUG_SYNC_RECEIVE 
-		  INFO("wakeup sender, packet %d\n",dw1);
-#endif
+		  LOGdL(DEBUG_SYNC_RECEIVE,"wakeup sender, packet %d",dw1);
+
 		  packet = &socket->packets[dw1];
 
 		  /* check if sender is already waiting */
 		  if (packet->flags & DSI_PACKET_TX_WAITING)
 		    {
-#if DEBUG_SYNC_RECEIVE
-		      INFO("sender already waiting\n");
-		      INFO("wakeup %x.%x\n",
-			   socket->remote_socket.work_th.id.task,
-			   socket->remote_socket.work_th.id.lthread);
-#endif
+		      LOGdL(DEBUG_SYNC_RECEIVE,"sender already waiting");
+		      LOGdL(DEBUG_SYNC_RECEIVE,"wakeup %x.%x",
+                            socket->remote_socket.work_th.id.task,
+                            socket->remote_socket.work_th.id.lthread);
+
 		      /* wakeup */
-		      ret = l4_i386_ipc_send(socket->remote_socket.work_th,
+		      ret = l4_ipc_send(socket->remote_socket.work_th,
 					     L4_IPC_SHORT_MSG,0,0,
 					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
 					     &result);
@@ -361,9 +345,8 @@ dsi_sync_thread_receive(void * data)
 		  else
 		    {
 		      /* sender not yet waiting */
-#if DEBUG_SYNC_RECEIVE 
-		      INFO("sender not yet waiting\n");
-#endif
+		      LOGdL(DEBUG_SYNC_RECEIVE,"sender not yet waiting");
+
 		      /* mark wakeup notification pending */
 		      packet->flags |= DSI_PACKET_TX_PENDING;
 		    }
@@ -380,20 +363,18 @@ dsi_sync_thread_receive(void * data)
 		   * message from remote work thread
 		   *********************************************************/
 		  /* wait for packet (dw1 -> packet index) */
-#if DEBUG_SYNC_RECEIVE
-		  INFO("sender waits for packet %d\n",dw1);
-#endif
+		  LOGdL(DEBUG_SYNC_RECEIVE,"sender waits for packet %d",dw1);
+
 		  packet = &socket->packets[dw1];
 
 		  /* check if wakeup notification is already pending */
 		  if (packet->flags & DSI_PACKET_TX_PENDING)
 		    {
-#if DEBUG_SYNC
-		      INFO("notification pending\n");
-		      INFO("wakeup %x.%x\n",src.id.task,src.id.lthread);
-#endif
+		      LOGdL(DEBUG_SYNC,"notification pending");
+		      LOGdL(DEBUG_SYNC,"wakeup %x.%x",src.id.task,src.id.lthread);
+
 		      /* receiver already commited packet, reply immediately */
-		      ret = l4_i386_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
+		      ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
 					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
 					     &result);
 		      if (ret)
@@ -405,9 +386,8 @@ dsi_sync_thread_receive(void * data)
 		  else
 		    {
 		      /* no notification yet */
-#if DEBUG_SYNC
-		      INFO("set wait flag\n");
-#endif
+		      LOGdL(DEBUG_SYNC,"set wait flag");
+
 		      /* mark packet */
 		      packet->flags |= DSI_PACKET_TX_WAITING;
 		      /* and set the work-thread to that of the sender
@@ -459,7 +439,7 @@ dsi_start_sync_thread(dsi_socket_t * socket)
     return -L4_EINVAL;
 
   /* send IPC message */
-  ret = l4_i386_ipc_send(socket->sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_CONNECTED,
+  ret = l4_ipc_send(socket->sync_th,L4_IPC_SHORT_MSG,DSI_SYNC_CONNECTED,
 			 (l4_umword_t)socket,L4_IPC_NEVER,&result);
   if (ret)
     return -L4_EIPC;

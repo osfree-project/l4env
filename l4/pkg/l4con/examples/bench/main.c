@@ -1,8 +1,14 @@
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <stdio.h>
 #include <l4/sys/types.h>
 #include <l4/names/libnames.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/rdtsc.h>
+#include <l4/util/irq.h>
 #include <l4/con/l4con.h>
 #include <l4/thread/thread.h>
 #include <l4/dm_mem/dm_mem.h>
@@ -30,7 +36,7 @@ static l4_threadid_t vc_l4id;
 int
 main(int argc, char **argv)
 {
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   int error, i;
   l4_addr_t map_addr, write_addr;
   l4_uint32_t map_area;
@@ -57,8 +63,8 @@ main(int argc, char **argv)
       return -1;
     }
 
-  if ((error = con_if_openqry(con_l4id, 65536, 0, 0, L4THREAD_DEFAULT_PRIO,
-			     (con_threadid_t*)&vc_l4id, CON_NOVFB, &exc)))
+  if ((error = con_if_openqry_call(&con_l4id, 65536, 0, 0, L4THREAD_DEFAULT_PRIO,
+			     &vc_l4id, CON_NOVFB, &_env)))
     {
       printf("Error %d opening vc\n", error);
       return error;
@@ -73,12 +79,12 @@ main(int argc, char **argv)
       return error;
     }
 
-  if (con_vc_graph_mapfb(vc_l4id,
-			 l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0),
-		 	 &snd_fpage, &offset, &exc)
-      || (exc._type != exc_l4_no_exception))
+  _env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
+  if (con_vc_graph_mapfb_call(&vc_l4id,
+		 	 &snd_fpage, &offset, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
-      printf("Error mapping framebuffer (exc=%d)", exc._type);
+      printf("Error mapping framebuffer (exc=%d)", _env.major);
       return -1;
     }
 
@@ -88,14 +94,14 @@ main(int argc, char **argv)
 
   l4_calibrate_tsc();
 
-  asm volatile ("cli");
+  l4util_cli();
   start = l4_rdtsc();
 
   for (i=0; i<ROUNDS; i++)
     MEM(ram);
 
   stop  = l4_rdtsc();
-  asm volatile ("sti");
+  l4util_sti();
 
   stop -= start;
   
@@ -107,14 +113,14 @@ main(int argc, char **argv)
   printf("ram: %11d cycles, %5dms, %4d.%03dMB/s\n",
          (l4_uint32_t)stop, us/1000, mb, kb);
 
-  asm volatile ("cli");
+  l4util_cli();
   start = l4_rdtsc();
 
   for (i=ROUNDS; i>0; i--)
     MEM(write_addr);
 
   stop  = l4_rdtsc();
-  asm volatile ("sti");
+  l4util_sti();
 
   stop -= start;
   

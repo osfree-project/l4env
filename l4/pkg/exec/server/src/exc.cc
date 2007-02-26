@@ -4,8 +4,12 @@
  * \brief	Some helper functions to deal without libstdc++
  *
  * \date	10/30/2000
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <stdio.h>
 #include <malloc.h>

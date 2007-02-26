@@ -5,7 +5,7 @@
  *	\date	01/21/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -69,9 +69,9 @@ protected:
     virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
 	virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-	virtual void WriteParameterName(CBEFile * pFile, CBEDeclarator * pDeclarator, CBEContext * pContext);
     virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
     virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
+	virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
 };
 
 #endif // !__DICE_BERCVANYFUNCTION_H__

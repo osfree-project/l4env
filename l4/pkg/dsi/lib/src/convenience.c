@@ -15,6 +15,7 @@
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/thread/thread.h>
+#include <l4/log/l4log.h>
 
 #include <l4/dsi/dsi.h>
 #include "__debug.h"
@@ -55,11 +56,11 @@ int dsi_thread_start_worker(dsi_socket_t * socket,
     dp=ret_code?ret_code:&d1;
 
     /* send start IPC */
-    ret = l4_i386_ipc_send(socket->work_th,L4_IPC_SHORT_MSG,(l4_umword_t)socket,0,
+    ret = l4_ipc_send(socket->work_th,L4_IPC_SHORT_MSG,(l4_umword_t)socket,0,
 			   L4_IPC_NEVER,&result);
     if (ret) return -L4_EIPC;
 
-    ret = l4_i386_ipc_receive(socket->work_th, L4_IPC_SHORT_MSG,
+    ret = l4_ipc_receive(socket->work_th, L4_IPC_SHORT_MSG,
 			      dp, &d1, L4_IPC_NEVER, &result);
     if(ret) return -L4_EIPC;
 
@@ -89,7 +90,7 @@ int dsi_thread_worker_wait(dsi_socket_t ** socket){
     parentid = l4thread_l4_id (l4thread_get_parent ());
 
     /* wait for start notification */
-    ret = l4_i386_ipc_receive(parentid,L4_IPC_SHORT_MSG,
+    ret = l4_ipc_receive(parentid,L4_IPC_SHORT_MSG,
 			      (l4_umword_t *)socket,&dw1,
 			      L4_IPC_NEVER,&result);
     return ret;
@@ -114,7 +115,7 @@ int dsi_thread_worker_started(int ret_code){
     parentid = l4thread_l4_id (l4thread_get_parent ());
 
     /* send start IPC */
-    ret = l4_i386_ipc_send(parentid,L4_IPC_SHORT_MSG,ret_code,0,
+    ret = l4_ipc_send(parentid,L4_IPC_SHORT_MSG,ret_code,0,
 			   L4_IPC_NEVER,&result);
     if (ret) return -L4_EIPC;
     return 0;
@@ -128,22 +129,119 @@ int dsi_thread_worker_started(int ret_code){
  *
  ****************************************************************************/
 
+/*!\brief Open-function for use with local sockets
+ * \ingroup socket
+ *
+ * \param cfg		low level stream configuration
+ * \param ctrl_ds	control area (if invalid, allocate new area)
+ * \param data_ds	data area
+ * \param work_id	work thread id
+ * \param flags		socket flags, see dsi_socket_create()
+ * \param socket	ptr to a #dsi_socket_t pointer, that will be set to
+ *			the newly created socket. Ignored if 0.
+ * \param comp		ptr to a #dsi_component_t structure, that will be
+ *			filled in
+ *
+ * This function can be used to create a component with a local socket in it.
+ * Use this function if your application is endpoint of a communication as
+ * well.
+ *
+ * The start and stop entries in comp will be set to 0. If you want a
+ * notification of this events, set your own callbacks after calling.
+ *
+ * \see dsi_socket_create().
+ */
+int dsi_socket_local_create(dsi_stream_cfg_t cfg,
+			    l4dm_dataspace_t *ctrl_ds,
+			    l4dm_dataspace_t *data_ds,
+			    l4_threadid_t work_id,
+			    l4_uint32_t flags,
+			    dsi_socket_t **socket,
+			    dsi_component_t *comp){
+
+    l4_threadid_t sync= L4_INVALID_ID;
+    int err;
+    dsi_socket_t *s;
+    
+    if(!socket)socket=&s;
+    if((err = dsi_socket_create((dsi_jcp_stream_t){}, cfg,
+    				ctrl_ds, data_ds, work_id,
+				&sync, flags,
+				socket))!=0){
+	return err;
+    }
+    if((err = dsi_socket_get_ref(*socket, &comp->socketref))!=0){
+	dsi_socket_close(*socket);
+	return err;
+    }
+    comp->connect = dsi_socket_local_connect;
+    comp->start = 0;
+    comp->stop  = dsi_socket_local_stop;
+    comp->close = dsi_socket_local_close;
+    return 0;
+}
+
+/*!\brief Close-function for use with local socket refs
+ * \ingroup socket
+ *
+ * This callback can be used for the close-callback in a DSI
+ * component descriptor (#dsi_component_t) if the socket is a socket in
+ * the local address space, and no other actions must be performed on
+ * connecting a socket than to call dsi_socket_close().
+ *
+ * \see dsi_socket_connect().
+ */
+int dsi_socket_local_close(dsi_component_t *comp){
+    int err;
+    dsi_socket_t *socket;
+
+    if((err = dsi_socket_get_descriptor(comp->socketref.socket,
+					&socket))!=0){
+	return err;
+    }
+    return dsi_socket_close(socket);
+}
+
+/*!\brief Stop-function for use with local socket refs
+ * \ingroup socket
+ *
+ * This callback can be used for the stop-callback in a DSI
+ * component descriptor (#dsi_component_t) if the socket is a socket in
+ * the local address space, and no other actions must be performed on
+ * connecting a socket than to call dsi_socket_stop().
+ *
+ * \see dsi_socket_connect().
+ */
+int dsi_socket_local_stop(dsi_component_t *comp){
+    int err;
+    dsi_socket_t *socket;
+
+    if((err = dsi_socket_get_descriptor(comp->socketref.socket,
+					&socket))!=0){
+	return err;
+    }
+    return dsi_socket_stop(socket);
+}
+
 /*!\brief Connect-function for use with local socket refs
  * \ingroup socket
  *
- * This callback can be used for the connect-callback in an DSI
+ * This callback can be used for the connect-callback in a DSI
  * component descriptor (#dsi_component_t) if the socket is a socket in
  * the local address space, and no other actions must be performed on
  * connecting a socket than to call dsi_socket_connect().
  *
  * \see dsi_socket_connect().
  */
-int dsi_socket_connect_local(dsi_component_t *comp,
+int dsi_socket_local_connect(dsi_component_t *comp,
 			     dsi_socket_ref_t *remote){
     dsi_socket_t *socket;
     int ret;
 
+    LOGd_Enter(DEBUG_CONNECT, "id %d -> id %d", comp->socketref.socket,
+    	       remote->socket);
     if((ret=dsi_socket_get_descriptor(comp->socketref.socket,&socket))!=0)
 	return ret;
     return dsi_socket_connect(socket, remote);
 }
+

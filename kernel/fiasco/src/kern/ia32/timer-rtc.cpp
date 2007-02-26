@@ -19,9 +19,6 @@ void Timer::init()
 
   // set up timer interrupt (~ 1ms)
   Rtc::init();
-
-  init_done = true;
-
 }
 
 IMPLEMENT inline NEEDS["rtc.h","pic.h"]

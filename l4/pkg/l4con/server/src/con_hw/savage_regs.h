@@ -1,5 +1,17 @@
-#ifndef __CON_HW_SAVAGE_REGS_H__
-#define __CON_HW_SAVAGE_REGS_H__
+/*!
+ * \file	savage_regs.h
+ * \brief	S3 Savage driver
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __SAVAGE_REGS_H_
+#define __SAVAGE_REGS_H_
 
 #define savage_in16(addr)\
   (*((volatile l4_uint16_t*)(savage_mmio+(addr))))

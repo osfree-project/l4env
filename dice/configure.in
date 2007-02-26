@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT(src/main.cpp)
-AM_INIT_AUTOMAKE(dice, 2.2.1)
+AM_INIT_AUTOMAKE(dice, 2.2.7)
 AM_CONFIG_HEADER(config.h)
 
 dnl Test for AIX
@@ -9,29 +9,40 @@ AC_AIX
 
 dnl Checks for programs.
 AC_PROG_CXX
-AC_PROG_CPP
-AC_SUBST(CPP)
+AC_SUBST(CXX)
 AC_PROG_RANLIB
 AM_PROG_LEX
 dnl check for specific bison version
-AC_CHECK_PROG(YACC, bison-1.35, bison-1.35 -y, bison -y)
 AC_PROG_YACC
+AC_CHECK_PROG(YACC, bison-1.35, bison-1.35 -y, bison -y)
 AC_PROG_LN_S
+
+dnl check for documentation programs
+AC_CHECK_PROG(DOXYGEN,doxygen,doxygen)
+AM_CONDITIONAL(HAS_DOXYGEN, test "x$DOXYGEN" != "x")
+
+AC_CHECK_PROG(LATEX,latex,latex)
+AC_CHECK_PROG(BIBTEX,bibtex,bibtex)
+AC_CHECK_PROG(DVIPS,dvips,dvips)
+AC_CHECK_PROG(FIG2DEV,fig2dev,fig2dev)
+AC_CHECK_PROG(PDFLATEX,pdflatex,pdflatex)
+
+AM_CONDITIONAL(HAS_LATEX, test "x$LATEX" != "x" -a "x$BIBTEX" != "x")
+AM_CONDITIONAL(HAS_DVIPS, test "x$DVIPS" != "x")
+AM_CONDITIONAL(HAS_FIG2DEV, test "x$FIG2DEV" != "x")
+AM_CONDITIONAL(HAS_PDFLATEX, test "x$PDFLATEX" != "x")
 
 dnl check for getopt version
 AC_CHECK_FUNC(getopt_long_only, AC_DEFINE(HAVE_GETOPT_LONG, 1, needed by non-GNU systems))
 AC_CHECK_HEADER(getopt.h, AC_DEFINE(HAVE_GETOPT_H, 1, needed by non-GNU systems))
-
-dnl Doxygen is our documentation making program
-AC_CHECK_PROG(DOXYGEN,doxygen,doxygen)
-AM_CONDITIONAL(HAS_DOXYGEN, test "x$DOXYGEN" != "x")
 
 dnl Remove generated Makefiles wthen doing maintainer-clean.
 MAINTAINERCLEANFILES="$MAINTAINERCLEANFILES Makefile.in"
 AC_SUBST(MAINTAINERCLEANFILES)
 
 dnl Always include top level includes.
-CPPFLAGS="$CPPFLAGS -I\$(top_srcdir)/src"
+dnl turn on _all_ warnings.
+CPPFLAGS="$CPPFLAGS -Wall -I\$(top_srcdir)/src"
 AC_SUBST(CPPFLAGS)
 
 dnl Check for L4 directory
@@ -47,24 +58,43 @@ fi
 AC_MSG_RESULT("$L4DIR")
 AC_SUBST(L4DIR)
 
+dnl Check for debugging
+AC_ARG_ENABLE(debug,
+[  --disable-debug         disable debugging code (assert, etc.)],
+[case "${enableval}" in
+  yes) debug=true ;;
+  no) debug=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --disable-debug) ;;
+esac],[debug=true])
+if test "$debug" == "false" ; then
+  CPPFLAGS="$CPPFLAGS -DNDEBUG"
+  AC_SUBST(CPPFLAGS)
+fi
+
 dnl Modified files.
 AC_OUTPUT(
 Makefile
 doc/Makefile
 doc/manual/Makefile
 doc/html/Makefile
+doc/user-man/Makefile
 src/Makefile
 src/parser/Makefile
 src/parser/dce/Makefile
 src/parser/corba/Makefile
 src/parser/inc/Makefile
+src/parser/gcc-c/Makefile
+src/parser/gcc-cxx/Makefile
 src/fe/Makefile
 src/be/Makefile
 src/be/l4/Makefile
 src/be/l4/v2/Makefile
 src/be/l4/x0/Makefile
+src/be/l4/x0/arm/Makefile
+src/be/l4/x0/ia32/Makefile
 src/be/l4/x0adapt/Makefile
 src/be/sock/Makefile
+src/be/cdr/Makefile
 include/Makefile
 include/dice/Makefile
 )

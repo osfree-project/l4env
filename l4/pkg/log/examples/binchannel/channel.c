@@ -11,6 +11,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/sys/types.h>
 #include <stdio.h>
+#include <string.h>
 
 char LOG_tag[9]="channel";
 unsigned char buffer[2*L4_PAGESIZE];
@@ -28,7 +29,7 @@ int main(void){
     id = LOG_channel_open(2, l4_fpage(ptr, L4_LOG2_PAGESIZE, 0, 0));
 
     LOG("opening channel returned %d", id);
-    if(id) return 1;
+    if(id<0) return 1;
 
     i=0;
     do{

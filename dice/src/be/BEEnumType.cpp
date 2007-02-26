@@ -5,7 +5,7 @@
  *	\date	Tue Jul 23 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,8 +27,12 @@
 
 #include "be/BEEnumType.h"
 #include "be/BEFile.h"
+#include "be/BETypedef.h"
+#include "be/BEDeclarator.h"
+
 #include "fe/FEEnumType.h"
 #include "fe/FETaggedEnumType.h"
+#include "fe/FEIdentifier.h"
 
 IMPLEMENT_DYNAMIC(CBEEnumType);
 
@@ -146,17 +150,22 @@ void CBEEnumType::Write(CBEFile * pFile, CBEContext * pContext)
     pFile->Print("%s", (const char *) m_sName);	// should be set to "enum"
     if (!m_sTag.IsEmpty())
         pFile->Print(" %s", (const char *) m_sTag);
-    pFile->PrintIndent(" { ");
-    // print members
+    // get member count
     int nMax = GetMemberCount();
-    for (int nCurr = 0; nCurr < nMax; nCurr++)
-    {
-        pFile->Print("%s", (const char*)GetMemberAt(nCurr));
-        if (nCurr < nMax-1)
-            pFile->Print(", ");
-    }
-    // close enum
-    pFile->PrintIndent(" }");
+    // only print member if we got some
+	if (nMax > 0)
+	{
+		pFile->PrintIndent(" { ");
+		// print members
+		for (int nCurr = 0; nCurr < nMax; nCurr++)
+		{
+			pFile->Print("%s", (const char*)GetMemberAt(nCurr));
+			if (nCurr < nMax-1)
+				pFile->Print(", ");
+		}
+		// close enum
+		pFile->PrintIndent(" }");
+	}
 }
 
 /** \brief write the initialization of a enum with the 'zero' element
@@ -190,4 +199,42 @@ void CBEEnumType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
 bool CBEEnumType::HasTag(String sTag)
 {
     return (m_sTag == sTag);
+}
+
+/** \brief writes a cast of this type
+ *  \param pFile the file to write to
+ *  \param bPointer true if the cast should produce a pointer
+ *  \param pContext the context of the write operation
+ *
+ * A enum cast is '(enum tag)'.
+ */
+void CBEEnumType::WriteCast(CBEFile* pFile,  bool bPointer,  CBEContext* pContext)
+{
+    pFile->Print("(");
+	if (m_sTag.IsEmpty())
+	{
+		// no tag -> we need a typedef to save us
+		// the alias can be used for the cast
+		CBETypedef *pTypedef = GetTypedef();
+		assert(pTypedef);
+		// get first declarator (without stars)
+		VectorElement *pIter = pTypedef->GetFirstDeclarator();
+		CBEDeclarator *pDecl;
+		while ((pDecl = pTypedef->GetNextDeclarator(pIter)) != 0)
+		{
+			if (pDecl->GetStars() <= (bPointer?1:0))
+			    break;
+		}
+		assert(pDecl);
+		pFile->Print("%s", (const char*)pDecl->GetName());
+		if (bPointer && (pDecl->GetStars() == 0))
+			pFile->Print("*");
+	}
+	else
+	{
+		pFile->Print("%s %s", (const char*)m_sName, (const char*)m_sTag);
+    	if (bPointer)
+    		pFile->Print("*");
+	}
+	pFile->Print(")");
 }

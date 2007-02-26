@@ -2,6 +2,7 @@ IMPLEMENTATION[arm]:
 
 #include <cstdio>
 
+#include "config.h"
 #include "kdb_ke.h"
 #include "kmem.h"
 #include "mem_unit.h"
@@ -128,13 +129,15 @@ L4_msgdope fpage_map(Space *from, L4_fpage fp_from, Space *to,
 
 	      page_flags = Space::Page_writable 
 		| Space::Page_user_accessible;
+#if 0
 	      if( phys < 0x20000000 ) 
 		phys += 0xc0000000;
 	      else if( phys < 0x80000000 )
 		phys += 0x20000000;
+#endif
 
 	    }
-	  
+
 	  // The owner of the parent mapping.  By default, this is the
 	  // sender task.  However, if we create a 4K submapping from
 	  // a 4M submapping, and the 4K mapping doesn't have the same
@@ -178,7 +181,7 @@ L4_msgdope fpage_map(Space *from, L4_fpage fp_from, Space *to,
 		    {
 		      phys += super_offset;
 		      parent = sigma0;
-		      parent_addr = phys;
+		      parent_addr = phys/* - 0xc0000000*/;
 		    }
 		}
 
@@ -248,9 +251,10 @@ L4_msgdope fpage_map(Space *from, L4_fpage fp_from, Space *to,
 		  assert (phys == parent->virt_to_phys((void*)parent_addr));
 		  pm = mapdb->lookup(parent->space(), parent_addr, 
 				     phys);
-		  
+			  
 		  if (! pm)
 		    goto skip;	// someone deleted this mapping in the meantime
+
 #ifdef MAPDB_RAM_ONLY
 		}
 #endif
@@ -265,8 +269,9 @@ L4_msgdope fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	  if (! fp_from.write())
 	    page_flags &= ~ Space::Page_writable;
 
-	  Space::status_t status =
+	  Space::Status status =
 	    to->v_insert(phys, rcv_addr, size, page_flags);
+
 
 	  switch (status)
 	    {

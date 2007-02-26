@@ -9,15 +9,15 @@ IMPLEMENTATION:
 
 #include "panic.h"
 
-char __dso_handle;
+char __dso_handle __attribute__((weak));
 
-extern "C" void __cxa_pure_virtual()
+extern "C" void __attribute__((weak)) __cxa_pure_virtual() 
 {
   panic("cxa pure virtual function called");
 }
 
 
-extern "C" void __pure_virtual()
+extern "C" void  __attribute__((weak)) __pure_virtual()
 {
   panic("pure virtual function called");
 }

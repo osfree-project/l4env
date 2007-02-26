@@ -5,7 +5,7 @@
  *	\date	02/07/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -58,6 +58,8 @@ protected:
 public:
     virtual CBECallFunction* GetNewCallFunction();
     virtual CBESizes * GetNewSizes();
+	virtual CBESndFunction* GetNewSndFunction();
+	virtual CBEMarshaller* GetNewMarshaller(CBEContext* pContext);
 };
 
 #endif // !__DICE_L4V2BECLASSFACTORY_H__

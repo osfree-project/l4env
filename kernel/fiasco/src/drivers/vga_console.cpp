@@ -64,7 +64,7 @@ public:
    */
   int getchar( bool blocking = true );
 
-  bool const is_working();
+  inline bool const is_working();
 
 private:
 
@@ -229,16 +229,14 @@ void Vga_console::ansi_attrib( int a )
     break;
   case 5:
     _attribute |= 0x8080;
-  case 30 ... 37:
-    _attribute = (_attribute & 0x0f0) | colors[a-30] | ((_attribute >> 8) & 0x08);
-    break;
-  case 40 ... 47:
-    _attribute = (_attribute & 0x0f) | (colors[a-40] << 4) | ((_attribute >> 8) & 0x80);;
-    break;
   default:
+    if (30 <= a && a <= 37) 
+      _attribute = (_attribute & 0x0f0) | colors[a-30] | ((_attribute >> 8) & 0x08);
+    else if (40 <= a && a <= 47)
+      _attribute = (_attribute & 0x0f) | (colors[a-40] << 4) | ((_attribute >> 8) & 0x80);
     break;
-
   };
+
 }
 
 
@@ -453,8 +451,21 @@ Vga_console::~Vga_console()
 {}
 
 
-IMPLEMENT
+IMPLEMENT inline
 bool const Vga_console::is_working()
 {
   return _is_working;
+}
+
+PUBLIC
+char const *Vga_console::next_attribute( bool restart = false ) const
+{
+  static char const *attribs[] = { "direct", "out", 0 };
+  static unsigned pos = 0;
+  if(restart)
+    pos = 0;
+  if(pos > 2)
+    return 0;
+  else
+    return attribs[pos++];
 }

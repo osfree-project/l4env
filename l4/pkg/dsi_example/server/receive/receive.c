@@ -61,7 +61,7 @@ receive_thread(void * data)
   l4thread_sleep(5000);
 #endif
 
-  Msg("started\n");
+  LOGL("started");
 
   /* start measurement */
   t_start = l4_rdtsc();
@@ -78,7 +78,7 @@ receive_thread(void * data)
 	    break;
 	  else
 	    {
-	      Panic("get packet failed (%d)\n",ret);
+	      Panic("get packet failed (%d)",ret);
 	      return;
 	    }
 	}
@@ -94,7 +94,7 @@ receive_thread(void * data)
 #if DO_SANITY
       if (ret)
 	{
-	  Panic("get packet number failed (%d)\n",ret);
+	  Panic("get packet number failed (%d)",ret);
 	  return;
 	}
 #endif
@@ -104,7 +104,7 @@ receive_thread(void * data)
 #if DO_SANITY
       if (ret)
 	{
-	  Panic("get data failed (%d)\n",ret);
+	  Panic("get data failed (%d)",ret);
 	  return;
 	}
 #endif
@@ -118,13 +118,13 @@ receive_thread(void * data)
 #if DO_SANITY
       if (ret)
 	{
-	  Panic("commit packet failed (%d)\n",ret);
+	  Panic("commit packet failed (%d)",ret);
 	  return;
 	}
 #endif
 
 #if 0
-      KDEBUG("commited packet\n");
+      KDEBUG("commited packet");
 #endif
     }
 
@@ -137,12 +137,12 @@ receive_thread(void * data)
   c_end   = t_end;
   cycles  = c_end - c_start;
 
-  Msg("receive done (%d packets):\n",count);
-  Msg("t = %lums\n",ms);
-  Msg("cycles = %u:%u (%u per packet)\n",
-      (l4_uint32_t)(cycles / 0x100000000ULL),
-      (l4_uint32_t) cycles,
-      (l4_uint32_t)(cycles / count));
+  printf("receive done (%d packets):\n",count);
+  printf("t = %lums\n",ms);
+  printf("cycles = %u:%u (%u per packet)\n",
+         (l4_uint32_t)(cycles / 0x100000000ULL),
+         (l4_uint32_t) cycles,
+         (l4_uint32_t)(cycles / count));
 
 #if 1
   KDEBUG("done.");
@@ -168,11 +168,11 @@ receive_thread(void * data)
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_receive_server_open(sm_request_t * request, 
-				const dsi_example_receive_dataspace_t * ctrl_ds, 
-				const dsi_example_receive_dataspace_t * data_ds, 
-				dsi_example_receive_socket_t * s, 
-				sm_exc_t * _ev)
+dsi_example_receive_open_component(CORBA_Object _dice_corba_obj,
+    const dsi_example_receive_dataspace_t *ctrl_ds,
+    const dsi_example_receive_dataspace_t *data_ds,
+    dsi_example_receive_socket_t *s,
+    CORBA_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, sync_id;
@@ -190,7 +190,7 @@ dsi_example_receive_server_open(sm_request_t * request,
 			     L4THREAD_DEFAULT_PRIO,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
     {
-      Panic("start work thread failed!\n");
+      Panic("start work thread failed!");
       return -1;
     }
   work_id = l4thread_l4_id(ret);
@@ -217,7 +217,7 @@ dsi_example_receive_server_open(sm_request_t * request,
 			  flags, &soc);
   if (ret)
     {
-      Panic("create DSI socket failed\n");
+      Panic("create DSI socket failed");
       return -1;
     }
 
@@ -225,7 +225,7 @@ dsi_example_receive_server_open(sm_request_t * request,
   ret = dsi_socket_get_ref(soc,(dsi_socket_ref_t *)s);
   if (ret)
     {
-      Panic("get socket ref failed\n");
+      Panic("get socket ref failed");
       return -1;
     }
 
@@ -234,7 +234,7 @@ dsi_example_receive_server_open(sm_request_t * request,
   ret = dsi_socket_get_data_area(soc,&addr,&size);
   if (ret)
     {
-      Panic("get data area failed\n");
+      Panic("get data area failed");
       return -1;
     }
 
@@ -264,10 +264,10 @@ dsi_example_receive_server_open(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-dsi_example_receive_server_connect(sm_request_t * request, 
-				   const dsi_example_receive_socket_t * local, 
-				   const dsi_example_receive_socket_t * remote, 
-				   sm_exc_t *_ev)
+dsi_example_receive_connect_component(CORBA_Object _dice_corba_obj,
+    const dsi_example_receive_socket_t *local,
+    const dsi_example_receive_socket_t *remote,
+    CORBA_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -276,7 +276,7 @@ dsi_example_receive_server_connect(sm_request_t * request,
   ret = dsi_socket_get_descriptor(local->socket,&s);
   if (ret)
     {
-      Panic("invalid socket\n");
+      Panic("invalid socket");
       return -1;
     }
 
@@ -284,7 +284,7 @@ dsi_example_receive_server_connect(sm_request_t * request,
   ret = dsi_socket_connect(s,(dsi_socket_ref_t *)remote);
   if (ret)
     {
-      Panic("connect failed\n");
+      Panic("connect failed");
       return -1;
     }
 
@@ -304,11 +304,6 @@ dsi_example_receive_server_connect(sm_request_t * request,
 /*****************************************************************************/ 
 int main(void)
 {
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-  int ret;
-
   /* init log lib */
   LOG_init("receive");
 
@@ -321,44 +316,19 @@ int main(void)
   /* register at nameserver */
   if (!names_register(DSI_EXAMPLE_RECEIVE_NAMES))
     {
-      Panic("failed to register receiver!\n");
+      Panic("failed to register receiver!");
       return -1;
     }
   
 #if 0
-  INFO("receiver up.\n");
+  LOGL("receiver up.");
 #endif
 
-  /* Flick server loop */
-  flick_init_request(&request, &ipc_buf);
-  while (1)
-    {
-      result = flick_server_wait(&request);
-
-      while (!L4_IPC_IS_ERROR(result))
-	{
-          /* dispatch request */
-          ret = dsi_example_receive_server(&request);
-          switch(ret)
-            {
-            case DISPATCH_ACK_SEND:
-              /* reply and wait for next request */
-              result = flick_server_reply_and_wait(&request);
-              break;
-              
-            default:
-              INFO("Flick dispatch error (%d)!\n",ret);
-              
-              /* wait for next request */
-              result = flick_server_wait(&request);
-              break;
-            }
-        }
-      Msg("Flick IPC error (0x%08x)!\n",result.msgdope);
-    }
+  /* Dice server loop */
+  dsi_example_receive_server_loop(NULL);
 
   /* this should never happen */
-  Panic("left receive server loop...\n");
+  Panic("left receive server loop...");
   return 0;
 }
   

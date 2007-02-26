@@ -14,50 +14,52 @@ namespace Proc {
 
   extern Status volatile virtual_processor_state;
 
-  FIASCO_INLINE
+  inline
   void stack_pointer( Mword sp )
   {
     asm volatile ( "movl %0, %%esp \n" : : "r"(sp) );
   }
 
-  FIASCO_INLINE
+  inline
   Status processor_state()
   {
     return virtual_processor_state;
   }
 
-  FIASCO_INLINE
+  inline
   void ux_set_virtual_processor_state( Status s )
   {
     virtual_processor_state = s;
   }
 
-  FIASCO_INLINE
+  inline
   void pause()
   {
     asm volatile (" .byte 0xf3, 0x90 #pause \n" ); 
   }
 
-  FIASCO_INLINE
+  inline
   void halt()
   {
-    static struct timespec idle = {10, 0};
+    static struct timespec idle;
+    idle.tv_sec  = 10;
+    idle.tv_nsec = 0;
     nanosleep (&idle, NULL);
   }
 
-  FIASCO_INLINE
+  inline
   void cli()
   {
     asm volatile ("cli" : : : "memory");
   }
 
-  FIASCO_INLINE
+  inline
   void sti()
   {
     asm volatile ("sti" : : : "memory");
   }
   
-  FIASCO_INLINE
+  inline
   Status cli_save()
   {
     Status ret = virtual_processor_state;
@@ -65,25 +67,24 @@ namespace Proc {
     return ret;
   }
 
-  FIASCO_INLINE
+  inline
   void sti_restore( Status st )
   {
     if (st & 0x200)
       Proc::sti();
   }
 
-  FIASCO_INLINE
+  inline
   Status interrupts()
   {
     return (virtual_processor_state & 0x0200);
   }
 
-  FIASCO_INLINE
+  inline
   void irq_chance()
   {
     asm volatile ("nop; nop;" : : : "memory");
   }
-
 
 };
 

@@ -1,5 +1,10 @@
 # -*- makefile -*-
 
+ifeq ($(CONFIG_IA32_486),y)
+  CFLAGS += -march=i486
+  CXXFLAGS += -march=i486
+endif
+
 ifeq ($(CONFIG_IA32_586),y)
   CFLAGS += -march=i586
   CXXFLAGS += -march=i586
@@ -28,6 +33,11 @@ endif
 ifeq ($(CONFIG_IA32_K6_2),y)
   CFLAGS += -march=k6-2
   CXXFLAGS += -march=k6-2
+endif
+
+ifeq ($(CONFIG_IA32_K6_3),y)
+  CFLAGS += -march=k6-3
+  CXXFLAGS += -march=k6-3
 endif
 
 ifeq ($(CONFIG_IA32_ATHLON),y)
@@ -68,5 +78,8 @@ ifeq ($(CONFIG_NO_FRAME_PTR),y)
   CXXFLAGS += -fomit-frame-pointer
 endif
 
-SHARED_FLAGS	+= -mpreferred-stack-boundary=2
+ifeq ($(CONFIG_GSTABS),y)
+  SHARED_FLAGS += -gstabs+
+endif
 
+SHARED_FLAGS	+= -mpreferred-stack-boundary=2

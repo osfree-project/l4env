@@ -1,33 +1,66 @@
 IMPLEMENTATION[msg-arm]:
 
+#include "config.h"
 #include "kdb_ke.h"
+#include "kmem.h"
 #include "long_msg.h"
+#include "std_macros.h"
 
 
-IMPLEMENT /*inline*/
-Address Thread::remote_fault_addr (Address /*pfa*/)
-{
-  kdb_ke("UNIMPLEMENTED: remote_fault_addr");
-#if 0
-  return pfa < Kmem::ipc_window(1) ? pfa - Kmem::ipc_window(0) + _vm_window0
-                                   : pfa - Kmem::ipc_window(1) + _vm_window1;
-#endif
-  return 0;
+PROTECTED inline NEEDS ["config.h", "kmem.h", "std_macros.h"]
+void             
+Thread::setup_ipc_window(unsigned win, Address address)
+{                
+  if (win == 0) {
+
+    if (EXPECT_TRUE (_vm_window0 == address))
+      return;
+
+    _vm_window0 = address;
+
+  } else {
+
+    if (EXPECT_TRUE (_vm_window1 == address))
+      return;
+
+    _vm_window1 = address;
+  }
+
+  // Pull in the mappings for the entire 8 MB window, by copying 2 PDE slots,
+  // thereby replacing the old ones, based on the optimistic assumption that
+  // the receiver's mappings are already set up appropriately. Note that this
+  // does not prevent a pagefault on either of these mappings later on, e.g.
+  // if the receiver's mapping is r/o here and needs to be r/w for Long-IPC.
+  // Careful: for SMAS current_space() != space()
+  current_space()->copy_in( (void*)Kmem::ipc_window (win),
+                            receiver()->space_context(), 
+                            (void*)address, 
+                            2 * Config::SUPERPAGE_SIZE );
 }
 
-IMPLEMENT /*inline*/
-Mword Thread::update_ipc_window (Address /*pfa*/, Address /*remote_pfa*/)
+IMPLEMENT inline
+Address Thread::remote_fault_addr( Address pfa )
 {
-  kdb_ke("UNIMPLEMENTED: remote_fault_addr");
-#if 0
+  return pfa < Kmem::ipc_window(1) ? pfa - Kmem::ipc_window(0) + _vm_window0
+                                   : pfa - Kmem::ipc_window(1) + _vm_window1;
+}
+
+IMPLEMENT inline NEEDS["config.h"]
+Mword Thread::update_ipc_window (Address pfa, Mword error, Address remote_pfa)
+{
   // XXX: We don't care about the page-fault error code here, but
   // we should: If we want to write to a read-only page, we would
   // fail here.  Space::update() probably should take an
   // error-code argument, as should
   // Thread::ipc_pagein_request().
 
-  if (space()->update (pfa, receiver()->space_context(), remote_pfa))
+  if (!receiver()->space_context()->lookup((void*)remote_pfa,0,0).is_invalid())
     {
+      space()->copy_in((void*)pfa, 
+                       receiver()->space_context(), 
+                       (void*)remote_pfa, 
+                       Config::SUPERPAGE_SIZE);
+
       cpu_lock.clear();
 
       // It's OK if the PF occurs again: This can happen if we're
@@ -36,12 +69,11 @@ Mword Thread::update_ipc_window (Address /*pfa*/, Address /*remote_pfa*/)
       // checks for double page faults.)
       if (Config::monitor_page_faults)
         {
-          _last_pf_address = (vm_offset_t) -1;
+          _last_pf_address = (Address) -1;
         }
 
       return 1;		// Success
     }
-#endif
   return 0;		// Failure
 }
 
@@ -61,12 +93,9 @@ Mword Thread::update_ipc_window (Address /*pfa*/, Address /*remote_pfa*/)
     @return sender's IPC error code
  */
 PRIVATE 
-L4_msgdope Thread::do_send_long(Thread */*partner*/,               // l4_timeout_t t
-				Sys_ipc_frame */*i_regs*/)
+L4_msgdope Thread::do_send_long(Thread *partner, Sys_ipc_frame *i_regs)
 {
-  kdb_ke("UNIMPLEMENTED: remote_fault_addr");
-  return 0;
-#if 0
+#if 1
   Long_msg *regs = (Long_msg*)i_regs;
   // just copy the message here.  don't care about pages not being  
   // mapped in -- this is completely handled in the page fault handler.
@@ -219,7 +248,7 @@ L4_msgdope Thread::do_send_long(Thread */*partner*/,               // l4_timeout
           // XXX if the memcpy() fails somewhere in the middle because
           // of a page fault, we don't report the memory words that   
           // have already been copied.
-	  copy_from_user<Mword>
+	  copy_from_user
 	    (rcv_header->words + Sys_ipc_frame::num_reg_words(),
 	     snd_descr->words  + Sys_ipc_frame::num_reg_words(),
 	     min - Sys_ipc_frame::num_reg_words());
@@ -295,10 +324,10 @@ L4_msgdope Thread::do_send_long(Thread */*partner*/,               // l4_timeout
 
       while (s && r)
         {
-          vm_offset_t from = peek_user(&snd_strdope->snd_str);
-          vm_offset_t from_size = peek_user(&snd_strdope->snd_size);
-          vm_offset_t to = rcv_strdope->rcv_str;
-          vm_offset_t to_size = rcv_strdope->rcv_size;
+          Unsigned8 *from      = peek_user(&snd_strdope->snd_str);
+          size_t     from_size = peek_user(&snd_strdope->snd_size);
+          Unsigned8 *to        = rcv_strdope->rcv_str;
+          size_t     to_size   = rcv_strdope->rcv_size;
 
           // silently limit sizes to 4MB
           if (to_size > Config::SUPERPAGE_SIZE)
@@ -310,10 +339,10 @@ L4_msgdope Thread::do_send_long(Thread */*partner*/,               // l4_timeout
           if (min > 0)
             {
               // XXX no bounds checking!
-              setup_ipc_window(1, to & Config::SUPERPAGE_MASK);
-              copy_from_user<Unsigned8>((void*)(Kmem::ipc_window(1) 
-						+ (to & ~Config::SUPERPAGE_MASK)),
-					(void*)from, min);
+              setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK);
+              copy_from_user((Unsigned8*)(Kmem::ipc_window(1) 
+                                          + (((Address)to) & ~Config::SUPERPAGE_MASK)),
+                             from, min);
             }
 
           // indicate size of received data

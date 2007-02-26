@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -27,9 +27,13 @@
 
 #include "fe/FEUnionType.h"
 #include "fe/FETaggedUnionType.h"
+#include "fe/FEUnionCase.h"
+#include "Vector.h"
+#include "Compiler.h"
+#include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEUnionType) CFEUnionType::CFEUnionType(CFETypeSpec * pSwitchType, String sSwitchVar, Vector * pUnionBody, String sUnionName):CFEConstructedType
-    (TYPE_UNION)
+IMPLEMENT_DYNAMIC(CFEUnionType) CFEUnionType::CFEUnionType(CFETypeSpec * pSwitchType, String sSwitchVar, Vector * pUnionBody, String sUnionName)
+: CFEConstructedType(TYPE_UNION)
 {
     IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
 
@@ -38,7 +42,8 @@ IMPLEMENT_DYNAMIC(CFEUnionType) CFEUnionType::CFEUnionType(CFETypeSpec * pSwitch
     m_pUnionBody = pUnionBody;
 }
 
-CFEUnionType::CFEUnionType(Vector * pUnionBody):CFEConstructedType(TYPE_UNION)
+CFEUnionType::CFEUnionType(Vector * pUnionBody)
+: CFEConstructedType(TYPE_UNION)
 {
     IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
 
@@ -47,7 +52,8 @@ CFEUnionType::CFEUnionType(Vector * pUnionBody):CFEConstructedType(TYPE_UNION)
     m_pUnionBody = pUnionBody;
 }
 
-CFEUnionType::CFEUnionType(CFEUnionType & src):CFEConstructedType(src)
+CFEUnionType::CFEUnionType(CFEUnionType & src)
+: CFEConstructedType(src)
 {
     IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
 

@@ -1,3 +1,15 @@
+/*!
+ * \file	ati_vid.c
+ * \brief	Hardware Acceleration for ATI Mach64 cards (backend scaler)
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 /* most stuff taken from MPlayer/vidix driver */
 
 #include <stdio.h>

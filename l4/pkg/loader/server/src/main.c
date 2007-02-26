@@ -1,17 +1,18 @@
 /* $Id$ */
 /**
  * \file	loader/server/src/main.c
+ * \brief	Main function
  * 
  * \date	08/29/2000
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- * 
- * \brief	Main function */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
-#include <l4/env/env.h>
-#include <l4/oskit10_l4env/support.h>
 
 #include <stdio.h>
 
@@ -21,12 +22,13 @@
 #include "idl.h"
 #include "fprov-if.h"
 #include "dm-if.h"
+#include "exec-if.h"
 
-char LOG_tag[9] = "loader";		/**< tell logserver our log tag
-					  before main is called */
-
-const int l4thread_max_threads = 4;
-const l4_size_t l4thread_stack_size = 16384;
+char LOG_tag[9] = "loader";		     /**< tell logserver our log tag
+						  before main is called */
+const l4_ssize_t l4libc_heapsize = 128*1024; /**< init malloc heap */
+const int l4thread_max_threads = 4;	     /**< limit number of threads */
+const l4_size_t l4thread_stack_size = 16384; /**< limit stack size */
 
 /** Main function. */
 int
@@ -34,10 +36,11 @@ main(int argc, char **argv)
 {
   int i, error;
 
-  if ((  error = OSKit_libc_support_init(0x20000))
-      ||(error = fprov_if_init())
+  if (  (error = fprov_if_init())
+      ||(error = exec_if_init())
       ||(error = app_init())
       ||(error = dm_if_init())
+      ||(error = cfg_init())
       ||(error = start_app_pager()))
     return error;
   

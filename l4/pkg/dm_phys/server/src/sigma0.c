@@ -6,23 +6,13 @@
  *
  * \date   08/04/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/ipc.h>
@@ -60,19 +50,16 @@ static l4_threadid_t sigma0_id = L4_INVALID_ID;
 int
 dmhys_sigma0_init(void)
 {
-  int ret;
+  l4_umword_t dummy;
+  l4_threadid_t preempter;
 
-  /* request Sigma0 id */
-  ret = l4env_request_service(L4ENV_SIGMA0,&sigma0_id);
-  if ((ret < 0) || (l4_is_invalid_id(sigma0_id)))
-    {
-      Panic("DMphys: Sigma0 not found!");
-      return -1;
-    }
+  /* init some internal L4env stuff */
+  preempter = sigma0_id = L4_INVALID_ID;
+  l4_thread_ex_regs(l4_myself(), (l4_umword_t)-1, (l4_umword_t)-1,
+		    &preempter, &sigma0_id, &dummy, &dummy, &dummy);
 
-#if DEBUG_SIGMA0
-  INFO("Sigma0 = %x.%x\n",sigma0_id.id.task,sigma0_id.id.lthread);
-#endif
+  LOGdL(DEBUG_SIGMA0,"Sigma0 = %x.%x\n",
+        sigma0_id.id.task,sigma0_id.id.lthread);
 
   /* done */
   return 0;
@@ -94,7 +81,7 @@ dmphys_sigma0_map_any_page(void)
   l4_msgdope_t result;
 
   /* call sigma0 to map a page, the receive window is our whole map area */
-  error = l4_i386_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
+  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
 			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START, 
 					 DMPHYS_MEMMAP_LOG2_SIZE),
 			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
@@ -104,11 +91,9 @@ dmphys_sigma0_map_any_page(void)
       return NULL;
     }
 
-#if DEBUG_SIGMA0
-  INFO("got page 0x%05x\n",fpage.fp.page);
-  INFO("base 0x%08x, mapped at 0x%08x\n",base,DMPHYS_MEMMAP_START + base);
-#endif
-
+  LOGdL(DEBUG_SIGMA0,"got page 0x%05x\n  base 0x%08x, mapped at 0x%08x",
+        fpage.fp.page,base,DMPHYS_MEMMAP_START + base);
+  
   /* return page map address */
   return (void *)(DMPHYS_MEMMAP_START + base);
 }
@@ -130,13 +115,11 @@ dmphys_sigma0_map_page(l4_addr_t page)
   l4_fpage_t fpage;
   l4_msgdope_t result;
 
-#if DEBUG_SIGMA0
-  INFO("\n");
-#endif
+  LOGdL(DEBUG_SIGMA0,"");
 
   /* call sigma0 to map the page */
   page &= L4_PAGEMASK;
-  error = l4_i386_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,page,0,
+  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,page,0,
 			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START + page, 
 					 L4_LOG2_PAGESIZE),
 			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
@@ -150,13 +133,13 @@ dmphys_sigma0_map_page(l4_addr_t page)
     {
       /* sigma0 denied page */
 #if DEBUG_SIGMA0
-      DMSG("  requesting 4K-page at 0x%08x: denied\n",page);
+      printf("  requesting 4K-page at 0x%08x: denied\n",page);
 #endif
       return -1;
     }
 
 #if DEBUG_SIGMA0
-  DMSG("  requesting 4K-page at 0x%08x: success\n",page);
+  printf("  requesting 4K-page at 0x%08x: success\n",page);
 #endif
 
   /* done */
@@ -197,13 +180,11 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
   l4_fpage_t fpage;
   l4_msgdope_t result;
 
-#if DEBUG_SIGMA0
-  INFO("\n");
-#endif
+  LOGdL(DEBUG_SIGMA0,"");
 
   /* call sigma0 to map the page */
   page &= L4_SUPERPAGEMASK;
-  error = l4_i386_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,
+  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,
 			   page | 1, L4_LOG2_SUPERPAGESIZE << 2,
 			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START + page,
 					 L4_LOG2_SUPERPAGESIZE),
@@ -219,7 +200,7 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
     {
       /* sigma0 denied page */
 #if DEBUG_SIGMA0
-      DMSG("  requesting 4M-page at 0x%08x: denied\n",page);
+      printf("  requesting 4M-page at 0x%08x: denied\n",page);
 #endif
       return -1;
     }
@@ -229,8 +210,8 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
       /* no 4M-page received, this can happen if the whole 4M-page is not
        * available but the 4K-page at that address */
 #if DEBUG_SIGMA0
-      DMSG("  requesting 4M-page at 0x%08x: failed (got %d)\n",
-	  page,fpage.fp.size);
+      printf("  requesting 4M-page at 0x%08x: failed (got %d)\n",
+             page,fpage.fp.size);
 #endif
 
       /* unmap page, the 4K-page must be mapped explicitly */
@@ -241,7 +222,7 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
     }
 
 #if DEBUG_SIGMA0
-  DMSG("  requesting 4M-page at 0x%08x: success\n",page);
+  printf("  requesting 4M-page at 0x%08x: success\n",page);
 #endif
 
   /* done */
@@ -281,7 +262,7 @@ dmphys_sigma0_kinfo(void)
   l4_msgdope_t result;
 
   /* call sigma0 to map kernel info page */
-  error = l4_i386_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,1,1,
+  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,1,1,
 			   L4_IPC_MAPMSG(DMPHYS_KINFO_MAP, L4_LOG2_PAGESIZE),
 			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
   if ((error) || (!l4_ipc_fpage_received(result)))

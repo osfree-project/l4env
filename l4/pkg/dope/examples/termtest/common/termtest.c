@@ -1,5 +1,22 @@
+/*
+ * \brief   Test of the DOpE terminal library
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+/*** GENERAL INCLUDES ***/
 #include <stdio.h>
 
+/*** LOCAL INCLUDES ***/
 #include "term.h"
 #include "dopelib.h"
 #include "startup.h"
@@ -8,7 +25,7 @@ int main(int argc, char **argv) {
 
 	char hist[1024];
 	char dst[256];
-	struct history_struct *history;
+	struct history *history;
 	
 	native_startup(argc, argv);
 

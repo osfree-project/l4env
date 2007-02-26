@@ -1,0 +1,12 @@
+/* -*- c++ -*- */
+
+#ifndef CLIMITS_INCLUDE
+#define CLIMITS_INCLUDE
+// I love Feve, who likes to ignore things 
+// behind its horizon. (C++ really exists)
+extern "C" {
+#include <l4/minilibc/limits.h>
+}
+#endif //CLIMITS_INCLUDE
+
+

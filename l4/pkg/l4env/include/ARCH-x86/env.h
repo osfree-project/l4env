@@ -39,7 +39,7 @@
  *****************************************************************************/
 
 #define L4ENV_MAXSECT	64		///< max # of loadable sections
-#define L4ENV_MAXPATH	64		///< max length of pathname
+#define L4ENV_MAXPATH	256		///< max length of pathname
 
 /** 
  * Defines some L4 kernel information - some of them (arch, data, arch_class)
@@ -80,8 +80,8 @@ typedef struct
 
 /** 
  * The environment info page - should consider 64-bit architectures too.
- * With L4ENV_MAXSECT = 64 and L4ENV_MAXPATH = 64, 
- * l4env_infopage_t occupies 466 dwords 
+ * With L4ENV_MAXSECT = 64 and L4ENV_MAXPATH = 256, 
+ * l4env_infopage_t occupies 562 dwords 
  * \ingroup env
  */
 typedef struct 
@@ -121,7 +121,6 @@ typedef struct
    * (libloader and libl4rm), because the l4rm can't page itself before
    * it's pager thread is started. */
   l4_addr_t		addr_libloader;		///< reloc address
-  l4_addr_t		addr_libl4rm;		///< reloc address
   
   l4_addr_t		stack_low;		///< low bound of thread stack
   l4_addr_t		stack_high;		///< high bound of thread stack

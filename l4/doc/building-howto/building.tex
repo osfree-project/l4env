@@ -1,332 +1,334 @@
-\documentclass[twocolumn,10pt]{article}
+\documentclass[twocolumn,letter,10pt]{article}
+\usepackage[latin1]{inputenc}
+\usepackage{html}
+%begin{latexonly}
 \usepackage[a4paper,dvips]{geometry}
 \usepackage{fancyvrb}
+%end{latexonly}
+
+\tolerance = 1000
+\emergencystretch = 10pt
+\clubpenalty = 10000
+\widowpenalty = 10000 \displaywidowpenalty = 10000
+\setlength{\marginparwidth}{1cm}
 
 \title{Building DROPS HOWTO}
-\author{Frank Mehnert}
-\date{}
+\author{Frank Mehnert \qquad Jork Löser\\drops@os.inf.tu-dresden.de }
+\date{May 2003}
+
+\newcommand{\llinux}{L$\!^4$Linux}
+\newcommand{\code}[1]{\texttt{#1}}
 
 \begin{document}
 \maketitle
 
+This document is also available in
+\latexhtml{\htmladdnormallink{HTML}{index.html}}
+{\htmladdnormallink{postscript}{building.ps}} format.
 
-\section{The \texttt{drops-gcc} Compiler}
-The best way to build libraries or applications for DROPS is to use
-the \texttt{drops-gcc} compiler. This wrapper script for gcc/g++
-automaticly uses the proper header files and links against several
-standard libraries.
+\section{Quickstart}
 
-To work correct, the \texttt{drops-gcc} compiler itself has to be
-installed (\texttt{make} is insufficient, \texttt{make install} is
-needed) and depends at least on an installed version of the OSKit 1.0
-(either as a local or global -- see next chapter for details)
+Although we recommend reading the few pages of this paper, here is the
+abstract:
+
+\begin{enumerate}
+
+\item Get the following components from \code{http://os.{\hskip
+      0pt}inf.{\hskip 0pt}tu-{\hskip 0pt}dresden.de/{\hskip
+      0pt}drops/{\hskip 0pt}download.html}:
+  OSKit, OSKit 1.0, L4Env, \llinux, Fiasco.
+
+\item Unpack the tar-balls in one directory. Memorize the directory.
+
+\item Switch into \code{l4/} and enter
+
+  \code{DROPS\_STDDIR=<dir>/drops make oldconfig}
+
+  Substitute \code{<dir>} with the absolute pathname of the directory
+  you kept in mind. Still in \code{l4/}, enter
+
+  \code{make}
+
+\end{enumerate}
 
 
-\subsection{Local Installation}
-In the global installation, the \texttt{drops-gcc} compiler itself
-and appendant libraries are installed in subdirectories of 
-\texttt{/home/drops}. For local installations (e.g. on Laptops),
-these files can be installed into an \textbf{user specified}
-directory (e.g. \texttt{\$HOME/src/drops}). In the following text,
-this directory is called the \textsl{local DROPS directory}.
+\section{Involved Components}
 
-\begin{description}
-\item[\textsl{local DROPS directory}]
-  Create that directory (e.g. \$HOME/src/drops):
-\begin{verbatim}
-  mkdir $HOME/src/drops
-\end{verbatim}
-  Edit the global config script for the L4 build tree 
-  (e.g. \texttt{\$HOME/src/l4/Makeconf.local}) and set
-  the \texttt{DROPS\_STDDIR} variable to point to that
-  directory.
+DROPS is a collection of packages using services of internal or
+external libraries and tools.
 
-\item[OSKit 0.6 libraries]
-Check out, compile and install the OSKit Version 1.0.
-\begin{verbatim}
-  cd $HOME/src
-  cvs checkout oskit
-  cd oskit
-  ./configure --prefix=$HOME/src/drops
-  make
-  make install
-\end{verbatim}
+A DROPS package typically consists of a server, one or more client
+libraries and associated interface headers. Often there also exist one
+or more examples illustrating the usage of the package.
 
-\item[OSKit 1.0 libraries]
-Check out, compile and install the OSKit Version 1.0.
-\begin{verbatim}
-  cd $HOME/src
-  cvs checkout oskit10
-  cd oskit10
-  ./configure --prefix=$HOME/src/drops
-  make
-  make install
-\end{verbatim}
+For C library support, DROPS utilizes the external FLUX Operating
+System Toolkit, in both versions 0.6 and 1.0. Some
+packages require the older version, some packages use the new one.
 
-After installation, the checked out version of the OSKit 1.0 can
-be removed.
+Some DROPS packages require \llinux, the L4 port of Linux. \llinux{} is
+available as another external module.
 
-\item[The \texttt{drops-gcc} compiler]
-Checkout the \texttt{drops-gcc} compiler:
-\begin{verbatim}
-  cd $HOME/src
-  cvs checkout l4/tool/gcc-wrap
-\end{verbatim}
-There are two individual settings for the local installation in
-the \texttt{drops-gcc.in} script but there is \textbf{no need to change}
-something here.
+The internal tools include the BID makefile macros, the IDL compiler
+dice, a dependency generation tool, a code transformation tool, a
+configuration tool and others.
 
+To build a DROPS package, all interface headers and libraries the
+packet depends on must be available, as well as the C library and the
+tools mentioned. For examples, the name server has the following
+dependencies:
 \begin{itemize}
-\item \texttt{DROPSDIR} points to the \textsl{local DROPS directory}.
-  The default setting has the value of make's \texttt{\$DROPS\_STDDIR}
-  variable.
-\item \texttt{L4DIR} points to the directory the L4 tree resides in 
-  (e.g. \$HOME/src/l4). If this variable is not set, \textbf{all} 
-  libraries the application should linked against must reside in the 
-  \textsl{local DROPS directory}. In default, this setting has the
-  value of make's \texttt{\$L4DIR} variable.
+\item the resource manager \code{rmgr} (part of DROPS)
+\item the logging server \code{log} (part of DROPS)
+\item the packet l4util (part of DROPS)
+\item the C library from OSKit 0.6 (not part of DROPS but available from the
+  DROPS download site)
+\item the BID make macros
 \end{itemize}
 
-If you want to change one of these values then you have to edit the 
-\texttt{drops-gcc.in} script. Again: The default settings should be
-suitable in most cases.
+The building tools of DROPS allow for two locations of the required
+packets (rmgr, log\dots), C libraries and tools, depending on how you
+installed DROPS:
 
-Compile and install the compiler.
+\begin{enumerate}
+\item All packets and tools are available in source code. Their
+   directories are specified relative to the \code{L4DIR}. Please see
+   table \ref{tab:dirs} for the locations of the various components.
+   
+   By executing \code{make} in \code{L4DIR/pkg}, all libraries are
+   symlinked into subdirectories of \code{L4DIR/lib} and all
+   interface headers and IDL files are symlinked into subdirectories
+   at \code{L4DIR/lib}. We also refer to \code{L4DIR} as \textit{L4
+     directory}.
+
+\item The packets and tools are already compiled and installed at a central
+   place at \code{DROPS\_STDDIR}. Obviously, only the headers and IDL
+   files of the packets are available in source code. We also refer to
+   \code{DROPS\_STDDIR} as \textit{DROPS directory}.
+\end{enumerate}
+
+\begin{table}[h]
+\center{
+\begin{tabular}{|l|l|}
+\hline
+component               & default location     \\
+\hline
+DROPS packets           & \code{L4DIR/pkg}         \\
+DROPS Tools             & \code{L4DIR/tool}        \\
+OSKit 0.6               & \code{L4DIR/../oskit}    \\
+OSKit 1.0               & \code{L4DIR/../oskit10}  \\
+\llinux{} v2.2          & \code{L4DIR/../linux22}  \\
+\hline
+\end{tabular}
+\caption{Locations of source code relative to \code{L4DIR}}
+\label{tab:dirs}
+}
+\end{table}
+
+The first method allows to inspect and to change the source code, e.g.
+for development or for debugging. The second method allows to use
+pre-compiled libraries
+from a central place without the need to download and compile the whole DROPS
+source tree. For instance, the students at the Dresden OS group can easily
+access the \textit{DROPS directory} at \code{/home/drops} which is
+rebuild from the newest CVS version each night.
+
+You can mix both methods of installation, i.e. some packets can be
+installed into the \textit{DROPS directory} and some other packets can be
+compiled from sources within the \textit{L4 directory}. If you have both
+versions of one packet, the one in \code{L4DIR/pkg} will be used when
+compiling other packets.
+
+
+In the following section we show how to build a DROPS tree.
+
+
+
+\section{How to build DROPS}
+
+
+\subsection{Downloading and Unpacking}
+
+The source code of the DROPS packages and the tools can be obtained from
+\code{http://os.inf.tu-{\hskip 0pt}dresden.de/{\hskip 0pt}drops/{\hskip
+    0pt}download.html}
+as tar-balls or via remote-CVS -- see download instructions at this web page.
+Put all the tar-balls into one directory and unpack them.
+
+If you are at the Dresden OS group, you can use the CVS repository at
+\code{/home/cvs}. You can also use the installed components at
+\code{/home/drops}. Check out the components you want to compile on
+your own. Additionally, you need the BID macros at \code{L4DIR/mk},
+the Makefile at \code{L4DIR}. If you want to compile DROPS packages,
+you should also check out the Makefile at \code{L4DIR/pkg}. We set up
+some CVS modules, please see the aforementioned download page for details.
+
+\subsection{OS requirements}
+
+The following external compilers and tools which are not part of the
+DROPS distribution are required:
+
+\begin{table}[h]
+\center{
+\begin{tabular}{|l|l|}
+\hline
+tool                    & supported versions    \\
+\hline
+GNU C                   & 2.95.2, 2.95.4 or 3.2 \\
+GNU make                & $\geq$ 3.77           \\
+Binutils                & $\geq$ 2.13.90        \\
+GNU bash                & $\geq$ 2.05           \\
+GNU find                &                       \\
+awk                     & posix compatible      \\
+GNU sed                 &                       \\
+GNU perl                & $\geq$ 5.6.1          \\
+flex                    &                       \\
+byacc                   &                       \\
+Doxygen (recommended) & $\geq$ 1.2.15           \\
+\hline
+\end{tabular}
+\caption{Required build tools}
+\label{tab:tools}
+}
+\end{table}
+
+We have tested DROPS with various versions of the GNU tools, but
+cannot give a guarantee that it works with the versions installed on
+your system. If you encounter a problem and cannot use the versions
+mentioned in table \ref{tab:tools}, contact us and we will try to
+solve the issue.
+
+\subsection{Configuring}
+
+Prior to compilation, you must configure the DROPS environment. Go
+into your \code{L4DIR} directory. If you uncompressed the tar-balls,
+this should be \code{l4/}. A 
+
+\code{l4/> make config}
+
+starts an interactive configuration tool. You should at least adapt
+the \code{DROPS\_STDDIR} setting at ``Paths and Directories'', as this
+is the directory where the components will be installed on a
+\code{make install}. Note that unlike the other components, OSKit 1.0
+cannot be used without being installed into \code{DROPS\_STDDIR}.
+
+The default values meet most peoples requirements. Thus, instead of
+doing the interactive configuration, you can also configure
+non-interactively. Set the environment variable \code{DROPS\_STDDIR}
+and use the make-target \emph{oldconfig}:
+
+\code{l4/> DROPS\_STDDIR=yourdir make oldconfig}
+
+If you are at Dresden OS group, a ``\code{make oldconfig}'' should do it.
+
+
+\subsection{Compilation}
+
+\subsubsection{The Easy way}
+
+After configuring, go to the \code{L4DIR} directory and do a
+
+\code{l4/> make}
+
+This builds everything available as sources: the tools, C libraries,
+Fiasco micro-kernel and the DROPS packages. It also builds the documentation.
+
+OSKit 1.0 will also be installed if its sources are available. If you
+forgot to set DROPS\_STDDIR during configuration, you probably notice
+this now, as OSKIT 1.0 tries to install to \code{/home/drops}. Delete
+the files \code{L4DIR/../oskit/GNUMakefile} and
+\code{L4DIR/../oskit10/GNUMakefile}. Then, redo \code{make} in
+\code{L4DIR} after a successful configuration.
+
+To install the things into \code{DROPS\_STDDIR} (and obtain the same
+setup as we have at Dresden), do a
+
+\code{l4/> make install}
+
+\subsubsection{Doing it separately}
+
+If you want to restart the build process, e.g. after editing some
+source files, you do not have to build everything again. Here is what
+the makefile in \code{L4DIR} does.
+
+\begin{enumerate}
+\item DROPS tools in \code{L4DIR/tool}
 \begin{verbatim}
-  cd $HOME/src
-  cvs checkout l4/tool/gcc-wrap
-  cd l4/tool/gcc-wrap
-  make
-  make install
+cd l4/tool ; make
 \end{verbatim}
-
-\item[Flick]
-Checkout and compile Flick.
+\item OSKit 0.6 and 1.0
 \begin{verbatim}
-  cd $HOME/src
-  cvs checkout l4/tool/flick
-  cvs checkout l4/tool/flick-obj
-  cd l4/tool/flick-obj
-  make
+cd oskit ; make -f Makefile.drops
+cd oskit10 ; make -f Makefile.drops
 \end{verbatim}
-
-Optional, install Flick by
+\item \llinux{} v2.2
 \begin{verbatim}
-  make install
+cd linux22 ; make -f Makefile.drops
 \end{verbatim}
-With this command, Flick will be installed into your 
-\textsl{local DROPS directory}.
-
-\item[Common L4 Environment]
-Checkout and compile the Common L4 Environment. You can do it
-using
+\item Fiasco micro-kernel
 \begin{verbatim}
-  cd $HOME/src/l4/pkg
-  make l4env_update
-  make l4env
+cd l4/kernel ; make
 \end{verbatim}
-
-or checking out the following packages by hand:
-
-L4 packages are needed: \texttt{l4sys, l4util, names, log, rmgr,
-l4env, lock, thread, semaphore, l4rm, generic\_dm, generic\_ts,
-generic\_fprov, oskit10\_support\_l4env\_full}.
+\item DROPS packages
 \begin{verbatim}
-  cd $HOME/src
-  cvs checkout l4/pkg/<pkg_name>
-  cd l4/pkg
-  make pkg-links
-  make lib
-  make
+cd l4/pkg ; make
 \end{verbatim}
-
-\item[Standard C++ library]
-Checkout, compile and install the \texttt{libstdc++} library:
+\item DROPS package and tool documentation
 \begin{verbatim}
-  cd $HOME/src
-  cvs checkout l4/pkg/libstdc++
-  cd l4/pkg/libstdc++
-  ln -s ../pkg.Makefile.tmpl .
-  make
-  make install
+cd l4/pkg ; make doc
+cd l4/doc/html ; make doc
+cd l4/tool; make doc
 \end{verbatim}
+\end{enumerate}
 
-After installing, this package can be removed.
+Generally, you can build the DROPS packages and tools separately,
+i.e., you can switch into the directory of a specific DROPS package or
+tool and issue the \code{make} command there. See Section \ref{sec:submakes}
+for details.
 
-\item[Other L4 packages]
-To compile other L4 packages, it is necessary to install the
-L$^{4}$Linux sources:
-\begin{verbatim}
-  cd $HOME/src
-  cvs checkout linux22
-  cd linux22
-  make oldconfig
-  make dep
-\end{verbatim}
+Note, although the makefile in \code{L4DIR} builds the documentation
+per default, the called sub-makefiles only build the documentation
+when \code{doc} is explicitely mentioned as a target on the cmdline.
 
-\end{description}
+\subsubsection{Sub-makefiles and Sub-tree consistency}
+\label{sec:submakes}
 
-\subsection{Usage}
-The \texttt{dropsgcc} compiler has several build mode.
+\textsl{The DROPS build system allows to bring a subtree in a properly
+  built state by issuing \code{make} at the top of that subtree. \code{Make}
+  generally not builds things upwards in the directory hierarchy.}
 
-\begin{description}
-\item[oskit10\_sigma0]
-  When using this mode, the application will be linked against OSKit 1.0
-  libraries and the \texttt{oskit10\_support} library making her a 
-  \textsl{Sigma~0} client. The OSKit's FreeBSD C library is used.
-  Dependant libraries:
-  \begin{description}
-  \item[OSKit]
-  \texttt{liboskit\_startup, liboskit\_clientos, liboskit\_bootp,
-  liboskit\_linux\_fs, liboskit\_diskpart, liboskit\_linux\_dev, 
-  liboskit\_freebsd\_net, liboskit\_kern, liboskit\_lmm, liboskit\_amm, 
-  liboskit\_freebsd\_c, liboskit\_com}
-  \item[other]
-  \texttt{librmgr, libgcc, liboskit10\_support}
-  \end{description}
+This is true for everything \emph{below} \code{L4DIR}. Exceptions are
+the external C libraries and \llinux, which have their own build
+system. \code{L4DIR}, serving as the project root directory, is the
+other exception, as it integrates the external components.
 
-\item[oskit10\_l4env]
-  The application is linked against OSKit 1.0 libraries and the Common L4
-  Environment together with the \texttt{oskit10\_support\_l4env\_full}
-  library. This is the default mode of \texttt{drops-gcc}. The OSKit's
-  FreeBSD C library is used. Dependant libraries:
-  \begin{description}
-  \item[OSKit]
-  \texttt{liboskit\_startup, liboskit\_clientos, liboskit\_bootp,
-  liboskit\_linux\_fs, liboskit\_diskpart, liboskit\_linux\_dev,
-  liboskit\_freebsd\_net, liboskit\_kern, liboskit\_lmm, liboskit\_amm,
-  liboskit\_freebsd\_c, liboskit\_com}
-  \item[Common L4 Environment]
-  \texttt{libthread, libsemaphore, libl4rm, libgeneric\_dm, liblogserver,
-  libnames, libl4env, libl4util}
-  \item[other]
-  \texttt{librmgr, libgcc, liboskit10\_support\_l4env\_full}
-  \end{description}
+As a consequence, a \code{make} issued within a package X cannot help you
+building other packages X may depend on. Or, if you are within the
+\code{server/} directory of a DROPS package, \code{make} does not rebuild the
+\code{lib/} directory of that package. In these cases, you have to
+issue the \code{make} upwards the directory hierarchy.
 
-\item[oskit10\_l4env\_tiny]
-  The application is linked against the OSKit 1.0 and the Common L4
-  Environment together with the \texttt{oskit10\_support\_l4env} library.
-  Use this mode for simple servers (without C++ and special OSKit features,
-  e.g. memory file system).
-  There are many functions in this mode which don't work (e.g. 
-  \texttt{sleep()}). Tested functions are memory management
-  (\texttt{malloc()}/\texttt{free()} and console input/output
-  (\texttt{printf()}, \texttt{getchar()}). Therefore it is recommended
-  to use the \texttt{oskit10\_l4env} mode instead. The OSKit's tiny C
-  library is used.
-  Dependant libraries:
-  \begin{description}
-  \item[OSKit]
-  \texttt{liboskit\_clientos, liboskit\_kern, liboskit\_lmm, liboskit\_c}
-  \item[Common L4 Environment]
-  \texttt{libthread, libsemaphore, libl4rm, libgeneric\_dm, liblogserver,
-  libnames, liblenv, libl4util}
-  \item[other]
-  \texttt{librmgr, liboskit10\_support\_l4env}
-  \end{description}
+As another consequence, you can be shure that \code{make} does not change
+your filesystem outside the current subtree. Exceptions are the
+installation directories \code{L4DIR/bin}, \code{L4DIR/lib},
+\code{L4DIR/include} and \code{L4DIR/doc}.
 
-\end{description}
+\subsubsection{Dependencies}
 
-To specifiy the mode the project should built with, \textbf{either}
+The DROPS build system automatically detects source code dependencies
+by intercepting the file system calls during compilation. This turned
+out the be both a robust and general solution.
 
-\begin{itemize}
-\item add \texttt{-}\textsl{$<$mode\_name$>$} as command line parameter
-  of \texttt{drops-gcc} \textbf{or}
-\item export the \texttt{DROPS\_BUILD\_MODE} envionment variable
-  from the Makefile.
-\end{itemize}
+It is generally not necessary to enforce rebuilding of DROPS source
+code, e.g. by doing a \code{make clean} followed by a \code{make}. A
+\code{make} rebuilds the depending files reliably, be it within one DROPS
+package, accross DROPS packages or code of external componente such as
+the C library.
 
-To simplify this task, a new Makefile template
-(\texttt{Makeconf.oskit10\_lenv}) was created.
-The template does also define a \texttt{DROPS\_LIB}
-variable which includes the libraries the application is linked
-against for using as dependency.
-
-
-\section{The \texttt{oskit10\_support\_l4env\_full} library}
-The \texttt{oskit10\_support\_l4env\_full} library is the glue code
-which allows applications to use code of the OSKit 1.0 together with
-services of the Common L4 Environment.
-
-
-\subsection{Global Heap Management}
-The malloc()/free() functions of the OSKit access a memory chunk
-located at a dataspace provided by a dataspace manager. The default
-size of the memory chunk is 4MB (defined in file 
-\textsl{base\_multiboot\_init\_mem.c}). At boot time, the size can be
-specified using the command line parameter
-\texttt{--heap}=\textsl{$<$size in bytes$>$}.
-
-The memory allocator is protected by a simple locking mechanism.
-For this, a semaphore of the \texttt{semaphore} library is used
-(file \textsl{lock.c}).
-
-
-\subsection{Accessing Physical Memory}
-Some applications need access to physical memory regions. Until now,
-such requests are sent to RMGR.
-
-\begin{description}
-\item[0x00000000-0x00001000] The \textsl{first page} holds the BIOS
-  data area.
-\item[0x000A0000-0x000FFFFF] The \textsl{adapter area} holds the BIOS
-  ROM area.
-\item[0x80000000-0xFFFFFFFF] The \textsl{device area} can be accessed
-  in memory chunks of 4MB.
-\item[TODO] Unmapping of physical memory?
-\end{description}
-
-\subsection{Accessing the multiboot info}
-There are two global symbols defined for accessing the multiboot info
-which is provided by the bootloader:
-
-\begin{description}
-\item[boot\_info] holds the multiboot info as provided by the
-  old grub bootloader.
-
-\item[grub\_boot\_info] holds the extended multiboot info as
-  provided by newer (hacked) versions of GRUB. The size of the
-  structure depends on \texttt{grub\_boot\_info.flags}. One important
-  feature of newer GRUB version is the VESA video mode information.
-  For an example how to use that information, see the \texttt{vesaview}
-  server of the \texttt{smart\_mpeg package}.
-\end{description}
-
-
-\subsection{Helpers}
-
-Some helper functions of the OSKit 1.0 are overwritten:
-\begin{description}
-\item[exit] 
-  The exit function prints the exit code of the application. If
-  the exit code was not equal zero, the user will be prompted for
-  an key. Pressing s sets the task into sleep, pressing k enters
-  the L4 kernel debugger and Return reboots immediatly.
-\item[pc\_reset]
-  After showing an appropriate message, the code jumps into the kernel
-  debugger. On continue, the machine is rebootet.
-\end{description}
-
-\section{Example}
-For an example how to use the \texttt{drops-gcc} compiler, see the
-tftp package. Especially notice the Makefile.
-
-
-\section{Changelog}
-\begin{description}
-\item[22.01.2001] initial release
-\item[25.01.2001] first review by Jork
-\item[26.01.2001] new targets for checking out and building the
-  Common L4 Environment
-\item[29.01.2001] added dependant libraries for each mode of 
-  \texttt{drops-gcc}
-\item[17.04.2001] changed drops-gcc.in so that it doesn't need to
-  be patched anymore -- use \texttt{DROPS\_STDDIR} instead
-\item[01.02.2002] added dependency to OSKit 0.6 and L4Linux
-
-
-\end{description}
 
 
 \end{document}
 
+% Localwords: CVS unset API APIs IDL gcc libc OSKit OSKits Dresden OS
+% Local variables:
+%  compile-command: "make"
+% End:

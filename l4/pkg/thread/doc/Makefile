@@ -1,6 +1,6 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = thread
+SRC_DOX_REF = thread.cfg
 
 include $(L4DIR)/mk/doc.mk

@@ -1,7 +1,7 @@
 /* Automatically generated, don't edit */
-/* Generated on: erwin */
-/* At: Wed, 12 Feb 2003 22:51:14 +0000 */
-/* Linux version 2.4.20 (adam@erwin) (gcc version 2.95.4 20011002 (Debian prerelease)) #1 SMP Fri Nov 29 12:09:40 CET 2002 */
+/* Generated on: iron */
+/* At: Fri, 12 Sep 2003 15:00:05 +0000 */
+/* Linux version 2.4.21-rc8-osws (adam@erwin) (gcc version 2.95.4 20011002 (Debian prerelease)) #1 Fri Jun 13 17:15:56 CEST 2003 */
 
 /* Main menu */
 
@@ -22,9 +22,11 @@
 /* Kernel ABI Version */
 #define CONFIG_ABI_V2 1
 #undef  CONFIG_ABI_X0
+#undef  CONFIG_ABI_V4
 
 
 /* Target processor */
+#undef  CONFIG_IA32_486
 #define CONFIG_IA32_586 1
 #undef  CONFIG_IA32_686
 #undef  CONFIG_IA32_K6
@@ -34,11 +36,14 @@
 #define CONFIG_ASSEMBLER_IPC_SHORTCUT 1
 #define CONFIG_SCHED_RTC 1
 #undef  CONFIG_SLOW_RTC
+#undef  CONFIG_IO_PROT
 #undef  CONFIG_DECEIT_BIT_DISABLES_SWITCH
+#undef  CONFIG_DISABLE_AUTO_SWITCH
 #undef  CONFIG_APIC_MASK
 #define CONFIG_POWERSAVE_GETCHAR 1
 #undef  CONFIG_X2_LIKE_SYS_CALLS
 #undef  CONFIG_SYNC_TSC
+#undef  CONFIG_SMALL_SPACES
 
 
 /* Kernel Debugging */
@@ -46,10 +51,15 @@
 #undef  CONFIG_NDEBUG
 #undef  CONFIG_PROFILE
 #define CONFIG_NO_FRAME_PTR 1
+#define CONFIG_GSTABS 1
+#define CONFIG_WATCHDOG 1
+#undef  CONFIG_FFUN
+#define CONFIG_SERIAL 1
 #define CONFIG_KDB 1
 #define CONFIG_JDB 1
 #undef  CONFIG_JDB_LOGGING
-#undef  CONFIG_CHECK_CIRCULAR
+#undef  CONFIG_JDB_MISC
+#undef  CONFIG_MAINTAINER_MODE
 
 
 /* Derived symbols */
@@ -57,5 +67,6 @@
 #define CONFIG_IA32_TARGET "Intel Pentium"
 #define CONFIG_XARCH "ia32"
 #undef  CONFIG_SCHED_PIT
+#define CONFIG_PERF_CNT 1
 /* That's all, folks! */
 #define AUTOCONF_INCLUDED

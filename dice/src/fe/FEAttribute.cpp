@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,6 +26,7 @@
  */
 
 #include "fe/FEAttribute.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEAttribute) 
 
@@ -214,8 +215,11 @@ void CFEAttribute::Serialize(CFile * pFile)
     case ATTR_INIT_RCVSTRING:
     pFile->Print("init_rcvstring");
     break;
-	case ATTR_INIT_WITH_IN:
+	case ATTR_PREALLOC:
 	pFile->Print("init_with_in");
+	break;
+	case ATTR_ALLOW_REPLY_ONLY:
+	pFile->Print("allow_reply_only");
 	break;
     }
     pFile->Print("</attribute>\n");

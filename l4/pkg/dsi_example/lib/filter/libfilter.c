@@ -47,7 +47,7 @@ __get_component_id(void)
       /* request send component id */
       if (!names_waitfor_name(DSI_EXAMPLE_FILTER_NAMES,&filter_id,10000))
         {
-          Panic("filter component (\"%s\") not found!\n",
+          Panic("filter component (\"%s\") not found!",
 		DSI_EXAMPLE_FILTER_NAMES);
           filter_id = L4_INVALID_ID;
           return -1;
@@ -72,20 +72,20 @@ static int
 __filter_connect(dsi_component_t * comp, dsi_socket_ref_t * remote)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call send component to connect socket */
-  ret = dsi_example_filter_connect(filter_id,
+  ret = dsi_example_filter_connect_call(&filter_id,
 			   (dsi_example_filter_socket_t *)&comp->socketref,
 			   (dsi_example_filter_socket_t *)remote,
-			   &_exc); 
-  if (ret || (_exc._type != exc_l4_no_exception))
+			   &env); 
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("connect failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("connect failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
   
@@ -118,17 +118,17 @@ filter_open(l4dm_dataspace_t rcv_ctrl_ds, l4dm_dataspace_t rcv_data_ds,
 {
   int ret;
   dsi_example_filter_socket_t rcv_socket_ref,snd_socket_ref;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
   
   /* get send component id */
   if (__get_component_id() < 0)
     return -1;
 
 #if 0
-  INFO("receive socket:\n");
-  INFO("ctrl_ds %d at %x.%x\n",rcv_ctrl_ds.id,
+  LOGL("receive socket:");
+  LOGL("ctrl_ds %d at %x.%x",rcv_ctrl_ds.id,
        rcv_ctrl_ds.manager.id.task,rcv_ctrl_ds.manager.id.lthread);
-  INFO("data_ds %d at %x.%x\n",rcv_data_ds.id,
+  LOGL("data_ds %d at %x.%x",rcv_data_ds.id,
        rcv_data_ds.manager.id.task,rcv_data_ds.manager.id.lthread);
 #endif
 
@@ -148,16 +148,16 @@ filter_open(l4dm_dataspace_t rcv_ctrl_ds, l4dm_dataspace_t rcv_data_ds,
     }
 
   /* call filter to create sockets */
-  ret = dsi_example_filter_open(filter_id,0,
+  ret = dsi_example_filter_open_call(&filter_id,0,
 			  (dsi_example_filter_dataspace_t *)&rcv_ctrl_ds,
 			  (dsi_example_filter_dataspace_t *)&rcv_data_ds,
 			  &rcv_socket_ref,&snd_socket_ref,
 			  (dsi_example_filter_dataspace_t *)snd_ctrl_ds,
 			  (dsi_example_filter_dataspace_t *)snd_data_ds,
-			  &_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+			  &env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("open socket failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("open socket failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
   

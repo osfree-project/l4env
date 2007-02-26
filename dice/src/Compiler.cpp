@@ -5,7 +5,7 @@
  *	\date	03/06/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,17 +37,18 @@
 #include <sys/wait.h>
 #include <sys/timeb.h>
 #include <errno.h>
+#include <limits.h> // needed for realpath
 #include <stdlib.h>
 #include <string.h>
 
 #if defined(HAVE_GETOPT_H)
 #include <getopt.h>
 #endif
- 
-#include "fe/stdfe.h"
+
 #include "File.h"
 #include "CParser.h"
-#include "be/BEContext.h"
+#include "CPreProcess.h"
+#include "ProgramOptions.h"
 #include "be/BERoot.h"
 // L4 specific
 #include "be/l4/L4BENameFactory.h"
@@ -55,10 +56,21 @@
 #include "be/l4/v2/L4V2BEClassFactory.h"
 // L4X0
 #include "be/l4/x0/L4X0BEClassFactory.h"
+// L4X0 Arm
+#include "be/l4/x0/arm/X0ArmClassFactory.h"
+// L4X0 IA32
+#include "be/l4/x0/ia32/X0IA32ClassFactory.h"
 // L4 X0 adaption (V2 user land to X0 kernel)
 #include "be/l4/x0adapt/L4X0aBEClassFactory.h"
 // Sockets
 #include "be/sock/SockBEClassFactory.h"
+// CDR
+#include "be/cdr/CCDRClassFactory.h"
+
+#include "fe/FEFile.h"
+#include "fe/FELibrary.h"
+#include "fe/FEInterface.h"
+#include "fe/FEOperation.h"
 
 //@{
 /** some config variables */
@@ -98,11 +110,21 @@ CCompiler::CCompiler()
     m_pContext = 0;
     m_pRootBE = 0;
     m_nWarningLevel = 0;
+	m_sSymbols = 0;
+	m_nSymbolCount = 0;
+	m_nDumpMsgBufDwords = 0;
 }
 
 /** cleans up the compiler object */
 CCompiler::~CCompiler()
 {
+    for (int i=0; i<m_nSymbolCount-1; i++)
+	    free(m_sSymbols[i]);
+    free(m_sSymbols);
+	// we delete the preprocessor here, because ther should be only
+	// one for the whole compiler run.
+    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+	delete pPreProcess;
 }
 
 /**
@@ -113,7 +135,9 @@ CCompiler::~CCompiler()
 void CCompiler::ParseArguments(int argc, char *argv[])
 {
 	int c;
+#if defined(HAVE_GETOPT_LONG)
 	int index = 0;
+#endif
 	bool bHaveFileName = false;
     unsigned long nNoWarning = 0;
 
@@ -125,7 +149,6 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         {"template", 0, 0, 't'},
         {"no-opcodes", 0, 0, 'n'},
         {"create-inline", 2, 0, 'i'},
-        {"server-return-code", 0, 0, 'r'},
         {"filename-prefix", 1, 0, 'F'},
         {"include-prefix", 1, 0, 'p'},
         {"verbose", 2, 0, 'v'},
@@ -133,15 +156,17 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         {"preprocess", 1, 0, 'P'},
         {"f", 1, 0, 'f'},
         {"B", 1, 0, 'B'},
-        {"stop-after-preprocess", 0, 0, 'E'},
+        {"stop-after-preprocess", 2, 0, 'E'},
         {"include", 1, 0, 'I'},
         {"nostdinc", 0, 0, 'N'},
         {"optimize", 2, 0, 'O'},
         {"testsuite", 2, 0, 'T'},
         {"version", 0, 0, 'V'},
         {"message-passing", 0, 0, 'm'},
+		{"with-cpp", 1, 0, 'x'},
         {"M", 2, 0, 'M'},
         {"W", 1, 0, 'W'},
+		{"D", 1, 0, 'D'},
         {"help", 0, 0, 'h'},
         {"help", 0, 0, '?'},
         {0, 0, 0, 0}
@@ -150,18 +175,18 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 
     // prevent getopt from writing error messages
 	opterr = 0;
-	// set the "root" parser
-	CParser *pParser = new CParser();
-  	ASSERT(pParser);
-	CParser::SetCurrentParser(pParser);
+	// obtain a reference to the pre-processor
+	// and create one if not existent
+	CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+
 
     while (1)
     {
 #if defined(HAVE_GETOPT_LONG)
-        c = getopt_long_only(argc, argv, "cstni::v::hrF:p:CP:f:B:EO::VI:NT::M::W:", long_options, &index);
+        c = getopt_long_only(argc, argv, "cstni::v::hF:p:CP:f:B:E::O::VI:NT::M::W:D:x:", long_options, &index);
 #else
         // n has an optional parameter to recognize -nostdinc and -n (no-opcode)
-        c = getopt(argc, argv, "cstn::i::v::hrF:p:CP:f:B:EO::VI:NT::M::W:");
+        c = getopt(argc, argv, "cstn::i::v::hF:p:CP:f:B:E::O::VI:NT::M::W:D:x:");
 #endif
 
         if (c == -1)
@@ -176,11 +201,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         {
         case '?':
             // Error exits
-#if defined(HAVE_GETOPT_LONG)            
+#if defined(HAVE_GETOPT_LONG)
             Error("unrecognized option: %s (%d)\nUse \'--help\' to show valid options.\n", argv[optind - 1], optind);
 #else
             Error("unrecognized option: %s (%d)\nUse \'-h\' to show valid options.\n", argv[optind], optind);
-#endif            
+#endif
             break;
         case ':':
             // Error exits
@@ -194,9 +219,9 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             Verbose("Create server/component-side code.\n");
             m_nOptions |= PROGRAM_GENERATE_COMPONENT;
             break;
-        case 't':                    
+        case 't':
             Verbose("create skeletons enabled\n");
-            m_nOptions |= PROGRAM_GENERATE_SKELETON;
+            m_nOptions |= PROGRAM_GENERATE_TEMPLATE;
             break;
         case 'i':
             {
@@ -211,6 +236,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     // make upper case
                     String sArg(optarg);
                     sArg.MakeUpper();
+					sArg.TrimLeft('=');
                     if (sArg == "EXTERN")
                     {
                         m_nOptions |= PROGRAM_GENERATE_INLINE_EXTERN;
@@ -232,10 +258,6 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 }
             }
             break;
-        case 'r':
-            Verbose("do not create return code from server to client\n");
-            m_nOptions |= PROGRAM_SERVER_RETURN_CODE;
-            break;
         case 'n':
 #if !defined(HAVE_GETOPT_LONG)
             {
@@ -249,10 +271,10 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 else if (sArg == "ostdinc")
                 {
                     Verbose("no standard include paths\n");
-                    pParser->AddCPPArgument(String("-nostdinc"));
+                    pPreProcess->AddCPPArgument(String("-nostdinc"));
                 }
             }
-#else            
+#else
             Verbose("create no opcodes\n");
             m_nOptions |= PROGRAM_NO_OPCODES;
 #endif
@@ -329,13 +351,19 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 // check for -I arguments, which we preprocess ourselves as well
                 String sArg(optarg);
-                pParser->AddCPPArgument(sArg);
+                pPreProcess->AddCPPArgument(sArg);
                 if (sArg.Left(2) == "-I")
                 {
                     String sPath = sArg.Right(sArg.GetLength()-2);
-                    pParser->AddIncludePath(sPath);
+                    pPreProcess->AddIncludePath(sPath);
                     Verbose("Added %s to include paths\n", (const char*)sPath);
                 }
+				else if (sArg.Left(2) == "-D")
+				{
+				    String sDefine = sArg.Right(sArg.GetLength()-2);
+				    AddSymbol(sDefine);
+					Verbose("Found symbol \"%s\"\n", (const char*)sDefine);
+				}
             }
             break;
         case 'I':
@@ -343,15 +371,15 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 String sPath("-I");
                 sPath += optarg;
-                pParser->AddCPPArgument(sPath);	// copies sPath
+                pPreProcess->AddCPPArgument(sPath);	// copies sPath
                 // add to own include paths
-                pParser->AddIncludePath(optarg);
+                pPreProcess->AddIncludePath(optarg);
                 Verbose("Added %s to include paths\n", optarg);
             }
             break;
         case 'N':
             Verbose("no standard include paths\n");
-            pParser->AddCPPArgument(String("-nostdinc"));
+            pPreProcess->AddCPPArgument(String("-nostdinc"));
             break;
         case 'f':
             {
@@ -369,11 +397,26 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 					{
 					    m_nOptions |= PROGRAM_FORCE_CORBA_ALLOC;
 						Verbose("Force use of CORBA_alloc (instead of Environment->malloc).\n");
+						if (m_nOptions & PROGRAM_FORCE_ENV_MALLOC)
+						{
+						    m_nOptions &= ~PROGRAM_FORCE_ENV_MALLOC;
+							Verbose("Overrides previous -fforce-env-malloc.\n");
+						}
+					}
+					else if (sArg == "FORCE-ENV-MALLOC")
+					{
+					    m_nOptions |= PROGRAM_FORCE_ENV_MALLOC;
+						Verbose("Force use of Environment->malloc (instead of CORBA_alloc).\n");
+						if (m_nOptions & PROGRAM_FORCE_CORBA_ALLOC)
+						{
+						    m_nOptions &= ~PROGRAM_FORCE_CORBA_ALLOC;
+							Verbose("Overrides previous -fforce-corba-alloc.\n");
+						}
 					}
 					else if (sArg == "FORCE-C-BINDINGS")
 					{
 					    m_nOptions |= PROGRAM_FORCE_C_BINDINGS;
-						Verbose("Force use of L4 C bindings (instead of inline assembler),\n");
+						Verbose("Force use of L4 C bindings (instead of inline assembler).\n");
 					}
 					else
 					{
@@ -416,7 +459,34 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         m_nOptions |= PROGRAM_USE_CTYPES;
                         Verbose("use C-style type names\n");
                     }
+					else if (sArg == "CONST-AS-DEFINE")
+					{
+					    m_nOptions |= PROGRAM_CONST_AS_DEFINE;
+						Verbose("print const declarators as define statements\n");
+					}
                     break;
+                case 'I':
+                    if (sArg.Left(14) == "INIT-RCVSTRING")
+                    {
+                        m_nOptions |= PROGRAM_INIT_RCVSTRING;
+                        if (sArg.GetLength() > 14)
+                        {
+                            String sName = sOrig.Right(sOrig.GetLength()-15);
+                            Verbose("User provides function \"%s\" to init indirect receive strings\n", (const char*)sName);
+                            m_sInitRcvStringFunc = sName;
+                        }
+                        else
+                            Verbose("User provides function to init indirect receive strings\n");
+                    }
+                    break;
+				case 'K':
+				    if (sArg == "KEEP-TEMP-FILES")
+					{
+					    pPreProcess->SetOption(PROGRAM_KEEP_TMP_FILES);
+					    m_nOptions |= PROGRAM_KEEP_TMP_FILES;
+						Verbose("Keep temporary files generated during preprocessing\n");
+					}
+					break;
                 case 'L':
                     if (sArg == "L4TYPES")
                     {
@@ -424,6 +494,25 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         Verbose("use L4-style type names\n");
                     }
                     break;
+				case 'N':
+				    if (sArg == "NO-SEND-CANCELED-CHECK")
+					{
+					    m_nOptions |= PROGRAM_NO_SEND_CANCELED_CHECK;
+						Verbose("Do not check if the send part of a call was canceled.\n");
+					}
+					else if ((sArg == "NO-SERVER-LOOP") ||
+					         (sArg == "NO-SRVLOOP"))
+					{
+					    m_nOptions |= PROGRAM_NO_SERVER_LOOP;
+						Verbose("Do not generate server loop.\n");
+					}
+					else if ((sArg == "NO-DISPATCH") ||
+					         (sArg == "NO-DISPATCHER"))
+					{
+					    m_nOptions |= PROGRAM_NO_DISPATCHER;
+						Verbose("Do not generate dispatch function.\n");
+					}
+					break;
                 case 'O':
                     if (sArg.Left(12) == "OPCODE-SIZE=")
                     {
@@ -466,25 +555,95 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         Verbose("User provides CORBA_Environment parameter to server loop\n");
                     }
                     break;
-                case 'I':
-                    if (sArg.Left(14) == "INIT-RCVSTRING")
-                    {
-                        m_nOptions |= PROGRAM_INIT_RCVSTRING;
-                        if (sArg.GetLength() > 14)
-                        {
-                            String sName = sOrig.Right(sOrig.GetLength()-15);
-                            Verbose("User provides function \"%s\" to init indirect receive strings\n", (const char*)sName);
-                            m_sInitRcvStringFunc = sName;
-                        }
-                        else
-                            Verbose("User provides function to init indirect receive strings\n");
-                    }
-                    break;
                 case 'T':
-					if (sArg == "TRACE-SERVER")
+					if (sArg.Left(12) == "TRACE-SERVER")
 					{
 					    m_nOptions |= PROGRAM_TRACE_SERVER;
 						Verbose("Trace messages received by the server loop\n");
+					    if (sArg.GetLength() > 12)
+						{
+						    String sName = sOrig.Right(sOrig.GetLength()-13);
+							Verbose("User sets trace function to \"%s\".\n", (const char*)sName);
+							m_sTraceServerFunc = sName;
+						}
+					}
+					else if (sArg.Left(12) == "TRACE-CLIENT")
+					{
+					    m_nOptions |= PROGRAM_TRACE_CLIENT;
+						Verbose("Trace messages send to the server and answers received from it\n");
+					    if (sArg.GetLength() > 12)
+						{
+						    String sName = sOrig.Right(sOrig.GetLength()-13);
+							Verbose("User sets trace function to \"%s\".\n", (const char*)sName);
+							m_sTraceClientFunc = sName;
+						}
+					}
+					else if (sArg.Left(17) == "TRACE-DUMP-MSGBUF")
+					{
+					    m_nOptions |= PROGRAM_TRACE_MSGBUF;
+						Verbose("Trace the message buffer struct\n");
+					    if (sArg.GetLength() > 17)
+						{
+						    // check if lines are meant
+							if (sArg.Left(24) == "TRACE-DUMP-MSGBUF-DWORDS")
+							{
+							    if (sArg.GetLength() > 24)
+								{
+								    String sNumber = sArg.Right(sArg.GetLength()-25);
+									m_nDumpMsgBufDwords = sNumber.ToInt();
+									if (m_nDumpMsgBufDwords >= 0)
+									    m_nOptions |= PROGRAM_TRACE_MSGBUF_DWORDS;
+								}
+								else
+								    Error("The option -ftrace-dump-msgbuf-dwords expects an argument (e.g. -ftrace-dump-msgbuf-dwords=10).\n");
+							}
+							else
+							{
+								String sName = sOrig.Right(sOrig.GetLength()-18);
+								Verbose("User sets trace function to \"%s\".\n", (const char*)sName);
+								m_sTraceMsgBuf = sName;
+							}
+						}
+                    }
+					else if (sArg.Left(14) == "TRACE-FUNCTION")
+					{
+					    if (sArg.GetLength() > 14)
+						{
+						    String sName = sOrig.Right(sOrig.GetLength()-15);
+							Verbose("User sets trace function to \"%s\".\n", (const char*)sName);
+							if (m_sTraceServerFunc.IsEmpty())
+							    m_sTraceServerFunc = sName;
+							if (m_sTraceClientFunc.IsEmpty())
+							    m_sTraceClientFunc = sName;
+							if (m_sTraceMsgBuf.IsEmpty())
+							    m_sTraceMsgBuf = sName;
+						}
+						else
+						    Error("The option -ftrace-function expects an argument (e.g. -ftrace-function=LOGl).\n");
+					}
+					else if ((sArg == "TEST-NO-SUCCESS") || (sArg == "TEST-NO-SUCCESS-MESSAGE"))
+					{
+					    Verbose("User does not want to see success messages of testsuite.\n");
+						m_nOptions |= PROGRAM_TESTSUITE_NO_SUCCESS_MESSAGE;
+					}
+					else if (sArg == "TESTSUITE-SHUTDOWN")
+					{
+					    Verbose("User wants to shutdown Fiasco after running the testsuite.\n");
+						m_nOptions |= PROGRAM_TESTSUITE_SHUTDOWN_FIASCO;
+					}
+					break;
+                case 'U':
+				    if ((sArg == "USE-SYMBOLS") || (sArg == "USE-DEFINES"))
+					{
+					    m_nOptions |= PROGRAM_USE_SYMBOLS;
+                        Verbose("Use the symbols/defines given as arguments\n");
+					}
+					break;
+				case 'Z':
+				    if (sArg == "ZERO-MSGBUF")
+					{
+					    m_nOptions |= PROGRAM_ZERO_MSGBUF;
+						Verbose("Zero message buffer before using.\n");
 					}
 					break;
                 default:
@@ -524,9 +683,9 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "ARM")
                     {
-                        Warning("ARM back-end not supported yet!");
+                        Warning("ARM back-end not fully supported yet!");
                         m_nBackEnd &= ~PROGRAM_BE_PLATFORM;
-                        m_nBackEnd |= PROGRAM_BE_IA32; // PROGRAM_BE_ARM;
+                        m_nBackEnd |= PROGRAM_BE_ARM;
                         Verbose("use back-end for ARM platform\n");
                     }
                     else
@@ -571,6 +730,12 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         m_nBackEnd |= PROGRAM_BE_SOCKETS;
                         Verbose("use sockets back-end\n");
                     }
+					else if (sArg == "CDR")
+					{
+					    m_nBackEnd &= ~PROGRAM_BE_INTERFACE;
+						m_nBackEnd |= PROGRAM_BE_CDR;
+						Verbose("use CDR back-end\n");
+					}
                     else
                     {
                         Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
@@ -603,8 +768,26 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             }
             break;
 	    case 'E':
-            Verbose("stop after preprocess option enabled.\n");
-            m_nOptions |= PROGRAM_STOP_AFTER_PRE;
+			if (!optarg)
+			{
+				Verbose("stop after preprocess option enabled.\n");
+				m_nOptions |= PROGRAM_STOP_AFTER_PRE;
+			}
+			else
+			{
+				String sArg(optarg);
+				sArg.MakeUpper();
+				if (sArg == "XML")
+				{
+					Verbose("stop after preprocessing and dump XML file.\n");
+					m_nOptions |= PROGRAM_STOP_AFTER_PRE_XML;
+				}
+				else
+				{
+					Warning("unrecognized argument \"%s\" to option -E.\n", (const char*)sArg);
+					m_nOptions |= PROGRAM_STOP_AFTER_PRE;
+				}
+			}
             break;
 	    case 'O':
             {
@@ -647,7 +830,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 m_nOptions |= PROGRAM_GENERATE_TESTSUITE_THREAD;
             Verbose("generate testsuite for IDL.\n");
             // need server stubs for that
-            m_nOptions |= PROGRAM_GENERATE_SKELETON;
+            m_nOptions |= PROGRAM_GENERATE_TEMPLATE;
             // need client and server files
             m_nOptions |= PROGRAM_GENERATE_CLIENT | PROGRAM_GENERATE_COMPONENT;
             break;
@@ -742,12 +925,54 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     nNoWarning |= PROGRAM_WARNING_NO_MAXSIZE;
                     Verbose("Do not warn if max-size attribute is not set for unbound variable sized arguments.\n");
                 }
+				else if (sArg.Left(2) == "P,")
+				{
+				    String sTmp(optarg);
+					// remove "p,"
+					String sCppArg = sTmp.Right(sTmp.GetLength()-2);
+					pPreProcess->AddCPPArgument(sCppArg);
+					Verbose("preprocessor argument \"%s\" added\n", (const char*)sCppArg);
+					// check if CPP argument has special meaning
+					if (sCppArg.Left(2) == "-I")
+					{
+						String sPath = sCppArg.Right(sCppArg.GetLength()-2);
+						pPreProcess->AddIncludePath(sPath);
+						Verbose("Added %s to include paths\n", (const char*)sPath);
+					}
+					else if (sCppArg.Left(2) == "-D")
+					{
+						String sDefine = sCppArg.Right(sCppArg.GetLength()-2);
+						AddSymbol(sDefine);
+						Verbose("Found symbol \"%s\"\n", (const char*)sDefine);
+					}
+				}
                 else
                 {
                     Warning("dice: warning \"%s\" not supported.\n", optarg);
                 }
             }
             break;
+        case 'D':
+		    if (!optarg)
+			{
+			    Error("There has to be an argument for the option '-D'\n");
+			}
+			else
+			{
+                String sArg("-D");
+				sArg += optarg;
+                pPreProcess->AddCPPArgument(sArg);
+			    AddSymbol(optarg);
+			    Verbose("Found symbol \"%s\"\n", optarg);
+			}
+			break;
+        case 'x':
+		    {
+			    String sArg(optarg);
+				pPreProcess->SetCPP((const char*)sArg);
+				Verbose("Use \"%s\" as preprocessor\n", optarg);
+			}
+			break;
         default:
             Error("You used an obsolete parameter (%c).\nPlease use dice --help to check your parameters.\n", c);
         }
@@ -771,14 +996,33 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         m_nOptions |= PROGRAM_FILE_IDLFILE;
 
     if ((m_nBackEnd & PROGRAM_BE_INTERFACE) == 0)
-        m_nBackEnd |= PROGRAM_BE_V2;
+	{
+	    if (m_nBackEnd & PROGRAM_BE_ARM)
+		    m_nBackEnd |= PROGRAM_BE_X0;
+	    else
+			m_nBackEnd |= PROGRAM_BE_V2;
+	}
     if ((m_nBackEnd & PROGRAM_BE_PLATFORM) == 0)
         m_nBackEnd |= PROGRAM_BE_IA32;
     if ((m_nBackEnd & PROGRAM_BE_LANGUAGE) == 0)
         m_nBackEnd |= PROGRAM_BE_C;
+    if ((m_nBackEnd & PROGRAM_BE_ARM) &&
+	    ((m_nBackEnd & PROGRAM_BE_PLATFORM) != PROGRAM_BE_X0))
+    {
+	    Warning("The Arm Backend currently works with X0 native only!\n");
+		Warning("  -> Setting interface to X0 native.\n");
+		m_nBackEnd &= ~PROGRAM_BE_INTERFACE;
+		m_nBackEnd |= PROGRAM_BE_X0;
+    }
 
     if ((m_nOptions & (PROGRAM_GENERATE_CLIENT | PROGRAM_GENERATE_COMPONENT)) == 0)
         m_nOptions |= PROGRAM_GENERATE_CLIENT | PROGRAM_GENERATE_COMPONENT;
+
+    if ((m_nOptions & (PROGRAM_GENERATE_TESTSUITE_THREAD | PROGRAM_GENERATE_TESTSUITE_TASK)) != 0)
+	{
+	    m_nOptions &= ~PROGRAM_NO_SERVER_LOOP;
+	    m_nOptions |= PROGRAM_FORCE_CORBA_ALLOC;
+	}
 
     if (nNoWarning != 0)
     {
@@ -791,7 +1035,7 @@ void CCompiler::ShowCopyright()
 {
     if (!m_bVerbose)
         return;
-    printf("DICE (c) 2001-2002 Dresden University of Technology\n"
+    printf("DICE (c) 2001-2003 Dresden University of Technology\n"
            "Author: Ronald Aigner <ra3@os.inf.tu-dresden.de>\n"
            "e-Mail: dice@os.inf.tu-dresden.de\n\n");
 }
@@ -811,9 +1055,9 @@ void CCompiler::ShowHelp()
 #endif
                  "                 shows this help\n"
     " -v"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
         ", --verbose"
-#endif        
+#endif
                     " <level>      print verbose output\n"
     "    set <level> to 1 to let only the back-end generate output\n"
     "    set <level> to 2 to let back-end and data-representation generate\n"
@@ -826,83 +1070,86 @@ void CCompiler::ShowHelp()
     "    set <level> to 7 to let only the parser generate output\n"
     "    if you don't specify a level, level 1 is assumed\n"
     " -C"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --corba"
 #else
     "         "
-#endif    
+#endif
     "                use the CORBA front-end (scan CORBA IDL)\n"
     " -P"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --preprocess"
-#endif        
+#endif
     " <string>  hand <string> as argument to preprocessor\n"
     " -I<string>                 same as -P-I<string>\n"
+	" -D<string>                 same as -P-D<string>\n"
     " -nostdinc                  same as -P-nostdinc\n"
+	" -Wp,<string>               same as -P<string>\n"
+	"    Arguments given to '-P' and '-Wp,' are checked for '-D' and '-I'\n"
+	"    as well.\n"
     " -E                         stop processing after pre-processing\n"
+	" -EXML                      stop after parsing and dump an XML file of parsed\n"
+	"                            input\n"
     " -M                         print included file tree and stop after doing that\n"
     " -MM                        print included file tree for files included with\n"
     "                            '#include \"file\"' and stop\n"
     " -MD                        print included file tree into .d file and compile\n"
     " -MMD                       print included file tree for files included with\n"
     "                            '#include \"file\"' into .d file and compile\n"
+	" --with-cpp=<string>        use <string> as cpp\n"
+	"    Dice (silently) checks if it can run <string> before using it.\n"
 
     "\nBack-End Options:\n"
     " -i"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --create-inline"
-#endif        
+#endif
     " <mode>  generate client stubs as inline\n"
     "    set <mode> to \"static\" to generate static inline\n"
     "    set <mode> to \"extern\" to generate extern inline\n"
     "    <mode> is optional\n"
     " -n"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --no-opcodes"
 #else
     "              "
-#endif        
+#endif
     "            do not generate opcodes\n"
     " -c"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --client"
 #else
     "          "
-#endif        
+#endif
     "                generate client-side code\n"
     " -s"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --server"
 #else
     "          "
-#endif        
+#endif
     "                generate server/component-side code\n"
     "    if none of the two is specified both are set\n"
     " -t"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --template, --create-skeleton\n"
     "   "
-#endif    
+#endif
     "              generate skeleton/templates for server side functions\n"
-    " -r"
-#if defined(HAVE_GETOPT_LONG)    
-    ", --server-return-code"
-#else
-    "                      "
-#endif        
-    "    do generate an return code from server to client\n"
     " -F"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --filename-prefix"
-#endif    
+#endif
     " <string>\n"
     "                 prefix each filename with the string\n"
     " -p"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --include-prefix"
-#endif    
+#endif
     " <string>\n"
     "                 prefix each included file with string\n"
+	"\n"
+	"Compiler Flags:\n"
     " -f<string>                   supply flags to compiler\n"
     "    if <string> starts with 'F'/'f' (filetype):\n"
     "      set <string> to \"Fidlfile\" for one client C file per IDL file (default)\n"
@@ -920,24 +1167,64 @@ void CCompiler::ShowHelp()
     "      set <size> to \"short\" or 2 if opcode should use 2 bytes\n"
     "      set <size> to \"long\" or 4 if opcode should use 4 bytes (default)\n"
     "      set <size> to \"longlong\" or 8 if opcode should use 8 bytes\n"
-    "    set <string> to 'server-parameter' to provide a CORBA_Environment parameter\n"
-    "      to the server loop; otherwise you may use NULL when calling the loop\n"
+    "    set <string> to 'server-parameter' to provide a CORBA_Environment\n"
+	"      parameter to the server loop; otherwise you may use NULL when calling the\n"
+	"      loop\n"
     "    set <string> to 'init-rcvstring[=<func-name>]' to make the server-loop use\n"
-    "       a user-provided function to initialize the receive buffers of indirect strings\n"
+    "       a user-provided function to initialize the receive buffers of indirect\n"
+	"       strings\n"
+	"\n"
 	"    set <string> to 'force-corba-alloc' to force the usage of the CORBA_alloc\n"
 	"       function instead of the CORBA_Environment's malloc member\n"
-	"    set <string> to 'force-c-bindings' to force the usage of L4's C-bindings instead\n"
-	"       of inline assembler\n"
-	"    set <string> to 'trace-server' to trace all messages received by the server-loop\n"
+	"    set <string> to 'force-env-malloc' to force the usage of CORBA_Environment's\n"
+	"       malloc member instead of CORBA_alloc\n"
+	"    depending on their order they may override each other.\n"
+	"\n"
+	"    set <string> to 'force-c-bindings' to force the usage of L4's C-bindings\n"
+	"       instead of inline assembler\n"
+	"    set <string> to 'no-server-loop' to not generate the server loop function\n"
+	"    set <string> to 'no-dispatcher' to not generate the dispatcher function\n"
+	"\n"
+	"  Debug Options:\n"
+	"    set <string> to 'trace-server' to trace all messages received by the\n"
+	"       server-loop\n"
+	"    set <string> to 'trace-client' to trace all messages send to the server and\n"
+	"       answers received from it\n"
+	"    set <string> to 'trace-dump-msgbuf' to dump the message buffer, before a\n"
+	"       call, right after it, and after each wait\n"
+	"    set <string> to 'trace-dump-msgbuf-dwords=<number>' to restrict the number\n"
+	"       of dumped dwords. <number> can be any positive integer including zero.\n"
+	"    set <string> to 'trace-function=<function>' to use <function> instead of\n"
+	"       'printf' to print trace messages. This option sets the function for\n"
+	"       client and server.\n"
+	"       If you like to specify different functions for client, server, or msgbuf,\n"
+	"       you can use -ftrace-client=<function1>, -ftrace-server=<function2>, or\n"
+	"       -ftrace-dump-msgbuf=<function3> respectively\n"
+	"\n"
+	"    set <string> to 'zero-msgbuf' to zero out the message buffer before each\n"
+	"       and wait/reply-and-wait\n"
+	"    if <string> is set to 'use-symbols' or 'use-defines' the symbols given with\n"
+	"       '-D' or '-P-D' are not just handed down to the preprocessor, but also\n"
+	"       used to simplify the generated code. USE FOR DEBUGGING ONLY!\n"
+	"    if <string> is set to 'test-no-success-message' the tesuite will only print\n"
+	"       error messages (only useful in association with -T)\n"
+	"    if <string> is set to 'no-send-canceled-check' the client call will not\n"
+	"       retry to send if it was canceled or aborted by another thread.\n"
+	"    if <string> is set to 'const-as-define' all const declarations will be\n"
+	"       printed as #define statements\n"
+	"    if <string> is set to 'keep-temp-files' Dice will not delete the temporarely\n"
+	"       during preprocessing created files. This options should be used to\n"
+	"       debug dice only.\n"
+	"\n"
     " -B"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --back-end"
-#endif    
+#endif
     " <string>     defines the back-end to use\n"
     "    <string> starts with a letter specifying platform, kernel interface or\n"
     "    language mapping\n"
     "    p - specifies the platform (IA32, IA64, ARM) (default: IA32)\n"
-    "    i - specifies the kernel interface (v2, x0, x0adapt, v4, sock) (default: v2)\n"
+    "    i - specifies the kernel interface (v2, x0, x0adapt, v4, sock)(default:v2)\n"
     "    m - specifies the language mapping (C, CPP) (default: C)\n"
     "    example: -Bpia32 -Biv2 -BmC - which is default\n"
     "    (currently only the default values are supported)\n"
@@ -948,28 +1235,142 @@ void CCompiler::ShowHelp()
     "    set <level> to \"1\" to optimize array and constructed type marshalling\n"
     "    if <level> is empty the highest is chosen\n"
     " -T"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --testsuite"
-#endif    
+#endif
     " <string>    generates a testsuite for the stubs.\n"
     "                             (overwrites server skeleton file!)\n"
-    "    set <string> to \"thread\" if testsuite servers should run as seperate threads\n"
-    "    set <string> to \"task\"   if testsuite servers should run as seperate tasks\n"
+    "    set <string> to \"thread\" if testsuite servers should run as seperate\n"
+	"                             threads\n"
+    "    set <string> to \"task\"   if testsuite servers should run as seperate\n"
+	"                             tasks\n"
     "    if <string> is empty \"thread\" is chosen\n"
     " -m"
-#if defined(HAVE_GETOPT_LONG)    
+#if defined(HAVE_GETOPT_LONG)
     ", --message-passing"
 #else
     "                   "
-#endif        
+#endif
     "       generate MP functions for RPC functions as well\n"
     "\nGeneral Compiler Options\n"
     " -Wall                       ignore all warnings\n"
     " -Wignore-duplicate-fids     duplicate function ID are no errors, but warnings\n"
-    " -Wprealloc                  warn if memory has to be allocated using CORBA_alloc\n"
-    " -Wno-maxsize                warn if a variable sized parameter has no maximum size\n"
-    "                             to bound its required memory use\n"
+    " -Wprealloc                  warn if memory has to be allocated using\n"
+	"                             CORBA_alloc\n"
+    " -Wno-maxsize                warn if a variable sized parameter has no maximum\n"
+	"                             size to bound its required memory use\n"
     "\n\nexample: dice -v -i test.idl\n\n");
+    exit(0);
+}
+
+/** displays a short help for this compiler */
+void CCompiler::ShowShortHelp()
+{
+    printf("Usage: dice [<options>] <idl-file>\n"
+    //23456789+123456789+123456789+123456789+123456789+123456789+123456789+123456789+
+    "\nPre-Processor/Front-End Options:\n"
+    " -h"
+#if defined(HAVE_GETOPT_LONG)
+        ", --help"
+#else
+        "        "
+#endif
+                 "                 shows verbose help\n"
+    " -v"
+#if defined(HAVE_GETOPT_LONG)
+        ", --verbose"
+#endif
+                    " <level>      print verbose output\n"
+    " -C"
+#if defined(HAVE_GETOPT_LONG)
+    ", --corba"
+#else
+    "         "
+#endif
+    "                use the CORBA front-end (scan CORBA IDL)\n"
+    " -P"
+#if defined(HAVE_GETOPT_LONG)
+    ", --preprocess"
+#endif
+    " <string>  hand <string> as argument to preprocessor\n"
+    " -I<string>                 same as -P-I<string>\n"
+	" -D<string>                 same as -P-D<string>\n"
+    " -nostdinc                  same as -P-nostdinc\n"
+    " -E                         stop after pre-processing and output pre-processed\n"
+	"                            IDL file\n"
+    " -M                         print included file tree and stop after doing that\n"
+    " -MM                        print included file tree for files included with\n"
+    "                            '#include \"file\"' and stop\n"
+    " -MD                        print included file tree into .d file and compile\n"
+    " -MMD                       print included file tree for files included with\n"
+    "                            '#include \"file\"' into .d file and compile\n"
+
+    "\nBack-End Options:\n"
+    " -i"
+#if defined(HAVE_GETOPT_LONG)
+    ", --create-inline"
+#endif
+    " <mode>  generate client stubs as inline\n"
+    " -n"
+#if defined(HAVE_GETOPT_LONG)
+    ", --no-opcodes"
+#else
+    "              "
+#endif
+    "            do not generate opcodes\n"
+    " -c"
+#if defined(HAVE_GETOPT_LONG)
+    ", --client"
+#else
+    "          "
+#endif
+    "                generate client-side code\n"
+    " -s"
+#if defined(HAVE_GETOPT_LONG)
+    ", --server"
+#else
+    "          "
+#endif
+    "                generate server/component-side code\n"
+    "    if none of the two is specified both are set\n"
+    " -t"
+#if defined(HAVE_GETOPT_LONG)
+    ", --template, --create-skeleton\n"
+    "   "
+#endif
+    "              generate skeleton/templates for server side functions\n"
+    " -F"
+#if defined(HAVE_GETOPT_LONG)
+    ", --filename-prefix"
+#endif
+    " <string>\n"
+    "                 prefix each filename with the string\n"
+    " -p"
+#if defined(HAVE_GETOPT_LONG)
+    ", --include-prefix"
+#endif
+    " <string>\n"
+    "                 prefix each included file with string\n"
+    " -f<string>                   supply flags to compiler\n"
+    " -B"
+#if defined(HAVE_GETOPT_LONG)
+    ", --back-end"
+#endif
+    " <string>     defines the back-end to use\n"
+    " -O <level>                  sets the optimization level\n"
+    " -T"
+#if defined(HAVE_GETOPT_LONG)
+    ", --testsuite"
+#endif
+    " <string>    generates a testsuite for the stubs.\n"
+    " -m"
+#if defined(HAVE_GETOPT_LONG)
+    ", --message-passing"
+#else
+    "                   "
+#endif
+    "       generate MP functions for RPC functions as well\n"
+	" -W<string>                  some warning options\n\n");
     exit(0);
 }
 
@@ -990,23 +1391,38 @@ void CCompiler::ShowVersion()
  */
 void CCompiler::Parse()
 {
-	CParser *pParser = CParser::GetCurrentParser();
+    // if sFilename contains a path, add it to include paths
+	CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+    int nPos;
+    if ((nPos = m_sInFileName.ReverseFind('/')) >= 0)
+	{
+		pPreProcess->AddIncludePath(m_sInFileName.Left(nPos+1));
+		Verbose("Added %s to include paths\n", (const char*)(m_sInFileName.Left(nPos+1)));
+	}
     // set namespace to uninitialized
-    m_pRootFE = new CFEFile(m_sInFileName, String(), 0);
-	pParser->Parse(m_sInFileName, m_nUseFrontEnd, m_pRootFE, ((m_nVerboseLevel & PROGRAM_VERBOSE_PARSER) > 0));
+	CParser *pParser = CParser::CreateParser(m_nUseFrontEnd);
+	CParser::SetCurrentParser(pParser);
+	if (!pParser->Parse(0 /* no exitsing scan buffer*/, m_sInFileName,
+	    m_nUseFrontEnd, ((m_nVerboseLevel & PROGRAM_VERBOSE_PARSER) > 0),
+		(m_nOptions & PROGRAM_STOP_AFTER_PRE) > 0))
+    {
+		if (!erroccured)
+		    Error("other parser error.");
+	}
+	// get file
+	m_pRootFE = pParser->GetTopFileInScope();
 	// now that parsing is over, get rid of it
 	delete pParser;
-	CParser::SetCurrentParser(0);
 	// if errors, print them and abort
     if (erroccured)
     {
         if (errcount > 0)
             Error("%d Error(s) and %d Warning(s) occured.", errcount, warningcount);
         else
-            Warning("%s: warning: %d Warning(s) occured.", (const char *) m_sInFileName, warningcount);
+            Warning("%s: warning: %d Warning(s) occured while parsing.", (const char *) m_sInFileName, warningcount);
     }
 	// if we should stop after preprocessing we write the intermediate output
-    if (m_nOptions & PROGRAM_STOP_AFTER_PRE)
+    if (m_nOptions & PROGRAM_STOP_AFTER_PRE_XML)
     {
         Verbose("Start generating XML output ...\n");
         String sXMLFilename = m_pRootFE->GetFileNameWithoutExtension() + ".xml";
@@ -1036,7 +1452,7 @@ void CCompiler::Parse()
 void CCompiler::PrepareWrite()
 {
     // if we should stop after preprocessing skip this function
-    if (m_nOptions & PROGRAM_STOP_AFTER_PRE)
+    if (m_nOptions & (PROGRAM_STOP_AFTER_PRE | PROGRAM_STOP_AFTER_PRE_XML))
         return;
 
     Verbose("Check consistency of parsed input ...\n");
@@ -1058,11 +1474,20 @@ void CCompiler::PrepareWrite()
     if (m_nBackEnd & PROGRAM_BE_V2)
         pCF = new CL4V2BEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
     else if (m_nBackEnd & PROGRAM_BE_X0)
-        pCF = new CL4X0BEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
+	{
+	    if (m_nBackEnd & PROGRAM_BE_ARM)
+		    pCF = new CX0ArmClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
+	    else if (m_nBackEnd & PROGRAM_BE_IA32)
+		    pCF = new CX0IA32ClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
+	    else
+			pCF = new CL4X0BEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
+	}
     else if (m_nBackEnd & PROGRAM_BE_X0ADAPT)
 	    pCF = new CL4X0aBEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
     else if (m_nBackEnd & PROGRAM_BE_SOCKETS)
         pCF = new CSockBEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
+	else if (m_nBackEnd & PROGRAM_BE_CDR)
+	    pCF = new CCDRClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
     else
         pCF = new CBEClassFactory((m_nVerboseLevel & PROGRAM_VERBOSE_CLASSFACTORY) > 0);
 
@@ -1085,6 +1510,15 @@ void CCompiler::PrepareWrite()
     m_pContext->ModifyWarningLevel(m_nWarningLevel);
     m_pContext->SetOpcodeSize(m_nOpcodeSize);
     m_pContext->SetInitRcvStringFunc(m_sInitRcvStringFunc);
+	m_pContext->SetTraceClientFunc(m_sTraceClientFunc);
+	m_pContext->SetTraceServerFunc(m_sTraceServerFunc);
+	m_pContext->SetTraceMsgBufFunc(m_sTraceMsgBuf);
+	if (m_pContext->IsOptionSet(PROGRAM_USE_SYMBOLS))
+	{
+	    for (int i=0; i<m_nSymbolCount-1; i++)
+		    m_pContext->AddSymbol(m_sSymbols[i]);
+	}
+	m_pContext->SetTraceMsgBufDwords(m_nDumpMsgBufDwords);
     Verbose("...done.\n");
 
 	/** Prepare write for the back-end does some intialization which cannot be performed
@@ -1096,6 +1530,7 @@ void CCompiler::PrepareWrite()
     {
         Verbose("Back-End creation failed\n");
         delete m_pRootBE;
+		m_pRootBE = 0;
         Error("Creation of the back-end failed. compilation aborted.\n");
     }
     Verbose("...done.\n");
@@ -1107,9 +1542,10 @@ void CCompiler::PrepareWrite()
     Verbose("... dependencies done.\n");
 
     // if we should stop after printing the dependencies, stop here
-    if ((m_nOptions & PROGRAM_DEPEND_M) || (m_nOptions & PROGRAM_DEPEND_MM))
+    if (m_nOptions & (PROGRAM_DEPEND_M | PROGRAM_DEPEND_MM))
     {
          delete m_pContext;
+		 delete m_pRootBE;
          delete pNF;
          delete pCF;
          return;
@@ -1129,7 +1565,7 @@ void CCompiler::PrepareWrite()
 void CCompiler::Optimize()
 {
     // if we should stop after preprocessing skip this function
-    if ((m_nOptions & PROGRAM_STOP_AFTER_PRE) || (m_nOptions & PROGRAM_DEPEND_M) || (m_nOptions & PROGRAM_DEPEND_MM))
+    if (m_nOptions & (PROGRAM_STOP_AFTER_PRE | PROGRAM_STOP_AFTER_PRE_XML | PROGRAM_DEPEND_M | PROGRAM_DEPEND_MM))
         return;
 
     // create optimizer
@@ -1150,7 +1586,7 @@ void CCompiler::Optimize()
 void CCompiler::Write()
 {
     // if we should stop after preprocessing skip this function
-    if ((m_nOptions & PROGRAM_STOP_AFTER_PRE) || (m_nOptions & PROGRAM_DEPEND_M) || (m_nOptions & PROGRAM_DEPEND_MM))
+    if (m_nOptions & (PROGRAM_STOP_AFTER_PRE | PROGRAM_STOP_AFTER_PRE_XML | PROGRAM_DEPEND_M | PROGRAM_DEPEND_MM))
         return;
 
     // write backend
@@ -1161,10 +1597,11 @@ void CCompiler::Write()
 
 /**
  *	\brief helper function
+ *  \param sMsg the format string of the message
  *
  * This method prints a message if the ciompiler runs in verbose mode.
  */
-void CCompiler::Verbose(char *sMsg, ...)
+void CCompiler::Verbose(const char *sMsg, ...)
 {
     // if verbose turned off: return
     if (!m_bVerbose)
@@ -1182,7 +1619,7 @@ void CCompiler::Verbose(char *sMsg, ...)
  * This method prints an error message and exits the compiler. Any clean up should be
  * performed  BEFORE this method is called.
  */
-void CCompiler::Error(char *sMsg, ...)
+void CCompiler::Error(const char *sMsg, ...)
 {
     fprintf(stderr, "dice: ");
     va_list args;
@@ -1202,11 +1639,11 @@ void CCompiler::Error(char *sMsg, ...)
  * object has been declared. This is useful if we do not have a current line number available (any time after the
  * parsing finished).
  */
-void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, ...)
+void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...)
 {
     va_list args;
     va_start(args, sMsg);
-    GccError(pFEObject, nLinenb, sMsg, args);
+    GccErrorVL(pFEObject, nLinenb, sMsg, args);
     va_end(args);
 }
 
@@ -1220,7 +1657,7 @@ void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, ...)
  * object has been declared. This is useful if we do not have a current line number available (any time after the
  * parsing finished).
  */
-void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list vl)
+void CCompiler::GccErrorVL(CFEBase * pFEObject, int nLinenb, const char *sMsg, va_list vl)
 {
     if (pFEObject)
     {
@@ -1252,7 +1689,11 @@ void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list v
                 {
                     // we do not use GetFullFileName, because the "normal" filename already includes the whole path
                     // it is the filename generated by Gcc
-                    fprintf(stderr, "from %s:%d", (const char*) ((CFEFile *) (pIter->GetElement()))->GetFileName(), 1);
+					CFEFile *pFEFile = (CFEFile *)(pIter->GetElement());
+					int nIncludeLine = 1;
+					if (pIter->GetNext())
+					    nIncludeLine = ((CFEFile*)(pIter->GetNext()->GetElement()))->GetIncludedOnLine();
+                    fprintf(stderr, "from %s:%d", (const char*) pFEFile->GetFileName(), nIncludeLine);
                     if (pIter->GetNext()->GetNext())
                         fprintf(stderr, ",\n                 ");
                     else
@@ -1279,7 +1720,7 @@ void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list v
  *
  * This method prints an error message and returns.
  */
-void CCompiler::Warning(char *sMsg, ...)
+void CCompiler::Warning(const char *sMsg, ...)
 {
     va_list args;
     va_start(args, sMsg);
@@ -1293,11 +1734,11 @@ void CCompiler::Warning(char *sMsg, ...)
  *	\param nLinenb the line in the file where the object originated
  *	\param sMsg the warning message
  */
-void CCompiler::GccWarning(CFEBase * pFEObject, int nLinenb, char *sMsg, ...)
+void CCompiler::GccWarning(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...)
 {
     va_list args;
     va_start(args, sMsg);
-    GccWarning(pFEObject, nLinenb, sMsg, args);
+    GccWarningVL(pFEObject, nLinenb, sMsg, args);
     va_end(args);
 }
 
@@ -1307,8 +1748,10 @@ void CCompiler::GccWarning(CFEBase * pFEObject, int nLinenb, char *sMsg, ...)
  *	\param sMsg the warning message
  *  \param vl teh variable argument list
  */
-void CCompiler::GccWarning(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list vl)
+void CCompiler::GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg, va_list vl)
 {
+    erroccured++;
+	warningcount++;
     if (pFEObject)
     {
         // check line number
@@ -1406,17 +1849,17 @@ void CCompiler::PrintDependencyTree(FILE * output, CFEFile * pFEFile)
     if (!pFEFile)
         return;
     // print names
-    VectorElement *pIter = pFEFile->GetFirstIncludeFile();
+    VectorElement *pIter = pFEFile->GetFirstChildFile();
     CFEFile *pIncFile;
-    while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+    while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
     {
         if (pIncFile->IsStdIncludeFile() && ((m_nOptions & PROGRAM_DEPEND_MM) || (m_nOptions & PROGRAM_DEPEND_MMD)))
             continue;
         PrintDependentFile(output, pIncFile->GetFullFileName());
     }
     // ierate over included files
-    pIter = pFEFile->GetFirstIncludeFile();
-    while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+    pIter = pFEFile->GetFirstChildFile();
+    while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
     {
         if (pIncFile->IsStdIncludeFile() && ((m_nOptions & PROGRAM_DEPEND_MM) || (m_nOptions & PROGRAM_DEPEND_MMD)))
             continue;
@@ -1477,9 +1920,9 @@ void CCompiler::PrintGeneratedFiles(FILE * output, CFEFile * pFEFile)
 
     if (m_nOptions & PROGRAM_FILE_ALL)
     {
-        VectorElement *pIter = pFEFile->GetFirstIncludeFile();
+        VectorElement *pIter = pFEFile->GetFirstChildFile();
         CFEFile *pFile;
-        while ((pFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+        while ((pFile = pFEFile->GetNextChildFile(pIter)) != 0)
             PrintGeneratedFiles(output, pFile);
     }
 }
@@ -1796,4 +2239,30 @@ void CCompiler::PrintDependentFile(FILE * output, String sFileName)
      }
      fprintf(output, "%s ", (const char *) sFileName);
      m_nCurCol += nLength + 1;
+}
+
+/** \brief adds another symbol to the internal list
+ *  \param sNewSymbol the symbol to add
+ */
+void CCompiler::AddSymbol(const char *sNewSymbol)
+{
+    if (!sNewSymbol)
+        return;
+    if (!m_sSymbols)
+        m_nSymbolCount = 2;
+    else
+        m_nSymbolCount++;
+    m_sSymbols = (char **) realloc(m_sSymbols, m_nSymbolCount * sizeof(char *));
+    m_sSymbols[m_nSymbolCount - 2] = strdup(sNewSymbol);
+    m_sSymbols[m_nSymbolCount - 1] = 0;
+}
+
+/** \brief adds another symbol to the internal list
+ *  \param sNewSymbol the symbol to add
+ */
+void CCompiler::AddSymbol(String sNewSymbol)
+{
+    if (sNewSymbol.IsEmpty())
+	    return;
+    AddSymbol((const char*)sNewSymbol);
 }

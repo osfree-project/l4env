@@ -1,0 +1,5 @@
+Implementation of the Omega0 interrupt management interface
+
+This package contains a standalone implementation of the Omega0 server. See
+doc/omega0.ps.gz for a paper on the Omega0 interface specification.
+The l4io package sources this package for its multi-server including Omega0.

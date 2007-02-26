@@ -9,7 +9,7 @@
 unsigned long *glob_ptr;
 #endif
 
-CORBA_long test_test_map_component(CORBA_Object *_dice_corba_obj,
+CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
     l4_snd_fpage_t page,
     CORBA_unsigned_long offset,
     CORBA_Environment *_dice_corba_env)
@@ -53,7 +53,8 @@ int main(int argc, char* argv[])
   // register with names
   names_register("fpageS");
   // turn on logging
-  enter_kdebug("*#I*IR+");
+//  enter_kdebug("*#I*");
+//  enter_kdebug("*#IR+");
   // start loop
   test_test_server_loop(&_env);
   // unregister with names

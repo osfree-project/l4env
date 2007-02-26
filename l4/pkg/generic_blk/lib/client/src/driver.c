@@ -12,6 +12,7 @@
 /* L4 includes */
 #include <l4/util/atomic.h>
 #include <l4/env/errno.h>
+#include <l4/log/l4log.h>
 #include <l4/util/macros.h>
 #include <l4/names/libnames.h>
 
@@ -98,7 +99,7 @@ l4blk_open_driver(const char * name,
 {
   int d,ret;
   blkclient_driver_t * drv;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* return invalid driver handle on error */
   *driver = -1;
@@ -106,14 +107,12 @@ l4blk_open_driver(const char * name,
   /* find driver descriptor */
   for (d = 0; d < BLKCLIENT_MAX_DRIVERS; d++)
     {
-      if (cmpxchg32(&drivers[d].notify_thread,-1,0))
+      if (l4util_cmpxchg32(&drivers[d].notify_thread, -1, 0))
 	/* found */
 	break;
     }
 
-#if DEBUG_DRIVER_OPEN
-  INFO("using driver descriptor %d\n",d);
-#endif
+  LOGdL(DEBUG_DRIVER_OPEN, "using driver descriptor %d", d);
 
   if (d == BLKCLIENT_MAX_DRIVERS)
     return -L4_ENOMEM;
@@ -121,45 +120,39 @@ l4blk_open_driver(const char * name,
   drv = &drivers[d];
 
   /* request driver id at nameserver */
-  if (!names_waitfor_name(name,&drv->driver_id,BLKCLIENT_NAMES_WAIT))
+  if (!names_waitfor_name(name, &drv->driver_id, BLKCLIENT_NAMES_WAIT))
     {
-      Error("Block driver \"%s\" not found!\n",name);
+      LOG_Error("block driver \"%s\" not found!",name);
       return -L4_ENOTFOUND;
     }
 
   /* open driver */
-  ret = l4blk_driver_open(drv->driver_id,&drv->handle,
-			  (l4blk_threadid_t *)&drv->cmd_id,
-			  (l4blk_threadid_t *)&drv->notify_id,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4blk_driver_open_call(&drv->driver_id, &drv->handle,
+                               &drv->cmd_id, &drv->notify_id, &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("Open driver failed \"%s\" (ret %d, exc %d)\n",name,ret,exc._type);
+      LOG_Error("open driver failed \"%s\" (ret %d, exc %d)",
+                name, ret, _env.major);
       if (ret)
 	return ret;
       else
 	return -L4_EIPC;
     }
 
-#if DEBUG_DRIVER_OPEN
-  INFO("opened driver %d, cmd %x.%x, notify %x.%x\n",drv->handle,
-       drv->cmd_id.id.task,drv->cmd_id.id.lthread,
-       drv->notify_id.id.task,drv->notify_id.id.lthread);
-#endif
+  LOGdL(DEBUG_DRIVER_OPEN, "\n  opened driver %d, cmd "IdFmt", notify "IdFmt,
+        drv->handle, IdStr(drv->cmd_id), IdStr(drv->notify_id));
 
   /* create notification thread */
   ret = blkclient_start_notification_thread(drv);
   if (ret)
     {
-      Error("Create notification thread failed!\n");
-      l4blk_driver_close(drv->driver_id,drv->handle,&exc);
+      LOG_Error("create notification thread failed!");
+      l4blk_driver_close_call(&drv->driver_id, drv->handle, &_env);
       return -L4_ENOTHREAD;
     }
 
-#if DEBUG_DRIVER_OPEN
-  INFO("notification wait thread %x.%x\n",
-       l4thread_l4_id(drv->notify_thread).id.task,
-       l4thread_l4_id(drv->notify_thread).id.lthread);
-#endif
+  LOGdL(DEBUG_DRIVER_OPEN, "notification wait thread "IdFmt,
+        IdStr(l4thread_l4_id(drv->notify_thread)));
 
   *driver = d;
 
@@ -183,7 +176,7 @@ l4blk_close_driver(l4blk_driver_t driver)
 {
   blkclient_driver_t * drv;
   int ret;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;  
   
   /* check driver handle */
   if ((driver < 0) || (driver >= BLKCLIENT_MAX_DRIVERS) ||
@@ -196,10 +189,10 @@ l4blk_close_driver(l4blk_driver_t driver)
   drv->notify_thread = -1;
 
   /* close driver */
-  ret = l4blk_driver_close(drv->driver_id,drv->handle,&exc);
-  if (ret || (exc._type != exc_l4_no_exception))
+  ret = l4blk_driver_close_call(&drv->driver_id, drv->handle, &_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      Error("Close driver failed ((ret %d, exc %d)\n",ret,exc._type);
+      LOG_Error("close driver failed (ret %d, exc %d)", ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -208,4 +201,25 @@ l4blk_close_driver(l4blk_driver_t driver)
 
   /* done */
   return 0;
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Return thread id of command thread
+ * 
+ * \param  driver        Driver handle
+ *	
+ * \return thread id of command thread, L4_INVALID_ID if invalid driver handle
+ */
+/*****************************************************************************/ 
+l4_threadid_t 
+l4blk_get_driver_thread(l4blk_driver_t driver)
+{
+  /* check driver handle */
+  if ((driver < 0) || (driver >= BLKCLIENT_MAX_DRIVERS) ||
+      (drivers[driver].notify_thread == -1))
+    return L4_INVALID_ID;
+
+  /* return command thread id */
+  return drivers[driver].cmd_id;
 }

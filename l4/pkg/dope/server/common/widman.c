@@ -1,10 +1,19 @@
 /*
- * \brief	DOpE widget base class module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE widget base class module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * This module implements common functionality
  * of all widgets.
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
  */
 
 
@@ -12,9 +21,8 @@ struct private_widget;
 #define WIDGET struct private_widget
 #define WIDGETARG WIDGET
 
+#include "dopestd.h"
 #include "event.h"
-#include "dope-config.h"
-#include "memory.h"
 #include "script.h"
 #include "widget_data.h"
 #include "widget.h"
@@ -25,16 +33,15 @@ struct private_widget;
 #define MAX(a,b) a>b?a:b
 #define MIN(a,b) a<b?a:b
 
-static struct memory_services    *mem;
 static struct redraw_services    *redraw;
 static struct script_services    *script;
 static struct messenger_services *msg;
 
 /* we only need to access the interface that all widget types have in common */
 WIDGET {
-	struct widget_methods 	*gen;	/* pointer to general methods */
-	void					*widget_specific_methods;
-	struct widget_data		*wd;	/* pointer to general attributes */
+	struct widget_methods   *gen;   /* pointer to general methods */
+	void                    *widget_specific_methods;
+	struct widget_data      *wd;    /* pointer to general attributes */
 };
 
 int init_widman(struct dope_services *d);
@@ -58,7 +65,7 @@ static u8 *strdup(u8 *s) {
 	if (!s) return NULL;
 	strl = strlength(s);
 	if (strl>=0) {
-		result = mem->alloc(strl+2);
+		result = malloc(strl+2);
 		if (!result) return NULL;
 		d=result;
 		while (*s) *(d++)=*(s++);
@@ -67,16 +74,6 @@ static u8 *strdup(u8 *s) {
 	}
 	return NULL;
 }
-
-static u16 streq(char *s1,char *s2) {
-	int i;
-	for (i=0;i<256;i++) {
-		if (*(s1) != *(s2++)) return 0;
-		if (*(s1++) == 0) return 1;
-	}
-	return 1;
-}
-
 
 
 /*********************************************************/
@@ -87,10 +84,10 @@ static u16 streq(char *s1,char *s2) {
 static void wid_destroy(WIDGET *w) {
 	/* dont destroy widget, which are still in use */
 	if (w->wd->ref_cnt) {
-		DOPEDEBUG(printf("WidgetManager(destroy): The reference counter of the object %lu is not zero -\n",(long)w));
-		DOPEDEBUG(printf("                        I hope you know what you are doing!..."));
+		INFO(printf("WidgetManager(destroy): The reference counter of the object %lu is not zero -\n",(long)w));
+		INFO(printf("                        I hope you know what you are doing!..."));
 	}
-	mem->free(w);
+	free(w);
 }
 
 
@@ -155,7 +152,7 @@ static long wid_get_max_h(WIDGET *w) {
 
 
 /*** DETERMINE ABSOLUTE POSITION OF THE WIDGET ON THE SCREEN ***/
-static long	wid_get_abs_x(WIDGET *w) {
+static long wid_get_abs_x(WIDGET *w) {
 	long x=0;
 	while ((w!=NULL) && (w!=(WIDGET *)'#')) {
 		x+=w->wd->x;
@@ -163,7 +160,7 @@ static long	wid_get_abs_x(WIDGET *w) {
 	}
 	return x;
 }
-static long	wid_get_abs_y(WIDGET *w) {
+static long wid_get_abs_y(WIDGET *w) {
 	long y=0;
 	while ((w!=NULL) && (w!=(WIDGET *)'#')) {
 		y+=w->wd->y;
@@ -174,10 +171,10 @@ static long	wid_get_abs_y(WIDGET *w) {
 
 
 /*** GET/SET WIDGET STATE (SELECTED OR NOT) ***/
-static long wid_get_state(WIDGET *w) {
+static int wid_get_state(WIDGET *w) {
 	return w->wd->flags & WID_FLAGS_STATE;
 }
-static void wid_set_state(WIDGET *w,long new){
+static void wid_set_state(WIDGET *w,int new){
 	if (new) w->wd->flags = w->wd->flags | WID_FLAGS_STATE;
 	else w->wd->flags = w->wd->flags & (WID_FLAGS_STATE^0xffffffff);
 	w->wd->update = w->wd->update | WID_UPDATE_STATE;
@@ -185,10 +182,10 @@ static void wid_set_state(WIDGET *w,long new){
 
 
 /*** GET/SET FOCUS FLAG (MOUSE OVER WIDGET) ***/
-static long wid_get_focus(WIDGET *w) {
+static int wid_get_focus(WIDGET *w) {
 	return w->wd->flags & WID_FLAGS_FOCUS;
 }
-static void wid_set_focus(WIDGET *w,long new){
+static void wid_set_focus(WIDGET *w,int new){
 	if (new) w->wd->flags = w->wd->flags | WID_FLAGS_FOCUS;
 	else w->wd->flags = w->wd->flags & (WID_FLAGS_FOCUS^0xffffffff);
 	w->wd->update = w->wd->update | WID_UPDATE_FOCUS;
@@ -199,7 +196,7 @@ static void wid_set_focus(WIDGET *w,long new){
 static WIDGET * wid_get_parent(WIDGET *w) {
 	return w->wd->parent;
 }
-static void wid_set_parent(WIDGET *w,void *p)	{
+static void wid_set_parent(WIDGET *w,void *p)   {
 	w->wd->parent=p;
 	w->wd->update = w->wd->update | WID_UPDATE_PARENT;
 }
@@ -215,30 +212,30 @@ static void wid_set_context(WIDGET *w,void *c) {
 
 
 /*** GET/SET NEXT/PREVIOUS ELEMENT WHEN THE WIDGET IS USED IN A CONNECTED LIST ***/
-static WIDGET *	wid_get_next(WIDGET *w) {
+static WIDGET * wid_get_next(WIDGET *w) {
 	return w->wd->next;
 }
-static void wid_set_next(WIDGET *w,WIDGET *n)	{
+static void wid_set_next(WIDGET *w,WIDGET *n)   {
 	w->wd->next=n;
 }
-static WIDGET *	wid_get_prev(WIDGET *w) {
+static WIDGET * wid_get_prev(WIDGET *w) {
 	return w->wd->prev;
 }
-static void wid_set_prev(WIDGET *w,WIDGET *p)	{
+static void wid_set_prev(WIDGET *w,WIDGET *p)   {
 	w->wd->prev=p;
 }
 
 
 /*** DRAW A WIDGET (DUMMY - MUST BE OVERWRITTEN BY SOMETHING MORE USEFUL ***/
-static void wid_draw(WIDGET *w,long x,long y) {
-	w=w;x=x;y=y;	/* just to avoid warnings */
+static void wid_draw(WIDGET *w, struct gfx_ds *ds, long x,long y) {
+	w=w;x=x;y=y;    /* just to avoid warnings */
 }
 
 
 /*** FIND WIDGET INSIDE A WIDGET AT THE GIVEN POSITION (RELATIVE TO PARENT) ***/
 static WIDGET *wid_find(WIDGET *w,long x,long y) {
 	if (w) {
-		if ((x >= w->wd->x) && (y >= w->wd->y) && 
+		if ((x >= w->wd->x) && (y >= w->wd->y) &&
 			(x < w->wd->x+w->wd->w) && (y < w->wd->y+w->wd->h)) {
 			return w;
 		}
@@ -272,12 +269,12 @@ static void wid_update(WIDGET *w,u16 redraw_flag) {
 		ny1 = wid_get_abs_y(w);
 		nx2 = nx1 + w->wd->w - 1;
 		ny2 = ny1 + w->wd->h - 1;
-		
+
 		ox1 = nx1 - w->wd->x + w->wd->ox;
 		oy1 = ny1 - w->wd->y + w->wd->oy;
 		ox2 = ox1 + w->wd->ow - 1;
 		oy2 = oy1 + w->wd->oh - 1;
-		
+
 		/* if the updated widget is a window use the general draw function */
 		if (w==win) {
 			if (redraw_flag) redraw->draw_area(NULL,MIN(ox1,nx1),MIN(oy1,ny1),MAX(ox2,nx2),MAX(oy2,ny2));
@@ -286,10 +283,10 @@ static void wid_update(WIDGET *w,u16 redraw_flag) {
 		/* otherwise limit the drawing to window area */
 		else {
 			p=w->wd->parent;
-			if (p) redraw_flag = p->gen->do_layout(p,w,redraw_flag);
+//          if (p) redraw_flag = p->gen->do_layout(p,w,redraw_flag);
 			if (redraw_flag) redraw->draw_area(win,MIN(ox1,nx1),MIN(oy1,ny1),MAX(ox2,nx2),MAX(oy2,ny2));
 		}
-		
+
 		w->wd->ox=w->wd->x;
 		w->wd->oy=w->wd->y;
 		w->wd->ow=w->wd->w;
@@ -300,29 +297,29 @@ static void wid_update(WIDGET *w,u16 redraw_flag) {
 
 
 /*** INC/DECREMENT REFERENCE COUNTER OF WIDGET ***/
-static void	wid_inc_ref(WIDGET *w) {
+static void wid_inc_ref(WIDGET *w) {
 	if (!w) return;
 	w->wd->ref_cnt++;
 }
-static void	wid_dec_ref(WIDGET *w) {
+static void wid_dec_ref(WIDGET *w) {
 	if (!w) return;
 	w->wd->ref_cnt--;
 	if (w->wd->ref_cnt<=0) {
-		DOPEDEBUG(printf("widget %lu ref_cnt reached zero -> commit suicide\n",(long)w));
+		INFO(printf("widget %lu ref_cnt reached zero -> commit suicide\n",(long)w));
 		w->gen->destroy(w);
 	}
 }
 
 
 /*** CAUSE A REDRAW OF THE WIDGET ***/
-static void	wid_force_redraw(WIDGET *cw) {
+static void wid_force_redraw(WIDGET *cw) {
 	redraw->draw_widget(cw);
 }
 
 
 /*** HANDLE EVENTS ***/
 static void wid_handle_event(WIDGET *cw,EVENT *e) {
-	struct binding_struct *cb = cw->wd->bindings;
+	struct binding *cb = cw->wd->bindings;
 	s16 propagate = 1;
 
 	/* check bindings */
@@ -348,7 +345,7 @@ static void wid_handle_event(WIDGET *cw,EVENT *e) {
 static u16 wid_do_layout(WIDGET *cw,WIDGET *child,u16 redraw_flag) {
 
 	/* ... we leave the redraw_flag as it is ... */
-	
+
 	/* return 1 -> we didnt made a redraw - the caller has to do this */
 	/* return 0 -> we made a redraw - the caller dont has to do anything more */
 
@@ -358,10 +355,10 @@ static u16 wid_do_layout(WIDGET *cw,WIDGET *child,u16 redraw_flag) {
 
 /*** ADD EVENT BINDING FOR A WIDGET ***/
 static void wid_bind(WIDGET *cw,char *bind_ident,char *message) {
-	struct binding_struct *new;
-	
-	printf("Widman(bind): create new binding for %s\n",bind_ident);
-	new = (struct binding_struct *)mem->alloc(sizeof(struct binding_struct));
+	struct binding *new;
+
+	INFO(printf("Widman(bind): create new binding for %s\n",bind_ident);)
+	new = (struct binding *)malloc(sizeof(struct binding));
 	if (!new) {
 		ERROR(printf("WidgetManager(bind): out of memory!\n");)
 		return;
@@ -371,12 +368,12 @@ static void wid_bind(WIDGET *cw,char *bind_ident,char *message) {
 	new->next = cw->wd->bindings;
 	new->bind_ident = strdup(bind_ident);
 	cw->wd->bindings = new;
-	
-	if (streq(bind_ident,"press")) 	{new->ev_type = EVENT_PRESS; return;}
-	if (streq(bind_ident,"release")){new->ev_type = EVENT_RELEASE; return;}
-	if (streq(bind_ident,"motion"))	{new->ev_type = EVENT_MOTION; return;}
-	if (streq(bind_ident,"leave")) 	{new->ev_type = EVENT_MOUSE_LEAVE;  return;}
-	if (streq(bind_ident,"enter")) 	{new->ev_type = EVENT_MOUSE_ENTER;  return;}
+
+	if (dope_streq(bind_ident,"press",6))  {new->ev_type = EVENT_PRESS; return;}
+	if (dope_streq(bind_ident,"release",8)){new->ev_type = EVENT_RELEASE; return;}
+	if (dope_streq(bind_ident,"motion",7)) {new->ev_type = EVENT_MOTION; return;}
+	if (dope_streq(bind_ident,"leave",6))  {new->ev_type = EVENT_MOUSE_LEAVE;  return;}
+	if (dope_streq(bind_ident,"enter",6))  {new->ev_type = EVENT_MOUSE_ENTER;  return;}
 
 	new->bind_ident = strdup(bind_ident);
 	new->ev_type = EVENT_ACTION;
@@ -385,10 +382,10 @@ static void wid_bind(WIDGET *cw,char *bind_ident,char *message) {
 
 /*** CHECK IF WIDGET IS BOUND TO A CERTAIN EVENT ***/
 static u8 *wid_get_bind_msg(WIDGET *cw,u8 *bind_ident) {
-	struct binding_struct *cb = cw->wd->bindings;
-	
+	struct binding *cb = cw->wd->bindings;
+
 	while (cb) {
-		if (streq(cb->bind_ident,bind_ident)) return cb->msg;
+		if (dope_streq(cb->bind_ident,bind_ident,256)) return cb->msg;
 		cb=cb->next;
 	}
 	return NULL;
@@ -404,8 +401,8 @@ static void default_widget_data(struct widget_data *d) {
 	d->x =0; d->y =0; d->w =64; d->h =64;
 	d->ox=0; d->oy=0; d->ow=64; d->oh=64;
 	d->min_w=0;
-	d->min_h=0; 
-	d->max_w=10000;   
+	d->min_h=0;
+	d->max_w=10000;
 	d->max_h=10000;
 	d->update=0;
 	d->next=NULL;
@@ -422,46 +419,46 @@ static void default_widget_data(struct widget_data *d) {
 
 /*** SET GENERAL WIDGET METHODS TO DEFAULT METHODS ***/
 static void default_widget_methods(struct widget_methods *m) {
-	m->destroy		= wid_destroy;
-	m->get_app_id	= wid_get_app_id;
-	m->set_app_id	= wid_set_app_id;
-	m->get_x		= wid_get_x;
-	m->set_x		= wid_set_x;
-	m->get_y		= wid_get_y;
-	m->set_y		= wid_set_y;
-	m->get_w		= wid_get_w;
-	m->set_w		= wid_set_w;
-	m->get_h		= wid_get_h;
-	m->set_h		= wid_set_h;
-	m->get_min_w	= wid_get_min_w;
-	m->get_min_h	= wid_get_min_h;
-	m->get_max_w	= wid_get_max_w;
-	m->get_max_h	= wid_get_max_h;
-	m->get_abs_x	= wid_get_abs_x;
-	m->get_abs_y	= wid_get_abs_y;
-	m->get_state	= wid_get_state;
-	m->set_state	= wid_set_state;
-	m->get_parent	= wid_get_parent;
-	m->set_parent	= wid_set_parent;
-	m->get_context	= wid_get_context;
-	m->set_context	= wid_set_context;
-	m->get_next		= wid_get_next;
-	m->set_next		= wid_set_next;
-	m->get_prev		= wid_get_prev;
-	m->set_prev		= wid_set_prev;
-	m->draw			= wid_draw;
-	m->update		= wid_update;
-	m->find			= wid_find;
-	m->inc_ref		= wid_inc_ref;
-	m->dec_ref		= wid_dec_ref;
-	m->force_redraw	= wid_force_redraw;
-	m->get_focus	= wid_get_focus;
-	m->set_focus	= wid_set_focus;
-	m->handle_event	= wid_handle_event;
-	m->get_window	= wid_get_window;
-	m->do_layout	= wid_do_layout;
-	m->bind			= wid_bind;
-	m->get_bind_msg	= wid_get_bind_msg;
+	m->destroy      = wid_destroy;
+	m->get_app_id   = wid_get_app_id;
+	m->set_app_id   = wid_set_app_id;
+	m->get_x        = wid_get_x;
+	m->set_x        = wid_set_x;
+	m->get_y        = wid_get_y;
+	m->set_y        = wid_set_y;
+	m->get_w        = wid_get_w;
+	m->set_w        = wid_set_w;
+	m->get_h        = wid_get_h;
+	m->set_h        = wid_set_h;
+	m->get_min_w    = wid_get_min_w;
+	m->get_min_h    = wid_get_min_h;
+	m->get_max_w    = wid_get_max_w;
+	m->get_max_h    = wid_get_max_h;
+	m->get_abs_x    = wid_get_abs_x;
+	m->get_abs_y    = wid_get_abs_y;
+	m->get_state    = wid_get_state;
+	m->set_state    = wid_set_state;
+	m->get_parent   = wid_get_parent;
+	m->set_parent   = wid_set_parent;
+	m->get_context  = wid_get_context;
+	m->set_context  = wid_set_context;
+	m->get_next     = wid_get_next;
+	m->set_next     = wid_set_next;
+	m->get_prev     = wid_get_prev;
+	m->set_prev     = wid_set_prev;
+	m->draw         = wid_draw;
+	m->update       = wid_update;
+	m->find         = wid_find;
+	m->inc_ref      = wid_inc_ref;
+	m->dec_ref      = wid_dec_ref;
+	m->force_redraw = wid_force_redraw;
+	m->get_focus    = wid_get_focus;
+	m->set_focus    = wid_set_focus;
+	m->handle_event = wid_handle_event;
+	m->get_window   = wid_get_window;
+	m->do_layout    = wid_do_layout;
+	m->bind         = wid_bind;
+	m->get_bind_msg = wid_get_bind_msg;
 }
 
 
@@ -497,11 +494,10 @@ static struct widman_services services = {
 
 int init_widman(struct dope_services *d) {
 
-	mem		=	d->get_module("Memory 1.0");	
-	redraw	=	d->get_module("RedrawManager 1.0");
-	msg		=	d->get_module("Messenger 1.0");
-	script	=	d->get_module("Script 1.0");
-	
+	redraw = d->get_module("RedrawManager 1.0");
+	msg    = d->get_module("Messenger 1.0");
+	script = d->get_module("Script 1.0");
+
 	d->register_module("WidgetManager 1.0",&services);
 	return 1;
 }

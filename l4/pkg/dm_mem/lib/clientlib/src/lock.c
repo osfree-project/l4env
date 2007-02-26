@@ -6,23 +6,13 @@
  *
  * \date   01/30/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -60,14 +50,14 @@ __lock(l4dm_dataspace_t * ds,
        l4_size_t size)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_mem_lock(ds->manager,ds->id,offset,size,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_mem_lock_call(&(ds->manager),ds->id,offset,size,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_mem: lock dataspace %u at %x.%x failed (ret %d, exc %d)!",
-	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_exc._type);
+	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_env.major);
       if (ret)
         return ret;
       else
@@ -99,14 +89,14 @@ __unlock(l4dm_dataspace_t * ds,
 	 l4_size_t size)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_mem_unlock(ds->manager,ds->id,offset,size,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_mem_unlock_call(&(ds->manager),ds->id,offset,size,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_mem: unlock dataspace %u at %x.%x failed (ret %d, exc %d)!",
-	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_exc._type);
+	  ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_env.major);
       if (ret)
         return ret;
       else
@@ -148,10 +138,8 @@ __walk_vm(l4_addr_t addr,
   failed = 0;
   while ((left > 0) && !failed)
     {
-#if DEBUG_LOCK
-      INFO("addr 0x%08x, left 0x%08x\n",a,left);
-#endif
-
+      LOGdL(DEBUG_LOCK,"addr 0x%08x, left 0x%08x",a,left);
+      
       /* lookup addr */
       ret = l4rm_lookup((void *)a,&ds,&ds_offs,&ds_map_addr,&ds_map_size);
       if (ret < 0)
@@ -167,14 +155,12 @@ __walk_vm(l4_addr_t addr,
 	  if (map_remain > left)
 	    map_remain = left;
 
-#if DEBUG_LOCK
-	  INFO("ds %u at %x.%x\n",ds.id,ds.manager.id.task,
-	       ds.manager.id.lthread);
-	  DMSG("  ds map area 0x%08x-0x%08x, offs 0x%08x\n",
-	       ds_map_addr,ds_map_addr + ds_map_size,ds_offs);
-	  DMSG("  %s request size 0x%08x\n",
-	       (lock) ? "lock" : "unlock",map_remain);
-#endif	  
+	  LOGdL(DEBUG_LOCK,"ds %u at %x.%x\n" \
+                "  ds map area 0x%08x-0x%08x, offs 0x%08x\n" \
+                "  %s request size 0x%08x",
+                ds.id,ds.manager.id.task,ds.manager.id.lthread,
+                ds_map_addr,ds_map_addr + ds_map_size,ds_offs,
+                (lock) ? "lock" : "unlock",map_remain);
 
 	  if (lock)
 	    ret = __lock(&ds,ds_offs,map_remain);
@@ -183,9 +169,9 @@ __walk_vm(l4_addr_t addr,
 	  if (ret < 0)
 	    {
 #if DEBUG_ERRORS
-	      DMSG("ds %u at %x.%x, offset 0x%08x, size 0x%08x\n",
-		   ds.id,ds.manager.id.task,ds.manager.id.lthread,ds_offs,
-		   map_remain);
+	      printf("ds %u at %x.%x, offset 0x%08x, size 0x%08x\n",
+                     ds.id,ds.manager.id.task,ds.manager.id.lthread,ds_offs,
+                     map_remain);
 	      ERROR("libdm_mem: %s failed: %d!",
 		    (lock) ? "lock" : "unlock",ret);
 #endif

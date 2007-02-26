@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	generic_io/lib/src/init.c
+ * \file   generic_io/lib/clientlib/init.c
+ * \brief  L4Env I/O Client Library Initialization
  *
- * \brief	L4Env I/O Client Library Initialization
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -65,10 +54,10 @@ static int _initialized = 0;	/**< initialization flag */
 static int __io_register(l4_uint32_t * type)
 {
   int error;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  error = l4_io_register_client(io_l4id, *type, &_exc);
-  return FLICK_ERR(error, &_exc);
+  error = l4_io_register_client_call(&io_l4id, *type, &_env);
+  return DICE_ERR(error, &_env);
 }
 
 /*****************************************************************************/
@@ -85,7 +74,7 @@ static int __io_register(l4_uint32_t * type)
 static int __io_mapping(l4io_info_t **addr)
 {
   int error;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   l4_fpage_t rfp;		/* receive fpage desc */
   l4_snd_fpage_t info;		/* received fpage */
@@ -100,13 +89,14 @@ static int __io_mapping(l4io_info_t **addr)
   l4_fpage_unmap(rfp, L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 
   DMSG("receiving fpage {0x%08x, 0x%08x}\n", rfp.fp.page << 12, 1 << rfp.fp.size);
+  _env.rcv_fpage = rfp;
 
-  error = l4_io_map_info(io_l4id, rfp, &info, &_exc);
+  error = l4_io_map_info_call(&io_l4id, &info, &_env);
 
   DMSG("received fpage {0x%08x, 0x%08x}\n",
        info.fpage.fp.page << 12, 1 << info.fpage.fp.size);
 
-  if ((error=FLICK_ERR(error, &_exc)))
+  if ((error=DICE_ERR(error, &_env)))
     return error;
 
   if ((*addr)->magic != L4IO_INFO_MAGIC)

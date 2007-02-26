@@ -54,10 +54,9 @@ static int attach(int irq, int*handle){
   }
 
   if(rmgr_get_irq(irq)) return 2;
-  irq_th.lh.low = irq + 1;
-  irq_th.lh.high = 0;
+  l4_make_taskid_from_irq(irq, &irq_th);
   
-  error = l4_i386_ipc_receive(irq_th, 0, &dummy, &dummy,
+  error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
                               L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
 
   if(error!=L4_IPC_RETIMEOUT) return 3;
@@ -106,9 +105,8 @@ static int irq_request(int handle, omega0_request_t request){
     irq_mask(request.s.param-1);
   }
   if(request.s.wait){
-    irq_th.lh.low = handle;
-    irq_th.lh.high = 0;
-    err = l4_i386_ipc_receive(irq_th, L4_IPC_SHORT_MSG, &dummy, &dummy,
+    l4_make_taskid_from_irq(handle-1, &irq_th);
+    err = l4_ipc_receive(irq_th, L4_IPC_SHORT_MSG, &dummy, &dummy,
                               L4_IPC_NEVER, &result);
     irq_mask(handle-1);
     irq_ack(handle-1);

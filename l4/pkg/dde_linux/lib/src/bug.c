@@ -1,4 +1,6 @@
-/*!
+/* $Id$ */
+/*****************************************************************************/
+/**
  * \file   dde_linux/lib/src/bug.c
  * \brief  BUG() handler
  *
@@ -8,6 +10,10 @@
  * You can set your own BUG() handler by overwriting the dde_BUG function
  * pointer.
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <l4/dde_linux/dde.h>
 #include <l4/log/l4log.h>
@@ -16,12 +22,11 @@
 
 static void do_bug(const char*, const char*, int) __attribute__ ((noreturn));
 
-void (*dde_BUG)(const char*file, const char*function, int line)
-	__attribute__ ((noreturn)) = do_bug;
+void (*dde_BUG)(const char *file, const char *function, int line) __attribute__ ((noreturn)) = do_bug;
 
-static void do_bug(const char*file, const char*function, int line){
-	printk("BUG() called in %s:%d(%s)",
-	     file, line, function);
-	LOG_flush();
-	while(1) enter_kdebug("bug");
+static void do_bug(const char *file, const char *function, int line)
+{
+  printk("BUG() called in %s:%d(%s)", file, line, function);
+  LOG_flush();
+  while (1) enter_kdebug("bug");
 }

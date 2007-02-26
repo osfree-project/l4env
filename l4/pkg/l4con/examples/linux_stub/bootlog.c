@@ -1,8 +1,15 @@
-/*
- * bootlog.c
+/* $Id$ */
+/**
+ * \file	con/examples/linux_stub/bootlog.c
+ * \brief	Buffering of initial output
  *
- * Buffering of initial output
- */
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <linux/types.h>
 #include <linux/tty.h>

@@ -38,7 +38,7 @@ typedef struct
   l4_low_high_t semi_reserved;
   l4_low_high_t dedicated[4];
   volatile unsigned long long clock;
-} l4_kernel_info_t;
+} Kernel_info;
 
 #define L4_KERNEL_INFO_MAGIC (0x4BE6344CL) /* "L4µK" */
 

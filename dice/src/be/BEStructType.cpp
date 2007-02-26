@@ -5,12 +5,12 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,9 +30,16 @@
 #include "be/BETypedef.h"
 #include "be/BEDeclarator.h"
 #include "be/BERoot.h"
+#include "be/BEAttribute.h"
 
 #include "fe/FETaggedStructType.h"
+#include "fe/FEInterface.h"
+#include "fe/FELibrary.h"
 #include "fe/FEFile.h"
+#include "fe/FEArrayType.h"
+#include "fe/FESimpleType.h"
+#include "fe/FEIsAttribute.h"
+#include "fe/FEDeclarator.h"
 
 IMPLEMENT_DYNAMIC(CBEStructType);
 
@@ -70,6 +77,9 @@ bool CBEStructType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
     // sets m_sName to "struct"
     if (!CBEType::CreateBackEnd(pFEType, pContext))
         return false;
+    // if sequence create own members
+	if (pFEType->GetType() == TYPE_ARRAY)
+	    return CreateBackEndSequence((CFEArrayType*)pFEType, pContext);
     // iterate over members
     CFEStructType *pFEStruct = (CFEStructType *) pFEType;
     VectorElement *pIter = pFEStruct->GetFirstMember();
@@ -90,16 +100,134 @@ bool CBEStructType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
     {
         // see if we can find the original struct
         String sTag = ((CFETaggedStructType*)pFEType)->GetTag();
-        CFEFile *pFERoot = pFEType->GetRoot();
-        ASSERT(pFERoot);
-        CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
+		// we start with the parent interface and walk all the way up to the root
+        CFEConstructedType *pFETaggedDecl = 0;
+		CFEInterface *pFEInterface = pFEType->GetParentInterface();
+		if (pFEInterface)
+		{
+		    pFETaggedDecl = pFEInterface->FindTaggedDecl(sTag);
+			if (!pFETaggedDecl)
+			{
+			    CFELibrary *pParentLib = pFEInterface->GetParentLibrary();
+				while (pParentLib && !pFETaggedDecl)
+				{
+				    pFETaggedDecl = pParentLib->FindTaggedDecl(sTag);
+					pParentLib = pParentLib->GetParentLibrary();
+				}
+			}
+		}
+		if (!pFETaggedDecl)
+		{
+			CFEFile *pFERoot = pFEType->GetRoot();
+			// we definetly have a root
+			assert(pFERoot);
+			// we definetly have this decl in there
+			pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
+		}
+		// now we can assign a global tag name
         if (pFETaggedDecl)
             m_sTag = pContext->GetNameFactory()->GetTypeName(pFETaggedDecl, sTag, pContext);
         else
-            m_sTag = sTag;
+		{
+		    // if this is a complete type, than this should
+			// be made a full name as well, since it is defined in
+			// an idl file
+			if (GetMemberCount() > 0)
+			    m_sTag = pContext->GetNameFactory()->GetTypeName(pFEType, sTag, pContext);
+			else
+                m_sTag = sTag;
+			// still no original struct found, than this might be a user
+			// defined struct
+			// get the size from there
+			CBESizes *pSizes = pContext->GetSizes();
+			m_nSize = pSizes->GetSizeOfEnvType(sTag);
+		}
     }
 
     return true;
+}
+/**	\brief prepares this instance for the code generation
+ *	\param pFEType the corresponding front-end type
+ *	\param pContext the context of the code generation
+ *	\return true if the code generation was successful
+ */
+bool CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType, CBEContext * pContext)
+{
+    // if sequence create own members
+	if (pFEType->GetType() != TYPE_ARRAY)
+	    return false;
+    // CLM states that (1.11)
+	// that 'sequence <type, size>' will be mapped to
+	// struct {
+	// unsigned long _maximum;
+	// unsigned long _length;
+	// type* _buffer;
+	// }
+	// we extend this to add the attributes max_is and length_is to buffer, so
+	// the marshaller can perform range checks.
+
+	// the member vector
+	Vector *pMembers = new Vector(RUNTIME_CLASS(CFETypedDeclarator));
+
+	// create the _maximum member
+	CFETypeSpec* pFEMType = new CFESimpleType(TYPE_INTEGER, true,
+	                                    true, 4/*value for LONG*/, false);
+	CFEDeclarator *pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, String("_maximum"));
+	CFETypedDeclarator *pFEMember = new CFETypedDeclarator(TYPEDECL_FIELD,
+	                                    pFEMType,
+										new Vector(RUNTIME_CLASS(CFEDeclarator),
+										    1, pFEDeclarator));
+	pFEMType->SetParent(pFEMember);
+	pFEDeclarator->SetParent(pFEMember);
+	pMembers->Add(pFEMember);
+
+	// create _length member
+	pFEMType = new CFESimpleType(TYPE_INTEGER, true,
+	                                    true, 4/*value for LONG*/, false);
+	pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, String("_length"));
+	pFEMember = new CFETypedDeclarator(TYPEDECL_FIELD,
+	                                    pFEMType,
+										new Vector(RUNTIME_CLASS(CFEDeclarator),
+										    1, pFEDeclarator));
+	pFEMType->SetParent(pFEMember);
+	pFEDeclarator->SetParent(pFEMember);
+	pMembers->Add(pFEMember);
+
+	// add attributes
+	// attribute [max_is(_maximum)]
+	Vector *pAttributes = new Vector(RUNTIME_CLASS(CFEAttribute));
+	pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, String("_maximum"));
+	CFEAttribute *pFEAttribute = new CFEIsAttribute(ATTR_MAX_IS,
+	                                    new Vector(RUNTIME_CLASS(CFEDeclarator),
+										    1, pFEDeclarator));
+	pFEDeclarator->SetParent(pFEAttribute);
+	pAttributes->Add(pFEAttribute);
+    // attribute [length_is(_length)]
+	pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, String("_length"));
+	pFEAttribute = new CFEIsAttribute(ATTR_LENGTH_IS,
+	                                    new Vector(RUNTIME_CLASS(CFEDeclarator),
+										    1, pFEDeclarator));
+	pFEDeclarator->SetParent(pFEAttribute);
+	pAttributes->Add(pFEAttribute);
+	// create the *_buffer member
+	pFEMType = pFEType->GetBaseType();
+	pFEDeclarator = new CFEDeclarator(DECL_IDENTIFIER, String("_buffer"), 1);
+	pFEMember = new CFETypedDeclarator(TYPEDECL_FIELD,
+	                                    pFEMType,
+										new Vector(RUNTIME_CLASS(CFEDeclarator),
+										    1, pFEDeclarator), pAttributes);
+	pFEMType->SetParent(pFEMember);
+	pFEDeclarator->SetParent(pFEMember);
+	pAttributes->SetParentOfElements(pFEMember);
+	pMembers->Add(pFEMember);
+
+	// create struct
+	CFEStructType *pFEStruct = new CFEStructType(pMembers);
+	pMembers->SetParentOfElements(pFEStruct);
+	pFEStruct->SetParent(pFEType->GetParent());
+
+	// recusively call CreateBackEnd to initialize struct
+    return CreateBackEnd(pFEStruct, pContext);
 }
 
 /**	\brief adds a new member
@@ -224,7 +352,7 @@ CObject *CBEStructType::Clone()
  */
 int CBEStructType::GetSize()
 {
-    if (m_nSize > 0)
+    if (m_nSize != 0)
         return m_nSize;
 
     // if this is a tagged struct without members, we have to find the original struct
@@ -232,7 +360,7 @@ int CBEStructType::GetSize()
     {
         // search for tag
         CBERoot *pRoot = GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         CBEStructType *pTaggedType = (CBEStructType*)pRoot->FindTaggedType(TYPE_TAGGED_STRUCT, GetTag());
         // if found, marshal this instead
         if ((pTaggedType) && (pTaggedType != this))
@@ -240,6 +368,9 @@ int CBEStructType::GetSize()
             m_nSize = pTaggedType->GetSize();
             return m_nSize;
         }
+		// if no tagged struct found, this is a user defined type
+		// we asked the sizes class in CreateBackEnd, maybe it knows my size
+		// -> m_nSize should be > 0
     }
 
     VectorElement *pIter = GetFirstMember();
@@ -251,13 +382,15 @@ int CBEStructType::GetSize()
         if (pMember->IsString())
         {
             // a string is also variable sized member
+			m_nSize = -1;
             return -1;
         }
         else if (pMember->IsVariableSized())
         {
             // if one of the members is variable sized,
             // the whole struct is variable sized
-            return nSize;
+			m_nSize = -1;
+            return -1;
 //        	// its of variable size
 //            m_nSize += pMember->GetType()->GetSize();	// we add the base type size
 //            // if bitfields before, align them and add them
@@ -313,18 +446,39 @@ int CBEStructType::GetSize()
 void CBEStructType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
 {
     pFile->Print("{ ");
+	pFile->IncIndent();
     VectorElement *pIter = GetFirstMember();
     CBETypedDeclarator *pMember;
-    bool bComma = false;
     while ((pMember = GetNextMember(pIter)) != 0)
     {
-        if (bComma)
-            pFile->Print(", ");
-        if (pMember->GetType())
-            pMember->GetType()->WriteZeroInit(pFile, pContext);
-        bComma = true;
+        // get type
+		CBEType *pType = pMember->GetType();
+        // get declarator
+		VectorElement *pIDecl = pMember->GetFirstDeclarator();
+		CBEDeclarator *pDecl;
+		while ((pDecl = pMember->GetNextDeclarator(pIDecl)) != 0)
+		{
+		    // be C99 compliant:
+            pFile->Print("%s : ", (const char*)pDecl->GetName());
+			if (pDecl->IsArray())
+				WriteZeroInitArray(pFile, pType, pDecl, pDecl->GetFirstArrayBound(), pContext);
+			else if (pType)
+				pType->WriteZeroInit(pFile, pContext);
+			if (pIDecl)
+			{
+			    pFile->Print(",\n");
+				pFile->PrintIndent("");
+			}
+		}
+
+		if (pIter)
+		{
+		    pFile->Print(",\n");
+			pFile->PrintIndent("");
+		}
     }
-    pFile->Print("} ");
+	pFile->DecIndent();
+    pFile->Print(" }");
 }
 
 /** \brief checks if this is a constructed type
@@ -367,7 +521,7 @@ void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pCont
 		// no tag -> we need a typedef to save us
 		// the alias can be used for the cast
 		CBETypedef *pTypedef = GetTypedef();
-		ASSERT(pTypedef);
+		assert(pTypedef);
 		// get first declarator (without stars)
 		VectorElement *pIter = pTypedef->GetFirstDeclarator();
 		CBEDeclarator *pDecl;
@@ -376,7 +530,7 @@ void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pCont
 			if (pDecl->GetStars() <= (bPointer?1:0))
 			    break;
 		}
-		ASSERT(pDecl);
+		assert(pDecl);
 		pFile->Print("%s", (const char*)pDecl->GetName());
 		if (bPointer && (pDecl->GetStars() == 0))
 			pFile->Print("*");
@@ -455,7 +609,7 @@ int CBEStructType::GetFixedSize()
     {
         // search for tag
         CBERoot *pRoot = GetRoot();
-        ASSERT(pRoot);
+        assert(pRoot);
         CBEStructType *pTaggedType = (CBEStructType*)pRoot->FindTaggedType(TYPE_TAGGED_STRUCT, GetTag());
         // if found, marshal this instead
         if ((pTaggedType) && (pTaggedType != this))
@@ -569,4 +723,54 @@ void CBEStructType::WriteGetMemberSize(CBEFile *pFile, CBETypedDeclarator *pMemb
 bool CBEStructType::IsSimpleType()
 {
     return false;
+}
+
+/** \brief tries to find a member with the name sName
+ *  \param sName the name of the member to search
+ *  \return the member found or 0 if not found
+ */
+CBETypedDeclarator* CBEStructType::FindMember(String sName)
+{
+    VectorElement *pIter = GetFirstMember();
+	CBETypedDeclarator *pMember;
+	while ((pMember = GetNextMember(pIter)) != 0)
+	{
+	    if (pMember->FindDeclarator(sName))
+		    return pMember;
+	}
+	return 0;
+}
+
+/** \brief tries to find a member with a specific attribute
+ *  \param nAttributeType the attribute type to look for
+ *  \return the first member with the given attribute
+ */
+CBETypedDeclarator* CBEStructType::FindMemberAttribute(int nAttributeType)
+{
+    VectorElement *pIter = GetFirstMember();
+	CBETypedDeclarator *pMember;
+	while ((pMember = GetNextMember(pIter)) != 0)
+	{
+	    if (pMember->FindAttribute(nAttributeType))
+		    return pMember;
+	}
+	return 0;
+}
+
+/** \brief tries to find a member with a specific IS attribute
+ *  \param nAttributeType the attribute type to look for
+ *  \param sAttributeParameter the name of the attributes parameter to look for
+ *  \return the first member with the given attribute
+ */
+CBETypedDeclarator* CBEStructType::FindMemberIsAttribute(int nAttributeType, String sAttributeParameter)
+{
+    VectorElement *pIter = GetFirstMember();
+	CBETypedDeclarator *pMember;
+	while ((pMember = GetNextMember(pIter)) != 0)
+	{
+	    CBEAttribute *pAttr = pMember->FindAttribute(nAttributeType);
+		if (pAttr && pAttr->FindIsParameter(sAttributeParameter))
+		    return pMember;
+	}
+	return 0;
 }

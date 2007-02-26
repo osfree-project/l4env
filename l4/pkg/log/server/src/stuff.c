@@ -6,6 +6,10 @@
  * \author	Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
@@ -25,7 +29,7 @@
 #if CONFIG_USE_TCPIP
 /* We need heap for the net, 512KB seems to be sufficient. Define this here.
  */
-oskit_addr_t oskit_support_heapsize = 1024*512;
+oskit_addr_t l4libc_heapsize = 1024*512;
 #endif
 
 #define STACKSIZE 16384

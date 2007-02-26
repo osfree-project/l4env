@@ -1,7 +1,7 @@
 #include "test-server.h"
 #include <stdio.h>
 
-CORBA_long sock_srv_func1_component(CORBA_Object *_dice_corba_obj,
+CORBA_long sock_srv_func1_component(CORBA_Object _dice_corba_obj,
     CORBA_long a,
     CORBA_Environment *_dice_corba_env)
 {
@@ -12,7 +12,7 @@ CORBA_long sock_srv_func1_component(CORBA_Object *_dice_corba_obj,
 
 const char* test_string = "Hello World!";
 
-CORBA_long sock_srv_func2_component(CORBA_Object *_dice_corba_obj,
+CORBA_long sock_srv_func2_component(CORBA_Object _dice_corba_obj,
     CORBA_char_ptr *str,
     CORBA_Environment *_dice_corba_env)
 {
@@ -22,8 +22,8 @@ CORBA_long sock_srv_func2_component(CORBA_Object *_dice_corba_obj,
   return _return;
 }
 
-CORBA_void sock_srv_func3_component(CORBA_Object *_dice_corba_obj,
-    str_A *t,
+CORBA_void sock_srv_func3_component(CORBA_Object _dice_corba_obj,
+    const str_A *t,
     CORBA_Environment *_dice_corba_env)
 {
   printf("t.a = %ld\n", t->a);
@@ -36,25 +36,25 @@ CORBA_void sock_srv_func3_component(CORBA_Object *_dice_corba_obj,
 #endif
 }
 
-CORBA_void sock_srv_func4_component(CORBA_Object *_dice_corba_obj,
-    CORBA_char_ptr str,
-    CORBA_char_ptr str2,
+CORBA_void sock_srv_func4_component(CORBA_Object _dice_corba_obj,
+    const_CORBA_char_ptr str,
+    const_CORBA_char_ptr str2,
     CORBA_Environment *_dice_corba_env)
 {
   printf("func4 @ server: String \"%s\" empfangen\n", str);
   printf("func4 @ server: String2 \"%s\" empfangen\n", str2);
 }
 
-CORBA_void sock_srv_func5_component(CORBA_Object *_dice_corba_obj,
-    CORBA_char_ptr str,
+CORBA_void sock_srv_func5_component(CORBA_Object _dice_corba_obj,
+    const_CORBA_char_ptr str,
     CORBA_Environment *_dice_corba_env)
 {
   printf("func5 @ server: String \"%s\" empfangen\n", str);
 }
 
-CORBA_long sock_srv_func6_component(CORBA_Object *_dice_corba_obj,
-    CORBA_char_ptr str,
-    CORBA_char_ptr str2,
+CORBA_long sock_srv_func6_component(CORBA_Object _dice_corba_obj,
+    const_CORBA_char_ptr str,
+    const_CORBA_char_ptr str2,
     CORBA_Environment *_dice_corba_env)
 {
   printf("func6 @ server: String \"%s\" empfangen\n", str);

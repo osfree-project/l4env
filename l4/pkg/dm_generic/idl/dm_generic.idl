@@ -8,49 +8,22 @@
  *
  * \date    11/19/2001
  * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
 
-/**
- * L4 threadid type
- * \ingroup idl
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
  */
-typedef struct if_l4dm_threadid
-{
-  unsigned long low;
-  unsigned long high;
-} if_l4dm_threadid_t;
 
-/**
- * Dataspace id type
- * \ingroup idl
- */
-typedef struct if_l4dm_dataspace
-{
-  unsigned long      id;
-  if_l4dm_threadid_t manager;
-} if_l4dm_dataspace_t;
+/** import l4dm_dataspace_t and via l4/sys/types.h l4_threadid_t */
+import <l4/dm_generic/types.h>
 
 /**
  * Dataspace manager interface 
  * \ingroup idl
  */
-module if_l4dm
+library if_l4dm
 {
   /**
    * Generic dataspace manager interface 
@@ -79,13 +52,13 @@ module if_l4dm
        * \a offset.
        */
       /***********************************************************************/ 
-      long map(in unsigned long ds_id, 
-	       in unsigned long offset,
-	       in unsigned long size, 
-	       in unsigned long rcv_size2, 
-	       in unsigned long rcv_offs, 
-	       in unsigned long flags, 
-	       out fpage page);
+      long map([in] unsigned long ds_id, 
+	       [in] unsigned long offset,
+	       [in] unsigned long size, 
+	       [in] unsigned long rcv_size2, 
+	       [in] unsigned long rcv_offs, 
+	       [in] unsigned long flags, 
+	       [out] fpage *page);
 
       /***********************************************************************/
       /**
@@ -104,9 +77,9 @@ module if_l4dm
        * as receive window.
        */
       /***********************************************************************/ 
-      long fault(in unsigned long ds_id, 
-		 in unsigned long offset,
-		 out fpage page);
+      long fault([in] unsigned long ds_id, 
+	         [in] unsigned long offset,
+		 [out] fpage *page);
 
       /***********************************************************************/
       /**
@@ -121,7 +94,7 @@ module if_l4dm
        *                         is allowed to close a dataspace
        */
       /***********************************************************************/ 
-      long close(in unsigned long ds_id);
+      long close([in] unsigned long ds_id);
 
       /***********************************************************************/
       /**
@@ -135,8 +108,8 @@ module if_l4dm
        *          - -#L4_EPERM  permission denied
        */
       /***********************************************************************/ 
-      long close_all(in if_l4dm_threadid_t client, 
-		     in unsigned long flags);
+      long close_all([in] l4_threadid_t client, 
+	             [in] unsigned long flags);
 
       /***********************************************************************/
       /**
@@ -145,7 +118,7 @@ module if_l4dm
        * 
        * \param   ds_id       Dataspace id
        * \param   client      Client id
-       * \param   rights      Rights bit mask
+       * \param   flags       Rights bit mask
        *	
        * \return  0 on success, error code otherwise:
        *          - -#L4_EINVAL  invalid dataspace id
@@ -154,9 +127,9 @@ module if_l4dm
        * Grant / extend access rights to a dataspace. 
        */
       /***********************************************************************/ 
-      long share(in unsigned long ds_id, 
-		 in if_l4dm_threadid_t client,
-		 in unsigned long flags);
+      long share([in] unsigned long ds_id, 
+	         [in] l4_threadid_t client,
+		 [in] unsigned long flags);
 
       /***********************************************************************/
       /**
@@ -165,7 +138,7 @@ module if_l4dm
        * 
        * \param   ds_id       Dataspace id
        * \param   client      Client id
-       * \param   rights      Rights bit mask
+       * \param   flags       Rights bit mask
        *	
        * \return  0 on success, error code otherwise:
        *          - -#L4_EINVAL  invalid dataspace id
@@ -174,9 +147,9 @@ module if_l4dm
        * Revoke / restrict access rights to a dataspace. 
        */
       /***********************************************************************/ 
-      long revoke(in unsigned long ds_id, 
-		  in if_l4dm_threadid_t client,
-		  in unsigned long flags);
+      long revoke([in] unsigned long ds_id, 
+	          [in] l4_threadid_t client,
+		  [in] unsigned long flags);
 
       /***********************************************************************/
       /**
@@ -184,7 +157,7 @@ module if_l4dm
        * \ingroup idl_generic
        * 
        * \param   ds_id       Dataspace id
-       * \param   rights      Rights bit mask
+       * \param   flags       Rights bit mask
        *	
        * \return  0 if requested operations are allowed, error code otherwise:
        *          - -#L4_EINVAL  invalid dataspace id
@@ -194,8 +167,8 @@ module if_l4dm
        * dataspace.
        */
       /***********************************************************************/ 
-      long check_rights(in unsigned long ds_id, 
-			in unsigned long flags);
+      long check_rights([in] unsigned long ds_id, 
+	                [in] unsigned long flags);
 
       /***********************************************************************/
       /**
@@ -213,8 +186,8 @@ module if_l4dm
        * Transfer the ownership of the dataspace to \a new_owner.
        */
       /***********************************************************************/ 
-      long transfer(in unsigned long ds_id, 
-		    in if_l4dm_threadid_t new_owner);
+      long transfer([in] unsigned long ds_id, 
+	            [in] l4_threadid_t new_owner);
 
       /***********************************************************************/
       /**
@@ -237,13 +210,13 @@ module if_l4dm
        * Create a copy of a dataspace.
        */
       /***********************************************************************/ 
-      long copy(in unsigned long ds_id, 
-		in unsigned long src_offs, 
-		in unsigned long dst_offs, 
-		in unsigned long num, 
-		in unsigned long flags, 
-		in string name, 
-		out if_l4dm_dataspace_t copy);
+      long copy([in] unsigned long ds_id, 
+	        [in] unsigned long src_offs, 
+		[in] unsigned long dst_offs, 
+		[in] unsigned long num, 
+		[in] unsigned long flags, 
+		[in, string] char* name, 
+		[out] l4dm_dataspace_t *copy);
 
       /***********************************************************************/
       /**
@@ -259,8 +232,8 @@ module if_l4dm
        *                        set the name
        */
       /***********************************************************************/ 
-      long set_name(in unsigned long ds_id, 
-		    in string name);
+      long set_name([in] unsigned long ds_id, 
+	            [in, string] char* name);
 
       /***********************************************************************/
       /**
@@ -269,13 +242,14 @@ module if_l4dm
        * 
        * \param   ds_id       Dataspace id
        * \retval  name        Dataspace name
+       * \retval  size        Length of name
        *	
        * \return  0 on success, error code otherwise:
        *          - -#L4_EINVAL  invalid dataspace id
        */
       /***********************************************************************/ 
-      long get_name(in unsigned long ds_id, 
-		    out string name);
+      long get_name([in] unsigned long ds_id, 
+	            [out, string, prealloc] char ** name);
 
       /***********************************************************************/
       /**
@@ -288,7 +262,7 @@ module if_l4dm
        *          - -#L4_EINVAL  invalid dataspace id
        */
       /***********************************************************************/ 
-      long show_ds(in unsigned long ds_id);
+      long show_ds([in] unsigned long ds_id);
 
       /***********************************************************************/
       /**
@@ -305,9 +279,9 @@ module if_l4dm
        * owned by \a client. 
        */
       /***********************************************************************/ 
-      long dump(in if_l4dm_threadid_t owner, 
-		in unsigned long flags, 
-		out if_l4dm_dataspace_t dump_ds);
+      long dump([in] l4_threadid_t owner, 
+	        [in] unsigned long flags, 
+		[out] l4dm_dataspace_t *dump_ds);
 
       /***********************************************************************/
       /**
@@ -322,8 +296,8 @@ module if_l4dm
        * List all dataspaces owned by \a client.
        */
       /***********************************************************************/ 
-      void list(in if_l4dm_threadid_t owner, 
-		in unsigned long flags);
+      void list([in] l4_threadid_t owner, 
+	        [in] unsigned long flags);
     };
 };
 

@@ -2,65 +2,42 @@
 #include <malloc.h>
 #include <stdarg.h>
 #include <string.h>
-#include <flux/x86/paging.h>
+
 #include "dis-asm.h"
+#include "disasm.h"
 
 /* local variables */
 static char *out_buf;
 static int out_len;
 static int use_syms;
 static unsigned dis_task;
-static unsigned dis_va2;
-static unsigned dis_pa1;
-static unsigned dis_pa2;
 static disassemble_info dis_info;
-
-/* extern function to print address or symbol at address */
-extern const char*
-disasm_get_symbol_at_address(unsigned address, unsigned task);
-
-/* prototype of the function we export */
-extern unsigned int
-disasm_bytes(char *buffer, unsigned len, unsigned va, unsigned pa1,
-	     unsigned pa2, unsigned pa_size, unsigned task, 
-	     int show_symbols, int show_intel_syntax);
-
+static Peek_task dis_peek_task;
+static Get_symbol dis_get_symbol;
 
 /* read <length> bytes starting at memaddr */
 static int
-my_read_memory(bfd_vma memaddr, bfd_byte *myaddr, unsigned int length,
+my_read_memory(bfd_vma memaddr, bfd_byte *myaddr, unsigned length,
 	       struct disassemble_info *info __attribute__ ((unused)))
 {
-  unsigned opb  = info->octets_per_byte;
-  unsigned end_addr_offset = length / opb;
-  unsigned max_addr_offset = info->buffer_length / opb;
-  unsigned pa   = (memaddr < dis_va2) ? dis_pa1 : dis_pa2;
-  unsigned size = PAGE_SIZE - (length & PAGE_MASK);
+  unsigned i;
 
-  if (   memaddr < info->buffer_vma
-      || memaddr - info->buffer_vma + end_addr_offset > max_addr_offset)
-    return -1;
-
-  if (size > length)
-    size = length;
-
-  if (size > 0)
-    memcpy(myaddr, (void*)(pa + (memaddr & PAGE_MASK)), size);
-
-  if ((length -= size))
-    memcpy(myaddr+size, (void*)dis_pa2, length);
+  for (i=0; i<length; i++)
+    {
+      int c;
+      if ((c = dis_peek_task(memaddr+i, dis_task)) == -1)
+	return -1;
+      *myaddr++ = c;
+    }
 
   return 0;
 }
 
 /* XXX return byte without range check */
-unsigned char
+static unsigned char
 my_get_data(bfd_vma memaddr)
 {
-  if (memaddr < dis_va2)
-    return *(unsigned char*)(dis_pa1 + (memaddr & PAGE_MASK));
-
-  return *(unsigned char*)(dis_pa2 + (memaddr & PAGE_MASK));
+  return dis_peek_task(memaddr, dis_task);
 }
 
 /* print address (using symbols if possible) */
@@ -69,7 +46,8 @@ my_print_address(bfd_vma memaddr, struct disassemble_info *info)
 {
   const char *symbol;
 
-  if (use_syms && (symbol = disasm_get_symbol_at_address(memaddr, dis_task)))
+  if (use_syms && dis_get_symbol
+      && (symbol = dis_get_symbol(memaddr, dis_task)))
     {
       unsigned i;
       char buf[48];
@@ -201,47 +179,39 @@ special_l4_ops(bfd_vma memaddr)
 /* WARNING: This function is not reentrant because it accesses some
  * global static variables (out_buf, out_len, dis_task, ...) */
 unsigned int
-disasm_bytes(char *buffer, unsigned len, unsigned va, unsigned pa1,
-	     unsigned pa2, unsigned pa_size, unsigned task, 
-	     int show_symbols, int show_intel_syntax)
+disasm_bytes(char *buffer, unsigned len, Address addr,
+	     unsigned task, int show_symbols, int show_intel_syntax,
+	     Peek_task peek_task, Get_symbol get_symbol)
 {
-  use_syms = show_symbols;
-  out_buf  = buffer;
-  out_len  = len;
-  dis_task = task;
-  dis_pa1  = pa1 & ~PAGE_MASK;
-  dis_pa2  = pa2 & ~PAGE_MASK;
-  dis_va2  = round_page(va+1);
+  use_syms       = show_symbols;
+  out_buf        = buffer;
+  out_len        = len;
+  dis_task       = task;
+  dis_peek_task  = peek_task;
+  dis_get_symbol = get_symbol;
 
   /* terminate string */
   if (out_len)
     out_buf[--out_len] = '\0';
 
-  /* sanity check */
-  if (pa_size == 0)
-    return 0;
-
   /* test for special L4 opcodes */
-  if (   (my_get_data(va) == 0xcc)
-      && ((len = special_l4_ops(va+1))))
+  if (my_get_data(addr) == 0xcc && (len = special_l4_ops(addr+1)))
     return len;
 
   /* one step back for special L4 opcodes */
-  if (   (va & 0xfff) /* don't cross page backwards */
-      && (my_get_data(va-1) == 0xcc)
-      && ((len = special_l4_ops(va))))
+  if (my_get_data(addr-1) == 0xcc && (len = special_l4_ops(addr)))
     return len-1;
-  
+
   INIT_DISASSEMBLE_INFO(dis_info, NULL, my_printf);
   
   dis_info.print_address_func = my_print_address;
   dis_info.read_memory_func = my_read_memory;
-  dis_info.buffer = (bfd_byte*)va;
-  dis_info.buffer_length = pa_size;
-  dis_info.buffer_vma = va;
+  dis_info.buffer = (bfd_byte*)addr;
+  dis_info.buffer_length = 99; /* XXX */
+  dis_info.buffer_vma = addr;
 
   return (show_intel_syntax) 
-    ? print_insn_i386_intel(va, &dis_info)
-    : print_insn_i386_att(va, &dis_info);
+    ? print_insn_i386_intel(addr, &dis_info)
+    : print_insn_i386_att(addr, &dis_info);
 }
 

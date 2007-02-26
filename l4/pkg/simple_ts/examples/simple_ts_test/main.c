@@ -12,25 +12,28 @@
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/l4rm/l4rm.h>
-#include <l4/sys/syscalls.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
+#include <l4/thread/thread.h>
 #include <l4/generic_ts/generic_ts-client.h>
 
 /* other includes */
 #include <stdio.h>
+#include <stdlib.h>
 
-typedef struct {
-    l4dm_dataspace_t	ds;
-    l4_addr_t		start;
-    l4_addr_t		end;
+char LOG_tag[9] = "ts_test";
+
+typedef struct 
+{
+  l4dm_dataspace_t	ds;
+  l4_addr_t		start;
+  l4_addr_t		end;
 } stack_t;
 
 #define MAX_TASK_CNT	1024
 #define MAX_TASK_ID	1024
 
-static stack_t pager_stack;
 static stack_t app_stack[MAX_TASK_CNT];
 static int task2app[MAX_TASK_ID] = {0, };
 
@@ -43,37 +46,36 @@ app(int number, l4_threadid_t caller)
   l4_umword_t dummy;
 
   printf("--> App %d: Hello World!\n", number);
-  l4_i386_ipc_call(caller, 
-      		   L4_IPC_SHORT_MSG, 0, 0, 
-      		   L4_IPC_SHORT_MSG, &dummy, &dummy,
-		   L4_IPC_NEVER, &result);
+  l4_ipc_call(caller, 
+      	      L4_IPC_SHORT_MSG, 0, 0, 
+	      L4_IPC_SHORT_MSG, &dummy, &dummy,
+	      L4_IPC_NEVER, &result);
   for (;;)
     {
       /* receive anything from anywhere but don't answer */
-      l4_i386_ipc_wait(&src_id, L4_IPC_SHORT_MSG, &dw1, &dw2,
-	  	       L4_IPC_NEVER, &result);
+      l4_ipc_wait(&src_id, L4_IPC_SHORT_MSG, &dw1, &dw2,
+	  	  L4_IPC_NEVER, &result);
     }
 }
 
 
 static void
-app_pager(l4_threadid_t caller)
+app_pager(void *unused)
 {
   extern char _end;
-  l4_umword_t dw1, dw2, dummy;
+  l4_umword_t dw1, dw2;
   void *reply_type;
   l4_msgdope_t result;
   l4_threadid_t src_thread;
 
-  l4_i386_ipc_call(caller,
-      		   L4_IPC_SHORT_MSG, 0, 0,
-		   L4_IPC_SHORT_MSG, &dummy, &dummy,
-		   L4_IPC_NEVER, &result);
+  /* because of l4thread_create(..., L4THREAD_CREATE_SYNC) */
+  l4thread_started(0);
+
   for (;;)
     {
-      int error = l4_i386_ipc_wait(&src_thread,
-	                           L4_IPC_SHORT_MSG, &dw1, &dw2,
-				   L4_IPC_NEVER, &result);
+      int error = l4_ipc_wait(&src_thread,
+	                      L4_IPC_SHORT_MSG, &dw1, &dw2,
+			      L4_IPC_NEVER, &result);
       while (!error)
 	{
 	  int appidx;
@@ -86,6 +88,7 @@ app_pager(l4_threadid_t caller)
 	      continue;
 	    }
 
+	  /* implement Sigma0 pagefault protocol */
 	  appidx = task2app[src_thread.id.task];
 	  reply_type = L4_IPC_SHORT_FPAGE;
 	  if ((dw1 == 1) && ((dw2 & 0xff) == 1))
@@ -138,11 +141,11 @@ app_pager(l4_threadid_t caller)
 	      enter_kdebug("stop");
 	    }
 
-	  error = l4_i386_ipc_reply_and_wait(src_thread, reply_type, dw1, dw2,
-	      				     &src_thread, L4_IPC_SHORT_MSG,
-					     &dw1, &dw2, 
-					     L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0),
-					     &result);
+	  error = l4_ipc_reply_and_wait(src_thread, reply_type, dw1, dw2,
+	      				&src_thread, L4_IPC_SHORT_MSG,
+					&dw1, &dw2, 
+					L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0),
+					&result);
 	}
 
       printf("pager: IPC error %x\n", error);
@@ -155,15 +158,10 @@ main(void)
   int error, i;
   l4_threadid_t ts_id;
   l4_threadid_t tid, pager;
-  l4_threadid_t my_preempter, my_pager;
-  l4_threadid_t ext_preempter, partner;
-  sm_exc_t exc;
-  unsigned int *esp;
+  l4_uint32_t *esp;
   l4_umword_t dummy;
   l4_msgdope_t result;
-  l4_sched_param_t sched;
-
-  LOG_init("s_tstst");
+  CORBA_Environment _env = dice_default_environment;
 
   if (!names_waitfor_name("SIMPLE_TS", &ts_id, 5000))
     {
@@ -171,50 +169,10 @@ main(void)
       return -1;
     }
 
-  /* allocate pager stack */
-  pager_stack.start = (l4_addr_t)l4dm_mem_ds_allocate(L4_PAGESIZE,0,
-						      &pager_stack.ds);
-  if (pager_stack.start == 0)
-    {
-      printf("allocate pager stack failed");
-      exit(-1);
-    }
-
-  /* get thread parameters */
-  my_preempter = my_pager = L4_INVALID_ID;
-  l4_thread_ex_regs(l4_myself(),
-      		    (l4_umword_t)-1, (l4_umword_t)-1,
-		    &my_preempter, &my_pager,
-		    &dummy, &dummy, &dummy);
-  ext_preempter = partner = L4_INVALID_ID;
-  l4_thread_schedule(l4_myself(),
-                     L4_INVALID_SCHED_PARAM,
-		     &ext_preempter, &partner,
-		     &sched);
-
-  /* set our priority to 20 */
-  sched.sp.prio = 20;
-  ext_preempter = partner = L4_INVALID_ID;
-  l4_thread_schedule(l4_myself(), sched, &ext_preempter, &partner, &sched);
+  l4thread_set_prio(l4thread_myself(), 20);
 
   /* start pager thread */
-  pager = l4_myself();
-  pager.id.lthread = 3;
-
-  /* set stack pointer, touch page */
-  esp = (unsigned int*)(pager_stack.start + L4_PAGESIZE);
-  *(--((l4_threadid_t*)esp)) = l4_myself();
-  *(--esp) = 0;
-
-  /* create pager thread */
-  l4_thread_ex_regs(pager,
-      		    (l4_umword_t)app_pager, (l4_umword_t)esp,
-		    &my_preempter, &my_pager,
-		    &dummy, &dummy, &dummy);
-
-  /* wait for pager up */
-  l4_i386_ipc_receive(pager, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
-  l4_i386_ipc_send(pager, 0, 0, 0, L4_IPC_NEVER, &result);
+  pager = l4thread_l4_id(l4thread_create(app_pager, 0, L4THREAD_CREATE_SYNC));
 
   printf("Pager is up.\n");
 
@@ -230,7 +188,7 @@ main(void)
 	}
 
       app_stack[i].end = app_stack[i].start + L4_PAGESIZE - 1;
-      esp = (unsigned int*)(app_stack[i].start+L4_PAGESIZE);
+      esp = (l4_uint32_t*)(app_stack[i].start+L4_PAGESIZE);
 
       /* put app number and myself on top of stack as parameter */
       *(--((l4_threadid_t*)esp)) = l4_myself();
@@ -242,8 +200,8 @@ main(void)
        * may be that the new task's pager doesn't know anything about the
        * new task (because the task already runs before the task create to
        * the task server returns */
-      error = l4_ts_allocate(ts_id, (l4_ts_taskid_t*)&tid, &exc);
-      if (error || exc._type != exc_l4_no_exception)
+      if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
+	  || _env.major != CORBA_NO_EXCEPTION)
 	{
 	  /* most probably we have reached the maximum number of tasks */
 	  printf("Expected error allocating task: %d\n", error);
@@ -259,18 +217,18 @@ main(void)
       task2app[tid.id.task] = i;
 
       /* Create task. We choose a priority of 19 and an mcp of 0xe0. */
-      error = l4_ts_create(ts_id, (l4_ts_taskid_t*)&tid, 
-			   (l4_umword_t)app, (l4_umword_t)esp, 0xe0,
-	                   (l4_ts_taskid_t*)&pager, 21, "",  0, &exc);
-      if (error || exc._type != exc_l4_no_exception)
+      if ((error = l4_ts_create_call(&ts_id, &tid, 
+				     (l4_addr_t)app, (l4_addr_t)esp, 0xe0,
+				     &pager, 21, "",  0, &_env))
+	  || _env.major != CORBA_NO_EXCEPTION)
 	{
 	  printf("Error %d creating task\n", error);
 	  break;
 	}
       
       /* shake hands with new app */
-      l4_i386_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
-      l4_i386_ipc_send(tid, 0, 0, 0, L4_IPC_NEVER, &result);
+      l4_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
+      l4_ipc_send(tid, 0, 0, 0, L4_IPC_NEVER, &result);
 
       printf("Task %x.%x (%08x:%08x) stack at %08x..%08x is up\n",
 	     tid.id.task,tid.id.lthread,tid.lh.high,tid.lh.low,
@@ -281,8 +239,8 @@ main(void)
   /* give summary */
   printf("%d tasks created\n", i);
 
-  error = l4_ts_delete(ts_id, (l4_ts_taskid_t*)&tid, &exc);
-  if (error)
+  if ((error = l4_ts_delete_call(&ts_id, &tid, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("error deleting task %x.%x\n", 
 	     tid.id.task, tid.id.lthread);
@@ -291,8 +249,8 @@ main(void)
 
   printf("Task %x.%x killed\n", tid.id.task, tid.id.lthread);
 
-  error = l4_ts_free(ts_id, (l4_ts_taskid_t*)&tid, &exc);
-  if (error || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_free_call(&ts_id, &tid, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d freeing task %x.%x\n", 
 	      error, tid.id.task, tid.id.lthread);
@@ -301,8 +259,8 @@ main(void)
   
   printf("Task %x.%x freed\n", tid.id.task, tid.id.lthread);
 
-  error = l4_ts_allocate(ts_id, (l4_ts_taskid_t*)&tid, &exc);
-  if (error || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d allocating task %x.%x\n", 
 	      error, tid.id.task, tid.id.lthread);
@@ -320,10 +278,9 @@ main(void)
   printf("Task %x.%x (%08x:%08x) with diff. version number re-allocated\n",
          tid.id.task, tid.id.lthread, tid.lh.high, tid.lh.low);
 
-  error = l4_ts_create(ts_id, (l4_ts_taskid_t*)&tid, 
-		        (l4_umword_t)app, (l4_umword_t)esp, 0,
-                        (l4_ts_taskid_t*)&pager, -1, "", 0, &exc);
-  if (error || exc._type != exc_l4_no_exception)
+  if ((error = l4_ts_create_call(&ts_id, &tid, (l4_addr_t)app, (l4_addr_t)esp, 
+				 0, &pager, -1, "", 0, &_env))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printf("Error %d creating new task\n", error);
       return -1;

@@ -17,7 +17,7 @@ libpci_compat_kmalloc(int size)
 	(libpci_compat_pcibus < libpci_compat_MAX_BUS))
       return &libpci_compat_pcibuss[libpci_compat_pcibus++];
 
-    printf(__FUNCTION__" failed\n");
+    printf("%s failed\n", __FUNCTION__);
     printf("device %d, bus %d\n",libpci_compat_pcidev,libpci_compat_pcibus);
 
     return 0;

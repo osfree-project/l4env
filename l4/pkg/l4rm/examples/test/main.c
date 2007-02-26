@@ -6,23 +6,13 @@
  *
  * \date   05/27/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <stdio.h>
 
@@ -83,7 +73,7 @@ avl_test(void)
       nodes[i].in_tree = 0;
     }
 
-  l4_srand(l4_rdtsc_32());
+  l4util_srand(l4_rdtsc_32());
 
   for (r = 0; r < ROUNDS; r++)
     {
@@ -92,12 +82,12 @@ avl_test(void)
 
       /* insert */
       i = (int)((double)(NUM_NODES - num_in_tree - 1) * 
-		((double)l4_rand() / (double)L4_RAND_MAX));
+		((double)l4util_rand() / (double)L4_RAND_MAX));
       printf("%6d: insert %d\n",r,i);
       while (i > 0)
 	{
 	  j = (int)((double)(NUM_NODES - 1) * 
-		    ((double)l4_rand() / (double)L4_RAND_MAX));
+		    ((double)l4util_rand() / (double)L4_RAND_MAX));
 	  if (!nodes[j].in_tree)
 	    {
 	      ret = AVLT_insert(nodes[j].start,nodes[j].end,nodes[j].data);
@@ -116,12 +106,12 @@ avl_test(void)
 
       /* remove */
       i = (int)((double)(num_in_tree - 1) * 
-		((double)l4_rand() / (double)L4_RAND_MAX));
+		((double)l4util_rand() / (double)L4_RAND_MAX));
       printf("%6d: remove %d of %d\n",r,i,num_in_tree);
       while (i > 0)
 	{
 	  j = (int)((double)(NUM_NODES - 1) * 
-		    ((double)l4_rand() / (double)L4_RAND_MAX));
+		    ((double)l4util_rand() / (double)L4_RAND_MAX));
 	  if (nodes[j].in_tree)
 	    {
 	      ret = AVLT_remove(nodes[j].start,nodes[j].end);
@@ -177,7 +167,8 @@ rm_test(void)
   l4dm_dataspace_t ds1,ds2,ds3;
   volatile char *c;
   volatile l4_uint32_t addr;
-  l4_addr_t addr1,addr2,addr3,addr4,addr5,addr6;
+  l4_addr_t addr1,addr2;
+  void *addr3, *addr4, *addr5, *addr6, *addr7;
   l4_threadid_t dm_id;
   l4_uint32_t area;
   l4_addr_t area_addr,a;
@@ -292,14 +283,13 @@ rm_test(void)
     }
   printf("ds1 = %d at %x.%x\n",ds1.id,ds1.manager.id.task,ds1.manager.id.lthread);
 
-  ret = l4rm_attach(&ds1,10000,0, L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,
-		    (void **)&addr1);
+  ret = l4rm_attach(&ds1,10000,0, L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC, &addr7);
   if (ret)
     {
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds1 to region at addr 0x%08x\n",addr1);
+  printf("attached ds1 to region at addr 0x%08x\n",(unsigned)addr7);
 
   ret = l4rm_area_reserve(0x01000001,L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,&addr2,&area);
   if (ret)
@@ -309,21 +299,22 @@ rm_test(void)
     }
   printf("reserved area %x at 0x%08x\n",area,addr2);
 
-  ret = l4rm_area_attach(&ds1,area,4096,0,0,(void **)&addr3);
+  ret = l4rm_area_attach(&ds1,area,4096,0,0,&addr3);
   if (ret)
     {
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds1 to region at addr 0x%08x\n",addr3);
+  printf("attached ds1 to region at addr 0x%08x\n",(unsigned)addr3);
   
-  ret = l4rm_area_attach(&ds1,area,10000,0,L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,(void **)&addr4);
+  ret = l4rm_area_attach(&ds1,area,10000,0,L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,
+      &addr4);
   if (ret)
     {
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds1 to region at addr 0x%08x\n",addr4);
+  printf("attached ds1 to region at addr 0x%08x\n",(unsigned)addr4);
 
   l4rm_show_region_list();
   enter_kdebug("-");
@@ -337,14 +328,14 @@ rm_test(void)
     }
   printf("ds2 = %d at %x.%x\n",ds2.id,ds2.manager.id.task,ds2.manager.id.lthread);
 
-  addr5 = 0x10010000;
-  ret = l4rm_attach_to_region(&ds2,(void *)addr5,1000,0,0);
+  addr5 = (void*)0x10010000;
+  ret = l4rm_attach_to_region(&ds2,addr5,1000,0,0);
   if (ret)
     {
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds2 to region at address 0x%08x\n",addr5);
+  printf("attached ds2 to region at address 0x%08x\n",(unsigned)addr5);
 
   l4rm_show_region_list();
   enter_kdebug("-");
@@ -370,13 +361,13 @@ rm_test(void)
     }
   printf("ds3 = %d at %x.%x\n",ds3.id,ds3.manager.id.task,ds3.manager.id.lthread);
 
-  ret = l4rm_area_attach(&ds3,area,0x100000,0,0,(void **)&addr6);
+  ret = l4rm_area_attach(&ds3,area,0x100000,0,0,&addr6);
   if (ret)
     {
       printf("error attaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("attached ds3 to region at address 0x%08x\n",addr6);
+  printf("attached ds3 to region at address 0x%08x\n",(unsigned)addr6);
 
   l4rm_show_region_list();
   enter_kdebug("-");
@@ -393,14 +384,14 @@ rm_test(void)
 
   avlt_show_tree();
 
-  ret = l4rm_detach((void *)addr4);
+  ret = l4rm_detach(addr4);
   if (ret)
     {
       printf("error detaching dataspace: %d\n",ret);
       enter_kdebug("???");
     }
 
-  ret = l4rm_detach((void *)addr5);
+  ret = l4rm_detach(addr5);
   if (ret)
     {
       printf("error detaching dataspace: %d\n",ret);

@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <cstring>
 
-
 using namespace std;
 
 #define class     struct
@@ -10,390 +9,243 @@ using namespace std;
 #define protected public 
 
 #include "thread.h"
-
-// vm_offset_t comes from "types.h"
 #include "types.h"
 
-#define NAME_LEN 40
+#ifdef CONFIG_LOCAL_IPC
+#include "utcb.h"
+#include "utask_status.h"
+#endif
+
+typedef Stack<Context>		stack_ctxt;
+typedef Stack_top<Context>	stack_top_ctxt;
+
+bool dumpzero;
+
+#define NAME_LEN 65
+
+#define DUMP_CAST_OFFSET(type, subtype) ({				\
+  unsigned offset = reinterpret_cast<Address>(				\
+                    static_cast<subtype *>(				\
+                    reinterpret_cast<type *>(1))) - 1;			\
+  char buffer[NAME_LEN];                                                \
+  snprintf (buffer, sizeof (buffer), "CAST_%s_TO_%s", #type, #subtype);	\
+  printf (offset || dumpzero ? "#define %-*s %u\n" : "#define %-*s\n",	\
+          NAME_LEN, buffer, offset); })
+
+#define DUMP_OFFSET(prefix,name,offset) ({				\
+  char buffer[NAME_LEN];						\
+  snprintf (buffer, sizeof (buffer), "OFS__%s__%s", #prefix, #name);	\
+  printf (offset || dumpzero ? "#define %-*s %u\n" : "#define %-*s\n",	\
+          NAME_LEN, buffer, (unsigned) offset); })
 
 #define GET_PTR(ptr,member) (&(ptr)->member)
 
-#define GET_MEMBER_PTR(type,member) ({              \
-    void *type::*p = (void *type::*) &type::member; \
-    &(((type *) 0)->*p);             })
+#define GET_MEMBER_PTR(type,member) ({					\
+  void *type::*p = (void *type::*) &type::member;			\
+  &(((type *) 0)->*p); })
 
+#define DUMP_MEMBER1(prefix,						\
+                     type1,member1,					\
+                     name) ({						\
+  DUMP_OFFSET (prefix, name, GET_MEMBER_PTR (type1, member1)); })
 
+#define DUMP_MEMBER2(prefix,						\
+                     type1,member1,					\
+                     type2,member2,					\
+                     name) ({						\
+  type2 *m2 = (type2 *) GET_MEMBER_PTR (type1, member1);		\
+  DUMP_OFFSET (prefix, name, GET_PTR (m2, member2)); })
 
-namespace Proc {
-  Status volatile virtual_processor_state;
-};
+#define DUMP_MEMBER3(prefix,						\
+                     type1,member1,					\
+                     type2,member2,					\
+                     type3,member3,					\
+                     name) ({						\
+  type2 *m2 = (type2 *) GET_MEMBER_PTR (type1, member1);		\
+  type3 *m3 = (type3 *) GET_PTR (m2, member2);				\
+  DUMP_OFFSET (prefix, name, GET_PTR (m3, member3)); })
 
+#define DUMP_MEMBER4(prefix,						\
+                     type1,member1,					\
+                     type2,member2,					\
+                     type3,member3,					\
+                     type4,member4,					\
+                     name) ({						\
+  type2 *m2 = (type2 *) GET_MEMBER_PTR (type1, member1);		\
+  type3 *m3 = (type3 *) GET_PTR (m2, member2);				\
+  type4 *m4 = (type4 *) GET_PTR (m3, member3);				\
+  DUMP_OFFSET (prefix, name, GET_PTR (m4, member4)); })
 
+#define DUMP_MEMBER5(prefix,						\
+                     type1,member1,					\
+                     type2,member2,					\
+                     type3,member3,					\
+                     type4,member4,					\
+                     type5,member5,					\
+                     name) ({						\
+  type2 *m2 = (type2 *) GET_MEMBER_PTR (type1, member1);		\
+  type3 *m3 = (type3 *) GET_PTR (m2, member2);				\
+  type4 *m4 = (type4 *) GET_PTR (m3, member3);				\
+  type5 *m5 = (type5 *) GET_PTR (m4, member4);				\
+  DUMP_OFFSET (prefix, name, GET_PTR (m5, member5)); })
 
-#define DUMP_MEMBER(type,member,name)          ({          \
-  printf("#define OFS__THREAD__%s", #name);                \
-  for(int i=strlen(#name); i<NAME_LEN; i++) printf(" ");   \
-  unsigned p = (unsigned) GET_MEMBER_PTR(type,member);     \
-  if (p != 0) printf("%d",p);                              \
-  printf("\n");                                            \
-                                             0;  })
-
-
-
-
-
-#define DUMP_MEMBER2(type,member, member_type, sub_member, name)  ({ \
-  printf("#define OFS__THREAD__%s ",#name);                          \
-  for(int i=strlen(#name); i<NAME_LEN; i++) printf(" ");             \
-  member_type *p = (member_type *) GET_MEMBER_PTR(type,member);      \
-  printf("%d\n",(unsigned) GET_PTR(p,sub_member));;                  \
-  0; })
-
-
-
-#define DUMP_MEMBER3(type,member, member_type, sub_member, sub_type, sub_member2,name)  ({ \
-  printf("#define OFS__THREAD__%s ", #name);                         \
-  for(int i=strlen(#name); i<NAME_LEN; i++) printf(" ");             \
-  member_type *p = (member_type *) GET_MEMBER_PTR(type,member);      \
-  sub_type    *p1= (sub_type    *) GET_PTR(p,sub_member);            \
-  printf("%d\n", (unsigned) GET_PTR(p1,sub_member2));                \
-  0; })
-
-#define DUMP_MEMBER4(             type,                              \
-                     member,      member_type,                       \
-                     sub_member,  sub_type,                          \
-                     sub_member2, sub_type2,                         \
-                     sub_member3,                                    \
-                     name)  ({                                       \
-  printf("#define OFS__THREAD__%s ", #name);                         \
-  for(int i=strlen(#name); i<NAME_LEN; i++) printf(" ");             \
-  member_type *p = (member_type *) GET_MEMBER_PTR(type,member);      \
-  sub_type    *p1= (sub_type    *) GET_PTR( p,sub_member);           \
-  sub_type2   *p2= (sub_type2   *) GET_PTR(p1,sub_member2);          \
-  printf("%d\n",(unsigned) GET_PTR(p2,sub_member3));                 \
-  0; })
-
-#define DUMP_MEMBER5(             type,                              \
-                     member,      member_type,                       \
-                     sub_member,  sub_type,                          \
-                     sub_member2, sub_type2,                         \
-                     sub_member3, sub_type3,                         \
-                     sub_member4,                                    \
-                     name)  ({                                       \
-  printf("#define OFS__THREAD__%s ", #name);                         \
-  for(int i=strlen(#name); i<NAME_LEN; i++) printf(" ");             \
-  member_type *p = (member_type *) GET_MEMBER_PTR(type,member);      \
-  sub_type    *p1= (sub_type    *) GET_PTR( p,sub_member);           \
-  sub_type2   *p2= (sub_type2   *) GET_PTR(p1,sub_member2);          \
-  sub_type3   *p3= (sub_type3   *) GET_PTR(p2,sub_member3);          \
-  printf("%d\n",(unsigned) GET_PTR(p3,sub_member4));                 \
-  0; })
-
-#define GET_CAST_OFFSET(type, sub_type)                              \
-     (reinterpret_cast< vm_offset_t >(                               \
-            static_cast<sub_type * >(                                \
-                 reinterpret_cast<type * >(0x10)))- 0x10)
-
-
-#define DUMP_CAST_OFFSET(type, sub_type) ({                          \
-  printf("#define CAST_%s_TO_%s ", #type,#sub_type);                 \
-  for(int i=strlen("#define CAST_" #type "_TO_" #sub_type " ");      \
-         i<(NAME_LEN + 22); i++) printf(" ");                        \
-  printf("%d\n",GET_CAST_OFFSET(type, sub_type));                    \
-  0; })
-
-#ifdef FIASCO_SMP
-typedef Stack<Context,int>	stack_ctxt_int;
-typedef Stack_top<Context>	stack_top_ctxt;
-
-#else
-typedef Stack<Context>	stack_ctxt;
-typedef Stack_top<Context>	stack_top_ctxt;
-#endif
-
-void generate_fiasco_smp_headers(void);
-void generate_fiasco_headers(void);
-void generate_cast_offsets(void);
-
-int
-main(void)
+void generate_fiasco_headers (void)
 {
-#ifdef FIASCO_SMP
-  generate_fiasco_smp_headers();
-#else
-  generate_fiasco_headers();
+  puts ("\n/* Thread */\n");
+
+  DUMP_MEMBER1 (THREAD, Context, _space_context,	SPACE_CONTEXT);
+  DUMP_MEMBER1 (THREAD, Context, _stack_link,		STACK_LINK);
+  DUMP_MEMBER1 (THREAD, Context, _donatee,		DONATEE);
+  DUMP_MEMBER1 (THREAD, Context, _lock_cnt,		LOCK_CNT);
+  DUMP_MEMBER1 (THREAD, Context, _thread_lock,		THREAD_LOCK_PTR);
+  DUMP_MEMBER1 (THREAD, Context, _sched,		SCHED);
+  DUMP_MEMBER1 (THREAD, Context, _mcp,			MCP);
+  DUMP_MEMBER1 (THREAD, Context, _fpu_state,		FPU_STATE);
+  DUMP_MEMBER1 (THREAD, Context, _state,		STATE);
+  DUMP_MEMBER1 (THREAD, Context, ready_next,		READY_NEXT);
+  DUMP_MEMBER1 (THREAD, Context, ready_prev,		READY_PREV);
+  DUMP_MEMBER1 (THREAD, Context, kernel_sp,		KERNEL_SP);
+  DUMP_MEMBER1 (THREAD, Receiver, _partner,		PARTNER);
+  DUMP_MEMBER1 (THREAD, Receiver, _receive_regs,	RECEIVE_REGS);
+  DUMP_MEMBER1 (THREAD, Receiver, _pagein_addr,		PAGEIN_ADDR);
+  DUMP_MEMBER1 (THREAD, Receiver, _pagein_error_code,	PAGEIN_ERROR_CODE);
+  DUMP_MEMBER1 (THREAD, Receiver, _pagein_applicant,	PAGEIN_APPLICANT);
+  DUMP_MEMBER1 (THREAD, Receiver, _sender_first,	SENDER_FIRST);
+  DUMP_MEMBER1 (THREAD, Thread, _timeout,		TIMEOUT);
+  DUMP_MEMBER1 (THREAD, Thread, _id,			ID);
+  DUMP_MEMBER1 (THREAD, Thread, _send_partner,		SEND_PARTNER);
+  DUMP_MEMBER1 (THREAD, Thread, sender_next,		SENDER_NEXT);
+  DUMP_MEMBER1 (THREAD, Thread, sender_prev,		SENDER_PREV);
+  DUMP_MEMBER1 (THREAD, Thread, _preemption,		PREEMPTION);
+
+  DUMP_MEMBER2 (THREAD, Thread,				
+			_preemption, Preemption,
+			_id,				PREEMPTION__ID);
+
+  DUMP_MEMBER2 (THREAD, Thread,				
+			_preemption, Preemption,
+			_send_partner,			PREEMPTION__SEND_PARTNER);
+
+  DUMP_MEMBER2 (THREAD, Thread,				
+			_preemption, Preemption,
+			sender_next,			PREEMPTION__SENDER_NEXT);
+
+  DUMP_MEMBER2 (THREAD, Thread,				
+			_preemption, Preemption,
+			sender_prev,			PREEMPTION__SENDER_PREV);
+
+  DUMP_MEMBER2 (THREAD, Thread,				
+			_preemption, Preemption,
+			_pending_preemption,		PREEMPTION__PENDING_PREEMPTION);
+
+  DUMP_MEMBER1 (THREAD, Thread, _space,			SPACE);
+  DUMP_MEMBER1 (THREAD, Thread, _thread_lock,		THREAD_LOCK);
+
+  DUMP_MEMBER2 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+                        _switch_lock,			THREAD_LOCK__SWITCH_LOCK);
+
+  DUMP_MEMBER3 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+                        _switch_lock, Switch_lock,
+                        _lock_owner,			THREAD_LOCK__SWITCH_LOCK__LOCK_OWNER);
+
+  DUMP_MEMBER3 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+			_switch_lock, Switch_lock,
+			_lock_stack,			THREAD_LOCK__SWITCH_LOCK__LOCK_STACK);
+
+  DUMP_MEMBER4 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+			_switch_lock, Switch_lock,
+			_lock_stack, stack_ctxt,
+			_head,				THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD);
+
+  DUMP_MEMBER5 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+			_switch_lock, Switch_lock,
+			_lock_stack, stack_ctxt,
+			_head, stack_top_ctxt,
+			_version,			THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD__VERSION);
+
+  DUMP_MEMBER5 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+			_switch_lock, Switch_lock,
+			_lock_stack, stack_ctxt,
+			_head, stack_top_ctxt,
+			_next,				THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD__NEXT);
+
+  DUMP_MEMBER2 (THREAD, Thread,
+			_thread_lock, Thread_lock,
+			_switch_hint,			THREAD_LOCK__SWITCH_HINT);
+
+  DUMP_MEMBER1 (THREAD, Thread, _pager,			PAGER);
+  DUMP_MEMBER1 (THREAD, Thread, _preempter,		PREEMPTER);
+  DUMP_MEMBER1 (THREAD, Thread, _ext_preempter,		EXT_PREEMPTER);
+  DUMP_MEMBER1 (THREAD, Thread, present_next,		PRESENT_NEXT);
+  DUMP_MEMBER1 (THREAD, Thread, present_prev,		PRESENT_PREV);
+  DUMP_MEMBER1 (THREAD, Thread, _irq,			IRQ);
+  DUMP_MEMBER1 (THREAD, Thread, _target_desc,		TARGET_DESC);
+  DUMP_MEMBER1 (THREAD, Thread, _pagein_status_code,	PAGEIN_STATUS_CODE);
+  DUMP_MEMBER1 (THREAD, Thread, _vm_window0,		VM_WINDOW0);
+  DUMP_MEMBER1 (THREAD, Thread, _vm_window1,		VM_WINDOW1);
+  DUMP_MEMBER1 (THREAD, Thread, _recover_jmpbuf,	RECOVER_JMPBUF);
+  DUMP_MEMBER1 (THREAD, Thread, _pf_timeout,		PF_TIMEOUT);
+  DUMP_MEMBER1 (THREAD, Thread, _last_pf_address,	LAST_PF_ADDRESS);
+  DUMP_MEMBER1 (THREAD, Thread, _last_pf_error_code,	LAST_PF_ERROR_CODE);
+  DUMP_MEMBER1 (THREAD, Thread, _magic,			MAGIC);
+  DUMP_MEMBER1 (THREAD, Thread, _idt,			IDT);
+  DUMP_MEMBER1 (THREAD, Thread, _idt_limit,		IDT_LIMIT);
+  DUMP_OFFSET  (THREAD, MAX, sizeof (Thread));
+
+  puts ("\n/* Scheduling Context */\n");
+
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_owner,		OWNER);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_id,		ID);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_prio,		PRIO);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_timeslice,	TIMESLICE);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_ticks_left,	TICKS_LEFT);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_preemption_time,	PREEMPTION_TIME);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_start_cputime,	START_CPUTIME);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_total_cputime,	TOTAL_CPUTIME);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_prev,		PREV);
+  DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_next,		NEXT);
+  DUMP_OFFSET  (SCHED_CONTEXT, MAX, sizeof (Sched_context));
+
+#ifdef CONFIG_LOCAL_IPC
+  dumpzero = true;
+
+  puts ("\n/* utask_status */\n");
+  
+  DUMP_MEMBER1 (UTCB, Utask_status, current_tcb,		CUR_UTCB);
+  DUMP_MEMBER1 (UTCB, Utask_status, head,			UTCB_HEAD);
+  DUMP_OFFSET  (USERSTATUS, MAX, sizeof (Utask_status));
+
+  puts("\n/* Utcb */\n");
+
+  DUMP_MEMBER1 (UTCB, Utcb, id,					UTCB_ID);
+  DUMP_MEMBER1 (UTCB, Utcb, m_esp, 				ESP);
+  DUMP_MEMBER1 (UTCB, Utcb, m_eip, 				EIP);
+  DUMP_MEMBER1 (UTCB, Utcb, m_prev, 				PREV);
+  DUMP_MEMBER1 (UTCB, Utcb, status, 				STATUSWORD);
+  DUMP_MEMBER1 (UTCB, Utcb, fpu, 				FPU);
+  DUMP_OFFSET  (USERTCB, MAX, sizeof (Utcb));
+  
+  dumpzero = false;
 #endif
-  printf("#define OFS__THREAD__MAX");
+}
 
-  for(int i=strlen("MAX")-1; i<NAME_LEN; i++) printf(" ");
-  printf("%d\n",sizeof(Thread));
+void generate_cast_offsets (void)
+{
+  puts ("\n/* Cast Offsets */\n");
 
+  DUMP_CAST_OFFSET (Thread, Receiver);
+  DUMP_CAST_OFFSET (Thread, Sender);
+}
+
+int main (void)
+{
+  generate_fiasco_headers();
   generate_cast_offsets();
   return 0;
-
-}
-
-
-void 
-generate_fiasco_headers()
-{
-#ifndef FIASCO_SMP
-  DUMP_MEMBER(Context, _state,STATE);
-
-
-  DUMP_MEMBER(Context, ready_next, READY_NEXT);
-  DUMP_MEMBER(Context, ready_prev, READY_PREV);
-
-
-  DUMP_MEMBER(Context, kernel_sp, KERNEL_SP);
-  DUMP_MEMBER(Context, _space_context, SPACE_CONTEXT);
-  DUMP_MEMBER(Context, _stack_link, STACK_LINK);
-  DUMP_MEMBER(Context, _donatee, DONATEE);
-
-
-  DUMP_MEMBER(Thread, _lock_cnt, LOCK_CNT);
-  DUMP_MEMBER(Context, _thread_lock, THREAD_LOCK_PTR);
-
-  DUMP_MEMBER(Context,_sched,SCHED);
-
-  DUMP_MEMBER2(Thread,_sched,sched_t,_prio, SCHED__PRIO);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_mcp, SCHED__MCP);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_timeslice, SCHED__TIMESLICE);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_ticks_left, SCHED__TICKS_LEFT);
-
-  DUMP_MEMBER(Context,_fpu_state,FPU_STATE);
-
-  DUMP_MEMBER(Receiver, _partner,          PARTNER);
-  DUMP_MEMBER(Receiver, _receive_regs,     RECEIVE_REGS);
-  DUMP_MEMBER(Receiver, _pagein_request,   PAGIN_REQUEST);
-  DUMP_MEMBER(Receiver, _pagein_applicant, PAGEIN_APPLICANT);
-  DUMP_MEMBER(Receiver, _sender_first,     SENDER_FIRST);
-
-  DUMP_MEMBER(Thread, _id, ID);
-  DUMP_MEMBER(Thread, _send_partner, SEND_PARTNER);
-  DUMP_MEMBER(Thread, sender_next,     SENDER_NEXT);
-  DUMP_MEMBER(Thread, sender_prev,     SENDER_PREV);
-
-  DUMP_MEMBER(Thread, _space, SPACE);
-  DUMP_MEMBER(Thread, _thread_lock, THREAD_LOCK);
-
-  DUMP_MEMBER2(Thread, _thread_lock, Thread_lock,_switch_lock,THREAD_LOCK__SWITCH_LOCK);
-
-
-
-  DUMP_MEMBER3(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _switch_lock,  Switch_lock,            \
-	     _lock_owner,                                 \
-             THREAD_LOCK__SWITCH_LOCK__LOCK_OWNER)  ;
-
-
-  DUMP_MEMBER3(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _switch_lock,  Switch_lock,            \
-	     _lock_stack,                                 \
-             THREAD_LOCK__SWITCH_LOCK__LOCK_STACK)  ;
-
-
-  DUMP_MEMBER4(            Thread,                \
-             _thread_lock, Thread_lock,           \
-	     _switch_lock, Switch_lock,           \
-	     _lock_stack,  stack_ctxt,              \
-             _head,                                 \
-             THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD)  ;
-
-
-  DUMP_MEMBER5(            Thread,                \
-             _thread_lock, Thread_lock,           \
-	     _switch_lock, Switch_lock,           \
-	     _lock_stack,  stack_ctxt,              \
-             _head,        stack_top_ctxt,          \
-   	     _version,	                            \
-             THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD__VERSION)  ;
-
-  DUMP_MEMBER5(            Thread,                \
-             _thread_lock, Thread_lock,           \
-	     _switch_lock, Switch_lock,           \
-	     _lock_stack,  stack_ctxt,              \
-             _head,        stack_top_ctxt,          \
-   	     _next,	                            \
-             THREAD_LOCK__SWITCH_LOCK_LOCK_STACK__HEAD__NEXT)  ;
-
-
-  DUMP_MEMBER2(Thread, _thread_lock, Thread_lock,_switch_hint,THREAD_LOCK__SWITCH_HINT);
-
-  DUMP_MEMBER(Thread, _timeout, TIMEOUT);
-
-  DUMP_MEMBER(Thread, _pager, PAGER);
-  DUMP_MEMBER(Thread, _preempter, PREEMPTER);
-  DUMP_MEMBER(Thread, _ext_preempter, EXT_PREEMPTER);
-
-  DUMP_MEMBER(Thread, present_next, PRESENT_NEXT);
-  DUMP_MEMBER(Thread, present_prev, PRESENT_PREV);
-
-  DUMP_MEMBER(Thread, _irq,IRQ);
-
-  DUMP_MEMBER(Thread, _idt,IDT);
-  DUMP_MEMBER(Thread, _idt_limit,IDT_LIMIT);
-  
-  DUMP_MEMBER(Thread, _target_desc, TARGET_DESC);
-  DUMP_MEMBER(Thread, _pagein_error_code, PAGEIN_ERROR_CODE);
-
-  DUMP_MEMBER(Thread, _vm_window0, VM_WINDOW0);
-  DUMP_MEMBER(Thread, _vm_window1, VM_WINDOW1);
-
-  DUMP_MEMBER(Thread, _recover_jmpbuf, RECOVER_JMPBUF);
-  DUMP_MEMBER(Thread, _pf_timeout, PF_TIMEOUT);
-
-  DUMP_MEMBER(Thread, _last_pf_address, LAST_PF_ADDRESS);
-  DUMP_MEMBER(Thread, _last_pf_error_code, LAST_PF_ERROR_CODE);
-
-  DUMP_MEMBER(Thread, _magic, MAGIC);
-
-
-#endif
-  
-}
-
-void
-generate_fiasco_smp_headers()
-{
-#ifdef FIASCO_SMP
-  DUMP_MEMBER(Context, _state,STATE);
-
-  DUMP_MEMBER(Context, _lock_owner, LOCK_OWNER);
-
-  DUMP_MEMBER(Context, _ready_next, READY_NEXT);
-  DUMP_MEMBER(Context, _ready_prev, READY_PREV);
-
-
-  DUMP_MEMBER(Context, kernel_sp, KERNEL_SP);
-  DUMP_MEMBER(Context, _space_context, SPACE_CONTEXT);
-  DUMP_MEMBER(Context, _no_switch_req, NO_SWITCH_REQ);
-  DUMP_MEMBER(Context, _stack_link, STACK_LINK);
-  DUMP_MEMBER(Context, _enqueue_link, ENQUEUE_LINK);
-  DUMP_MEMBER(Context, _dequeue_link, DEQUEUE_LINK);
-  DUMP_MEMBER(Context, _switch_link, SWITCH_LINK);
-
-
-
-  DUMP_MEMBER(Context,_counter,COUNTER);
-  DUMP_MEMBER(Context,_enq_counter,ENQ_COUNTER);
-  DUMP_MEMBER(Context,_enq_pend_cnt,ENQ_PEND_CNT);
-
-  DUMP_MEMBER(Context,_spin_cnt,SPIN_CNT);
-  DUMP_MEMBER(Context,_lock_cnt, LOCK_CNT);
-  DUMP_MEMBER(Context,_thread_lock,THREAD_LOCK_PTR);
-
-
-
-  DUMP_MEMBER(Context,_sched,SCHED);
-
-  DUMP_MEMBER2(Thread,_sched,sched_t,_prio, SCHED__PRIO);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_mcp, SCHED__MCP);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_timeslice, SCHED__TIMESLICE);
-  DUMP_MEMBER2(Thread,_sched,sched_t,_ticks_left, SCHED__TICKS_LEFT);
-
-  DUMP_MEMBER(Context,_fpu_state,FPU_STATE);
-
-  DUMP_MEMBER(Context, _stack_low      , STACK_LOW);
-  DUMP_MEMBER(Context, _switch_fail_cnt, SWITCH_FAIL_CNT);
-  DUMP_MEMBER(Context, _entry_cnt      , ENTRY_CNT);
-  DUMP_MEMBER(Context, _pf_cnt         , PF_CNT);
-  DUMP_MEMBER(Context, _switch_to_cnt  , SWITCH_TO_CNT);
-  DUMP_MEMBER(Context, _pf_in_progress , PF_IN_PROGRESS);
-  DUMP_MEMBER(Context, _user_space_access, USER_SPACE_ACCESS);
-  DUMP_MEMBER(Context, _ctxt_log       , CTXT_LOG);
-  DUMP_MEMBER(Context, _timer_intr_in_progress, TIMER_INTR_IN_PROGRESS);
-  DUMP_MEMBER(Context, _last_entry_eip , LAST_ENTRY_EIP);
-  DUMP_MEMBER(Context, _last_entry_eip_cnt, LAST_ENTRY_EIP_CNT);
-
-  DUMP_MEMBER(Receiver, _partner,          PARTNER);
-  DUMP_MEMBER(Receiver, _receive_regs,     RECEIVE_REGS);
-  DUMP_MEMBER(Receiver, _pagein_request,   PAGIN_REQUEST);
-  DUMP_MEMBER(Receiver, _pagein_applicant, PAGEIN_APPLICANT);
-  DUMP_MEMBER(Receiver, _sender_first,     SENDER_FIRST);
-
-  DUMP_MEMBER(Thread, _id, ID);
-  DUMP_MEMBER(Thread, _send_partner, SEND_PARTNER);
-  DUMP_MEMBER(Thread, sender_next,     SENDER_NEXT);
-  DUMP_MEMBER(Thread, sender_prev,     SENDER_PREV);
-
-  DUMP_MEMBER(Thread, _space, SPACE);
-  DUMP_MEMBER(Thread, _thread_lock, THREAD_LOCK);
-
-
-
-  DUMP_MEMBER2(Thread, _thread_lock, Thread_lock,_lock_stack,THREAD_LOCK__LOCK_STACK);
-  DUMP_MEMBER3(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _lock_stack,  stack_ctxt_int,          \
-	     _head,                                 \
-             THREAD_LOCK__LOCK_STACK__HEAD)  ;
-
-  DUMP_MEMBER4(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _lock_stack,  stack_ctxt_int,          \
-	     _head,        stack_top_ctxt,          \
-             _version,                              \
-             THREAD_LOCK__LOCK_STACK__HEAD__VERSION)  ;
-
-  DUMP_MEMBER4(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _lock_stack,  stack_ctxt_int,          \
-	     _head,        stack_top_ctxt,          \
-             _next,                                 \
-             THREAD_LOCK__LOCK_STACK__HEAD__NEXT)  ;
-
-  DUMP_MEMBER3(            Thread,                \
-             _thread_lock, Thread_lock,           \
-             _lock_stack,  stack_ctxt_int,          \
-	     _arg,                                 \
-             THREAD_LOCK__LOCK_STACK__ARG)  ;
-
-  DUMP_MEMBER2(Thread, _thread_lock, Thread_lock,_switch_hint,THREAD_LOCK__SWITCH_HINT);
-  DUMP_MEMBER2(              Thread, 
-	       _thread_lock, Thread_lock,
-               _was_executing,
-	       THREAD_LOCK__WAS_EXECUTING);
-
-
-  DUMP_MEMBER(Thread, _timeout, TIMEOUT);
-  DUMP_MEMBER(Thread, _pager,   PAGER);
-  DUMP_MEMBER(Thread, _preempter, PREEMPTER);
-  DUMP_MEMBER(Thread, _ext_preempter, EXT_PREEMPTER);
-
-  DUMP_MEMBER(Thread, present_next, PRESENT_NEXT);
-  DUMP_MEMBER(Thread, present_prev, PRESENT_PREV);
-  DUMP_MEMBER(Thread, _irq, IRQ);
-  DUMP_MEMBER(Thread, _idt, IDT);
-  DUMP_MEMBER(Thread, _idt_limit, IDT_LIMIT);
-  DUMP_MEMBER(Thread, _target_desc, TARGET_DESC);
-  DUMP_MEMBER(Thread, _pagein_error_code, PAGEIN_ERROR_CODE);
-  DUMP_MEMBER(Thread, _vm_window0, VM_WINDOW0);
-  DUMP_MEMBER(Thread, _vm_window1, VM_WINDOW1);
-  DUMP_MEMBER(Thread, _recover_jmpbuf, RECOVER_JMPBUF);
-
-  DUMP_MEMBER(Thread, _pf_timeout, PF_TIMEOUT);
-  DUMP_MEMBER(Thread, _last_pf_address, LAST_PF_ADDRESS);
-  DUMP_MEMBER(Thread, _last_pf_error_code, LAST_PF_ERROR_CODE);
-
-  DUMP_MEMBER(Thread, _magic, MAGIC);
-  DUMP_MEMBER(Thread, _magic1, MAGIC1);
-  DUMP_MEMBER(Thread, _magic2, MAGIC2);
-  DUMP_MEMBER(Thread, _magic3, MAGIC3);
-  DUMP_MEMBER(Thread, _magic4, MAGIC4);
-  DUMP_MEMBER(Thread, _magic5, MAGIC5);
-  DUMP_MEMBER(Thread, _magic6, MAGIC6);
-  DUMP_MEMBER(Thread, _magic7, MAGIC7);
-  DUMP_MEMBER(Thread, _magic8, MAGIC8);
-#endif
-
-}
-
-void
-generate_cast_offsets()
-{
-  DUMP_CAST_OFFSET(Thread,Sender);
-  DUMP_CAST_OFFSET(Thread,Receiver);
 }

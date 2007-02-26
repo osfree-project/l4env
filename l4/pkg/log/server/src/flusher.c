@@ -21,6 +21,10 @@
  * Function-Interface:	flusher_init(), flush_buffer, do_flush_buffer().
  *
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <l4/util/util.h>
 #include <l4/sys/ipc.h>
@@ -56,7 +60,7 @@ static int wait_for_flush_request(void){
     l4_msgdope_t result;
     l4_umword_t dw0, dw1;
 
-    err = l4_i386_ipc_wait(&flush_requester, NULL, &dw0, &dw1,
+    err = l4_ipc_wait(&flush_requester, NULL, &dw0, &dw1,
 			   L4_IPC_NEVER, &result);
     LOGd(CONFIG_LOG_IPC, "received ipc, err=%#x\n", err);
     return err;
@@ -67,7 +71,7 @@ static int answer_flush_request(void){
     int err;
     l4_msgdope_t result;
 
-    do{err = l4_i386_ipc_send(flush_requester, NULL, 0, 0,
+    do{err = l4_ipc_send(flush_requester, NULL, 0, 0,
 			      L4_IPC_NEVER, &result);
     }while(err == L4_IPC_SECANCELED);
     return err;
@@ -101,7 +105,7 @@ static void thread_loop(void*data){
 #endif
 
     do{
-	err = l4_i386_ipc_send(main_thread, NULL, ret, 0,
+	err = l4_ipc_send(main_thread, NULL, ret, 0,
 			       L4_IPC_NEVER, &result);
     } while(err==L4_IPC_SECANCELED);
     if(err){
@@ -237,12 +241,12 @@ int flush_buffer(void){
     if(buffer_size){
 	err = L4_IPC_SECANCELED;
 	while(err == L4_IPC_SECANCELED){
-	    err = l4_i386_ipc_call(flusher_thread, NULL, 0, 0,
+	    err = l4_ipc_call(flusher_thread, NULL, 0, 0,
 				   NULL, &dw0, &dw1,
 				   L4_IPC_NEVER, &result);
 	}
 	while(err == L4_IPC_RECANCELED){
-	    err = l4_i386_ipc_receive(flusher_thread, NULL, &dw0, &dw1,
+	    err = l4_ipc_receive(flusher_thread, NULL, &dw0, &dw1,
 				      L4_IPC_NEVER, &result);
 	}
 	
@@ -300,7 +304,7 @@ int flusher_init(int prio){
 	goto error;
     }
     do{
-	err = l4_i386_ipc_receive(flusher_thread, NULL, &dw0, &dw1,
+	err = l4_ipc_receive(flusher_thread, NULL, &dw0, &dw1,
 				  L4_IPC_NEVER, &result);
     } while(err == L4_IPC_RECANCELED);
     if(err){

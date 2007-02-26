@@ -8,12 +8,13 @@ IMPLEMENTATION[ia32-ux]:
 #include "entry_frame.h"
 #include "globalconfig.h"
 #include "globals.h"
+#include "initcalls.h"
 #include "kdb_ke.h"
 #include "logdefs.h"
 #include "pic.h"
 #include "receiver.h"
 #include "static_init.h"
-#include "initcalls.h"
+#include "std_macros.h"
 #include "thread_state.h"
 
 
@@ -24,21 +25,21 @@ extern "C" unsigned apic_irq_nr;
 #endif
 
 
-static char dirq_storage[sizeof(dirq_t)* 16]; // 16 device irq's
+static char dirq_storage[sizeof(Dirq)* 16]; // 16 device irq's
 
 IMPLEMENT 
-void *dirq_t::operator new ( size_t ) 
+void *Dirq::operator new ( size_t ) 
 {
   static unsigned first = 0;
-  return reinterpret_cast<dirq_t*>(dirq_storage)+(first++);
+  return reinterpret_cast<Dirq*>(dirq_storage)+(first++);
 }
 
 IMPLEMENT FIASCO_INIT
 void
-dirq_t::init()
+Dirq::init()
 {
   for( unsigned i = 0; i<16; ++i )
-    new dirq_t(i);
+    new Dirq(i);
 }
 
 
@@ -49,7 +50,7 @@ dirq_t::init()
     @return true if the binding could be established
  */
 IMPLEMENT inline NEEDS ["atomic.h","pic.h"]
-bool dirq_t::alloc(Receiver *t, bool ack_in_kernel)
+bool Dirq::alloc(Receiver *t, bool ack_in_kernel)
 {
   bool ret = smp_cas(&_irq_thread, reinterpret_cast<Receiver*>(0), t);
 
@@ -75,7 +76,7 @@ bool dirq_t::alloc(Receiver *t, bool ack_in_kernel)
             successful
  */
 IMPLEMENT inline NEEDS ["receiver.h","pic.h"]
-bool dirq_t::free(Receiver *t)
+bool Dirq::free(Receiver *t)
 {
   bool ret = smp_cas(&_irq_thread, t, reinterpret_cast<Receiver*>(0));
 
@@ -93,8 +94,8 @@ bool dirq_t::free(Receiver *t)
     an IRQ message, and if so, restarts it so that it can pick up the IRQ
     message using ipc_receiver_ready().
  */
-PUBLIC inline NOEXPORT NEEDS ["receiver.h","pic.h","kdb_ke.h"]
-void dirq_t::hit()
+PUBLIC inline NOEXPORT
+void Dirq::hit()
 {
   // We're entered holding the kernel lock, which also means irqs are
   // disabled on this CPU (XXX always correct?).  We never enable irqs
@@ -103,14 +104,15 @@ void dirq_t::hit()
   // once we return from it (iret in entry.S:all_irqs) or we switch to
   // a different thread.
 
-  if (! _irq_thread)
+  if (EXPECT_FALSE (!_irq_thread) )
     {
       Pic::disable_locked(id().irq());
     }
-  else if (_irq_thread == (void*)-1) /* debugger attached to IRQ */ 
+  else if (EXPECT_FALSE (_irq_thread == (void*)-1))
     {
+      /* debugger attached to IRQ */
 #if defined(CONFIG_JDB)
-      jdb_enter_kdebug("IRQ ENTRY");
+      kdb_ke("IRQ ENTRY");
 #endif
       Pic::enable_locked(id().irq());
       return;
@@ -174,8 +176,8 @@ void dirq_t::hit()
 #ifdef CONFIG_APIC_MASK
 	      if (id().irq() == apic_irq_nr)
 		{
-		  dest_regs->edx = apic_timer_entry;
-		  dest_regs->ebx = apic_irq_mask;
+		  dest_regs->set_msg_word(0, apic_timer_entry);
+		  dest_regs->set_msg_word(1, apic_irq_mask);
 		}
 #endif
 
@@ -190,7 +192,7 @@ void dirq_t::hit()
 	      _irq_thread->state_change_dirty(~Thread_ipc_mask, 0);
 
 	      // in case a timeout was set
-	      _irq_thread->reset_receive_timeout();
+	      _irq_thread->reset_timeout();
 
 	      // kernel-unlock is done in switch_to() (on switchee's side)
 	      
@@ -221,8 +223,8 @@ void dirq_t::hit()
     }
 }
 
-/** Hardware interrupt entry point.  Calls corresponding irq_t instance's 
-    irq_t::hit() method.
+/** Hardware interrupt entry point.  Calls corresponding Dirq instance's
+    Dirq::hit() method.
     @param irqnum hardware-interrupt number
  */
 extern "C" void
@@ -231,25 +233,19 @@ irq_interrupt(unsigned irqnum)
   LOG_IRQ(irqnum);
 
   // we're entered with disabled irqs
-  irq_t *i = dirq_t::lookup(irqnum);
+  Irq *i = Dirq::lookup(irqnum);
 
   i->maybe_acknowledge();
-
-
-
-
-  //i->hit(); //maybe_acknowledge()
 
 #if 0				// screen spinner for debugging purposes
   (*(unsigned char*)(kmem::phys_to_virt(0xb8000 + irqnum*2)))++;
 #endif
 
-
 #if defined(CONFIG_IA32) && defined(CONFIG_PROFILE)
   cpu_lock.lock();
 #endif
 
-  static_cast<dirq_t*>(i)->hit();
+  static_cast<Dirq*>(i)->hit();
 
 #if defined(CONFIG_IA32) && defined(CONFIG_PROFILE)
   cpu_lock.clear_irqdisable(); 

@@ -8,9 +8,9 @@ INTERFACE:
 #include <cstddef>
 
 extern char *pr_base;
-extern vm_offset_t pr_off;
-extern vm_size_t pr_size;
-extern vm_size_t pr_scale;
+extern Address pr_off;
+extern size_t pr_size;
+extern size_t pr_scale;
 
 IMPLEMENTATION:
 
@@ -104,12 +104,12 @@ sbrk_free(void* buf, size_t len)
 }
 
 char *pr_base;
-vm_offset_t pr_off;
-vm_size_t pr_size;
-vm_size_t pr_scale;
+Address pr_off;
+size_t pr_size;
+size_t pr_scale;
 
 int
-profil(char *samples, vm_size_t size, vm_offset_t offset, vm_size_t scale)
+profil(char *samples, size_t size, Address offset, size_t scale)
 {
   pr_base = samples;
   pr_size = size;

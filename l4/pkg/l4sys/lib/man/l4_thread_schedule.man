@@ -42,7 +42,7 @@ This word specifies scheduling parameters:
 } l4_sched_param_struct_t;
 
 typedef union {
-  dword_t sched_param;
+  l4_umword_t sched_param;
   l4_sched_param_struct_t sp;
 } l4_sched_param_t;\fP
 .fi

@@ -1,9 +1,16 @@
 /* $Id$ */
-
-/*	con/server/src/ev.c
+/**
+ * \file	con/server/src/ev.c
+ * \brief	mouse, keyboard, etc event stuff
  *
- *	event stuff
- */
+ * \date	2001
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ *		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 /* L4 includes */
 #include <l4/con/l4con.h>
@@ -33,11 +40,7 @@ extern l4_uint8_t vc_mode;
 
 static int use_omega0 = 0;
 
-/******************************************************************************
- * handle_keyevent                                                            *
- *                                                                            *
- * Key event handling -> distribution and switch                              *
- ******************************************************************************/
+/** brief Key event handling -> distribution and switch */
 static void
 handle_event(l4input_t *ev)
 {
@@ -45,7 +48,7 @@ handle_event(l4input_t *ev)
   static int shift_down = 0;
   static int f_key;
 
-  static sm_exc_t _ev;
+  static CORBA_Environment env = dice_default_environment;
   static stream_io_input_event_t ev_struct;
 
   if (ev->type == EV_KEY)
@@ -115,9 +118,10 @@ handle_event(l4input_t *ev)
     {
       /* krishna: Flick is dumb. No Flick client timeouts means a security 
        * problem here because the untrusted part is the Flick server! */
-      stream_io_push(ev_partner_l4id, &ev_struct, &_ev);
-      if (   _ev._type == exc_l4_system_exception
-	  && _ev._except == (void *)5)
+      stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
+//      if (   _ev._type == exc_l4_system_exception
+//	  && _ev._except == (void *)5)
+      if (env.major != CORBA_NO_EXCEPTION)
 	{
 	  printf("handle_key_event: Target thread %x.%x dead?\n",
 	      ev_partner_l4id.id.task, ev_partner_l4id.id.lthread);
@@ -128,11 +132,7 @@ handle_event(l4input_t *ev)
   l4lock_unlock(&want_vc_lock);
 }
 
-/******************************************************************************
- * ev_init                                                                    *
- *                                                                            *
- * event driver initialization                                                *
- ******************************************************************************/
+/** \brief event driver initialization */
 void ev_init()
 {
   l4input_init(use_omega0, 255, handle_event);

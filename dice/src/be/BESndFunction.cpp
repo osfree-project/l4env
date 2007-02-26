@@ -5,7 +5,7 @@
  *	\date	01/14/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -36,7 +36,7 @@
 #include "be/BEHeaderFile.h"
 #include "be/BEMsgBufferType.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 
 IMPLEMENT_DYNAMIC(CBESndFunction);
@@ -66,7 +66,7 @@ CBESndFunction::~CBESndFunction()
 void CBESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // define message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
     // check for temp
     if (HasVariableSizedParameters() || HasArrayParameters())
@@ -87,7 +87,7 @@ void CBESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pCon
 void CBESndFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     // init message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
@@ -150,6 +150,10 @@ bool CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCo
     }
     CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
     delete pOldType;
+
+	// need a message buffer, don't we?
+	if (!AddMessageBuffer(pFEOperation, pContext))
+	    return false;
 
     return true;
 }

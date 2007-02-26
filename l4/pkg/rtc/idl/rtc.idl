@@ -1,0 +1,32 @@
+/* $Id$ */
+/**
+ * \file   rtc/idl/rtc.idl
+ * 
+ * \date   09/23/2003
+ * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ * 
+ * \brief  RTC server mainly used with L4Linux.
+ */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
+/** l4 namespace */
+library l4rtc
+{
+  /** exec interface */
+  interface if
+    {
+      /**
+       *
+       */
+      int get_offset([out] l4_uint32_t *offset);
+
+      /**
+       *
+       */
+      int get_linux_tsc_scaler([out] l4_uint32_t *scaler);
+    };
+};
+

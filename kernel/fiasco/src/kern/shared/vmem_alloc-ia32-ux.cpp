@@ -15,7 +15,7 @@ private:
 
 IMPLEMENTATION[ia32-ux]:
 
-#include <flux/x86/paging.h> // pd_entry_t
+#include <flux/x86/paging.h> // Pd_entry
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -42,7 +42,7 @@ template< typename _Ty >
 inline
 P_ptr<_Ty> Vmem_alloc::linear_virt_to_phys( _Ty *v )
 {
-  return P_ptr<_Ty>((((vm_offset_t)v) - Kmem::mem_phys));
+  return P_ptr<_Ty>((((Address)v) - Kmem::mem_phys));
 }
 
 IMPLEMENT FIASCO_INIT
@@ -74,19 +74,19 @@ void *Vmem_alloc::page_alloc( void *address, int order, Zero_fill zf,
 
  
   // insert page into master page table
-  pd_entry_t *p = Kmem::kdir + (((vm_offset_t)address >> PDESHIFT) & PDEMASK);
-  pt_entry_t *e;
+  Pd_entry *p = Kmem::kdir + (((Address)address >> PDESHIFT) & PDEMASK);
+  Pt_entry *e;
 
   if (! (*p & INTEL_PDE_VALID))
     {
-      pt_entry_t *new_pt = (pd_entry_t*)Kmem_alloc::allocator()->alloc(0);
+      Pt_entry *new_pt = (Pd_entry*)Kmem_alloc::allocator()->alloc(0);
       if (!new_pt)
         {
           kdb_ke("page_alloc: can't alloc page table");
           goto error;
         }
 
-      P_ptr<pt_entry_t> new_ppt = Kmem_alloc::allocator()->virt_to_phys(new_pt);
+      P_ptr<Pt_entry> new_ppt = Kmem_alloc::allocator()->virt_to_phys(new_pt);
 
       memset(new_pt, 0, Config::PAGE_SIZE);
       *p = new_ppt.get_unsigned()
@@ -94,11 +94,11 @@ void *Vmem_alloc::page_alloc( void *address, int order, Zero_fill zf,
         | Kmem::pde_global();
       if (pa != Page::USER_NO)
         *p |= INTEL_PDE_USER;
-      e = new_pt + (((vm_offset_t)address >> PTESHIFT) & PTEMASK);
+      e = new_pt + (((Address)address >> PTESHIFT) & PTEMASK);
     }
   else if ((*p & INTEL_PDE_SUPERPAGE)
-           || (e = Kmem_alloc::allocator()->phys_to_virt(P_ptr<pt_entry_t>((pt_entry_t*)(*p & Config::PAGE_MASK)))
-                   + (((vm_offset_t)address >> PTESHIFT) & PTEMASK),
+           || (e = Kmem_alloc::allocator()->phys_to_virt(P_ptr<Pt_entry>((Pt_entry*)(*p & Config::PAGE_MASK)))
+                   + (((Address)address >> PTESHIFT) & PTEMASK),
                *e & INTEL_PTE_VALID))
     {
       kdb_ke("page_alloc: address already mapped");
@@ -139,11 +139,7 @@ IMPLEMENT
 inline NEEDS[<flux/x86/paging.h>,"config.h"]
 void Vmem_alloc::page_free( void *page, int order )
 {
-
-// undef the f... oskit defines
-#undef PAGE_MASK 
-
-  vm_offset_t phys = Kmem::virt_to_phys(page);
+  Address phys = Kmem::virt_to_phys(page);
 
   if (phys == 0xffffffff)
     return;
@@ -152,12 +148,12 @@ void Vmem_alloc::page_free( void *page, int order )
   if (phys != zero_page.get_unsigned())
     Kmem_alloc::allocator()->free(0, page); // 2^0=1 pages
 
-  vm_offset_t va = reinterpret_cast<vm_offset_t>(page);
+  Address va = reinterpret_cast<Address>(page);
 
   if (va < Kmem::mem_phys)
     {
       // clean out pgdir entry
-      (phys_to_virt(P_ptr<pd_entry_t>((pd_entry_t*)(
+      (phys_to_virt(P_ptr<Pd_entry>((Pd_entry*)(
          Kmem::kdir[(va >> PDESHIFT) & PDEMASK] 
 	 & Config::PAGE_MASK))))[(va >> PTESHIFT) & PTEMASK] = 0;
 

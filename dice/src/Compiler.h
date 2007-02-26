@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -65,19 +65,20 @@ class CCompiler
     virtual void Write();
     virtual void PrepareWrite();
     virtual void ShowHelp();
+    virtual void ShowShortHelp();
     virtual void ShowCopyright();
     virtual void ParseArguments(int argc, char *argv[]);
-    static void Error(char *sMsg, ...);
-    static void Warning(char *sMsg, ...);
-    static void GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, ...);
-    static void GccError(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list vl);
-    static void GccWarning(CFEBase * pFEObject, int nLinenb, char *sMsg, ...);
-    static void GccWarning(CFEBase * pFEObject, int nLinenb, char *sMsg, va_list vl);
+    static void Error(const char *sMsg, ...);
+    static void Warning(const char *sMsg, ...);
+    static void GccError(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...);
+    static void GccErrorVL(CFEBase * pFEObject, int nLinenb, const char *sMsg, va_list vl);
+    static void GccWarning(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...);
+    static void GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg, va_list vl);
 	virtual void Parse();
 
   protected:
     virtual void Optimize();
-    virtual void Verbose(char *sMsg, ...);
+    virtual void Verbose(const char *sMsg, ...);
     virtual void ShowVersion();
     virtual void PrintDependencyTree(FILE * output, CFEFile * pFEFile);
     virtual void PrintDependencies();
@@ -94,6 +95,8 @@ class CCompiler
     virtual void PrintGeneratedFiles4Operation(FILE * output, CFEInterface * pFEInterface);
     virtual void PrintGeneratedFiles4Operation(FILE * output, CFEOperation * pFEOperation);
     virtual void PrintDependentFile(FILE * output, String sFileName);
+    virtual void AddSymbol(const char *sNewSymbol);
+    virtual void AddSymbol(String sNewSymbol);
 
 // Attributes
   protected:
@@ -169,6 +172,30 @@ class CCompiler
      *  \brief contains the name of the init-rcv-string function
      */
     String m_sInitRcvStringFunc;
+    /** \var String m_sTraceClientFunc
+     *  \brief contains the name of the Trace function for the client
+     */
+    String m_sTraceClientFunc;
+    /** \var String m_sTraceServerFunc
+     *  \brief contains the name of the Trace function for the server
+     */
+    String m_sTraceServerFunc;
+    /** \var String m_sTraceMsgBuf
+     *  \brief contains the name of the Trace function for the message buffer
+     */
+    String m_sTraceMsgBuf;
+	/** \var int m_nSymbolCount
+	 *  \brief number of currently defined symbols
+	 */
+	int m_nSymbolCount;
+	/** \var char **m_sSymbols
+	 *  \brief list of symbols defined when calling dice
+	 */
+	char **m_sSymbols;
+	/** \var int m_nDumpMsgBufDwords
+	 *  \brief contains the number of dwords to dump
+	 */
+	int m_nDumpMsgBufDwords;
 };
 
 #endif				// __DICE_COMPILER_H__

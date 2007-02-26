@@ -6,21 +6,7 @@
 #
 # 05/2002 Jork Loeser <jork.loeser@inf.tu-dresden.de>
 
-# Input: Variable TARGET contains the subdirectories to discover. They
-#        are build in the order given in TARGET, even in parallel case
-#        (make -j).
-#
-# targets:
-# all relink config install: are maked for every subdir.
-#
-# scrub, clean, mostlyclean: made for subdirs + scrubbing the local dir.
-#
-# cleanall realclean: made for subdirs + removing local dependency-files.
-#
-# $(TARGET): change to the given subdir and do a simple 'make'.
-
 include $(L4DIR)/mk/Makeconf
-include $(L4DIR)/mk/config.inc
 
 ifeq ($(PKGDIR),.)
 TARGET ?= $(patsubst %/Makefile,%,$(wildcard $(addsuffix /Makefile, \
@@ -28,30 +14,39 @@ TARGET ?= $(patsubst %/Makefile,%,$(wildcard $(addsuffix /Makefile, \
 $(if $(wildcard include/Makefile), idl lib server examples: include)
 $(if $(wildcard idl/Makefile), lib server examples: idl)
 $(if $(wildcard lib/Makefile), server examples: lib)
-.PHONY: idl include lib server examples
 else
 TARGET ?= $(patsubst %/Makefile,%,$(wildcard $(addsuffix /Makefile, \
 	idl src lib server examples doc)))
 endif
+SUBDIR_TARGET	:= $(if $(filter doc,$(MAKECMDGOALS)),$(TARGET),    \
+			$(filter-out doc,$(TARGET)))
 
-MKFLAGS += $(MKFLAGS_$@)
-
+all::	$(SUBDIR_TARGET)
+idl include lib server examples doc:
 install::
-all::	$(TARGET)
 
-clean cleanall install oldconfig reloc scrub txtconfig::
-	$(if $(TARGET), $(VERBOSE)set -e ; for d in $(TARGET) ; do \
-		$(MAKE) -C $$d $@ ; done  )
+clean cleanall scrub::
+	$(VERBOSE)set -e; $(foreach d,$(TARGET),\
+		test -f $d/broken || \
+		$(MAKE) -C $d $@ $(MKFLAGS) $(MKFLAGS_$(d)); )
 
-$(TARGET):
-	$(VERBOSE)$(MAKE) -C $@ $(MKFLAGS)
+install oldconfig reloc txtconfig relink::
+	$(VERBOSE)set -e; $(foreach d,$(TARGET),\
+		test -f $d/broken -o -f $d/obsolete || \
+		$(MAKE) -C $d $@ $(MKFLAGS) $(MKFLAGS_$(d)); )
+
+$(SUBDIR_TARGET):
+	$(VERBOSE)test -f $@/broken -o -f $@/obsolete || \
+		$(MAKE) -C $@ $(MKFLAGS)
 
 install-symlinks:
 	$(warning target install-symlinks is obsolete. Use 'include' instead (warning only))
 	$(VERBOSE)$(MAKE) include
 
 help::
-	@echo "  all            - build subdirs: $(TARGET)"
+	@echo "  all            - build subdirs: $(SUBDIR_TARGET)"
+	$(if $(filter doc,$(TARGET)), \
+	@echo "  doc            - build documentation")
 	@echo "  scrub          - call scrub recursively"
 	@echo "  clean          - call clean recursively"
 	@echo "  cleanall       - call cleanall recursively"

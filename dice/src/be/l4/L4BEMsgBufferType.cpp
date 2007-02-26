@@ -5,11 +5,11 @@
  *	\date	02/13/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
+ * it under the terms of the GNU General Public License, Version 2 as
  * published by the Free Software Foundation (see the file COPYING). 
  *
  * This program is distributed in the hope that it will be useful,
@@ -33,8 +33,10 @@
 #include "be/BEFunction.h"
 #include "be/BESrvLoopFunction.h"
 #include "be/BEType.h"
+#include "be/BEUserDefinedType.h"
 #include "be/BEDeclarator.h"
 #include "be/BEAttribute.h"
+#include "be/BEHeaderFile.h"
 
 #include "fe/FETaggedStructType.h"
 #include "fe/FESimpleType.h"
@@ -151,8 +153,11 @@ CFETypeSpec *CL4BEMsgBufferType::GetMsgBufferType(CFEInterface *pFEInterface,
     if (nFlexpageOut > 0)
         nSizeOut += (nFlexpageOut+1)*nFlexpageSize;
     int nSize = MAX(nSizeIn, nSizeOut);
-    if (nSize < 8)
-        nSize = 8;
+    // get minimum size
+	CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+	int nMin = pSizes->GetMaxShortIPCSize(DIRECTION_IN);
+    if (nSize < nMin)
+        nSize = nMin;
     if ((m_nVariableCount[DIRECTION_IN-1] + m_nVariableCount[DIRECTION_OUT-1]) > 0)
     {
         nSize = 0;
@@ -260,8 +265,11 @@ CFETypeSpec * CL4BEMsgBufferType::GetMsgBufferType(CFEOperation * pFEOperation,
         nBytesOut += (m_nFlexpageCount[DIRECTION_OUT-1]+1)*nFlexpageSize;
 
     int nSize = MAX(nBytesIn, nBytesOut);
-    if (nSize < 8)
-        nSize = 8;
+    // get minimum size
+	CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+	int nMin = pSizes->GetMaxShortIPCSize(DIRECTION_IN);
+    if (nSize < nMin)
+        nSize = nMin;
     if ((m_nVariableCount[DIRECTION_IN-1] + m_nVariableCount[DIRECTION_OUT-1]) > 0)
     {
         nSize = 0;
@@ -346,7 +354,7 @@ CFETypeSpec * CL4BEMsgBufferType::GetMsgBufferType(CFEOperation * pFEOperation,
  */
 void CL4BEMsgBufferType::InitCounts(CBEFunction * pFunction, CBEContext *pContext)
 {
-    ASSERT(pFunction);
+	assert(pFunction);
     // get directions
     int nSendDir = pFunction->GetSendDirection();
     int nRecvDir = pFunction->GetReceiveDirection();
@@ -378,7 +386,7 @@ void CL4BEMsgBufferType::InitCounts(CBEFunction * pFunction, CBEContext *pContex
     {
         if (m_bCountAllVarsAsMax)
         {
-            int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) + pFunction->GetFixedSize(nSendDir, pContext);
+            int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext);// + pFunction->GetFixedSize(nSendDir, pContext);
             m_nFixedCount[nSendDir-1] = MAX(nMaxSend, m_nFixedCount[nSendDir-1]);
         }
         else
@@ -386,17 +394,18 @@ void CL4BEMsgBufferType::InitCounts(CBEFunction * pFunction, CBEContext *pContex
     }
     // if there are variable sized parameters for recv and NOT for send
     // -> get max of receive (dont't forget "normal" fixed) and max with fixed
+	// pFunction->GetMaxSize includes the normal fixed size already
     if ((nTempSend == 0) && (nTempRecv > 0))
     {
-        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) + pFunction->GetFixedSize(nRecvDir, pContext);
+        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext);// + pFunction->GetFixedSize(nRecvDir, pContext);
         m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
     }
     // if there are variable sized parameters for send AND recveive
     // -> add recv max to fixed AND if send max bigger, set var sized of send
     if ((nTempSend > 0) && (nTempRecv > 0))
     {
-        int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) + pFunction->GetFixedSize(nSendDir, pContext);
-        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) + pFunction->GetFixedSize(nRecvDir, pContext);
+        int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext);// + pFunction->GetFixedSize(nSendDir, pContext);
+        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext);// + pFunction->GetFixedSize(nRecvDir, pContext);
         m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
         if (nMaxSend > nMaxRecv)
         {
@@ -405,6 +414,9 @@ void CL4BEMsgBufferType::InitCounts(CBEFunction * pFunction, CBEContext *pContex
             else
                 m_nVariableCount[nSendDir-1] = MAX(nTempSend, m_nVariableCount[nSendDir-1]);
         }
+		else
+		    // count send max as fixed, so we do not forget this value
+		    m_nFixedCount[nSendDir-1] = MAX(nMaxSend, m_nFixedCount[nSendDir-1]);
     }
 
     // count indirect strings (we count all parameters with the ref attribute)
@@ -523,7 +535,7 @@ void CL4BEMsgBufferType::WriteInitialization(CBEFile * pFile, CBEContext * pCont
         // allocate message data structure
         pFile->PrintIndent("%s = ", (const char *) sMsgBuffer);
         m_pType->WriteCast(pFile, true, pContext);
-        pFile->Print("alloca(%s);\n", (const char *) sOffset);
+        pFile->Print("_dice_alloca(%s);\n", (const char *) sOffset);
     }
     // if we receive flexpages, we have to initialize the fpage member
     WriteReceiveFlexpageInitialization(pFile, pContext);
@@ -540,10 +552,10 @@ void CL4BEMsgBufferType::WriteSizeOfBytes(CBEFile *pFile, CBEContext *pContext)
     int nFlexpages = MAX(m_nFlexpageCount[DIRECTION_IN-1], m_nFlexpageCount[DIRECTION_OUT-1]);
     if (nFlexpages > 0)
         nBufferSize += (nFlexpages+1)*pContext->GetSizes()->GetSizeOfType(TYPE_FLEXPAGE);
+    // add space for opcode / exception
+    nBufferSize += pContext->GetSizes()->GetOpcodeSize();
     // make dword aligned
     nBufferSize = (nBufferSize+3) & ~3;
-    // add space for opcode
-    nBufferSize += pContext->GetSizes()->GetOpcodeSize();
     // declare constant size (at least opcode size)
     pFile->Print("%d", nBufferSize);
     // iterate over variable sized parameters
@@ -669,6 +681,19 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringInitialization(CBEFile *pFile
     // get an array of values, which contain the maxima
     int nStrings = GetRefStringCount(nDirection);
     int nMaxStrSize = pContext->GetSizes()->GetMaxSizeOfType(TYPE_CHAR);
+	// get the offset variable (just in case we need it)
+    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+	// if we have an variable sized string, we need to offset into the bytes member of the message
+	// buffer. For this we need an offset. This function is called after the size dope of the
+	// message has been set, which is the number of dwords used for variable sized parameters.
+	// we get the offset for the cast by multiplying this number with the size of an mword
+	if (IsVariableSized())
+	{
+		sOffset += "*";
+		sOffset += pContext->GetSizes()->GetSizeOfType(TYPE_MWORD);
+	}
+	else
+		sOffset.Empty();
     // iterate over the number of indirect strings, and init them
 	VectorElement *pIter = 0;
 	CBETypedDeclarator *pParameter = 0;
@@ -682,7 +707,8 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringInitialization(CBEFile *pFile
 		{
 		    do {
 		        pParameter = pFunction->GetNextSortedParameter(pIter);
-			} while (pParameter && !pParameter->FindAttribute(ATTR_REF));
+			} while ((pParameter && !pParameter->FindAttribute(ATTR_REF)) ||
+			         (pParameter && !pParameter->IsDirection(nDirection)));
 		}
         int nStrSize = 0;
         if (m_nMaxima[nDirection-1])
@@ -713,11 +739,12 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringInitialization(CBEFile *pFile
                 sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext, (void*)&sFuncName);
             // get env variable
             String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
+			// call the init function for the indorect string
             pFile->PrintIndent("%s( %d, &(", (const char*)sFuncName, i);
-            WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
-            pFile->Print("[%d].rcv_str), &(", i);
-            WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
-            pFile->Print("[%d].rcv_size), ", i);
+			WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
+			pFile->Print("[%d].rcv_str), &(", i);
+			WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
+			pFile->Print("[%d].rcv_size), ", i);
             // only if parent is server-loop, we have to test if the environment is a pointer
             if (pFunction->IsKindOf(RUNTIME_CLASS(CBESrvLoopFunction)))
             {
@@ -728,64 +755,45 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringInitialization(CBEFile *pFile
         }
         else
         {
-		    if (pParameter && pParameter->FindAttribute(ATTR_INIT_WITH_IN))
+		    if (pParameter && pParameter->FindAttribute(ATTR_PREALLOC))
 			{
 				pFile->PrintIndent("");
-				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
 				pFile->Print("[%d].rcv_str = (%s)(", i, (const char*)sMWord);
 				VectorElement *pI = pParameter->GetFirstDeclarator();
 				CBEDeclarator *pD = pParameter->GetNextDeclarator(pI);
 				int nStart = 1, nStars;
-				if (pParameter->GetType()->IsPointerType())
+				CBEType *pType = pParameter->GetType();
+				if (pType->IsPointerType())
 				    nStart--;
 				for (nStars=nStart; nStars<pD->GetStars(); nStars++)
-                    pFile->Print("*");				
+                    pFile->Print("*");
 				pFile->Print("%s);\n", (const char*)pD->GetName());
 				// set receive size
 				pFile->PrintIndent("");
-				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
 				pFile->Print("[%d].rcv_size = ", i);
+				if (pType->GetSize() > 1)
+					pFile->Print("(");
 				pParameter->WriteGetSize(pFile, NULL, pContext);
+				if (pType->GetSize() > 1)
+				{
+					pFile->Print(")");
+					pFile->Print("*sizeof");
+					pType->WriteCast(pFile, false, pContext);
+				}
 				pFile->Print(";\n");
 			}
 			else
 			{
-				if (pContext->IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				{
-					CCompiler::Warning("CORBA_alloc is used to set receive buffer in %s.", (const char*)pFunction->GetName());
-				}
 				pFile->PrintIndent("");
-				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
 				pFile->Print("[%d].rcv_str = (%s)", i, (const char*)sMWord);
-				if ((((pContext->IsOptionSet(PROGRAM_SERVER_PARAMETER)) && 
-					pFunction->IsComponentSide()) ||
-					!pFunction->IsComponentSide()) &&
-					!pContext->IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC))
-				{
-					CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
-					CBEDeclarator *pDecl = 0;
-					if (pEnv)
-					{
-						VectorElement* pIter = pEnv->GetFirstDeclarator();
-						pDecl = pEnv->GetNextDeclarator(pIter);
-					}
-					if (pDecl)
-					{
-						pFile->Print("(%s", (const char*)pDecl->GetName());
-						if (pDecl->GetStars())
-							pFile->Print("->malloc)");
-						else
-							pFile->Print(".malloc)");
-					}
-					else
-						pFile->Print("CORBA_alloc");
-				}
-				else
-					pFile->Print("CORBA_alloc");
+				pContext->WriteMalloc(pFile, pFunction);
 				pFile->Print("(%d);\n", nStrSize);
 				// set receive size
 				pFile->PrintIndent("");
-				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+				WriteMemberAccess(pFile, TYPE_REFSTRING, pContext, sOffset);
 				pFile->Print("[%d].rcv_size = %d;\n", i, nStrSize);
 	        }
         }
@@ -796,7 +804,7 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringInitialization(CBEFile *pFile
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  *
- * This function is used instead of th einit function to zero the memory
+ * This function is used instead of the init function to zero the memory
  * of the receive buffer.
  *
  * We assume that rcv_str points to valid memory, and rcv_size is the correct
@@ -816,10 +824,10 @@ void CL4BEMsgBufferType::WriteReceiveIndirectStringSetZero(CBEFile *pFile, CBECo
     {
         // get message buffer variables
         pFile->PrintIndent("memset((void*)((");
-        WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
-        pFile->Print("[%d]).rcv_str), 0, (");
-        WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
-        pFile->Print("[%d]).rcv_size);\n", i, i);
+		WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+		pFile->Print("[%d]).rcv_str), 0, (", i);
+		WriteMemberAccess(pFile, TYPE_REFSTRING, pContext);
+		pFile->Print("[%d]).rcv_size);\n", i);
     }
 }
 
@@ -846,9 +854,36 @@ void CL4BEMsgBufferType::InitCounts(CBEClass * pClass, CBEContext *pContext)
  *  \param pFile the file to write to
  *  \param nMemberType the type of the member to access
  *  \param pContext the context of the write operation
+ *  \param sOffset a possible offset variable if the member access has to be done using a cast of another type
+ *
+ * We need to implement a special case for TYPE_REFSTRING. They are not members
+ * of the message buffer structure if it is variable size. Therefore we have to
+ * cast the TYPE_INTEGER member to the l4_strdope_t type and use this.
  */
-void CL4BEMsgBufferType::WriteMemberAccess(CBEFile * pFile, int nMemberType, CBEContext * pContext)
+void CL4BEMsgBufferType::WriteMemberAccess(CBEFile * pFile, int nMemberType, CBEContext * pContext, String sOffset)
 {
+    if ((nMemberType == TYPE_REFSTRING) && IsVariableSized())
+	{
+	    // create l4_strdope_t
+		CBEUserDefinedType *pType = pContext->GetClassFactory()->GetNewUserDefinedType();
+		pType->SetParent(this);
+		if (!pType->CreateBackEnd(String("l4_strdope_t"), pContext))
+		{
+			pFile->Print(")");
+			return;
+		}
+		// ((l4_strdope_t*)(&(_buffer->_bytes[offset])))
+		pFile->Print("(");
+		// cast of l4_strdope_t type
+		pType->WriteCast(pFile, true, pContext);
+		// get pointer to offset in message buffer
+		pFile->Print("(&");
+		WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+		pFile->Print("[%s]))", (const char*)sOffset);
+		// done
+		delete pType;
+		return;
+	}
     // print variable name
     String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
     pFile->Print("%s", (const char*)sName);
@@ -873,6 +908,9 @@ CObject * CL4BEMsgBufferType::Clone()
  */
 void CL4BEMsgBufferType::WriteSizeDopeInit(CBEFile *pFile, CBEContext *pContext)
 {
+    // get minimum size
+	CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+	int nMin = pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD);
     // calculate dwords
     int nDwordsIn = m_nFixedCount[DIRECTION_IN-1];
     int nDwordsOut = m_nFixedCount[DIRECTION_OUT-1];
@@ -888,8 +926,8 @@ void CL4BEMsgBufferType::WriteSizeDopeInit(CBEFile *pFile, CBEContext *pContext)
     nDwordsIn = (nDwordsIn+3) >> 2;
     nDwordsOut = (nDwordsOut+3) >> 2;
     // check minimum value
-    if (nDwordsIn < 2)
-        nDwordsIn = 2;
+    if (nDwordsIn < nMin)
+        nDwordsIn = nMin;
     int nDwords = MAX(nDwordsIn, nDwordsOut);
 
     // calculate strings
@@ -931,24 +969,35 @@ void CL4BEMsgBufferType::WriteSizeDopeInit(CBEFile *pFile, CBEContext *pContext)
 /** \brief writes the init string for the send dope
  *  \param pFile the file to write to
  *  \param nSendDirection the direction for IN
+ *  \param bHasSizeIsParams true if the calling function has parameters with a size_is attribute
  *  \param pContext the context of the write operation
  */
-void CL4BEMsgBufferType::WriteSendDopeInit(CBEFile *pFile, int nSendDirection, CBEContext *pContext)
+void CL4BEMsgBufferType::WriteSendDopeInit(CBEFile *pFile, int nSendDirection, bool bHasSizeIsParams, CBEContext *pContext)
 {
+    // get minimum size
+	CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+	int nMin = pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD);
+	// check if we use offset variable
+    bool bUseOffset = IsVariableSized(nSendDirection) || bHasSizeIsParams;
     // after marshalling set the message dope
-    if (IsVariableSized(nSendDirection))
+    if (bUseOffset)
     {
         String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
         // dword align size
         pFile->PrintIndent("%s = (%s+3) >> 2;\n",
                            (const char *) sOffset,
                            (const char *) sOffset);
+	    // check minimum
+		pFile->PrintIndent("%s = (%s<%d)?%d:%s;\n",
+		                   (const char*)sOffset,
+		                   (const char*)sOffset, nMin,
+						   nMin, (const char*)sOffset);
     }
     // send dope
     pFile->PrintIndent("");
     WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
     pFile->Print(" = L4_IPC_DOPE(");
-    if (IsVariableSized(nSendDirection))
+    if (bUseOffset)
     {
         String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
         pFile->Print("%s", (const char *) sOffset);
@@ -958,12 +1007,12 @@ void CL4BEMsgBufferType::WriteSendDopeInit(CBEFile *pFile, int nSendDirection, C
         // calculate bytes
         int nDwordsIn = m_nFixedCount[nSendDirection-1];
         if (m_nFlexpageCount[nSendDirection-1] > 0)
-            nDwordsIn += (m_nFlexpageCount[nSendDirection-1]+1)*pContext->GetSizes()->GetSizeOfType(TYPE_FLEXPAGE);
+            nDwordsIn += (m_nFlexpageCount[nSendDirection-1]+1)*pSizes->GetSizeOfType(TYPE_FLEXPAGE);
         // make dwords
         nDwordsIn = (nDwordsIn+3) >> 2;
         // check minimum value
-        if (nDwordsIn < 2)
-            nDwordsIn = 2;
+        if (nDwordsIn < nMin)
+            nDwordsIn = nMin;
         pFile->Print("%d", nDwordsIn);
     }
     pFile->Print(", %d);\n", m_nRefStringCount[nSendDirection-1]);
@@ -981,23 +1030,30 @@ void CL4BEMsgBufferType::WriteSendDopeInit(CBEFile *pFile, CBEContext *pContext)
     // send dope
     pFile->PrintIndent("");
     WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
-    pFile->Print(" = L4_IPC_DOPE(2, 0);\n");
+	CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+	int nSize = pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD);
+    pFile->Print(" = L4_IPC_DOPE(%d, 0);\n", nSize);
 }
 
 /** \brief tests if this message buffer is suited for a short IPC
  *  \param nDirection the direction to test
  *  \param pContext the context of the test
+ *  \param nWords the number of words allowed for a short IPC
  *  \return true if short IPC
  */
-bool CL4BEMsgBufferType::IsShortIPC(int nDirection, CBEContext *pContext)
+bool CL4BEMsgBufferType::IsShortIPC(int nDirection, CBEContext *pContext, int nWords)
 {
     if (nDirection == 0)
-        return IsShortIPC(DIRECTION_IN, pContext) && IsShortIPC(DIRECTION_OUT, pContext);
+        return IsShortIPC(DIRECTION_IN, pContext, nWords) && IsShortIPC(DIRECTION_OUT, pContext, nWords);
 
     if (GetVariableCount(nDirection) > 0)
         return false;
     CL4BESizes *pSizes = (CL4BESizes*)(pContext->GetSizes());
-    if (GetFixedCount(nDirection) > pSizes->GetMaxShortIPCSize(nDirection))
+	if (nWords == 0)
+	    nWords = pSizes->GetMaxShortIPCSize(nDirection);
+	else
+	    nWords *= pSizes->GetSizeOfType(TYPE_MWORD);
+    if (GetFixedCount(nDirection) > nWords)
         return false;
     if (GetRefStringCount(nDirection) > 0)
         return false;
@@ -1031,4 +1087,224 @@ void CL4BEMsgBufferType::InitCounts(CBEMsgBufferType * pMsgBuffer, CBEContext * 
         m_nMaxima[0][i] = pL4Buffer->m_nMaxima[0][i];
         m_nMaxima[1][i] = pL4Buffer->m_nMaxima[1][i];
     }
+}
+
+/** \brief writes a dumper function for the message buffer
+ *  \param pFile the file to write to
+ *  \param sResult the result dope string (if empty the send dope is used)
+ *  \param pContext the context if the write operation
+ */
+void CL4BEMsgBufferType::WriteDump(CBEFile *pFile, String sResult, CBEContext *pContext)
+{
+	String sFunc = pContext->GetTraceMsgBufFunc();
+	if (sFunc.IsEmpty())
+		sFunc = String("printf");
+	bool bSend = sResult.IsEmpty();
+	// printf fpage
+	pFile->PrintIndent("%s(\"", (const char*)sFunc);
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp = {\\n\\t grant:%%x,\\n\\t write:%%x,\\n\\t size:%%x,\\n\\t zero:%%x,\\n\\t page:%%x }\\n\", ");
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp.grant, ");
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp.write, ");
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp.size, ");
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp.zero, ");
+	WriteMemberAccess(pFile, TYPE_RCV_FLEXPAGE, pContext);
+	pFile->Print(".fp.page);\n");
+	// print size dope
+	pFile->PrintIndent("%s(\"", (const char*)sFunc);
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md = {\\n\\t msg_deceited:%%x,\\n\\t fpage_received:%%x,\\n\\t msg_redirected:%%x,\\n\\t "
+		"src_inside:%%x,\\n\\t snd_error:%%x,\\n\\t error_code:%%x,\\n\\t strings:%%x,\\n\\t dwords:%%x }\\n\", ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+    pFile->Print(".md.msg_deceited, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.fpage_received, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.msg_redirected, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.src_inside, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.snd_error, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.error_code, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.strings, ");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.dwords);\n");
+	// print send dope
+	if (bSend)
+	{
+		pFile->PrintIndent("%s(\"", (const char*)sFunc);
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md = { msg_deceited:%%x,\\n\\t fpage_received:%%x,\\n\\t msg_redirected:%%x,\\n\\t "
+			"src_inside:%%x,\\n\\t snd_error:%%x,\\n\\t error_code:%%x,\\n\\t strings:%%x,\\n\\t dwords:%%x }\\n\", ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.msg_deceited, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.fpage_received, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.msg_redirected, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.src_inside, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.snd_error, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.error_code, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.strings, ");
+		WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		pFile->Print(".md.dwords);\n");
+	}
+	else
+	{
+		pFile->PrintIndent("%s(\"%s.md = { msg_deceited:%%x,\\n\\t fpage_received:%%x,\\n\\t msg_redirected:%%x,\\n\\t "
+			"src_inside:%%x,\\n\\t snd_error:%%x,\\n\\t error_code:%%x,\\n\\t strings:%%x,\\n\\t dwords:%%x }\\n\", "
+			"%s.md.msg_deceited, %s.md.fpage_received, %s.md.msg_redirected, %s.md.src_inside, "
+			"%s.md.snd_error, %s.md.error_code, %s.md.strings, %s.md.dwords);\n", (const char*)sFunc ,
+			(const char*)sResult, (const char*)sResult, (const char*)sResult, (const char*)sResult, (const char*)sResult,
+			(const char*)sResult, (const char*)sResult, (const char*)sResult, (const char*)sResult);
+	}
+	// print dwords
+	pFile->PrintIndent("for (_i=0; _i<");
+	if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF_DWORDS))
+	{
+	    int nBytes = pContext->GetTraceMsgBufDwords()*4;
+	    pFile->Print("((%d <= ", nBytes);
+		if (bSend)
+			WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		else
+			pFile->Print("%s", (const char*)sResult);
+		pFile->Print(".md.dwords*4) ? %d : ", nBytes);
+		if (bSend)
+			WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		else
+			pFile->Print("%s", (const char*)sResult);
+		pFile->Print(".md.dwords*4)");
+	}
+	else
+	{
+		if (bSend)
+			WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+		else
+			pFile->Print("%s", (const char*)sResult);
+		pFile->Print(".md.dwords*4");
+	}
+	pFile->Print("; _i++)\n");
+	pFile->PrintIndent("{\n");
+	pFile->IncIndent();
+	pFile->PrintIndent("if (_i%4 == 0)\n");
+	pFile->IncIndent();
+	pFile->PrintIndent("%s(\"dwords[%%d]:\", _i/4);\n", (const char*)sFunc);
+	pFile->DecIndent();
+	pFile->PrintIndent("%s(\"%%02x \", ", (const char*)sFunc);
+	WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+	pFile->Print("[_i]);\n");
+	pFile->PrintIndent("if (_i%4 == 3)\n");
+	pFile->IncIndent();
+	pFile->PrintIndent("%s(\"\\n\");\n", (const char*)sFunc);
+	pFile->DecIndent();
+	pFile->DecIndent();
+	pFile->PrintIndent("}\n");
+}
+
+/** \brief fills the message buffer with zeros
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CL4BEMsgBufferType::WriteSetZero(CBEFile *pFile, CBEContext *pContext)
+{
+    pFile->PrintIndent("memset(");
+    CBEDeclarator *pDecl = GetAlias();
+    if ((pDecl->GetStars() == 0) && !IsVariableSized())
+        pFile->Print("&");
+    String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+	pFile->Print("%s, 0, sizeof", (const char*)sName);
+	m_pType->WriteCast(pFile, false, pContext);
+	pFile->Print(");\n");
+}
+
+/** \brief wraps the access to indirect parts
+ *  \param pFile the file to write to
+ *  \param nIndex the index of the indirect part to access
+ *  \param pContext the context of the write operation
+ *
+ * Since the message buffer can be of a base type,the string member might
+ * point to a location which is not the location we want. Therefore we have
+ * to use the size dope of the message buffer to find the correct location
+ * of the string.
+ *
+ * It looks like this:
+ * msgbuf->_buffer[msgbuf->size.md.dwords*4+%d*sizeof(l4strdope_t)]
+ */
+void CL4BEMsgBufferType::WriteIndirectPartAccess(CBEFile* pFile, int nIndex, CBEContext* pContext)
+{
+    pFile->Print("(*(l4_strdope_t*)(&");
+    WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+	pFile->Print("[");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SIZE, pContext);
+	pFile->Print(".md.dwords*4");
+	if (nIndex > 0)
+	    pFile->Print(" + %d*sizeof(l4_strdope_t)", nIndex);
+	pFile->Print("]))");
+}
+
+/** \brief writes the definition of the message buffer
+ *  \param pFile the file to write to
+ *  \param bTypedef true if a type definition should be written
+ *  \param pContext the context of the write operation
+ */
+void CL4BEMsgBufferType::WriteDefinition(CBEFile* pFile,  bool bTypedef,  CBEContext* pContext)
+{
+    if (bTypedef &&
+	    pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)) &&
+		!IsVariableSized())
+	{
+		// get minimum size
+		CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+		int nMin = pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD);
+		// calculate dwords
+		int nDwordsIn = m_nFixedCount[DIRECTION_IN-1];
+		int nDwordsOut = m_nFixedCount[DIRECTION_OUT-1];
+		// calculate flexpages
+		int nFlexpageIn = m_nFlexpageCount[DIRECTION_IN-1];
+		int nFlexpageOut = m_nFlexpageCount[DIRECTION_OUT-1];
+		int nFlexpageSize = pContext->GetSizes()->GetSizeOfType(TYPE_FLEXPAGE);
+		if (nFlexpageIn > 0)
+			nDwordsIn += (nFlexpageIn+1)*nFlexpageSize;
+		if (nFlexpageOut > 0)
+			nDwordsOut += (nFlexpageOut+1)*nFlexpageSize;
+		// make dwords
+		nDwordsIn = (nDwordsIn+3) >> 2;
+		nDwordsOut = (nDwordsOut+3) >> 2;
+		// check minimum value
+		if (nDwordsIn < nMin)
+			nDwordsIn = nMin;
+		int nDwords = MAX(nDwordsIn, nDwordsOut);
+
+		// calculate strings
+		int nStrings = MAX(m_nRefStringCount[DIRECTION_IN-1], m_nRefStringCount[DIRECTION_OUT-1]);
+		// get const name
+		String sName = pContext->GetNameFactory()->GetString(STR_MSGBUF_SIZE_CONST, pContext, this);
+	    // write size dope constant
+		pFile->Print("#ifndef %s\n", (const char*)sName);
+		pFile->Print("#define %s L4_IPC_DOPE(%d, %d)\n", (const char*)sName, nDwords, nStrings);
+		pFile->Print("#endif /* %s */\n\n", (const char*)sName);
+
+    }
+	CBEMsgBufferType::WriteDefinition(pFile, bTypedef, pContext);
+}
+
+/** \brief writes the send dope initialization if we send an fpage
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CL4BEMsgBufferType::WriteSendFpageDope(CBEFile* pFile, CBEContext* pContext)
+{
+    pFile->PrintIndent("");
+	WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, pContext);
+	pFile->Print(".md.fpage_received = 1;\n");
 }

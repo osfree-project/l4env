@@ -33,3 +33,6 @@ Features:
   declared in the module file).  This feature can be turned off so that
   all functions labeled "inline" are hidded and generated out-of-line.
 
+For more documentation, please refer to the documentation (manpage,
+webpage) in directory "doc" (requires Doxygen), or go to the online
+documentation at <http://os.inf.tu-dresden.de/~hohmuth/prj/preprocess/>.

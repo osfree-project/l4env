@@ -4,10 +4,12 @@ EXTENSION class Space
 {
 public:
 
-  void	page_map	(vm_offset_t phys, vm_offset_t virt,
-                         vm_offset_t size, unsigned page_attribs);
-  void	page_unmap	(vm_offset_t virt, vm_offset_t size);
-  void	page_protect	(vm_offset_t virt, vm_offset_t size,
+  void	page_map	(Address phys, Address virt,
+                         Address size, unsigned page_attribs);
+                         
+  void	page_unmap	(Address virt, Address size);
+  
+  void	page_protect	(Address virt, Address size,
                          unsigned page_attribs);
 
   /** 
@@ -18,69 +20,35 @@ public:
    * @param addr virtual address for which an entry should be copied from the 
    *             shared page directory.                                      
    */           
-  void	kmem_update	(vm_offset_t addr);
+  void kmem_update (void *addr);
+
+  /**
+   * Populate this address space with n PDEs from a remote address space.
+   * Use this function when a part of another address space needs to be
+   * temporarily visible in the current address space (i.e., for long IPC).
+   * If one of the PDEs was valid, i.e. non-null, we need a TLB flush.
+   * @param loc_addr virtual address where temporary should be established.
+   * @param rem remote address space.
+   * @param rem_addr virtual address in remote address space.
+   * @param n number of PDEs to copy.
+   */
+  void remote_update (const Address, const Space_context *,
+                      const Address, size_t);
 
   /**
    * Update a page in the small space window from Kmem.
    * @param flush true if TLB-Flush necessary
    */
-  void	update_small	(vm_offset_t addr, bool flush);
+  void update_small (Address addr, bool flush);
 };
 
 IMPLEMENTATION[ia32-ux]:
 
 #include <cstring>
 #include "cpu.h"
+#include "kdb_ke.h"
 #include "regdefs.h"
-
-/** Destructor.  Deletes the address space and unregisters it from
-    Space_index.
- */
-PUBLIC
-Space::~Space()
-{
-  // free all page tables we have allocated for this address space
-  // except the ones in kernel space which are always shared
-
-  for (unsigned i = 0; i < (Kmem::mem_user_max >> Config::SUPERPAGE_SHIFT); i++)
-    if ((_dir[i] & INTEL_PDE_VALID) &&
-       !(_dir[i] & (INTEL_PDE_SUPERPAGE | Kmem::pde_global())))
-      Kmem_alloc::allocator()->free(0,P_ptr<void>(_dir[i] & Config::PAGE_MASK));
-
-  // free IO bitmap (if allocated)
-
-  if(Config::enable_io_protection)
-    {
-      pd_entry_t * iopde = _dir +
-        ((get_virt_port_addr(0) >> PDESHIFT) & PDEMASK);
-      if((*iopde & INTEL_PDE_VALID)
-                                // this should never be a superpage
-                                // but better be careful
-         && !(*iopde & INTEL_PDE_SUPERPAGE))
-        {                       // have a second level PT for IO bitmap
-          // free the first half of the IO bitmap
-          pt_entry_t * iopte = _dir + 
-            ((get_virt_port_addr(0) >> PTESHIFT) & PTEMASK);
-          if(*iopte & INTEL_PTE_VALID)
-            Kmem_alloc::allocator()->free(0,P_ptr<void>(*iopte & Config::PAGE_MASK));
-
-          // XXX invalidate entries ??
-
-          // free the second half
-          iopte = _dir + 
-            ((get_virt_port_addr(L4_fpage::IO_PORT_MAX / 2) >> PTESHIFT) & PTEMASK);
-          if(*iopte & INTEL_PTE_VALID)
-            Kmem_alloc::allocator()->free(0,P_ptr<void>(*iopte & Config::PAGE_MASK));
-
-          // free the page table
-          Kmem_alloc::allocator()->free(0,P_ptr<void>(*iopde & Config::PAGE_MASK));
-        }
-    }
-
-  // deregister from task table
-  Space_index::del(Space_index(_dir[number_index] >> 8),
-                   Space_index(_dir[chief_index]  >> 8));
-}
+#include "std_macros.h"
 
 /** Insert a page-table entry, or upgrade an existing entry with new
     attributes.
@@ -88,7 +56,7 @@ Space::~Space()
     @param virt Virtual address for which an entry should be created.
     @param size Size of the page frame -- 4KB or 4MB.
     @param page_attribs Attributes for the mapping (see
-                        Space::page_attrib_t).
+                        Space::Page_attrib).
     @return Insert_ok if a new mapping was created;
              Insert_warn_exists if the mapping already exists;
              Insert_warn_attrib_upgrade if the mapping already existed but
@@ -100,18 +68,19 @@ Space::~Space()
                                range
     @pre phys and virt need to be size-aligned according to the size argument.
  */
-PUBLIC Space::status_t
-Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
-                  unsigned page_attribs)
+PUBLIC
+Space::Status Space::v_insert (Address phys, Address virt, size_t size,
+                               unsigned page_attribs)
 {
   // insert page into page table
 
   // XXX should modify page table using compare-and-swap
   
-  pd_entry_t *p = _dir + ((virt >> PDESHIFT) & PDEMASK);
-  pt_entry_t *e;
+  Pd_entry *p = _dir + ((virt >> PDESHIFT) & PDEMASK);
+  Pt_entry *e;
   
-  if (! (*p & INTEL_PDE_VALID)) // we don't have a page table for this area
+  // This 4 MB area is not mapped
+  if (EXPECT_TRUE (!(*p & INTEL_PDE_VALID)))
     {
       // check if we can insert a 4MB mapping
       if (size == Config::SUPERPAGE_SIZE
@@ -132,8 +101,9 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
         }
          
       // can't map a superpage -- alloc new page table
-      pt_entry_t *new_pt = (pt_entry_t *)Kmem_alloc::allocator()->alloc(0);
-      if (! new_pt)
+      Pt_entry *new_pt = (Pt_entry *)Kmem_alloc::allocator()->alloc(0);
+
+      if (EXPECT_FALSE (!new_pt))
         return Insert_err_nomem;
       
       memset(new_pt, 0, Config::PAGE_SIZE);
@@ -146,25 +116,26 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
 
       e = new_pt + ((virt >> PTESHIFT) & PTEMASK);
     }
-  else if (*p & INTEL_PDE_SUPERPAGE)
+
+  // This 4 MB area is covered by a superpage
+  else if (EXPECT_TRUE (*p & INTEL_PDE_SUPERPAGE))
     {
-      // already have mapped a superpage
-      
-      if ((*p & Config::SUPERPAGE_MASK) | (virt & ~Config::SUPERPAGE_MASK) != phys)
+      // want to change physical attributes?
+      if (EXPECT_FALSE ((  (*p &    Config::SUPERPAGE_MASK)
+			 | (virt & ~Config::SUPERPAGE_MASK)) != phys) )
         return Insert_err_exists;
 
       // same mapping -- check for page-attribute upgrade
-      if ((*p | page_attribs) == *p) // no attrib change?
+      if (EXPECT_FALSE ((*p | page_attribs) == *p)) // no attrib change?
         return Insert_warn_exists;
 
-      // change attributes
-      
+      // change attributes?
       if (size == Config::SUPERPAGE_SIZE)
         {
           // upgrade the whole superpage at once
           *p |= page_attribs;
           
-          page_protect (virt, size, page_attribs);
+          page_protect (virt, size, *p & Page_all_attribs);
 
 	  update_small(phys, false);
 
@@ -173,9 +144,9 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
 
       // we need to split the superpage mapping because
       // it's only partly upgraded
-      
-      pt_entry_t *new_pt = split_pgtable(p);
-      if (! new_pt)
+
+      Pt_entry *new_pt = split_pgtable(p);
+      if (EXPECT_FALSE (! new_pt) )
         return Insert_err_nomem;
       
       *p = Kmem::virt_to_phys(new_pt)
@@ -186,37 +157,39 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
       
       e = new_pt + ((virt >> PTESHIFT) & PTEMASK);
     }
-  else if (size == Config::SUPERPAGE_SIZE)
-    {
-      return Insert_err_exists;
-    }
-  else
-    { 
-      e = static_cast<pt_entry_t *>(Kmem::phys_to_virt(*p & Config::PAGE_MASK))
-        + ((virt >> PTESHIFT) & PTEMASK);
-    }
 
-  assert(size == Config::PAGE_SIZE);
+  // This 4 MB area is covered by a pagetable
+  else if (EXPECT_FALSE (size == Config::SUPERPAGE_SIZE))
+    return Insert_err_exists;
+
+  else
+    e = static_cast<Pt_entry *>(Kmem::phys_to_virt (*p & Config::PAGE_MASK))
+      + ((virt >> PTESHIFT) & PTEMASK);
+
+  assert (size == Config::PAGE_SIZE);
   
-  if (*e & INTEL_PTE_VALID)     // anything mapped already?
+  // anything mapped already?
+  if (EXPECT_FALSE (*e & INTEL_PTE_VALID))
     {
-      if ((*e & Config::PAGE_MASK) != phys)
+      // different page?
+      if (EXPECT_FALSE ((*e & Config::PAGE_MASK) != phys))
         return Insert_err_exists;
       
-      if ((*e | page_attribs) == *e) // no attrib change?
+      // no attrib change?
+      if (EXPECT_FALSE ((*e | page_attribs) == *e))
         return Insert_warn_exists;
 
       // upgrade from read-only to read-write
       *e |= page_attribs;
 
-      page_protect (virt, size, page_attribs);
+      page_protect (virt, size, *e & Page_all_attribs);
 
       return Insert_warn_attrib_upgrade;
     }
   else                  // we don't have mapped anything
     {
       *e = phys | INTEL_PTE_MOD | INTEL_PTE_VALID | INTEL_PTE_REF
-        | page_attribs;
+	| page_attribs;
 
       page_map (phys, virt, size, page_attribs);
     }
@@ -231,7 +204,7 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
                 frame.
     @param page_attribs Meaningful only if we find something (and return true).
                 If not 0, we fill in the page attributes for the found page    
-                frame (see Space::page_attrib_t).
+                frame (see Space::Page_attrib).
     @param size If not 0, we fill in the size of the page-table slot.  If an
                 entry was found (and we return true), this is the size
                 of the page frame.  If no entry was found (and we
@@ -239,11 +212,11 @@ Space::v_insert(vm_offset_t phys, vm_offset_t virt, vm_offset_t size,
                 either case, it is either 4KB or 4MB.
     @return True if an entry was found, false otherwise.
  */
-PUBLIC bool
-Space::v_lookup(vm_offset_t virt, vm_offset_t *phys = 0,
-                  vm_offset_t *size = 0, unsigned *page_attribs = 0)
+PUBLIC
+bool Space::v_lookup (Address virt, Address *phys = 0, Address *size = 0,
+                      unsigned *page_attribs = 0)
 {
-  const pd_entry_t *p = _dir + ((virt >> PDESHIFT) & PDEMASK);
+  const Pd_entry *p = _dir + ((virt >> PDESHIFT) & PDEMASK);
 
   if (! (*p & INTEL_PDE_VALID))
     {
@@ -260,7 +233,7 @@ Space::v_lookup(vm_offset_t virt, vm_offset_t *phys = 0,
       return true;
     }
 
-  const pt_entry_t *e = static_cast<pt_entry_t *>
+  const Pt_entry *e = static_cast<Pt_entry *>
     (Kmem::phys_to_virt(*p & Config::PAGE_MASK))
     + ((virt >> PTESHIFT) & PTEMASK);
 
@@ -275,7 +248,7 @@ Space::v_lookup(vm_offset_t virt, vm_offset_t *phys = 0,
   return true;
 }
 
-/** Delete a page-table entries, or some of the entries' attributes.  This 
+/** Delete page-table entries, or some of the entries' attributes.  This 
     function works for one or multiple mappings (in contrast to v_insert!). 
     @param virt Virtual address of the memory region that should be changed.
     @param size Size of the memory region that should be changed.
@@ -284,18 +257,17 @@ Space::v_lookup(vm_offset_t virt, vm_offset_t *phys = 0,
     @return False if an error occurs and some of the mappings could
              not be flushed.  True if all goes well.
  */
-PUBLIC bool 
-Space::v_delete(vm_offset_t virt, vm_offset_t size,
-                  unsigned page_attribs = 0)
+PUBLIC
+bool Space::v_delete (Address virt,
+                      Address size,
+                      unsigned page_attribs = 0)
 {
-  // delete page from page table
+  // delete pages from page tables
   
-  for (vm_offset_t va = virt;
-       va < virt + size;
-       va += Config::PAGE_SIZE)
+  for (Address va = virt; va < virt + size; va += Config::PAGE_SIZE)
     {
-      pd_entry_t *p = _dir + ((va >> PDESHIFT) & PDEMASK);
-      pt_entry_t *e;
+      Pd_entry *p = _dir + ((va >> PDESHIFT) & PDEMASK);
+      Pt_entry *e;
       
       if (! (*p & INTEL_PDE_VALID))
         {
@@ -317,11 +289,17 @@ Space::v_delete(vm_offset_t virt, vm_offset_t size,
           if (((va & ~Config::SUPERPAGE_MASK) == 0) // superpage boundary
               && va + Config::SUPERPAGE_SIZE <= virt + size)
             {
-              // unmap superpage
-              if (page_attribs)
-                *p &= ~page_attribs;
+              if (page_attribs)		
+                {
+                  *p &= ~page_attribs;	// downgrade PDE (superpage) rights
+                  page_protect (va, size, *p & Page_all_attribs);
+                }
               else
-                *p = 0;
+                {
+                  *p = 0;		// delete PDE (superpage)
+                  page_unmap (va, size);
+                }
+              
               va += Config::SUPERPAGE_SIZE - Config::PAGE_SIZE;
 
 	      update_small(va, true);
@@ -331,8 +309,8 @@ Space::v_delete(vm_offset_t virt, vm_offset_t size,
 
           // need to unshare/split
 
-          pt_entry_t *new_pt = split_pgtable(p);
-          if (! new_pt)  
+          Pt_entry *new_pt = split_pgtable(p);
+          if (!new_pt)
             return false;
           
           *p = Kmem::virt_to_phys(new_pt)
@@ -343,45 +321,45 @@ Space::v_delete(vm_offset_t virt, vm_offset_t size,
 	  
           e = new_pt + ((va >> PTESHIFT) & PTEMASK);
         } 
+
       else
-        e = static_cast<pt_entry_t *>(Kmem::phys_to_virt(*p & Config::PAGE_MASK))
+        e = static_cast<Pt_entry *>(Kmem::phys_to_virt(*p & Config::PAGE_MASK))
           + ((va >> PTESHIFT) & PTEMASK);
 
       if (Config::conservative && !(*e & INTEL_PTE_VALID))
         kdb_ke("v_delete unmapped page");
 
       if (page_attribs)
-        *e &= ~page_attribs;
+        {
+          *e &= ~page_attribs;		// downgrade PTE rights
+          page_protect (va, size, *e & Page_all_attribs);
+        }
       else
-        *e = 0;                 // delete page table entry
-
-      page_unmap (va, size);
+        {
+          *e = 0;			// delete PTE
+          page_unmap (va, size);
+        }
     }
 
   return true;
 }
 
-static pt_entry_t *
-split_pgtable(pd_entry_t *p)
+static Pt_entry * split_pgtable (Pd_entry *p)
 {
   // alloc new page table
-  pt_entry_t *new_pt = static_cast<pt_entry_t *>(Kmem_alloc::allocator()->alloc(0));
-  if (! new_pt)
+  Pt_entry *new_pt = static_cast<Pt_entry *>(Kmem_alloc::allocator()->alloc(0));
+
+  if (!new_pt)
     return 0;  
                
   if (*p & INTEL_PDE_SUPERPAGE)
-    {
-      for (unsigned i = 0; i < 1024; i++)
-        {
-          new_pt[i] = ((*p & Config::SUPERPAGE_MASK) + (i << Config::PAGE_SHIFT))
-            | INTEL_PTE_MOD | INTEL_PTE_VALID | INTEL_PTE_REF 
-            | (*p & Space::Page_all_attribs);
-        }
-    }
+    for (unsigned i = 0; i < 1024; i++)
+      new_pt[i] = ((*p & Config::SUPERPAGE_MASK) + (i << Config::PAGE_SHIFT))
+                | INTEL_PTE_MOD | INTEL_PTE_VALID | INTEL_PTE_REF 
+                | (*p & Space::Page_all_attribs);
+
   else
-    { 
-      std::memcpy(new_pt, p, Config::PAGE_SIZE);
-    }
+    std::memcpy (new_pt, p, Config::PAGE_SIZE);
 
   return new_pt;
 }

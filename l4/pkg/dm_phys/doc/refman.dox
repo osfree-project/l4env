@@ -12,6 +12,9 @@
 - \htmlonly<a href="group__api.html">\endhtmlonly 
   Client Library API Documentation
   \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__types.html">\endhtmlonly
+    Dataspace Types
+    \htmlonly</a>\endhtmlonly
   - \htmlonly<a href="group__api__open.html">\endhtmlonly
     Open/Close/Copy Dataspaces
     \htmlonly</a>\endhtmlonly

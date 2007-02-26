@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -30,13 +30,14 @@
 #define __DICE_FE_FEINTERFACE_H__
 
 #include "fe/FEFileComponent.h"
-#include "fe/FEInterfaceComponent.h"
-#include "fe/FEIdentifier.h"
-#include "fe/FEAttribute.h"	
+#include "fe/FEAttribute.h" // needed for ATTR_TYPE
+#include "CString.h"
+#include "Vector.h"
 
 class CFEInterface;
 class CFETypedDeclarator;
 class CFEConstDeclarator;
+class CFEIdentifier;
 
 /** \class CFEInterface
  *	\ingroup frontend

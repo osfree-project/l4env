@@ -1,6 +1,19 @@
-#ifndef L4_EXEC_FILE_H
-#define L4_EXEC_FILE_H
+/*!
+ * \file	file.h
+ * \brief	
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __FILE_H_
+#define __FILE_H_
+
+/** file class */
 class file_t
 {
   public:

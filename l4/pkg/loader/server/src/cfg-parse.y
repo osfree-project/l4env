@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <l4/sys/consts.h>
-#include <l4/env/env.h>
 
 #include "cfg.h"
 
@@ -51,16 +50,17 @@ int yyparse(void);
   } interval;
 }
 
-%token <string> TASK MODULE BINPATH LIBPATH MODPATH
-%token <string> VERBOSE MEMDUMP SLEEP MEMORY IN AT MB KB MS S MIN H
-%token <string> FIASCO_SYMBOLS FIASCO_LINES
-%token <string> DIRECT_MAPPED CONTIGUOUS DMA_ABLE REBOOT_ABLE NO_VGA PRIORITY
-%token <string> NO_SIGMA_NULL
-%token <string> UNSIGNED STRING
+%token <string>  TASK MODULE BINPATH LIBPATH MODPATH
+%token <string>  VERBOSE MEMDUMP SLEEP MEMORY IN IS AT MB KB MS S MIN H
+%token <string>  FIASCO_SYMBOLS FIASCO_LINES
+%token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE REBOOTABLE NO_VGA PRIORITY
+%token <string>  NO_SIGMA_NULL
+%token <string>  UNSIGNED STRING
 
-%type <number>	 number memnumber memmodifier taskflag taskflags
-%type <number>	 memflag memflags time timemodifier
-%type <string>	 string
+%type <number>   number memnumber memmodifier task_flag
+%type <number>   memflagspec memflags memflag
+%type <number>   time timemodifier
+%type <string>   string
 %type <interval> memrange
 
 %start file
@@ -75,11 +75,12 @@ rules		: rule rules
 		|
 		;
 
-rule		: taskspec constraints modules
-		| setting
+rule		: task_spec
+		| task_constraint
+		| global_setting
 		;
 
-setting		: VERBOSE number
+global_setting	: VERBOSE number
 			{ cfg_verbose = $2; }
 		| FIASCO_SYMBOLS number
 			{ cfg_fiasco_symbols = $2; }
@@ -132,17 +133,17 @@ setting		: VERBOSE number
 			}
 		;
 
-taskspec	: TASK string string taskflags
+task_spec	: TASK string string
 			{
-			  if (cfg_new_task($2, $3, $4))
+			  if (cfg_new_task($2, $3))
 			    {
 			      yyerror("Error creating cfg_task");
 			      YYERROR;
 			    }
 			}
-		| TASK string taskflags
+		| TASK string
 			{
-			  if (cfg_new_task($2, NULL, $3))
+			  if (cfg_new_task($2, NULL))
 			    {
 			      yyerror("Error creating cfg_task");
 			      YYERROR;
@@ -150,15 +151,34 @@ taskspec	: TASK string string taskflags
 			}
 		;
 
-taskflags	: taskflag taskflags
-			{ $$ = $1 | $2; }
-		|
-			{ $$ = 0; }
+task_constraint	: task_modspec
+		| MEMORY memconstraint
+			{
+			  // MEMORY is a string, therefore we need an empty rule, to avoid return value clashes
+			  // bison assumes, that if no return value is given, the return values of one of the
+			  // rule-elements should be used...
+			}
+		| PRIORITY number
+			{ 
+			  if (cfg_new_task_prio($2))
+			    {
+			      yyerror("Error setting task priority");
+			      YYABORT;
+			    }
+			}
+		| task_flag
+			{
+			  if (cfg_new_task_flag($1))
+			    {
+			      yyerror("Error setting task flag");
+			      YYABORT;
+			    }
+			}
 		;
 
-taskflag	: DIRECT_MAPPED
+task_flag	: DIRECT_MAPPED
 			{ $$ = CFG_F_DIRECT_MAPPED; }
-		| REBOOT_ABLE
+		| REBOOTABLE
 			{ $$ = CFG_F_REBOOT_ABLE; }
 		| NO_VGA
 			{ $$ = CFG_F_NO_VGA; }
@@ -166,15 +186,11 @@ taskflag	: DIRECT_MAPPED
 			{ $$ = CFG_F_NO_SIGMA_NULL; }
 		;
 
-modules		: modspec modules
-		|
-		;
-
-modspec		: MODULE string string
+task_modspec	: MODULE string string
 			{ 
 			  if (cfg_new_module($2, $3))
 			    {
-			      yyerror("Error creating cfg_module");
+			      yyerror("Error adding module");
 			      YYABORT;
 			    }
 			}
@@ -182,46 +198,20 @@ modspec		: MODULE string string
 			{ 
 			  if (cfg_new_module($2, NULL))
 			    {
-			      yyerror("Error creating cfg_module");
+			      yyerror("Error adding module");
 			      YYABORT;
 			    }
 			}
 		;
 
-constraints	: constraint constraints
-		|
-		;
-
-constraint	: MEMORY memconstraint
-		| PRIORITY number
-			{ cfg_set_prio($2); }
-		;
-
-memconstraint	: memnumber memrange memflags
-			{ cfg_new_mem($1, $2.low, $2.high, $3); }
-		;
-
-memflags	: memflag memflags
-			{ $$ = $1 | $2; }
-		|
-			{ $$ = 0; }
-		;
-
-memflag		: DMA_ABLE
-			{ $$ = CFG_M_DMA_ABLE; }
-		| CONTIGUOUS
-			{ $$ = CFG_M_CONTIGUOUS; }
-		| DIRECT_MAPPED
-			{ $$ = CFG_M_DIRECT_MAPPED; }
-		;
-
-
-memrange	: IN '[' memnumber ',' memnumber ']'
-			{ $$.low = $3; $$.high = $5; }
-		| AT memnumber
-			{ $$.low = $2; $$.high = 0; }
-		|
-			{ $$.low = 0; $$.high = L4_MAX_ADDRESS; }
+memconstraint	: memnumber memrange memflagspec
+			{
+			  if (cfg_new_mem($1, $2.low, $2.high, $3))
+			    {
+			      yyerror("Error adding memory region");
+			      YYABORT;
+			    }
+			}
 		;
 
 memnumber	: number memmodifier
@@ -233,14 +223,45 @@ memmodifier	: MB	{ $$ = 1024*1024; }
 		|	{ $$ = 1; }
 		;
 
+memrange	: IN '[' memnumber ',' memnumber ']'
+			{ $$.low = $3; $$.high = $5; }
+		| AT memnumber
+			{ $$.low = $2; $$.high = 0; }
+		|
+			{ $$.low = 0; $$.high = L4_MAX_ADDRESS; }
+		;
+
+memflagspec	: IS '[' memflags ']'
+			{ $$ = $3; }
+		|
+			{ $$ = 0; }
+		;
+
+memflags	: memflags memflag
+			{ $$ = $1 | $2; }
+		| memflag
+			{ $$ = $1; }
+		;
+
+memflag		: DMAABLE
+			{ $$ = CFG_M_DMA_ABLE; }
+		| CONTIGUOUS
+			{ $$ = CFG_M_CONTIGUOUS; }
+		| DIRECT_MAPPED
+			{ $$ = CFG_M_DIRECT_MAPPED; }
+		;
+
+
 time		: number timemodifier
       			{ $$ = $1*$2; }
+		;
 
 timemodifier	: S	{ $$ = 1000; }
 		| MS	{ $$ = 1; }
 		| MIN	{ $$ = 60000; }
 		| H	{ $$ = 3600000; }
 		|	{ $$ = 1000; }
+		;
 
 number		: UNSIGNED
 			{ $$ = strtoul($1, 0, 0); }

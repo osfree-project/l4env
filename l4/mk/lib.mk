@@ -63,19 +63,24 @@ include $(L4DIR)/mk/install.inc
 
 DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
-$(filter-out %.s.so, $(TARGET)):%.a: $(OBJS)
-	$(AR_MESSAGE)
+$(filter-out %.s.so %.o.a, $(TARGET)):%.a: $(OBJS)
+	@$(AR_MESSAGE)
 #	$(AR) rvs $@ $(foreach obj, $(OBJS_$@),		\
              $(firstword $(foreach dir, . $(VPATH),	\
                   $(wildcard $(dir)/$(obj)))))
 	$(VERBOSE)$(RM) $@
 	$(VERBOSE)$(AR) rs $@ $(OBJS)
-	$(BUILT_MESSAGE)
+	@$(BUILT_MESSAGE)
 
 $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(LIBDEPS)
-	$(AR_MESSAGE)
+	@$(AR_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,ld) $(LD) -o $@ -shared -nostdlib $(OBJS) $(LDFLAGS)
-	$(BUILT_MESSAGE)
+	@$(BUILT_MESSAGE)
+
+$(filter %.o.a, $(TARGET)):%.o.a: $(OBJS) $(LIBDEPS)
+	@$(AR_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,ld) $(LD) -o $@ -r $(OBJS) $(LDFLAGS)
+	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build
 

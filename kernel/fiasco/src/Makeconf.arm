@@ -5,8 +5,6 @@
 CFLAGS := -W -Wall
 CXXFLAGS :=  -W -Wall -fno-rtti -fno-exceptions
 
-
-
 SYSTEM_TARGET=arm-linux-
 
 CC3=	gcc
@@ -16,3 +14,7 @@ L4ALL_INCDIR=   -nostdinc \
 		$(addprefix -I, \
 		$(PRIVATE_INCDIR) $(dir $(LIBGCC))/include)
 
+ifeq ($(CONFIG_NO_FRAME_PTR),y)
+  CFLAGS += -fomit-frame-pointer
+  CXXFLAGS += -fomit-frame-pointer
+endif

@@ -11,11 +11,13 @@
 
 #include "global.h"
 #include "idt.h"
+#include "helper.h"
 
 typedef l4_cpu_time_t (*memcpy_t)(char *dst, char *src, l4_size_t size);
 
 static unsigned char memcpy_stack[STACKSIZE] __attribute__((aligned(4096)));
 static jmp_buf memcpy_jmp_buf;
+
 
 static l4_cpu_time_t
 memcpy_standard_rep_byte(char *dst, char *src, l4_size_t size)
@@ -331,7 +333,7 @@ test_memcpy(memcpy_t memcpy)
   for (m=(l4_umword_t*)scratch_mem;
        m<(l4_umword_t*)(scratch_mem+2*size/sizeof(l4_umword_t));
        m++)
-    *m = l4_rand();
+    *m = l4util_rand();
 
   if (!setjmp(memcpy_jmp_buf))
     {
@@ -340,8 +342,17 @@ test_memcpy(memcpy_t memcpy)
       if (0 != memcmp((void*)scratch_mem, (void*)scratch_mem+size, size))
 	puts("Implementation error!");
       else
-	printf("Memory (copy) bandwidth: %4uMB/s\n",
-	    (unsigned)(((l4_uint64_t)SCRATCH_MEM_SIZE/2) / l4_tsc_to_us(time)));
+	{
+	  unsigned mb_s     = (unsigned)(((l4_uint64_t)SCRATCH_MEM_SIZE/2) / 
+				         l4_tsc_to_us(time));
+	  unsigned cy1000_b = (unsigned)(1000*time/
+				         ((l4_uint64_t)SCRATCH_MEM_SIZE/2));
+	  unsigned cy_b     = cy1000_b / 1000;
+
+	  cy1000_b -= 1000*cy_b;
+	  printf("Memory (copy): %4uMB/s (%u.%03ucy/B)\n", 
+	      mb_s, cy_b, cy1000_b);
+	}
     }
   else
     puts("Not applicable (invalid opcode)");
@@ -369,7 +380,7 @@ test_mem_bandwidth_thread(void)
 
   asm volatile ("lidt (%%eax)\n\t" : : "a" (&idt));
 
-  puts("\nTesting memory bandwidth:");
+  printf("\nTesting memory bandwidth (CPU %dMHz):\n", mhz);
 
   test_memcpy(memcpy_standard_rep_byte);
   test_memcpy(memcpy_standard_rep_word);
@@ -382,7 +393,7 @@ test_mem_bandwidth_thread(void)
 
   call(main_id);
 
-  sleep_forever();
+  l4_sleep_forever();
 }
 
 void

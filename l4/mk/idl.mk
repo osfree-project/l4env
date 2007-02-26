@@ -37,13 +37,11 @@ $(warning You have overwritten INSTALL_INC_PREFIX. I hope you know what you are 
 endif
 INSTALL_INC_PREFIX     ?= l4/$(PKGNAME)
 
-# our default MODE is 'host' as this includes no includes per default
-MODE			?= host
+# our default MODE is 'l4env'
+MODE			?= l4env
 
 IDL_EXPORT_STUB ?= %
 IDL_EXPORT_IDL	?= %
-
-PRIVATE_INCDIR+=$(L4INCDIR)
 
 .general.d: $(L4DIR)/mk/idl.mk
 include $(L4DIR)/mk/Makeconf
@@ -81,6 +79,7 @@ INSTALL_TARGET = $(patsubst %.idl,%-sys.h,				\
 		   $(filter $(IDL_EXPORT_STUB), $(IDL)))
 
 all:: $(IDL_FILES)
+.DELETE_ON_ERROR:
 
 # the dependencies for the generated files
 DEPS		+= $(IDL_DEP)
@@ -108,20 +107,20 @@ SKELETON_INCLUDE_PREFIX = $(if $(IDL_EXPORT_SKELETON),\
 vpath %-sys.h ..
 
 $(IDL:.idl=.aoi):%.aoi: %.idl .general.d %-sys.h
-	$(GEN_MESSAGE)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(FLICK_CPP_NAME),,.$(<F).d) $(FLICK_FE) -o $@ $(IDL_FLAGS) $<
 	$(VERBOSE)$(CP) $(<:.idl=-sys.h) .
 
 %-client.prc: %.aoi
-	$(GEN_MESSAGE)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)$(FLICK_PFE) --interface_include_file_fmt $(STUB_INCLUDE_PREFIX)$(<:.aoi=-sys.h) -o $@ $<
 
 %-server.prc: %.aoi
-	$(GEN_MESSAGE)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)$(FLICK_PFE) -s --interface_include_file_fmt $(SKELETON_INCLUDE_PREFIX)$(<:.aoi=-sys.h) -o $@ $<
 
 %.c %.h: %.prc
-	$(GEN_MESSAGE)
+	@$(GEN_MESSAGE)
 	$(VERBOSE)$(FLICK_PBE) -i -n -s $<
 
 else
@@ -144,15 +143,16 @@ IDL_FLAGS	+= -C
 endif
 
 %-server.c %-server.h %-client.c %-client.h %-sys.h: %.idl .general.d
-	$(VERBOSE)$(call MAKEDEP,dice,"$(call IDL_FILES_EXPAND,$<)",.$(<F).d) $(DICE) $(IDL_FLAGS) $<
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,dice,"$(call IDL_FILES_EXPAND,$<)",.$(<F).d) CC=$(CC_$(ARCH)) $(DICE) $(IDL_FLAGS) $<
+	$(DEPEND_VERBOSE)$(ECHO) "$(call IDL_FILES_EXPAND,$<): $(DICE)" >>.$(<F).d
+	$(DEPEND_VERBOSE)$(ECHO) "$(DICE):" >>.$(<F).d
 
 
 endif
 
-cleanall::
-	$(VERBOSE)$(RM) $(wildcard $(addprefix $(INSTALLDIR_LOCAL)/, $(IDL_FILES)))
-
 clean cleanall::
+	$(VERBOSE)$(RM) $(wildcard $(addprefix $(INSTALLDIR_LOCAL)/, $(IDL_FILES)))
 	$(VERBOSE)$(RM) $(wildcard $(IDL_FILES) *.aoi *.prc)
 
 else

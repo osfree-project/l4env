@@ -5,7 +5,7 @@
  *	\date	03/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -91,11 +91,11 @@ VectorElement *CBETestMainFunction::GetFirstSrvLoop()
 CBETestServerFunction *CBETestMainFunction::GetNextSrvLoop(VectorElement * &pIter)
 {
     if (!pIter)
-	return 0;
+		return 0;
     CBETestServerFunction *pRet = (CBETestServerFunction *) pIter->GetElement();
     pIter = pIter->GetNext();
     if (!pRet)
-	return GetNextSrvLoop(pIter);
+		return GetNextSrvLoop(pIter);
     return pRet;
 }
 
@@ -153,9 +153,9 @@ bool CBETestMainFunction::AddTestFunction(CFEFile * pFEFile, CBEContext * pConte
 
     if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
       {
-	  pIter = pFEFile->GetFirstIncludeFile();
+	  pIter = pFEFile->GetFirstChildFile();
 	  CFEFile *pIncFile;
-	  while ((pIncFile = pFEFile->GetNextIncludeFile(pIter)) != 0)
+	  while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
 	    {
 		if (!AddTestFunction(pIncFile, pContext))
 		    return false;
@@ -207,7 +207,7 @@ bool CBETestMainFunction::AddTestFunction(CFEInterface * pFEInterface, CBEContex
     pContext->SetFunctionType(nOldType);
 
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     CBETestServerFunction *pFunction = (CBETestServerFunction*)pRoot->FindFunction(sFuncName);
     if (!pFunction)
     {
@@ -260,7 +260,8 @@ void CBETestMainFunction::Write(CBEImplementationFile * pFile, CBEContext * pCon
 void CBETestMainFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("CORBA_Object %s;\n", (const char *) sObj);
+	pFile->PrintIndent("CORBA_Object_base _%s;\n", (const char *)sObj);
+    pFile->PrintIndent("CORBA_Object %s = &_%s;\n", (const char *) sObj, (const char *) sObj);
 
     String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
     pFile->PrintIndent("CORBA_Environment %s;\n", (const char *) sEnv);

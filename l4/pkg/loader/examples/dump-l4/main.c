@@ -1,12 +1,15 @@
 /* $Id$ */
 /**
  * \file	loader/linux/dump-l4/main.c
+ * \brief	L4Linux program to dump information about an application
+ * 		which was started by the L4 loader.
  *
  * \date	06/10/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Linux program to dump information about an application
- * 		which was started by the L4 loader. */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,10 +82,10 @@ dump_task_info(unsigned int task)
   l4dm_dataspace_t ds;
   l4_addr_t fpage_addr;
   l4_size_t fpage_size;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
 
-  if ((error = l4loader_app_info(loader_id, task, 0, &fname, 
-				 (l4loader_dataspace_t*)&ds, &exc)))
+  if ((error = l4loader_app_info_call(&loader_id, task, 0, &fname, 
+				      &ds, &env)))
     {
       printf("Error %d dumping l4 task %x\n", error, task);
       return error;
@@ -168,10 +171,10 @@ main(int argc, char **argv)
 	  l4dm_dataspace_t ds;
 	  l4_addr_t fpage_addr;
 	  l4_addr_t fpage_size;
-	  sm_exc_t exc;
+	  CORBA_Environment env = dice_default_environment;
 	  
-	  if ((error = l4loader_app_info(loader_id, 0, 0, &fname,
-					 (l4loader_dataspace_t*)&ds, &exc)))
+	  if ((error = l4loader_app_info_call(&loader_id, 0, 0, &fname,
+					      &ds, &env)))
 	    {
 	      printf("Error %d getting l4 task list\n", error);
 	      return error;

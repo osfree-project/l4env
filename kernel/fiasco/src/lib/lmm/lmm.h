@@ -27,6 +27,9 @@
 //#include /cdefs.h>
 #include "types.h"
 
+typedef Address vm_offset_t;
+typedef size_t vm_size_t;
+
 typedef unsigned int lmm_flags_t;
 typedef int lmm_pri_t;
 

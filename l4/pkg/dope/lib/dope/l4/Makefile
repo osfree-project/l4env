@@ -4,6 +4,7 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = libl4dope.a
 PRIVATE_INCDIR   = $(PKGDIR)/lib/dope/include \
+                   $(PKGDIR)/server/include \
                    $(PKGDIR)/include \
                    $(PKGDIR)/idl/OBJ-$(SYSTEM)
 SRC_C            = func.c init.c sync.c listener.c events.c main.c

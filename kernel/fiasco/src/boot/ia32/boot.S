@@ -24,17 +24,12 @@ ENTRY(start)
         .align  2
 #endif
 
-ENTRY(_mb_header)
-        .long   0x1BADB002              /* magic */
-        .long   0x00010000              /* flags: AOUT_KLUDGE */
-        .long   - 0x00010000 - 0x1BADB002
-  .long   _mb_header                    /* header_addr */
-        .long   __crt_dummy__           /* load_addr */
-        .long   _edata			/* load_end_addr */
-        .long   _end			/* bss_end_addr */
-        .long   _start	                /* entry */
-	
-	.bss
+	.p2align(2), 0x90
+	.long   0x1BADB002              /* magic */
+	.long   0x00000000              /* feature flags */
+	.long   0 - 0x1BADB002
 
+	.bss
 	.space	1024
 ENTRY(_stack)
+

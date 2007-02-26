@@ -1,0 +1,34 @@
+#include <l4/names/libnames.h>
+#include <l4/env/errno.h>
+#include <l4/sys/consts.h>
+#include <l4/hiworld/hiworld.h>
+
+static CORBA_Object server_id = L4_INVALID_ID;
+            
+//! Request netserver id at nameserver
+static int check_server(void){
+    if (l4_is_invalid_id(server_id)){
+        if (!names_waitfor_name("hiworld",&server_id,10000)) return 1;
+    }
+    return 0;
+}
+
+//! print the string
+int hiworld_print(void){
+    CORBA_Environment env = dice_default_environment;
+
+    if (check_server()) return -L4_EINVAL;
+    hi_print_call(&server_id, &env);
+    return -env.ipc_error;
+}
+
+//! get the string
+int hiworld_count(void){
+    CORBA_Environment env = dice_default_environment;
+    int count;
+
+    if (check_server()) return -L4_EINVAL;
+    count=hi_count_call(&server_id, &env);
+    if(!env.ipc_error) return count;
+    return -env.ipc_error;
+}

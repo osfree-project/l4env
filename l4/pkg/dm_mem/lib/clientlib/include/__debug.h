@@ -6,27 +6,16 @@
  *
  * \date   11/23/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _DM_MEM___DEBUG_H
 #define _DM_MEM___DEBUG_H
-
-#ifdef DEBUG
 
 /* enable debug assertions */
 #define DEBUG_ASSERTIONS           1
@@ -39,7 +28,5 @@
 #define DEBUG_LOCK                 0
 #define DEBUG_ALLOCATE             0
 #define DEBUG_RELEASE              0
-
-#endif /* DEBUG */
 
 #endif /* !_DM_MEM___DEBUG_H */

@@ -1,44 +1,41 @@
 /*!
  * \file	con/include/l4/con/l4contxt.h
- *
  * \brief	libcontxt client interface
  *
- * \author	Mathias Noack <mn3@os.inf.tu-dresden.de>
- *
- */
+ * \date	2002
+ * \author	Mathias Noack <mn3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #ifndef _L4CONTXT_L4CONTXT_H
 #define _L4CONTXT_L4CONTXT_H
 
 /* common interface include */
 #include <l4/con/l4contxt_common.h>
 
-/*****************************************************************************
- *** prototypes
- *****************************************************************************/
+/** \defgroup contxt_if Client Library for Text Output */
 
-/*****************************************************************************/
-/**
- * \brief   Init of contxt library
+/** Init of contxt library.
+ * \ingroup contxt_if
  * 
  * \param   max_sbuf_size  ... max IPC string buffer
  * \param   scrbuf_lines   ... number of additional screenbuffer lines 
  *
  * This is the init-function of libcontxt. It opens a console and allocates 
- * the screen history buffer.
- */
-/*****************************************************************************/ 
+ * the screen history buffer using malloc(). This functions must be called
+ * before the other functions for text output may be used. */
 int contxt_init(long max_sbuf_size, int scrbuf_lines);
 
-/*****************************************************************************/
-/**
- * \brief   close contxt library
+/** Close contxt library.
+ * \ingroup contxt_if
  * 
  * \return  0 on success (close a console)
  *          PANIC otherwise
  *
- * Close the libcontxt console.
- */
-/*****************************************************************************/
+ * Close the libcontxt console. */
 int contxt_close(void);
 
 #endif

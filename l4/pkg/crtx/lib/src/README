@@ -1,31 +1,20 @@
-crt0_getopt.S:
-  - for simple L4 applications (sigma0, optional OSKit 0.6)
+crt0_nol4env.S:
+  (for simple L4 applications without L4env (sigma0, optional OSKit 0.6))
   - initialization of argc/argv
   - falls asleep after main function exited
 
-crt0_l4env_stat.S (OBSOLETE, use crt0_l4env.S):
-  - for L4env applications (l4env, optional OSKit 1.0)
-  - initialization of argv/argv
-  - calls l4_startup for L4env initialization
-  - OBSOLETE: still used by scsi, dsi_meteor, semaphore
-
 crt0_l4env.S:
-  - for L4env applications (l4env, optional OSKit 1.0)
+  (for L4env applications (l4env, optional OSKit 1.0))
   - initialization for static constructors
-  - initialization of argv/argv
   - calls l4env_startup for L4env initialization
-  - use in conjunction with crtn.S!
+  - use in conjunction with crtn.S to finalize ctors and dtors section!
 
 crt0_l4env_dyn.S:
-  - for L4env applications with dynamic libloader/libl4env libraries
+  (for L4env applications with dynamic libloader/libl4env libraries)
   - application is only startable by L4 loader
-  - does nothing because the whole work is done by the L4 loader
-
-crt0_l4env_freebsd.S:
-  - for L4env applications (l4env, OSKit 1.0)
-  - initialization of is done by multiboot_main
-  - calls l4env_startup for L4env initialization
-  - use in conjunction with crtn.S!
+  - support for calling constructors/destructors
+  - does nothing else because the whole work is done by the L4 loader library
+  - use in conjunction with crtn.S to finalize ctors and dtors section!
 
 crt0_oskit10_support.S:
   - for sigma0 applications linked against the OSKit 1.0
@@ -36,4 +25,8 @@ crtn.S:
 
 main_stat.ld:
   - linker script for standard L4 applications
+
+main_rel.ld:
+  - linker script for Linux kernel modules and XFree86 drivers
+  - similar to elf_i386.xr except that we merge all .text.* sections
 

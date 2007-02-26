@@ -6,6 +6,11 @@
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <l4/log/l4log.h>
 #include <l4/log/log_printf.h>
 #include "internal.h"

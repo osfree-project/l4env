@@ -21,28 +21,28 @@ the sender to the recipient.
 It currently comprises 7 calls:
 
 <desc
-<dt/<code/l4_i386_ipc_call()// The usual blocking RPC.
+<dt/<code/l4_ipc_call()// The usual blocking RPC.
 
-<dt/<code/l4_i386_receive()// Wait for a message from a specified thread.
+<dt/<code/l4_receive()// Wait for a message from a specified thread.
 
-<dt/<code/l4_i386_reply_and_wait()// Send a message to a client and
+<dt/<code/l4_reply_and_wait()// Send a message to a client and
 wait for the next order from a client.
 
-<dt/<code/l4_i386_reply_deceiting_and_wait()// Send a message to a
+<dt/<code/l4_reply_deceiting_and_wait()// Send a message to a
 client (using a virtual sender id) and wait for the next order from a client.
 
-<dt/<code/l4_i386_send()// Send a message and continue.
-<dt/<code/l4_i386_send_deceiting()// Send a message using a virtual
+<dt/<code/l4_send()// Send a message and continue.
+<dt/<code/l4_send_deceiting()// Send a message using a virtual
 sender id.
-<dt/<code/l4_i386_wait()// Wait for a message from any thread.
+<dt/<code/l4_wait()// Wait for a message from any thread.
 </desc
 
 <sect>See Also
 
-<ref t=m id="l4_i386_ipc_call"//, 
-<ref t=m id="l4_i386_ipc_receive"//, 
-<ref t=m id="l4_i386_ipc_reply_and_wait"//, 
-<ref t=m id="l4_i386_ipc_reply_deceiting_and_wait"//, 
-<ref t=m id="l4_i386_ipc_send"//, 
-<ref t=m id="l4_i386_ipc_send_deceiting"//,
-<ref t=m id="l4_i386_ipc_wait"// 
+<ref t=m id="l4_ipc_call"//, 
+<ref t=m id="l4_ipc_receive"//, 
+<ref t=m id="l4_ipc_reply_and_wait"//, 
+<ref t=m id="l4_ipc_reply_deceiting_and_wait"//, 
+<ref t=m id="l4_ipc_send"//, 
+<ref t=m id="l4_ipc_send_deceiting"//,
+<ref t=m id="l4_ipc_wait"// 

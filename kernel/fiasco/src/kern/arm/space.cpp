@@ -9,7 +9,7 @@ class Space : public Space_context
 {
 public:
   /** Return status of v_insert. */
-  enum status_t {
+  enum Status {
     Insert_ok = E_OK,		///< Mapping was added successfully.
     Insert_err_nomem  = E_NOMEM,  ///< Couldn't alloc new page table
     Insert_err_exists = E_EXISTS, ///< A mapping already exists at the target addr
@@ -19,7 +19,7 @@ public:
   };
 
   /** Attribute masks for page mappings. */
-  enum page_attrib_t {
+  enum Page_attrib {
     Page_no_attribs = 0,
     /// Page is writable.
     Page_writable = Page::USER_NO, 
@@ -38,8 +38,13 @@ public:
   bool v_delete(Address virt, size_t size,
 		Mword page_attribs = 0);
 
-  status_t v_insert(Address phys, Address virt, 
+  Status v_insert(Address phys, Address virt, 
 		    size_t size, Mword page_attribs);
+
+  static Space *kernel_space();
+  static void kernel_space( Space * );
+
+  void kmem_update (void *addr);
 
 private:
   Space();			// default constructors are undefined
@@ -49,6 +54,8 @@ private:
     number_index = 0xeff00000, 
     chief_index  = 0xefe00000,
   };
+
+  static Space *k_space;
 
 };
 
@@ -65,6 +72,20 @@ IMPLEMENTATION:
 #include "l4_types.h"
 #include "panic.h"
 
+Space *Space::k_space;
+
+IMPLEMENT inline
+Space *Space::kernel_space()
+{
+  return k_space;
+}
+
+IMPLEMENT inline
+void Space::kernel_space( Space *_k_space )
+{
+  k_space = _k_space;
+}
+
 // state requests/manipulation
 
 /** Constructor.  Creates a new address space and registers it with
@@ -80,9 +101,11 @@ IMPLEMENTATION:
 PROTECTED
 Space::Space(unsigned new_number)
 {
-#warning NEED dir_init
-  //Kmem::dir_init(_dir);		// copy current shared kernel page directory
-
+  // copy current shared kernel page directory
+  copy_in( (void*)Kmem::mem_user_max, 
+	   nonull_static_cast<Page_table*>(kernel_space()), 
+	   (void*)Kmem::mem_user_max, Kmem::mem_kernel_max - Kmem::mem_user_max );
+  
   // scribble task/chief numbers into an unused part of the page directory
   insert_invalid((void*)number_index, Config::SUPERPAGE_SIZE, new_number << 8);	      
   insert_invalid((void*)chief_index, Config::SUPERPAGE_SIZE,
@@ -158,7 +181,7 @@ PUBLIC inline NEEDS["globals.h"]
 Address Space::virt_to_phys(void *a) const // pgtble lookup
 {
   if (this == sigma0)		// sigma0 doesn't have mapped everything
-    return (Address)a;
+    return (Address)a/*+0xc0000000*/;
 
   return (Address)Space_context::lookup(a);
 }
@@ -182,23 +205,42 @@ bool Space::v_delete(Address /*virt*/, size_t /*size*/,
 }
 
 IMPLEMENT
-Space::status_t Space::v_insert(Address phys, Address virt, 
-				size_t size, Mword page_attribs)
+Space::Status Space::v_insert(Address phys, Address virt, 
+			      size_t size, Mword page_attribs)
 {
   size_t s;
   Page::Attribs a;
   P_ptr<void> p = Page_table::lookup( (void*)virt, &s, &a );
   if(p.is_null())
-    return (status_t)insert( P_ptr<void>(phys), (void *)virt, size, page_attribs );
+    return (Status)insert( P_ptr<void>(phys), (void*)virt, size, page_attribs);
   else
     {
       if(p.get_unsigned() != phys || s != size)
 	return Insert_err_exists;
       if(page_attribs == a)
 	return Insert_warn_exists;
-      
-#warning Page_table::change not yet implemented
-      //      change((void*)virt, page_attribs);
+
+      change((void*)virt, page_attribs);
+
       return Insert_warn_attrib_upgrade;
     }
+}
+
+IMPLEMENT inline
+void Space::kmem_update (void *addr)
+{
+  // copy current shared kernel page directory
+  copy_in( addr, nonull_static_cast<Page_table*>(kernel_space()), 
+	   addr, Config::SUPERPAGE_SIZE );
+
+}
+
+
+/** Tests if a task is the sigma0 task.
+    @return true if the task is sigma0, false otherwise.
+*/
+PUBLIC inline 
+bool Space::is_sigma0(void)
+{
+  return this == sigma0;
 }

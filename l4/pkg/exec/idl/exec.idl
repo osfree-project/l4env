@@ -7,46 +7,48 @@
  * \brief Common L4 Environment, EXEC layer
  */
 
-/** l4 namespace */
-module l4exec
-{
-  struct threadid_t
-    {
-      unsigned long low;
-      unsigned long high;
-    };
-  
-  struct dataspace_t
-    {
-      unsigned long id;
-      threadid_t manager;
-    };
-  
-  /** structure that is exchanged by the interface */
-  typedef long envpage_t[500];
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+
+/** l4 namespace */
+library l4exec
+{
+  /** structure that is exchanged by the interface */
+  typedef long envpage_t[563];
+
+  /** exec interface */
   interface bin
     {
       /** Open the binary file.
        * Get the file image from the file provider, analyse the header
        * information, and load all dependant libraries. The envpage
        * describes what servers to use to open dataspaces. */
-      long open(in string fname, inout envpage_t envpage,
-		in unsigned long flags);
+      long open([in, string] char* fname, [in] l4dm_dataspace_t *img_ds,
+		[in, out] envpage_t *envpage, [in] unsigned long flags);
+
+      /** Test file type of image. Returns > 0 if interpreter knows how to
+       * handle it */
+      long ftype([in] l4dm_dataspace_t *img_ds, [in] envpage_t *envpage);
 
       /** Close binary */
-      long close(inout envpage_t envpage);
-      
+      long close([in, out] envpage_t *envpage);
+
       /** Relocate/link the binary described by envpage. */
-      long link(inout envpage_t envpage);
+      long link([in, out] envpage_t *envpage);
 
       /** Get debug symbols.
        * The dataspace is contiguous. */
-      long get_symbols(in envpage_t envpage, out dataspace_t sym_ds);
+      long get_symbols([in] envpage_t envpage,
+		       [out] l4dm_dataspace_t *sym_ds);
 
       /** Get debug lines info.
        * The dataspace is contiguous. */
-      long get_lines(in envpage_t envpage, out dataspace_t lines_ds);
+      long get_lines([in] envpage_t envpage,
+		     [out] l4dm_dataspace_t *lines_ds);
     };
 };
 

@@ -1,13 +1,17 @@
 /* $Id$ */
 /**
  * \file	loader/linux/run-l4/main.c
+ * \brief	Linux program to start applications on the L4 loader server
  *
  * \date	06/10/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Linux program to start applications on the L4 loader server */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -25,7 +29,7 @@ int
 main(int argc, char **argv)
 {
   int i, error;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   const char *fname = strrchr(argv[0], '/');
   struct stat buf;
 
@@ -71,11 +75,15 @@ main(int argc, char **argv)
    * using fserv as file server. */
   for (i=1; i<argc; i++)
     {
-      if ((error = l4loader_app_open(loader_id, argv[i], 
-				     (l4loader_threadid_t*)&fserv_id, 0, &exc)))
+      static char error_msg[1024];
+      char *ptr = error_msg;
+      if ((error = l4loader_app_open_call(&loader_id, argv[i], 
+				          &fserv_id, 0, &ptr, &env)))
 	{
-	  printf("Error %d (%s) loading l4 module \"%s\"\n", 
-	      error, l4env_errstr(error), argv[i]);
+	  printf("Error %d loading l4 module \"%s\"\n", 
+	      error, argv[i]);
+	  if (*error_msg)
+	    printf("(Loader says '%s')\n", error_msg);
 	  return error;
 	}
     }

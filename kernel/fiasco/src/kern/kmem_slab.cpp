@@ -2,16 +2,16 @@ INTERFACE:
 
 #include "kmem_slab_simple.h"
 
-class kmem_slab_t : public kmem_slab_simple_t
+class Kmem_slab : public Kmem_slab_simple
 {
 };
 
 IMPLEMENTATION:
 
-// kmem_slab_t -- A type-independent slab cache allocator for Fiasco,
+// Kmem_slab -- A type-independent slab cache allocator for Fiasco,
 // derived from a generic slab cache allocator (slab_cache_anon in
-// lib/slab.{h,cc}) and from kmem_slab_simple_t which handles locking
-// and kmem_slab_t-instance allocation for us.
+// lib/slab.{h,cc}) and from Kmem_slab_simple which handles locking
+// and Kmem_slab-instance allocation for us.
 
 // This specialization adds multi-page slabs.
 // We allocate multi-page slabs as multiple, potentially
@@ -32,19 +32,14 @@ IMPLEMENTATION:
 
 #include "config.h"
 #include "vmem_alloc.h"
+#include "kmem.h"
 #include "kmem_alloc.h"
 #include "region.h"
 
-#undef PAGE_SIZE
-
-extern "C" {
-  extern char _mappings_1, _mappings_end_1;
-}
-
 PUBLIC
-kmem_slab_t::kmem_slab_t(unsigned long slab_size, unsigned elem_size, 
+Kmem_slab::Kmem_slab(unsigned long slab_size, unsigned elem_size, 
 			 unsigned alignment)
-  : kmem_slab_simple_t (slab_size, elem_size, alignment)
+  : Kmem_slab_simple (slab_size, elem_size, alignment)
 {
   static bool region_initialized = false;
 
@@ -52,8 +47,10 @@ kmem_slab_t::kmem_slab_t(unsigned long slab_size, unsigned elem_size,
     {
       region_initialized = true; // set this first to avoid recursion
                                  // because region allocs a slab of its own
-      region::init(reinterpret_cast<vm_offset_t>(&_mappings_1),
-		   reinterpret_cast<vm_offset_t>(&_mappings_end_1));
+      region::init (reinterpret_cast<Address>((void *)
+                      Kmem::_mappings_1_addr),
+		    reinterpret_cast<Address>((void *)
+                      Kmem::_mappings_end_1_addr));
     }
 }
 
@@ -61,7 +58,7 @@ kmem_slab_t::kmem_slab_t(unsigned long slab_size, unsigned elem_size,
 // allocate or free blocks
 
 virtual void *
-kmem_slab_t::block_alloc(unsigned long size, unsigned long alignment)
+Kmem_slab::block_alloc(unsigned long size, unsigned long alignment)
 {
   // size must be a power of two of PAGE_SIZE
   assert(size >= Config::PAGE_SIZE
@@ -76,13 +73,13 @@ kmem_slab_t::block_alloc(unsigned long size, unsigned long alignment)
       return Kmem_alloc::allocator()->alloc(0); // 2^0 = 1 page
     }
 
-  vm_offset_t vaddr = region::reserve_pages(size, alignment);
+  Address vaddr = region::reserve_pages(size, alignment);
   if (! vaddr)
     return 0;
 
   // Fine, we reserved virtual addresses for the buffer.  Now actually
   // allocate pages.
-  for (vm_offset_t a = vaddr;
+  for (Address a = vaddr;
        a < vaddr + size;
        a += Config::PAGE_SIZE)
     {
@@ -90,7 +87,7 @@ kmem_slab_t::block_alloc(unsigned long size, unsigned long alignment)
 	continue;		// successfully allocated a page
 
       // Error - out of memory.  Undo everything.
-      for (vm_offset_t i = vaddr;
+      for (Address i = vaddr;
 	   i < a;
 	   i += Config::PAGE_SIZE)
 	{
@@ -106,7 +103,7 @@ kmem_slab_t::block_alloc(unsigned long size, unsigned long alignment)
 }
 
 virtual void 
-kmem_slab_t::block_free(void *block, unsigned long size)
+Kmem_slab::block_free(void *block, unsigned long size)
 {
   for (char *p = reinterpret_cast<char*>(block);
        p < reinterpret_cast<char*>(block) + size;
@@ -118,5 +115,5 @@ kmem_slab_t::block_free(void *block, unsigned long size)
   // We didn't reserve a memory region if the allocation was just one
   // page.  Otherwise, we need to free the region.
   if (size != Config::PAGE_SIZE)	
-    region::return_pages(reinterpret_cast<vm_offset_t>(block), size);
+    region::return_pages(reinterpret_cast<Address>(block), size);
 }

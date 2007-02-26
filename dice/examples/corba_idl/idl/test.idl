@@ -1,9 +1,49 @@
+/*
+ * This is a simple CORBA IDL example
+ */
 
+/* One of the differences to the DCE IDL is the
+ * usage of the keyword 'module' instead of 'library'.
+ */
 module test
 {
+  /* CORBA IDL allows you to specify sequences, which are
+   * similar to array types. The CORBA C Language Mapping
+   * states that sequences are translated into a struct, 
+   * which has three members:
+   * struct {
+   *   unsigned long _maximum;
+   *   unsigned long _length;
+   *   type *_buffer;
+   * }
+   *
+   * This would translate the following line into:
+   * typedef struct {
+   *   unsigned long _maximum;
+   *   unsigned long _length;
+   *   long *_buffer;
+   * } test_l10;
+   *
+   * (the name is concatenated from the module's name
+   * and the type's name).
+   */
+  typedef sequence<long, 10> l10;
+  
   interface test
   {
+    /*
+     * A simple test function:
+     * - attributes are specified without [] preceeding the 
+     *   type of the parameters
+     * - out parameters do not have to be referenced, but 
+     *   receive their references automatically
+     */
     void test(in long t1, out long t2);
+
+    /*
+     * This function uses the above defined sequence
+     */
+    void test2(in l10 t3);
   };
 };
 

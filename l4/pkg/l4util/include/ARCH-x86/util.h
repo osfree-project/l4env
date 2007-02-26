@@ -5,29 +5,42 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include <stdarg.h>
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+EXTERN_C_BEGIN
 
-/* io oriented stuff */
-
-int 
-l4_sprintf(char *buf, const char *cfmt, ...);
-int 
-l4_vsprintf(char* string, __const char* format, va_list);
-
-/* calculate l4 timeouts */
+/** Calculate l4 timeouts */
 int micros2l4to(int mus, int *to_e, int *to_m);
 
-/* suspend thread */
+/** Suspend thread for a period of <ms> milliseconds */
 void l4_sleep(int ms);
+
+/* Suspend thread for a period of <us> micro seconds.
+ * WARNING: This function is mostly bogus since the timer resolution of
+ *          current L4 implementations is about 1ms! */
 void l4_usleep(int us);
 
+/** Go sleep and never wake up. */
+L4_INLINE void l4_sleep_forever(void) __attribute__((noreturn));
 
-/* touching data areas to force mapping */
+L4_INLINE void
+l4_sleep_forever(void)
+{
+  for (;;)
+    {
+      __asm__ __volatile("xor  %%eax,%%eax  \n\t"
+                         "mov  %%eax,%%ebp  \n\t"
+		     	 "mov  %%eax,%%esi  \n\t"
+			 "mov  %%eax,%%edi  \n\t"
+			 "mov  %%eax,%%ecx  \n\t"
+			 "dec  %%eax        \n\t"
+			 "int  $0x30        \n\t"
+			 : : : "memory");
+    }
+}
+
+/** Touch data areas to force mapping read-only */
 static inline void
 l4_touch_ro(const void*addr, unsigned size)
 {
@@ -43,6 +56,8 @@ l4_touch_ro(const void*addr, unsigned size)
   }
 }
 
+
+/** Touch data areas to force mapping read-write */
 static inline void
 l4_touch_rw(const void*addr, unsigned size)
 {
@@ -58,8 +73,7 @@ l4_touch_rw(const void*addr, unsigned size)
   }
 }
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif
+

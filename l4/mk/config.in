@@ -1,0 +1,102 @@
+# -*- Shell-script -*-
+
+mainmenu_name "DROPS Configuration"
+
+mainmenu_option next_comment
+comment 'Target Architectures'
+bool 'x86' BUILD_SYSTEMS_x86_s
+if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
+    define_string BUILD_SYSTEMS_x86 "x86"
+    string " CPU types" CPU_x86 '586'
+    bool '  L4 V2' BUILD_SYSTEMS_x86_l4v2
+    bool '  L4 X0' BUILD_SYSTEMS_x86_l4x0
+fi
+bool 'arm' BUILD_SYSTEMS_arm_s
+if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
+    define_string BUILD_SYSTEMS_arm "arm"
+    string " CPU types" CPU_arm 'sa'
+    bool '  L4 X0' BUILD_SYSTEMS_arm_l4x0
+fi
+endmenu
+
+bool 'Build shared libloaders.s.so' 'BUILD_LOADER'
+if [ "$BUILD_LOADER" = "y" ] ; then
+    define_string BUILD_LOADER_PICS 'libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a libsemaphore.a libthread.a libslab.a libl4env_err.a'
+fi
+
+mainmenu_option next_comment
+comment 'Paths and Directories'
+string 'DROPS_STDDIR' DROPS_STDDIR '/home/drops'
+string 'L4LINUX22_DIR' L4LINUX22_DIR '$(L4DIR)/../linux22'
+define_string L4LINUXDIR '$(error L4LINUXDIR is obsolete, use L4LINUX22_DIR now!)'
+bool 'Linux 2.4 kernel sources available' LINUX24_AVAIL
+if [ "$LINUX24_AVAIL" = "y" ] ; then
+  string 'Path to Linux 2.4 sources' LINUX24_DIR '$(L4DIR)/../linux-2.4.20'
+  define_string LINUX24_INCDIR $LINUX24_DIR/include
+else
+  bool 'Use Linux headers from DROPS_STDDIR' LINUX24_GLOBALINC
+  if [ "$LINUX24_GLOBALINC" = "y" ] ; then
+    define_string LINUX24_INCDIR '$(DROPS_STDDIR)/include/linux-24'
+  else
+    define_string LINUX24_INCDIR '$(L4DIR)/include/linux-24'
+  fi
+fi
+define_string DDE_LINUX_DIR '$(error DDE_LINUX_DIR is obsolete!)'
+string 'SDL include path' SDL_INCDIR '$(L4DIR)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
+endmenu
+
+mainmenu_option next_comment
+comment 'Verboseness and Messages'
+bool 'Verbose dependency building' DEPEND_VERBOSE_SWITCH
+if [ "$DEPEND_VERBOSE_SWITCH" = "n" ] ; then
+    define_string DEPEND_VERBOSE @
+fi
+bool 'Verbose compilation and building' VERBOSE_SWITCH
+if [ "$VERBOSE_SWITCH" = "n" ] ; then
+    define_string VERBOSE @
+fi
+bool 'Short messages for compilation' SHOWMESSAGES
+if [ "$SHOWMESSAGES" = "y" ] ; then
+bool 'Colored build-steps' BID_COLORED_PHASES
+fi
+endmenu
+
+mainmenu_option next_comment
+comment 'Compilers and Tools'
+bool 'Use special C-Compilers' BIDc_USE_SPECIAL_CC
+if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
+    string 'HOST_CC' HOST_CC 'gcc'
+    string 'HOST_CXX' HOST_CXX 'g++'
+    if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
+        string 'CC_x86' CC_x86 '$(SYSTEM_TARGET_x86)gcc'
+        string 'CXX_x86' CXX_x86 '$(SYSTEM_TARGET_x86)g++'
+    fi
+    if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
+        string 'CC_arm' CC_arm '$(SYSTEM_TARGET_arm)gcc'
+        string 'CXX_arm' CXX_arm '$(SYSTEM_TARGET_arm)g++'
+    fi
+else
+    define_string HOST_CC  'gcc'
+    define_string HOST_CXX 'g++'
+    define_string CC_x86   '$(SYSTEM_TARGET_x86)gcc'
+    define_string CXX_x86  '$(SYSTEM_TARGET_x86)g++'
+    define_string CC_arm   '$(SYSTEM_TARGET_arm)gcc'
+    define_string CXX_arm  '$(SYSTEM_TARGET_arm)g++'
+fi
+bool 'System has ld.so (highly recommended if so)' HAVE_LDSO
+if [ "$HAVE_LDSO" = "y" ] ; then
+    bool 'Automatically determine internal gcc preprocessor names' INT_CPP_NAME_SWITCH
+    if [ "$INT_CPP_NAME_SWITCH" = "n" ] ; then
+        if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
+          string 'Internal name of x86 gcc preprocessor' INT_CPP_x86_NAME "cpp0"
+          string 'Internal name of x86 g++ preprocessor' INT_CXX_x86_NAME "cpp0"
+	fi
+        if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
+          string 'Internal name of arm gcc preprocessor' INT_CPP_arm_NAME "cpp0"
+          string 'Internal name of arm g++ preprocessor' INT_CXX_arm_NAME "cpp0"
+	fi
+    fi
+fi
+bool 'Strip binaries on install' BID_STRIP_PROGS
+
+endmenu

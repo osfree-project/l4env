@@ -42,7 +42,11 @@ CL4X0aBESizes::~CL4X0aBESizes()
 */
 int CL4X0aBESizes::GetMaxShortIPCSize(int nDirection)
 {
-    return 12;
+// HACK: because X0 adaption has no _w3 IPC bindings,
+// we return 2 words...
+
+//    return 12;
+    return 8;
 }
 
 /** \brief 
@@ -58,8 +62,12 @@ int CL4X0aBESizes::GetSizeOfEnvType(String sName)
         return 16; // 4*l4_umword_t
     if (sName == "l4_timeout_t")
         return 4; // l4_umword_t
+    if (sName == "l4_threadid_t")
+	    return 8;
     if (sName == "CORBA_Object")
-        return 8; // sizeof(l4_threadid_t)
+        return 4; // sizeof(l4_threadid_t*)
+    if (sName == "CORBA_Object_base")
+	    return 8; // sizeof(l4_threadid_t)
     if (sName == "CORBA_Environment")
         return 28; // 4(major+repos_id) + 4(param) + 4(ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(user_data) + 4(malloc ptr)
     return CBESizes::GetSizeOfEnvType(sName);

@@ -15,18 +15,17 @@ IMPLEMENTATION:
 extern "C" int main(void);
 
 extern "C" 
-void __main(vm_offset_t mbi_phys, unsigned int aflag,
+void __main(Address mbi_phys, unsigned int aflag,
 	    unsigned achecksum_ro, unsigned achecksum_rw) FIASCO_INIT;
 
 extern "C" 
-void __main(vm_offset_t mbi_phys, unsigned int aflag,
+void __main(Address mbi_phys, unsigned int aflag,
 	    unsigned achecksum_ro, unsigned achecksum_rw)
 {
-
-  if (checksum::get_checksum_ro() != achecksum_ro)
+  if (Checksum::get_checksum_ro() != achecksum_ro)
     panic("read-only (text) checksum does not match");
 
-  if (checksum::get_checksum_rw() != achecksum_rw)
+  if (Checksum::get_checksum_rw() != achecksum_rw)
     panic("read-write (data) checksum does not match");
 
   

@@ -9,32 +9,32 @@ interface simple
   /**
    * This function should be transmitted using a short IPC
    */
-  void func1([in] int t1);
+  void func1([in] int t11);
   /**
    * This function requires a long IPC.
    */
-  void func2([in] int t1, [in] int t2, [in] int t3);
+  void func2([in] int t21, [in] long t22, [in] int t23);
   /**
    * This function should also require a short IPC.
    * [out] parameters have to be referenced, because the compiler could do it
    * implicetly, but that would be no good for the user.
    */
-  void func3([out] int *t1);
+  void func3([out] int *t31);
   /**
    * Should also require a long IPC
    */
-  void func4([out] int *t1, [out] int *t2, [out] int *t3);
+  void func4([out] int *t41, [out] int *t42, [out] int *t43);
   /**
    * short IPC both ways
    */
-  void func5([in] int t1, [out] int *t2);
+  void func5([in] int t51, [out] int *t52);
   /**
    * also short IPC both ways
    * if using a return type, be aware that this is also data, which has to be transmitted
    */
-  int func6([in] int t1);
+  int func6([in] int t61);
   /**
-   * references should be derederenced
+   * references should be dereferenced
    */
-  void func7([in] int *t1);
+  void func7([in] int *t71);
 };

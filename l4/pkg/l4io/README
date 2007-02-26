@@ -1,0 +1,8 @@
+L4IO is a simple I/O manager. It implements the Generic I/O Manager Interface
+as defined in the generic_io package (see the generic_io documentation for a
+detailed description).
+
+This package includes Linux source code files for PCI programming and sources
+code from the omega0 package for interrupt handling.
+
+Documentation can be found in l4io/doc/.

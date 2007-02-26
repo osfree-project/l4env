@@ -6,23 +6,13 @@
  *
  * \date   01/22/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -63,20 +53,20 @@ l4dm_share(l4dm_dataspace_t * ds,
 	   l4_uint32_t rights)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (ds == NULL)
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_share(ds->manager,ds->id,(if_l4dm_threadid_t *)&client,
-			      rights,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_share_call(&(ds->manager),ds->id,&client,
+			      rights,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: share failed, ds %u at %x.%x, client %x.%x "
 	    "(ret %d, exc %d)!",
 	    ds->id, ds->manager.id.task,ds->manager.id.lthread,
-	    client.id.task,client.id.lthread,ret,_exc._type);
+	    client.id.task,client.id.lthread,ret,_env.major);
       if (ret)
 	return ret;
       else
@@ -110,21 +100,21 @@ l4dm_revoke(l4dm_dataspace_t * ds,
 	    l4_uint32_t rights)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (ds == NULL)
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_revoke(ds->manager,ds->id,
-			       (if_l4dm_threadid_t *)&client,
-			       rights,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_revoke_call(&(ds->manager),ds->id,
+			       &client,
+			       rights,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: revoke failed, ds %u at %x.%x, client %x.%x "
 	    "(ret %d, exc %d)!",
 	    ds->id, ds->manager.id.task,ds->manager.id.lthread,
-	    client.id.task,client.id.lthread,ret,_exc._type);
+	    client.id.task,client.id.lthread,ret,_env.major);
       if (ret)
 	return ret;
       else
@@ -153,18 +143,18 @@ l4dm_check_rights(l4dm_dataspace_t * ds,
 		  l4_uint32_t rights)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (ds == NULL)
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_check_rights(ds->manager,ds->id,rights,&_exc);
-  if (((ret < 0) && (ret != -L4_EPERM)) || (_exc._type != exc_l4_no_exception))
+  ret = if_l4dm_generic_check_rights_call(&(ds->manager),ds->id,rights,&_env);
+  if (((ret < 0) && (ret != -L4_EPERM)) || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_generic: check rights failed, ds %u at %x.%x "
 	    "(ret %d, exc %d)!",ds->id, ds->manager.id.task,
-	    ds->manager.id.lthread,ret,_exc._type);
+	    ds->manager.id.lthread,ret,_env.major);
       if (ret) 
 	return ret;
       else

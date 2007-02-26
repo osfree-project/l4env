@@ -1,13 +1,15 @@
 /* $Id$ */
-/*****************************************************************************
- * exec/examples/exec_test/main.c                                            *
- *                                                                           *
- * Created:   08/20/2000                                                     *
- * Author(s): Frank Mehnert <fm3@os.inf.tu-dresden.de>                       *
- *                                                                           *
- * Common L4 environment                                                     *
- * Example for using the EXEC layer                                          *
- *****************************************************************************/
+/** 
+ * \file	exec/examples/exec_test/main.c
+ * \brief	Example for using the EXEC layer
+ *
+ * \date	08/20/2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
@@ -38,11 +40,11 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
   l4exec_section_t *l4exc_tmp;
   l4exec_section_t *l4exc_stop;
   l4_uint32_t rm_area;
-  sm_exc_t exc;
+  CORBA_Environment exc = dice_default_environment;
 
   /* first stage */
-  error = l4exec_bin_open(exec_id, fname, 
- 			   (l4exec_envpage_t_slice*)env, 0, &exc);
+  error = l4exec_bin_open_call(&exec_id, fname, &L4DM_INVALID_DATASPACE,
+ 			       (l4exec_envpage_t*)env, 0, &exc);
   if (error  != -L4_EXEC_NOSTANDARD)
     {
       printf("Error %d loading file\n", error);
@@ -136,7 +138,7 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
     }
   
   /* second stage */
-  if ((error = l4exec_bin_link(exec_id, (l4exec_envpage_t_slice*)env, &exc)))
+  if ((error = l4exec_bin_link_call(&exec_id, (l4exec_envpage_t*)env, &exc)))
     {
       printf("Error %d linking complete file\n", error);
       return error;
@@ -183,15 +185,13 @@ main(void)
   env->ver_info.arch_data  = ARCH_ELF_ARCH_DATA;
   env->ver_info.arch       = ARCH_ELF_ARCH;
   env->addr_libloader =  0x0e000;
-  env->addr_libl4rm   =  0x10000;
 
   strcpy(env->binpath, "(nd)/tftpboot/fm3/gimp/");
   strcpy(env->libpath, "(nd)/tftpboot/fm3/gimp/");
 
-  printf("sizeof(l4env_infopage_t) = %d (max %d) dwords\n", 
+  printf("sizeof(l4env_infopage_t) = %d dwords\n", 
           (sizeof(l4env_infopage_t) + 
-	   sizeof(l4_umword_t) - 1) / sizeof(l4_umword_t),
-	  L4_MAX_RPC_BUFFER_SIZE);
+	   sizeof(l4_umword_t) - 1) / sizeof(l4_umword_t));
  
   load_app("gimp", exec_id, env);
   load_app("gimp", exec_id, env);

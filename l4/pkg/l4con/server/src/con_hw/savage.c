@@ -1,3 +1,15 @@
+/*!
+ * \file	savage.c
+ * \brief	Hardware Acceleration for S3 Savage cards
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <stdio.h>
 
 #include <l4/env/errno.h>
@@ -131,7 +143,7 @@ static struct board_t savage_boards[] =
     { "SuperSavage/IXC 64", S3_SUPERSAVAGE }
 };
 
-static struct pci_device_id savage_pci_tbl[] __init =
+static const struct pci_device_id savage_pci_tbl[] __init =
 {
     {PCI_VENDOR_ID_S3, PCI_CHIP_SAVAGE4, 0, 0, CH_SAVAGE4},
     {PCI_VENDOR_ID_S3, PCI_CHIP_SAVAGE3D, 0, 0, CH_SAVAGE3D},
@@ -459,7 +471,7 @@ savage_init(void)
 
 static int
 savage_probe(unsigned int bus, unsigned int devfn,
-             struct pci_device_id *dev, con_accel_t *accel)
+             const struct pci_device_id *dev, con_accel_t *accel)
 {
   unsigned int addr0, addr1;
   unsigned char rev;

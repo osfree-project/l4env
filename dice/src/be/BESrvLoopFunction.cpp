@@ -5,12 +5,12 @@
  *	\date	01/21/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,9 +31,11 @@
 #include "be/BEType.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEOpcodeType.h"
+#include "be/BEReplyCodeType.h"
 #include "be/BESwitchCase.h"
 #include "be/BEWaitAnyFunction.h"
 #include "be/BEReplyAnyWaitAnyFunction.h"
+#include "be/BEDispatchFunction.h"
 #include "be/BERoot.h"
 #include "be/BEComponent.h"
 #include "be/BEImplementationFile.h"
@@ -41,36 +43,33 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEDeclarator.h"
 
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
+#include "fe/FEOperation.h"
 #include "fe/FEStringAttribute.h"
 
 IMPLEMENT_DYNAMIC(CBESrvLoopFunction);
 
 CBESrvLoopFunction::CBESrvLoopFunction()
-:m_vSwitchCases(RUNTIME_CLASS(CBESwitchCase))
 {
     m_pWaitAnyFunction = 0;
     m_pReplyAnyWaitAnyFunction = 0;
+	m_pDispatchFunction = 0;
     IMPLEMENT_DYNAMIC_BASE(CBESrvLoopFunction, CBEInterfaceFunction);
 }
 
 CBESrvLoopFunction::CBESrvLoopFunction(CBESrvLoopFunction & src)
-:CBEInterfaceFunction(src),
- m_vSwitchCases(RUNTIME_CLASS(CBESwitchCase))
+: CBEInterfaceFunction(src)
 {
     m_pWaitAnyFunction = src.m_pWaitAnyFunction;
     m_pReplyAnyWaitAnyFunction = src.m_pReplyAnyWaitAnyFunction;
-    m_vSwitchCases.Add(&(src.m_vSwitchCases));
-    m_vSwitchCases.SetParentOfElements(this);
-    m_sDefaultFunction = src.m_sDefaultFunction;
+	m_pDispatchFunction = src.m_pDispatchFunction;
     IMPLEMENT_DYNAMIC_BASE(CBESrvLoopFunction, CBEInterfaceFunction);
 }
 
 /**	\brief destructor of target class */
 CBESrvLoopFunction::~CBESrvLoopFunction()
 {
-    m_vSwitchCases.DeleteAll();
 }
 
 /**	\brief creates the server loop function for the given interface
@@ -95,77 +94,122 @@ bool CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext *
     if (!CBEInterfaceFunction::CreateBackEnd(pFEInterface, pContext))
         return false;
 
-    // add functions
-    if (!AddSwitchCases(pFEInterface, pContext))
-        return false;
-
     // set own message buffer
     if (!AddMessageBuffer(pFEInterface, pContext))
         return false;
 
-    // set Corba parameters to variables without pointers
-    if (m_pCorbaObject)
-    {
-        VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-        CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
-        pDecl->IncStars(-pDecl->GetStars());
-        SetCallVariable(m_pCorbaObject, pContext);
-    }
-    if (m_pCorbaEnv)
-    {
-        if (!DoUseParameterAsEnv(pContext))
-        {
-            VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-            CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-            pDecl->IncStars(-pDecl->GetStars());
-        }
-        SetCallVariable(m_pCorbaEnv, pContext);
-    }
+	// CORBA_Object should not have any pointers (its a pointer type itself)
+	// set Corba parameters to variables without pointers
+	if (m_pCorbaEnv)
+	{
+		if (!DoUseParameterAsEnv(pContext))
+		{
+			VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
+			CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
+			pDecl->IncStars(-pDecl->GetStars());
+		}
+	}
 
-    // no parameters added
-
-    // set message buffer type
-    VectorElement *pIter = GetFirstSwitchCase();
-    CBESwitchCase *pSwitchCase;
-    while ((pSwitchCase = GetNextSwitchCase(pIter)) != 0)
-    {
-        pSwitchCase->SetMessageBufferType(pContext);
-    }
+	// no parameters added
 
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // search for wait any function
     int nOldType = pContext->SetFunctionType(FUNCTION_WAIT_ANY);
     String sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
     pContext->SetFunctionType(nOldType);
     m_pWaitAnyFunction = (CBEWaitAnyFunction*)pRoot->FindFunction(sFuncName);
-    ASSERT(m_pWaitAnyFunction);
+    assert(m_pWaitAnyFunction);
     if (m_pCorbaObject)
-        SetCallVariable(m_pWaitAnyFunction, m_pCorbaObject, pContext);
+	{
+	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
+		m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
     if (m_pCorbaEnv)
-        SetCallVariable(m_pWaitAnyFunction, m_pCorbaEnv, pContext);
+	{
+	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
+		m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
 
-    // check if interface has default function and add its name if available
-    if (pFEInterface->FindAttribute(ATTR_DEFAULT_FUNCTION))
-    {
-        CFEStringAttribute *pDefaultFunc = ((CFEStringAttribute*)(pFEInterface->FindAttribute(ATTR_DEFAULT_FUNCTION)));
-        m_sDefaultFunction = pDefaultFunc->GetString();
-        if (!m_sDefaultFunction.IsEmpty())
-        {
-            // search for reply-any-wait-any function
-            nOldType = pContext->SetFunctionType(FUNCTION_REPLY_ANY_WAIT_ANY);
-            sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
-            pContext->SetFunctionType(nOldType);
-            m_pReplyAnyWaitAnyFunction = (CBEReplyAnyWaitAnyFunction*)pRoot->FindFunction(sFuncName);
-            ASSERT(m_pReplyAnyWaitAnyFunction);
-            if (m_pCorbaObject)
-                SetCallVariable(m_pReplyAnyWaitAnyFunction, m_pCorbaObject, pContext);
-            if (m_pCorbaEnv)
-                SetCallVariable(m_pReplyAnyWaitAnyFunction, m_pCorbaEnv, pContext);
-        }
-    }
+	// search for reply-any-wait-any function
+	nOldType = pContext->SetFunctionType(FUNCTION_REPLY_ANY_WAIT_ANY);
+	sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+	pContext->SetFunctionType(nOldType);
+	m_pReplyAnyWaitAnyFunction = (CBEReplyAnyWaitAnyFunction*)pRoot->FindFunction(sFuncName);
+	assert(m_pReplyAnyWaitAnyFunction);
+	if (m_pCorbaObject)
+	{
+	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
+		m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
+	if (m_pCorbaEnv)
+	{
+	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
+		m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
+
+	// search for dispatch function
+	nOldType = pContext->SetFunctionType(FUNCTION_DISPATCH);
+	sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+	pContext->SetFunctionType(nOldType);
+	m_pDispatchFunction = (CBEDispatchFunction*)pRoot->FindFunction(sFuncName);
+	assert(m_pDispatchFunction);
+	if (m_pCorbaObject)
+	{
+	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
+		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
+	if (m_pCorbaEnv)
+	{
+	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
+		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
+	if (m_pMsgBuffer)
+	{
+	    VectorElement *pIter = m_pMsgBuffer->GetFirstDeclarator();
+		CBEDeclarator *pDecl = m_pMsgBuffer->GetNextDeclarator(pIter);
+		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+	}
 
     return true;
+}
+
+/** \brief write the declaration of the CORBA_Object variable
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBESrvLoopFunction::WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext)
+{
+    if (m_pCorbaObject)
+    {
+        pFile->PrintIndent("");
+        m_pCorbaObject->WriteDeclaration(pFile, pContext);
+        pFile->Print("; // is client id\n");
+    }
+}
+
+/** \brief write the declaration of the CORBA_Environment variable
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBESrvLoopFunction::WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBEContext *pContext)
+{
+    // we always have a CORBA_Environment, but sometimes
+    // it is set as a cast from the server parameter.
+    if (m_pCorbaEnv)
+    {
+        pFile->PrintIndent("");
+        m_pCorbaEnv->WriteDeclaration(pFile, pContext);
+        if (!DoUseParameterAsEnv(pContext))
+            pFile->Print(" = dice_default_server_environment");
+        pFile->Print(";\n");
+    }
 }
 
 /**	\brief writes the variable declarations of this function
@@ -180,46 +224,43 @@ bool CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext *
  */
 void CBESrvLoopFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
-    // write opcode
+    // write CORBA stuff
+	WriteCorbaObjectDeclaration(pFile, pContext);
+	WriteCorbaEnvironmentDeclaration(pFile, pContext);
+    // clean up
+
+    // write message buffer
+    pFile->PrintIndent("");
+    assert(m_pMsgBuffer);
+    m_pMsgBuffer->WriteDeclaration(pFile, pContext);
+    pFile->Print(";\n");
+
+	// write reply code
+	CBEReplyCodeType *pReplyType = pContext->GetClassFactory()->GetNewReplyCodeType();
+	if (!pReplyType->CreateBackEnd(pContext))
+	{
+	    delete pReplyType;
+		return;
+	}
+	String sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
+	pFile->PrintIndent("");
+	pReplyType->Write(pFile, pContext);
+	pFile->Print(" %s;\n", (const char*)sReply);
+	delete pReplyType;
+
+	// write opcode
     CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
     if (!pOpcodeType->CreateBackEnd(pContext))
     {
         delete pOpcodeType;
         return;
     }
-
     String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
     pFile->PrintIndent("");
     pOpcodeType->Write(pFile, pContext);
     pFile->Print(" %s;\n", (const char *) sOpcodeVar);
 
     delete pOpcodeType;
-
-    // write CORBA stuff
-    // write variables
-    if (m_pCorbaObject)
-    {
-        pFile->PrintIndent("");
-        m_pCorbaObject->WriteDeclaration(pFile, pContext);
-        pFile->Print("; // is client id\n");
-    }
-    // we always have a CORBA_Environment, but sometimes
-    // it is set as a cast from the server parameter.
-    if (m_pCorbaEnv)
-    {
-        pFile->PrintIndent("");
-        m_pCorbaEnv->WriteDeclaration(pFile, pContext);
-        if (!DoUseParameterAsEnv(pContext))
-            pFile->Print(" = dice_default_environment");
-        pFile->Print(";\n");
-    }
-    // clean up
-
-    // write message buffer
-    pFile->PrintIndent("");
-    ASSERT(m_pMsgBuffer);
-    m_pMsgBuffer->WriteDeclaration(pFile, pContext);
-    pFile->Print(";\n");
 }
 
 /**	\brief writes the variable initializations of this function
@@ -237,21 +278,8 @@ void CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext
     // contain values used to init message buffer
     WriteEnvironmentInitialization(pFile, pContext);
     // init message buffer
-    ASSERT(m_pMsgBuffer);
+    assert(m_pMsgBuffer);
     m_pMsgBuffer->WriteInitialization(pFile, pContext);
-    // init opcode
-    CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
-    pOpcodeType->SetParent(this);
-    if (!pOpcodeType->CreateBackEnd(pContext))
-    {
-        delete pOpcodeType;
-        return;
-    }
-    String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-    pFile->PrintIndent("%s = ", (const char *) sOpcodeVar);
-    pOpcodeType->WriteZeroInit(pFile, pContext);
-    pFile->Print(";\n");
-    delete pOpcodeType;
 }
 
 /**	\brief writes the invocation of the message transfer
@@ -337,186 +365,30 @@ void CBESrvLoopFunction::WriteLoop(CBEFile * pFile, CBEContext * pContext)
     pFile->IncIndent();
 
     // write switch
-    WriteSwitch(pFile, pContext);
+	String sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
+    if (m_pDispatchFunction)
+	{
+	    pFile->PrintIndent("%s = ", (const char*)sReply);
+	    m_pDispatchFunction->WriteCall(pFile, String(), pContext);
+		pFile->Print("\n");
+	}
 
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-}
-
-/**	\brief writes the switch statement
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
- */
-void CBESrvLoopFunction::WriteSwitch(CBEFile * pFile, CBEContext * pContext)
-{
-    String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-
-    pFile->PrintIndent("switch (%s)\n", (const char *) sOpcodeVar);
-    pFile->PrintIndent("{\n");
-
-    // iterate over functions
-    ASSERT(m_pClass);
-    VectorElement *pIter = GetFirstSwitchCase();
-    CBESwitchCase *pFunction;
-    while ((pFunction = GetNextSwitchCase(pIter)) != 0)
-    {
-        pFunction->Write(pFile, pContext);
-    }
-
-    // writes default case
-    WriteDefaultCase(pFile, pContext);
-
-    pFile->PrintIndent("}\n");
-}
-
-
-/**	\brief adds the functions for the given front-end interface
- *	\param pFEInterface the interface to add the functions for
- *	\param pContext the context of the code generation
- */
-bool CBESrvLoopFunction::AddSwitchCases(CFEInterface * pFEInterface, CBEContext * pContext)
-{
-    if (!pFEInterface)
-        return true;
-
-    VectorElement *pIter = pFEInterface->GetFirstOperation();
-    CFEOperation *pFEOperation;
-    while ((pFEOperation = pFEInterface->GetNextOperation(pIter)) != 0)
-    {
-        CBESwitchCase *pFunction = pContext->GetClassFactory()->GetNewSwitchCase();
-        AddSwitchCase(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-        {
-            RemoveSwitchCase(pFunction);
-            delete pFunction;
-            return false;
-        }
-    }
-
-    pIter = pFEInterface->GetFirstBaseInterface();
-    CFEInterface *pFEBase;
-    while ((pFEBase = pFEInterface->GetNextBaseInterface(pIter)) != 0)
-    {
-        if (!AddSwitchCases(pFEBase, pContext))
-            return false;
-    }
-
-    return true;
-}
-
-/**	\brief adds a new function to the functions vector
- *	\param pFunction the function to add
- */
-void CBESrvLoopFunction::AddSwitchCase(CBESwitchCase * pFunction)
-{
-    if (!pFunction)
-        return;
-    m_vSwitchCases.Add(pFunction);
-    pFunction->SetParent(this);
-}
-
-/**	\brief removes a function from the functions vector
- *	\param pFunction the function to remove
- */
-void CBESrvLoopFunction::RemoveSwitchCase(CBESwitchCase * pFunction)
-{
-    if (!pFunction)
-        return;
-    m_vSwitchCases.Remove(pFunction);
-}
-
-/**	\brief retrieves a pointer to the first function
- *	\return a pointer to the first function
- */
-VectorElement *CBESrvLoopFunction::GetFirstSwitchCase()
-{
-    return m_vSwitchCases.GetFirst();
-}
-
-/**	\brief retrieves reference to the next function
- *	\param pIter the pointer to the next function
- *	\return a reference to the next function
- */
-CBESwitchCase *CBESrvLoopFunction::GetNextSwitchCase(VectorElement * &pIter)
-{
-    if (!pIter)
-	    return 0;
-    CBESwitchCase *pRet = (CBESwitchCase *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-	    return GetNextSwitchCase(pIter);
-    return pRet;
-}
-
-/** \brief writes the default case of the switch statetment
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * The default case is usually empty. It is only used if the opcode does not match any
- * of the defined opcodes. Because the switch statement expects a valid opcode after the
- * function returns, it hastohave the format:
- * &lt;opcode type&gt; &lt;name&gt;(&lt;corba object&gt;*, &lt;msgbuffer type&gt;*, &lt;corba environment&gt;*)
- *
- * An alternative is to call the wait-any function.
- */
-void CBESrvLoopFunction::WriteDefaultCase(CBEFile *pFile, CBEContext *pContext)
-{
-    String sOpcode = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
-    pFile->PrintIndent("default:\n");
-    pFile->IncIndent();
-    if (m_sDefaultFunction.IsEmpty())
-    {
-        pFile->PrintIndent("/* unknown opcode */\n");
-        pFile->PrintIndent("");
-        m_pWaitAnyFunction->WriteCall(pFile, sOpcode, pContext);
-        pFile->Print("\n");
-    }
-    else
-    {
-        String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
-        String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-        String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-        String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
-
-        pFile->PrintIndent("if (%s(&%s, &%s, &%s) == REPLY)\n", (const char*)m_sDefaultFunction,
-                           (const char*)sObj, (const char*)sMsgBuffer, (const char*)sEnv);
-        pFile->IncIndent();
-        pFile->PrintIndent("");
-        m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcode, pContext);
-        pFile->Print("\n");
-        pFile->DecIndent();
-        pFile->PrintIndent("else\n");
-        pFile->IncIndent();
-        pFile->PrintIndent("");
-        m_pWaitAnyFunction->WriteCall(pFile, sOpcode, pContext);
-        pFile->Print("\n");
-        pFile->DecIndent();
-    }
-    pFile->PrintIndent("break;\n");
-    pFile->DecIndent();
-}
-
-/** \brief writes function declaration
- *  \param pFile the file to write to
- *  \param pContext the context of the write operation
- *
- * This implementation adds the decalartion of the default function if defined and used. And
- * it has to declare the reply-any-wait-any function
- */
-void CBESrvLoopFunction::WriteFunctionDeclaration(CBEFile * pFile, CBEContext * pContext)
-{
-    // call base
-    CBEInterfaceFunction::WriteFunctionDeclaration(pFile, pContext);
-    // add declaration of default function
+	// check if we should reply or not
+	pFile->PrintIndent("if (%s == DICE_REPLY)\n", (const char*)sReply);
+	pFile->IncIndent();
+	pFile->PrintIndent("");
+	m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
+	pFile->Print("\n");
+	pFile->DecIndent();
+    pFile->PrintIndent("else\n");
+	pFile->IncIndent();
+	pFile->PrintIndent("");
+	m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
     pFile->Print("\n");
-    if (!m_sDefaultFunction.IsEmpty())
-    {
-        CBEMsgBufferType *pMsgBuffer = m_pClass->GetMessageBuffer();
-        String sMsgBufferType = pMsgBuffer->GetAlias()->GetName();
-        // int &lt;name&gt;(&lt;corba object&gt;*, &lt;msg buffer type&gt;*, &lt;corba environment&gt;*)
-        pFile->Print("CORBA_int %s(CORBA_Object*, %s*, CORBA_Environment*);\n", (const char*)m_sDefaultFunction,
-                     (const char*)sMsgBufferType);
-    }
+	pFile->DecIndent();
+
+    pFile->DecIndent();
+    pFile->PrintIndent("}\n");
 }
 
 /** \brief test fi this function should be written
@@ -535,39 +407,6 @@ bool CBESrvLoopFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
 		if (!IsTargetFile((CBEImplementationFile*)pFile))
 			return false;
 	return pFile->GetTarget()->IsKindOf(RUNTIME_CLASS(CBEComponent));
-}
-
-/** \brief sets the call varaiable for a specific function
- *  \param pFunction the function to set this for
- *  \param pParameter the parameter to be changed
- *  \param pContext the context of this operation
- *
- * This implementation should make it easier to set the call variable for
- * the corba object and environment variables. Since they keep their name
- * and onyl change the number of stars, we can use their name as original
- * and call name.
- */
-void CBESrvLoopFunction::SetCallVariable(CBEFunction *pFunction, CBETypedDeclarator *pParameter, CBEContext *pContext)
-{
-    // get name
-    VectorElement *pIter = pParameter->GetFirstDeclarator();
-    CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pIter);
-    // call function's SetCallVariable method
-    pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-}
-
-/** \brief delegates the set-call-variable call to the switch cases
- *  \param pParameter the parameter to be changed
- *  \param pContext the context of this operation
- */
-void CBESrvLoopFunction::SetCallVariable(CBETypedDeclarator *pParameter, CBEContext *pContext)
-{
-    VectorElement *pIter = GetFirstSwitchCase();
-    CBESwitchCase *pSwitchCase;
-    while ((pSwitchCase = GetNextSwitchCase(pIter)) != 0)
-    {
-        SetCallVariable(pSwitchCase, pParameter, pContext);
-    }
 }
 
 /** \brief determines the direction, the server loop sends to
@@ -595,10 +434,10 @@ bool CBESrvLoopFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContex
 {
     // get class's message buffer
     CBEClass *pClass = GetClass();
-    ASSERT(pClass);
+    assert(pClass);
     // get message buffer type
     CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
-    ASSERT(pMsgBuffer);
+    assert(pMsgBuffer);
     // msg buffer not initialized yet
     pMsgBuffer->InitCounts(pClass, pContext);
     // create own message buffer
@@ -659,14 +498,36 @@ void CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile *pFile, CBEConte
         // corba-env = (CORBA_Env*)malloc(sizeof(CORBA_Env));
         pFile->PrintIndent("%s = ", (const char*)pDecl->GetName());
         m_pCorbaEnv->GetType()->WriteCast(pFile, true, pContext);
-        pFile->Print("alloca(sizeof");
+        pFile->Print("_dice_alloca(sizeof");
         m_pCorbaEnv->GetType()->WriteCast(pFile, false, pContext);
         pFile->Print(");\n");
         // *corba-env = dice_default_env;
         pFile->PrintIndent("*%s = ", (const char*)pDecl->GetName());
         m_pCorbaEnv->GetType()->WriteCast(pFile, false, pContext);
-        pFile->Print("%s;\n", "dice_default_environment");
+        pFile->Print("%s;\n", "dice_default_server_environment");
         pFile->DecIndent();
         pFile->PrintIndent("}\n");
     }
+}
+
+/** \brief writes the attributes for the function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *
+ * This implementation adds the "noreturn" attribute to the declaration
+ */
+void CBESrvLoopFunction::WriteFunctionAttributes(CBEFile* pFile,  CBEContext* pContext)
+{
+    pFile->Print(" __attribute__((noreturn))");
+}
+
+/** \brief writes the return statement of this function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *
+ * Since this function is "noreturn" it is not allowed to have a return statement.
+ */
+void CBESrvLoopFunction::WriteReturn(CBEFile* pFile,  CBEContext* pContext)
+{
+    /* empty */
 }

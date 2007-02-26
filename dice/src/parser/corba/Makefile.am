@@ -4,7 +4,7 @@ noinst_LIBRARIES=	libcorba.a
 libcorba_a_SOURCES=	parser.yy \
 			scanner.ll
 
-LFLAGS=         -Pcorba -o$(LEX_OUTPUT_ROOT).c
+LFLAGS=         -Pcorba -d -o$(LEX_OUTPUT_ROOT).c
 YFLAGS=		-pcorba -d -v
 
 CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).c \
@@ -13,4 +13,7 @@ CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).c \
 dist-hook:
 	rm -f $(distdir)/parser.cc $(distdir)/$(LEX_OUTPUT_ROOT).c \
 	$(distdir)/scanner.cc $(distdir)/scanner.h $(distdir)/y.output
-	
+
+scanner.cc: parser.h
+
+parser.h: parser.cc

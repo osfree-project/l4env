@@ -5,7 +5,7 @@
  *	\date	01/11/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -31,8 +31,6 @@
 #include "be/BESndFunction.h"
 #include "be/BERcvFunction.h"
 #include "be/BEWaitFunction.h"
-#include "be/BEReplyRcvFunction.h"
-#include "be/BEReplyWaitFunction.h"
 #include "be/BESrvLoopFunction.h"
 #include "be/BEUnmarshalFunction.h"
 #include "be/BEComponentFunction.h"
@@ -106,9 +104,15 @@ void CBEComponent::SetFileType(CBEContext * pContext, int nHeaderOrImplementatio
  *
  * A server loop is not needed if all functions of the interface and its base interfaces are message passing interfaces.
  * So if at least one of the functions (operations) is any RPC function we need a server loop.
+ *
+ * There is also no server loop needed if the interface is abstract.
  */
 bool CBEComponent::NeedServerLoop(CFEInterface * pFEInterface, CBEContext * pContext)
 {
+    // test astract attribute
+	if (pFEInterface->FindAttribute(ATTR_ABSTRACT))
+	    return false;
+	// test functions
     VectorElement *pIter = pFEInterface->GetFirstOperation();
     CFEOperation *pOperation;
     while ((pOperation = pFEInterface->GetNextOperation(pIter)) != 0)
@@ -161,7 +165,7 @@ bool CBEComponent::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
         // file is in same directory
         pContext->SetFileType(FILETYPE_OPCODE);
         String sOpcode = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
-        pHeader->AddIncludedFileName(sOpcode, true);
+        pHeader->AddIncludedFileName(sOpcode, true, false);
     }
     return true;
 }
@@ -192,18 +196,18 @@ bool CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * p
     }
     GetRoot()->AddToFile(pImpl, pContext);
     // if create component function, we use seperate file for this
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_SKELETON))
+    if (pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
     {
 		pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
 		AddFile(pImpl);
 		pImpl->SetHeaderFile(pHeader);
-		pContext->SetFileType(FILETYPE_SKELETON);
+		pContext->SetFileType(FILETYPE_TEMPLATE);
 		if (!pImpl->CreateBackEnd(pFEFile, pContext))
-		{                	                	
+		{
 			RemoveFile(pImpl);
-			delete pImpl;       	
+			delete pImpl;
 			VERBOSE("CBEComponent::CreateBackEndImplementation failed because implementation file could not be created\n");
-			return false;               	
+			return false;
 		}
 		GetRoot()->AddToFile(pImpl, pContext);
 	}

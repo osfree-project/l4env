@@ -154,7 +154,7 @@ typedef struct _xReq *xReqPtr;
 /* abs() is a function, not a macro; include the file declaring
  * it in case we haven't done that yet.
  */  
-#include <stdlib.h>
+//#include <stdlib.h>
 #endif /* X_NOT_STDC_ENV */
 #endif /* IN_MODULE */
 #ifndef Fabs
@@ -182,7 +182,7 @@ typedef struct _xReq *xReqPtr;
  * #include'ing it later.
  */
 
-#include <math.h>
+//#include <math.h>
 #endif
 #undef MAXSHORT
 #define MAXSHORT SHRT_MAX
@@ -195,7 +195,7 @@ typedef struct _xReq *xReqPtr;
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdio.h>	/* for fopen, etc... */
+//#include <stdio.h>	/* for fopen, etc... */
 
 #endif
 

@@ -1,5 +1,17 @@
-#ifndef __L4_EXEC_SERVER_EXC_OBJ_H
-#define __L4_EXEC_SERVER_EXC_OBJ_H
+/*!
+ * \file	exec/server/src/exc_obj.h
+ * \brief	exc object declaration
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __EXC_OBJ_H_
+#define __EXC_OBJ_H_
 
 #include <l4/sys/types.h>
 #include <l4/l4rm/l4rm.h>
@@ -20,6 +32,7 @@ class exc_obj_t : public dsc_obj_t,
 		  public file_t
 {
   public:
+    /** constructor */
     exc_obj_t(exc_img_t *img, l4_uint32_t _id);
     virtual ~exc_obj_t();
 
@@ -98,12 +111,12 @@ class exc_obj_t : public dsc_obj_t,
 
     /** common flags */
     int flags;
-#define EO_LIBS_LOADED		0x00000001  /** dependant libraries loaded */
-#define EO_DYNAMIC		0x00000002  /** exec object is dynamic */
-#define EO_SHARE		0x00000004  /** share sections of exec object */
-#define EO_LOAD_SYMBOLS		0x00000008  /** hold symbols */
-#define EO_LOAD_LINES		0x00000010  /** hold lines */
-#define EO_DIRECT_MAP		0x00000020  /** program sections direct map'd */
+#define EO_LIBS_LOADED		0x00000001  /**< dependant libraries loaded */
+#define EO_DYNAMIC		0x00000002  /**< exec object is dynamic */
+#define EO_SHARE		0x00000004  /**< share sections of exec obj */
+#define EO_LOAD_SYMBOLS		0x00000008  /**< hold symbols */
+#define EO_LOAD_LINES		0x00000010  /**< hold lines */
+#define EO_DIRECT_MAP		0x00000020  /**< program sections direct map'd */
 
     int not_valid;
 
@@ -118,8 +131,12 @@ class exc_obj_t : public dsc_obj_t,
 int exc_obj_alloc_sect(void);
 
 /** load binary */
-int exc_obj_load_bin(const char *fname, int force_load, l4_threadid_t client,
+int exc_obj_load_bin(const char *fname, const l4dm_dataspace_t *img_ds,
+		     int force_load, l4_threadid_t client,
 		     int flags, exc_obj_t **exc_obj, l4env_infopage_t *env);
+
+/** identify binary */
+int exc_obj_check_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env);
 
 #define SH_ADDR_HERE(sh,ph)  ((ph)->vaddr + (sh)->sh_addr - (ph)->l4exc.addr)
 

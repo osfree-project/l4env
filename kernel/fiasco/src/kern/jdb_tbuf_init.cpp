@@ -45,21 +45,21 @@ void Jdb_tbuf_init::init(Observer *o)
       unsigned size = n*sizeof(Tb_entry_fit64);
       
       if (! Vmem_alloc::page_alloc((void*)Kmem::tbuf_status_page, 0,
-				   Vmem_alloc::NO_ZERO_FILL, Page::USER_RW))
+				   Vmem_alloc::ZERO_FILL, Page::USER_RW))
 	panic("jdb_tbuf: alloc status page at %08x failed", 
 	      Kmem::tbuf_status_page);
 
-      vm_offset_t va = Kmem::tbuf_buffer_area;
+      Address va = Kmem::tbuf_buffer_area;
       for (unsigned i=0; i<size/Config::PAGE_SIZE; i++)
 	{
 	  if (! Vmem_alloc::page_alloc((void*)va, 0, 
-				       Vmem_alloc::NO_ZERO_FILL, Page::USER_RW))
+				       Vmem_alloc::ZERO_FILL, Page::USER_RW))
 	    panic("jdb_tbuf: alloc buffer at %08x failed", va);
 	  
 	  va += Config::PAGE_SIZE;
 	}
 
-      status = (l4_tracebuffer_status_t *) Kmem::tbuf_status_page;
+      status = (Tracebuffer_status *) Kmem::tbuf_status_page;
       status->tracebuffer0 = Kmem::tbuf_buffer_area;
       status->tracebuffer1 = Kmem::tbuf_buffer_area + size / 2;
       status->size0        =
@@ -69,7 +69,7 @@ void Jdb_tbuf_init::init(Observer *o)
 
       for (register int i = 0; i < LOG_EVENT_MAX_EVENTS; i++)
 	{
-#ifdef NO_LOG_EVENTS
+#ifndef CONFIG_JDB_LOGGING
 	  status->logevents[i] = 0;
 #else
 	  // Note: constructors are called later, so don't try

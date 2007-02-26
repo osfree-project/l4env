@@ -37,7 +37,7 @@ $(MODULES_FILE): $(srcdir)/$(MODULES_FILE).$(CONFIG_XARCH)
 
 $(srcdir)/$(MODULES_FILE).$(CONFIG_XARCH):
 
-include $(MODULES_FILE)
+-include $(MODULES_FILE)
 ifdef SUBSYSTEMS
  _modules_read_ = true
 endif
@@ -81,7 +81,7 @@ $(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready): $(MODULES_FILE)
 # Avoid attempts to update other Makefile fragments -- restart cleanly
 	$(MAKE) $(MAKECMDGOALS)
 
-include .Modules.deps
+-include .Modules.deps
 endif # _modules_read_
 
 ifdef _modules_deps_read_
@@ -152,6 +152,7 @@ do-all: $(ALL)
 endif
 
 Checkinitcalls: kernel.image $(OBJ_KERNEL)
+	@echo "Checking initcalls"
 	$(VERBOSE)$(srcdir)/../tool/checkinitcalls -k kernel.image \
 	  -Werror $(filter-out kernel.image, $^) && \
 	echo "Initcalls OK"
@@ -259,7 +260,7 @@ DEPS.dot: $(KERNEL_MODULES_CPP)
 # being created/updated before all $(DEPS) are).  Therefore, depend on
 # object files.  Once these are made, we know all $(DEPS) have been
 # updated.
-Circular:	$(foreach subsys, $(SUBSYSTEMS), $(OBJ_$(subsys)))
+Circular:	$(OBJ_KERNEL)
 	@echo "Creating $@"
 	@( \
 	  echo 'Do "make DEPS" for full fine-grained dependency information.';\
@@ -296,6 +297,8 @@ Circular-ok: $(srcdir)/Circular.max.$(CONFIG_XARCH) Circular
 	  echo "Circular-dependency check OK ($$current <= $$max)"
 
 ifeq ($(filter clean cleanall mrproper auto,$(MAKECMDGOALS)),)
+
+$(DEPS): .Modules.deps
 
 -include $(IFDEPS)
 -include $(filter-out $(IFDEPS), $(DEPS))

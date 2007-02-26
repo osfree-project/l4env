@@ -1,6 +1,7 @@
 #include "test-client.h"
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
+#include <l4/util/util.h>
 
 #define BUFFER_SIZE 100
 static char buffer[BUFFER_SIZE];
@@ -18,7 +19,7 @@ my_init(int nb,
 int
 main(int argc, char** argv)
 {
-  CORBA_Object srv;
+  l4_threadid_t srv;
   CORBA_Environment env = dice_default_environment;
 
   char *str;
@@ -41,6 +42,9 @@ main(int argc, char** argv)
 
   str = "Attention server, are you there? If you are, please answer!";
   test_f2_call(&srv, str, &env);
+
+  l4_sleep(2000);
+  enter_kdebug("*#^init-rcvstring stopped");
 
   return 0;
 }

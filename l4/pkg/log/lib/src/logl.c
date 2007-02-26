@@ -1,6 +1,6 @@
 /*!
  * \file   log/lib/src/logl.c
- * \brief  
+ * \brief  verbose logging
  *
  * \date   09/15/1999
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
@@ -16,7 +16,7 @@ void LOG_logl(const char*file, int line, const char*function,
   
     lock_printf;
 
-    LOG_printf("%s:%d:%s(): ",file, line, function);
+    LOG_printf("%s:%d:%s():\n ", LOG_filename(file), line, function);
     va_start(list,format);
     LOG_vprintf(format,list);
     va_end(list);

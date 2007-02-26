@@ -1,9 +1,16 @@
 /* $Id$ */
-
-/*	con/server/include/con_log.h
+/**
+ * \file	con/server/include/con_log.h
+ * \brief	logging macros
  *
- *	logging macros
- */
+ * \date	2001
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * 		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #ifndef _CON_LOG_H
 #define _CON_LOG_H

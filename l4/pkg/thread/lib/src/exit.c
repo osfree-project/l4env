@@ -6,21 +6,6 @@
  *
  * \date   09/06/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  * 
  * The cleanup of a thread includes the release of its stack. Since we need
  * a valid stack pointer also after we released the thread stack, we must 
@@ -28,6 +13,11 @@
  * stack, the usage is synchronized through a simple busy-wait lock. 
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4env includes */
 #include <l4/sys/types.h>
@@ -74,11 +64,11 @@ __lock_exit_stack(void)
   l4_umword_t dummy;
 
   /* try to get the lock */
-  while (!cmpxchg32(&exit_stack_used,0,1))
+  while (!l4util_cmpxchg32(&exit_stack_used,0,1))
     {
       /* wait 1 ms */
-      l4_i386_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,&dummy,&dummy,
-			  L4_IPC_TIMEOUT(0,0,250,14,0,0),&result);
+      l4_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,&dummy,&dummy,
+		     L4_IPC_TIMEOUT(0,0,250,14,0,0),&result);
     }
 }
 
@@ -210,7 +200,7 @@ l4thread_exit(void)
 
   /* avoid compiler warning: 
    * l4thread_exit is declared 'noreturn', but __do_exit is not (__do_exit 
-   * is mainly inline assambler, gcc cannot see that it does not return). 
+   * is mainly inline assembler, gcc cannot see that it does not return). 
    * To avoid the warning "`noreturn' function does return" we put an 
    * infinite loop here so gcc thinks we never return.
    */

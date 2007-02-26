@@ -28,7 +28,7 @@ Names implements the following primitives:
 Names enforces a string being registered at most once at a certain time.
 
 <sect>Limitations
-The number of names that can be registered is MAX_ENTRIES, the maximum name length is MAX_NAME_LEN. These values are defined in <code/names.h/ .
+The number of names that can be registered is NAMES_MAX_ENTRIES, the maximum name length is NAMES_MAX_NAME_LEN. These values are defined in <code/libnames.h/ .
 
 Security is currently not a big thing in names. A thread can register a name for an arbitrary thread_id - and unregister it as well.
 

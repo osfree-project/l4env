@@ -5,7 +5,7 @@
  *	\date	01/29/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -33,7 +33,7 @@
 
 class CBEUnmarshalFunction;
 class CBEComponentFunction;
-class CBEFunction;
+class CBEMarshalFunction;
 
 /**	\class CBESwitchCase
  *	\ingroup backend
@@ -41,7 +41,7 @@ class CBEFunction;
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
-class CBESwitchCase : public CBEOperationFunction  
+class CBESwitchCase : public CBEOperationFunction
 {
 DECLARE_DYNAMIC(CBESwitchCase);
 // Constructor
@@ -62,7 +62,7 @@ public:
     virtual void SetCallVariable(String sOriginalName, int nStars, String sCallName, CBEContext * pContext);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile, int nDirection, CBEContext *pContext);
     virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
 
@@ -75,10 +75,10 @@ protected:
 	 *	\brief a reference to the corresponding unmarshal function
 	 */
 	CBEUnmarshalFunction *m_pUnmarshalFunction;
-	/**	\var CBEFunction *m_pReplyWaitFunction
-	 *	\brief a reference to the corresponding reply-and-wait or wait-any function
+	/**	\var CBEMarshalFunction *m_pMarshalFunction
+	 *	\brief a reference to the corresponding marshal function
 	 */
-	CBEFunction *m_pReplyWaitFunction;
+	CBEMarshalFunction *m_pMarshalFunction;
 	/**	\var CBEComponentFunction *m_pComponentFunction
 	 *	\brief a reference to the corresponding component function
 	 */

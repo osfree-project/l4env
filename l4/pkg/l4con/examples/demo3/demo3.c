@@ -1,12 +1,15 @@
 /* $Id$ */
+/**
+ * \file	con/examples/demo3/demo3.c
+ * \brief	demonstration server for con
+ *
+ * pSLIM_CSCS (bird)
+ * pSLIM_COPY (`dismembered' bird) */
 
-/*	con/examples/demo3/demo3.c
- *
- *	demonstration server for con
- *
- *	pSLIM_CSCS (bird)
- *	pSLIM_COPY (`dismembered' bird)
- */
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 /* L4 includes */
 #include <l4/thread/thread.h>
@@ -18,7 +21,6 @@
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
-#include <l4/oskit10_l4env/support.h>
 
 #define PROGTAG		"_demo3"
 
@@ -65,15 +67,14 @@ int clear_screen()
   int ret = 0;
   char buffer[30];
 
-  con_pslim_rect_t rect;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t rect;
+  CORBA_Environment _env = dice_default_environment;
 
   /* setup initial vfb area info */
   rect.x = 0; rect.y = 0;
   rect.w = xres; rect.h = yres;
 
-  ret = con_vc_pslim_fill(vc_l4id, 
-			  (con_pslim_rect_t *) &rect, black, &_ev);
+  ret = con_vc_pslim_fill_call(&vc_l4id, &rect, black, &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
@@ -94,12 +95,12 @@ int draw_bird()
   int ret = 0;
   char buffer[30];
 
-  con_pslim_rect_t rect;
+  l4con_pslim_rect_t rect;
   l4_strdope_t bmap;
   l4_strdope_t bird_y;
   l4_strdope_t bird_u;
   l4_strdope_t bird_v;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   /*** draw upper-right text ***/
 
@@ -112,14 +113,15 @@ int draw_bird()
   bmap.snd_str = (l4_umword_t) cscs_bmap;
   bmap.rcv_size = 0;
 
-  ret = con_vc_pslim_bmap(vc_l4id,
-			  (con_pslim_rect_t *) &rect,
+  ret = con_vc_pslim_bmap_call(&vc_l4id,
+			  &rect,
 			  black, cornflowerblue,
-			  bmap, pSLIM_BMAP_START_MSB, &_ev);
-  if (ret || _ev._type != exc_l4_no_exception)
+			  (char*)cscs_bmap, 275, 
+			  pSLIM_BMAP_START_MSB, &_env);
+  if (ret || _env.major != CORBA_NO_EXCEPTION)
     {
       ret2ecodestr(ret, buffer);
-      printf("Error \"%s\" doing pslim_bmap (exc=%d)\n", buffer, _ev._type);
+      printf("Error \"%s\" doing pslim_bmap (exc=%d)\n", buffer, _env.major);
       return -1;
     }
 
@@ -142,17 +144,19 @@ int draw_bird()
   bird_v.snd_str = (l4_umword_t) my_yuv + 128*128 + 128*128/4;
   bird_v.rcv_size = 0;
 
-  ret = con_vc_pslim_cscs(vc_l4id,
+  ret = con_vc_pslim_cscs_call(&vc_l4id,
 			  &rect, 
-		  	  bird_y, bird_u, bird_v,
+			  (char*)my_yuv, 128*128,
+			  (char*)(my_yuv + 128*128), 128*128/4, 
+			  (char*)(my_yuv + 128*128 + 128*128/4), 128*128/4, 
 	  		  pSLIM_CSCS_PLN_YV12,
   			  1, 
-			  &_ev);
+			  &_env);
 
-  if (ret || _ev._type != exc_l4_no_exception)
+  if (ret || _env.major != CORBA_NO_EXCEPTION)
     {
       ret2ecodestr(ret, buffer);
-      printf("Error \"%s\" doing pslim_cscs (exc=%d)\n", buffer, _ev._type);
+      printf("Error \"%s\" doing pslim_cscs (exc=%d)\n", buffer, _env.major);
       return -1;
     }
 
@@ -170,9 +174,9 @@ int dismember_bird()
   int ret = 0, i;
   char buffer[30];
 
-  con_pslim_rect_t rect;
+  l4con_pslim_rect_t rect;
   l4_strdope_t bmap;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   /*** draw upper-right text ***/
 
@@ -185,11 +189,11 @@ int dismember_bird()
   bmap.snd_str = (l4_umword_t) copy_bmap;
   bmap.rcv_size = 0;
 
-  ret = con_vc_pslim_bmap(vc_l4id,
-			  (con_pslim_rect_t *) &rect, black, lightsteelblue,
-			  bmap,
+  ret = con_vc_pslim_bmap_call(&vc_l4id,
+			  &rect, black, lightsteelblue,
+			  (char*)copy_bmap, 275, 
 		  	  pSLIM_BMAP_START_MSB, 
-	  		  &_ev);
+	  		  &_env);
   if (ret) 
     {
       ret2ecodestr(ret, buffer);
@@ -205,11 +209,11 @@ int dismember_bird()
   for (i=0;i<20;i++) 
     {
       /* upper-left */
-      ret = con_vc_pslim_copy(vc_l4id,
-			      (con_pslim_rect_t *) &rect,
+      ret = con_vc_pslim_copy_call(&vc_l4id,
+			      &rect,
 	      		      rect.x - 5,
 			      rect.y - 5,
-			      &_ev);
+			      &_env);
       /* setup vfb area info */
       rect.x -= 5; rect.y -= 5;
       l4_sleep(inter_copy_delay);
@@ -218,11 +222,11 @@ int dismember_bird()
   for (i=0;i<20;i++) 
     {
       /* upper-right */
-      ret = con_vc_pslim_copy(vc_l4id,
-			      (con_pslim_rect_t *) &rect,
+      ret = con_vc_pslim_copy_call(&vc_l4id,
+			      &rect,
 	      		      rect.x + 5,
 			      rect.y - 5,
-			      &_ev);
+			      &_env);
       /* setup vfb area info */
       rect.x += 5; rect.y -= 5;
       l4_sleep(inter_copy_delay);
@@ -231,11 +235,11 @@ int dismember_bird()
   for (i=0;i<20;i++) 
     {
       /* lower-right */
-      ret = con_vc_pslim_copy(vc_l4id,
-			      (con_pslim_rect_t *) &rect,
+      ret = con_vc_pslim_copy_call(&vc_l4id,
+			      &rect,
 			      rect.x + 5,
 			      rect.y + 5,
-	      		      &_ev);
+	      		      &_env);
       /* setup vfb area info */
       rect.x += 5; rect.y += 5;
       l4_sleep(inter_copy_delay);
@@ -244,11 +248,11 @@ int dismember_bird()
   for (i=0;i<20;i++) 
     {
       /* lower-left */
-      ret = con_vc_pslim_copy(vc_l4id,
-			      (con_pslim_rect_t *) &rect,
+      ret = con_vc_pslim_copy_call(&vc_l4id,
+			      &rect,
 	      		      rect.x - 5,
 			      rect.y + 5,
-			      &_ev);
+			      &_env);
       /* setup vfb area info */
       rect.x -= 5; rect.y += 5;
       l4_sleep(inter_copy_delay);
@@ -267,7 +271,7 @@ int main(int argc, char *argv[])
   int error = 0;
   l4_threadid_t dummy_l4id = L4_NIL_ID;
 
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
   
   do_args(argc, argv);
   LOG_init(PROGTAG);
@@ -282,21 +286,21 @@ int main(int argc, char *argv[])
       enter_kdebug("panic");
     }
 
-  if (con_if_openqry(con_l4id, 
+  if (con_if_openqry_call(&con_l4id, 
 		     MY_SBUF_SIZE1, MY_SBUF_SIZE2, MY_SBUF_SIZE3,
 		     L4THREAD_DEFAULT_PRIO,
-	  	     (con_threadid_t*) &vc_l4id, 
+	  	     &vc_l4id, 
   		     CON_VFB,
-		     &_ev))
+		     &_env))
     enter_kdebug("Ouch, open vc failed");
 
-  if (con_vc_smode(vc_l4id, CON_OUT, (con_threadid_t*)&dummy_l4id, &_ev))
+  if (con_vc_smode_call(&vc_l4id, CON_OUT, &dummy_l4id, &_env))
     enter_kdebug("Ouch, setup vc failed");
 
-  if (con_vc_graph_gmode(vc_l4id, &gmode, &xres, &yres,
+  if (con_vc_graph_gmode_call(&vc_l4id, &gmode, &xres, &yres,
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
-			 &fn_x, &fn_y, &_ev))
+			 &fn_x, &fn_y, &_env))
     enter_kdebug("Ouch, graph_gmode failed");
 
   while (!error) 
@@ -311,7 +315,7 @@ int main(int argc, char *argv[])
       l4_sleep(2000);
     }
   
-  if (con_vc_close(vc_l4id, &_ev))
+  if (con_vc_close_call(&vc_l4id, &_env))
     enter_kdebug("Ouch, close vc failed?!");
   printf("closed vc\n");
   

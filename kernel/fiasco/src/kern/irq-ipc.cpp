@@ -8,7 +8,7 @@ IMPLEMENTATION[ipc]:
 
 
 /** Sender-activation function called when receiver gets ready.
-    irq_t::hit() actually ensures that this method is always called
+    Irq::hit() actually ensures that this method is always called
     when an interrupt occurs, even when the receiver was already
     waiting. 
  */
@@ -19,7 +19,7 @@ extern "C" unsigned apic_irq_nr;
 #endif
 PUBLIC 
 virtual void 
-irq_t::ipc_receiver_ready()
+Irq::ipc_receiver_ready()
 {
   assert(current() == _irq_thread);
 
@@ -28,10 +28,10 @@ irq_t::ipc_receiver_ready()
       _irq_thread->receive_regs()->msg_dope(0);	// state = OK
 
 #ifdef CONFIG_APIC_MASK
-      if (id().lh.low-1 == apic_irq_nr)
+      if (id().irq() == apic_irq_nr)
 	{
-	  _irq_thread->receive_regs()->edx = apic_timer_entry;
-	  _irq_thread->receive_regs()->ebx = apic_irq_mask;
+	  _irq_thread->receive_regs()->set_msg_word(0, apic_timer_entry);
+	  _irq_thread->receive_regs()->set_msg_word(1, apic_irq_mask);
 	}
 #endif
 
@@ -52,6 +52,4 @@ irq_t::ipc_receiver_ready()
 
       _irq_thread->ipc_unlock();
     }
-  
-  return;
 }

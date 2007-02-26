@@ -6,26 +6,14 @@
  *
  * \date   11/13/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * This file provides the user programming interface for the L4 semaphore 
- * implementation. 
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4_SEMAPHORE_SEMAPHORE_H
 #define _L4_SEMAPHORE_SEMAPHORE_H
 
@@ -48,6 +36,11 @@
  * use assembler version of up/down
  */
 #define L4SEMAPHORE_ASM               1
+
+/**
+ * restart canceled block/wakup IPC
+ */
+#define L4SEMAPHORE_RESTART_IPC       1
 
 /*****************************************************************************
  *** types                                                                         

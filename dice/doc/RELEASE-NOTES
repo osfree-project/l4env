@@ -1,4 +1,4 @@
-	WHAT'S NEW IN DICE 2.2.0 - Nov 19th 2002
+	WHAT'S NEW IN DICE 2.2.2 - Jul 17th 2003
 	========================================
 
 This is the latest development version of DICE. Please send bug reports
@@ -7,10 +7,27 @@ and suggestions for new features to ra3@os.inf.tu-dresden.de.
 New releases are announced on the DICE mailing list. You can subscribe
 to this list at http://os.inf.tu-dresden.de/mailmain/listinfo/dice/.
 
+Changes in 2.2.2
+----------------
+ - tons of bug-fixes
+ - x0 Back-End added (untested)
+ - x0adaption Back-End added (imitates V2 API on X0 kernel)
+ - generated stubs partially contain inline assembler
+ - added user's manual
+ - unified some examples
+ - CORBA_Object usage compatible to CORBA C Language Mapping now
+ - bug fixes
+
+Changes in 2.2.1
+----------------
+ - added 'socket' Back-End
+ - bug fixes
+
 Changes in 2.2.0
 ----------------
-
-
+ - BE: flexpages, indirect strings
+ - works for L4 version 2
+  
 ==========================================================================
 
 If you think you have found a bug, please email a report to

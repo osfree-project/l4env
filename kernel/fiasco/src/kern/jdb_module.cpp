@@ -113,7 +113,6 @@ public:
      * format description (see Cmd::fmt).
      */
     void *argbuf;
-    
 
     /**
      * @brief Creates a Jdb command.
@@ -125,12 +124,11 @@ public:
      * @param _argbuf pointer to argument buffer (see Cmd::argbuf)
      * 
      */
-    Cmd( int _id, char const *_scmd, char const *_cmd,
-	 char const *_fmt, char const *_descr, void *_argbuf )
-      : id(_id), scmd(_scmd), cmd(_cmd), fmt(_fmt),
-	descr(_descr), argbuf(_argbuf)
+    Cmd( int _id, char const *_scmd, char const *_cmd, 
+	 char const *_fmt, char const *_descr, void *_argbuf)
+      : id(_id), scmd(_scmd), cmd(_cmd),
+         fmt(_fmt), descr(_descr), argbuf(_argbuf)
     {}
-	 
 
   };
 
@@ -152,12 +150,24 @@ public:
     /// Reboot the system
     REBOOT,
 
+    /// got KEY_HOME
+    GO_BACK,
+
     /**
      * @brief Wait for new input arguments
      * @see action() for detailed information.
      */
     EXTRA_INPUT,
+
+    /**
+     * @brief Wait for new input arguments and interpret character
+     *        in next_char as next keystroke
+     * @see action() for detailed information.
+     */
+    EXTRA_INPUT_WITH_NEXTCHAR,
   };
+
+  typedef void (Gotkey)(char *&str, int maxlen, int c);
 
   /**
    * @brief Create a new instance of an Jdb_module.
@@ -199,7 +209,8 @@ public:
    * request further input depending on the already given input.
    *
    */
-  virtual Action_code action( int cmd, void *&args, char const* &fmt ) = 0;
+  virtual Action_code action( int cmd, void *&args, char const* &fmt,
+			      int &next_char ) = 0;
 
   /**
    * @brief The number of commands this modules provides.
@@ -247,22 +258,30 @@ public:
    */
   Cmd const* has_cmd( char const* cmd, bool short_mode = false ) const;
 
-public:
-	
   /**
    * @brief Get the first registered Jdb_module.
    */
   static Jdb_module *first();
-  
-private:
-  friend class Jdb_core;
 
+  /**
+   * @brief Call this function every time a `\n' is written to the
+   *        console and it stops output when the screen is full.
+   * @return 0 if user wants to abort the output (escape or 'q' pressed)
+   */
+  static int new_line( unsigned &line );
+
+private:
   static Jdb_module *_first;
 
   Jdb_module *_next;
   Jdb_module *_prev;
   Jdb_category const *const _cat;
 
+protected:
+  /**
+   *
+   */
+  static int getchar( void );
 };
 
 /**
@@ -404,8 +423,13 @@ private:
 IMPLEMENTATION:
 
 #include <cassert>
+#include <cstdio>
 #include <cstring>
 
+#include "jdb_screen.h"
+#include "kernel_console.h"
+#include "keycodes.h"
+#include "simpleio.h"
 #include "static_init.h"
 
 Jdb_category *Jdb_category::_first = 0;
@@ -413,7 +437,7 @@ Jdb_category *Jdb_category::_first = 0;
 static Jdb_category misc_cat( "MISC", "misc debugger commands", 2000 ) 
   INIT_PRIORITY(JDB_CATEGORY_INIT_PRIO);
 
-IMPLEMENT
+IMPLEMENT inline
 Jdb_category const *Jdb_category::first()
 {
   return _first;
@@ -433,7 +457,7 @@ Jdb_category::Jdb_category( char const *const name,
 
   if(_first->_order > order)
     {
-      _next = _first->_next;
+      _next = _first;
       _first = this;
       return;
     }
@@ -447,20 +471,20 @@ Jdb_category::Jdb_category( char const *const name,
 	
 }
 
-IMPLEMENT 
+IMPLEMENT inline
 char const *const Jdb_category::name() const
 {
   return _name;
 }
 
 
-IMPLEMENT 
+IMPLEMENT inline
 char const *const Jdb_category::description() const
 {
   return _desc;
 }
 
-IMPLEMENT 
+IMPLEMENT inline
 Jdb_category const *Jdb_category::next() const
 {
   return _next;
@@ -491,7 +515,7 @@ Jdb_category::Iterator Jdb_category::modules() const
 
 Jdb_module *Jdb_module::_first = 0;
 
-IMPLEMENT 
+IMPLEMENT inline
 Jdb_module *Jdb_module::first()
 {
   return _first;
@@ -527,7 +551,8 @@ Jdb_module::~Jdb_module()
 
 
 IMPLEMENT
-Jdb_module::Cmd const* Jdb_module::has_cmd( char const* cmd, bool short_mode ) const
+Jdb_module::Cmd const*
+Jdb_module::has_cmd( char const* cmd, bool short_mode ) const
 {
   int n = num_cmds();
   Cmd const* cs = cmds();
@@ -546,19 +571,53 @@ Jdb_module::Cmd const* Jdb_module::has_cmd( char const* cmd, bool short_mode ) c
     }
 
   return 0;
-
 }
 
-
-IMPLEMENT
-Jdb_category const *Jdb_module::category() const
+IMPLEMENT inline
+Jdb_category const *
+Jdb_module::category() const
 {
   return _cat;
 }
 
-IMPLEMENT
-Jdb_module *Jdb_module::next() const
+IMPLEMENT inline
+Jdb_module *
+Jdb_module::next() const
 {
   return _next;
+}
+
+IMPLEMENT
+int
+Jdb_module::getchar()
+{
+  return Kconsole::console()->getchar();
+}
+
+IMPLEMENT
+int
+Jdb_module::new_line( unsigned &line )
+{
+  if (line++ > Jdb_screen::height()-2)
+    {
+      putstr("--- CR: line, SPACE: page, ESC: abort ---");
+      int a = Kconsole::console()->getchar();
+      putstr("\r\033[K");
+
+      switch (a)
+	{
+	case KEY_ESC:
+	case 'q':
+	  putchar('\n');
+	  return 0;
+	case KEY_RETURN:
+	  line--;
+	  return 1;
+	default:
+	  line=0;
+	  return 1;
+	}
+    }
+  return 1;
 }
 

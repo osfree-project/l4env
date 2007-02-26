@@ -1,0 +1,6 @@
+Dynamic L4 Loader.
+
+The loader is able to load L4 binaries at runtime. It works together with
+the L4 exec server (see package exec) which is the binary interpreter.
+Currently, only ELF binaries are supported. The loader accesses files using
+the file provider interface as defined in the generic_fprov package.

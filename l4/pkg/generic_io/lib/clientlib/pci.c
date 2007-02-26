@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	generic_io/lib/src/pci.c
+ * \file   generic_io/lib/clientlib/pci.c
+ * \brief  L4Env I/O Client Library PCI Support Wrapper
  *
- * \brief	L4Env I/O Client Library PCI Support Wrapper
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -44,144 +33,144 @@
 int l4io_pci_find_slot(unsigned int bus, unsigned int slot, l4io_pci_dev_t * pci_dev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_find_slot(io_l4id, bus, slot, (l4_io_pci_dev_t *) pci_dev, &_exc);
+  err = l4_io_pci_find_slot_call(&io_l4id, bus, slot, (l4_io_pci_dev_t *) pci_dev, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_find_device(unsigned short vendor, unsigned short device,
 			 l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_find_device(io_l4id, vendor, device, start,
-			      (l4_io_pci_dev_t *) pci_dev, &_exc);
+  err = l4_io_pci_find_device_call(&io_l4id, vendor, device, start,
+			      (l4_io_pci_dev_t *) pci_dev, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_find_class(unsigned long class,
 			l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_find_class(io_l4id, class, start, (l4_io_pci_dev_t *)pci_dev, &_exc);
+  err = l4_io_pci_find_class_call(&io_l4id, class, start, (l4_io_pci_dev_t *)pci_dev, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_readb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t * val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_read_config_byte(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_read_config_byte_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 int l4io_pci_readw_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t * val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_read_config_word(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_read_config_word_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 int l4io_pci_readl_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t * val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_read_config_dword(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_read_config_dword_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_writeb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_write_config_byte(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_write_config_byte_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 int l4io_pci_writew_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_write_config_word(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_write_config_word_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 int l4io_pci_writel_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t val)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_write_config_dword(io_l4id, pdev, pos, val, &_exc);
+  err = l4_io_pci_write_config_dword_call(&io_l4id, pdev, pos, val, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_enable(l4io_pdev_t pdev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_enable_device(io_l4id, pdev, &_exc);
+  err = l4_io_pci_enable_device_call(&io_l4id, pdev, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_disable(l4io_pdev_t pdev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_disable_device(io_l4id, pdev, &_exc);
+  err = l4_io_pci_disable_device_call(&io_l4id, pdev, &_env);
 
   /* done */
-  return FLICK_ERR(err, &_exc);
+  return DICE_ERR(err, &_env);
 }
 
 void l4io_pci_set_master(l4io_pdev_t pdev)
 {
   int err;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_set_master(io_l4id, pdev, &_exc);
+  err = l4_io_pci_set_master_call(&io_l4id, pdev, &_env);
 
   /* done */
-  FLICK_ERR(err, &_exc);
+  DICE_ERR(err, &_env);
 }
 
 int l4io_pci_set_pm(l4io_pdev_t pdev, int state)
 {
   int err;
   int old = state;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
-  err = l4_io_pci_set_power_state(io_l4id, pdev, &old, &_exc);
+  err = l4_io_pci_set_power_state_call(&io_l4id, pdev, &old, &_env);
 
   /* done */
-  FLICK_ERR(err, &_exc);
+  DICE_ERR(err, &_env);
 
   return old;
 }

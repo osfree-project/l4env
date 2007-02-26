@@ -1,37 +1,26 @@
-#-*- makefile -*-
 # $Id$
 #
 # menu.lst	(con) 
 #
 # run this to test con in your box I'll keep and update the binaries
-# (if not mail me)
 
 title= Fiasco: con + demos
-kernel= (nd)/tftpboot/ch12/static_ex/con/rmgr -sigma0 -serial
-
-# debug messages should be redirected to:
-# 1) serial line
-serial --unit=1 --speed=115200
-terminal serial
-# or 2) Hercules screen
-# terminal hercules
-
-# set VESA mode (here 640x480x16)
-vbeset 0x111
-
-module= (nd)/tftpboot/ch12/static_ex/con/fiasco nowait -I+ -VT+ -comspeed 115200 -comport 2 -nokdb
-module= (nd)/tftpboot/ch12/static_ex/con/sigma0
-module= (nd)/tftpboot/ch12/static_ex/con/names
-module= (nd)/tftpboot/ch12/static_ex/con/log
-module= (nd)/tftpboot/ch12/static_ex/con/buffermgr --addr=0x02000000 --size=0x01000000
-module= (nd)/tftpboot/ch12/static_ex/con/simple_dm
+kernel (nd)/tftpboot/ch12/static_ex/con/rmgr -sigma0 -serial
+module (nd)/tftpboot/ch12/static_ex/con/fiasco nowait 
+module (nd)/tftpboot/ch12/static_ex/con/sigma0
+module (nd)/tftpboot/ch12/static_ex/con/names
+module (nd)/tftpboot/ch12/static_ex/con/log
+module (nd)/tftpboot/ch12/static_ex/con/dm_phys
 
 # con server
 module= (nd)/tftpboot/ch12/static_ex/con/con
 
 # con client applications
-module= (nd)/tftpboot/ch12/static_ex/con/con_demo1
-module= (nd)/tftpboot/ch12/static_ex/con/con_demo2
-module= (nd)/tftpboot/ch12/static_ex/con/con_demo3
-module= (nd)/tftpboot/ch12/static_ex/con/con_evdemo
-module= (nd)/tftpboot/ch12/static_ex/con/con_dsidemo
+module (nd)/tftpboot/ch12/static_ex/con/con_demo1
+module (nd)/tftpboot/ch12/static_ex/con/con_demo2
+module (nd)/tftpboot/ch12/static_ex/con/con_demo3
+module (nd)/tftpboot/ch12/static_ex/con/con_evdemo
+
+# set VESA mode (here 640x480x16)
+vbeset 0x111
+

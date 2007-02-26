@@ -1,0 +1,7 @@
+L4Env Generic Dataspace Manager Interface
+
+This package contains the definition of the L4Env Generic Dataspace
+Manager Interface dm_generic and support libraries for building and
+using dataspace managers. It provides the interface common for all
+dataspace managers. For further documentation see the reference manual
+of the L4Env Phys. Dataspace Manager DMphys in l4/pkg/dm_phys/doc.

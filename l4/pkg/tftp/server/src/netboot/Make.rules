@@ -32,6 +32,9 @@ endif
 ifeq ($(CONFIG_RTL8139),y)
 SRC_C		+= rtl8139.c
 endif
+ifeq ($(CONFIG_RHINE),y)
+SRC_C		+= via-rhine.c
+endif
 
 ifeq ($(CONFIG_NE2000),y)
 OBJS 		+= nepci.o ne.o

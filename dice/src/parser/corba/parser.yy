@@ -1,11 +1,11 @@
 %{
 /*
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -25,18 +25,42 @@
 
 #include "defines.h"
 #include "Vector.h"
-#include "fe/stdfe.h"
 #include "Compiler.h"
+#include "CParser.h"
 
 void corbaerror(char *);
-void corbaerror2(char *fmt, ...);
-void corbawarning(char *fmt, ...);
-int corbalex();
+void corbaerror2(const char *fmt, ...);
+void corbawarning(const char *fmt, ...);
+
+#include "fe/FEFile.h"
+#include "fe/FELibrary.h"
+#include "fe/FEInterface.h"
+#include "fe/FEOperation.h"
+#include "fe/FETypedDeclarator.h"
+
+#include "fe/FETaggedStructType.h"
+#include "fe/FETaggedUnionType.h"
+#include "fe/FETaggedEnumType.h"
+#include "fe/FESimpleType.h"
+#include "fe/FEUserDefinedType.h"
+#include "fe/FEArrayType.h"
+
+#include "fe/FEArrayDeclarator.h"
+#include "fe/FEConstDeclarator.h"
+
+#include "fe/FEVersionAttribute.h"
+
+#include "fe/FEConditionalExpression.h"
+#include "fe/FEUserDefinedExpression.h"
+#include "fe/FEUnionCase.h"
+
+#include "parser.h"
+
+int corbalex(YYSTYPE*);
 
 #define YYDEBUG	1
 
 // collection for elements
-extern CFEFile *pCurFile;
 
 // error stuff
 extern int errcount;
@@ -44,13 +68,15 @@ extern int warningcount;
 extern int erroccured;
 
 // #include/import special treatment
-extern int nIncludeLevelCORBA;
 extern String sInFileName;
-extern int nLineNbCORBA;
+extern int gLineNumber;
 
 int nParseErrorCORBA = 0;
 
 %}
+
+// we want a reentrant parser
+%pure_parser
 
 %union {
   char*			_id;
@@ -155,6 +181,8 @@ int nParseErrorCORBA = 0;
 %token WSTRING
 %token FPAGE
 %token REFSTRING
+/* dice specific token */
+%token EOF_TOKEN
 
 %token	<_id>		ID
 %token	<_int>		LIT_INT
@@ -258,23 +286,23 @@ definition_list :
 definition :
 	  type_dcl semicolon
 	{
-		if (pCurFile == NULL)
+		if (!CParser::GetCurrentFile())
 		{
 			CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (typedef)");
 			YYABORT;
 		}
 		else
-			pCurFile->AddTypedef($1);
+			CParser::GetCurrentFile()->AddTypedef($1);
 	}
 	| const_dcl semicolon
 	{
-		if (pCurFile == NULL)
+		if (!CParser::GetCurrentFile())
 		{
 			CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (const)");
 			YYABORT;
 		}
 		else
-			pCurFile->AddConstant($1);
+			CParser::GetCurrentFile()->AddConstant($1);
 	}
 	| except_dcl semicolon
 	{
@@ -282,35 +310,39 @@ definition :
 	| interface semicolon
 	{
 		if ($1 != NULL) {
-			if (pCurFile == NULL)
+			if (!CParser::GetCurrentFile())
 			{
 				CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (interface)");
 				YYABORT;
 			}
 			else
-				pCurFile->AddInterface($1);
+				CParser::GetCurrentFile()->AddInterface($1);
 		}
 		// else: was forward_dcl
 	}
 	| module semicolon
 	{
-		if (pCurFile == NULL)
+		if (!CParser::GetCurrentFile())
 		{
 			CCompiler::GccError(NULL, 0, "Fatal Error: furrent file vanished (module)");
 			YYABORT;
 		}
 		else
-			pCurFile->AddLibrary($1);
+			CParser::GetCurrentFile()->AddLibrary($1);
 	}
 	| value semicolon
+	| EOF_TOKEN
+	{
+	    YYACCEPT;
+	}
 	;
 
 module :
 	  MODULE ID
 	{
 		// check if we can find a library with this name
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		$<_library>$ = pRoot->FindLibrary($2);
 	} LBRACE module_element_list rbrace
 	{
@@ -318,7 +350,7 @@ module :
 		$$ = new CFELibrary(String($2), new Vector(RUNTIME_CLASS(CFEAttribute), 1, tmp), $5);
 		$5->SetParentOfElements($$);
 		tmp->SetParent($$);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		if ($<_library>3 != NULL)
 			$$->AddSameLibrary($<_library>3);
 	}
@@ -367,8 +399,8 @@ interface_dcl	:
 	  ABSTRACT INTERFACE ID interface_inheritance_spec
 	{
 		// test base interfaces
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		VectorElement *pCurrent;
 		CFEIdentifier *pId;
 		for (pCurrent = $4->GetFirst(); pCurrent != NULL; pCurrent = pCurrent->GetNext()) {
@@ -389,21 +421,21 @@ interface_dcl	:
 	} LBRACE export_list rbrace
 	{
 		if ($7 == NULL) {
-			corbaerror2("no empty interface specification supported.\n");
+			corbaerror2("no empty interface specification supported.");
 			YYABORT;
 		}
 		CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
-		pAttr->SetSourceLine(nLineNbCORBA);
+		pAttr->SetSourceLine(gLineNumber);
 		$$ = new CFEInterface(new Vector(RUNTIME_CLASS(CFEAttribute), 1, pAttr), String($3), $4, $7);
 		// set parent relationship
 		pAttr->SetParent($$);
 		$7->SetParentOfElements($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| ABSTRACT INTERFACE ID
 	{
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		if (pRoot->FindInterface($3) != NULL)
 		{
 			// name already exists
@@ -413,22 +445,22 @@ interface_dcl	:
 	} LBRACE export_list rbrace
 	{
 		if ($6 == NULL) {
-			corbaerror2("no empty interface specification supported.\n");
+			corbaerror2("no empty interface specification supported.");
 			YYABORT;
 		}
 		CFEAttribute *pAttr = new CFEAttribute(ATTR_ABSTRACT);
-		pAttr->SetSourceLine(nLineNbCORBA);
+		pAttr->SetSourceLine(gLineNumber);
 		$$ = new CFEInterface(new Vector(RUNTIME_CLASS(CFEAttribute), 1, pAttr), String($3), NULL, $6);
 		// set parent relationship
 		pAttr->SetParent($$);
 		$6->SetParentOfElements($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| INTERFACE ID interface_inheritance_spec
 	{
 		// test base interfaces
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		VectorElement *pCurrent;
 		CFEIdentifier *pId;
 		for (pCurrent = $3->GetFirst(); pCurrent != NULL; pCurrent = pCurrent->GetNext())
@@ -452,21 +484,21 @@ interface_dcl	:
 	} LBRACE export_list rbrace
 	{
 		if ($6 == NULL) {
-			corbaerror2("no empty interface specification supported.\n");
+			corbaerror2("no empty interface specification supported.");
 			YYABORT;
 		}
 		CFEAttribute *pAttr = new CFEVersionAttribute(0,0);
-		pAttr->SetSourceLine(nLineNbCORBA);
+		pAttr->SetSourceLine(gLineNumber);
 		$$ = new CFEInterface(new Vector(RUNTIME_CLASS(CFEAttribute), 1, pAttr), String($2), $3, $6);
 		// set parent relationship
 		pAttr->SetParent($$);
 		$6->SetParentOfElements($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| INTERFACE ID
 	{
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		if (pRoot->FindInterface($2) != NULL)
 		{
 			// name already exists
@@ -476,16 +508,16 @@ interface_dcl	:
 	} LBRACE export_list rbrace
 	{
 		if ($5 == NULL) {
-			corbaerror2("no empty interface specification supported.\n");
+			corbaerror2("no empty interface specification supported.");
 			YYABORT;
 		}
 		CFEAttribute *pAttr = new CFEVersionAttribute(0,0);
-		pAttr->SetSourceLine(nLineNbCORBA);
+		pAttr->SetSourceLine(gLineNumber);
 		$$ = new CFEInterface(new Vector(RUNTIME_CLASS(CFEAttribute), 1, pAttr), String($2), NULL, $5);
 		// set parent relationship
 		pAttr->SetParent($$);
 		$5->SetParentOfElements($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -557,13 +589,13 @@ scoped_name :
 	  ID
 	{
 		$$ = new CFEIdentifier($1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| SCOPE ID
 	{
 		$$ = new CFEIdentifier($2);
 		$$->Prefix(String("::"));
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| scoped_name SCOPE ID
 	{
@@ -673,18 +705,13 @@ init_param_decl :
 	  IN param_type_spec simple_declarator
 	{
 		CFEAttribute *tmp = new CFEAttribute(ATTR_IN);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$$ = new CFETypedDeclarator(TYPEDECL_PARAM, $2, new Vector(RUNTIME_CLASS(CFEDeclarator), 1, $3), new Vector(RUNTIME_CLASS(CFEAttribute), 1, tmp));
-		// check if OUT and reference
-		if ($$->FindAttribute(ATTR_OUT) != NULL) {
-			// because CORBA knows no pointers, we have to add a reference for out parameters
-			$3->SetStars(1);
-		}
 		// set parent relationship
 		$2->SetParent($$);
 		$3->SetParent($$);
 		tmp->SetParent($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -695,17 +722,17 @@ const_dcl :
 	        while (pType && (pType->GetType() == TYPE_USER_DEFINED))
 		{
 		    String sTypeName = ((CFEUserDefinedType*)pType)->GetName();
-		    CFETypedDeclarator *pTypedef = pCurFile->FindUserDefinedType(sTypeName);
+		    CFETypedDeclarator *pTypedef = CParser::GetCurrentFile()->FindUserDefinedType(sTypeName);
 		    if (!pTypedef)
-		        corbaerror2("Cannot find type for \"%s\".\n", (const char*)sTypeName);
+		        corbaerror2("Cannot find type for \"%s\".", (const char*)sTypeName);
 		    pType = pTypedef->GetType();
 		}
 		if (!( $5->IsOfType(pType->GetType()) )) {
-			corbaerror2("Const type of \"%s\" does not match with expression.\n",$3);
+			corbaerror2("Const type of \"%s\" does not match with expression.",$3);
 			YYABORT;
 		}
 		$$ = new CFEConstDeclarator($2, String($3), $5);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 		$5->SetParent($$);
@@ -732,7 +759,7 @@ const_type :
 	| scoped_name
 	{
 		$$ = new CFEUserDefinedType($1->GetName());
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| octet_type
 	{ $$ = $1; }
@@ -749,7 +776,7 @@ or_expr :
 	| or_expr BITOR xor_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITOR, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -762,7 +789,7 @@ xor_expr :
 	| xor_expr BITXOR and_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITXOR, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -775,7 +802,7 @@ and_expr :
 	| and_expr BITAND shift_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITAND, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -788,7 +815,7 @@ shift_expr :
 	| shift_expr RSHIFT add_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_RSHIFT, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -796,7 +823,7 @@ shift_expr :
 	| shift_expr LSHIFT add_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LSHIFT, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -809,7 +836,7 @@ add_expr :
 	| add_expr PLUS mult_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_PLUS, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -817,7 +844,7 @@ add_expr :
 	| add_expr MINUS mult_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -830,7 +857,7 @@ mult_expr :
 	| mult_expr MUL unary_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MUL, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -838,7 +865,7 @@ mult_expr :
 	| mult_expr DIV unary_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_DIV, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -846,7 +873,7 @@ mult_expr :
 	| mult_expr MOD unary_expr
 	{
 		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MOD, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$3->SetParent($$);
@@ -857,21 +884,21 @@ unary_expr :
 	  MINUS primary_expr
 	{
 		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_SMINUS, $2);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 	}
 	| PLUS primary_expr
 	{
 		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_SPLUS, $2);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 	}
 	| BITNOT primary_expr
 	{
 		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_TILDE, $2);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 	}
@@ -883,52 +910,54 @@ primary_expr :
 	  scoped_name
 	{
 		$$ = new CFEUserDefinedExpression($1->GetName());
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_INT
 	{
 		$$ = new CFEPrimaryExpression(EXPR_INT, $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_STR
 	{
 		$$ = new CFEExpression(EXPR_STRING, *$1);
-		$$->SetSourceLine(nLineNbCORBA);
+		delete $1;
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_WSTR
 	{
 		$$ = new CFEExpression(EXPR_STRING, *$1);
-		$$->SetSourceLine(nLineNbCORBA);
+		delete $1;
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_CHAR
 	{
 		$$ = new CFEExpression(EXPR_CHAR, $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_WCHAR
 	{
 		$$ = new CFEExpression(EXPR_CHAR, $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LIT_FLOAT
 	{
 		$$ = new CFEPrimaryExpression(EXPR_FLOAT, $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| TRUE
 	{
 		$$ = new CFEExpression(EXPR_TRUE);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| FALSE
 	{
 		$$ = new CFEExpression(EXPR_FALSE);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LPAREN const_exp rparen
 	{
 		$$ = new CFEPrimaryExpression(EXPR_PAREN, $2);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 	}
@@ -943,8 +972,8 @@ type_dcl :
 	  TYPEDEF type_spec declarators
 	{
 		// check if type_names already exist
-		CFEFile *pRoot = pCurFile->GetRoot();
-		ASSERT(pRoot);
+		CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
+		assert(pRoot);
 		VectorElement *pIter;
 		CFEDeclarator *pDecl;
 		for (pIter = $3->GetFirst(); pIter != NULL; pIter = pIter->GetNext()) {
@@ -953,14 +982,14 @@ type_dcl :
 				if (pDecl->GetName() != NULL) {
 					if (pRoot->FindUserDefinedType(pDecl->GetName()) != NULL)
 					{
-						corbaerror2("\"%s\" has already been defined as type.\n",(const char*)pDecl->GetName());
+						corbaerror2("\"%s\" has already been defined as type.",(const char*)pDecl->GetName());
 						YYABORT;
 					}
 				}
 			}
 		}
 		$$ = new CFETypedDeclarator(TYPEDECL_TYPEDEF, $2, $3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 		$3->SetParentOfElements($$);
@@ -971,37 +1000,39 @@ type_dcl :
 		if ($1->IsKindOf(RUNTIME_CLASS(CFETaggedStructType))) {
 			String sTag = ((CFETaggedStructType*)$1)->GetTag();
 			CFEDeclarator *pDecl =  new CFEDeclarator(DECL_IDENTIFIER, "_struct_" + sTag);
-			pDecl->SetSourceLine(nLineNbCORBA);
+			pDecl->SetSourceLine(gLineNumber);
 			// modify tag, so compiler won't warn
 			Vector *pDecls = new Vector(RUNTIME_CLASS(CFEDeclarator), 1, pDecl);
 			// create a new typed decl
 			$$ = new CFETypedDeclarator(TYPEDECL_TYPEDEF, $1, pDecls);
-			$$->SetSourceLine(nLineNbCORBA);
+			$$->SetSourceLine(gLineNumber);
 			$1->SetParent($$);
 			pDecl->SetParent($$);
 			// return
 		} else {
-			corbaerror2("A struct without any declarators is not permitted\n");
+			corbaerror2("A struct without any declarators is not permitted.");
 			YYABORT;
 		}
 	}
 	| union_type
 	{
+	    // FIXME
 		// extract the name
 		// create a new typed decl
 		// return
 	}
 	| enum_type
 	{
+	    // FIXME
 		// extract the name
 		// create a new typed decl
 		// return
 	}
 	| NATIVE simple_declarator
 	{
+	    // FIXME
 		// use the name as type name
 		//$$ = new CFEUserDefinedType($2);
-		#warning "native type translation to typedef?"
 	}
 	;
 
@@ -1020,7 +1051,7 @@ simple_type_spec :
 	| scoped_name
 	{
 		$$ = new CFEUserDefinedType($1->GetName());
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1097,7 +1128,7 @@ array_declarator :
 		}
 		$$->AddBounds(0, $3);
 		$3->SetParent($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1105,11 +1136,11 @@ simple_declarator :
 	  ID
 	{
 		$$ = new CFEDeclarator(DECL_IDENTIFIER, String($1));
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| error
 	{
-		corbaerror2("expected a declarator\n");
+		corbaerror2("expected a declarator");
 		YYABORT;
 	}
 	;
@@ -1118,17 +1149,17 @@ floating_pt_type :
 	  FLOAT
 	{
 		$$ = new CFESimpleType(TYPE_FLOAT);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| DOUBLE
 	{
 		$$ = new CFESimpleType(TYPE_DOUBLE);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LONG DOUBLE
 	{
 		$$ = new CFESimpleType(TYPE_LONG_DOUBLE);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1136,32 +1167,32 @@ integer_type :
 	  SHORT
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, false, true, 2/*value for SHORT*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LONG
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, false, true, 4/*value for LONG*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| LONG LONG
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, false, true, 8/*value for LONG LONG*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| UNSIGNED SHORT
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, true, true, 2/*value for SHORT*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| UNSIGNED LONG
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, true, true, 4/*value for LONG*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| UNSIGNED LONG LONG
 	{
 		$$ = new CFESimpleType(TYPE_INTEGER, true, true, 8/*value for LONG LONG*/, false);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1169,7 +1200,7 @@ char_type :
 	  CHAR
 	{
 		$$ = new CFESimpleType(TYPE_CHAR);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1177,7 +1208,7 @@ wide_char_type :
 	  WCHAR
 	{
 		$$ = new CFESimpleType(TYPE_WCHAR);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1185,7 +1216,7 @@ boolean_type :
 	  BOOLEAN
 	{
 		$$ = new CFESimpleType(TYPE_BOOLEAN);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1193,7 +1224,7 @@ octet_type :
 	  OCTET
 	{
 		$$ = new CFESimpleType(TYPE_OCTET);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1201,7 +1232,7 @@ any_type :
 	  ANY
 	{
 		$$ = new CFESimpleType(TYPE_ANY);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1209,7 +1240,7 @@ object_type :
 	  OBJECT
 	{
 		$$ = new CFESimpleType(TYPE_OBJECT);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1218,12 +1249,12 @@ struct_type :
 	{
 		$$ = new CFETaggedStructType(String($2), $4);
 		$4->SetParentOfElements($$);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| STRUCT LBRACE member_list RBRACE
 	{
 		$$ = new CFEStructType($3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		$3->SetParentOfElements($$);
 	}
 	;
@@ -1245,7 +1276,7 @@ member :
 	  type_spec declarators semicolon
 	{
 		$$ = new CFETypedDeclarator(TYPEDECL_FIELD, $1, $2);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$2->SetParentOfElements($$);
@@ -1256,13 +1287,13 @@ union_type :
 	  UNION ID SWITCH LPAREN switch_type_spec rparen LBRACE switch_body rbrace
 	{
 		CFEUnionType *tmp = new CFEUnionType($5, String(), $8);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$5->SetParent(tmp);
 		$8->SetParentOfElements(tmp);
 		tmp->SetCORBA();
 		$$ = new CFETaggedUnionType(String($2), tmp);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		tmp->SetParent($$);
 	}
@@ -1280,7 +1311,7 @@ switch_type_spec :
 	| scoped_name
 	{
 		$$ = new CFEUserDefinedType($1->GetName());
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1301,7 +1332,7 @@ case :
 	  case_label_list element_spec semicolon
 	{
 		$$ = new CFEUnionCase($2, $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 		$1->SetParentOfElements($$);
@@ -1309,7 +1340,7 @@ case :
 	| DEFAULT colon element_spec semicolon
 	{
 		$$ = new CFEUnionCase($3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$3->SetParent($$);
 	}
@@ -1339,7 +1370,7 @@ element_spec :
 	  type_spec declarator
 	{
 		$$ = new CFETypedDeclarator(TYPEDECL_FIELD, $1, new Vector(RUNTIME_CLASS(CFEDeclarator), 1, $2));
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$1->SetParent($$);
 		$2->SetParent($$);
@@ -1350,7 +1381,7 @@ enum_type :
 	  ENUM ID LBRACE enumerator_list rbrace
 	{
 		$$ = new CFETaggedEnumType(String($2), $4);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1358,14 +1389,14 @@ enumerator_list :
 	  enumerator_list COMMA ID
 	{
 		CFEIdentifier *tmp = new CFEIdentifier($3);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$1->Add(tmp);
 		$$ = $1;
 	}
 	| ID
 	{
 		CFEIdentifier *tmp = new CFEIdentifier($1);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$$ = new Vector(RUNTIME_CLASS(CFEIdentifier), 1, tmp);
 	}
 	;
@@ -1376,7 +1407,7 @@ sequence_type	:
 		// specifies a "bounded" array of that type
 		// can be nested
 		$$ = new CFEArrayType($3, $5);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		$3->SetParent($$);
 	}
 	| SEQUENCE LT simple_type_spec GT
@@ -1384,7 +1415,7 @@ sequence_type	:
 		// specifies an "unbounded" array of that type
 		// can be nested
 		$$ = new CFEArrayType($3);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		$3->SetParent($$);
 	}
 	;
@@ -1392,43 +1423,36 @@ sequence_type	:
 string_type :
 	  STRING LT positive_int_const GT
 	{
-		// string as "bounded" array of bytes
-		// == char var[int]
-		CFESimpleType *tmp = new CFESimpleType(TYPE_STRING);
-		$$ = new CFEArrayType(tmp, $3);
-		tmp->SetParent($$);
-		tmp->SetSourceLine(nLineNbCORBA);
-		$$->SetSourceLine(nLineNbCORBA);
+	    // according to
+		// - CORBA C Language Mapping 1.12 and 1.13, and
+		// - CORBA C++ Language Mapping 1.7 and 1.8
+		// strings, no matter if bound or unbound
+		// are mapped to char* and wchar* respectively
+        $$ = new CFESimpleType(TYPE_STRING); // is replaced by 'char*'
+		$$->SetSourceLine(gLineNumber);
 	}
 	| STRING
 	{
-		// string as "unbounded" array of bytes (string attribute?)
-		CFESimpleType *tmp = new CFESimpleType(TYPE_STRING);
-		$$ = new CFEArrayType(tmp);
-		tmp->SetParent($$);
-		tmp->SetSourceLine(nLineNbCORBA);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$ = new CFESimpleType(TYPE_STRING);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
 wide_string_type :
 	  WSTRING LT positive_int_const GT
 	{
-		// string as "bounded" array of two bytes  (wchar array + max_is)
-		CFESimpleType *tmp = new CFESimpleType(TYPE_WSTRING);
-		$$ = new CFEArrayType(tmp, $3);
-		tmp->SetParent($$);
-		tmp->SetSourceLine(nLineNbCORBA);
-		$$->SetSourceLine(nLineNbCORBA);
+	    // according to
+		// - CORBA C Language Mapping 1.12 and 1.13, and
+		// - CORBA C++ Language Mapping 1.7 and 1.8
+		// strings, no matter if bound or unbound
+		// are mapped to char* and wchar* respectively
+		$$ = new CFESimpleType(TYPE_WSTRING);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| WSTRING
 	{
-		// string as "unbounded" array of two bytes  (wchar array)
-		CFESimpleType *tmp = new CFESimpleType(TYPE_WSTRING);
-		$$ = new CFEArrayType(tmp);
-		tmp->SetParent($$);
-		tmp->SetSourceLine(nLineNbCORBA);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$ = new CFESimpleType(TYPE_WSTRING);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1515,7 +1539,7 @@ op_dcl :
             $$ = new CFEOperation($2, String($3), $4, 0, $5);
         else
             $$ = new CFEOperation($2, String($3), $4, new Vector(RUNTIME_CLASS(CFEAttribute), 1, $1), $5);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 		if ($1 != 0)
@@ -1531,7 +1555,7 @@ op_dcl :
             $$ = new CFEOperation($2, String($3), $4);
         else
             $$ = new CFEOperation($2, String($3), $4, new Vector(RUNTIME_CLASS(CFEAttribute), 1, $1));
-        $$->SetSourceLine(nLineNbCORBA);
+        $$->SetSourceLine(gLineNumber);
 		// set parent relationship
 		$2->SetParent($$);
 		if ($1 != 0)
@@ -1546,7 +1570,7 @@ op_attribute :
 	{
 		// we do not support oneway attribute -> represent appropriately (in)
 		$$ = new CFEAttribute(ATTR_IN);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| /* is optional attribute */
 	{
@@ -1562,7 +1586,7 @@ op_type_spec :
 	| VOID
 	{
 		$$ = new CFESimpleType(TYPE_VOID);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1594,7 +1618,7 @@ param_dcl	:
 	  param_attribute param_type_spec simple_declarator
 	{
 		$$ = new CFETypedDeclarator(TYPEDECL_PARAM, $2, new Vector(RUNTIME_CLASS(CFEDeclarator), 1, $3), $1);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		// check if OUT and reference
 		if ($$->FindAttribute(ATTR_OUT) != 0) {
 			// because CORBA knows no pointers we have to add a reference
@@ -1611,27 +1635,27 @@ param_attribute :
 	  IN
 	{
 		CFEAttribute *tmp = new CFEAttribute(ATTR_IN);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$$ = new Vector(RUNTIME_CLASS(CFEAttribute), 1, tmp);
 	}
 	| OUT
 	{
 		CFEAttribute *tmp = new CFEAttribute(ATTR_OUT);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$$ = new Vector(RUNTIME_CLASS(CFEAttribute), 1, tmp);
 	}
 	| INOUT
 	{
 		CFEAttribute *tmpI = new CFEAttribute(ATTR_IN);
 		CFEAttribute *tmpO = new CFEAttribute(ATTR_OUT);
-		tmpI->SetSourceLine(nLineNbCORBA);
-		tmpO->SetSourceLine(nLineNbCORBA);
+		tmpI->SetSourceLine(gLineNumber);
+		tmpO->SetSourceLine(gLineNumber);
 		$$ = new Vector(RUNTIME_CLASS(CFEAttribute), 1, tmpI);
 		$$->Add(tmpO);
 	}
 	| error
 	{
-		corbaerror2("expected parameter attribute, such as 'in', 'out', or 'inout'.\n");
+		corbaerror2("expected parameter attribute, such as 'in', 'out', or 'inout'.");
 		YYABORT;
 	}
 	;
@@ -1663,15 +1687,17 @@ string_literal_list :
 	  string_literal_list COMMA LIT_STR
 	{
 		CFEIdentifier *tmp = new CFEIdentifier(*$3);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$1->Add(tmp);
 		$$ = $1;
+		delete $3;
 	}
 	| LIT_STR
 	{
 		CFEIdentifier *tmp = new CFEIdentifier(*$1);
-		tmp->SetSourceLine(nLineNbCORBA);
+		tmp->SetSourceLine(gLineNumber);
 		$$ = new Vector(RUNTIME_CLASS(CFEIdentifier), 1, tmp);
+		delete $1;
 	}
 	;
 
@@ -1685,7 +1711,7 @@ param_type_spec :
 	| scoped_name
 	{
 		$$ = new CFEUserDefinedType($1->GetName());
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 		//$1->SetParent($$);
         delete $1;
 	}
@@ -1693,7 +1719,7 @@ param_type_spec :
 	{ $$ = $1; }
 	| error
 	{
-		corbaerror2("expected a parameter type\n");
+		corbaerror2("expected a parameter type");
 	}
 	;
 
@@ -1701,12 +1727,12 @@ predefined_type :
 	  FPAGE
 	{
 		$$ = new CFESimpleType(TYPE_FLEXPAGE);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	| REFSTRING
 	{
 		$$ = new CFESimpleType(TYPE_REFSTRING);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1717,7 +1743,7 @@ fixed_pt_type :
 		// I can think of a more stupid implementation
 		// see CORBA language mapping for exact translation
 		$$ = new CFESimpleType(TYPE_FLOAT);
-		$$->SetSourceLine(nLineNbCORBA);
+		$$->SetSourceLine(gLineNumber);
 	}
 	;
 
@@ -1739,7 +1765,7 @@ semicolon
 	: SEMICOLON
 	| error 
 	{  
-		corbaerror2("expecting ';'"); 
+		corbaerror2("expecting ';'");
 		YYABORT;
 	}
 	;
@@ -1748,7 +1774,7 @@ rbrace
 	: RBRACE
 	| error 
 	{ 
-		corbaerror2("expecting '}'"); 
+		corbaerror2("expecting '}'");
 		YYABORT;
 	}
 	;
@@ -1757,7 +1783,7 @@ rbracket
 	: RBRACKET
 	| error 
 	{ 
-		corbaerror2("expecting ']'"); 
+		corbaerror2("expecting ']'");
 		YYABORT;
 	}
 	;
@@ -1766,7 +1792,7 @@ rparen
 	: RPAREN
 	| error 
 	{ 
-		corbaerror2("expecting ')'"); 
+		corbaerror2("expecting ')'");
 		YYABORT;
 	}
 	;
@@ -1775,7 +1801,7 @@ colon
 	: COLON
 	| error 
 	{ 
-		corbaerror2("expecting ':'"); 
+		corbaerror2("expecting ':'");
 		YYABORT;
 	}
 	;
@@ -1791,11 +1817,11 @@ corbaerror(char* s)
 }
 
 void
-corbaerror2(char *fmt, ...)
+corbaerror2(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	CCompiler::GccError(pCurFile, nLineNbCORBA, fmt, args);
+	CCompiler::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
 	va_end(args);
 	nParseErrorCORBA = 0;
 	erroccured = 1;
@@ -1803,13 +1829,12 @@ corbaerror2(char *fmt, ...)
 }
 
 void
-corbawarning(char *fmt, ...)
+corbawarning(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	CCompiler::GccWarning(pCurFile, nLineNbCORBA, fmt, args);
+	CCompiler::GccWarningVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
 	va_end(args);
 	nParseErrorCORBA = 0;
-	warningcount++;
 }
 

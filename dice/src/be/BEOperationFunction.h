@@ -5,7 +5,7 @@
  *	\date	01/14/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -69,12 +69,6 @@ protected:
     virtual bool AddException(CFEIdentifier *pFEException, CBEContext *pContext);
     virtual bool AddAttribute(CFEAttribute *pFEAttribute, CBEContext *pContext);
     virtual int WriteMarshalOpcode(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext);
-
-protected:
-	/**	\var String m_sOpcodeConstName
-	 *	\brief the name of the functions opcode
-	 */
-	String m_sOpcodeConstName;
 };
 
 #endif // !__DICE_BEOPERATIONFUNCTION_H__

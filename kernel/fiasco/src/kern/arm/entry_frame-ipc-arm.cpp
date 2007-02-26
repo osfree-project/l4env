@@ -3,56 +3,56 @@ IMPLEMENTATION[ipc-arm]:
 IMPLEMENT inline 
 void Sys_ipc_frame::rcv_source( L4_uid id ) 
 { 
-  r[12] = id.raw(); 
+  r[1] = id.raw(); 
 }
 
 IMPLEMENT inline 
 L4_uid Sys_ipc_frame::rcv_source() 
 { 
-  return L4_uid(r[12]);
+  return L4_uid(r[1]);
 }
 
 IMPLEMENT inline 
 L4_uid Sys_ipc_frame::snd_dest() const
 { 
-  return L4_uid(r[12]); 
+  return L4_uid(r[0]); 
 }
 
 IMPLEMENT inline 
 Mword Sys_ipc_frame::has_snd_dest() const
 { 
-  return r[12]; 
+  return r[0]; 
 }
 
 IMPLEMENT inline 
 Mword Sys_ipc_frame::irq() const
 { 
-  return r[12] -1; 
+  return r[0] -1; 
 }
 
 IMPLEMENT inline 
 void Sys_ipc_frame::snd_desc( Mword w ) 
 { 
-  r[0] =w; 
+  r[1] =w; 
 }
 
 IMPLEMENT inline 
 L4_snd_desc Sys_ipc_frame::snd_desc() const 
 { 
-  return r[0]; 
+  return r[1]; 
 }
 
 IMPLEMENT inline 
 L4_timeout Sys_ipc_frame::timeout() const 
 { 
-  return L4_timeout( r[1] ); 
+  return L4_timeout( r[3] ); 
 }
 
 IMPLEMENT inline 
 Mword Sys_ipc_frame::msg_word( unsigned index ) const
 {
-  if(index < 6)
-    return r[index+2];
+  if(index < 9)
+    return r[index+4];
   else
     return 0;
 }
@@ -60,20 +60,20 @@ Mword Sys_ipc_frame::msg_word( unsigned index ) const
 IMPLEMENT inline 
 void Sys_ipc_frame::set_msg_word( unsigned index, Mword value )
 {
-  if(index < 6)
-    r[index+2] = value;
+  if(index < 9)
+    r[index+4] = value;
 }
 
 IMPLEMENT inline 
 L4_rcv_desc Sys_ipc_frame::rcv_desc() const 
 { 
-  return r[11]; 
+  return r[2]; 
 }
 
 IMPLEMENT inline 
 void Sys_ipc_frame::rcv_desc( L4_rcv_desc d ) 
 { 
-  r[11] = d.raw(); 
+  r[2] = d.raw(); 
 }
 
 IMPLEMENT inline 
@@ -91,7 +91,7 @@ void Sys_ipc_frame::msg_dope_set_error( Mword e )
 IMPLEMENT inline
 unsigned const Sys_ipc_frame::num_reg_words()
 {
-  return 6;
+  return 9;
 }
 
 IMPLEMENT inline 
@@ -111,7 +111,7 @@ void Sys_ipc_frame::msg_dope_combine( L4_msgdope d )
 IMPLEMENT inline 
 void Sys_ipc_frame::copy_msg( Sys_ipc_frame *to ) const 
 {
-  for(unsigned x = 2; x<2+6; ++x )
+  for(unsigned x = 4; x<13; ++x )
     to->r[x] = r[x];
 }
 

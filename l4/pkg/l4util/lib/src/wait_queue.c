@@ -65,7 +65,7 @@ extern inline void __wq_suspend_thread(l4_threadid_t wakeup_thread)
       ko('s');
 #endif
 
-      error = l4_i386_ipc_receive(wakeup_thread,&wq_msg,
+      error = l4_ipc_receive(wakeup_thread,&wq_msg,
 				  &wq_msg.new_wait.lh.low,
 				  &wq_msg.new_wait.lh.high,
 				  L4_IPC_NEVER,&result);
@@ -131,7 +131,7 @@ extern inline void __wq_wakeup_thread(l4_threadid_t tid,
   wq_msg.new_wait = new_wait;
   wq_msg.magic = WQ_WAKEUP_MAGIC;
 
-  error = l4_i386_ipc_send(tid,&wq_msg,
+  error = l4_ipc_send(tid,&wq_msg,
 			   wq_msg.new_wait.lh.low,
 			   wq_msg.new_wait.lh.high,
 			   WQ_WAKEUP_TIMEOUT,&result);

@@ -18,7 +18,7 @@ public:
   typedef Mword Status;
 
   /// ctor.
-  Cpu_lock();
+  inline Cpu_lock();
 
   /**
    * @brief Test if the lock is already held.

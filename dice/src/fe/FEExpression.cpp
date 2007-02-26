@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -25,9 +25,9 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "CString.h"
-#include "defines.h"
 #include "fe/FEExpression.h"
+#include "CString.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEExpression) 
 
@@ -127,10 +127,14 @@ bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
         break;
     case EXPR_TRUE:
     case EXPR_FALSE:
-        return ((nType == TYPE_INTEGER) || (nType == TYPE_BOOLEAN));
+        return ((nType == TYPE_INTEGER)
+		    || (nType == TYPE_LONG)
+		    || (nType == TYPE_BOOLEAN));
         break;
     case EXPR_CHAR:
-        return ((nType == TYPE_INTEGER) || (nType == TYPE_CHAR));
+        return ((nType == TYPE_INTEGER)
+		    || (nType == TYPE_LONG)
+		    || (nType == TYPE_CHAR));
         break;
     case EXPR_STRING:
         return (nType == TYPE_CHAR_ASTERISK);
@@ -194,3 +198,33 @@ void CFEExpression::Serialize(CFile * pFile)
         }
     }
 }
+
+/** \brief print the object to a string
+ *  \return a string with the content of the object
+ */
+String CFEExpression::ToString()
+{
+    String ret;
+	switch (m_nType)
+	{
+	case EXPR_STRING:
+		ret = m_String;
+		break;
+	case EXPR_CHAR:
+		ret = String(m_Char);
+		break;
+	case EXPR_NULL:
+	    ret = "null";
+		break;
+	case EXPR_TRUE:
+	    ret = "true";
+		break;
+	case EXPR_FALSE:
+	    ret = "false";
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+

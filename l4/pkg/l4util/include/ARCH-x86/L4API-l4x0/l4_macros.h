@@ -5,8 +5,9 @@
  * \brief  Some useful generic macros, L4 x0 version
  *
  * \date   11/12/2002
- * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
+ * \author Lars Reuther <reuther@os.inf.tu-dresden.de> */
+
+/*
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *

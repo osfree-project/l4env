@@ -16,7 +16,6 @@ IMPLEMENTATION[arch]:
 #include <cstring>
 #include <cstdio> // for debug printf's
 
-
 static Kernel_info *boot_info_kip;
 
 IMPLEMENT
@@ -49,15 +48,8 @@ void Boot_info::init()
 
 #if 0
   kmbi = *(multiboot_info *)(phys_to_virt(get_mbi_pa()));
-  if (kmbi.flags & MULTIBOOT_CMDLINE)
-    {
-      strncpy(_cmdline, static_cast<char*>(phys_to_virt(kmbi.cmdline)),
-	      sizeof(_cmdline));
-      _cmdline[sizeof(_cmdline) - 1] = 0;
-    }
-  else
+  
+   Cmdline::init (kmbi.flags & MULTIBOOT_CMDLINE ?
+                 static_cast<char*>(phys_to_virt (kmbi.cmdline)) : "");
 #endif
-    _cmdline[0] = 0;
-
-
 }

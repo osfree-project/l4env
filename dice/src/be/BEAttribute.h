@@ -5,7 +5,7 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -73,7 +73,7 @@ protected:
    *	\param src the source to copy from
    */
   CBEAttribute(CBEAttribute & src);
-  
+
 public:
     virtual CBEDeclarator * GetNextIsAttribute(VectorElement * &pIter);
     virtual VectorElement *GetFirstIsAttribute();
@@ -86,6 +86,8 @@ public:
     virtual CObject * Clone();
     virtual CBEDeclarator* FindIsParameter(String sName);
     virtual String GetString();
+	virtual int GetRemainingNumberOfIsAttributes(VectorElement *pIter);
+	virtual CBEType* GetAttrType();
 
 protected:
     virtual bool CreateBackEndInt(CFEIntAttribute * pFEIntAttribute, CBEContext * pContext);
@@ -127,7 +129,7 @@ protected:
    *	\brief the value of the String attribute
    */
   String m_sString;
-  /**	\var CBEType m_pType 
+  /**	\var CBEType m_pType
    *	\brief contains the type of the type attribute
    */
   CBEType *m_pType;
@@ -142,4 +144,3 @@ protected:
 };
 
 #endif				//*/ !__DICE_BEATTRIBUTE_H__
-

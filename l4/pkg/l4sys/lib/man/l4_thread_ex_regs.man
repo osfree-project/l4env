@@ -12,10 +12,10 @@
 \fBstatic inline void\fP 
 .br
 \fBl4_thread_ex_regs(l4_threadid_t \fP \fIdest\fP \fB,
-dword_t \fP \fIeip\fP \fB, dword_t \fP \fIesp\fP \fB,
+l4_umword_t \fP \fIeip\fP \fB, l4_umword_t \fP \fIesp\fP \fB,
 l4_threadid_t \fP \fI*preempter\fP \fB, l4_threadid_t\fP \fI*pager\fP
-\fB, dword_t \fP \fI*old_eflags\fP \fB, dword_t\fP \fI*old_eip\fP
-\fB, dword_t \fP \fI*old_esp\fP \fB);\fP
+\fB, l4_umword_t \fP \fI*old_eflags\fP \fB, l4_umword_t\fP \fI*old_eip\fP
+\fB, l4_umword_t \fP \fI*old_esp\fP \fB);\fP
 
 .SH " Description"
 The \fBl4_thread_ex_regs()\fP system call reads and writes user\-level 

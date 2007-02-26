@@ -1,39 +1,29 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/src/pci.c
+ * \file   l4io/server/src/pci.c
+ * \brief  L4Env l4io I/O Server PCI module (wrapper to PCIlib)
  *
- * \brief	L4Env l4io I/O Server PCI module (wrapper to PCIlib)
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/env/errno.h>
 #include <l4/sys/types.h>
 #include <l4/generic_io/types.h>
-#include <l4/generic_io/generic_io-server.h>	/* FLICK IPC interface */
+#include <l4/generic_io/generic_io-server.h>	/* IDL IPC interface */
 
 /* local includes */
 #include "io.h"
 #include "pci.h"
 #include "pcilib.h"
+#include "pcilib_pci.h"
 #include "__config.h"
 #include "__macros.h"
 
@@ -43,37 +33,33 @@ static inline void * _pci_get_addr(l4_io_pdev_t pdev)
   return pci_find_slot(pdev>>8, pdev&0xff);
 }
 
-/*****************************************************************************/
-/**
- * \name Find PCI Devices (IPC interface)
+/** \name Find PCI Devices (IPC interface)
  *
  * Locate PCI devices based on their properties.
  *
  * We use busno:devfn as PCI device handle. 
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Locate PCI device according to vendor and device id.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  vendor_id	vendor id of PCI device
- * \param  device_id	device id of PCI device
- * \param  start_at	maybe start at this previously found device
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  vendor_id		vendor id of PCI device
+ * \param  device_id		device id of PCI device
+ * \param  start_at		maybe start at this previously found device
  *
- * \retval pci_dev	PCI device found
- * \retval _ev		exception vector (unused)
+ * \retval pci_dev		PCI device found
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_find_device(sm_request_t * request,
-			     l4_uint16_t vendor_id, l4_uint16_t device_id,
-			     l4_io_pdev_t start_at,
-			     l4_io_pci_dev_t * pci_dev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_find_device_component(CORBA_Object _dice_corba_obj,
+                                          l4_uint16_t vendor_id,
+                                          l4_uint16_t device_id,
+                                          l4_io_pdev_t start_at,
+                                          l4_io_pci_dev_t *pci_dev,
+                                          CORBA_Environment *_dice_corba_env)
 {
   void *from, *pdev;
   unsigned int vendor = vendor_id;
@@ -103,7 +89,7 @@ l4_io_server_pci_find_device(sm_request_t * request,
     }
 
   memset(pci_dev, 0, sizeof(l4_io_pci_dev_t));
-  pci_dev->handle = pci_linux_to_io(pdev, (void *) pci_dev);
+  pci_dev->handle = PCI_linux_to_io(pdev, (void *) pci_dev);
 
 #if DEBUG_PCI
   printf("successfull (pdev=%x:%02x.%x)\n",
@@ -113,24 +99,23 @@ l4_io_server_pci_find_device(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Locate PCI device according to bus and slot info.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  bus		bus number
- * \param  slot		slot number
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  bus			bus number
+ * \param  slot			slot number
  *
- * \retval pci_dev	PCI device found
- * \retval _ev		exception vector (unused)
+ * \retval pci_dev		PCI device found
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_find_slot(sm_request_t * request,
-			   l4_uint32_t bus, l4_uint32_t slot,
-			   l4_io_pci_dev_t * pci_dev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_find_slot_component(CORBA_Object _dice_corba_obj,
+                                         l4_uint32_t bus,
+                                         l4_uint32_t slot,
+                                         l4_io_pci_dev_t *pci_dev,
+                                         CORBA_Environment *_dice_corba_env)
 {
   void *pdev;
 
@@ -149,7 +134,7 @@ l4_io_server_pci_find_slot(sm_request_t * request,
     }
 
   memset(pci_dev, 0, sizeof(l4_io_pci_dev_t));
-  pci_dev->handle = pci_linux_to_io(pdev, (void *) pci_dev);
+  pci_dev->handle = PCI_linux_to_io(pdev, (void *) pci_dev);
 
 #if DEBUG_PCI
   DMSG("successfull (pdev=%x:%02x.%x)\n",
@@ -159,25 +144,23 @@ l4_io_server_pci_find_slot(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Locate PCI device according to device class id.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  class_id	device class id of PCI device
- * \param  start_at	maybe start at this previously found device
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  class_id		device class id of PCI device
+ * \param  start_at		maybe start at this previously found device
  *
- * \retval pci_dev	PCI device found
- * \retval _ev		exception vector (unused)
+ * \retval pci_dev		PCI device found
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_find_class(sm_request_t * request,
-			    l4_uint32_t class_id,
-			    l4_io_pdev_t start_at,
-			    l4_io_pci_dev_t * pci_dev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_find_class_component(CORBA_Object _dice_corba_obj,
+                                          l4_uint32_t class_id,
+                                          l4_io_pdev_t start_at,
+                                          l4_io_pci_dev_t *pci_dev,
+                                          CORBA_Environment *_dice_corba_env)
 {
   void *from, *pdev;
   unsigned int class = class_id;
@@ -203,7 +186,7 @@ l4_io_server_pci_find_class(sm_request_t * request,
     }
 
   memset(pci_dev, 0, sizeof(l4_io_pci_dev_t));
-  pci_dev->handle = pci_linux_to_io(pdev, (void *) pci_dev);
+  pci_dev->handle = PCI_linux_to_io(pdev, (void *) pci_dev);
 
 #if DEBUG_PCI
   DMSG("successfull (pdev=%x:%02x.%x)\n",
@@ -212,35 +195,29 @@ l4_io_server_pci_find_class(sm_request_t * request,
 
   return 0;
 }
-
 /** @} */
-/*****************************************************************************/
-/**
- * \name Read PCI Configuration Space (IPC interface)
+/** \name Read PCI Configuration Space (IPC interface)
  *
  * Read the PCI configuration space portions (byte, word, dword).
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Read one byte of PCI configuration space.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
  *
- * \retval val		content of configuration register
- * \retval _ev		exception vector (unused)
+ * \retval val			content of configuration register
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_read_config_byte(sm_request_t * request,
-				  l4_io_pdev_t pdev,
-				  l4_int32_t offset, l4_uint8_t * val,
-				  sm_exc_t * _ev)
+l4_int32_t l4_io_pci_read_config_byte_component(CORBA_Object _dice_corba_obj,
+                                                l4_io_pdev_t pdev,
+                                                l4_int32_t offset,
+                                                l4_uint8_t *val,
+                                                CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -254,25 +231,23 @@ l4_io_server_pci_read_config_byte(sm_request_t * request,
   return pci_read_config_byte(pci_dev, offset, val);
 }
 
-/*****************************************************************************/
 /** Read one word of PCI configuration space
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
  *
- * \retval val		content of configuration register
- * \retval _ev		exception vector (unused)
+ * \retval val			content of configuration register
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_read_config_word(sm_request_t * request,
-				  l4_io_pdev_t pdev,
-				  l4_int32_t offset, l4_uint16_t * val,
-				  sm_exc_t * _ev)
+l4_int32_t l4_io_pci_read_config_word_component(CORBA_Object _dice_corba_obj,
+                                                l4_io_pdev_t pdev,
+                                                l4_int32_t offset,
+                                                l4_uint16_t *val,
+                                                CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -286,25 +261,23 @@ l4_io_server_pci_read_config_word(sm_request_t * request,
   return pci_read_config_word(pci_dev, offset, val);
 }
 
-/*****************************************************************************/
 /** Read one double word of PCI configuration space.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
  *
- * \retval val		content of configuration register
- * \retval _ev		exception vector (unused)
+ * \retval val			content of configuration register
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_read_config_dword(sm_request_t * request,
-				   l4_io_pdev_t pdev,
-				   l4_int32_t offset, l4_uint32_t * val,
-				   sm_exc_t * _ev)
+l4_int32_t l4_io_pci_read_config_dword_component(CORBA_Object _dice_corba_obj,
+                                                 l4_io_pdev_t pdev,
+                                                 l4_int32_t offset,
+                                                 l4_uint32_t *val,
+                                                 CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -317,11 +290,8 @@ l4_io_server_pci_read_config_dword(sm_request_t * request,
 
   return pci_read_config_dword(pci_dev, offset, val);
 }
-
 /** @} */
-/*****************************************************************************/
-/**
- * \name Modify PCI Configuration Space (IPC interface)
+/** \name Modify PCI Configuration Space (IPC interface)
  *
  * Write portions of PCI configuration space (bytes, word, dwords).
  *
@@ -329,27 +299,24 @@ l4_io_server_pci_read_config_dword(sm_request_t * request,
  * altered. Implementation.
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Write one byte into PCI configuration space.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
- * \param  val		configuration register modifier
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
+ * \param  val			configuration register modifier
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_write_config_byte(sm_request_t * request,
-				   l4_io_pdev_t pdev,
-				   l4_int32_t offset, l4_uint8_t val,
-				   sm_exc_t * _ev)
+l4_int32_t l4_io_pci_write_config_byte_component(CORBA_Object _dice_corba_obj,
+                                                 l4_io_pdev_t pdev,
+                                                 l4_int32_t offset,
+                                                 l4_uint8_t val,
+                                                 CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -372,25 +339,23 @@ l4_io_server_pci_write_config_byte(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Write one word into PCI configuration space.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
- * \param  val		configuration register modifier
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
+ * \param  val			configuration register modifier
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_write_config_word(sm_request_t * request,
-				   l4_io_pdev_t pdev,
-				   l4_int32_t offset, l4_uint16_t val,
-				   sm_exc_t * _ev)
+l4_int32_t l4_io_pci_write_config_word_component(CORBA_Object _dice_corba_obj,
+                                                 l4_io_pdev_t pdev,
+                                                 l4_int32_t offset,
+                                                 l4_uint16_t val,
+                                                 CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -413,25 +378,23 @@ l4_io_server_pci_write_config_word(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Write one double word into PCI configuration space.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
- * \param  offset	configuration register
- * \param  val		configuration register modifier
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
+ * \param  offset		configuration register
+ * \param  val			configuration register modifier
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_write_config_dword(sm_request_t * request,
-				    l4_io_pdev_t pdev,
-				    l4_int32_t offset, l4_uint32_t val,
-				    sm_exc_t * _ev)
+l4_int32_t l4_io_pci_write_config_dword_component(CORBA_Object _dice_corba_obj,
+                                                  l4_io_pdev_t pdev,
+                                                  l4_int32_t offset,
+                                                  l4_uint32_t val,
+                                                  CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -453,32 +416,26 @@ l4_io_server_pci_write_config_dword(sm_request_t * request,
 
   return 0;
 }
-
 /** @} */
-/*****************************************************************************/
-/**
- * \name PCI Device Initialization (IPC interface)
+/** \name PCI Device Initialization (IPC interface)
  *
  * Activation, Busmastering and Power Management (PM).
  *
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Initialize device before it's used by a driver.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device to be initialized
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device to be initialized
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_enable_device(sm_request_t * request,
-			       l4_io_pdev_t pdev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_enable_device_component(CORBA_Object _dice_corba_obj,
+                                             l4_io_pdev_t pdev,
+                                             CORBA_Environment *_dice_corba_env)
 {
   int err;
   void *pci_dev =  _pci_get_addr(pdev);
@@ -504,21 +461,19 @@ l4_io_server_pci_enable_device(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Finalize device after use.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_disable_device(sm_request_t * request,
-				l4_io_pdev_t pdev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_disable_device_component(CORBA_Object _dice_corba_obj,
+                                              l4_io_pdev_t pdev,
+                                              CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -534,21 +489,19 @@ l4_io_server_pci_disable_device(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Enable Busmastering for PCI device.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device to be initialized
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device to be initialized
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_set_master(sm_request_t * request,
-			    l4_io_pdev_t pdev, sm_exc_t * _ev)
+l4_int32_t l4_io_pci_set_master_component(CORBA_Object _dice_corba_obj,
+                                          l4_io_pdev_t pdev,
+                                          CORBA_Environment *_dice_corba_env)
 {
   void *pci_dev =  _pci_get_addr(pdev);
 
@@ -565,24 +518,22 @@ l4_io_server_pci_set_master(sm_request_t * request,
   return 0;
 }
 
-/*****************************************************************************/
 /** Set power management state for PCI device.
  * \ingroup grp_pci
  *
- * \param  request	FLICK request structure
- * \param  pdev		PCI device to be initialized
- * \param  state	new PM state (0 == D0, 3 == D3, etc.)
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  pdev			PCI device to be initialized
+ * \param  state		new PM state (0 == D0, 3 == D3, etc.)
  *
- * \retval state	old PM state
- * \retval _ev		exception vector (unused)
+ * \retval state		old PM state
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_pci_set_power_state(sm_request_t * request,
-				 l4_io_pdev_t pdev, l4_int32_t * state,
-				 sm_exc_t * _ev)
+l4_int32_t l4_io_pci_set_power_state_component(CORBA_Object _dice_corba_obj,
+                                               l4_io_pdev_t pdev,
+                                               l4_int32_t *state,
+                                               CORBA_Environment *_dice_corba_env)
 {
   int old;
   void *pci_dev =  _pci_get_addr(pdev);
@@ -601,9 +552,7 @@ l4_io_server_pci_set_power_state(sm_request_t * request,
 
   return 0;
 }
-
 /** @} */
-/*****************************************************************************/
 /** PCI module initialization.
  * \ingroup grp_pci
  *
@@ -611,7 +560,6 @@ l4_io_server_pci_set_power_state(sm_request_t * request,
  *
  * Initialize PCIlib and setup base addresses.
  */
-/*****************************************************************************/
 int io_pci_init()
 {
   return PCI_init();

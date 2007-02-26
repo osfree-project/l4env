@@ -14,28 +14,32 @@ IMPLEMENTATION[ia32-ux]:
 
 #include "kmem.h"
 #include "regdefs.h"
-#include "undef_oskit.h"
 
 // utility functions for mapping flexpages from one address space into another
-
-
 
 
 /** Map the region described by "fp_from" of address space "from" into
     region "fp_to" at offset "offs" of address space "to", updating the
     mapping database as we do so.
     @param from source address space
-    @param fp_from flexpage descriptor for virtual-address space range
-                   in source address space
+    @param fp_from_{page, size, write, grant} flexpage description for 
+	virtual-address space range in source address space
     @param to destination address space
-    @param fp_to flexpage descriptor for virtual-address space range
-                 in destination address space
+    @param fp_to_{page, size} flexpage descripton for virtual-address 
+	space range in destination address space
     @param offs sender-specified offset into destination flexpage
     @pre page_aligned(offs)
     @return IPC error code that describes the status of the operation
  */
-L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to, 
-			 L4_fpage fp_to, Address offs)
+L4_msgdope mem_map(Space *from, 
+		   Address fp_from_page,
+		   Mword fp_from_size,
+		   bool fp_from_write,
+		   bool fp_from_grant,
+		   Space *to, 
+		   Address fp_to_page,
+		   Mword fp_to_size,
+		   Address offs)
 {
   assert((offs & ~Config::PAGE_MASK) == 0);
 
@@ -44,7 +48,7 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
   L4_msgdope condition(0);
 
   // compute virtual address space regions for this operation
-  size_t snd_size = fp_from.size();
+  size_t snd_size = fp_from_size;
   size_t snd_size_mask;
   if (snd_size >= 32)
     {
@@ -57,13 +61,13 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
       snd_size_mask = ~(snd_size - 1);
     }
   Address snd_start = Config::backward_compatibility
-    ? fp_from.page() & snd_size_mask // size aligment
-    : fp_from.page() & Config::PAGE_MASK;
+    ? fp_from_page & snd_size_mask // size aligment
+    : fp_from_page & Config::PAGE_MASK;
 
   if (Config::backward_compatibility)
     offs &= snd_size_mask;
   
-  size_t rcv_size = fp_to.size();
+  size_t rcv_size = fp_to_size;
   size_t rcv_size_mask;
   if (rcv_size >= 32)
     {
@@ -76,14 +80,14 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
       rcv_size_mask = ~(rcv_size - 1);
     }
   Address rcv_start = Config::backward_compatibility
-    ? fp_to.page() & rcv_size_mask // size aligment
-    : fp_to.page() & Config::PAGE_MASK;
+    ? fp_to_page & rcv_size_mask // size aligment
+    : fp_to_page & Config::PAGE_MASK;
   
   // loop variables
   Address rcv_addr = rcv_start + (offs & ~rcv_size_mask);
   Address snd_addr = snd_start;
 
-  bool is_sigma0 = (from->space() == Config::sigma0_taskno);
+  bool is_sigma0 = from->is_sigma0();
 
   if (snd_size == 0 || rcv_size == 0)
     {
@@ -119,8 +123,7 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
       size_t  size;
       unsigned page_flags;
 
-      if ((is_sigma0 
-	   || from->v_lookup(snd_addr, &phys, &size, &page_flags)))
+      if (is_sigma0 || from->v_lookup(snd_addr, &phys, &size, &page_flags))
 	{
 	  // we have a mapping in the sender's address space
 	  // locate the corresponding entry in the mapping data base
@@ -138,8 +141,8 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 		  size = Config::PAGE_SIZE;
 		}
 
-	      page_flags = Space::Page_writable 
-		| Space::Page_user_accessible;
+	      page_flags = Space::Page_writable
+			 | Space::Page_user_accessible;
 
 	      // for IPC mapping purposes, sigma0 addresses from
 	      // 0x40000000 .. 0xC0000000-1 are shifted to 0x80000000
@@ -176,14 +179,14 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 		  // because we currently can only give out 4K
 		  // mappings from a single 4M mapping.
 
-		  if (fp_from.grant())
+		  if (fp_from_grant)
 		    {
 		      printf("KERNEL: XXX can't grant from 4M page "
 			     "(%x: %08x -> %x: %08x)\n", 
-			     (unsigned int)from->space(), fp_from.raw(),
-			     (unsigned int)to->space(),   fp_to.raw());
+			     (unsigned int)from->space(), fp_from_page,
+			     (unsigned int)to->space(),   fp_to_page);
 		      kdb_ke("XXX");
-		      fp_from.grant( 0 );
+		      // fp_from.grant( 0 );
 		    }
 
 		  size = Config::PAGE_SIZE;
@@ -230,7 +233,7 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	      // mapping is a child of our's
 
 #ifdef MAPDB_RAM_ONLY
-	      if (phys < Kmem::info()->main_memory.high)// XXX mapdb limitation
+	      if (phys < Kmem::info()->main_memory_high())// XXX mapdb limitation
 		{
 #endif
 		  assert (phys == to->virt_to_phys(rcv_addr));
@@ -254,13 +257,13 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	  else
 	    {
 #ifdef MAPDB_RAM_ONLY
-	      if (phys < Kmem::info()->main_memory.high)// XXX mapdb limitation
+	      if (phys < Kmem::info()->main_memory_high())// XXX mapdb limitation
 		{
 #endif
 		  // look up the parent mapping in the mapping data base; this
 		  // also locks the mapping tree for this page frame
 		  assert (phys == parent->virt_to_phys(parent_addr));
-		  pm = mapdb->lookup(parent->space(), parent_addr, 
+		  pm = mapdb->lookup(parent->space(), parent_addr,
 				     phys);
 		  
 		  if (! pm)
@@ -276,10 +279,10 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	    }
 
 
-	  if (! fp_from.write())
+	  if (! fp_from_write)
 	    page_flags &= ~ Space::Page_writable;
 
-	  Space::status_t status =
+	  Space::Status status =
 	    to->v_insert(phys, rcv_addr, size, page_flags);
 
 	  switch (status)
@@ -293,10 +296,10 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	      // different source page.  This could lead to spurious
 	      // flushes when one of the mappings is unmapped.
 
-	      if (fp_from.grant())
+	      if (fp_from_grant)
 		{
 #ifdef MAPDB_RAM_ONLY		// XXX mapdb limitation
-		  if (phys < Kmem::info()->main_memory.high)
+		  if (phys < Kmem::info()->main_memory_high())
 		    {
 #endif
 		      mapdb->grant(pm, to->space(), rcv_addr);
@@ -309,7 +312,7 @@ L4_msgdope mem_fpage_map(Space *from, L4_fpage fp_from, Space *to,
 	      else if (status == Space::Insert_ok)
 		{
 #ifdef MAPDB_RAM_ONLY		// XXX mapdb limitation
-		  if (phys < Kmem::info()->main_memory.high)
+		  if (phys < Kmem::info()->main_memory_high())
 		    {
 #endif
 		      if (mapdb->insert(pm, to->space(), 
@@ -438,7 +441,7 @@ void mem_fpage_unmap(Space *space, L4_fpage fp, bool me_too,
 	}
 
 #ifdef MAPDB_RAM_ONLY
-      if (phys >= Kmem::info()->main_memory.high)
+      if (phys >= Kmem::info()->main_memory_high())
 	{
 	  if (me_too)
 	    {
@@ -499,7 +502,7 @@ void mem_fpage_unmap(Space *space, L4_fpage fp, bool me_too,
 	       m;
 	       m = m->next_child(parent))
 	    {
-	      Space* child_space = Space_index(m->space()).lookup();
+	      Space* child_space = m->space_ptr();
 
 	      child_space->v_delete(m->vaddr(), m->size(), flush_mode);
               
@@ -517,14 +520,14 @@ void mem_fpage_unmap(Space *space, L4_fpage fp, bool me_too,
 	    }
 
 	  Mapping *locked = 
-	    (parent->space() == Config::sigma0_taskno) 
+	    // NOTE: Don't use parent->space_ptr()->is_sigma0() here.
+	    // Sigma0 may already be deleted from space index.
+	    parent->space_is_sigma0()
 	    ? parent : parent->parent();
 
 	  if (!only_read_only)
 	    {
-	      mapdb->flush(parent, 
-			   me_too && !(parent->space() 
-				       == Config::sigma0_taskno));
+	      mapdb->flush(parent, me_too && !parent->space_is_sigma0());
 	    }
 
 	  mapdb->free(locked);
@@ -545,43 +548,10 @@ void mem_fpage_unmap(Space *space, L4_fpage fp, bool me_too,
  */
 Mapdb *mapdb_instance()
 {
-  static Mapdb mapdb (0, Kmem::info()->main_memory.high);
+  static Mapdb mapdb (0, Kmem::info()->main_memory_high());
   return &mapdb;
 }
 
-
-/** Flexpage mapping.
-    divert to mem_fpage_map (for memory fpages) or 
-    io_fpage_map (for IO fpages)
-    @param from source address space
-    @param fp_from flexpage descriptor for virtual-address space range
-                   in source address space
-    @param to destination address space
-    @param fp_to flexpage descriptor for virtual-address space range
-                 in destination address space
-    @param offs sender-specified offset into destination flexpage
-    @pre page_aligned(offs)
-    @return IPC error code that describes the status of the operation
-*/
-inline NEEDS ["config.h"]
-L4_msgdope fpage_map(Space *from, L4_fpage fp_from, Space *to, 
-		     L4_fpage fp_to, vm_offset_t offs)
-{
-  L4_msgdope result(0);
-
-  if(Config::enable_io_protection &&
-     (fp_from.is_iopage()       // an IO flex page ?? or everything ??
-      || fp_from.is_whole_space()))
-    {
-      result.combine(io_fpage_map(from, fp_from, to, fp_to));
-    }
-  
-  if(!Config::enable_io_protection || !fp_from.is_iopage())
-    {
-      result.combine( mem_fpage_map(from, fp_from, to, fp_to, offs) );
-    }
-  return result;
-}
 
 
 /** Flexpage unmapping.
@@ -612,144 +582,4 @@ fpage_unmap(Space *space, L4_fpage fp, bool me_too, bool only_read_only)
       mem_fpage_unmap(space, fp, me_too, only_read_only);
     }
 }
-
-
-
-/** Map the IO port region described by "fp_from" of address space "from" 
-    into address space "to". IO ports can only be mapped idempotently, 
-    therefore there is no offset for fp_from and only those ports are mapped 
-    that lay in the intersection of fp_from and fp_to
-    @param from source address space
-    @param fp_from IO flexpage descriptor for IO space range
-                   in source IO space
-    @param to destination address space
-    @param fp_to IO flexpage descriptor for IO space range
-                 in destination IO space
-    @return IPC error code that describes the status of the operation
- */
-L4_msgdope io_fpage_map(Space *from, L4_fpage fp_from, Space *to, L4_fpage fp_to)
-{
-  L4_msgdope condition(0);
-  
-/*   printf("io_map %u -> %u "
- * 	    "snd %08x base %x size %x rcv %08x base %x size %x\n",
- * 	    (unsigned)from->space(), (unsigned)to->space(),
- * 	    fp_from.fpage, 
- * 	    fp_from.iofp.iopage, fp_from.iofp.iosize,
- * 	    fp_to.fpage, 
- * 	    fp_to.iofp.iopage, fp_to.iofp.iosize);
- *   kdb_ke("io_fpage_map 1");
- */
-
-  if(!fp_to.is_iopage() // ordinary memory fpage on receiver
-     && !fp_to.is_whole_space())
-    {				// but not complete address space
-      return L4_msgdope(0);		// in this case: do nothing
-    }
-
-  // if fp_from == whole address space 
-  // than try to map the full IO address space
-  if(fp_from.is_whole_space())
-    fp_from = L4_fpage::io(0, L4_fpage::WHOLE_IO_SPACE, fp_from.grant());
-
-  // compute end of sender window
-  vm_offset_t snd_size = 
-    fp_from.size() < L4_fpage::WHOLE_IO_SPACE ?
-    fp_from.size() : (Mword)L4_fpage::WHOLE_IO_SPACE;
-
-  vm_offset_t snd_end = fp_from.iopage() + (1L << snd_size);
-  if(snd_end > L4_fpage::IO_PORT_MAX)
-    snd_end = L4_fpage::IO_PORT_MAX;
-    
-  // loop variable: current sending position
-  vm_offset_t snd_pos = fp_from.iopage(); 
-
-  if(fp_to.is_iopage())	// valid IO page for receiver ?
-    {				// need to adjust snd_pos & snd_end
-      
-      // snd_pos : take the max of fp_from & fp_to
-      if(snd_pos < fp_to.iopage())
-	snd_pos = fp_to.iopage(); 
-
-      vm_offset_t rcv_win = 
-	fp_to.size() < L4_fpage::WHOLE_IO_SPACE ?
-	(1L << fp_to.size()) : (Mword)L4_fpage::IO_PORT_MAX;
-
-      // snd_end : take min of fp_from & fp_to
-      if( snd_end > fp_to.iopage() + rcv_win)
-	snd_end = fp_to.iopage() + rcv_win;
-    }
-
-  assert(snd_pos < L4_fpage::IO_PORT_MAX);
-
-  // loop variable to hold an IO port 
-  bool snd_ports;
-
-  bool is_sigma0 = (from->space() == Config::sigma0_taskno);
-
-  // Loop now and do the mapping
-  while(snd_pos < snd_end)
-    {
-      if(is_sigma0)
-	snd_ports = true;
-      else
-	snd_ports = from->io_lookup(snd_pos);
-
-      // do something if sender has mapped something and receiver has nothing
-      if(snd_ports && ! to->io_lookup(snd_pos) )
-	{
-	  Space::status_t status = to->io_insert(snd_pos);
-	  
-	  switch(status)
-	    {
-	    case Space::Insert_ok:
-
-	      if (fp_from.grant())
-		{
-		  from->io_delete(snd_pos);
-		}
-	      condition.fpage_received(1);
-	      break;
-	      
-	    case Space::Insert_err_nomem:
-	      condition.error(L4_msgdope::REMAPFAILED);
-	      break;
-	      
-	    default:		// io_insert does not deliver anything else
-	      assert(false);
-	    }
-
-	  if (condition.has_error())
-	    return condition;
-	}
-      
-      // increase loop variable
-      snd_pos ++;
-    }
-
-  return condition;
-}
-
-
-/** Unmap IO mappings.
-    Unmap the region described by "fp" from the IO
-    space "space" and/or the IO spaces the mappings have been
-    mapped into. 
-    XXX not implemented yet
-    @param space address space that should be flushed
-    @param fp    IO flexpage descriptor of IO-space range that should
-                 be flushed
-    @param me_too If flase, only flush recursive mappings.  If false, 
-                 additionally flush the region in the given address space.
-    @return true if successful
-*/
-void
-io_fpage_unmap(Space *space, L4_fpage fp, bool /*me_too*/)
-{
-  printf("KERNEL: XXX can't flush IO pages (task %x: fp=%08x)\n",
-	 (unsigned)space->space(), fp.raw());
-  kdb_ke("XXX");
-}
-
-
 

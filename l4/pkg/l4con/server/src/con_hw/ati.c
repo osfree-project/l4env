@@ -1,3 +1,15 @@
+/*!
+ * \file	ati.c
+ * \brief	Hardware Acceleration for ATI Mach64 cards
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 /* most stuff taken from Linux 2.2.21: driver/video/atyfb.c */
 
 #include <stdio.h>
@@ -57,7 +69,7 @@ static struct aty_features aty_features[] =
     { 0x4c4e, 0x4c4e, "3D RAGE Mobility (AGP)" },
 };
 
-static struct pci_device_id ati_pci_tbl[] __init =
+static const struct pci_device_id ati_pci_tbl[] __init =
 {
     {PCI_VENDOR_ID_ATI, 0, 0, 0, 0},
     {0, 0, 0, 0, 0}
@@ -365,7 +377,7 @@ ati_sync(void)
     wait_for_idle();
 }
 
-static void
+static int
 ati_init(void)
 {
   unsigned chip_id;
@@ -383,16 +395,17 @@ ati_init(void)
       }
   
   if (!chipname)
-    printf("Unknown mach64 0x%04x", Gx);
-  else
-    printf("Found ATI %s [0x%04x rev 0x%02x]", chipname, Gx, Rev);
+    return 0;
 
-  printf(" (PCI %02x/%02x)\n", ati_pci_bus, ati_pci_devfn);
+  printf("Found ATI %s [0x%04x rev 0x%02x] (PCI %02x/%02x)\n", 
+        chipname, Gx, Rev, ati_pci_bus, ati_pci_devfn);
+
+  return 1;
 }
 
 static int
 ati_probe(unsigned int bus, unsigned int devfn,
-	  struct pci_device_id *dev, con_accel_t *accel)
+	  const struct pci_device_id *dev, con_accel_t *accel)
 {
   unsigned int addr;
   unsigned short tmp;
@@ -424,10 +437,6 @@ ati_probe(unsigned int bus, unsigned int devfn,
       return -L4_ENOTFOUND;
     }
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, "video",
-		 &hw_map_vid_mem_addr)<0)
-    return -L4_ENOTFOUND;
-
   if (map_io_mem(addr, 0x1000, "ctrl", &ati_regbase)<0)
     return -L4_ENOTFOUND;
 
@@ -435,8 +444,17 @@ ati_probe(unsigned int bus, unsigned int devfn,
   ati_pci_devfn = devfn;
   ati_regbase += 0x400;
 
-  ati_init();
+  if (!ati_init())
+    {
+      unmap_io_mem(addr, 0x1000, "ctrl", ati_regbase-0x400);
+      return -L4_ENOTFOUND;
+    }
+
   init_engine();
+
+  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, "video",
+		 &hw_map_vid_mem_addr)<0)
+    return -L4_ENOTFOUND;
 
   accel->copy = ati_bmove;
   accel->fill = ati_fill;

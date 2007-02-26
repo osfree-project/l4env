@@ -4,7 +4,7 @@ SECTIONS
 {
   .text :
     {
-      *(.text)
+      *(.text .text.*)
     }
   .data :
     {

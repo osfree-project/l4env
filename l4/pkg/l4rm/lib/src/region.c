@@ -6,23 +6,13 @@
  *
  * \date   06/01/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -269,9 +259,7 @@ __find_region(l4rm_region_desc_t * rp)
     /* invalid address region */
     return NULL;
 
-#if DEBUG_REGION_FIND
-  INFO("L4RM: find <0x%08x-0x%08x>\n",rp->start,rp->end);
-#endif
+  LOGdL(DEBUG_REGION_FIND,"L4RM: find <0x%08x-0x%08x>",rp->start,rp->end);
 
   /* find region descriptor the new region fits into */
   while (tmp && (tmp->end < rp->start))
@@ -284,7 +272,7 @@ __find_region(l4rm_region_desc_t * rp)
     }
 
 #if DEBUG_REGION_FIND
-  DMSG("  found <0x%08x-0x%08x>\n",tmp->start,tmp->end);
+  printf("  found <0x%08x-0x%08x>\n",tmp->start,tmp->end);
 #endif
 
   if (rp->end > tmp->end)
@@ -332,9 +320,7 @@ l4rm_init_regions(void)
   SET_FREE(head);
   SET_AREA(head,L4RM_DEFAULT_REGION_AREA);
 
-#if DEBUG_REGION_INIT
-  INFO("L4RM: vm 0x%08x-0x%08x\n",head->start,head->end + 1);
-#endif
+  LOGdL(DEBUG_REGION_INIT,"L4RM: vm 0x%08x-0x%08x",head->start,head->end + 1);
 
   /* done */
   return 0;
@@ -361,19 +347,16 @@ l4rm_insert_region(l4rm_region_desc_t * region)
 {
   l4rm_region_desc_t * rp;
 
-#if DEBUG_REGION_INSERT
-  INFO("\n");
-  DMSG("  region <0x%08x-0x%08x>\n",region->start,region->end);
-  DMSG("  area 0x%05x\n",REGION_AREA(region));
-#endif
-
+  LOGdL(DEBUG_REGION_INSERT,"\n  region <0x%08x-0x%08x>\n  area 0x%05x",
+        region->start,region->end,REGION_AREA(region));
+  
   rp = __find_region(region);
   if (rp == NULL)
     /* invalid region */
     return -L4_EUSED;
 
 #if DEBUG_REGION_INSERT
-  DMSG("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
+  printf("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
 #endif
 
   if (IS_ATTACHED_REGION(rp))
@@ -405,6 +388,9 @@ l4rm_free_region(l4rm_region_desc_t * region)
   /* mark region free */
   SET_FREE(region);
 
+  if (REGION_AREA(region) != L4RM_DEFAULT_REGION_AREA)
+    SET_RESERVED(region);
+
   /* modify region list */
   return __modify_region(region,region->flags);
 }
@@ -427,11 +413,8 @@ l4rm_insert_area(l4rm_region_desc_t * region)
 {
   l4rm_region_desc_t * rp;
 
-#if DEBUG_REGION_INSERT
-  INFO("\n");
-  DMSG("  region <0x%08x-0x%08x>\n",region->start,region->end);
-  DMSG("  area 0x%05x\n",REGION_AREA(region));
-#endif
+  LOGdL(DEBUG_REGION_INSERT,"\n  region <0x%08x-0x%08x>\n  area 0x%05x",
+        region->start,region->end,REGION_AREA(region));
 
   rp = __find_region(region);
   if (rp == NULL)
@@ -439,7 +422,7 @@ l4rm_insert_area(l4rm_region_desc_t * region)
     return -L4_EINVAL;
 
 #if DEBUG_REGION_INSERT
-  DMSG("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
+  printf("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
 #endif
 
   if (IS_ATTACHED_REGION(rp))
@@ -526,7 +509,7 @@ l4rm_find_free_region(l4_size_t size,
   if (flags & L4RM_LOG2_ALIGNED)
     {
       /* calculate alignment */
-      align = bsr(size);
+      align = l4util_log2(size);
       if (size > (1UL << align))
 	align++;
 
@@ -629,28 +612,28 @@ l4rm_show_region_list(void)
 {
   l4rm_region_desc_t * rp = head;
 
-  Msg("region list:\n");
+  printf("region list:\n");
   while (rp)
     {
-      Msg("  area 0x%05x: 0x%08x - 0x%08x [%7dKiB]:",
-	  REGION_AREA(rp),rp->start,rp->end, (rp->end - rp->start + 1) >> 10);
+      printf("  area 0x%05x: 0x%08x - 0x%08x [%7dKiB]:",
+             REGION_AREA(rp),rp->start,rp->end, (rp->end - rp->start + 1) >> 10);
       if (IS_ATTACHED_REGION(rp))
-	Msg(" %2d at %2x.%x\n",
-	    rp->ds.id,rp->ds.manager.id.task,rp->ds.manager.id.lthread);
+	printf(" %2d at %2x.%x\n",
+               rp->ds.id,rp->ds.manager.id.task,rp->ds.manager.id.lthread);
       else if (IS_FREE_REGION(rp) || IS_RESERVED_AREA(rp))
 	{
 	  if (IS_RESERVED_AREA(rp))
-	    Msg(" reserved");
+	    printf(" reserved");
 
 	  if (IS_FREE_REGION(rp))
-	    Msg(" free");
+	    printf(" free");
 
-	  Msg("\n");
+	  printf("\n");
 	}
       else
-	Msg(" unknown\n");
+	printf(" unknown\n");
 
       rp = rp->next;
     }
-  Msg("\n");
+  printf("\n");
 }

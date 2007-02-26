@@ -91,6 +91,19 @@ public:
 
   /// numer of words transmitted in registers
   static unsigned const num_reg_words();
+
+  /// Has this IPC an absolute send timeout?
+  Mword has_abs_snd_timeout() const;
+
+  /// The clock bit of the absolute send timeout.
+  Mword abs_snd_clock() const;
+
+  /// Has this IPC an absolute recieve timeout?
+  Mword has_abs_rcv_timeout() const;
+
+  /// The clock bit of the absolute reveive timeout.
+  Mword abs_rcv_clock() const;
+
 };
 
 /**
@@ -103,8 +116,11 @@ public:
   /// get the dest parameter of the syscall
   L4_uid dest() const; 
 
+  /// set the return type of the syscall
+  void type( Mword type );
+
   /// set the result of the syscall
-  void nearest( L4_uid id ) ;
+  void nearest( L4_uid id );
 };
 
 /**
@@ -169,6 +185,9 @@ public:
   
   /// get the scheduling parameters
   L4_sched_param param() const;
+
+  /// get scheduling time point
+  Unsigned64 time() const;
 
   /// get the preempter id
   L4_uid preempter() const;
@@ -242,6 +261,16 @@ public:
 
 };
 
+extern "C" void Entry_frame_Syscall_frame_cast_problem();
 
 IMPLEMENTATION:
-//-
+
+inline
+template< typename Cl >
+Cl *sys_frame_cast( Entry_frame *e ) 
+{
+  Cl *r = nonull_static_cast<Cl*>(nonull_static_cast<Syscall_frame*>(e));
+  if(((void*)e) != ((void*)r))
+    Entry_frame_Syscall_frame_cast_problem();
+  return r;
+}

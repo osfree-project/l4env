@@ -8,15 +8,8 @@ enum Mapping_type { Map_mem = 0, Map_io };
 
 struct Mapping_tree;		// forward decls
 class Mapdb_tree;
+class Mapdb_space;
 class Physframe;
-
-struct Mapping_entry
-{
-  unsigned space:11;		///< Address-space number
-  unsigned size:1;		///< 0 = 4K mapping, 1 = 4M mapping
-  unsigned address:20;		///< Virtual address in address space
-  unsigned depth:8;		///< Depth in mapping tree
-} __attribute__((packed));
 
 /** Represents one mapping in a mapping tree.
     Instances of Mapping ("mappings") work as an iterator over a
@@ -34,7 +27,7 @@ class Mapping
 {
   friend class Mapdb;
   friend class Mapping_tree;
-  friend class Jdb;
+  friend class Jdb_mapdb;
   friend struct Physframe;
 
   // CREATORS
@@ -48,10 +41,9 @@ class Mapping
  */
 class Mapdb
 {
+  friend class Jdb_mapdb;
+
 private:
-
-  friend class Jdb;
-
   // DATA
 #if 0
   Mapdb_tree* _tree;
@@ -177,6 +169,7 @@ IMPLEMENTATION:
 #include "helping_lock.h"
 #include "kmem_alloc.h"
 #include "kmem_slab.h"
+#include "std_macros.h"
 
 #ifndef offsetof		// should be defined in stddef.h, but isn't
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -207,7 +200,7 @@ struct Mapping_tree
 
 
 
-enum mapping_depth_t 
+enum Mapping_depth 
 {
   Depth_root = 0, Depth_max = 252, 
   Depth_subtree = 253, Depth_empty = 254, Depth_end = 255 
@@ -224,22 +217,6 @@ Mapping::data()
   return &_data;
 }
 
-/** Address space.
-    @return the address space into which the frame is mapped. 
- */
-PUBLIC inline NEEDS[Mapping::data]
-unsigned 
-Mapping::space()
-{
-  return data()->space;
-}
-
-// undef OSKIT THINGS
-#undef PAGE_SHIFT
-#undef PAGE_SIZE
-#undef SUPERPAGE_SIZE
-
-
 /** Virtual address.
     @return the virtual address at which the frame is mapped.
  */
@@ -254,7 +231,7 @@ Mapping::vaddr()
     @return the size of the page frame -- 4K or 4M.
  */
 PUBLIC inline NEEDS[Mapping::data, "config.h"]
-vm_size_t 
+size_t 
 Mapping::size()
 {
   if ( data()->size ) 
@@ -280,14 +257,14 @@ Mapping::type()
 /** free entry?.
     @return true if this is unused.
  */
-inline NEEDS[mapping_depth_t, Mapping::data]
+inline NEEDS[Mapping_depth, Mapping::data]
 bool
 Mapping::unused()
 {
   return (data()->depth > Depth_subtree);
 }
 
-inline NEEDS[mapping_depth_t, Mapping::data]
+inline NEEDS[Mapping_depth, Mapping::data]
 bool
 Mapping::is_end_tag()
 {
@@ -310,7 +287,7 @@ Mapping::next(const Mapping* end_of_tree)
 }
 
 #if 0
-inline NEEDS[mapping_depth_t, Mapping::data]
+inline NEEDS[Mapping_depth, Mapping::data]
 Mapdb_tree *
 Mapping::subtree()
 {
@@ -424,14 +401,14 @@ Mapping::next_child(Mapping *parent)
 // Mapping-tree allocators
 // 
 
-enum mapping_tree_size_t { 
+enum Mapping_tree_size { 
   Size_factor = 4, 
   Size_id_max = 8 /* can be up to 15 (4 bits) */ 
 };
 
 class mapping_tree_allocators 
 {
-  auto_ptr<kmem_slab_t> _allocator [Size_id_max + 1];
+  auto_ptr<Kmem_slab> _allocator [Size_id_max + 1];
 
   friend class foo;		// Avoid warning about not being constructible
 };
@@ -444,19 +421,19 @@ mapping_tree_allocators::mapping_tree_allocators()
        slab_number++ )
     {
       unsigned elem_size = 
-	(Size_factor << slab_number) * sizeof(Mapping) 
+	(Size_factor << slab_number) * sizeof(Mapping)
 	+ sizeof(Mapping_tree);
 
-      auto_ptr<kmem_slab_t> alloc (
-	new kmem_slab_t(((Config::PAGE_SIZE / elem_size) < 40
+      auto_ptr<Kmem_slab> alloc (
+			  new Kmem_slab(((Config::PAGE_SIZE / elem_size) < 40
 			  ? 8*Config::PAGE_SIZE : Config::PAGE_SIZE),
-			elem_size, 1));
+			elem_size, Mapdb_defs::slab_align));
       _allocator[slab_number] = alloc;
     }
 }
 
 PUBLIC inline
-kmem_slab_t*
+Kmem_slab*
 mapping_tree_allocators::allocator_for_treesize (int size)
 {
   return _allocator[size].get();
@@ -473,7 +450,7 @@ mapping_tree_allocators::instance()
 }  
 
 static inline
-kmem_slab_t*
+Kmem_slab*
 allocator_for_treesize (int size)
 {
   return mapping_tree_allocators::instance().allocator_for_treesize(size);
@@ -503,16 +480,18 @@ Mapping_tree::operator delete (void* block, size_t)
   allocator_for_treesize(t->_size_id)->free(block);
 }
 
-PUBLIC //inline NEEDS[mapping_depth_t, Mapping_tree::last]
-Mapping_tree::Mapping_tree (unsigned size_factor, unsigned page_number)
+PUBLIC //inline NEEDS[Mapping_depth, Mapping_tree::last]
+Mapping_tree::Mapping_tree (unsigned size_factor, unsigned page_number) 
 {
   _count = 1;			// 1 valid mapping
   _size_id = size_factor;	// size is equal to Size_factor << 0
+#ifndef NDEBUG
   _empty_count = 0;		// no gaps in tree representation
+#endif
   
   _mappings[0].data()->depth = Depth_root;
   _mappings[0].data()->address = page_number;
-  _mappings[0].data()->space = Config::sigma0_taskno;
+  _mappings[0].data()->set_space_to_sigma0();
   _mappings[0].data()->size = 0;
 	  
   _mappings[1].data()->depth = Depth_end;
@@ -522,7 +501,7 @@ Mapping_tree::Mapping_tree (unsigned size_factor, unsigned page_number)
   last()->data()->depth = Depth_end;
 }
 
-PUBLIC //inline NEEDS[mapping_depth_t, Mapping_tree::last]
+PUBLIC //inline NEEDS[Mapping_depth, Mapping_tree::last]
 Mapping_tree::Mapping_tree (unsigned size_factor,
 				Mapping_tree* from_tree)
 {
@@ -579,7 +558,9 @@ Mapping_tree::copy_compact_tree(Mapping_tree *dst, Mapping_tree *src)
   assert (src_count < dst->number_of_entries());
 
   dst->_count = 0;
+#ifndef NDEBUG
   dst->_empty_count = 0;
+#endif
   
   Mapping *d = dst->mappings();     
   
@@ -602,10 +583,6 @@ Mapping_tree::copy_compact_tree(Mapping_tree *dst, Mapping_tree *src)
 PUBLIC inline void
 Mapping_tree::check_integrity ()
 {
-  extern void Mapping_entry_has_not_the_size_of_5_bytes();
-  if(sizeof(Mapping_entry)!=5)
-    Mapping_entry_has_not_the_size_of_5_bytes();
-
 #ifndef NDEBUG
   // Sanity checking
   assert (// Either each entry is used
@@ -616,7 +593,7 @@ Mapping_tree::check_integrity ()
   Mapping* m = mappings();
 
   assert (! m->unused()		// The first entry is never unused.
-	  && m->space() == Config::sigma0_taskno
+	  && m->data()->space_is_sigma0()
 	  && m->data()->depth == 0);
 
   unsigned 
@@ -647,7 +624,7 @@ Mapping_tree::check_integrity ()
 class Physframe
 {
   friend class Mapdb;
-  friend class Jdb;
+  friend class Jdb_mapdb;
 
   // DATA
   auto_ptr<Mapping_tree> tree;
@@ -681,7 +658,7 @@ class Physframe
 
   void* operator new [] (size_t size)
   {
-#warning We may waste a bit of memory here
+// XXX: warning We may waste a bit of memory here
     unsigned order;
     order = (size + Config::PAGE_SIZE -1) >> Config::PAGE_SHIFT;
     order = Kmem_alloc::size_to_order(order);
@@ -712,10 +689,11 @@ class Physframe
  */
 PUBLIC
 Mapdb::Mapdb(Address start, Address end)
-  : physframe(new Physframe [(end - start) / Config::PAGE_SIZE + 1]),
+  : physframe(new Physframe [((end - start) >> Config::PAGE_SHIFT) + 1]),
     _start(start)
 {
-  size_t page_number = (end - start) / Config::PAGE_SIZE + 1;
+  size_t page_number = ((end - start) >> Config::PAGE_SHIFT) + 1;
+  size_t page_offset = start >> Config::PAGE_SHIFT;
   assert (physframe);
 
   // Call this at least once to ensure the mapping-tree allocators
@@ -726,7 +704,7 @@ Mapdb::Mapdb(Address start, Address end)
   // create a sigma0 mapping for all physical pages
   for (unsigned page_id = 0; page_id < page_number; page_id++)
     {
-      auto_ptr<Mapping_tree> new_tree (new (0) Mapping_tree (0, page_id));
+      auto_ptr<Mapping_tree> new_tree (new (0) Mapping_tree (0, page_id + page_offset));
       physframe[page_id].tree = new_tree;
     }    
 } // Mapdb()
@@ -757,7 +735,7 @@ Mapdb::~Mapdb()
  */
 PUBLIC static Mapping *
 Mapdb::insert(Mapping *parent,
-	      unsigned space, 
+	      Mapdb_space space, 
 	      Address va, 
 	      size_t size,
 	      Mapping_type type)
@@ -775,12 +753,12 @@ Mapdb::insert(Mapping *parent,
   // only happens if an earlier call to free() with this mapping tree
   // couldn't allocate a bigger array.  In this case, signal an
   // out-of-memory condition.
-  if (! t->last()->unused())
+  if (EXPECT_FALSE (! t->last()->unused()) )
     return 0;
 
   // If the parent mapping already has the maximum depth, we cannot
   // insert a child.
-  if (parent->data()->depth == Depth_max)
+  if (EXPECT_FALSE (parent->data()->depth == Depth_max) )
     return 0;
 
   Mapping
@@ -834,8 +812,10 @@ Mapdb::insert(Mapping *parent,
 	  free++;
 	}
 
+#ifndef NDEBUG
       // Tree-header maintenance
       t->_empty_count -= 1;	// Allocated dead entry
+#endif
     }
   else				// free == 0
     {
@@ -857,8 +837,10 @@ Mapdb::insert(Mapping *parent,
 	  if (insert + 1 < t->end())
 	    insert++;		// Arrange for copying end tag as well
 	}
+#ifndef NDEBUG
       else
 	t->_empty_count -= 1;	// Allocated dead entry
+#endif
 
       // Move mappings
       while (insert > free)
@@ -871,14 +853,15 @@ Mapdb::insert(Mapping *parent,
   t->_count += 1;		// Adding an alive entry
 
   // found a place to insert new child.
-  free->data()->depth = mapping_depth_t(parent->data()->depth + 1);
+  free->data()->depth = Mapping_depth(parent->data()->depth + 1);
   free->data()->address = va >> Config::PAGE_SHIFT;
-  free->data()->space = space;
+  free->data()->space(space.value);
   free->data()->size = (size == Config::SUPERPAGE_SIZE);
 
   t->check_integrity();
   return free;
 } // insert()
+
 
 /** Lookup a mapping and lock the corresponding mapping tree.  The returned
     mapping pointer, and all other mapping pointers derived from it, remain
@@ -893,7 +876,7 @@ Mapdb::insert(Mapping *parent,
     @return mapping, if found; otherwise, 0
  */
 PUBLIC Mapping *
-Mapdb::lookup(unsigned space,
+Mapdb::lookup(Mapdb_space space,
 	      Address va,
 	      Address phys)	// Mapping_type type
 {
@@ -916,7 +899,7 @@ Mapdb::lookup(unsigned space,
        m;
        m = m->next (t->end()))
     {
-      if (m->data()->space == space
+      if (m->data()->space() == space.value
 	  && m->data()->address == va >> Config::PAGE_SHIFT)
 	{
 	  // found!
@@ -950,7 +933,7 @@ Mapdb::free(Mapping* mapping_of_tree)
   // We assume that the zeroth mapping of the tree is a sigma0
   // mapping, that is, its virtual address == the page's physical
   // address.
-  Address phys_pno = t->mappings()[0].data()->address;
+  Address phys_pno = t->mappings()[0].data()->address - (_start >> Config::PAGE_SHIFT);
 
   // We are the owner of the tree lock.
   assert (physframe[phys_pno].lock.lock_owner() == current());
@@ -1081,7 +1064,9 @@ Mapdb::flush(Mapping *m, bool me_too)
 	{
 	  // Found another data element -- stop deleting.  Since we
 	  // created holes in the tree representation, account for it.
+#ifndef NDEBUG
 	  t->_empty_count += deleted;
+#endif
 
 	  t->check_integrity();
 	  return;
@@ -1104,8 +1089,10 @@ Mapdb::flush(Mapping *m, bool me_too)
     {
       start_of_deletions->data()->depth = Depth_end;
 
+#ifndef NDEBUG
       // also, reduce number of free entries
       t->_empty_count -= empty_elems_passed;
+#endif
     }
 
   t->check_integrity();
@@ -1119,9 +1106,8 @@ Mapdb::flush(Mapping *m, bool me_too)
     @param va Virtual address of the mapping in the new address space
  */
 PUBLIC void 
-Mapdb::grant(Mapping *m, unsigned new_space, Address va)
+Mapdb::grant(Mapping *m, Mapdb_space new_space, Address va)
 {
-  m->data()->space = new_space;
+  m->data()->space(new_space.value);
   m->data()->address = va >> Config::PAGE_SHIFT;
-} // grant()
-
+}

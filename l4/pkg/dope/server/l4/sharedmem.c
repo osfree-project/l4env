@@ -1,17 +1,25 @@
 /*
- * \brief	DOpE shared memory management module
- * \date	2002-02-04
- * \author	Norman Feske <no@atari.org>
+ * \brief   DOpE shared memory management module
+ * \date    2002-02-04
+ * \author  Norman Feske <no@atari.org>
  *
  * This component provides an abstraction for handling
  * shared memory.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
 #include <stdio.h>
 
-#include "dope-config.h"
+#include "dopestd.h"
 #include "module.h"
-#include "memory.h"
 #include "thread.h"
 #include "sharedmem.h"
 
@@ -19,9 +27,8 @@
 #include <l4/thread/thread.h>
 #include <l4/sys/types.h>
 
-static struct memory_services *mem;
 
-struct shared_memory_struct {
+struct shared_memory {
 	l4dm_dataspace_t  ds;
 	s32               size;
 	void             *addr;
@@ -36,61 +43,66 @@ int init_sharedmem(struct dope_services *d);
 
 
 /*** ALLOCATE SHARED MEMORY BLOCK OF SPECIFIED SIZE ***/
-static SHAREDMEM *alloc(s32 size) {
-	SHAREDMEM *new = mem->alloc(sizeof(SHAREDMEM));
+static SHAREDMEM *shm_alloc(s32 size) {
+	SHAREDMEM *new = malloc(sizeof(SHAREDMEM));
 	if (!new) {
 		ERROR(printf("SharedMemory(alloc): out of memory.\n"));
 		return NULL;
 	}
-	new->addr = l4dm_mem_ds_allocate(size, 
-	                                 L4DM_CONTIGUOUS | L4RM_LOG2_ALIGNED,
+	new->addr = l4dm_mem_ds_allocate(size,
+	                                 L4DM_CONTIGUOUS | L4RM_LOG2_ALIGNED | L4RM_MAP,
 	                                 &new->ds);
 	new->size = size;
-	printf("SharedMem(alloc): hl.low=%x, lh.high=%x, id=%x\n",
-					new->ds.manager.lh.low,
-					new->ds.manager.lh.high,
-					new->ds.id);
+	printf("SharedMem(alloc): hl.low=%x, lh.high=%x, id=%x, size=%x\n",
+		new->ds.manager.lh.low,
+		new->ds.manager.lh.high,
+		new->ds.id,
+		(int)size);
 	return new;
 }
 
 
 /*** FREE SHARED MEMORY BLOCK ***/
-static void free(SHAREDMEM *sm) {
+static void shm_destroy(SHAREDMEM *sm) {
 	if (!sm) return;
 	l4dm_mem_release(sm->addr);
-	mem->free(sm);
+	free(sm);
 }
 
 
 /*** RETURN THE ADRESS OF THE SHARED MEMORY BLOCK ***/
-static void *get_adr(SHAREDMEM *sm) {
+static void *shm_get_adr(SHAREDMEM *sm) {
 	if (!sm) return NULL;
+	printf("SharedMem(get_adr): address = %x\n",(int)sm->addr);
 	return sm->addr;
 }
 
 
 /*** GENERATE A GLOBAL IDENTIFIER FOR THE SPECIFIED SHARED MEMORY BLOCK ***/
-static void get_ident(SHAREDMEM *sm, u8 *dst) {
+static void shm_get_ident(SHAREDMEM *sm, u8 *dst) {
 	if (!sm) return;
 	sprintf(dst,"t_id=0x%08X,%08X ds_id=0x%08x size=0x%08x",
-	        sm->ds.manager.lh.low, 
-	        sm->ds.manager.lh.high, 
+	        sm->ds.manager.lh.low,
+	        sm->ds.manager.lh.high,
 	        sm->ds.id,
-			(int)sm->size);
+	        (int)sm->size);
 }
 
 
 /*** SHARE MEMORY BLOCK TO ANOTHER THREAD ***/
-static void share(SHAREDMEM *sm, THREAD *dst_thread) {
+static s32 shm_share(SHAREDMEM *sm, THREAD *dst_thread) {
 	l4_threadid_t *tid;
-	if (!sm) return;
+	if (!sm) return -1;
 
-	DOPEDEBUG(printf("VScreen(map): check_rights = %d\n",
+	INFO(printf("VScreen(map): check_rights = %d\n",
 		l4dm_check_rights(&sm->ds,L4DM_RW)
 	));
-			
+
 	tid = (l4_threadid_t *)dst_thread;
+	INFO(printf("SharedMem(share): share to %x.%x\n",
+	            (int)tid->id.task, (int)tid->id.lthread));
 	l4dm_share(&sm->ds, *tid, L4DM_RW);
+	return 0;
 }
 
 
@@ -99,12 +111,12 @@ static void share(SHAREDMEM *sm, THREAD *dst_thread) {
 /*** SERVICE STRUCTURE OF THIS MODULE ***/
 /****************************************/
 
-static struct sharedmem_services sharedmem = { 
-	alloc,
-	free,
-	get_adr,
-	get_ident,
-	share,
+static struct sharedmem_services sharedmem = {
+	shm_alloc,
+	shm_destroy,
+	shm_get_adr,
+	shm_get_ident,
+	shm_share,
 };
 
 
@@ -114,8 +126,6 @@ static struct sharedmem_services sharedmem = {
 /**************************/
 
 int init_sharedmem(struct dope_services *d) {
-
-	mem = d->get_module("Memory 1.0");
 	d->register_module("SharedMemory 1.0",&sharedmem);
 	return 1;
 }

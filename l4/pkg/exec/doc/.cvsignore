@@ -1,1 +1,3 @@
-doxygen
+*.title
+*.flags
+exec

@@ -5,57 +5,104 @@
 #ifndef __L4_IPC_L4X0_GCC295_NOPIC_H__ 
 #define __L4_IPC_L4X0_GCC295_NOPIC_H__
 
-#include <l4/sys/xadaption.h>
 
 /*****************************************************************************
  *** call
  *****************************************************************************/
 L4_INLINE int
-l4_i386_ipc_call(l4_threadid_t dest, 
-		 const void *snd_msg, 
-		 l4_umword_t snd_dword0, 
-		 l4_umword_t snd_dword1, 
-		 void *rcv_msg, 
-		 l4_umword_t *rcv_dword0, 
-		 l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result)
+l4_ipc_call(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
 {
-  unsigned  dummy1;
+  l4_umword_t dummy;
 
-  __asm__ __volatile__(
-	  "movl   %5, %%ecx	\n\t"	/* timeout */
-	  "leal   %4, %%esi	\n\t"	/* address of dest id */
-	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+  __asm__ __volatile__
+    ("movl  %5, %%ecx		\n\t"
+     "leal  %4, %%esi		\n\t"
+     "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  "movl  %%edi, %%ebp	\n\t"   /* rcv descriptor */
-	  "movl 4(%%esi), %%edi	\n\t"	/* dest.lh.high -> edi */
-	  "movl	 (%%esi), %%esi	\n\t"	/* dest.lh.low  -> esi */
+     "movl  %%edi, %%ebp	\n\t"
+     "movl  4(%%esi), %%edi	\n\t"
+     "movl   (%%esi), %%esi	\n\t"
 
-	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
-	  FixLongIn                     /* set dw2 if necessary */
+     ToId32_EdiEsi
+     FixLongIn
 
- 	  IPC_SYSENTER
+     IPC_SYSENTER
 
-	  FixLongOut                    /* restore dw2 if necessary */
+     FixLongOut
 
-	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
-	 : 
-	  "=a" (*result),		/* EAX, 0 */
-	  "=d" (*rcv_dword0),		/* EDX, 1 */
-	  "=b" (*rcv_dword1),		/* EBX, 2 */
-	  "=D" (dummy1)			/* EDI, 3 */
-	 :
-	  "m" (dest),			/* dest, 4  */
-	  "m" (timeout),		/* timeout, 5 */
-	  "0" ((int)snd_msg),           /* EAX, 0 */
-	  "1" (snd_dword0),		/* EDX, 1 */
-	  "2" (snd_dword1),		/* EBX, 2 */
-	  "3" (((int)rcv_msg) & (~L4_IPC_OPEN_IPC)) /* EDI, 3 rcv msg -> ebp */
-	 :
-	  "esi", "ecx", "memory"
-      );
+     : 
+     "=a" (*result),
+     "=d" (*rcv_dword0),
+     "=b" (*rcv_dword1),
+     "=D" (dummy)
+     :
+     "m" (dest),
+     "m" (timeout),
+     "a" ((l4_umword_t)snd_msg),
+     "d" (snd_dword0),
+     "b" (snd_dword1),
+     "D" (((l4_umword_t)rcv_msg) & (~L4_IPC_OPEN_IPC))
+     :
+     "esi", "ecx", "memory"
+     );
+  return L4_IPC_ERROR(*result);
+}
+
+L4_INLINE int
+l4_ipc_call_w3(l4_threadid_t dest,
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1,
+	       l4_umword_t snd_dword2,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+	       l4_umword_t *rcv_dword2,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
+{
+  l4_umword_t dummy;
+  l4_umword_t dw[3] = { snd_dword0, snd_dword1, snd_dword2 };
+
+  __asm__ __volatile__
+    ("pushl  %%ecx		\n\t"
+     "pushl  %%ebp		\n\t"	/* save ebp, no memory references 
+					   ("m") after this point */
+     "movl   %%edi, %%ebp	\n\t"
+     "movl   8(%%edx), %%edi	\n\t"
+     "movl   4(%%edx), %%ebx	\n\t"
+     "movl    (%%edx), %%edx	\n\t"
+
+     IPC_SYSENTER
+
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references 
+					   ("m") before this point */
+     "popl  %%ecx		\n\t"
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=d" (*rcv_dword0),
+     "=S" (dummy),
+     "=D" (*rcv_dword2)
+     :
+     "a" ((l4_umword_t)snd_msg),
+     "c" (timeout),
+     "d" (&dw[0]),
+     "S" (l4sys_to_id32(dest)),
+     "D" (((l4_umword_t)rcv_msg) & (~L4_IPC_OPEN_IPC))
+     :
+     "memory"
+     );
   return L4_IPC_ERROR(*result);
 }
 
@@ -63,62 +110,109 @@ l4_i386_ipc_call(l4_threadid_t dest,
  *** reply an wait
  *****************************************************************************/
 L4_INLINE int
-l4_i386_ipc_reply_and_wait(l4_threadid_t dest, 
-			   const void *snd_msg, 
-			   l4_umword_t snd_dword0, 
-			   l4_umword_t snd_dword1, 
-			   l4_threadid_t *src,
-			   void *rcv_msg, 
-			   l4_umword_t *rcv_dword0, 
-			   l4_umword_t *rcv_dword1, 
-			   l4_timeout_t timeout, 
-			   l4_msgdope_t *result)
+l4_ipc_reply_and_wait(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result)
 {
-  struct 
+  struct
   {
     l4_threadid_t * dest;
     l4_timeout_t timeout;
   } addresses = { &dest, timeout };
 
-  __asm__ __volatile__(
-	  /* eax, edx, ebx loaded, 
-	   * edi contains rcv buffer address, must be moved to ebp,
-	   * esi contains address of destination id,
-	   * $5  address of src id */
-	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  "movl  4(%%esi), %%ecx\n\t"	/* timeout -> ecx */
-	  "movl   (%%esi), %%esi\n\t"	/* load address of dest */
+     "movl  4(%%esi), %%ecx	\n\t"
+     "movl   (%%esi), %%esi	\n\t"
 
-	  "movl	 %%edi, %%ebp	\n\t" 	/* rmsg desc -> ebp */
-	  "movl	4(%%esi), %%edi	\n\t"	/* dest.lh.high -> edi */
-	  "movl	 (%%esi), %%esi	\n\t"	/* dest.lh.low  -> esi */
+     "movl  %%edi, %%ebp	\n\t"
+     "movl  4(%%esi), %%edi	\n\t"
+     "movl   (%%esi), %%esi	\n\t"
 
-	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
-	  FixLongIn                     /* set dw2 */
+     ToId32_EdiEsi
+     FixLongIn
 
- 	  IPC_SYSENTER
+     IPC_SYSENTER
 
-	  FixLongOut                    /* restore dw2 */
-	  FromId32_Esi                  /* source id ESI -> EDI/ESI */
+     FixLongOut
+     FromId32_Esi
                       
-	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl	%%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
-	 : 
-	  "=a" (*result),		/* EAX, 0 */
-	  "=d" (*rcv_dword0),		/* EDX, 1 */
-	  "=b" (*rcv_dword1),		/* EBX, 2 */
-	  "=S" (src->lh.low),           /* ESI, 3 */
-	  "=D" (src->lh.high)           /* EDI, 4 */
-	 :
-	  "0" ((int)snd_msg),           /* EAX, 0 */
-	  "1" (snd_dword0),		/* EDX, 1 */
-	  "2" (snd_dword1),		/* EBX, 2 */
-	  "3" (&addresses),		/* ESI, 3 */
-	  "4" (((int)rcv_msg) | L4_IPC_OPEN_IPC) /* EDI, 4  -> ebp rcv_msg */
-	 :
-	  "ecx", "memory"
-      );
+     : 
+     "=a" (*result),
+     "=d" (*rcv_dword0),
+     "=b" (*rcv_dword1),
+     "=S" (src->lh.low),
+     "=D" (src->lh.high)
+     :
+     "a" ((l4_umword_t)snd_msg),
+     "d" (snd_dword0),
+     "b" (snd_dword1),
+     "S" (&addresses),
+     "D" (((l4_umword_t)rcv_msg) | L4_IPC_OPEN_IPC)
+     :
+     "ecx", "memory"
+     );
+  return L4_IPC_ERROR(*result);
+}
+
+L4_INLINE int
+l4_ipc_reply_and_wait_w3(l4_threadid_t dest,
+                         const void *snd_msg,
+                         l4_umword_t snd_dword0,
+                         l4_umword_t snd_dword1,
+                         l4_umword_t snd_dword2,
+                         l4_threadid_t *src,
+                         void *rcv_msg,
+                         l4_umword_t *rcv_dword0,
+                         l4_umword_t *rcv_dword1,
+                         l4_umword_t *rcv_dword2,
+                         l4_timeout_t timeout,
+                         l4_msgdope_t *result)
+{
+  l4_umword_t dw[3] = { snd_dword0, snd_dword1, snd_dword2 };
+  l4_umword_t src32;
+
+  __asm__ __volatile__
+    ("pushl %%ecx		\n\t"
+     "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+					   ("m") after this point */
+     "movl  %%edi, %%ebp	\n\t"
+     "movl  8(%%edx), %%edi	\n\t"
+     "movl  4(%%edx), %%ebx	\n\t"
+     "movl   (%%edx), %%edx	\n\t"
+
+     IPC_SYSENTER
+
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references 
+					   ("m") before this point */
+     "popl  %%ecx		\n\t"
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=d" (*rcv_dword0),
+     "=S" (src32),
+     "=D" (*rcv_dword2)
+     :
+     "a" ((l4_umword_t)snd_msg),
+     "c" (timeout),
+     "d" (&dw[0]),
+     "S" (l4sys_to_id32(dest)),
+     "D" (((l4_umword_t)rcv_msg) | L4_IPC_OPEN_IPC)
+     :
+     "memory"
+     );
+
+  *src = l4sys_from_id32(src32);
   return L4_IPC_ERROR(*result);
 }
 
@@ -126,46 +220,88 @@ l4_i386_ipc_reply_and_wait(l4_threadid_t dest,
  *** send
  *****************************************************************************/
 L4_INLINE int
-l4_i386_ipc_send(l4_threadid_t dest, 
-		 const void *snd_msg, 
-		 l4_umword_t snd_dword0, 
-		 l4_umword_t snd_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result)
+l4_ipc_send(l4_threadid_t dest, 
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1, 
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
 {
-  unsigned dummy1, dummy2, dummy3, dummy4;
+  l4_umword_t dummy1, dummy2, dummy3, dummy4;
 
-  __asm__ __volatile__(
-	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  "movl 4(%%esi),%%edi  \n\t"
-	  "movl  (%%esi),%%esi  \n\t"
-	  "movl  $-1,%%ebp	\n\t"	/* L4_IPC_NIL_DESCRIPTOR */
+     "movl 4(%%esi),%%edi	\n\t"
+     "movl  (%%esi),%%esi	\n\t"
+     "movl  $-1,%%ebp		\n\t"
 
-	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
-	  FixLongIn                     /* set dw2 */
+     ToId32_EdiEsi
+     FixLongIn
 
- 	  IPC_SYSENTER
+     IPC_SYSENTER
 
-	  FixLongStackOut               /* remove receive dope from stack */
+     FixLongStackOut
 
-	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
-      : 
-      "=a" (*result),			/* EAX, 0 */
-      "=d" (dummy1),			/* EDX, 1 */
-      "=c" (dummy2),			/* ECX, 2 */
-      "=b" (dummy3),			/* EBX, 3 */
-      "=S" (dummy4)			/* ESI, 4 */
-      :
-      "0" ((int)snd_msg),               /* EAX, 0 */
-      "1" (snd_dword0),			/* EDX, 1 */
-      "2" (timeout),			/* ECX, 2 */
-      "3" (snd_dword1),			/* EBX, 3 */
-      "4" (&dest)			/* ESI, 4 */
-      :
-      "edi", "memory"
-      );
+     : 
+     "=a" (*result),
+     "=d" (dummy1),
+     "=c" (dummy2),
+     "=b" (dummy3),
+     "=S" (dummy4)
+     :
+     "a" ((l4_umword_t)snd_msg),
+     "d" (snd_dword0),
+     "c" (timeout),
+     "b" (snd_dword1),
+     "S" (&dest)
+     :
+     "edi", "memory"
+     );
+  return L4_IPC_ERROR(*result);
+};
+
+L4_INLINE int
+l4_ipc_send_w3(l4_threadid_t dest, 
+               const void *snd_msg,
+               l4_umword_t snd_dword0,
+               l4_umword_t snd_dword1, 
+               l4_umword_t snd_dword2, 
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
+{
+  l4_umword_t dummy1, dummy2, dummy3;
+
+  __asm__ __volatile__
+    ("pushl %%edx		\n\t"
+     "pushl %%edi		\n\t"
+     "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+					   ("m") after this point */
+     "movl  $-1,%%ebp		\n\t"
+
+     IPC_SYSENTER
+
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references 
+					   ("m") before this point */
+     "popl  %%edi		\n\t"
+     "popl  %%edx		\n\t"
+     :
+     "=a" (*result),
+     "=b" (dummy1),
+     "=c" (dummy2),
+     "=S" (dummy3)
+     :
+     "a" ((l4_umword_t)snd_msg),
+     "b" (snd_dword1),
+     "c" (timeout),
+     "d" (snd_dword0),
+     "S" (l4sys_to_id32(dest)),
+     "D" (snd_dword2)
+     :
+     "memory"
+     );
   return L4_IPC_ERROR(*result);
 };
 
@@ -173,47 +309,85 @@ l4_i386_ipc_send(l4_threadid_t dest,
  *** wait
  *****************************************************************************/
 L4_INLINE int
-l4_i386_ipc_wait(l4_threadid_t *src,
-		 void *rcv_msg, 
-		 l4_umword_t *rcv_dword0, 
-		 l4_umword_t *rcv_dword1, 
-		 l4_timeout_t timeout, 
-		 l4_msgdope_t *result)
+l4_ipc_wait(l4_threadid_t *src,
+            void *rcv_msg, 
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
 {
-  unsigned dummy1, dummy2;
+  l4_umword_t dummy;
 
-  __asm__ __volatile__(
-	  "pushl %%ebp		\n\t" /* save ebp, no memory references 
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t" /* save ebp, no memory references 
 					 ("m") after this point */
-	  "pushl %%esi		\n\t" /* src */
-	  "movl	 %%ebx,%%ebp	\n\t" /* rcv_msg */
+     "movl  %%ebx,%%ebp		\n\t"
 
-	  FixLongStackIn              /* push receive dope */
+     "movl  $-1,%%eax		\n\t"
+     FixLongStackIn
 
- 	  IPC_SYSENTER
+     IPC_SYSENTER
 
-	  FixLongOut                  /* restore dw2 */
-	  FromId32_Esi                /* source id ESI -> EDI/ESI */
+     FixLongOut
+     FromId32_Esi
 
-	  "popl  %%ebp		\n\t" /* src */
-	  "movl  %%esi,(%%ebp)	\n\t" /* src.low */
-	  "movl  %%edi,4(%%ebp)	\n\t" /* src.hi */
-	  "popl	 %%ebp		\n\t" /* restore ebp, no memory
+     "popl  %%ebp		\n\t" /* restore ebp, no memory
 					 references ("m") before this point */
-	 : 
-	  "=a" (*result),	      /* EAX,0 */
-	  "=b" (*rcv_dword1),	      /* EBX,1 */
-	  "=c" (dummy1),	      /* ECX, clobbered operand, 2 */
-	  "=d" (*rcv_dword0),	      /* EDX,3 */
-	  "=S" (dummy2)		      /* ESI, clobbered operand, 4 */
-	 :
-	  "0" (L4_IPC_NIL_DESCRIPTOR),/* EAX, 0 */
-	  "1" (((int)rcv_msg) | L4_IPC_OPEN_IPC), /* EBX, 1, rcv_msg -> EBP */
-	  "2" (timeout),	      /* ECX, 2 */
-	  "4" (src)		      /* ESI, 4 */
-	 :
-	  "edi", "memory"
-      );
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=c" (dummy),
+     "=d" (*rcv_dword0),
+     "=S" (src->lh.low),
+     "=D" (src->lh.high)
+     :
+     "b" (((l4_umword_t)rcv_msg) | L4_IPC_OPEN_IPC),
+     "c" (timeout),
+     "S" (0)			      /* no absolute timeout !! */
+     :
+     "memory"
+     );
+  return L4_IPC_ERROR(*result);
+}
+
+L4_INLINE int
+l4_ipc_wait_w3(l4_threadid_t *src,
+               void *rcv_msg, 
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_umword_t *rcv_dword2,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
+{
+  l4_umword_t dummy;
+  l4_umword_t src32;
+
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t" /* save ebp, no memory references 
+					 ("m") after this point */
+     "movl  %%edx, %%ebp	\n\t"
+
+     "xorl  %%esi, %%esi	\n\t" /* no absolute timeout! */
+     "movl  $-1, %%eax		\n\t"
+
+     IPC_SYSENTER
+
+     "popl  %%ebp		\n\t" /* restore ebp, no memory
+					 references ("m") before this point */
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=c" (dummy),
+     "=d" (*rcv_dword0),
+     "=S" (src32),
+     "=D" (*rcv_dword2)
+     :
+     "c" (timeout),
+     "d" (((l4_umword_t)rcv_msg) | L4_IPC_OPEN_IPC)
+     :
+     "memory"
+     );
+  *src = l4sys_from_id32(src32);
   return L4_IPC_ERROR(*result);
 }
 
@@ -221,47 +395,85 @@ l4_i386_ipc_wait(l4_threadid_t *src,
  *** receive
  *****************************************************************************/
 L4_INLINE int
-l4_i386_ipc_receive(l4_threadid_t src,
-		    void *rcv_msg, 
-		    l4_umword_t *rcv_dword0, 
-		    l4_umword_t *rcv_dword1, 
-		    l4_timeout_t timeout, 
-		    l4_msgdope_t *result)
+l4_ipc_receive(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1, 
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
 {
-  unsigned dummy1, dummy2;
+  l4_umword_t dummy1, dummy2;
 
-  __asm__ __volatile__(
-	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-	  "movl 4(%%esi), %%edi \n\t"
-	  "movl	 (%%esi), %%esi \n\t"
-	  "movl	 %%ebx,%%ebp	\n\t" 
+     "movl  4(%%esi), %%edi	\n\t"
+     "movl   (%%esi), %%esi	\n\t"
+     "movl   %%ebx,%%ebp	\n\t" 
 
-	  ToId32_EdiEsi                 /* destination id EDI/ESI -> ESI */
-	  FixLongStackIn                /* push receive dope */
+     ToId32_EdiEsi
+     FixLongStackIn
 
- 	  IPC_SYSENTER
+     IPC_SYSENTER
 
-	  FixLongOut                    /* restore dw2 */
+     FixLongOut
 
-	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
-	 : 
-	  "=a" (*result),		/* EAX, 0 */
-	  "=d" (*rcv_dword0),		/* EDX, 1 */
-	  "=b" (*rcv_dword1),		/* EBX, 2 */
-	  "=c" (dummy1),		/* ECX, 3 */
-	  "=S" (dummy2)			/* ESI, 4 */
-	 :
-	  "0" (L4_IPC_NIL_DESCRIPTOR),	/* EAX, 0 */
-	  "2" (((int)rcv_msg) & (~L4_IPC_OPEN_IPC)), /* EBX, 2, rcv_msg -> EBP */
-	  "3" (timeout),		/* ECX, 3 */
-	  "4" (&src)			/* ESI, 4 */
-	 :
-	  "edi", "memory"
-	 );
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=c" (dummy1),
+     "=d" (*rcv_dword0),
+     "=S" (dummy2)
+     :
+     "a" (L4_IPC_NIL_DESCRIPTOR),
+     "b" (((l4_umword_t)rcv_msg) & (~L4_IPC_OPEN_IPC)),
+     "c" (timeout),
+     "S" (&src)
+     :
+     "edi", "memory"
+     );
   return L4_IPC_ERROR(*result);
 }
 
-#endif
+L4_INLINE int
+l4_ipc_receive_w3(l4_threadid_t src,
+                  void *rcv_msg,
+                  l4_umword_t *rcv_dword0,
+                  l4_umword_t *rcv_dword1, 
+                  l4_umword_t *rcv_dword2, 
+                  l4_timeout_t timeout,
+                  l4_msgdope_t *result)
+{
+  l4_umword_t dummy1, dummy2;
+
+  __asm__ __volatile__
+    ("pushl %%ebp		\n\t"	/* save ebp, no memory references 
+					   ("m") after this point */
+     "movl  %%edx,%%ebp		\n\t"
+
+     IPC_SYSENTER
+
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references 
+					   ("m") before this point */
+     : 
+     "=a" (*result),
+     "=b" (*rcv_dword1),
+     "=c" (dummy1),
+     "=d" (*rcv_dword0),
+     "=S" (dummy2),
+     "=D" (*rcv_dword2)
+     :
+     "a" (L4_IPC_NIL_DESCRIPTOR),
+     "b" (((l4_umword_t)rcv_msg) & (~L4_IPC_OPEN_IPC)),
+     "c" (timeout),
+     "S" (l4sys_to_id32(src))
+     :
+     "memory"
+     );
+  return L4_IPC_ERROR(*result);
+}
+
+#endif /* __L4_IPC_L4X0_GCC295_NOPIC_H__ */
 

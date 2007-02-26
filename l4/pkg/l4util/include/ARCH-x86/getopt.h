@@ -93,11 +93,4 @@ extern int _getopt_internal (int argc, char *const *argv,
 }
 #endif
 
-extern char *_argv[];
-extern int  _argc;
-
-
-extern void arg_init(char* cmdline);
-
-
 #endif /* _GETOPT_H */

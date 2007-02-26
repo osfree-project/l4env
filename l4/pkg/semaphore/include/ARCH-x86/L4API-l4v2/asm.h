@@ -6,26 +6,14 @@
  *
  * \date   11/13/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * This file provides the user programming interface for the L4 semaphore 
- * implementation. 
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4_SEMAPHORE_ASM_H
 #define _L4_SEMAPHORE_ASM_H
 
@@ -57,6 +45,7 @@ volatile L4_INLINE void
 l4semaphore_down(l4semaphore_t * sem)
 {
   unsigned dummy;
+  l4_msgdope_t result;
 
   __asm__ __volatile__ 
     (
@@ -73,27 +62,20 @@ l4semaphore_down(l4semaphore_t * sem)
 #endif
 
      "pushl   %%ebx              \n\t"
-     "pushl   %%eax              \n\t"
      "pushl   %%edx              \n\t"
      "pushl   %%ebp              \n\t"
 
      /* setup call to semaphore thread */
-     "xorl    %%eax,%%eax        \n\t"        /* short send */
      "xorl    %%ebp,%%ebp        \n\t"        /* short receive */
      "movl    $1,%%edx           \n\t"        /* dw0 -> L4SEMAPHORE_BLOCK */
      "movl    %%ecx,%%ebx        \n\t"        /* dw1 -> semaphore */
      "xorl    %%ecx,%%ecx        \n\t"        /* timeout never, everything 
 					       * else is already set */
 
-#ifdef L4V2_IPC_SYSENTER
      IPC_SYSENTER                             /* call semaphore thread */
-#else
-     "int     $0x30              \n\t"        /* call semaphore thread */
-#endif
 
      "popl    %%ebp              \n\t"
      "popl    %%edx              \n\t"
-     "popl    %%eax              \n\t"
      "popl    %%ebx              \n\t"
 
 #if L4SEMAPHORE_USE_LOCK_SECTION
@@ -103,25 +85,43 @@ l4semaphore_down(l4semaphore_t * sem)
 #endif
      "2:                         \n\t"
      :
-     "=c" (dummy),                            /* ECX, 0 */
-     "=D" (dummy),                            /* EDI, 1 */
-     "=S" (dummy)                             /* ESI, 2 */
+     "=a" (result),                           /* EAX, 0, result dope */
+     "=c" (dummy),                            /* ECX, 1 */
+     "=D" (dummy),                            /* EDI, 2 */
+     "=S" (dummy)                             /* ESI, 3 */
      :
+     "a"  (L4_IPC_SHORT_MSG),                 /* EAX, short send */
      "c"  (sem),                              /* ECX, semaphore */
      "D"  (l4semaphore_thread_l4_id.lh.high), /* EDI, id high */
      "S"  (l4semaphore_thread_l4_id.lh.low)   /* ESI, id low */
      :
      "memory"
      );
+
+#if L4SEMAPHORE_RESTART_IPC
+  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
+    {
+      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG, 
+                  L4SEMAPHORE_BLOCK, (l4_umword_t)sem, L4_IPC_SHORT_MSG, 
+                  &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+
+  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
+    {
+      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
+                     &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+#endif
 }
 
 /*****************************************************************************
  * increment semaphore counter, wakeup first thread waiting
  *****************************************************************************/
-volatile extern inline void
+volatile L4_INLINE void
 l4semaphore_up(l4semaphore_t * sem)
 {
   unsigned dummy;
+  l4_msgdope_t result;
 
   __asm__ __volatile__
     (
@@ -138,7 +138,6 @@ l4semaphore_up(l4semaphore_t * sem)
 #endif
 
      "pushl   %%ebx              \n\t"
-     "pushl   %%eax              \n\t"
      "pushl   %%edx              \n\t"
      "pushl   %%ebp              \n\t"
 
@@ -148,21 +147,15 @@ l4semaphore_up(l4semaphore_t * sem)
 #else
      "xorl    %%ebp,%%ebp        \n\t"        /* short receive */
 #endif
-     "xorl    %%eax,%%eax        \n\t"        /* short send */     
      "movl    $2,%%edx           \n\t"        /* dw0 -> L4SEMAPHORE_RELEASE */
      "movl    %%ecx,%%ebx        \n\t"        /* dw1 -> semaphore */
      "xorl    %%ecx,%%ecx        \n\t"        /* timeout never, everything 
 					       * else is already set */
      
-#ifdef L4V2_IPC_SYSENTER
      IPC_SYSENTER                             /* do IPC */
-#else
-     "int     $0x30              \n\t"        /* do IPC */
-#endif
 
      "popl    %%ebp              \n\t"
      "popl    %%edx              \n\t"
-     "popl    %%eax              \n\t"
      "popl    %%ebx              \n\t"
 #if L4SEMAPHORE_USE_LOCK_SECTION
      "jmp     2f                 \n\t"
@@ -171,16 +164,35 @@ l4semaphore_up(l4semaphore_t * sem)
 #endif
      "2:                         \n\t"
      :
-     "=c" (dummy),                            /* ECX, 0 */
-     "=D" (dummy),                            /* EDI, 1 */
-     "=S" (dummy)                             /* ESI, 2 */
+     "=a" (result),                           /* EAX, 0, result dope */
+     "=c" (dummy),                            /* ECX, 1 */
+     "=D" (dummy),                            /* EDI, 2 */
+     "=S" (dummy)                             /* ESI, 3 */
      :
+     "a"  (L4_IPC_SHORT_MSG),                 /* EAX, short send */
      "c"  (sem),                              /* ECX, semaphore */
      "D"  (l4semaphore_thread_l4_id.lh.high), /* EDI, id high */
      "S"  (l4semaphore_thread_l4_id.lh.low)   /* ESI, id low */
      :
      "memory"
      );
+
+#if L4SEMAPHORE_RESTART_IPC
+  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
+    {
+      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG, 
+                  L4SEMAPHORE_RELEASE, (l4_umword_t)sem, L4_IPC_SHORT_MSG, 
+                  &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+
+#if !(L4SEMAPHORE_SEND_ONLY_IPC)
+  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
+    {
+      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
+                     &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+#endif
+#endif
 }
 
 /*****************************************************************************
@@ -204,7 +216,7 @@ l4semaphore_try_down(l4semaphore_t * sem)
       tmp = old - 1;
     }
   /* retry if someone else also modified the counter */
-  while (!cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
+  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
 
   /* decremented semaphore counter */
   return 1;
@@ -227,7 +239,7 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
       tmp = old - 1;
     }
   /* retry if someone else also modified the counter */
-  while (!cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
+  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
 
   if (tmp < 0)
     {
@@ -235,11 +247,11 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
       
       micros2l4to(time*1000, &e, &m);
       /* we did not get the semaphore, block */
-      ret = l4_i386_ipc_call(l4semaphore_thread_l4_id,
-			     L4_IPC_SHORT_MSG,L4SEMAPHORE_BLOCK,
-			     (l4_umword_t)sem,
-			     L4_IPC_SHORT_MSG,&dummy,&dummy,
-			     L4_IPC_TIMEOUT(0, 0, m, e, 0, 0),&result);
+      ret = l4_ipc_call(l4semaphore_thread_l4_id,
+			L4_IPC_SHORT_MSG,L4SEMAPHORE_BLOCK,
+			(l4_umword_t)sem,
+			L4_IPC_SHORT_MSG,&dummy,&dummy,
+			L4_IPC_TIMEOUT(0, 0, m, e, 0, 0),&result);
       if (ret != 0)
 	{
           /* we had a timeout, do semaphore_up to compensate */

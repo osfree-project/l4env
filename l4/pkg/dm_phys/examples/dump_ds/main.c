@@ -7,6 +7,11 @@
  *
  * \brief	Linux program to dump memory regions of DMphys */
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -29,7 +34,7 @@ main(int argc, char **argv)
 {
   int i, error, size, print;
   unsigned offset = 0;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   l4dm_dataspace_t ds;
   l4_snd_fpage_t snd_fpage;
 
@@ -69,23 +74,23 @@ main(int argc, char **argv)
 	  tid.id.lthread = 0;
 	}
       
-      error = if_l4dm_mem_dump(dm_id, (if_l4dm_threadid_t *)&tid,L4DM_SAME_TASK,
-			       (if_l4dm_dataspace_t *)&ds,&exc);
-      if ((error < 0) || (exc._type != exc_l4_no_exception))
+      error = if_l4dm_generic_dump_call(&dm_id, &tid,L4DM_SAME_TASK,
+			       &ds,&env);
+      if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
 	{
 	  fprintf(stderr, "Error dumping l4 task \"%s\" (error %d, exc %d)\n", 
-		  argv[i],error,exc._type);
+		  argv[i],error,env.major);
 	  exit(error);
 	}
 
-      error = if_l4dm_mem_size(ds.manager, ds.id, &size, &exc);
-      if ((error < 0) || (exc._type != exc_l4_no_exception))
+      error = if_l4dm_mem_size_call(&(ds.manager), ds.id, &size, &env);
+      if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
 	{
 	  fprintf(stderr, 
 		  "Error determining size of ds %d at ds_manager %x.%x "
 		  "(error %d, exc %d)\n",
 		  ds.id, ds.manager.id.task, ds.manager.id.lthread,
-		  error,exc._type);
+		  error,env.major);
 	  exit(error);
 	}
 
@@ -98,16 +103,15 @@ main(int argc, char **argv)
 
 	  // page fault
 	  error = 
-	    if_l4dm_mem_fault(ds.manager,l4_fpage((l4_addr_t)map_page,
-						  L4_LOG2_PAGESIZE, 0, 0),
-			      ds.id,offset,&snd_fpage, &exc);
-	  if ((error < 0) || (exc._type != exc_l4_no_exception))
+	    if_l4dm_generic_fault_call(&(ds.manager),
+			      ds.id,offset,&snd_fpage, &env);
+	  if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
 	    {
 	      printf("Error requesting ds %d at ds_manager %x.%x "
 		     "(error %d, exc %d)\n",
 		     ds.id, ds.manager.id.task, ds.manager.id.lthread,
-		     error,exc._type);
-	      if_l4dm_mem_close(ds.manager, ds.id, &exc);
+		     error,env.major);
+	      if_l4dm_generic_close_call(&(ds.manager), ds.id, &env);
 	      return error;
 	    }
 
@@ -125,7 +129,7 @@ main(int argc, char **argv)
 	  size -= print;
 	}
       
-      if_l4dm_mem_close(ds.manager, ds.id, &exc);
+      if_l4dm_generic_close_call(&(ds.manager), ds.id, &env);
     }
 
   return 0;

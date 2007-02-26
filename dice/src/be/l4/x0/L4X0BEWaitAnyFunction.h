@@ -33,13 +33,12 @@ class CL4X0BEWaitAnyFunction : public CL4BEWaitAnyFunction
 DECLARE_DYNAMIC(CL4X0BEWaitAnyFunction);
 
 public:
-  CL4X0BEWaitAnyFunction();
-  ~CL4X0BEWaitAnyFunction();
+	CL4X0BEWaitAnyFunction();
+	~CL4X0BEWaitAnyFunction();
 
 protected:
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual bool UseAsmLongIPC(CBEContext *pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

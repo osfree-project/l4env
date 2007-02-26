@@ -42,8 +42,9 @@ void __weak pcibios_enable_irq(struct pci_dev *dev)
                         msg = "";
                 else
                         msg = " Please try using pci=biosirq.";
-                printk(KERN_WARNING "PCI: No IRQ known for interrupt pin %c of d
-evice %s.%s\n",
+                printk(KERN_WARNING 
+		       "PCI: No IRQ known for interrupt pin %c "
+		       "of device %s.%s\n",
                        'A' + pin - 1, dev->slot_name, msg);
         }
 }

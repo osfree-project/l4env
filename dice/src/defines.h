@@ -1,16 +1,16 @@
 /**
- *	\file	dice/src/defines.h 
+ *	\file	dice/src/defines.h
  *	\brief	contains basic macros and definitions for all classes
  *
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -54,32 +54,16 @@ using namespace std;
 #define __PRETTY_FUNCTION__ "(no function name available)"
 #endif				/* _WIN_ */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-//#include <string.h>
+#include <assert.h>
 
-//@{
-/** some variables used for debugging */
-#ifndef GLOBAL_DEBUG_TRACE
-#define GLOBAL_DEBUG_TRACE
-
-extern int nGlobalDebug;
-#define DTRACE(s, args...)	if (nGlobalDebug == 1) printf(s, ## args)
-#define DTRACE_ON			nGlobalDebug = 1
-#define DTRACE_OFF			nGlobalDebug = 0
-
-#endif				/* GLOBAL_DEBUG_TRACE */
-//@}
-
-/** check condition and raise assertion if necessary */
-#define ASSERT(x) { if (!(x)) { fprintf(stderr,"ASSERTION in function '%s', (file: %s, line: %i)\n",  __PRETTY_FUNCTION__, __FILE__, __LINE__); exit(1);  } }
-/** check condition and raise assertion if necessary */
-#define ASSERTC(x) {  if (!(x))  { fprintf(stderr, "ASSERTION in function '%s', (file: %s, line: %i) (class %s)\n",  __PRETTY_FUNCTION__, __FILE__, __LINE__, this->GetClassName());  exit(1);  } }
-/** check condition and raise assertion if necessary */
-#define ASSERT_KINDOF(obj,classname)	ASSERT((obj)->IsKindOf(RUNTIME_CLASS(classname)))
-/** print debug information */
-#define TRACE(s, args...)	printf(s, ## args)
+#include "debug.h"
 
 // some dynamic class management stuff
 /**\class CRuntimeClass
@@ -87,7 +71,7 @@ extern int nGlobalDebug;
  *
  * This class is used to allow dynamic class management using the DEFINE_DYNAMIC and
  * IMPLEMENT_DYNAMIC macros. This way it is possible to determine during run-time of
- * the program the class of an object. CRuntimeClass contains also information which 
+ * the program the class of an object. CRuntimeClass contains also information which
  * can be used during debugging (e.g. print a class name, ...).
  */
 struct CRuntimeClass
@@ -120,8 +104,8 @@ struct CRuntimeClass
 	 */
   bool IsDerivedFrom(const CRuntimeClass * pBaseClass) const
   {
-      ASSERT(this != 0);
-      ASSERT(pBaseClass != 0);
+      assert(this);
+      assert(pBaseClass);
 
       // am I the searched class
       if (this == pBaseClass)
@@ -146,8 +130,8 @@ struct CRuntimeClass
    */
   void AddBase(const CRuntimeClass * pBaseClass)
   {
-      ASSERT(this != 0);
-      ASSERT(pBaseClass != 0);
+      assert(this);
+      assert(pBaseClass);
 
       // first check if we already have base class registered
       if (m_pBaseClasses != 0)
@@ -168,7 +152,7 @@ struct CRuntimeClass
    *  \param nSize the size of the class
    *  \param sName the name of the class
    */
-  CRuntimeClass(int nSize, char *sName)
+  CRuntimeClass(int nSize, const char *sName)
   {
       m_nSize = nSize;
       m_sName = sName;

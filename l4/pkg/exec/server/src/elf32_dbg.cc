@@ -3,8 +3,12 @@
  * \file	exec/server/src/elf32_dbg.cc
  * \brief	Some code for debugging code for analysis of ELF32 objects
  *
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <l4/exec/elf.h>
 #include <l4/exec/errno.h>

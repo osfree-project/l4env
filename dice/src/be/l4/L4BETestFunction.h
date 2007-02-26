@@ -5,7 +5,7 @@
  *	\date	Tue May 28 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,6 +54,8 @@ protected: // Protected methods
     virtual void WriteSuccessMessageTask(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
     virtual void WriteSuccessMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
+	virtual void CompareDeclarator(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext);
+	virtual void CompareFlexpages(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext);
 };
 
 #endif

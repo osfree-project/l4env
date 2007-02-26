@@ -5,7 +5,7 @@
  *	\date	Wed Oct 9 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,7 +26,7 @@
  */
 
 #include "be/BESizes.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CBESizes);
 
@@ -49,11 +49,12 @@ CBESizes::~CBESizes()
  */
 int CBESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    
+
     int nSize = 0;
     switch (nFEType)
     {
     case TYPE_INTEGER:
+	case TYPE_LONG:
         {
             switch (nFESize)
             {
@@ -177,4 +178,13 @@ void CBESizes::SetOpcodeSize(int nSize)
     if (nSize < 0)
         return;
     m_nOpcodeSize = nSize;
+}
+
+/** \brief returns the size of the exception
+ *  \return the size of the exception in bytes
+ */
+int CBESizes::GetExceptionSize()
+{
+    // currently only the first word of the exception is transmitted
+	return 4;
 }

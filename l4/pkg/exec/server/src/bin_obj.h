@@ -1,5 +1,17 @@
-#ifndef __L4_EXEC_SERVER_BIN_OBJ_H
-#define __L4_EXEC_SERVER_BIN_OBJ_H
+/*!
+ * \file	exec/server/src/bin_obj.h
+ * \brief	Binary Object declaration
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __BIN_OBJ_H_
+#define __BIN_OBJ_H_
 
 #include <l4/env/env.h>
 #include <l4/sys/consts.h>
@@ -15,13 +27,19 @@ class bin_obj_t : public dsc_obj_t,
   public:
     bin_obj_t(l4_uint32_t _id);
     ~bin_obj_t();
-    
+
     inline int set_bin(exc_obj_t *exc_obj)
       { set_fname(exc_obj->get_fname());
 	return add_to_dep(exc_obj); }
     inline int get_entry(void)
       { return deps[0] ? deps[0]->get_entry() : L4_MAX_ADDRESS; }
-    
+    inline int set_entry_point(l4env_infopage_t *env)
+      { 
+	env->entry_1st = L4_MAX_ADDRESS; 
+	env->entry_2nd = get_entry();
+	return 0;
+      }
+
     int load_libs(l4env_infopage_t *env);
     int link_first(l4env_infopage_t *env);
     int mark_startup_library(l4env_infopage_t *env);
@@ -41,14 +59,14 @@ class bin_obj_t : public dsc_obj_t,
     int add_to_dep(exc_obj_t *exc_obj);
 
   private:
-    exc_obj_t **free_dep;		/* number of dependant libs */
-    exc_obj_t **next_dep;		/* number of scanned libs */
-    exc_obj_t *deps[EXC_MAXLIB+2];	/* 1st  entry: binary
+    exc_obj_t **free_dep;		/**< number of dependant libs */
+    exc_obj_t **next_dep;		/**< number of scanned libs */
+    exc_obj_t *deps[EXC_MAXLIB+2];	/**< 1st  entry: binary
 					 * 2nd+ entry: dependant libraries
 					 * last+1 entry: NULL */
 };
 
-extern dsc_array_t *bin_objs;
+extern dsc_array_t *bin_objs;		/**< array of all bin_objs */
 
 #endif /* __L4_EXEC_SERVER_BIN_OBJ_H */
 

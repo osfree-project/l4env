@@ -6,7 +6,10 @@
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  *
  */
-
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #ifndef __LOG_LIB_INCLUDE_LOCK_H_
 #define __LOG_LIB_INCLUDE_LOCK_H_
 
@@ -69,9 +72,9 @@ inline int wq_lock_lock(wq_lock_queue_base*queue, wq_lock_queue_elem*q){
   if(old!=NULL){	/* already locked */
     old->next = q;
     q->prev = old;
-    if((err=l4_i386_ipc_receive(old->id, L4_IPC_SHORT_MSG, &dummy, &dummy,
+    if((err=l4_ipc_receive(old->id, L4_IPC_SHORT_MSG, &dummy, &dummy,
                                 L4_IPC_NEVER, &result))!=0)return err;
-    if((err= l4_i386_ipc_send(old->id, L4_IPC_SHORT_MSG, 0,0,
+    if((err= l4_ipc_send(old->id, L4_IPC_SHORT_MSG, 0,0,
                                 L4_IPC_NEVER, &result))!=0)return err;
   }
   return 0;
@@ -107,7 +110,7 @@ inline int wq_lock_unlock(wq_lock_queue_base*queue, wq_lock_queue_elem*q){
     }	/* while(q->next!=other */
     /* now we have the next in other */
     /* send an ipc, timeout never */
-    if((err = l4_i386_ipc_call(q->next->id, 
+    if((err = l4_ipc_call(q->next->id, 
                                L4_IPC_SHORT_MSG, 0,0,
                                L4_IPC_SHORT_MSG, &dummy, &dummy,
                                L4_IPC_NEVER,

@@ -5,12 +5,12 @@
  *	\date	01/18/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -44,7 +44,7 @@ class CBEImplementationFile;
  *	\ingroup backend
  *	\brief the back-end constant
  */
-class CBEConstant : public CBEObject  
+class CBEConstant : public CBEObject
 {
 DECLARE_DYNAMIC(CBEConstant);
 public:
@@ -62,12 +62,17 @@ protected:
 
 public:
 	virtual void Write(CBEHeaderFile *pFile, CBEContext *pContext);
-	virtual bool CreateBackEnd(CBEType* pType, String sName, CBEExpression* pValue, CBEContext *pContext);
+	virtual bool CreateBackEnd(CBEType* pType, String sName, CBEExpression* pValue, bool bAlwaysDefine, CBEContext *pContext);
 	virtual bool CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator, CBEContext *pContext);
-    virtual String GetName();
     virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
+    virtual String GetName();
+	virtual CBEExpression *GetValue();
 
 protected:
+    /** \var bool m_bAlwaysDefine
+	 *  \brief true if this const has to be printed as define always
+	 */
+	 bool m_bAlwaysDefine;
 	/**	\var String m_sName
 	 *	\brief the name of the constant
 	 */
@@ -82,7 +87,6 @@ protected:
 	 *	\brief the value of the constant
 	 */
 	CBEExpression *m_pValue;
-
 };
 
 #endif // !__DICE_BECONSTANT_H__

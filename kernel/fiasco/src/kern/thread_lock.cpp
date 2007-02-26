@@ -19,6 +19,12 @@ enum Switch_hint
     locker for Context; this locker automatically gets CPU time allocated
     to the locked thread (Context's ``donatee''); 
     Context::switch_to() uses that hint.
+    To make clear, which stuff in the TCB the lock not protects:
+    -the thread state
+    -queues
+    -the raw kernelstack
+    The rest is protected with this lock, this includes the 
+    kernelstackpointer (kernel_sp).
  */
 class Thread_lock
 {

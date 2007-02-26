@@ -1,3 +1,17 @@
+/*!
+ * \file   names/server/include/names.h
+ * \brief  Internal defines and prototypes for client/server communication
+ *
+ * \date   05/27/2003
+ * \author Uwe Dannowski <Uwe.Dannowski@ira.uka.de>
+ *
+ */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+#ifndef __NAMES_SERVER_INCLUDE_NAMES_H_
+#define __NAMES_SERVER_INCLUDE_NAMES_H_
 #include <l4/sys/types.h>
 #include <l4/names/libnames.h>
 
@@ -7,9 +21,6 @@
 #define	NAMES_QUERY_ID		4
 #define	NAMES_QUERY_NR		5
 #define NAMES_UNREGISTER_TASK	6
-
-#define MAX_NAME_LEN	255
-#define MAX_ENTRIES	32
 
 typedef struct {
   l4_fpage_t	fpage;
@@ -23,3 +34,5 @@ typedef struct {
 /* Internal prototypes */
 void names_init_message(message_t* msg, void* buffer);
 int  names_send_message(message_t* msg);
+
+#endif

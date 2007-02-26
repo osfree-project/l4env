@@ -10,4 +10,4 @@ scrub cleanall::
 	$(VERBOSE)$(RM) *~
 
 # dummies
-all clean install oldconfig txtconfig reloc::
+all clean install oldconfig txtconfig reloc relink::

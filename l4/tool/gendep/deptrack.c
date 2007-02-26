@@ -33,6 +33,13 @@ static char * wanted_executable_name;
 static char * target;
 static char * depfile_name;
 
+/* Special mode: Detection mode. In this mode, we watch for a binary opening
+a file specified in the environment variable GENDEP_SOURCE (stored in
+target). The binary name is written into $(GENDEP_OUTPUT) (depfile_name)
+then. */
+static int detection_mode;
+static int detection_done;
+
 /* List of dependencies. We first collect all, then write them out. */
 static struct strlist{
 	const char*name;
@@ -117,13 +124,22 @@ static char* trim (const char*fn){
 /*!\brief add a dependency
  *
  * Add a dependency to the list of dependencies for the current target.
- * If the name is already registered, it wount be added.
+ * If the name is already registered, it won't be added.
  */
 static void gendep__adddep(const char*name){
   struct strlist *dep;
   char *namecopy;
 
   if((namecopy = trim(name))==0) return;
+
+  /* special detection mode ? */
+  if(detection_mode){
+    if(!strcmp(namecopy, target)){
+      detection_done=1;
+    }
+    free(namecopy);
+    return;
+  }
   if(!strcmp(target, name)) return;
   for(dep=dependencies; dep; dep=dep->next){
   	if(!strcmp(dep->name, namecopy)){
@@ -181,6 +197,15 @@ setup_regexps (void)
   char *regexp_val =0;
   char *end, *start;
 
+  if(gendep_getenv(&target, "SOURCE")){
+    /* we have to watch for the binary that opens our file first */
+    detection_mode=1;
+    gendep_getenv(&depfile_name, "OUTPUT");
+    return;
+  }
+
+  /* standard mode of operation: catch dependencies */
+  
   if (!gendep_getenv (&wanted_executable_name, "BINARY"))
     return;
 
@@ -286,7 +311,7 @@ static void initialize (void)
   get_executable_name ();
   setup_regexps ();
 
-  if (target)
+  if (target && !detection_mode)
     {
       char fn[STRLEN];
       char *slash;
@@ -323,7 +348,7 @@ static void initialize (void)
 void
 gendep__register_open (char const *fn, int flags)
 {
-  if (output && !(flags & (O_WRONLY | O_RDWR)))
+  if ((detection_mode || output) && !(flags & (O_WRONLY | O_RDWR)))
     {
       int i;
 
@@ -367,6 +392,17 @@ static void finish (void)
         fputs(":\n", output);
       }
       fclose (output);
+      return;
     }
+  
+  if(detection_mode && detection_done && depfile_name){
+    FILE *file;
+    
+    file = fopen(depfile_name, "w");
+    if(!file) return;
+    fwrite(executable_name, strlen(executable_name), 1, file);
+    fclose(file);
+    return;
+  }
 }
 

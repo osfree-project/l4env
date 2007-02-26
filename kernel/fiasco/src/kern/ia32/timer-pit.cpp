@@ -15,9 +15,6 @@ void Timer::init()
 
   // set up timer interrupt (~ 1ms)
   Pit::init(1000);
-  
-  init_done = true;
-
 }
 
 IMPLEMENT inline NEEDS["pic.h"]

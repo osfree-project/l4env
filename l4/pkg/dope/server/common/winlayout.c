@@ -1,32 +1,41 @@
 /*
- * \brief	DOpE Window layout module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE Window layout module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * This module defines the layout of the window's
- * control elements.  
+ * control elements.
  */
 
-#include "dope-config.h"
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include "dopestd.h"
 #include "button.h"
 #include "widget.h"
 #include "winlayout.h"
 #include "window.h"
 #include "userstate.h"
 
-#define WE_L		0x01
-#define WE_O		0x02
-#define WE_R		0x04
-#define WE_U		0x08
-#define WE_FULLER	0x10
-#define WE_CLOSER	0x20
-#define WE_TITLE	0x40
+#define WE_L      0x01
+#define WE_O      0x02
+#define WE_R      0x04
+#define WE_U      0x08
+#define WE_FULLER 0x10
+#define WE_CLOSER 0x20
+#define WE_TITLE  0x40
 
-static struct button_services 		*but;
-static struct userstate_services 	*userstate;
+static struct button_services       *but;
+static struct userstate_services    *userstate;
 
-static s32 bsize=5;		/* border size */
-static s32 tsize=17;	/* title size */
+static s32 bsize=5;     /* border size */
+static s32 tsize=17;    /* title size */
 
 int init_winlayout(struct dope_services *d);
 
@@ -41,7 +50,7 @@ static WIDGET *new_button(WIDGET *next,long x,long y,long w,long h,char *txt,voi
 	nb->gen->set_w((WIDGET *)nb,w);
 	nb->gen->set_h((WIDGET *)nb,h);
 	nb->gen->set_context((WIDGET *)nb,(void *)context);
-	nb->gen->set_next(nb,next);
+	nb->gen->set_next((WIDGET *)nb,next);
 	nb->but->set_click(nb,clic);
 	nb->but->set_text(nb,txt);
 	nb->but->set_font(nb,2);
@@ -50,11 +59,20 @@ static WIDGET *new_button(WIDGET *next,long x,long y,long w,long h,char *txt,voi
 }
 
 static void resize_callback(BUTTON *b) {
-	userstate->set(USERSTATE_WINSIZE,(WIDGET *)b);
+	WINDOW *w;
+	if (!b) return;
+	w = (WINDOW *)b->gen->get_window((WIDGET *)b);
+	if (!w) return;
+	w->win->handle_resize(w,(WIDGET *)b);
 }
 
+
 static void move_callback(BUTTON *b) {
-	userstate->set(USERSTATE_WINMOVE,(WIDGET *)b);
+	WINDOW *w;
+	if (!b) return;
+	w = (WINDOW *)b->gen->get_window((WIDGET *)b);
+	if (!w) return;
+	w->win->handle_move(w,(WIDGET *)b);
 }
 
 /*************************/
@@ -65,21 +83,21 @@ static void move_callback(BUTTON *b) {
 static WIDGET *create_win_elements(s32 elements,s32 width,s32 height) {
 	s32 dx,dy,dw,dh;
 	WIDGET *first=NULL;
-	
+
 	dx = bsize;
 	dy = bsize+tsize;
 	dw = width  - 2*bsize;
 	dh = height - 2*bsize-tsize;
-	
-	if ((elements & WIN_CLOSER) | (elements & WIN_FULLER) | (elements & WIN_TITLE)) { 
+
+	if ((elements & WIN_CLOSER) | (elements & WIN_FULLER) | (elements & WIN_TITLE)) {
 		dy-=tsize;dh+=tsize;
 	}
-	
-	if (elements & WIN_BORDERS) { 
-		dy-=bsize;dx-=bsize;dw+=2*bsize;dh+=2*bsize; 
+
+	if (elements & WIN_BORDERS) {
+		dy-=bsize;dx-=bsize;dw+=2*bsize;dh+=2*bsize;
 	}
 
-	if (elements & WIN_BORDERS) {		
+	if (elements & WIN_BORDERS) {
 		first=new_button(first,dx,dy+bsize,bsize,dh-bsize-bsize,NULL,resize_callback,WE_L);
 		first=new_button(first,dx,dy,bsize,bsize,NULL,resize_callback,WE_L+WE_O);
 		first=new_button(first,dx+bsize,dy,dw-bsize-bsize,bsize,NULL,resize_callback,WE_O);
@@ -90,42 +108,42 @@ static WIDGET *create_win_elements(s32 elements,s32 width,s32 height) {
 		first=new_button(first,dx,dy+dh-bsize,bsize,bsize,NULL,resize_callback,WE_L+WE_U);
 		dx+=bsize;dy+=bsize;dw-=bsize*2;dh-=bsize*2;
 	}
-	
+
 	if (elements & WIN_CLOSER) {
 		first=new_button(first,dx,dy,tsize,tsize,"",NULL,WE_CLOSER);
 		dx+=tsize;dw-=tsize;
 	}
-	
+
 	if (elements & WIN_FULLER) {
 		first=new_button(first,dx+dw-tsize,dy,tsize,tsize,"",NULL,WE_FULLER);
 		dw-=tsize;
 	}
-	
+
 	if ((elements & WIN_TITLE) | (elements & WIN_CLOSER) | (elements & WIN_FULLER)) {
 		first=new_button(first,dx,dy,dw,tsize,"DOpE WINDOW",move_callback,WE_TITLE);
 		dy+=tsize;dh-=tsize;
 	}
-	
+
 	return first;
 }
 
 
 static void resize_win_elements(WIDGET *elem,s32 elem_mask,s32 width,s32 height) {
 	s32 tw=width,b=0;
-	
-	if (elem_mask & WIN_BORDERS) { 
+
+	if (elem_mask & WIN_BORDERS) {
 		b = bsize;
 		tw -= 2*b;
 	}
-	
-	if (elem_mask & WIN_CLOSER)	tw -= tsize;
-	if (elem_mask & WIN_FULLER)	tw -= tsize;
-	
+
+	if (elem_mask & WIN_CLOSER) tw -= tsize;
+	if (elem_mask & WIN_FULLER) tw -= tsize;
+
 	while (elem) {
 
 		switch ((s32)elem->gen->get_context(elem)) {
-		
-		case WE_L:	
+
+		case WE_L:
 			elem->gen->set_h(elem,height-bsize-bsize);
 			elem->gen->update(elem,0);
 			break;
@@ -164,7 +182,7 @@ static void resize_win_elements(WIDGET *elem,s32 elem_mask,s32 width,s32 height)
 			elem->gen->set_w(elem,tw);
 			elem->gen->update(elem,0);
 			break;
-		}			
+		}
 		elem=elem->gen->get_next(elem);
 	}
 }
@@ -184,7 +202,7 @@ static void set_win_title(WIDGET *elem,char *new_title) {
 	while (elem) {
 		if ((s32)elem->gen->get_context(elem) == WE_TITLE) {
 			((BUTTON *)elem)->but->set_text((BUTTON *)elem,new_title);
-			((BUTTON *)elem)->gen->update((BUTTON *)elem,1);
+			((BUTTON *)elem)->gen->update((WIDGET *)elem,1);
 			return;
 		}
 		elem=elem->gen->get_next(elem);
@@ -221,7 +239,7 @@ static s32 get_top_border(s32 elem_mask) {
 	if (elem_mask & WIN_BORDERS) top+=bsize;
 	if (elem_mask & (WIN_CLOSER|WIN_FULLER|WIN_TITLE)) top+=tsize;
 	return top;
-	
+
 }
 
 
@@ -253,10 +271,10 @@ static struct winlayout_services services = {
 /**************************/
 
 int init_winlayout(struct dope_services *d) {
-	
-	but			= d->get_module("Button 1.0");
-	userstate	= d->get_module("UserState 1.0");
-	
+
+	but       = d->get_module("Button 1.0");
+	userstate = d->get_module("UserState 1.0");
+
 	d->register_module("WinLayout 1.0",&services);
 	return 1;
 }

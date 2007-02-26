@@ -5,21 +5,21 @@ IMPLEMENTATION[arm]:
 #include "irq.h"
 #include "receiver.h"
 
-static char dirq_storage[sizeof(dirq_t)* 32]; // 16 device irq's
+static char dirq_storage[sizeof(Dirq)* 32]; // 16 device irq's
 
 IMPLEMENT 
-void *dirq_t::operator new ( size_t ) 
+void *Dirq::operator new ( size_t ) 
 {
   static unsigned first = 0;
-  return reinterpret_cast<dirq_t*>(dirq_storage)+(first++);
+  return reinterpret_cast<Dirq*>(dirq_storage)+(first++);
 }
 
 IMPLEMENT FIASCO_INIT
 void
-dirq_t::init()
+Dirq::init()
 {
   for( unsigned i = 0; i<32; ++i )
-    new dirq_t(i);
+    new Dirq(i);
 }
 
 
@@ -30,7 +30,7 @@ dirq_t::init()
     @return true if the binding could be established
  */
 IMPLEMENT inline NEEDS ["atomic.h"]
-bool dirq_t::alloc(Receiver *t, bool ack_in_kernel)
+bool Dirq::alloc(Receiver *t, bool ack_in_kernel)
 {
   bool ret = smp_cas(&_irq_thread, reinterpret_cast<Receiver*>(0), t);
 
@@ -40,13 +40,12 @@ bool dirq_t::alloc(Receiver *t, bool ack_in_kernel)
 
       _ack_in_kernel = ack_in_kernel;
       _queued = 0;
-#warning Pic must be handled
-#if 0
+
       if (_ack_in_kernel)
 	Pic::enable(irq);
       else
 	Pic::disable(irq);
-#endif
+
     }
 
   return ret;
@@ -58,16 +57,13 @@ bool dirq_t::alloc(Receiver *t, bool ack_in_kernel)
             successful
  */
 IMPLEMENT inline NEEDS ["receiver.h"]
-bool dirq_t::free(Receiver *t)
+bool Dirq::free(Receiver *t)
 {
   bool ret = smp_cas(&_irq_thread, t, reinterpret_cast<Receiver*>(0));
 
   if (ret) 
     {
-#warning Pic must be handled
-#if 0
       Pic::disable(id().irq());
-#endif
       sender_dequeue(t->sender_list());
     }
 

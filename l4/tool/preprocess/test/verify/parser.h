@@ -37,12 +37,12 @@ private:
 };
 
 #line 20 "parser.cpp"
-int bar();
+inline int bar();
 
 #line 23 "parser.cpp"
 // Try multiline NEEDS
 
-int baz();
+inline int baz();
 
 #line 29 "parser.cpp"
 // Try function arguments

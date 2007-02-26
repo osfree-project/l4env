@@ -1,0 +1,11 @@
+I/O server interface.
+
+This package defines the generic interface of I/O managers. It is (like
+dm_generic) not an implementation. generic_io includes a wrapper library libio.
+This is the I/O manager API to be used in programs.
+
+An I/O manager provides services to access I/O related resources. These
+resources are (at least on x86) I/O port regions, memory-mapped I/O regions and
+PCI configuration space. Interrupt handling is also in scope of an I/O manager
+and handled as proposed for Omega0 (see omega0/doc/omega0.ps.gz). A brief Omega0
+introduction is included in the manual (generic_io/doc/).

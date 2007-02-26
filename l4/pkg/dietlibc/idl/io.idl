@@ -1,0 +1,120 @@
+/* -*- c -*- */ 
+import <sys/stat.h>
+import <sys/types.h>
+import <fcntl.h>
+
+import <l4/sys/types.h>
+
+import <l4/dietlibc/io-types.h>
+
+library io
+{
+    /* Normal constructor / destructor functions
+     */
+    [uuid(1), abstract]
+    interface object_construct
+    {
+        file_desc_t open([in] object_id_t object_id, [in] int flags);
+        file_desc_t close([in] object_id_t object_id);
+        //int dup([in] int oldfd, [in, out] int *errno_wrap);
+        //int dup2([in] int oldfd, [in] int newfd, [in, out] int *errno_wrap);
+    };
+
+    /* Contains common functions
+     */
+    [uuid(2), abstract]
+    interface object_handles
+    {
+        // fcntl : this remains as exercise for the appreciated reader ;-)
+    };
+
+    [uuid(3), abstract]
+    interface object_meta
+    {
+        //stat;
+        //fstat;
+        //lstat;
+    };
+
+    [uuid(4), abstract]
+    interface object_common:
+        object_construct, object_meta, object_handles
+    {};
+
+    [uuid(5), abstract]
+    interface leaf_io
+    {
+        ssize_t read([in] file_desc_t fd,
+                     [out, size_is(count), ref, prealloc] char **buf,
+                     [in, out] size_t *count);
+        ssize_t write([in] file_desc_t fd,
+                      [in, prealloc, ref, size_is(count)] char *buf,
+                      [in, out] size_t *count);
+    };
+
+    [uuid(6), abstract]
+    interface container_io
+    {
+        //mkdir;
+        //rmdir;
+        //readdir;
+        //getdirent;
+        file_desc_t creat([in] object_id_t object_id, [in] mode_t mode);
+        //link;
+        //unlink;
+        //rename;
+    };
+
+    [uuid(7), abstract]
+    interface seekable
+    {
+        off_t lseek([in] file_desc_t fd, [in] off_t offset, [in] int whence);
+    };
+
+    [uuid(8)]
+    interface leaf : leaf_io, object_common
+    {};
+
+    [uuid(9)]
+    interface container : container_io, object_common
+    {};
+
+    [uuid(10)]
+    interface leaf_seekable : leaf, seekable
+    {};
+
+    /*
+    // we probably dont need this stuff normally
+    // we can use connectionless servers
+    [uuid(100)]
+    interface connection
+    {
+        // these exist to ensure reentrancability
+        l4_threadid_t init_connection();
+        // see above comment, why this is moved.
+        //void          close_connection();
+    };
+    */
+
+    /*
+    interface vfs
+    {
+        int     open([in, string] char* name, [in] int flags,
+                     [in, out] int *errno_wrap);
+        ssize_t read([in] int fd,
+                     [out, size_is(count), ref, prealloc] char **buf,
+                     [in, out] size_t *count,
+                     [in, out] int *errno_wrap);
+        ssize_t write([in] int fd,
+                      [in, prealloc, ref, size_is(count)] char *buf,
+                      [in, out] size_t *count,
+                      [in, out] int *errno_wrap);
+        int     close([in] int fd, [in, out] int *errno_wrap);
+        int     fsync([in] int fd, [in, out] int *errno_wrap);
+        off_t   lseek([in] int fd, [in] off_t offset, [in] int whence,
+                      [in, out] int *errno_wrap);
+        int     fstat([in] int fd, [in, out, prealloc] struct stat *buf,
+                      [in, out] int *errno_wrap);
+    };
+    */
+};

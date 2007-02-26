@@ -1,4 +1,4 @@
-PKGDIR	= ..
+PKGDIR	?= ..
 L4DIR	?= $(PKGDIR)/../..
 
 # the default is to build the listed directories, provided that they

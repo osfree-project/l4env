@@ -40,7 +40,7 @@ public:
   P_ptr<void> lookup( void *, size_t *, Page::Attribs *a ) const;
 
   void copy_in( void *my_base, Page_table *o, 
-		void* base, size_t size = 0 );
+		void *base, size_t size = 0 );
 
   static Page_table *current();
 

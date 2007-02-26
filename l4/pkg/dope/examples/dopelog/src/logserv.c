@@ -1,5 +1,6 @@
 #include "logserv.h"
 #include <stdio.h>
+#include <string.h>
 #include <l4/names/libnames.h>
 #include <l4/env/errno.h>
 #include <l4/sys/ipc.h>
@@ -40,14 +41,14 @@ static int get_message(void) {
 	memset(message_buffer, 0, LOG_BUFFERSIZE);
 	while (1) {
 		if (l4_thread_equal(msg_sender, L4_INVALID_ID)) {
-			err = l4_i386_ipc_wait(&msg_sender, &message, &message.d0, &message.d1,
+			err = l4_ipc_wait(&msg_sender, &message, &message.d0, &message.d1,
 					L4_IPC_TIMEOUT(0, 0, 0, 0, 0, 0),
 					&message.result
 			);
 			if (err != 0) return err;
 			break;
 		} else {
-			err = l4_i386_ipc_reply_and_wait(msg_sender, NULL, message.d0, 0,
+			err = l4_ipc_reply_and_wait(msg_sender, NULL, message.d0, 0,
 					   &msg_sender, &message,
 					   &message.d0, &message.d1,
 					   L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0),

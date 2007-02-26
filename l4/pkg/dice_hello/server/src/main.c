@@ -7,13 +7,13 @@
 
 int main(void)
 {
-  names_register("flick_hello_server");
+  names_register("dice_hello_server");
   hello_test_server_loop(NULL);
   return 0;
 }
 
 void 
-hello_test_f1_component(CORBA_Object *_dice_corba_obj,
+hello_test_f1_component(CORBA_Object _dice_corba_obj,
     l4_uint32_t t1,
     l4_uint32_t *t2,
     CORBA_Environment *_dice_corba_env)
@@ -23,7 +23,7 @@ hello_test_f1_component(CORBA_Object *_dice_corba_obj,
 }
 
 l4_uint16_t 
-hello_test_f2_component(CORBA_Object *_dice_corba_obj,
+hello_test_f2_component(CORBA_Object _dice_corba_obj,
     l4_int32_t t1,
     CORBA_Environment *_dice_corba_env)
 {
@@ -32,8 +32,8 @@ hello_test_f2_component(CORBA_Object *_dice_corba_obj,
 }
 
 l4_uint32_t 
-hello_test_f3_component(CORBA_Object *_dice_corba_obj,
-    char* s,
+hello_test_f3_component(CORBA_Object _dice_corba_obj,
+    const char* s,
     CORBA_Environment *_dice_corba_env)
 {
   printf("f3: %s\n", s);

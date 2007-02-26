@@ -14,8 +14,8 @@ setkey y z
 title = Back to Main
 configfile (nd)/tftpboot/ra3/menu.lst
 
-title = Loader (andy1) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy1-test"
+title = Loader (andy) - VMWare
+kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy-test"
 modaddr 0x02000000
 module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
 module (nd)/tftpboot/ra3/pub/sigma0
@@ -26,11 +26,11 @@ module (nd)/tftpboot/ra3/pub/con
 module (nd)/tftpboot/ra3/pub/simple_ts
 module (nd)/tftpboot/ra3/pub/tftp
 module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy1
+module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy
 vbeset 0x4021
 
-title = Loader (andy2) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy2-test"
+title = Loader (arrays) - VMWare
+kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "arrays-test"
 modaddr 0x02000000
 module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
 module (nd)/tftpboot/ra3/pub/sigma0
@@ -41,82 +41,7 @@ module (nd)/tftpboot/ra3/pub/con
 module (nd)/tftpboot/ra3/pub/simple_ts
 module (nd)/tftpboot/ra3/pub/tftp
 module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy2
-vbeset 0x4021
-
-title = Loader (andy3) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy3-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy3
-vbeset 0x4021
-
-title = Loader (andy4) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy4-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy4
-vbeset 0x4021
-
-title = Loader (andy5) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy5-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy5
-vbeset 0x4021
-
-title = Loader (andy6) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "andy6-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_andy6
-vbeset 0x4021
-
-title = Loader (array_idl) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "array_idl-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_array_idl
+module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_arrays
 vbeset 0x4021
 
 title = Loader (corba_idl) - VMWare
@@ -239,8 +164,8 @@ module (nd)/tftpboot/ra3/pub/l4exec
 module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_sockets
 vbeset 0x4021
 
-title = Loader (string1) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string1-test"
+title = Loader (strings) - VMWare
+kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "strings-test"
 modaddr 0x02000000
 module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
 module (nd)/tftpboot/ra3/pub/sigma0
@@ -251,11 +176,11 @@ module (nd)/tftpboot/ra3/pub/con
 module (nd)/tftpboot/ra3/pub/simple_ts
 module (nd)/tftpboot/ra3/pub/tftp
 module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string1
+module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_strings
 vbeset 0x4021
 
-title = Loader (string2) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string2-test"
+title = Loader (structs) - VMWare
+kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "structs-test"
 modaddr 0x02000000
 module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
 module (nd)/tftpboot/ra3/pub/sigma0
@@ -266,142 +191,7 @@ module (nd)/tftpboot/ra3/pub/con
 module (nd)/tftpboot/ra3/pub/simple_ts
 module (nd)/tftpboot/ra3/pub/tftp
 module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string2
-vbeset 0x4021
-
-title = Loader (string3) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string3-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string3
-vbeset 0x4021
-
-title = Loader (string4) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string4-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string4
-vbeset 0x4021
-
-title = Loader (string5) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string5-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string5
-vbeset 0x4021
-
-title = Loader (string6) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string6-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string6
-vbeset 0x4021
-
-title = Loader (string7) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string7-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string7
-vbeset 0x4021
-
-title = Loader (string8) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string8-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string8
-vbeset 0x4021
-
-title = Loader (string_idl) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "string_idl-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_string_idl
-vbeset 0x4021
-
-title = Loader (struct2) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "struct2-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_struct2
-vbeset 0x4021
-
-title = Loader (struct_idl) - VMWare
-kernel (nd)/tftpboot/ra3/pub/rmgr -sigma0 task modname "run" task modname "struct_idl-test"
-modaddr 0x02000000
-module (nd)/tftpboot/ra3/pub/fiasco -nowait -vmware -serial -nokdb -serial_esc
-module (nd)/tftpboot/ra3/pub/sigma0
-module (nd)/tftpboot/ra3/pub/names
-module (nd)/tftpboot/ra3/pub/log
-module (nd)/tftpboot/ra3/pub/dm_phys
-module (nd)/tftpboot/ra3/pub/con
-module (nd)/tftpboot/ra3/pub/simple_ts
-module (nd)/tftpboot/ra3/pub/tftp
-module (nd)/tftpboot/ra3/pub/l4exec
-module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_struct_idl
+module (nd)/tftpboot/ra3/pub/loader (nd)/tftpboot/ra3/pub/cfg_run (nd)/tftpboot/ra3/dice_tests/cfg_structs
 vbeset 0x4021
 
 title = l4str - VMWare

@@ -1,44 +1,52 @@
 /*
- * \brief	DOpE Button widget module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
- * 
+ * \brief   DOpE Button widget module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ *
  * This module converts fnt data to a generic font
  * structure that can be  used by other components
  * of DOpE such as the font manager module.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
-#include "dope-config.h"
+#include "dopestd.h"
 #include "fontconv.h"
 
 /*** FILE HEADER STRUCTURE OF *.FNT FILES ***/
 struct fntfile_hdr {
-	u16	font_id;		/* font number */
-	u16	point;			/* size */
-	u8	name[32];		/* font name */
-	u16	first_ade;		/* first ascii char */
-	u16	last_ade;		/* last ascii char */
-	u16	top;			/* distance topline <-> baseline */
-	u16	ascent;			/* distance ascentline <-> baseline */
-	u16	half;			/* distance halfline <-> baseline */
-	u16	descent;		/* distance descentline <-> baseline */
-	u16	bottom;			/* distance bottomline <-> baseline */
-	u16	max_char_width;	/* biggest character width */
-	u16	max_cell_width;	/* biggest character cell with */
-	u16	left_offset;	/* left offset for italic */
-	u16	right_offset;	/* right offset for italic */
-	u16	thicken;		/* scale value for bold */
-	u16	ul_size;		/* height of underscore */
-	u16	lighten;		/* mask for bright style */
-	u16	skew;			/* mask for italic */
-	u16	flags;			/* fontflags */
-	u16	*hor_table;		/* pointer to horizontal table */
-	u16	*off_table;		/* pointer to char offset table */
-	u16	*dat_table;		/* pointer to font image */
-	u16	form_width;		/* width of font image */
-	u16	form_height;	/* height of font image */
-	void	*next_font;		/* unused */
+	u16 font_id;        /* font number */
+	u16 point;          /* size */
+	u8  name[32];       /* font name */
+	u16 first_ade;      /* first ascii char */
+	u16 last_ade;       /* last ascii char */
+	u16 top;            /* distance topline <-> baseline */
+	u16 ascent;         /* distance ascentline <-> baseline */
+	u16 half;           /* distance halfline <-> baseline */
+	u16 descent;        /* distance descentline <-> baseline */
+	u16 bottom;         /* distance bottomline <-> baseline */
+	u16 max_char_width; /* biggest character width */
+	u16 max_cell_width; /* biggest character cell with */
+	u16 left_offset;    /* left offset for italic */
+	u16 right_offset;   /* right offset for italic */
+	u16 thicken;        /* scale value for bold */
+	u16 ul_size;        /* height of underscore */
+	u16 lighten;        /* mask for bright style */
+	u16 skew;           /* mask for italic */
+	u16 flags;          /* fontflags */
+	u16 *hor_table;     /* pointer to horizontal table */
+	u16 *off_table;     /* pointer to char offset table */
+	u16 *dat_table;     /* pointer to font image */
+	u16 form_width;     /* width of font image */
+	u16 form_height;    /* height of font image */
+	void    *next_font;     /* unused */
 };
 
 int init_conv_fnt(struct dope_services *d);
@@ -57,7 +65,7 @@ static u32 i2u32(u32 *src) {
 	u8 *b = ((u8 *)src) + 1;
 	u8 *c = ((u8 *)src) + 2;
 	u8 *d = ((u8 *)src) + 3;
-	return 	 ((u32)(*a))      + (((u32)(*b))<<8) + 
+	return   ((u32)(*a))      + (((u32)(*b))<<8) +
 			(((u32)(*c))<<16) + (((u32)(*d))<<24);
 }
 
@@ -72,7 +80,7 @@ static u32 m2u32(u32 *src) {
 	u8 *b = ((u8 *)src) + 1;
 	u8 *c = ((u8 *)src) + 2;
 	u8 *d = ((u8 *)src) + 3;
-	return 	 ((u32)(*d))      + (((u32)(*c))<<8) + 
+	return   ((u32)(*d))      + (((u32)(*c))<<8) +
 			(((u32)(*b))<<16) + (((u32)(*a))<<24);
 }
 
@@ -86,18 +94,18 @@ static u32 m2u32(u32 *src) {
 static s16 font_probe(struct fntfile_hdr *fnt) {
 	u32 max_char_w,img_w,img_h,point,first_ade,last_ade,top,bottom;
 	u16 (*get_u16) (u16 *);
-	DOPEDEBUG(char *dbg="ConvertFNT(probe): ";)
-	
+	INFO(char *dbg="ConvertFNT(probe): ";)
+
 	if ((fnt->flags & 4)==0) {
-		DOPEDEBUG(printf("%s font is in intel format\n",dbg));
+		INFO(printf("%s font is in intel format\n",dbg));
 		get_u16 = i2u16;
 	} else  {
-		DOPEDEBUG(printf("%s font is in motorola format\n",dbg));
+		INFO(printf("%s font is in motorola format\n",dbg));
 		get_u16 = m2u16;
 	}
-	
+
 	fnt->name[31]=0;
-	
+
 	max_char_w=get_u16(&fnt->max_char_width);
 	img_w=8*get_u16(&fnt->form_width);
 	img_h=get_u16(&fnt->form_height);
@@ -106,24 +114,24 @@ static s16 font_probe(struct fntfile_hdr *fnt) {
 	last_ade=get_u16(&fnt->last_ade);
 	top=get_u16(&fnt->top);
 	bottom=get_u16(&fnt->bottom);
-	
-	DOPEDEBUG(printf("%s image width:  %lu\n",dbg,img_w));
-	DOPEDEBUG(printf("%s image height: %lu\n",dbg,img_h));
-	DOPEDEBUG(printf("%s points:       %lu\n",dbg,point));
-	DOPEDEBUG(printf("%s first_ade:    %lu\n",dbg,first_ade));
-	DOPEDEBUG(printf("%s last_ade:     %lu\n",dbg,last_ade));
-	DOPEDEBUG(printf("%s top:          %lu\n",dbg,top));
-	DOPEDEBUG(printf("%s bottom:       %lu\n",dbg,bottom));
-	DOPEDEBUG(printf("%s name:         %s\n",dbg,fnt->name));
+
+	INFO(printf("%s image width:  %lu\n",dbg,img_w));
+	INFO(printf("%s image height: %lu\n",dbg,img_h));
+	INFO(printf("%s points:       %lu\n",dbg,point));
+	INFO(printf("%s first_ade:    %lu\n",dbg,first_ade));
+	INFO(printf("%s last_ade:     %lu\n",dbg,last_ade));
+	INFO(printf("%s top:          %lu\n",dbg,top));
+	INFO(printf("%s bottom:       %lu\n",dbg,bottom));
+	INFO(printf("%s name:         %s\n",dbg,fnt->name));
 
 	/* strange values -> seems not to be a valid fnt */
 	if ((max_char_w>100)|(img_h<1)|(img_h>100)|(img_w<1)|(point>50)|
 		(first_ade>255)|(last_ade>255)|(first_ade>last_ade)|
 		(top>img_h)|(bottom>img_h)|(top<bottom)) {
-		DOPEDEBUG(printf("%sthis doesnt seem to be valid fnt data - sorry\n",dbg));
+		INFO(printf("%sthis doesnt seem to be valid fnt data - sorry\n",dbg));
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -139,7 +147,7 @@ static void font_gen_width_table(struct fntfile_hdr *fnt,s32 *dst_wtab) {
 	s32 width;
 	u16 (*get_u16) (u16 *);
 	u32 (*get_u32) (u32 *);
-	
+
 	if ((fnt->flags & 4)==0) {
 		get_u16 = i2u16;
 		get_u32 = i2u32;
@@ -147,17 +155,18 @@ static void font_gen_width_table(struct fntfile_hdr *fnt,s32 *dst_wtab) {
 		get_u16 = m2u16;
 		get_u32 = m2u32;
 	}
-	
+
 	first_ade=get_u16(&fnt->first_ade);
 	last_ade=get_u16(&fnt->last_ade);
 	offsets = (u16 *)((get_u32((u32 *)(&fnt->off_table))) + (long)fnt);
 
 	for (i=0;i<first_ade;i++) *(dst_wtab++)=0;
 	for (i=first_ade;i<last_ade;i++) {
-		width=get_u16(offsets+1) - get_u16(offsets++);
-		*(dst_wtab++)=width;		
+		width=get_u16(offsets+1) - get_u16(offsets);
+		offsets++;
+		*(dst_wtab++)=width;
 	}
-	for (i=last_ade;i<256;i++) *(dst_wtab++)=0;	
+	for (i=last_ade;i<256;i++) *(dst_wtab++)=0;
 }
 
 
@@ -170,7 +179,7 @@ static void font_gen_offset_table(struct fntfile_hdr *fnt,s32 *dst_otab) {
 	u16 *offsets;
 	u16 (*get_u16) (u16 *);
 	u32 (*get_u32) (u32 *);
-	
+
 	if ((fnt->flags & 4)==0) {
 		get_u16 = i2u16;
 		get_u32 = i2u32;
@@ -178,16 +187,16 @@ static void font_gen_offset_table(struct fntfile_hdr *fnt,s32 *dst_otab) {
 		get_u16 = m2u16;
 		get_u32 = m2u32;
 	}
-	
+
 	first_ade=get_u16(&fnt->first_ade);
 	last_ade=get_u16(&fnt->last_ade);
 	offsets = (u16 *)((get_u32((u32 *)(&fnt->off_table))) + (long)fnt);
 
 	for (i=0;i<first_ade;i++) *(dst_otab++)=0;
 	for (i=first_ade;i<last_ade+1;i++) {
-		*(dst_otab++)=get_u16(offsets++);		
+		*(dst_otab++)=get_u16(offsets++);
 	}
-	for (i=last_ade+1;i<256;i++) *(dst_otab++)=0;	
+	for (i=last_ade+1;i<256;i++) *(dst_otab++)=0;
 }
 
 
@@ -237,7 +246,7 @@ static void font_gen_image(struct fntfile_hdr *fnt,u8 *dst) {
 	u8 *src;
 	u16 (*get_u16) (u16 *);
 	u32 (*get_u32) (u32 *);
-	
+
 	if ((fnt->flags & 4)==0) {
 		get_u16 = i2u16;
 		get_u32 = i2u32;
@@ -253,7 +262,7 @@ static void font_gen_image(struct fntfile_hdr *fnt,u8 *dst) {
 		for (i=0;i<linelength;i++) {
 			curr_byte=*(src++);
 			for (k=0;k<8;k++) {
-		 		if (((long)curr_byte)&0x0080) *(dst++)=255;
+		        if (((long)curr_byte)&0x0080) *(dst++)=255;
 				else *(dst++)=0;
 				curr_byte=curr_byte<<1;
 			}
@@ -268,15 +277,15 @@ static void font_gen_image(struct fntfile_hdr *fnt,u8 *dst) {
 /****************************************/
 
 static struct fontconv_services services={
-	(s16 (*)	(void *))			font_probe,
-	(void  	(*)	(void *,s32 *))	font_gen_width_table,
-	(void  	(*)	(void *,s32 *))	font_gen_offset_table,
-	(u8 *(*) (void *))			font_get_name,
-	(u16 (*)	(void *))			font_get_top,
-	(u16 (*)	(void *))			font_get_bottom,
-	(u32 (*)	(void *))			font_get_image_width,
-	(u32 (*)	(void *))			font_get_image_height,
-	(void  	(*)	(void *,u8 *))	font_gen_image
+	(s16 (*)    (void *))           font_probe,
+	(void   (*) (void *,s32 *)) font_gen_width_table,
+	(void   (*) (void *,s32 *)) font_gen_offset_table,
+	(u8 *(*) (void *))          font_get_name,
+	(u16 (*)    (void *))           font_get_top,
+	(u16 (*)    (void *))           font_get_bottom,
+	(u32 (*)    (void *))           font_get_image_width,
+	(u32 (*)    (void *))           font_get_image_height,
+	(void   (*) (void *,u8 *))  font_gen_image
 };
 
 

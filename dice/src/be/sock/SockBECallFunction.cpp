@@ -5,7 +5,7 @@
  *	\date	11/28/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,6 +30,7 @@
 #include "be/BEContext.h"
 #include "be/BEMarshaller.h"
 #include "be/BEMsgBufferType.h"
+#include "be/sock/BESocket.h"
 
 IMPLEMENT_DYNAMIC(CSockBECallFunction);
 
@@ -63,69 +64,14 @@ CSockBECallFunction::~CSockBECallFunction()
  */
 void CSockBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
+    assert(m_pComm);
+    CBESocket *pSocket = (CBESocket*)m_pComm;
     // create socket
-    pFile->PrintIndent("sd = socket(PF_INET, SOCK_DGRAM, 0);\n");
-    pFile->PrintIndent("if (sd < 0)\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"socket\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-    // get CORBA_Object and msg buffer
-    String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-    // send message
-    pFile->PrintIndent("dice_ret_size = sendto(sd, %s, ", (const char*)sMsgBuffer);
-    if (m_pMsgBuffer->IsVariableSized())
-        pFile->Print("%s", (const char*)sOffset);
-    else
-        pFile->Print("sizeof(%s)", (const char*)sMsgBuffer);
-    pFile->Print(", 0, (struct sockaddr*)%s, dice_fromlen);\n", (const char*)sCorbaObj);
-    // test if received size is smaller than msg buffer size
-    pFile->PrintIndent("if (dice_ret_size < ");
-    if (m_pMsgBuffer->IsVariableSized())
-        pFile->Print("%s", (const char*)sOffset);
-    else
-        pFile->Print("sizeof(%s)", (const char*)sMsgBuffer);
-    pFile->Print(")\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"send\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-    // offset might have been overwritten, so it has to be reinitialized
-    if (m_pMsgBuffer->IsVariableSized())
-    {
-        m_pMsgBuffer->WriteInitialization(pFile, pContext);
-    }
-    // zero out msg buffer for response
-    pFile->PrintIndent("bzero(");
-    if (!m_pMsgBuffer->IsVariableSized())
-        pFile->Print("&");
-    pFile->Print("%s, ", (const char*)sMsgBuffer);
-    if (m_pMsgBuffer->IsVariableSized())
-        pFile->Print("%s);\n", (const char*)sOffset);
-    else
-        pFile->Print("sizeof(%s));\n", (const char*)sMsgBuffer);
-    // receive response
-    pFile->PrintIndent("dice_ret_size = recvfrom(sd, %s, ", (const char*)sMsgBuffer);
-    if (m_pMsgBuffer->IsVariableSized())
-        pFile->Print("%s", (const char*)sOffset);
-    else
-        pFile->Print("sizeof(%s)", (const char*)sMsgBuffer);
-    pFile->Print(", 0, (struct sockaddr*)%s, &dice_fromlen);\n", (const char*)sCorbaObj);
-    pFile->PrintIndent("if (dice_ret_size < 0)\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"recv\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+	pSocket->CreateSocket(pFile, this, false, pContext);
+	// call
+	pSocket->WriteCall(pFile, this, false, pContext);
     // close socket
-    pFile->PrintIndent("close(sd);\n");
+	pSocket->CloseSocket(pFile, this, false, pContext);
 }
 
 /** \brief writes varaible declarations
@@ -158,7 +104,7 @@ void CSockBECallFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bo
     // marshal opcode
     nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
     // marshal rest
-    pMarshaller->Marshal(pFile, this, 0, nStartOffset, bUseConstOffset, pContext);
+    pMarshaller->Marshal(pFile, this, 0/*all types*/, 0/*all parameters*/, nStartOffset, bUseConstOffset, pContext);
     delete pMarshaller;
 }
 
@@ -171,10 +117,8 @@ void CSockBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContex
     CBECallFunction::WriteVariableInitialization(pFile, pContext);
     String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
     String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-    pFile->PrintIndent("bzero(");
-    if (!m_pMsgBuffer->IsVariableSized())
-        pFile->Print("&");
-    pFile->Print("%s, ", (const char*)sMsgBuffer);
+	// msgbuffer is always pointer: either variable sized or char[]
+    pFile->PrintIndent("bzero(%s, ", (const char*)sMsgBuffer);
     if (m_pMsgBuffer->IsVariableSized())
     {
         pFile->Print("%s);\n", (const char*)sOffset);

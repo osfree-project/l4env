@@ -63,6 +63,8 @@
  */
 #undef  CONFIG_NET
 #undef  CONFIG_VISWS
+#undef  CONFIG_X86_IO_APIC	/* keep an eye on this! */
+#undef  CONFIG_X86_LOCAL_APIC	/* keep an eye on this! */
 #define CONFIG_PCI 1
 #undef  CONFIG_PCI_GOBIOS
 #undef  CONFIG_PCI_GODIRECT

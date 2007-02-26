@@ -12,6 +12,7 @@
 /*****************************************************************************/
 
 /* L4/DROPS includes */
+#include <l4/log/l4log.h>
 #include <l4/util/macros.h>
 #include <l4/thread/thread.h>
 
@@ -36,21 +37,22 @@ __notification_thread(void * data)
   blkclient_driver_t * drv = (blkclient_driver_t *)data;
   l4_uint32_t handle,status;
   int error;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
 
   /* notification loop */
   while (1)
     {
-      l4blk_notify_wait(drv->notify_id,drv->handle,&handle,&status,&error,&exc);
-      if (exc._type != exc_l4_no_exception)
-	Error("IPC error calling driver (%d)\n",exc._type);
+      l4blk_notify_wait_call(&drv->notify_id, drv->handle,
+                             &handle, &status, &error, &_env);
+      if (_env.major != CORBA_NO_EXCEPTION)
+	LOG_Error("IPC error calling driver (%d)", _env.major);
       else
 	/* set request status */
 	blkclient_set_request_status(handle,status,error);
     }
 
   /* this should never happen */
-  Panic("left notification thread...\n");
+  Panic("left notification thread...");
 }
 
 /*****************************************************************************/
@@ -68,9 +70,9 @@ blkclient_start_notification_thread(blkclient_driver_t * driver)
 {
   /* start thread */
   driver->notify_thread = 
-    l4thread_create_long(L4THREAD_INVALID_ID,__notification_thread,
-			 L4THREAD_INVALID_SP,BLKCLIENT_NOTIFY_STACK_SIZE,
-			 L4THREAD_DEFAULT_PRIO,driver,L4THREAD_CREATE_ASYNC);
+    l4thread_create_long(L4THREAD_INVALID_ID, __notification_thread,
+			 L4THREAD_INVALID_SP, BLKCLIENT_NOTIFY_STACK_SIZE,
+			 L4THREAD_DEFAULT_PRIO, driver, L4THREAD_CREATE_ASYNC);
   if (driver->notify_thread < 0)
     {
       /* creation failed */

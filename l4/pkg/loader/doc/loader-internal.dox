@@ -1,0 +1,77 @@
+/*! file doc/general1.dox
+ *
+ * \brief Mainpage
+ */
+
+/*!\mainpage LOADER - L4 loader
+
+\section p_intro Loader-style applications
+
+This is the reference manual for the L4 Loader. For information on how to
+use the loader please see the 
+<a href=../../loader/html/>L4 Loader User Manual</a>.
+
+The L4 Loader distinguishes between Sigma0-style L4 tasks and Loader-style
+L4 tasks. Applications linked against the library \b libloader.s.so are
+denoted as Loader-style applications. This library contains interfaces to
+several servers of the L4 environment and also some basic libraries:
+- interfaces to \c names, \c log, \c loader,  \c rmgr, \c dm_generic, 
+  \c dm_mem, \c dm_phys, \c generic_ts and \c con
+- the \c thread library
+- the region manager \c l4rm
+- the \c slab allocator
+- the \c l4env_err library
+
+By using a separate library for these services it is possible to initialize
+the region manager independent from the application. Therefore it is possible
+to page the program regions by the region manager. Though the region manager
+itself has to be paged by an external pager. While this functionality is
+covered by the loader, the pager will be separated to an extra server in the
+future.
+
+To build that library you have to re-configure your L4 environment by
+invoking \c make \c config in your \e L4 \e directory. You have to enable
+the option \b Build \b shared \b libloader.s.so.
+
+\section p_new_style_init Initialization of Loader-style applications
+
+Loading of applications is performed in several steps:
+-# The L4 Loader passes the name of the executable to load to the
+   \e executable \e interpreter \c l4exec. This server loads the image
+   and all dependent shared libraries. If it detects a dependency to
+   libloader.s.so, it fills the entry address of that library in the
+   field \c entry_1st of the
+   <a href="structl4env__infopage__t.html>L4 environment infopage</a>.
+   In that case it performs a first linker pass to resolve all external 
+   references of the \b libloader.s.so library.
+-# The Loader recognizes \e Loader-style applications by looking at the
+   \c entry_1st field of the L4 environment infopage: Other values than
+   \c L4_MAX_ADDRESS stand for \e Loader-style application.
+-# An L4 task id is allocated at the task server.
+-# All modules the application depends of will be loaded.
+-# The pager is notified about the new L4 task he is responsible to page.
+-# The L4 task is started by the task server. The entry point of the task
+   is set to the \c l4loader_init() entry point provided by \b libloader.s.so.
+-# The region manager of the new application provided by \b libloader.s.so
+   is initialized and relocates all not relocated program sections.
+-# The control is passed back to the Loader which calls \c l4exec again
+   to perform a second linker pass for program sections just relocated by
+   the region manager.
+-# The control is passed to the application again which initializes the
+   remaining modules of the L4 environment (mainly \c thread and \c semaphore).
+-# The application is started either by calling \c multiboot_main() or
+   \c main() (the first has precedence).
+   
+*/
+
+
+/** \page p_doc About this documentation
+
+This documentation was created using Doxygen, a source-code documentation
+system.
+
+\par Requires:
+OSKit 1.0, rmgr, names, l4util, l4sys, Flick, L4 environment
+\author		Frank Mehnert
+*/
+

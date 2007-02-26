@@ -30,6 +30,7 @@ typedef struct {
 typedef union {
   l4_low_high_t lh;
   l4_threadid_struct_t id;
+  l4_uint64_t raw;
 } l4_threadid_t;
 
 typedef l4_threadid_t l4_taskid_t;
@@ -44,8 +45,10 @@ typedef union {
   l4_intrid_struct_t id;
 } l4_intrid_t;
 
-#define L4_NIL_ID 		((l4_threadid_t){lh:{0,0}})
-#define L4_INVALID_ID		((l4_threadid_t){lh:{0xffffffff,0xffffffff}})
+#define L4_NIL_ID_INIT 	     {{0,0}}
+#define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
+#define L4_INVALID_ID_INIT   {{0xffffffff,0xffffffff}}
+#define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
 
 /*
  * L4 flex pages
@@ -70,6 +73,7 @@ typedef struct {
 
 typedef union {
   l4_umword_t fpage;
+  l4_umword_t raw;
   l4_fpage_struct_t fp;
   l4_iofpage_struct_t iofp;
 } l4_fpage_t;

@@ -44,19 +44,19 @@ class mapping_t
 
 public:  
 #line 224 "mapping.cpp"
-  space_index_t 
+  inline space_index_t 
   space();
   
 #line 231 "mapping.cpp"
-  vm_offset_t 
+  inline vm_offset_t 
   vaddr();
   
 #line 238 "mapping.cpp"
-  vm_size_t 
+  inline vm_size_t 
   size();
   
 #line 248 "mapping.cpp"
-  mapping_type_t 
+  inline mapping_type_t 
   type();
   
 #line 283 "mapping.cpp"
@@ -77,14 +77,14 @@ public:
 
 private:  
 #line 213 "mapping.cpp"
-  mapping_t();
+  inline mapping_t();
   
 #line 217 "mapping.cpp"
-  mapping_s *
+  inline mapping_s *
   data();
   
 #line 256 "mapping.cpp"
-  bool
+  inline bool
   unused();
   
 #line 262 "mapping.cpp"

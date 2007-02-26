@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -55,8 +55,8 @@ public:
 	 *	\param pBranchTrue if the condition is true this expression is valid
 	 *	\param pBranchFalse if the condition is false thsi expression is valid
 	 */
-	CFEConditionalExpression(CFEExpression *pCondition, 
-		CFEExpression *pBranchTrue, 
+	CFEConditionalExpression(CFEExpression *pCondition,
+		CFEExpression *pBranchTrue,
 		CFEExpression *pBranchFalse);
 	virtual ~CFEConditionalExpression();
 
@@ -69,6 +69,7 @@ protected:
 // Operations
 public:
 	virtual void Serialize(CFile *pFile);
+	virtual String ToString();
 	virtual CObject* Clone();
 	virtual bool IsOfType(TYPESPEC_TYPE nType);
 	virtual long GetIntValue();

@@ -5,7 +5,7 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -42,6 +42,13 @@ class CBEExpression;
 class CBEFile;
 
 class CBEDeclarator;
+
+/** defines the maximum number if array bounds a declarator
+ * might have and thus how many indices may be available for
+ * a declarators.
+ */
+#define MAX_INDEX_NUMBER    10
+
 /** \class CDeclaratorStackLocation
  *  \brief class to represent a stack location for the declarator stack
  *
@@ -59,54 +66,81 @@ public:
     {
         IMPLEMENT_DYNAMIC_BASE(CDeclaratorStackLocation, CObject);
         pDeclarator = pDecl;
-        nIndex = -1;
+		for (int i=0; i<MAX_INDEX_NUMBER; i++)
+		{
+            nIndex[i] = -1;
+			sIndex[i].Empty();
+		}
         bCheckFunctionForReference = false;
     };
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CDeclaratorStackLocation(CDeclaratorStackLocation &src)
+	: pDeclarator(src.pDeclarator)
+	{
+	    IMPLEMENT_DYNAMIC_BASE(CDeclaratorStackLocation, CObject);
+// 		pDeclarator = (CBEDeclarator*)(src.pDeclarator->Clone());
+		for (int i=0; i<MAX_INDEX_NUMBER; i++)
+		{
+		    nIndex[i] = src.nIndex[i];
+			sIndex[i] = src.sIndex[i];
+		}
+		bCheckFunctionForReference = src.bCheckFunctionForReference;
+	};
     /** \var CBEDeclarator *pDeclarator
      *  \brief a reference to the declarator at this location
      */
     CBEDeclarator *pDeclarator;
-    /** \var int nIndex
+    /** \var int nIndex[MAX_INDEX_NUMBER]
      *  \brief the index of this declarator in an array (or -1 if no array)
      */
-    int nIndex;
+    int nIndex[MAX_INDEX_NUMBER];
     /** \var String sIndex
      *  \brief the name of the index variable if there is no fixed index
      */
-    String sIndex;
+    String sIndex[MAX_INDEX_NUMBER];
     /** \var bool bCheckFunctionForReference
      *  \brief true if WriteDeclaratorStack has to check pFunction->HasAdditionalReference
      */
     bool bCheckFunctionForReference;
     /** \brief sets the index of the stack location
      *  \param nIdx the new index
+	 *  \param nArrayDim which of the array dimensions is meant
      *
      * The array index is -1 if this stack location is new, its 0 or above
      * if this stack location is an array, or -2 if the array index is a sIndex.
      */
-    void SetIndex(int nIdx)
+    void SetIndex(int nIdx, int nArrayDim = 0)
     {
-        if (nIdx < 0)
+        if (nIdx < -3)
             return;
-        nIndex = nIdx;
-        sIndex.Empty();
+		if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
+		    return;
+        nIndex[nArrayDim] = nIdx;
+        sIndex[nArrayDim].Empty();
     }
     /** \brief sets the index variable of the stack location
      *  \param sIdx the new stack location variable
      */
-    void SetIndex(String sIdx)
+    void SetIndex(String sIdx, int nArrayDim = 0)
     {
         if (sIdx.IsEmpty())
             return;
-        nIndex = -2;
-        sIndex = sIdx;
+		if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
+		    return;
+        nIndex[nArrayDim] = -2;
+        sIndex[nArrayDim] = sIdx;
     }
     /** \brief checks if this stack location has an index
+	 *  \param nArrayDim the array dimension to check
      *  \return true if nIndex != -1
      */
-    bool HasIndex()
+    bool HasIndex(int nArrayDim = 0)
     {
-        return nIndex != -1;
+		if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
+		    return false;
+        return nIndex[nArrayDim] != -1;
     }
     /** \brief turns on the test for the additional reference
      */
@@ -114,6 +148,17 @@ public:
     {
         bCheckFunctionForReference = true;
     }
+	/** \brief get the number of used indices
+	 *  \return the number of used indices
+	 *
+	 * A index is used if nIndex[..] != -1
+	 */
+	int GetUsedIndexCount()
+	{
+	    int nRet = 0;
+		while (HasIndex(nRet)) nRet++;
+		return nRet;
+	}
 };
 
 /** \class CDeclaratorStack
@@ -139,7 +184,17 @@ public:
         CDeclaratorStackLocation *pNew = new CDeclaratorStackLocation(pDecl);
         vStack.AddHead(pNew);
     }
-    /** \brief removes the top-most stack location
+
+    /** \brief adds another declarator to the stack
+     *  \param pDecl the declarator to add
+     */
+    void Push(CDeclaratorStackLocation *pStackLoc)
+    {
+        CDeclaratorStackLocation *pNew = new CDeclaratorStackLocation(*pStackLoc);
+        vStack.AddHead(pNew);
+    }
+
+	/** \brief removes the top-most stack location
      *  \return the top-most declarator
      */
     CBEDeclarator *Pop()
@@ -149,7 +204,8 @@ public:
         delete pTop;
         return pDecl;
     }
-    /** \brief retrieves a pointer to the top-most stack location
+
+	/** \brief retrieves a pointer to the top-most stack location
      *  \return a reference to the top-most stack location
      */
     CDeclaratorStackLocation *GetTop()
@@ -159,6 +215,24 @@ public:
         return (CDeclaratorStackLocation*)(vStack.GetFirst()->GetElement());
     }
 
+	/** \brief retrieves the last stack location
+	 *  \return a referebce to the bottom-most stack location
+	 */
+	CDeclaratorStackLocation *GetBottom()
+	{
+	    if (!vStack.GetLast())
+		    return NULL;
+	    return (CDeclaratorStackLocation*)(vStack.GetLast()->GetElement());
+	}
+
+	/** \brief returns the number of used stack locations
+	 *  \return the size of the vector
+	 */
+    int GetSize()
+    {
+	    return vStack.GetSize();
+	}
+
     void Write(CBEFile *pFile, bool bUsePointer, bool bFirstIsGlobal, CBEContext *pContext);
 
 protected:
@@ -167,7 +241,7 @@ protected:
      */
     Vector vStack;
 };
-    
+
 
 /**	\class CBEDeclarator
  *	\ingroup backend
@@ -194,8 +268,9 @@ DECLARE_DYNAMIC(CBEDeclarator);
     virtual bool IsArray();
     virtual void WriteName(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIndirectInitialization(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
+    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
     virtual void WriteIndirect(CBEFile * pFile, bool bUsePointer, bool bHasPointerType, CBEContext * pContext);
-    virtual void WriteGlobalName(CBEFile * pFile, CBEContext * pContext, bool bWriteArray = false);
+    virtual void WriteGlobalName(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext, bool bWriteArray = false);
     virtual void WriteDeclaration(CBEFile * pFile, CBEContext * pContext);
     virtual bool CreateBackEnd(String sName, int nStars, CBEContext * pContext);
     virtual bool CreateBackEnd(CFEDeclarator * pFEDeclarator, CBEContext * pContext);
@@ -210,6 +285,8 @@ DECLARE_DYNAMIC(CBEDeclarator);
     virtual int GetMaxSize(CBEContext *pContext);
     virtual CObject * Clone();
     virtual void RemoveArrayBound(CBEExpression *pBound);
+	virtual int GetRemainingNumberOfArrayBounds(VectorElement *pIter);
+	virtual void WriteCleanup(CBEFile * pFile, bool bUsePointer, CBEContext * pContext);
 
 protected:
     virtual int GetFakeStars();
@@ -246,7 +323,7 @@ protected:
 	 */
     CBEExpression *m_pInitialValue;
 	/**	\var Vector *m_pBounds
-	 *	\brief contains the array bounds 
+	 *	\brief contains the array bounds
 	 */
     Vector *m_pBounds;
 };

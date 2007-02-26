@@ -5,7 +5,7 @@
  *	\date	03/22/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -29,7 +29,10 @@
 #ifndef __DICE_FE_FETAGGEDENUMTYPE_H__
 #define __DICE_FE_FETAGGEDENUMTYPE_H__
 
-#include "FEEnumType.h"
+#include "fe/FEEnumType.h"
+#include "CString.h"
+
+class Vector;
 
 /**	\class CFETaggedEnumType
  *	\ingroup frontend
@@ -38,7 +41,7 @@
  * A tagged struct type is a enum type with an additional name
  * set after the 'enum' keyword: "enum &lt;name&gt; { ..."
  */
-class CFETaggedEnumType : public CFEEnumType  
+class CFETaggedEnumType : public CFEEnumType
 {
 DECLARE_DYNAMIC(CFETaggedEnumType);
 

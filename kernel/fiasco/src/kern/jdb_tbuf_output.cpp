@@ -37,6 +37,7 @@ IMPLEMENTATION:
 #include "processor.h"
 #include "static_init.h"
 #include "tb_entry.h"
+#include "terminate.h"
 #include "thread.h"
 #include "watchdog.h"
 
@@ -63,8 +64,10 @@ console_log_entry(Tb_entry *e, const char *)
   int c;
   while ((c=Kconsole::console()->getchar(false)) == -1)
     Proc::pause();
-  if( c == 'i')
-    jdb_enter_kdebug("IPC");
+  if (c == 'i')
+    kdb_ke("LOG");
+  if (c == '^')
+    terminate(1);
 
   // enable interrupts we previously disabled
   Proc::sti_restore(s);

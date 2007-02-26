@@ -10,6 +10,11 @@
  * the LOG-calls do multiple printf-calls, which should not be
  * intermixed.
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include "internal.h"
 
 /* if we use locks, we can use a global message buffer */

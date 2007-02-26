@@ -14,6 +14,10 @@
  * start of main(). So, this memory would be allocated anyway. Thus we
  * save the effort and use the static array.
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -281,14 +285,14 @@ static int get_message(void){
   memset(message_buffer,0,LOG_BUFFERSIZE);
   while(1){
   	if(l4_thread_equal(msg_sender, L4_INVALID_ID)){
-		if((err=l4_i386_ipc_wait(&msg_sender,
+		if((err=l4_ipc_wait(&msg_sender,
                            &message, &message.d0, &message.d1,
 			   L4_IPC_TIMEOUT(0,0,0,0,0,0),
 			   &message.result))!=0)
 		    return err;
 		 break;
 	} else {
-		err = l4_i386_ipc_reply_and_wait(
+		err = l4_ipc_reply_and_wait(
 			msg_sender, NULL, message.d0, 0,
 			&msg_sender, &message, &message.d0, &message.d1,
 			L4_IPC_TIMEOUT(0,1,0,0,0,0),

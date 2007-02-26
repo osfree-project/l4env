@@ -1,14 +1,14 @@
 /**
- *	\file	dice/src/fe/FEExpression.h 
+ *	\file	dice/src/fe/FEExpression.h
  *	\brief	contains the declaration of the class CFEExpression
  *
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
+ * This file contains free software, you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 2 as 
  * published by the Free Software Foundation (see the file COPYING). 
  *
@@ -31,22 +31,24 @@
 
 enum EXPR_TYPE {
   EXPR_NONE			= 0,
-  EXPR_NULL			= 1, // Expression
-  EXPR_TRUE			= 2,
-  EXPR_FALSE		= 3,
-  EXPR_CHAR			= 4,
-  EXPR_STRING		= 5,
-  EXPR_USER_DEFINED	= 6,
-  EXPR_INT			= 7, // primary
-  EXPR_FLOAT		= 8,
-  EXPR_PAREN		= 9,
-  EXPR_UNARY		= 10, // unary
-  EXPR_BINARY		= 11, // binary
-  EXPR_CONDITIONAL	= 12, // conditional
+  EXPR_NULL,                // Expression
+  EXPR_TRUE,
+  EXPR_FALSE,
+  EXPR_CHAR,
+  EXPR_STRING,
+  EXPR_USER_DEFINED,
+  EXPR_INT,                 // primary
+  EXPR_FLOAT,
+  EXPR_PAREN,
+  EXPR_UNARY,               // unary
+  EXPR_BINARY,              // binary
+  EXPR_CONDITIONAL,         // conditional
+  EXPR_SIZEOF               // sizeof
 };
 
 #include "fe/FEBase.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
+#include "CString.h"
 
 /** \class CFEExpression
  *	\ingroup frontend
@@ -86,6 +88,7 @@ protected:
 // Operations
 public:
 	virtual void Serialize(CFile *pFile);
+	virtual String ToString();
 	virtual CObject* Clone();
 	virtual bool IsOfType(TYPESPEC_TYPE nType);
 	virtual long GetIntValue();

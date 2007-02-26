@@ -1,5 +1,7 @@
 INTERFACE:
 #include <cstddef>
+
+#include "types.h"
 IMPLEMENTATION:
 
 #include <cstdio>
@@ -7,21 +9,36 @@ IMPLEMENTATION:
 
 #include "load_elf.h"
 #include "uart.h"
-#include "types.h"
+#include "gdb_server.h"
 #include "kip.h"
 
 #include "static_init.h"
 STATIC_INITIALIZER_P(console_init,MAX_INIT_PRIO);
 
+static inline
+void write_back_data_cache()
+{
+  volatile Unsigned32 *base = (Unsigned32*)0xe0000000;
+  Unsigned32 *const end = (Unsigned32*)(0xe0000000 + 8192);
+  Unsigned32 dummy;
+  do {
+    dummy = *base;  
+    base+=8;
+  } while(base!=end) ;
+}
+
+
 
 void console_init()
 {
   static Uart sercon;
+  //  static Gdb_serv gdb(&sercon);
+  static Uart &gdb = sercon;
   sercon.startup(0x80050000,17);
   sercon.change_mode(Uart::MODE_8N1, 115200);
-  Console::stdout= &sercon;
-  Console::stderr= &sercon;
-  Console::stdin = &sercon;
+  Console::stdout= &gdb;
+  Console::stderr= &gdb;
+  Console::stdin = &gdb;
 }
 
 
@@ -29,9 +46,9 @@ Unsigned32 *page_dir;
 
 extern "C" char _binary_kernel_start;
 extern "C" char _binary_sigma0_start;
-extern "C" char _binary_rmgr_start;
+extern "C" char _binary_test_start;
 
-int main()
+int main(Address s, Address r)
 {
   
   // caution: no stack variables in this function because we're going
@@ -48,7 +65,7 @@ int main()
   printf("LOADER: Setting up a really small pagetable and start the kernel\n");
 
 #warning BAD HARDCODED THINGS FOLLOW
-  char *scratch_mem = (char*)0xc0060000;
+  char *scratch_mem = (char*)0xc0040000;
   unsigned scratch_mem_size = 0x05000;
 
   // bad hardcoded things !!
@@ -73,8 +90,8 @@ int main()
   md[1].base = scratch_mem;
   md[1].size_type = scratch_mem_size | L4_MEMORY_DESC_BOOT;
 
-  md[2].base = (void*)0xc0015000;
-  md[2].size_type = (64*1024*1024) - 0x015000;
+  md[2].base = (void*)(scratch_mem + 0x5000);
+  md[2].size_type = (64*1024*1024) - ((unsigned)scratch_mem + 0x5000 - 0xc0000000);
 
 
   // list termination
@@ -93,6 +110,10 @@ int main()
   for( unsigned pe= 0xf00, va=0xc0000000; pe <0x0fff; pe++,va+=0x100000 ) 
     page_dir[pe]=va | 0x0c0e;
 
+// map sdram linear from 0xc0000000
+  for( unsigned pe= 0xc00, va=0xc0000000; pe <0x0cff; pe++,va+=0x100000 ) 
+    page_dir[pe]=va | 0x0c0e;
+
   // map the cache flush area to 0xef000000
   for( unsigned pe= 0xef0, va=0xe0000000; pe <= 0x0ef8; pe++,va+=0x100000 ) 
     page_dir[pe]=va | 0x0c0e;
@@ -102,7 +123,9 @@ int main()
   unsigned control      = 0x0100f;
 
   void (*start)(Kernel_info*);
+#if 0
   Startup_func sigma0, rmgr;
+#endif
   Mword k_start, k_end, s_start, s_end, r_start, r_end;
 
   start = (void (*)(Kernel_info*))load_elf("Fiasco", &_binary_kernel_start, &k_start, &k_end);
@@ -112,16 +135,22 @@ int main()
       while(1);
     }
 
-  // sigma0 = load_elf("Sigma0", &_binary_sigma0_start, &s_start, &s_end);
-  // rmgr   = load_elf("RMGR", &_binary_rmgr_start);
-  // kip->sigma0_pc = (Mword)sigma0;
-  // kip->root_pc   = (Mword)rmgr;
+#if 0
+  sigma0 = load_elf("Sigma0", &_binary_sigma0_start, &s_start, &s_end);
+  rmgr   = load_elf("Root", &_binary_test_start, &r_start, &r_end);
+#endif
 
-  printf("LOADER: establish kernel mappings\n");
+  kip->sigma0_pc = s;
+  kip->root_pc   = r;
+
+  write_back_data_cache();
+
+  printf("LOADER: establish kernel mappings\nLOADER: Start kernel @%p\n",
+	 start);
 
   asm volatile ( "mcr p15, 0, %[doms], c3, c0    \n" // domains
-		 "mcr p15, 0, %[control], c1, c0 \n" // control
-		 "mcr p15, 0, %[pdir], c2, c0    \n" // pdbr
+                 "mcr p15, 0, %[pdir], c2, c0    \n" // pdbr
+                 "mcr p15, 0, %[control], c1, c0 \n" // control
 		 "mcr p15, 0, r0, c7, c7, 0x00   \n" // Cache flush
 		 "mcr p15, 0, r0, c8, c7, 0x00   \n" // TLB flush
 		 "mov r0, %[kip]                 \n"

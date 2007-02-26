@@ -78,7 +78,7 @@ static void queue_thread(void) {
       b->head.buffer = (char *) 
 	rcv_buffer.str.rcv_str = (l4_umword_t) &b->d1;
 
-      error = l4_i386_ipc_wait(&b->head.src, &rcv_buffer,
+      error = l4_ipc_wait(&b->head.src, &rcv_buffer,
 			       &b->d1, &b->d2,
 			       L4_IPC_NEVER, &result);
 

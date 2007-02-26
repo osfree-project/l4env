@@ -1,16 +1,16 @@
 /**
- *	\file	dice/src/fe/FEFile.h 
+ *	\file	dice/src/fe/FEFile.h
  *	\brief	contains the declaration of the class CFEFile
  *
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,25 +30,28 @@
 #define __DICE_FE_FEFILE_H__
 
 #include "FEBase.h"
+#include "Vector.h"
+#include "CString.h"
 
 class CFETypedDeclarator;
 class CFEConstDeclarator;
 class CFEConstructedType;
 class CFEInterface;
 class CFELibrary;
+class IncludeFile;
 
 /** \class CFEFile
  *	\ingroup frontend
  *	\brief represents an idl file
  */
-class CFEFile : public CFEBase  
+class CFEFile : public CFEBase
 {
 DECLARE_DYNAMIC(CFEFile);
 
 // constructor/desctructor
 public:
 	/** constructs a idl file representation */
-	CFEFile(String sFileName, String sPath, int nIncludeLevel, int nStdInclude = 0);
+	CFEFile(String sFileName, String sPath, int nIncludedOnLine = 1, int nStdInclude = 0);
 	virtual ~CFEFile();
 
 protected:
@@ -99,13 +102,19 @@ public:
 	virtual VectorElement* GetFirstInterface();
 	virtual void AddInterface(CFEInterface *pInterface);
 
-	virtual CFEFile* GetNextIncludeFile(VectorElement* &iter);
-	virtual VectorElement* GetFirstIncludeFile();
+	virtual CFEFile* GetNextChildFile(VectorElement* &iter);
+	virtual VectorElement* GetFirstChildFile();
 	virtual void AddChild(CFEFile *pNewChild);
 
-	virtual int GetIncludeLevel();
-	virtual bool IsIncluded();
+	virtual VectorElement* GetFirstInclude();
+	virtual IncludeFile* GetNextInclude(VectorElement* &iter);
+	virtual void AddInclude(IncludeFile *pNewInclude);
+
 	virtual CObject* Clone();
+
+	virtual int GetIncludedOnLine();
+
+	virtual CFEFile* FindFile(String sFileName);
 
 // Attributes
 protected:
@@ -133,6 +142,14 @@ protected:
 	 *	\brief the child files (included files)
 	 */
 	Vector m_vChildFiles;
+	/** \var Vector m_vIncludes
+	 *  \brief contains the include statements
+	 *
+	 * The preprocessor might swallow some included files,
+	 * because they have been included elsewhere already.
+	 * Therefore we keep an extra list of include statements.
+	 */
+	Vector m_vIncludes;
 	/** \var String m_sFileName
 	 *	\brief contains the file name of the component
 	 */
@@ -149,15 +166,6 @@ protected:
 	 *	\brief the file-name with the complete path
 	 */
 	String m_sFileWithPath;
-	/**	\var int m_nIncludeLevel
-	 *	\brief contains the include level of the component
-	 *
-	 * This value is situated in the interface component class, because most
-	 * of the components of an interface may occure in the top level of a file,
-	 * thus they need to know, which include level they are in, because they have
-	 * no parent interface to ask.
-	 */
-	int m_nIncludeLevel;
 	/**	\var int m_nStdInclude
 	 *	\brief set to 1 if this file is a standard include file (#include <...>)
 	 *
@@ -165,6 +173,10 @@ protected:
 	 * This option is used with the notstdinc option.
 	 */
 	int m_nStdInclude;
+	/** \var int m_nIncludedOnLine
+	 *  \brief the line number this file has been included from
+	 */
+	int m_nIncludedOnLine;
 };
 
 #endif // __DICE_FE_FEFILE_H__

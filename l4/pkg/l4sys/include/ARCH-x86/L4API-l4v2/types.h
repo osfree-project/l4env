@@ -47,6 +47,7 @@ typedef struct {
 typedef union {
   l4_low_high_t lh;          ///< Plain 64 bit id
   l4_threadid_struct_t id;   ///< Thread id struct
+  l4_uint64_t raw;
 } l4_threadid_t;
 
 /**
@@ -78,14 +79,16 @@ typedef union {
  * \ingroup api_types_id
  * \hideinitializer
  */
-#define L4_NIL_ID	     ((l4_threadid_t){lh:{0,0}})
+#define L4_NIL_ID_INIT	     {{0,0}}
+#define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
 
 /**
  * L4 invalid thread id
  * \ingroup api_types_id
  * \hideinitializer
  */
-#define L4_INVALID_ID	     ((l4_threadid_t){lh:{0xffffffff,0xffffffff}})
+#define L4_INVALID_ID_INIT   {{0xffffffff,0xffffffff}}
+#define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
 
 /**
  * \brief   Test if \a id is nil thread id
@@ -184,6 +187,7 @@ typedef struct {
  */
 typedef union {
   l4_umword_t fpage;         ///< Plain 32 bit value
+  l4_umword_t raw;
   l4_fpage_struct_t fp;      ///< Flexpage structure
   l4_iofpage_struct_t iofp;  ///< I/O Flexpage structure
 } l4_fpage_t;

@@ -40,7 +40,6 @@
  * the rights to redistribute these changes.
  */
 
-#include <oskit/boolean.h>
 #include <stdarg.h>
 #include <string.h>	/* strlen */
 
@@ -196,23 +195,23 @@ printnum_16(register unsigned long u,
     }
 }
 
-static oskit_bool_t	_doprnt_truncates = FALSE;
+static int _doprnt_truncates = 0;
 
 void _doprnt(register const char *fmt, va_list args, int radix, 
 	     void (*putc)(char*, char), char *putc_arg)
 {
 	int		length;
 	int		prec;
-	oskit_bool_t	ladjust;
+	int		ladjust;
 	char		padc;
 	long		n, m;
 	unsigned long	u;
 	int		plus_sign;
 	int		sign_char;
-	oskit_bool_t	altfmt, truncate;
+	int		altfmt, truncate;
 	int		base;
 	char		c;
-	oskit_bool_t	longopt;
+	int		longopt;
 #ifdef DOPRNT_FLOATS
 	int		float_hack;
 	char		*p;
@@ -233,20 +232,20 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 
 	    length = 0;
 	    prec = -1;
-	    ladjust = FALSE;
+	    ladjust = 0;
 	    padc = ' ';
 	    plus_sign = 0;
 	    sign_char = 0;
-	    altfmt = FALSE;
-	    longopt = FALSE;
+	    altfmt = 0;
+	    longopt = 0;
 
-	    while (TRUE) {
+	    for (;;) {
 		if (*fmt == '#') {
-		    altfmt = TRUE;
+		    altfmt = 1;
 		    fmt++;
 		}
 		else if (*fmt == '-') {
-		    ladjust = TRUE;
+		    ladjust = 1;
 		    fmt++;
 		}
 		else if (*fmt == '+') {
@@ -294,13 +293,13 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 	    }
 
 	    if (*fmt == 'l'){
-	        longopt = TRUE;
+	        longopt = 1;
 		fmt++;	/* need it if sizeof(int) < sizeof(long) */
 	    }
 
-	    truncate = FALSE;
+	    truncate = 0;
 #ifdef DOPRNT_FLOATS
-	    float_hack = FALSE;
+	    float_hack = 0;
 #endif
 
 	    switch(*fmt) {
@@ -308,7 +307,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		case 'B':
 		{
 		    register char *p;
-		    oskit_bool_t	  any;
+		    int		  any;
 		    register int  i;
 
 		    u = va_arg(args, unsigned long);
@@ -319,7 +318,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    if (u == 0)
 			break;
 
-		    any = FALSE;
+		    any = 0;
 		    while ((i = *p++) != 0) {
 			/* NOTE: The '32' here is because ascii space */
 			if (*p <= 32) {
@@ -331,7 +330,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 				(*putc)(putc_arg, ',');
 			    else {
 				(*putc)(putc_arg, '<');
-				any = TRUE;
+				any = 1;
 			    }
 			    j = *p++;
 			    for (; (c = *p) > 32; p++)
@@ -344,7 +343,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 				(*putc)(putc_arg, ',');
 			    else {
 				(*putc)(putc_arg, '<');
-				any = TRUE;
+				any = 1;
 			    }
 			    for (; (c = *p) > 32; p++)
 				(*putc)(putc_arg, c);

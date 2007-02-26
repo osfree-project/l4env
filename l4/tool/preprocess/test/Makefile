@@ -1,23 +1,17 @@
 # scan the L4 global configuration file
-ifeq (${L4_DIR},)
-  L4DIR = ../../..
-else
-  L4DIR = ${L4_DIR}
-endif
-include $(L4DIR)/Makeconf
-
--include Makeconf.local
-#include ../../Makeconf
+L4DIR	?= ../../..
+include $(L4DIR)/mk/Makeconf
 
 TOOL = ../src/preprocess
 
-all: test
+all:: test
 
 ALL_TESTS = $(TOOL_TESTS)
 TOOL_TESTS = mapping mapping_inline random random_inline extern_c static \
   noinline explicit operator template template_inline c-preproc inline \
   parser parser_noinline \
-  multifile variable line line_not line_nh interface comment_in_string
+  multifile variable line line_not line_nh interface comment_in_string \
+  default_args
 
 mapping_inline_src = mapping
 mapping_inline_flags = -i

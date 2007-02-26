@@ -14,107 +14,9 @@
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/env/cdefs.h>
-#include <l4/semaphore/semaphore.h>
 
-/*****************************************************************************
- *** Types
- *****************************************************************************/
-
-/**
- * Driver handle
- */
-typedef l4_uint32_t l4blk_driver_t;
-
-/**
- * Stream handle 
- */
-typedef l4_uint32_t l4blk_stream_t;
-
-/**
- * Request type
- */
-typedef struct l4blk_request l4blk_request_t;
-
-/**
- * Callback function prototype.
- *
- * \param request Request descriptor
- * \param status  Request status
- * \param error   Error code
- */
-typedef void (* l4blk_callback_fn_t) (l4blk_request_t * request, 
-                                      int status, 
-                                      int error);
-
-/**
- * Request structure
- */
-struct l4blk_request
-{
-  l4blk_driver_t      driver;      ///< driver handle
- 
-  l4_uint32_t         cmd;         ///< command
-  l4_uint32_t         device;      ///< device 
-  l4_uint32_t         block;       ///< block number
-  l4_uint32_t         count;       ///< number of blocks
-  l4_addr_t           buf;         ///< address of target/source buffer
-
-  /* real-time requests */
-  l4blk_stream_t      stream;      ///< stream handle
-  l4_uint32_t         req_no;      ///< request number
-  l4_uint32_t         flags;       ///< flags
-
-  /* client request handling */
-  l4_uint32_t         status;      ///< request status
-  int                 error;       ///< driver error code
-  l4semaphore_t *     wait;        ///< client semaphore
-  l4blk_callback_fn_t done;        ///< done callback function
-
-  /* client data */
-  void *              data;        ///< private client data
-};
-
-/* request commands */
-#define L4BLK_REQUEST_READ      0x00000001  ///< read blocks
-#define L4BLK_REQUEST_WRITE     0x00000002  ///< write blocks
-
-/* request flags */
-#define L4BLK_REQUEST_METADATA  0x00000001  ///< metadata request
-
-/* request status */
-#define L4BLK_UNPROCESSED       0x00000000  ///< not yet proccessed
-#define L4BLK_DONE              0x00000001  ///< successfully done
-#define L4BLK_ERROR             0x00000002  ///< I/O error
-#define L4BLK_SKIPPED           0x00000003  ///< skipped
-
-/* misc. */
-#define L4BLK_INVALID_DRIVER    (-1)        ///< invalid driver handle
-#define L4BLK_INVALID_STREAM    (-1)        ///< invalid stream handle
-
-/* dafault ctrls */
-#define L4BLK_CTRL_NUM_DISKS    0x00000001  ///< return number of disks 
-#define L4BLK_CTRL_DISK_SIZE    0x00000002  ///< return size of disk
-#define L4BLK_CTRL_DISK_GEOM    0x00000003  ///< return disk geometry
-#define L4BLK_CTRL_RREAD_PART   0x00000004  ///< reread partition table
-#define L4BLK_CTRL_MAX_SG_LEN   0x00000005  /**< return max. length of 
-                                             **  scatter gather list
-                                             **/
-
-/* ctrls needed by L4Linux stub */
-#define L4BLK_CTRL_DRV_IRQ      0x00008000  ///< return IRQ of block driver
-
-/**
- * Disk geometry structure (CHS), returned by L4BLK_CTRL_DISK_GEOM ctrl
- */
-typedef struct l4blk_disk_geometry
-{
-  l4_uint32_t heads;               ///< number of heads
-  l4_uint32_t cylinders;           ///< number of cylinders (tracks)
-  l4_uint32_t sectors;             ///< number of sectors / cylinder
-  l4_uint32_t start;               /**< partition start sector 
-                                    **  (if called for partition)
-                                    **/
-} l4blk_disk_geometry_t;
+/* generic_blk includes */
+#include <l4/generic_blk/types.h>
 
 /*****************************************************************************
  *** Prototypes
@@ -124,7 +26,8 @@ __BEGIN_DECLS;
 
 /*****************************************************************************/
 /**
- * \brief Setup block device driver client library.
+ * \brief   Setup block device driver client library.
+ * \ingroup api_init
  * 
  * Initialize the client library, this function must be called before any
  * of the other functions is called.
@@ -135,16 +38,17 @@ l4blk_init(void);
 
 /*****************************************************************************/
 /**
- * \brief Open block device driver.
+ * \brief   Open block device driver.
+ * \ingroup api_driver
  * 
- * \param  name          Driver name
- * \retval driver        Driver handle
+ * \param   name         Driver name
+ * \retval  driver       Driver handle
  *	
- * \return 0 on success (\a driver contains a valid handle), error code 
- *         otherwise:
- *         - \c -L4_EINVAL     invalid name
- *         - \c -L4_ENOTFOUND  driver not found
- *         other error codes depend on the requested driver.
+ * \return  0 on success (\a driver contains a valid handle), error code 
+ *          otherwise:
+ *          - -#L4_EINVAL     invalid name
+ *          - -#L4_ENOTFOUND  driver not found
+ *          other error codes depend on the requested driver.
  *
  * \a l4blk_open_driver does two things:
  * - request the id of the driver at the DROPS nameserver using \a name
@@ -153,16 +57,17 @@ l4blk_init(void);
 /*****************************************************************************/ 
 int
 l4blk_open_driver(const char * name, 
-									l4blk_driver_t * driver);
+                  l4blk_driver_t * driver);
   
 /*****************************************************************************/
 /**
- * \brief Close block device driver.
+ * \brief   Close block device driver.
+ * \ingroup api_driver
  * 
- * \param  driver        Driver handle.
+ * \param   driver       Driver handle.
  *	
- * \return 0 on success (close driver instance), error code otherwise:
- *         - \c -L4_EINVAL  invalid driver handle
+ * \return  0 on success (close driver instance), error code otherwise:
+ *          - -#L4_EINVAL  invalid driver handle
  *
  * Close driver instance.
  */
@@ -172,19 +77,33 @@ l4blk_close_driver(l4blk_driver_t driver);
 
 /*****************************************************************************/
 /**
- * \brief Create real-time stream.
+ * \brief   Return thread id of command thread
+ * \ingroup api_driver
+ *
+ * \param   driver       Driver handle
+ *	
+ * \return  Thread id of command thread, L4_INVALID_ID if invalid driver handle
+ */
+/*****************************************************************************/ 
+l4_threadid_t 
+l4blk_get_driver_thread(l4blk_driver_t driver);
+
+/*****************************************************************************/
+/**
+ * \brief   Create real-time stream.
+ * \ingroup api_stream
  * 
- * \param  driver        Driver handle
- * \param  bandwidth     Stream bandwidth (bytes/s) 
- * \param  blk_size      Stream block size (bytes)
- * \param  q             Quality parameter 
- * \param  meta_int      Metadata request interval (number of regular 
+ * \param   driver       Driver handle
+ * \param   bandwidth    Stream bandwidth (bytes/s) 
+ * \param   blk_size     Stream block size (bytes)
+ * \param   q            Quality parameter 
+ * \param   meta_int     Metadata request interval (number of regular 
  *                       requests per metadata request)
  * \retval stream        Stream handle
  *	
- * \return 0 on success (admission succeeded, \a stream contains a valid 
- *         handle), error code otherwise. The error code depends on the 
- *         driver.
+ * \return  0 on success (admission succeeded, \a stream contains a valid 
+ *          handle), error code otherwise. The error code depends on the 
+ *          driver.
  *
  * Create real-time stream. If the driver can handle the requested stream, 
  * it reserves the requeired resources and returns a valid stream handle.
@@ -192,53 +111,55 @@ l4blk_close_driver(l4blk_driver_t driver);
 /*****************************************************************************/ 
 int
 l4blk_create_stream(l4blk_driver_t driver, 
-										l4_uint32_t bandwidth, 
-										l4_uint32_t blk_size, 
-										float q, 
-										l4_uint32_t meta_int, 
-										l4blk_stream_t * stream);
+                    l4_uint32_t bandwidth, 
+                    l4_uint32_t blk_size, 
+                    float q, 
+                    l4_uint32_t meta_int, 
+                    l4blk_stream_t * stream);
 
 /*****************************************************************************/
 /**
- * \brief Close real-time stream.
+ * \brief   Close real-time stream.
+ * \ingroup api_stream
  * 
- * \param  driver        Driver handle
- * \param  stream        Stream handle
+ * \param   driver       Driver handle
+ * \param   stream       Stream handle
  *	
- * \return 0 on success (stream closed), error code otherwise.
+ * \return  0 on success (stream closed), error code otherwise.
  *         
  * Close real-time stream, release all resources assigned to the stream.
  */
 /*****************************************************************************/ 
 int
 l4blk_close_stream(l4blk_driver_t driver, 
-									 l4blk_stream_t stream);
+                   l4blk_stream_t stream);
 
 /*****************************************************************************/
 /**
- * \brief Set start time of real-time stream
+ * \brief   Set start time of real-time stream
+ * \ingroup api_stream
  * 
- * \param  driver        Driver handle
- * \param  stream        Stream handle
- * \param  time          Time (deadline) of first request (milliseconds)
- * \param  request_no    Request number of first request
+ * \param   driver       Driver handle
+ * \param   stream       Stream handle
+ * \param   time         Time (deadline) of first request (milliseconds)
+ * \param   request_no   Request number of first request
  *	
- * \return Time of first period on success, error code otherwise:
- *         - \c -L4_EIPC  IPC error calling driver
+ * \return  Time of first period on success, error code otherwise.
  */
 /*****************************************************************************/ 
 int l4blk_start_stream(l4blk_driver_t driver, 
-											 l4blk_stream_t stream, 
-											 l4_uint32_t time, 
-											 l4_uint32_t request_no);
+                       l4blk_stream_t stream, 
+                       l4_uint32_t time, 
+                       l4_uint32_t request_no);
 
 /*****************************************************************************/
 /**
- * \brief Execute request (synchronously)
+ * \brief   Execute request (synchronously)
+ * \ingroup api_cmd
  * 
- * \param  request       Request structure
+ * \param   request      Request structure
  *	
- * \return 0 on success (executed request), error code otherwise.
+ * \return  0 on success (executed request), error code otherwise.
  *
  * Send the request to the driver an block until it is finished.
  */
@@ -248,39 +169,42 @@ l4blk_do_request(l4blk_request_t * request);
 
 /*****************************************************************************/
 /**
- * \brief Send request list to driver.
+ * \brief   Send request to driver.
+ * \ingroup api_cmd
  * 
- * \param  requests      Request list
- * \param  num           Number of requests in request list
+ * \param   request      Request structure, it describes the block request
  *	
- * \return 0 on succcess (sent requests to the driver), error code otherwise.
+ * \return  0 on succcess (sent requests to the driver), error code otherwise.
  *
- * Send all requests in \a requests to the driver and return immediately. 
- * There are two ways to check the status of the requests:
+ * Send the request to the driver and return immediately. 
+ * There are several ways to check the status of the requests:
  * - a semaphore can be specified for each request (\a wait element of the
  *   request structure) which is incremented if the request is finished
+ * - a callback function can be specified in the request structure (\a done)
+ *   which will be called if the request is finished. Note that this function 
+ *   is be called in the context of a different thread 
  * - the status of a request can be checked at any time using the 
  *   l4blk_get_status() function
  */
 /*****************************************************************************/ 
 int
-l4blk_put_requests(l4blk_request_t requests[], 
-									 int num);
+l4blk_put_request(l4blk_request_t * request);
 
 /*****************************************************************************/
 /**
- * \brief Check status of a request.
+ * \brief   Check status of a request.
+ * \ingroup api_cmd
  * 
- * \param  request       Request structure
+ * \param   request      Request structure
  *	
- * \return Request status (>= 0):
- *         - #L4BLK_UNPROCESSED request not yet processed
- *         - #L4BLK_DONE        request finished successfully
- *         - #L4BLK_ERROR       I/O error processing request 
- *         - #L4BLK_SKIPPED     skipped real-time request 
- *                              (no time left in request period)
- *         error code (< 0):
- *         - -#L4_EINVAL        invalid request structure
+ * \return  Request status (>= 0):
+ *          - #L4BLK_UNPROCESSED request not yet processed
+ *          - #L4BLK_DONE        request finished successfully
+ *          - #L4BLK_ERROR       I/O error processing request 
+ *          - #L4BLK_SKIPPED     skipped real-time request 
+ *                               (no time left in request period)
+ *          error code (< 0):
+ *          - -#L4_EINVAL        invalid request structure
  */
 /*****************************************************************************/ 
 int 
@@ -288,15 +212,16 @@ l4blk_get_status(l4blk_request_t * request);
 
 /*****************************************************************************/
 /**
- * \brief Return driver error code.
+ * \brief   Return driver error code.
+ * \ingroup api_cmd
  * 
- * \param  request       Request structure
+ * \param   request      Request structure
  *	
- * \return Error code returned by ther device driver, \c -L4_EINVAL if 
- *         invalid request structure.
+ * \return  Error code returned by ther device driver, -#L4_EINVAL if 
+ *          invalid request structure.
  *
  * Return the error code returned by the driver, it can be used to check 
- * the error reason if the request status was set to \c L4BLK_ERROR.
+ * the error reason if the request status was set to #L4BLK_ERROR.
  */
 /*****************************************************************************/ 
 int 
@@ -304,16 +229,17 @@ l4blk_get_error(l4blk_request_t * request);
 
 /*****************************************************************************/
 /**
- * \brief Generic driver control.
+ * \brief   Generic driver control.
+ * \ingroup api_ctrl
  * 
- * \param  driver        Driver handle.
- * \param  cmd           Control command.
- * \param  in            Input buffer
- * \param  in_size       Size of input buffer
- * \param  out           Output buffer
- * \param  out_size      Size of output buffer
+ * \param   driver       Driver handle
+ * \param   cmd          Control command
+ * \param   in           Input buffer
+ * \param   in_size      Size of input buffer
+ * \param   out          Output buffer
+ * \param   out_size     Size of output buffer
  *	
- * \return result of ctrl-call to driver, \c -L4_EIPC if call failed.
+ * \return  result of ctrl-call to driver, -#L4_EIPC if call failed.
  *
  * This function is the 'swiss army knife' to manipulate various driver
  * parameters. The possible commands depend on the used driver.
@@ -321,19 +247,20 @@ l4blk_get_error(l4blk_request_t * request);
 /*****************************************************************************/ 
 int
 l4blk_ctrl(l4blk_driver_t driver, 
-					 l4_uint32_t cmd, 
-					 void * in, 
-					 int in_size, 
-					 void * out, 
-					 int out_size);
+           l4_uint32_t cmd, 
+           void * in, 
+           int in_size, 
+           void * out, 
+           int out_size);
 
 /*****************************************************************************/
 /**
- * \brief  Return number of disks
+ * \brief   Return number of disks
+ * \ingroup api_ctrl
  * 
- * \param  driver
+ * \param   driver       Driver handle
  *	
- * \return Number of disks connected to the driver, error code (< 0) if failed
+ * \return  Number of disks connected to the driver, error code (< 0) if failed
  */
 /*****************************************************************************/ 
 int
@@ -341,12 +268,13 @@ l4blk_ctrl_get_num_disks(l4blk_driver_t driver);
 
 /*****************************************************************************/
 /**
- * \brief  Return disk size
+ * \brief   Return disk size
+ * \ingroup api_ctrl
  * 
- * \param  driver        Driver handle
- * \param  device        Device id
+ * \param   driver       Driver handle
+ * \param   dev          Device id
  *	
- * \return Disk size in blocks (1KB), error code (< 0) if failed
+ * \return  Disk size in blocks (1KB), error code (< 0) if failed
  */
 /*****************************************************************************/ 
 int

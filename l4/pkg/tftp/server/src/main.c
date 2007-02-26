@@ -8,6 +8,10 @@
  * Simple DROPS TFTP server. 
  * Network code adapted from GRUB */
 
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
 /* local includes */
 #include "netboot/netboot.h"
 #include "netboot/etherboot.h"
@@ -120,10 +124,13 @@ __parse_command_line(int argc, char * argv[])
  * \return 		0 on success
  * 			-L4_ENOMEM if allocation failed */
 l4_int32_t 
-l4fprov_file_server_open(sm_request_t *request, const char *fname,
-			 const l4fprov_threadid_t *dm, l4_uint32_t flags,
-			 l4fprov_dataspace_t *ds, l4_uint32_t *size,
-			 sm_exc_t *_ev)
+l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
+    const char* fname,
+    const l4_threadid_t *dm,
+    l4_uint32_t flags,
+    l4dm_dataspace_t *ds,
+    l4_uint32_t *size,
+    CORBA_Environment *_dice_corba_env)
 {
   int read_size;
   int error;
@@ -185,7 +192,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
     }
 
   /* set dataspace owner to client */
-  if ((error = l4dm_transfer((l4dm_dataspace_t *)ds,request->client_tid)))
+  if ((error = l4dm_transfer((l4dm_dataspace_t *)ds,*_dice_corba_obj)))
     {
       printf("Error transfering dataspace ownership: %s (%d)\n",
 	     l4env_errstr(error), error);
@@ -200,36 +207,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
 static void
 server_loop(void)
 {
-  int ret;
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-
-  /* enter request loop */
-  flick_init_request(&request, &ipc_buf);
-  for (;;)
-    {
-      result = flick_server_wait(&request);
-      while (!L4_IPC_IS_ERROR(result))
-	{
-#ifdef DEBUG_REQUEST
-	  LOGL("request 0x%08x, src %x.%x\n", ipc_buf.buffer[0],
-	      request.client_tid.id.task, request.client_tid.id.lthread);
-#endif
-	  switch (ret = l4fprov_file_server(&request))
-	    {
-	    case DISPATCH_ACK_SEND:
-	      result = flick_server_reply_and_wait(&request);
-	      break;
-
-	    default:
-	      LOGL("Flick dispatch error (%d)!\n", ret);
-	      result = flick_server_wait(&request);
-	      break;
-	    }
-	}
-      printf("Flick IPC error (0x%08x)!\n", result.msgdope);
-    }
+  l4fprov_file_server_loop(NULL);
 }
 
 int

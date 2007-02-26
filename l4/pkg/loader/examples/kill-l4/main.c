@@ -1,11 +1,14 @@
 /* $Id$ */
 /**
  * \file	loader/linux/kill-l4/main.c
+ * \brief	Linux program to start applications on the L4 loader server
  *
  * \date	06/10/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Linux program to start applications on the L4 loader server */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +27,7 @@ int
 main(int argc, char **argv)
 {
   int i, error;
-  sm_exc_t exc;
+  CORBA_Environment env = dice_default_environment;
   const char *fname = strrchr(argv[0], '/');
   struct stat buf;
 
@@ -59,8 +62,8 @@ main(int argc, char **argv)
   /* parse command line: Kill each task */
   for (i=1; i<argc; i++)
     {
-      if ((error = l4loader_app_kill(loader_id, 
-				     strtol(argv[i], 0, 0), 0, &exc)))
+      if ((error = l4loader_app_kill_call(&loader_id, 
+				     strtol(argv[i], 0, 0), 0, &env)))
 	{
 	  printf("Error %d killing l4 task \"%s\"\n", error, argv[i]);
 	  return error;

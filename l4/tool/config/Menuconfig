@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 #
 # This script is derived from Linux Makeconfig.
 #
@@ -180,7 +180,7 @@ function define_int () {
 }
 
 function define_string () {
-	eval $1="$2"
+	eval $1="\$2"
 }
 
 #
@@ -912,7 +912,7 @@ EOM
 			*"-->"*|*"alt_config"*)
 				show_readme ;;
 			*)
-				eval help $selection ;;
+				help "${selection%% *}" "${selection#* }";;
 			esac
 			;;
 		255|1)
@@ -1189,7 +1189,7 @@ save_configuration () {
 	}
 
 	function define_string () {
-		eval $1="$2"
+		eval $1="\$2"
 		echo "$1='$2'"			>>$CONFIG
 		echo "#define $1 \"$2\""	>>$CONFIG_H
 	}
@@ -1225,10 +1225,11 @@ save_configuration () {
                 	;;
 
          	n)
-			echo "# $1 is not set"	>>$CONFIG
 			if [ "$DROPSCONF_UNDEF" ] ; then
+			    echo "# $1 is not set"	>>$CONFIG
                 	    echo "#undef  $1"	>>$CONFIG_H
 			else
+                	    echo "$1=n" 	>>$CONFIG
                 	    echo "#define $1 0"	>>$CONFIG_H
                 	fi
                 	;;

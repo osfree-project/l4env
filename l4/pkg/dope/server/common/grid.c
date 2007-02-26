@@ -1,89 +1,79 @@
 /*
- * \brief	DOpE Grid widget module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE Grid widget module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * The Grid  layout  widget  enables the  placement
- * of  multiple  child-widgets on a  grid.  Row and 
- * column  sizes  can  be  specified  absolutely or 
- * weighted.   Each  widget  can  be   individually 
+ * of  multiple  child-widgets on a  grid.  Row and
+ * column  sizes  can  be  specified  absolutely or
+ * weighted.   Each  widget  can  be   individually
  * positioned using padding, spanning and alignment
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
-struct private_grid;
-#define GRID struct private_grid
-#define WIDGET GRID
-#define WIDGETARG WIDGET
 
-#include "dope-config.h"
-#include "memory.h"
+struct grid;
+#define WIDGET struct grid
+
+#include "dopestd.h"
 #include "widget_data.h"
 #include "widget.h"
 #include "background.h"
-#include "clipping.h"
+#include "gfx.h"
 #include "widman.h"
 #include "script.h"
 #include "grid.h"
 
-static struct memory_services 		*mem;
-static struct widman_services 		*widman;
-static struct clipping_services		*clip;
-static struct background_services	*bg;
-static struct script_services		*script;
+static struct widman_services     *widman;
+static struct gfx_services        *gfx;
+static struct background_services *bg;
+static struct script_services     *script;
 
-#define GRID_UPDATE_COL_LAYOUT 	0x01
-#define GRID_UPDATE_ROW_LAYOUT 	0x02
-#define GRID_UPDATE_NEW_CHILD	0x04
+#define GRID_UPDATE_COL_LAYOUT 0x01
+#define GRID_UPDATE_ROW_LAYOUT 0x02
+#define GRID_UPDATE_NEW_CHILD  0x04
 
-#define GRID_SECTION_WEIGHTED 	0x00
-#define GRID_SECTION_FIXED		0x01
+#define GRID_SECTION_WEIGHTED  0x00
+#define GRID_SECTION_FIXED     0x01
 
-#define GRID_STICKY_EAST		0x01
-#define GRID_STICKY_WEST		0x02
-#define GRID_STICKY_NORTH		0x04
-#define GRID_STICKY_SOUTH		0x08
-
-struct section_struct;
-struct section_struct {
-	s32					type;	/* fixed size or weight */
-	s32					size;	/* row size in pixels */
-	s32					offset;	/* position relative to grid parent */
-	s32					index;	/* index of row/column */
-	float					weight;	/* weight of row/column */
-	struct section_struct  *next;	/* next row/column in connected list*/
+struct section;
+struct section {
+	s32   type;     /* fixed size or weight */
+	s32   size;     /* row size in pixels */
+	s32   offset;   /* position relative to grid parent */
+	s32   index;    /* index of row/column */
+	float weight;   /* weight of row/column */
+	struct section  *next;  /* next row/column in connected list*/
 };
 
 
-struct cell_struct;
-struct cell_struct {
-	struct section_struct	*row;		/* first row used by the cell */
-	struct section_struct	*col;		/* first column used be the cell */
-	s16					 row_span;	/* number of rows used by the cell */
-	s16					 col_span;	/* number of colums used by the cell */
-	u16					 sticky;	/* alignment of widget inside its cell */
-	s16					 pad_x;		/* hor.distance of widget to cell border */
-	s16					 pad_y;		/* ver.distance of widget to cell border */
-	WIDGET					*wid;		/* associated widget */
-	struct cell_struct		*next;		/* next cell in connected cell-list */
+struct cell;
+struct cell {
+	struct section *row;     /* first row used by the cell */
+	struct section *col;     /* first column used be the cell */
+	s16 row_span;            /* number of rows used by the cell */
+	s16 col_span;            /* number of colums used by the cell */
+	u16 sticky;              /* alignment of widget inside its cell */
+	s16 pad_x;               /* hor.distance of widget to cell border */
+	s16 pad_y;               /* ver.distance of widget to cell border */
+	WIDGET *wid;             /* associated widget */
+	struct cell *next;       /* next cell in connected cell-list */
 };
 
 
-GRID {
-	/* entry must point to a general widget interface */
-	struct widget_methods 	*gen;	/* for public access */
-	
-	/* entry is for the ones who knows the real widget identity (grid) */
-	struct grid_methods 	*grid;	/* for dedicated users */
-	
-	/* entry contains general widget data */
-	struct widget_data		*wd; 	/* access for grid module and widget manager */
-	
-	/* here comes the private grid specific data */
-	struct section_struct	*rows;	/* list of rows */
-	struct section_struct	*cols;	/* list of columns */
-	struct cell_struct		*cells;	/* list of cells */
-	u32					 update;/* grid specific update flags */
+struct grid_data {
+	struct section  *rows;  /* list of rows */
+	struct section  *cols;  /* list of columns */
+	struct cell     *cells; /* list of cells */
+	u32              update;/* grid specific update flags */
 };
 
 
@@ -97,8 +87,8 @@ void print_grid_info(GRID *g);
 
 void print_grid_info(GRID *g) {
 
-	struct section_struct *sec;
-	struct cell_struct *cc;
+	struct section *sec;
+	struct cell *cc;
 	WIDGET *cw;
 
 	printf("Grid info:\n");
@@ -110,7 +100,7 @@ void print_grid_info(GRID *g) {
 	printf(" width  = %lu\n",(long)g->wd->w);
 	printf(" height = %lu\n",(long)g->wd->h);
 	printf(" row-sections:\n");
-	sec=g->rows;
+	sec=g->gd->rows;
 	while (sec) {
 		printf("  index: %lu\n",sec->index);
 		printf("   offset:%lu\n",sec->offset);
@@ -120,7 +110,7 @@ void print_grid_info(GRID *g) {
 		sec=sec->next;
 	}
 	printf(" column-sections:\n");
-	sec=g->cols;
+	sec=g->gd->cols;
 	while (sec) {
 		printf("  index: %lu\n",sec->index);
 		printf("   offset:%lu\n",sec->offset);
@@ -130,7 +120,7 @@ void print_grid_info(GRID *g) {
 		sec=sec->next;
 	}
 	printf(" child-widgets:\n");
-	cc=g->cells;
+	cc=g->gd->cells;
 	while (cc) {
 		cw=cc->wid;
 		if (cw) {
@@ -154,12 +144,12 @@ void print_grid_info(GRID *g) {
 
 
 /*** CREATE NEW ROW/COLUMN SECTION WITH DEFAULT VALUES ***/
-static struct section_struct *new_section(u32 index) {
-	struct section_struct *new = mem->alloc(sizeof(struct section_struct));
+static struct section *new_section(u32 index) {
+	struct section *new = malloc(sizeof(struct section));
 
-	DOPEDEBUG(printf("Grid(new_section): index = %lu\n",index);)
+	INFO(printf("Grid(new_section): index = %lu\n",index);)
 	if (!new) {
-		DOPEDEBUG(printf("Grid(new_section): out of memory!\n");)
+		INFO(printf("Grid(new_section): out of memory!\n");)
 		return NULL;
 	}
 	/* set default properties */
@@ -175,18 +165,18 @@ static struct section_struct *new_section(u32 index) {
 
 /*** RETURNS ROW/COLUMN SECTION OF A SECTION-LIST BY ITS INDEX ***/
 /* the function creates a new section if the index doesnt exist already */
-static struct section_struct *get_section(struct section_struct *curr,s32 idx) {
-	struct section_struct *new;
-	
+static struct section *get_section(struct section *curr,s32 idx) {
+	struct section *new;
+
 	if (curr->index == idx) return curr;
-		
+
 	/* search for the needed index */
 	while (curr->next) {
 		if (curr->next->index == idx) return curr->next;
 		if (curr->next->index > idx) break;
-		curr=curr->next;			
+		curr=curr->next;
 	}
-	
+
 	/* insert new element */
 	new=new_section(idx);
 	if (new) {
@@ -199,54 +189,54 @@ static struct section_struct *get_section(struct section_struct *curr,s32 idx) {
 
 /*** RETURNS ROW SECTION STRUCTURE BY INDEX ***/
 /* a new row section is created automaticaly if needed */
-static struct section_struct *get_row(GRID *g,s32 row_idx) {
-	struct section_struct *new;
-	
+static struct section *get_row(GRID *g,s32 row_idx) {
+	struct section *new;
+
 	if (!g) return NULL;
-	if (!g->rows) {
-		g->rows=new_section(row_idx);
-		return g->rows;
+	if (!g->gd->rows) {
+		g->gd->rows=new_section(row_idx);
+		return g->gd->rows;
 	}
-	if (g->rows->index > row_idx) {
+	if (g->gd->rows->index > row_idx) {
 		new=new_section(row_idx);
 		if (new) {
-			new->next=g->rows;
-			g->rows=new;
+			new->next=g->gd->rows;
+			g->gd->rows=new;
 		}
 		return new;
 	}
-	return get_section(g->rows,row_idx);
+	return get_section(g->gd->rows,row_idx);
 }
 
 
 /*** RETURNS COLUMN SECTION STRUCTURE BY INDEX ***/
 /* a new column section is created automaticaly if needed */
-static struct section_struct *get_column(GRID *g,s32 col_idx) {
-	struct section_struct *new;
-	
+static struct section *get_column(GRID *g,s32 col_idx) {
+	struct section *new;
+
 	if (!g) return NULL;
-	if (!g->cols) {
-		g->cols=new_section(col_idx);
-		return g->cols;
+	if (!g->gd->cols) {
+		g->gd->cols=new_section(col_idx);
+		return g->gd->cols;
 	}
-	if (g->cols->index > col_idx) {
+	if (g->gd->cols->index > col_idx) {
 		new=new_section(col_idx);
 		if (new) {
-			new->next=g->cols;
-			g->cols=new;
+			new->next=g->gd->cols;
+			g->gd->cols=new;
 		}
 		return new;
 	}
-	return get_section(g->cols,col_idx);
+	return get_section(g->gd->cols,col_idx);
 }
 
 
 /*** RETURNS THE GRID-CELL THAT IS ASSOCIATED WITH A GIVEN WIDGET ***/
-static struct cell_struct *get_cell(GRID *g,WIDGET *w) {
-	struct cell_struct *curr;
+static struct cell *get_cell(GRID *g,WIDGET *w) {
+	struct cell *curr;
 	if (!g || !w) return NULL;
 	if (w->gen->get_parent(w)!=g) return NULL;
-	curr=g->cells;
+	curr=g->gd->cells;
 	while (curr) {
 		if (curr->wid == w) return curr;
 		curr=curr->next;
@@ -256,19 +246,19 @@ static struct cell_struct *get_cell(GRID *g,WIDGET *w) {
 
 
 /*** CALCULATE THE SIZES OF ROWS/COLUMNS-SECTIONS ***/
-/* seclist: 	begin of section list				*/
-/* sum_size:	desired overall size				*/
-/* num_secs:	max.number of sections to modify	*/
-static void  calc_section_sizes(struct section_struct *seclist,
-								s32 sum_size,u32 num_secs) {
-	struct section_struct *curr;
-	float	sum_weights = 0.0;
-	s32	i;
-	s32	fixed_size = 0;
-	s32	rest = (float)sum_size;
-	s32	weight_size;
+/* seclist:     begin of section list               */
+/* sum_size:    desired overall size                */
+/* num_secs:    max.number of sections to modify    */
+static void  calc_section_sizes(struct section *seclist,
+                                s32 sum_size,u32 num_secs) {
+	struct section *curr;
+	float   sum_weights = 0.0;
+	s32 i;
+	s32 fixed_size = 0;
+	s32 rest = (float)sum_size;
+	s32 weight_size;
 	if (!seclist) return;
-	
+
 	/* calculate sum of section weights and size of fixed-size-sections */
 	curr=seclist;
 	for (i=num_secs;(i--) && (curr);) {
@@ -281,11 +271,11 @@ static void  calc_section_sizes(struct section_struct *seclist,
 		curr=curr->next;
 	}
 	if (sum_weights == 0.0) sum_weights = 0.0001;
-	
+
 	/* calculate space that is left for the weighted sections */
 	weight_size = sum_size - fixed_size;
 	if (weight_size<0.0) weight_size = 0.0;
-	
+
 	/* calculate sizes of weighted sections */
 	curr=seclist;
 	for (i=num_secs;(i--) && (curr);) {
@@ -305,8 +295,8 @@ static void  calc_section_sizes(struct section_struct *seclist,
 
 
 /*** CALCULATE OFFSETS OF SECTIONS RELATIVE TO THE FIRST SECTION ***/
-static void calc_section_offsets(struct section_struct *curr) {
-	s32	curr_offset=0;
+static void calc_section_offsets(struct section *curr) {
+	s32 curr_offset=0;
 	if (!curr) return;
 	while (curr) {
 		curr->offset = curr_offset;
@@ -317,10 +307,10 @@ static void calc_section_offsets(struct section_struct *curr) {
 
 
 /*** RETURN SIZE OF THE SPECIFIED NUMBER OF NEIGHBOUR SECTIONS ***/
-static s32 get_section_size(struct section_struct *curr,u32 num_sections) {
+static s32 get_section_size(struct section *curr,u32 num_sections) {
 	if (!curr) return 0;
 	if (!num_sections) return 0;
-//	printf("get_section_size: curr->index = %lu\n",curr->index);
+//  printf("get_section_size: curr->index = %lu\n",curr->index);
 	if (num_sections>1) return curr->size + get_section_size(get_section(curr,curr->index+1),num_sections-1);
 	else return curr->size;
 }
@@ -328,12 +318,12 @@ static s32 get_section_size(struct section_struct *curr,u32 num_sections) {
 
 /*** INCREMENT SECTION SIZES SO THAT THE WIDGETS FIT INTO ITS CELLS ***/
 static void fit_widgets(GRID *g) {
-	struct cell_struct *cc;	/* current cell */
+	struct cell *cc;    /* current cell */
 	float  min;
 	float  secsize;
 	u16 update_widget;
 	if (!g) return;
-	cc=g->cells;
+	cc=g->gd->cells;
 	while (cc) {
 		if (cc->wid && cc->row && cc->col) {
 			update_widget=0;
@@ -345,7 +335,7 @@ static void fit_widgets(GRID *g) {
 				calc_section_sizes(cc->col,min,cc->col_span);
 				secsize = min;
 			}
-			
+
 			/* shrink widgets width so that it fits horizontally into its cell */
 			if (cc->wid->wd->w > secsize - 2*cc->pad_x) {
 				cc->wid->gen->set_w(cc->wid,secsize - 2*cc->pad_x);
@@ -365,10 +355,10 @@ static void fit_widgets(GRID *g) {
 				cc->wid->gen->set_h(cc->wid,secsize - 2*cc->pad_y);
 				update_widget=1;
 			}
-			
+
 			/* did we changed the widgets properties? */
 			if (update_widget) cc->wid->gen->update(cc->wid,WID_UPDATE_HIDDEN);
-		}	
+		}
 		cc=cc->next;
 	}
 }
@@ -376,12 +366,12 @@ static void fit_widgets(GRID *g) {
 
 /*** SET POSITIONS OF GRID WIDGETS TO ITS CELLS POSITIONS ***/
 static void place_widgets(GRID *g) {
-	struct cell_struct *cc;	/* current cell */
-	WIDGET *cw;				/* current widget */
+	struct cell *cc;    /* current cell */
+	WIDGET *cw;             /* current widget */
 	s32 cell_x,cell_y,cell_w,cell_h;
 	s32 wid_x,wid_y,wid_w,wid_h;
 	if (!g) return;
-	cc=g->cells;
+	cc=g->gd->cells;
 	while (cc) {
 		if (cc->col && cc->row) {
 			cell_x = cc->col->offset + cc->pad_x;
@@ -389,15 +379,15 @@ static void place_widgets(GRID *g) {
 			cell_w = get_section_size(cc->col,cc->col_span) - (float)(2*cc->pad_x);
 			cell_h = get_section_size(cc->row,cc->row_span) - (float)(2*cc->pad_y);
 			cw=cc->wid;
-			
+
 			wid_w = cw->gen->get_w(cw);
 			wid_x = cell_x + ((cell_w - wid_w)>>1);
 			cw->gen->set_x(cw,wid_x);
-	
+
 			wid_h = cw->gen->get_h(cw);
 			wid_y = cell_y + ((cell_h - wid_h)>>1);
 			cw->gen->set_y(cw,wid_y);
-			
+
 			if (cc->sticky & GRID_STICKY_EAST) {
 				wid_w = cell_w - wid_x - wid_w;
 				cw->gen->set_w(cw,wid_w);
@@ -430,17 +420,17 @@ static void place_widgets(GRID *g) {
 /*** GENERAL WIDGET METHODS ***/
 /******************************/
 
-static void grid_draw(GRID *g,long x,long y) {
+static void grid_draw(GRID *g,struct gfx_ds *ds,long x,long y) {
 
 	long x1,y1,x2,y2;
 	WIDGET *cw;
-	struct cell_struct *cc;
-	
+	struct cell *cc;
+
 	if (!g) {
-		DOPEDEBUG(printf("Grid(grid_draw): grid is zero!\n"));
+		INFO(printf("Grid(grid_draw): grid is zero!\n"));
 		return;
 	}
-	cc=g->cells;
+	cc=g->gd->cells;
 	x += g->wd->x;
 	y += g->wd->y;
 	while (cc) {
@@ -450,9 +440,9 @@ static void grid_draw(GRID *g,long x,long y) {
 			y1 = cc->row->offset + y;
 			x2 = x1 + get_section_size(cc->col,cc->col_span) - 1;
 			y2 = y1 + get_section_size(cc->row,cc->row_span) - 1;
-			clip->push(x1,y1,x2,y2);
-			cw->gen->draw(cw,x,y);
-			clip->pop();
+			gfx->push_clipping(ds,x1,y1,x2-x1+1,y2-y1+1);
+			cw->gen->draw(cw,ds,x,y);
+			gfx->pop_clipping(ds);
 		}
 		cc=cc->next;
 	}
@@ -460,19 +450,19 @@ static void grid_draw(GRID *g,long x,long y) {
 
 
 static WIDGET *grid_find(GRID *g,long x,long y) {
-	struct cell_struct *cc;
+	struct cell *cc;
 	WIDGET *cw;
 	WIDGET *result;
 	if (!g) return NULL;
 
 	x -= g->wd->x;
 	y -= g->wd->y;
-	
+
 	/* check if position is inside the window */
 	if ((x >= 0) && (y >= 0) && (x < g->wd->w) && (y < g->wd->h)) {
-	
+
 		/* go through all cells and check their widgets */
-		cc=g->cells;
+		cc=g->gd->cells;
 		while (cc) {
 			cw=cc->wid;
 			if (cw) {
@@ -483,7 +473,7 @@ static WIDGET *grid_find(GRID *g,long x,long y) {
 		}
 		return g;
 	}
-	return NULL;	
+	return NULL;
 }
 
 
@@ -492,32 +482,32 @@ static void (*orig_update)(GRID *g,u16 redraw_flag);
 static void grid_update(GRID *g,u16 redraw_flag) {
 	if (!g) return;
 
-	if ((g->wd->update & WID_UPDATE_SIZE) | (g->update & GRID_UPDATE_NEW_CHILD)) {
-		g->update = g->update | GRID_UPDATE_COL_LAYOUT | GRID_UPDATE_ROW_LAYOUT;	
+	if ((g->wd->update & WID_UPDATE_SIZE) | (g->gd->update & GRID_UPDATE_NEW_CHILD)) {
+		g->gd->update = g->gd->update | GRID_UPDATE_COL_LAYOUT | GRID_UPDATE_ROW_LAYOUT;
 	}
 
 	/* calculate sizes of rows/columns */
-	if (g->update & GRID_UPDATE_COL_LAYOUT) {
-		calc_section_sizes(g->cols,g->wd->w,99999);
+	if (g->gd->update & GRID_UPDATE_COL_LAYOUT) {
+		calc_section_sizes(g->gd->cols,g->wd->w,99999);
 	}
-	if (g->update & GRID_UPDATE_ROW_LAYOUT) {
-		calc_section_sizes(g->rows,g->wd->h,99999);
+	if (g->gd->update & GRID_UPDATE_ROW_LAYOUT) {
+		calc_section_sizes(g->gd->rows,g->wd->h,99999);
 	}
 
 	/* expand rows and columns so that widgets fit into their cells */
 	fit_widgets(g);
 
 	/* calculate offsets of rows/columns */
-	if (g->update & GRID_UPDATE_COL_LAYOUT) {
-		calc_section_offsets(g->cols);
+	if (g->gd->update & GRID_UPDATE_COL_LAYOUT) {
+		calc_section_offsets(g->gd->cols);
 	}
-	if (g->update & GRID_UPDATE_ROW_LAYOUT) {
-		calc_section_offsets(g->rows);
+	if (g->gd->update & GRID_UPDATE_ROW_LAYOUT) {
+		calc_section_offsets(g->gd->rows);
 	}
-	
+
 	/* set widget positions */
 	place_widgets(g);
-	
+
 	/* draw grid */
 	if (redraw_flag && !(g->wd->update & (WID_UPDATE_POS | WID_UPDATE_SIZE))) {
 		g->gen->force_redraw(g);
@@ -535,75 +525,75 @@ static void grid_update(GRID *g,u16 redraw_flag) {
 
 /*** ADD NEW CHILD WIDGET TO GRID ***/
 static void grid_add(GRID *g,WIDGET *new_elem) {
-	struct cell_struct *new_cell;
+	struct cell *new_cell;
 
-//	printf("I am here!\n");
+//  printf("I am here!\n");
 
 	if (!g) return;
 	if (!new_elem) return;
 	if (new_elem->gen->get_parent(new_elem)) return;
 
-//	printf("I am here2!\n");
+//  printf("I am here2!\n");
 
-	
+
 	/* create new cell with default values */
 	/* the widget has no row/column information yet */
 	/* it will appear as soon as the row/column values are defined */
-	new_cell = (struct cell_struct *)mem->alloc(sizeof(struct cell_struct));
+	new_cell = (struct cell *)malloc(sizeof(struct cell));
 	if (!new_cell) {
-		DOPEDEBUG(printf("Grid(grid_add): out of memory during creation of a grid cell\n");)
+		INFO(printf("Grid(grid_add): out of memory during creation of a grid cell\n");)
 		return;
 	}
 
-//	printf("I am here3!\n");
+//  printf("I am here3!\n");
 
 	new_cell->row = NULL;
 	new_cell->col = NULL;
 	new_cell->row_span = 1;
 	new_cell->col_span = 1;
-	new_cell->sticky =  GRID_STICKY_NORTH | GRID_STICKY_SOUTH | 
+	new_cell->sticky =  GRID_STICKY_NORTH | GRID_STICKY_SOUTH |
 						GRID_STICKY_EAST | GRID_STICKY_WEST;
 	new_cell->pad_x = 0;
 	new_cell->pad_y = 0;
 	new_cell->wid = new_elem;
 	new_elem->gen->inc_ref(new_elem);
 	new_elem->gen->set_parent(new_elem,g);
-	new_cell->next = g->cells;
-	g->cells = new_cell;
+	new_cell->next = g->gd->cells;
+	g->gd->cells = new_cell;
 
-//	printf("I am here4!\n");
-	
-	g->update = g->update | GRID_UPDATE_NEW_CHILD;	
+//  printf("I am here4!\n");
+
+	g->gd->update = g->gd->update | GRID_UPDATE_NEW_CHILD;
 	grid_update(g,WID_UPDATE_REDRAW);
 
-//	printf("I am here5!\n");
+//  printf("I am here5!\n");
 }
 
 
 /*** REMOVE CHILD WIDGET FROM GRID ***/
 static void grid_remove(GRID *g,WIDGET *element) {
-	struct cell_struct *prev_cell;
-	struct cell_struct *cell = get_cell(g,element);
+	struct cell *prev_cell;
+	struct cell *cell = get_cell(g,element);
 	if (!cell) return;
 	if (!element) return;
 	element->gen->dec_ref(element);
 	cell->wid=NULL;
 
-	g->update = g->update | GRID_UPDATE_NEW_CHILD;	
-	
+	g->gd->update = g->gd->update | GRID_UPDATE_NEW_CHILD;
+
 	/* is cell first element of cell list? */
-	if (cell == g->cells) {
-		g->cells = cell->next;
-		mem->free(cell);
+	if (cell == g->gd->cells) {
+		g->gd->cells = cell->next;
+		free(cell);
 		return;
 	}
-	
+
 	/* find previous cell in cell-list */
-	prev_cell=g->cells;
+	prev_cell=g->gd->cells;
 	while (prev_cell->next) {
 		if (prev_cell->next == cell) {
 			prev_cell->next = cell->next;
-			mem->free(cell);
+			free(cell);
 			return;
 		}
 	}
@@ -612,13 +602,13 @@ static void grid_remove(GRID *g,WIDGET *element) {
 
 /*** GET/SET ROW OF A CHILD ***/
 static void grid_set_row(GRID *g,WIDGET *w,s32 row_idx) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->row = get_row(g,row_idx);
-	if (cell->row && cell->col) g->update = g->update | GRID_UPDATE_NEW_CHILD;
+	if (cell->row && cell->col) g->gd->update = g->gd->update | GRID_UPDATE_NEW_CHILD;
 }
 static s32 grid_get_row(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->row) return -1;
 	return cell->row->index;
@@ -627,13 +617,13 @@ static s32 grid_get_row(GRID *g,WIDGET *w) {
 
 /*** GET/SET COLUMN OF A CHILD ***/
 static void grid_set_col(GRID *g,WIDGET *w,s32 col_idx) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->col = get_column(g,col_idx);
-	if (cell->row && cell->col) g->update = g->update | GRID_UPDATE_NEW_CHILD;
+	if (cell->row && cell->col) g->gd->update = g->gd->update | GRID_UPDATE_NEW_CHILD;
 }
 static s32 grid_get_col(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->col) return -1;
 	return cell->col->index;
@@ -642,13 +632,13 @@ static s32 grid_get_col(GRID *g,WIDGET *w) {
 
 /*** GET/SET ROWSPAN OF A CHILD ***/
 static void grid_set_row_span(GRID *g,WIDGET *w,s32 num_rows) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->row_span = num_rows;
-	g->update = g->update | GRID_UPDATE_ROW_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_ROW_LAYOUT;
 }
 static s32 grid_get_row_span(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->row) return -1;
 	return cell->row_span;
@@ -657,13 +647,13 @@ static s32 grid_get_row_span(GRID *g,WIDGET *w) {
 
 /*** GET/SET COLUMNSPAN OF A CHILD ***/
 static void grid_set_col_span(GRID *g,WIDGET *w,s32 num_cols) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->col_span = num_cols;
-	g->update = g->update | GRID_UPDATE_COL_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_COL_LAYOUT;
 }
 static s32 grid_get_col_span(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->col) return -1;
 	return cell->col_span;
@@ -672,13 +662,13 @@ static s32 grid_get_col_span(GRID *g,WIDGET *w) {
 
 /*** GET/SET PAD-X OF A CHILD ***/
 static void grid_set_pad_x(GRID *g,WIDGET *w,s32 pad_x) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->pad_x = pad_x;
-	g->update = g->update | GRID_UPDATE_ROW_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_ROW_LAYOUT;
 }
 static s32 grid_get_pad_x(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->row) return -1;
 	return cell->pad_x;
@@ -687,29 +677,43 @@ static s32 grid_get_pad_x(GRID *g,WIDGET *w) {
 
 /*** GET/SET PAD-Y OF A CHILD ***/
 static void grid_set_pad_y(GRID *g,WIDGET *w,s32 pad_y) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return;
 	cell->pad_y = pad_y;
-	g->update = g->update | GRID_UPDATE_COL_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_COL_LAYOUT;
 }
 static s32 grid_get_pad_y(GRID *g,WIDGET *w) {
-	struct cell_struct *cell = get_cell(g,w);
+	struct cell *cell = get_cell(g,w);
 	if (!cell) return -1;
 	if (!cell->col) return -1;
 	return cell->pad_y;
 }
 
 
+/*** GET/SET ALIGNMENT OF A CHILD INSIDE ITS CELL ***/
+static void grid_set_sticky(GRID *g,WIDGET *w,s32 sticky) {
+	struct cell *cell = get_cell(g,w);
+	if (!cell) return;
+	cell->sticky = sticky;
+	g->gd->update = g->gd->update | GRID_UPDATE_NEW_CHILD;
+}
+static s32 grid_get_sticky(GRID *g,WIDGET *w) {
+	struct cell *cell = get_cell(g,w);
+	if (!cell) return -1;
+	return cell->sticky;
+}
+
+
 /*** GET/SET ROW PIXEL SIZE ***/
 static void grid_set_row_h(GRID *g,u32 row_idx,u32 row_height) {
-	struct section_struct *row = get_row(g,row_idx);
+	struct section *row = get_row(g,row_idx);
 	if (!row) return;
 	row->size = row_height;
 	row->type = GRID_SECTION_FIXED;
-	g->update = g->update | GRID_UPDATE_ROW_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_ROW_LAYOUT;
 }
 static u32 grid_get_row_h(GRID *g,u32 row_idx) {
-	struct section_struct *row = get_row(g,row_idx);
+	struct section *row = get_row(g,row_idx);
 	if (!row) return 0;
 	return row->size;
 }
@@ -717,14 +721,14 @@ static u32 grid_get_row_h(GRID *g,u32 row_idx) {
 
 /*** GET/SET COLUMN PIXEL SIZE ***/
 static void grid_set_col_w(GRID *g,u32 col_idx,u32 col_width) {
-	struct section_struct *col = get_column(g,col_idx);
+	struct section *col = get_column(g,col_idx);
 	if (!col) return;
 	col->size = col_width;
 	col->type = GRID_SECTION_FIXED;
-	g->update = g->update | GRID_UPDATE_COL_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_COL_LAYOUT;
 }
 static u32 grid_get_col_w(GRID *g,u32 col_idx) {
-	struct section_struct *col = get_column(g,col_idx);
+	struct section *col = get_column(g,col_idx);
 	if (!col) return 0;
 	return col->size;
 }
@@ -732,14 +736,14 @@ static u32 grid_get_col_w(GRID *g,u32 col_idx) {
 
 /*** GET/SET ROW WEIGHT ***/
 static void grid_set_row_weight(GRID *g,u32 row_idx,float row_weight) {
-	struct section_struct *row = get_row(g,row_idx);
+	struct section *row = get_row(g,row_idx);
 	if (!row) return;
 	row->weight=row_weight;
 	row->type=GRID_SECTION_WEIGHTED;
-	g->update = g->update | GRID_UPDATE_ROW_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_ROW_LAYOUT;
 }
 static float grid_get_row_weight(GRID *g,u32 row_idx) {
-	struct section_struct *row = get_row(g,row_idx);
+	struct section *row = get_row(g,row_idx);
 	if (!row) return 0;
 	return row->weight;
 }
@@ -747,21 +751,21 @@ static float grid_get_row_weight(GRID *g,u32 row_idx) {
 
 /*** GET/SET COLUMN WEIGHT ***/
 static void grid_set_col_weight(GRID *g,u32 col_idx,float col_weight) {
-	struct section_struct *col = get_column(g,col_idx);
+	struct section *col = get_column(g,col_idx);
 	if (!col) return;
 	col->weight = col_weight;
 	col->type =GRID_SECTION_WEIGHTED;
-	g->update = g->update | GRID_UPDATE_COL_LAYOUT;
+	g->gd->update = g->gd->update | GRID_UPDATE_COL_LAYOUT;
 }
 static float grid_get_col_weight(GRID *g,u32 col_idx) {
-	struct section_struct *col = get_column(g,col_idx);
+	struct section *col = get_column(g,col_idx);
 	if (!col) return 0;
 	return col->weight;
 }
 
 
-static struct widget_methods 	gen_methods;
-static struct grid_methods 		grd_methods={
+static struct widget_methods    gen_methods;
+static struct grid_methods      grd_methods={
 	grid_add,
 	grid_remove,
 	grid_set_row,
@@ -776,6 +780,8 @@ static struct grid_methods 		grd_methods={
 	grid_get_pad_x,
 	grid_set_pad_y,
 	grid_get_pad_y,
+	grid_set_sticky,
+	grid_get_sticky,
 	grid_set_row_h,
 	grid_get_row_h,
 	grid_set_col_w,
@@ -794,27 +800,30 @@ static struct grid_methods 		grd_methods={
 static GRID *create(void) {
 
 	/* allocate memory for new widget */
-	GRID *new = (GRID *)mem->alloc(sizeof(GRID)+sizeof(struct widget_data));
+	GRID *new = (GRID *)malloc(sizeof(struct grid)
+	            + sizeof(struct widget_data)
+	            + sizeof(struct grid_data));
 	if (!new) {
-		DOPEDEBUG(printf("Grid(create): out of memory\n"));
+		INFO(printf("Grid(create): out of memory\n"));
 		return NULL;
 	}
 
-	new->gen  = &gen_methods;	/* pointer to general widget methods */
-	new->grid = &grd_methods;	/* pointer to grid specific methods */
+	new->gen  = &gen_methods;   /* pointer to general widget methods */
+	new->grid = &grd_methods;   /* pointer to grid specific methods */
 
 	/* set general widget attributes */
-	new->wd = (struct widget_data *)((long)new + sizeof(GRID));
+	new->wd = (struct widget_data *)((long)new + sizeof(struct grid));
+	new->gd = (struct grid_data *)((long)new->wd + sizeof(struct widget_data));
 	widman->default_widget_data(new->wd);
-	
+
 	/* set grid specific widget attributes */
 	new->wd->min_w=16;
 	new->wd->min_h=16;
-	new->rows=NULL;
-	new->cols=NULL;
-	new->cells=NULL;
-	new->update=0;
-	
+	new->gd->rows=NULL;
+	new->gd->cols=NULL;
+	new->gd->cells=NULL;
+	new->gd->update=0;
+
 	return new;
 }
 
@@ -847,7 +856,8 @@ static void script_row_config(GRID *g,long index,float weight,long width) {
 
 static void script_place_widget(GRID *g,WIDGET *w,long col,long row,
 										   long col_span,long row_span,
-										   long pad_x,long pad_y) {
+										   long pad_x,long pad_y,
+										   char *align) {
 
 	/* check if widget is a child of the grid - if not, try to adopt it */
 	if (!w->gen->get_parent(w)) grid_add(g,w);
@@ -858,6 +868,25 @@ static void script_place_widget(GRID *g,WIDGET *w,long col,long row,
 	if (row_span!=9999) grid_set_row_span(g,w,row_span);
 	if (pad_x!=9999) grid_set_pad_x(g,w,pad_x);
 	if (pad_y!=9999) grid_set_pad_y(g,w,pad_y);
+
+	/* set alignment */
+	if ((align) && (*align)) {
+		int sticky = 0;
+		do {
+			switch (*align) {
+			case 'c': break;
+			case 'n': sticky |= GRID_STICKY_NORTH; break;
+			case 's': sticky |= GRID_STICKY_SOUTH; break;
+			case 'e': sticky |= GRID_STICKY_EAST; break;
+			case 'w': sticky |= GRID_STICKY_WEST; break;
+			default: sticky = -1;
+			}
+
+		} while (*(++align) != 0);
+
+		grid_set_sticky(g,w,sticky);
+	}
+
 	grid_update(g,1);
 
 }
@@ -870,33 +899,32 @@ static void build_script_lang(void) {
 
 	script->reg_widget_method(widtype,"void columnconfig(long index,float weight=-1.0,long size=-1)",&script_column_config);
 	script->reg_widget_method(widtype,"void rowconfig(long index,float weight=-1.0,long size=-1)",&script_row_config);
-	script->reg_widget_method(widtype,"void place(Widget child,long column=9999,long row=9999,long columnspan=9999,long rowspan=9999,long padx=9999,long pady=9999)",script_place_widget);
+	script->reg_widget_method(widtype,"void place(Widget child,long column=9999,long row=9999,long columnspan=9999,long rowspan=9999,long padx=9999,long pady=9999,string align=\"nsew\")",script_place_widget);
 	script->reg_widget_method(widtype,"void add(Widget child)",grid_add);
 	script->reg_widget_method(widtype,"void remove(Widget child)",grid_remove);
-	
+
 	widman->build_script_lang(widtype,&gen_methods);
 }
 
 
 int init_grid(struct dope_services *d) {
 
-	mem		= d->get_module("Memory 1.0");
-	widman	= d->get_module("WidgetManager 1.0");
-	clip	= d->get_module("Clipping 1.0");
-	bg		= d->get_module("Background 1.0");
-	script	= d->get_module("Script 1.0");
-	
+	widman = d->get_module("WidgetManager 1.0");
+	gfx    = d->get_module("Gfx 1.0");
+	bg     = d->get_module("Background 1.0");
+	script = d->get_module("Script 1.0");
+
 	/* define general widget functions */
 	widman->default_widget_methods(&gen_methods);
-	
+
 	orig_update = gen_methods.update;
-	
-	gen_methods.draw	= grid_draw;
-	gen_methods.find	= grid_find;
-	gen_methods.update	= grid_update;
+
+	gen_methods.draw    = grid_draw;
+	gen_methods.find    = grid_find;
+	gen_methods.update  = grid_update;
 
 	build_script_lang();
-	
+
 	d->register_module("Grid 1.0",&services);
 	return 1;
 }

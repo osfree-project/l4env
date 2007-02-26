@@ -92,7 +92,7 @@ typedef struct _NewClientRec *NewClientPtr;
 #include <stdio.h>
 #endif
 #ifndef X_NOT_STDC_ENV
-#include <string.h>
+//#include <string.h>
 #else
 #ifdef SYSV
 #include <string.h>

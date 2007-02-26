@@ -1,0 +1,9 @@
+L4 Slide Presenter.
+
+This package will contain a complete DRM-scenario for L4. The core
+application of this scenario is a slide presenter which is
+included at an early state. It can be tested with
+presenter_test in the example directory.
+
+Current main focus is the connection to DOpE, that means
+to the controller and view. 

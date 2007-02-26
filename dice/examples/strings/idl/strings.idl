@@ -1,0 +1,105 @@
+/*
+ * This example demonstrates different usages of strings
+ */
+library strings
+{
+  /*
+   * Interface one simply sends one and two strings from the
+   * client to the server. The size of the strings is determined
+   * using 'strlen'. The size has to be determined to know the
+   * number of bytes to marshal and transmit. And we can use strlen,
+   * becaue [string] tells us that this is a zero-terminated character
+   * array.
+   */
+  interface one
+    {
+      void f1([in, string] char* t1);
+      void f2([in, string] char* t2, [in, string] char *t3);
+    };
+  
+  /*
+   * Interface two does the same as above, but in the opposite
+   * direction. The strings are send from the server to the 
+   * client.
+   * Since the strings are variable sized, the CORBA specification
+   * defines the usage of CORBA_alloc to allocate memory for the
+   * strings in the stub which is handed to the user. The user is
+   * responsible for the deallocation of the memory.
+   * You may override this behaviour with the [prealloc] attribute,
+   * which tells the stub to copy the string into the buffer
+   * given to it.
+   */
+  interface two
+    {
+      void f1([out, string] char** t1);
+      void f2([out, string] char** t2, [out, string] char** t3);
+    };
+  
+  /*
+   * Interfaces three and four uses an indirect string to transmit 
+   * the data from the client to the server.
+   */
+  interface three
+    {
+      void f1([in, ref, string] char* t1);
+    };
+  
+  interface four
+    {
+      void f1([out, ref, string] char** t1);
+    };
+  
+  /*
+   * Interfaceis five and six are examples on how you can specify the 
+   * actual length of a string. This way the compiler does not need to 
+   * use heuristics to define a maximum length for a string, but can 
+   * rely on the value provided.
+   * Nonetheless does the server code use a fictive value to define the
+   * maximum size of the receive buffer, which has to be set before the
+   * message (and thus the size of the string) arrives. This can be 
+   * avoided by spcifying a [max_is] attribute.
+   */
+  interface five
+    {
+      void f1([in, length_is(len)] char* t1, [in] int len);
+      void f2([in, length_is(len), max_is(50)] char *t1, [in] int len);
+    };
+  
+  interface six
+    {
+      void f1([out, length_is(len)] char** t1, [out] int *len);
+    };
+  
+  /*
+   * Interfaces seven and eigth combine some special cases, such as 
+   * using a string as in and out parameter or using a string as 
+   * return value.
+   * Interface eigth is a test case for sending a string and receiving
+   * another string.
+   */
+  interface seven
+    {
+      void f1([in, out, ref, string] char** t1, [in, out] int *len);
+      char* f2();
+    };
+  
+  interface eigth
+    {
+      long f1([in, string] char* str1, [out, string, max_is(200)] char** str2);
+      long f2([in, string] char* str1, [out, string] char** str2);
+    };
+
+  /*
+   * Interface nine has a out parameter, which should be transmitted
+   * as indirect string (just as in interface four). But it also has some
+   * variable sized in parameter, which will produce a variable sized
+   * message buffer, which has to apply special handling to find
+   * the indirect string on out.
+   */
+  interface nine
+    {
+      void f1([in, string] char* str1, [out, ref, string] char** str2);
+    };
+  
+};
+

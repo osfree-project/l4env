@@ -6,7 +6,7 @@ public:
   static void write_back_data_cache();
   static void write_back_data_cache( void * );
   static void tlb_flush();
-
+  static void dtlb_flush( void* va );
 };
 
 IMPLEMENTATION:
@@ -40,4 +40,10 @@ IMPLEMENT inline
 void Mem_unit::tlb_flush()
 {
   asm volatile ("mcr p15, 0, r0, c8, c7, 0x00 \n" : : : "memory" ); // TLB flush
+}
+
+IMPLEMENT inline
+void Mem_unit::dtlb_flush( void* va )
+{
+  asm volatile ("mcr p15, 0, %0, c8, c6, 0x01 \n" : : "r"(va) : "memory" ); // TLB flush
 }

@@ -1,31 +1,20 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/include/io.h
+ * \file   l4io/server/include/io.h
+ * \brief  L4Env l4io I/O Server Global Stuff
  *
- * \brief	L4Env l4io I/O Server Global Stuff
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
-#ifndef _IO_IO_H
-#define _IO_IO_H
+#ifndef __L4IO_SERVER_INCLUDE_IO_H_
+#define __L4IO_SERVER_INCLUDE_IO_H_
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -70,4 +59,4 @@ extern __inline__ int client_equal(io_client_t *c0, io_client_t *c1)
   return l4_thread_equal(c0->c_l4id, c1->c_l4id);
 }
 
-#endif /* !_IO_IO_H */
+#endif

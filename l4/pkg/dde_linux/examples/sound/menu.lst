@@ -16,4 +16,4 @@ title sounddrv-foo
 # channels:  2
 #     rate:  44 kHz
 #
-# or you have to adopt settings in server.c line 38.
+# or you have to adopt settings in server.c line 33.

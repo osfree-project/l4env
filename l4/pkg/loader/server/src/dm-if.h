@@ -1,13 +1,16 @@
 /**
  * \file	loader/server/src/dm-if.h
+ * \brief	Helper functions for communication with dataspace managers
  *
  * \date	06/11/2001
- * \author	Frank Mehnert
- *
- * \brief	Helper functions for communication with dataspace managers */
+ * \author	Frank Mehnert */
 
-#ifndef __LOADER_DM_IF_H_
-#define __LOADER_DM_IF_H_
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
+
+#ifndef __DM_IF_H_
+#define __DM_IF_H_
 
 #include <l4/sys/types.h>
 #include <l4/l4rm/l4rm.h>

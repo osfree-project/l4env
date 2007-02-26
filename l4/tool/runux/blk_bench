@@ -1,0 +1,11 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-l names \
+	-l log \
+	-l dm_phys \
+        -l blk-ux" -w -f /tmp/user/blk_file" \
+	-l blk_bench \
+	-n8 "$@"

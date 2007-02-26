@@ -8,6 +8,12 @@ Documentation of the Dataspace manager client library API.
 */
 
 /**
+\defgroup api_types Dataspace Types
+\ingroup  api
+\brief    Dataspace id type and functions to check ids
+*/
+
+/**
 \defgroup api_open Open/Close/Copy Dataspaces 
 \ingroup  api
 \brief    Functions to open / close dataspaces and to create copies of 

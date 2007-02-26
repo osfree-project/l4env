@@ -27,6 +27,7 @@ IMPLEMENTATION:
 #include <cstdlib>
 #include <cstdio>
 
+#include "config.h"
 #include "globals.h"
 #include "helping_lock.h"
 #include "kmem.h"
@@ -37,13 +38,11 @@ IMPLEMENTATION:
 #include "timer.h"
 #include "vmem_alloc.h"
 
-#include "undef_oskit.h"		// OSKIT crap
-
-// overload allocator -- we cannot allcate by page fault during
+// overload allocator -- we cannot allocate by page fault during
 // bootstrapping
 PUBLIC
 void *
-Kernel_thread::operator new(size_t s, threadid_t id)
+Kernel_thread::operator new(size_t s, Threadid id)
 {
   // call superclass' allocator
   void *addr = Thread::operator new(s, id);
@@ -60,7 +59,7 @@ Kernel_thread::operator new(size_t s, threadid_t id)
 
 PUBLIC inline
 Kernel_thread::Kernel_thread()
-  : Thread( current_space(), Config::kernel_id )
+             : Thread (current_space(), Config::kernel_id)
 {}
 
 PUBLIC inline
@@ -77,29 +76,20 @@ Kernel_thread::bootstrap()
   // Initializations done -- Helping_lock can now use helping lock
   Helping_lock::threading_system_active = true;
 
-  //
-  // set up my own thread control block
-  //
+  // Set up my own thread control block
   state_change (0, Thread_running);
 
-  sched()->set_prio (Config::kernel_prio);
-  sched()->set_mcp (Config::kernel_mcp);
-  sched()->set_timeslice (Config::default_time_slice);
-  sched()->set_ticks_left (Config::default_time_slice);
+  ready_next = ready_prev = present_next = present_prev = this;
 
-  present_next = present_prev = this;
-  ready_next = ready_prev = this;
+  // Set up class variables
+  for (int i = 0; i < 256; i++)
+    prio_next[i] = prio_first[i] = 0;
 
-  //
-  // set up class variables
-  //
-  for (int i = 0; i < 256; i++) prio_next[i] = prio_first[i] = 0;
   prio_next[Config::kernel_prio] = prio_first[Config::kernel_prio] = this;
   prio_highest = Config::kernel_prio;
 
-  timeslice_ticks_left = Config::default_time_slice;
-  timeslice_owner = this;
-
+  // Setup initial timeslice
+  set_current_sched (sched());
 
   Timer::enable();
 
@@ -127,27 +117,26 @@ Kernel_thread::run()
       // Interrupts must be enabled, otherwise idling is fatal
       assert (Proc::interrupts());
 
-      // putchar('I');
-
       idle();
 
       while (running && ready_next != this)	// are there any other threads ready?
 	schedule();
     }
 
-  Proc::cli();
+  puts ("\nExiting, wait...");
 
-  // Tear down all userspace applications recursively
-  kill_task (Space_index (Config::boot_id.task()));
+  // Boost this thread's priority to the maximum. Since this thread tears down
+  // all other threads, we want it to run whenever possible to advance as fast
+  // as we can.
+  ready_dequeue();
+  sched()->set_prio(255);
+  ready_enqueue();
+
+  kill_all();					// Nuke everything else
 
   Helping_lock::threading_system_active = false;
 
-  // Switch back to our boot stack
-  Proc::stack_pointer(boot_stack);
-
-  puts ("\nShutting down...");
-
-  exit (0);
+  exit (0);					// Commit suicide
 }
 
 PUBLIC inline NEEDS["processor.h"]

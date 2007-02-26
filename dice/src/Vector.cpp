@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -122,11 +122,11 @@ void Vector::Add(CObject * pElement)
 {
     if (!pElement)
     {
-        ASSERT(false);
+        assert(false);
         return;
     }
-    ASSERT(m_pType);
-    ASSERT(pElement->IsKindOf(m_pType));
+    assert(m_pType);
+    assert(pElement->IsKindOf(m_pType));
     VectorElement *pNewEl = new VectorElement();
     pNewEl->m_pElement = pElement;
     pNewEl->m_pPrev = m_pTail;
@@ -167,10 +167,10 @@ void Vector::AddHead(CObject * pElement)
 {
     if (!pElement)
     {
-        ASSERT(false);
+        assert(false);
         return;
     }
-    ASSERT(pElement->IsKindOf(m_pType));
+    assert(pElement->IsKindOf(m_pType));
     VectorElement *pNewEl = new VectorElement();
     pNewEl->m_pElement = pElement;
     pNewEl->m_pNext = m_pHead;
@@ -189,7 +189,7 @@ void Vector::AddUnique(CObject *pElement)
     if (!pElement)
         return;
     if (pElement)
-        ASSERT(pElement->IsKindOf(m_pType));
+        assert(pElement->IsKindOf(m_pType));
     VectorElement *pCurrent = GetFirst();
     while (pCurrent)
     {
@@ -216,7 +216,7 @@ bool Vector::Remove(CObject * pElement)
     if (!pElement)
         return false;
     if (pElement)
-        ASSERT(pElement->IsKindOf(m_pType));
+        assert(pElement->IsKindOf(m_pType));
     VectorElement *pCurrent = GetFirst();
     while (pCurrent)
     {

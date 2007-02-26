@@ -1,7 +1,19 @@
+/*!
+ * \file	vmware.c
+ * \brief	Use capabilities of VMware driver
+ *
+ * \date	07/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <stdio.h>
-#include <oskit/x86/pio.h>
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
+#include <l4/util/port_io.h>
 
 #include "init.h"
 #include "pci.h"
@@ -188,7 +200,7 @@ enum
 
 #define	SVGA_CMD_MAX			  22
 
-static struct pci_device_id vmware_pci_tbl[] __init =
+static const struct pci_device_id vmware_pci_tbl[] __init =
 {
     {PCI_VENDOR_ID_VMWARE, PCI_CHIP_VMWARE0405, 0, 0, 0},
     {PCI_VENDOR_ID_VMWARE, PCI_CHIP_VMWARE0710, 0, 0, 0},
@@ -205,15 +217,15 @@ static unsigned vm_may_be_busy = 0;
 static unsigned
 vmwareReadReg(int index)
 {
-  outl(vm_idx, index);
-  return inl(vm_val);
+  l4util_out32(index, vm_idx);
+  return l4util_in32(vm_val);
 }
 
 static void
 vmwareWriteReg(int index, unsigned value)
 {
-  outl(vm_idx, index);
-  outl(vm_val, value);
+  l4util_out32(index, vm_idx);
+  l4util_out32(value, vm_val);
 }
 
 static void
@@ -334,7 +346,7 @@ VMXGetVMwareSvgaId(void)
 
 static int
 vmware_probe(unsigned int bus, unsigned int devfn, 
-	     struct pci_device_id *dev, con_accel_t *accel)
+	     const struct pci_device_id *dev, con_accel_t *accel)
 {
   unsigned int addr, l, id;
 

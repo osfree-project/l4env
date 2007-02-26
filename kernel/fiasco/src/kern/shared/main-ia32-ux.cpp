@@ -17,7 +17,6 @@ IMPLEMENTATION[ia32-ux]:
 #include "kmem.h"
 #include "linker_syms.h"
 #include "processor.h"
-#include "undef_oskit.h"
 
 FIASCO_INIT int main (void) {
 
@@ -29,9 +28,10 @@ FIASCO_INIT int main (void) {
   printf ("%s\n", reinterpret_cast<char*>(Kmem::info()) +
          (Kmem::info()->offset_version_strings << 4));
 
-  printf ("CPU: %s (%u.%u.%u) APIC: %u Model: %s\n\n",
+  printf ("CPU: %s (%u.%u.%u) Model: %s at %llu MHz\n\n",
            Cpu::vendor_str(), Cpu::family(), Cpu::model(),
-           Cpu::stepping(), Cpu::apic(), Cpu::model_str());
+           Cpu::stepping(), Cpu::model_str(),
+           Cpu::frequency() / 1000000);
 
   if (Cpu::inst_tlb_entries())
     printf ("%4u Entry I TLB (4K pages)\n", Cpu::inst_tlb_entries());
@@ -39,8 +39,13 @@ FIASCO_INIT int main (void) {
     printf ("%4u Entry D TLB (4K pages)\n", Cpu::data_tlb_entries());
 
   if (Cpu::l1_trace_cache_size())
-    printf ("%3uK \346-ops T Cache (%u-way associative)\n",
+    printf ("%3uK %c-ops T Cache (%u-way associative)\n",
              Cpu::l1_trace_cache_size(),
+#ifdef CONFIG_UX
+	     'µ',
+#else
+	     '\346',
+#endif
              Cpu::l1_trace_cache_asso());
 
   else if (Cpu::l1_inst_cache_size())
@@ -59,9 +64,9 @@ FIASCO_INIT int main (void) {
              Cpu::l2_cache_asso(),
              Cpu::l2_cache_line_size());
 
-  // for your info. the more bytes, the merrier.
-  printf ("FYI: Saving %u memory pages in initcall section!\n",
-          (&_initcall_end - &_initcall_start) >> Config::PAGE_SHIFT);
+  printf ("Freeing init code/data: %u bytes (%u pages)\n\n",
+          &_initcall_end - &_initcall_start,
+          &_initcall_end - &_initcall_start >> Config::PAGE_SHIFT);
 
   // Perform architecture specific initialization
   main_arch();

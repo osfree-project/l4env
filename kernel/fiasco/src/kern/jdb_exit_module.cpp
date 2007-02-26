@@ -1,7 +1,7 @@
 IMPLEMENTATION:
 
 #include <cstdio>
-
+#include "simpleio.h"
 
 #include "jdb_module.h"
 #include "static_init.h"
@@ -27,7 +27,8 @@ public:
 static Jdb_exit_module jdb_exit_module INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 PUBLIC
-Jdb_module::Action_code Jdb_exit_module::action( int cmd, void *&, char const *& )
+Jdb_module::Action_code Jdb_exit_module::action( int cmd, void *&, 
+						 char const *&, int & )
 {
   if(cmd!=0)
     return NOTHING;

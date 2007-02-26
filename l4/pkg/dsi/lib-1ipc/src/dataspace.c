@@ -113,10 +113,8 @@ __setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
       return -L4_EINVAL;
     }
 
-#if DEBUG_CTRL_DS
-  INFO("attaching ctrl dataspace, size %d\n", size);
-  INFO("ds %d at %t\n",socket->ctrl_ds.id, socket->ctrl_ds.manager);
-#endif
+  LOGdL(DEBUG_CTRL_DS,"attaching ctrl dataspace, size %d", size);
+  LOGdL(DEBUG_CTRL_DS,"ds %d at %t",socket->ctrl_ds.id, socket->ctrl_ds.manager);
   
   /* attach dataspace */
   if (cds_map_area != -1)
@@ -127,7 +125,7 @@ __setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
 		      (void **)&map_addr);
   if (ret < 0)
     {
-      Error("DSI: attach dataspace failed: %s (%d)\n",
+      Error("DSI: attach dataspace failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       return ret;
     }
@@ -138,12 +136,10 @@ __setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
   socket->sg_lists = (dsi_sg_elem_t *)(map_addr + sizeof(dsi_ctrl_header_t) +
 				       cfg.num_packets * sizeof(dsi_packet_t));
 
-#if DEBUG_CTRL_DS
-  INFO("attached crtl ds to 0x%08x\n",map_addr);
-  INFO("header at 0x%08x\n",(l4_addr_t)socket->header);
-  INFO("packets at 0x%08x\n",(l4_addr_t)socket->packets);
-  INFO("sg_lists at 0x%08x\n",(l4_addr_t)socket->sg_lists);
-#endif
+  LOGdL(DEBUG_CTRL_DS,"attached crtl ds to 0x%08x",map_addr);
+  LOGdL(DEBUG_CTRL_DS,"header at 0x%08x",(l4_addr_t)socket->header);
+  LOGdL(DEBUG_CTRL_DS,"packets at 0x%08x",(l4_addr_t)socket->packets);
+  LOGdL(DEBUG_CTRL_DS,"sg_lists at 0x%08x",(l4_addr_t)socket->sg_lists);
 
   /* done */
   return 0;
@@ -195,13 +191,12 @@ dsi_create_ctrl_area(dsi_socket_t * socket, dsi_jcp_stream_t jcp_stream,
     cfg.num_packets * sizeof(dsi_packet_t) +
     cfg.num_packets * cfg.max_sg *  sizeof(dsi_sg_elem_t);
 
-#if DEBUG_CTRL_DS
-  INFO("header size %u\n",sizeof(dsi_ctrl_header_t));
-  INFO("%u packets of size %u\n",cfg.num_packets,sizeof(dsi_packet_t));
-  INFO("%u sg elems of size %u\n",cfg.num_packets * cfg.max_sg, 
+  LOGdL(DEBUG_CTRL_DS,"header size %u",sizeof(dsi_ctrl_header_t));
+  LOGdL(DEBUG_CTRL_DS,"%u packets of size %u",
+        cfg.num_packets,sizeof(dsi_packet_t));
+  LOGdL(DEBUG_CTRL_DS,"%u sg elems of size %u",cfg.num_packets * cfg.max_sg, 
        sizeof(dsi_sg_elem_t));
-  INFO("total size %u\n",size);
-#endif
+  LOGdL(DEBUG_CTRL_DS,"total size %u",size);
 
   /* align size to page size */
   size = (size + L4_PAGESIZE - 1) & L4_PAGEMASK;
@@ -214,10 +209,8 @@ dsi_create_ctrl_area(dsi_socket_t * socket, dsi_jcp_stream_t jcp_stream,
       return ret;
     }
 
-#if DEBUG_CTRL_DS
-  INFO("ds %d at %x.%x\n",socket->ctrl_ds.id,socket->ctrl_ds.manager.id.task,
-       socket->ctrl_ds.manager.id.lthread);
-#endif
+  LOGdL(DEBUG_CTRL_DS,"ds %d at %x.%x",socket->ctrl_ds.id,
+        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
 
   /* setup dataspace */
   ret = __setup_ctrl_ds(socket,cfg);
@@ -332,7 +325,7 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
 	}
       
       /* adapt packet / scatter gather list pointer */
-      Msg("DSI: adjusting packet / scatter gather list pointers\n");
+      printf("DSI: adjusting packet / scatter gather list pointers\n");
       map = (l4_addr_t)socket->header;
       socket->packets = (dsi_packet_t *)(map + sizeof(dsi_ctrl_header_t));
       socket->sg_lists = (dsi_sg_elem_t *)
@@ -361,11 +354,9 @@ dsi_release_ctrl_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
   
-#if DEBUG_CTRL_DS
-  INFO("detaching control area (ds %d at %x.%x)\n",
-       socket->ctrl_ds.id,
-       socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
-#endif
+  LOGdL(DEBUG_CTRL_DS,"detaching control area (ds %d at %x.%x)",
+        socket->ctrl_ds.id,
+        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
 
   /* detach control dataspace */
   ret = l4rm_detach(socket->header);
@@ -431,9 +422,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
 	  return -L4_EINVAL;
 	}
 
-#if DEBUG_DATA_DS
-      INFO("allocate data_ds, size %u\n",size);
-#endif
+      LOGdL(DEBUG_DATA_DS,"allocate data_ds, size %u",size);
 
       /* check dataspace manager */
       if (l4_thread_equal(dsi_dm_id,L4_INVALID_ID))
@@ -471,10 +460,8 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
       ds = data_ds;
     }
 
-#if DEBUG_DATA_DS
-  INFO("attaching data area\n");
-  INFO("ds %d at %#t\n",data_ds.id,data_ds.manager);
-#endif
+  LOGdL(DEBUG_DATA_DS,"attaching data area");
+  LOGdL(DEBUG_DATA_DS,"ds %d at %#t",data_ds.id,data_ds.manager);
   
   /* get dataspace size */
   ret = l4dm_mem_size(&ds,&size);
@@ -516,7 +503,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
     ret = l4rm_attach(&ds,size,0,flags,&map);
   if (ret)
     {
-      Error("DSI: attach data dataspace failed: %s (%d)\n",
+      Error("DSI: attach data dataspace failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       return ret;
     }
@@ -528,9 +515,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
   socket->data_map_size = i;
   socket->next_buf = map;
 
-#if DEBUG_DATA_DS
-  INFO("attached data ds to addr 0x%08x\n",(l4_addr_t)map);
-#endif
+  LOGdL(DEBUG_DATA_DS,"attached data ds to addr 0x%08x",(l4_addr_t)map);
 
   /* done */
   return 0;
@@ -551,11 +536,9 @@ dsi_release_data_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
 
-#if DEBUG_DATA_DS
-  INFO("detaching data area (ds %d at %x.%x)\n",
-       socket->data_ds.id,
-       socket->data_ds.manager.id.task,socket->data_ds.manager.id.lthread);
-#endif
+  LOGdL(DEBUG_DATA_DS,"detaching data area (ds %d at %x.%x)",
+        socket->data_ds.id,
+        socket->data_ds.manager.id.task,socket->data_ds.manager.id.lthread);
 
   /* detach data dataspace */
   ret = l4rm_detach(socket->data_area);
@@ -611,7 +594,7 @@ dsi_init_dataspaces(void)
   if (ret)
     {
       Error("DSI: failed to reserve map area for data dataspaces: "
-	    "%s (%d)\n",l4env_errstr(ret),ret);
+	    "%s (%d)",l4env_errstr(ret),ret);
       dds_map_area = -1;
     }
 #endif

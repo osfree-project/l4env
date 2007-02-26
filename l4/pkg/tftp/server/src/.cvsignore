@@ -1,5 +1,5 @@
-tftp
-tftp.stripped
 relocatable.tftp
 Makeconf
 tftp_config.h
+Makeconf.bid.local
+.config

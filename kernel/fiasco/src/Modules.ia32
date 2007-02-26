@@ -1,20 +1,10 @@
 # -*- makefile -*-
 
 SUBSYSTEMS = JABI ABI DRIVERS KERNEL CRT0 BOOT LIBK LIBAMM LIBLMM \
-	     CHECKSUM CXXLIB MINILIBC LIBKERN TCBOFFSET
+	     CHECKSUM CXXLIB MINILIBC LIBKERN TCBOFFSET SYMBOLS
 
-ifeq ("$(CONFIG_JDB)","y")
-ifneq ($(wildcard $(srcdir)/lib/disasm),)
-  SUBSYSTEMS		+= LIBDISASM
-  KERNEL_EXTRA_LIBS	+= $(LIBDISASM)
-  KERNEL_UNRES_SYMS	+= -u disasm_bytes
-endif
-
-ifneq ($(wildcard $(srcdir)/lib/gzip),)
-  SUBSYSTEMS		+= LIBGZIP
-  KERNEL_EXTRA_LIBS	+= $(LIBGZIP)
-  KERNEL_UNRES_SYMS	+= -u gz_end
-endif
+ifeq ("$(CONFIG_GSTABS)","y")      
+  SUBSYSTEMS		+= LINES
 endif
 
 #
@@ -28,10 +18,24 @@ PRIVATE_INCDIR		+= types/$(CONFIG_XARCH) types
 ABI			:= libabi.a
 VPATH			+= abi/$(CONFIG_XARCH) abi
 INTERFACES_ABI		:= l4_types kip
-l4_types_IMPL		:= l4_types l4_types-$(CONFIG_ABI) \
-                           l4_types-32bit l4_types-iofp
 
-kip_IMPL		:= kip kip-ia32
+kip_IMPL		:= kip
+l4_types_IMPL		:= l4_types l4_types-$(CONFIG_ABI)
+
+ifeq ("$(CONFIG_ABI)","v4")
+  kip_IMPL		+= kip-ia32-v4
+  l4_types_IMPL		+= l4_types-iofp l4_types-iofp-v4
+else
+  kip_IMPL		+= kip-ia32-v2x0
+  l4_types_IMPL		+= l4_types-32bit l4_types-iofp l4_types-iofp-v2x0
+  ifeq ("$(CONFIG_JDB)","y")
+    kip_IMPL		+= kip-ia32-v2x0-debug
+  endif
+endif
+
+ifeq ("$(CONFIG_JDB)","y")
+  l4_types_IMPL		+= l4_types-debug
+endif
 
 #
 # JABI Subsystem
@@ -41,15 +45,17 @@ VPATH			+= jabi/$(CONFIG_XARCH) jabi
 INTERFACES_JABI		:= jdb_ktrace
 jdb_ktrace_IMPL		:= jdb_ktrace-arch jdb_ktrace
 
-
 #
 # DRIVERS subsystem
 #
 DRIVERS			:= libdrivers.a libgluedriverslibc.a
 VPATH			+= drivers/$(CONFIG_XARCH) drivers
 PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
-INTERFACES_DRIVERS	:= mux_console console filter_console keyb io \
-			   uart vga_console
+INTERFACES_DRIVERS	:= mux_console console keyb io vga_console reset
+ifeq ("$(CONFIG_SERIAL)","y")
+INTERFACES_DRIVERS	+= filter_console uart
+endif
+reset_IMPL		:= reset-ia32
 uart_IMPL		:= uart uart-16550
 CXXSRC_DRIVERS		:= glue_libc.cc
 
@@ -61,31 +67,124 @@ io_IMPL			:= io io-ia32
 # KERNEL subsystem
 #
 KERNEL			:= kernel.image
-KERNEL_EXTRA		:= Symbols
 VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
-INTERFACES_KERNEL	:= startup boot_info __main mapdb region pic \
-			   space_context space space_index space_index_util \
-			   stack kmem kmem_alloc slab_cache_anon \
+
+INTERFACES_KERNEL	+= startup boot_info cmdline __main mapdb region pic \
+			   space_context space 
+ifneq ("$(CONFIG_ABI)","v4")
+  INTERFACES_KERNEL	+= space_index space_index_util
+endif
+INTERFACES_KERNEL	+= stack kmem kmem_alloc slab_cache_anon \
 			   kmem_slab_simple kmem_slab switch_lock thread_lock \
-			   helping_lock cpu_lock timer thread_state sched \
-			   context threadid sender receiver \
+			   helping_lock cpu_lock timer timeout ipc_timeout \
+			   sched_timeout \
+			   thread_state context threadid sender receiver \
 			   thread kernel_thread thread_util map_util irq dirq \
-			   virq globals kdb_ke apic watchdog rtc pit \
+			   globals apic watchdog kernel_uart pit \
 			   checksum main config kern_types mapped_alloc\
 			   vmem_alloc paging fpu fpu_state fpu_alloc cpu \
-			   entry_frame console_buffer kernel_uart \
-			   kernel_console boot_console profile \
-			   long_msg task irq_alloc terminate scheduler idt
+			   entry_frame kernel_console boot_console profile \
+			   long_msg task irq_alloc terminate idt preemption \
+			   sched_context allocators utcb_alloc
 
+apic_IMPL		:= apic-ia32
+boot_info_IMPL		:= boot_info boot_info-ia32-ux boot_info-ia32
+config_IMPL		:= config config-ia32-ux config-ia32
+context_IMPL		:= context context-ia32-ux context-ia32
+cpu_IMPL		:= cpu-ia32-common cpu-ia32
+dirq_IMPL		:= dirq dirq-ia32-ux
+entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux \
+			   entry_frame-ia32-ux-$(CONFIG_ABI) \
+		   	   entry_frame-abs-timeout-hack
+fpu_IMPL		:= fpu fpu-ia32-ux fpu-ia32
+globals_IMPL		:= globals globals-ia32-ux
+idt_IMPL		:= idt-ia32-ux idt-ia32
+irq_IMPL		:= irq irq-ipc irq-ia32 irq-generic
+kernel_thread_IMPL	:= kernel_thread
+kmem_IMPL		:= kmem-ia32-ux kmem-ia32
+kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-ux
+main_IMPL		:= main-ia32-ux main-ia32
+map_util_IMPL		:= map_util map_util-ia32-ux
+pagetable_IMPL		:= pagetable pagetable-arch
+paging_IMPL		:= paging paging-ia32-ux
+pic_IMPL		:= pic pic-i8259
+pit_IMPL		:= pit-i8254
+pmem_alloc_IMPL		:= pmem_alloc pmem_alloc-ia32-ux
+receiver_IMPL		:= receiver
+sched_context_IMPL	:= sched_context sched_context-ia32-ux
+space_IMPL		:= space space-ia32-ux space-ia32
+space_context_IMPL	:= space_context-ia32-ux space_context-ia32
+task_IMPL		:= task
+timer_IMPL		:= timer timer-ia32-ux
+thread_IMPL		:= thread thread-ia32-ux thread-ia32 \
+			   thread-$(CONFIG_ABI) \
+			   thread-syscall thread-syscall-$(CONFIG_ABI)	\
+			   thread-ipc thread-msg thread-msg-ia32 \
+			   thread-list thread-pagefault
+thread_util_IMPL	:= thread_util
+utcb_alloc_IMPL		:= utcb_alloc
+vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-ux vmem_alloc-ia32
+
+ifeq ("$(CONFIG_PERF_CNT)","y")
+  INTERFACES_KERNEL	+= perf_cnt
+endif
 
 ifeq ("$(CONFIG_KDB)","y")
   INTERFACES_KERNEL	+= kdb
 else
-  INTERFACES_KERNEL	+= uart_console
+  ifeq ("$(CONFIG_SERIAL)","y")
+    INTERFACES_KERNEL	+= uart_console
+  endif
 endif
 
-kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-ux
+ifeq ("$(CONFIG_ABI)","v4")
+  INTERFACES_KERNEL	+= sys_call_page
+  config_IMPL		+= config-v4
+  context_IMPL		+= context-v4 context-ia32-ux-v4
+  globals_IMPL		+= globals-v4
+  kernel_thread_IMPL	+= kernel_thread-std-v4 kernel_thread-ia32
+  kmem_IMPL		+= kmem-ia32-v4
+  kmem_alloc_IMPL	+= kmem_alloc-ia32-ux-v4
+  mapdb_IMPL		:= mapdb-ia32-ux-v4 mapdb mapdb-v4
+  map_util_IMPL		+= map_util-v4 map_util-ia32-ux-v4
+  receiver_IMPL		+= receiver-v4
+  space_IMPL		+= space-v4 space-ia32-ux-v4 space-ia32-v4
+  sys_call_page_IMPL	:= sys_call_page sys_call_page-ia32-ux-v4
+  task_IMPL		+= task-v4
+  thread_IMPL		+= thread-ia32-ux-v4 thread-ia32-v4
+  thread_util_IMPL	+= thread_util-v4
+  utcb_alloc_IMPL	+= utcb_alloc-ia32-v4
+else
+  config_IMPL		+= config-v2x0
+  context_IMPL		+= context-ia32-ux-v2x0
+  kernel_thread_IMPL	+= kernel_thread-std-v2x0 kernel_thread-ia32
+  kmem_IMPL		+= kmem-ia32-v2x0
+  kmem_alloc_IMPL	+= kmem_alloc-ia32-ux-v2x0
+  mapdb_IMPL		:= mapdb-ia32-ux-v2x0 mapdb mapdb-v2x0
+  map_util_IMPL		+= map_util-ia32-ux-v2x0
+  receiver_IMPL		+= receiver-v2x0
+  space_IMPL		+= space-v2x0 space-ia32-ux-v2x0 space-ia32-v2x0
+  task_IMPL		+= task-v2x0
+  thread_IMPL		+= thread-v2x0 thread-ia32-ux-v2x0 \
+			   thread-ia32-v2x0 thread-syscall-v2x0
+  thread_util_IMPL	+= thread_util-v2x0
+  utcb_alloc_IMPL	+= utcb_alloc-ia32-v2x0
+
+  ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS)","y")
+    INTERFACES_KERNEL	+= sys_call_page
+    sys_call_page_IMPL	:= sys_call_page
+    ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS_ABS)","y")
+      sys_call_page_IMPL += sys_call_page-abs-ia32
+    else
+      sys_call_page_IMPL += sys_call_page-rel-ia32-ux
+    endif
+    task_IMPL		+= task-v2x0-auto-map-kip
+  else
+    task_IMPL		+= task-v2x0-no-auto-map-kip
+  endif
+
+endif
 
 ifeq ("$(CONFIG_PROFILE)","y")
   cpu_lock_IMPL		:= cpu_lock cpu_lock-pic
@@ -95,94 +194,93 @@ else
   profile_IMPL		:= profile-disabled
   cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
 endif
-pic_IMPL		:= pic pic-i8259
-timer_IMPL		:= timer timer-ia32
+
 ifeq ("$(CONFIG_SCHED_PIT)","y")
   timer_IMPL		+= timer-pit
 else
   timer_IMPL		+= timer-rtc
+  INTERFACES_KERNEL	+= rtc
 endif
-main_IMPL		:= main-ia32-ux main-ia32
-kernel_uart_IMPL	:= kernel_uart kernel_uart-16550
-entry_frame_IMPL	:= entry_frame entry_frame-ia32-common-$(CONFIG_ABI)
-paging_IMPL		:= paging paging-ia32-ux
-pagetable_IMPL		:= pagetable pagetable-arch
-boot_info_IMPL		:= boot_info boot_info-ia32
-globals_IMPL		:= globals globals-ia32-ux
-config_IMPL		:= config config-ia32-ux config-ia32
-kmem_IMPL		:= kmem-ia32-ux kmem-ia32
-map_util_IMPL		:= map_util map_util-ia32-ux
-pmem_alloc_IMPL		:= pmem_alloc pmem_alloc-ia32-ux
-vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-ux vmem_alloc-ia32
-context_IMPL		:= context context-ia32-ux context-ia32
-sched_IMPL		:= sched sched-ia32-ux
-space_IMPL		:= space space-ia32-ux space-ia32
-space_context_IMPL	:= space_context-ia32-ux space_context-ia32
-irq_IMPL		:= irq irq-ipc irq-ia32
-dirq_IMPL		:= dirq dirq-ia32-ux
-cpu_IMPL		:= cpu-ia32-common cpu-ia32
-fpu_IMPL		:= fpu fpu-ia32-ux fpu-ia32
-idt_IMPL		:= idt-ia32-ux idt-ia32
-kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-ia32
-thread_IMPL		:= thread \
-			   thread-ia32-ux thread-ia32 thread-$(CONFIG_ABI) \
-			   thread-syscall thread-syscall-$(CONFIG_ABI)	\
-			   thread-ipc thread-msg thread-msg-ia32 \
-			   thread-list thread-io
 
-jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-ia32
-
-pit_IMPL		:= pit-i8254
-watchdog_IMPL		:= watchdog-ia32
-apic_IMPL		:= apic-ia32
-
-ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS)","y")
-  INTERFACES_KERNEL	+= sys_call_page
-  sys_call_page_IMPL	:= sys_call_page
-  ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS_ABS)","y")
-    sys_call_page_IMPL	+= sys_call_page-abs-ia32
-  else
-    sys_call_page_IMPL	+= sys_call_page-rel-ia32-ux
-  endif
-  task_IMPL		:= task task-auto-map-kip
+ifeq ("$(CONFIG_SERIAL)","y")
+  kernel_uart_IMPL	:= kernel_uart kernel_uart-16550
 else
-  task_IMPL		:= task task-no-auto-map-kip
+  kernel_uart_IMPL	:= kernel_uart-disabled
+endif
+
+ifeq ("$(CONFIG_IO_PROT)","y")
+  map_util_IMPL		+= map_util-io
+  space_IMPL		+= space-io
+  thread_IMPL		+= thread-io
+else
+  map_util_IMPL		+= map_util-noio
+  space_IMPL		+= space-noio
+  thread_IMPL		+= thread-noio
+endif
+
+ifeq ("$(CONFIG_WATCHDOG)","y")
+  watchdog_IMPL		:= watchdog-ia32
+else
+  watchdog_IMPL		:= watchdog-disabled
 endif
 
 ifeq ("$(CONFIG_SMALL_SPACES)","y")
   INTERFACES_KERNEL	+= smas
-  kmem_IMPL		+= kmem-smas
+  kmem_IMPL		+= kmem-ia32-smas
+  long_msg_IMPL		:= long_msg long_msg-ia32-smas
   space_context_IMPL	+= space_context-ia32-smas
   thread_IMPL		+= thread-ia32-smas
-  long_msg_IMPL		:= long_msg long_msg-ia32-smas
 else
+  kmem_IMPL		+= kmem-ia32-nosmas
+  long_msg_IMPL		:= long_msg long_msg-generic
   space_context_IMPL	+= space_context-ia32-nosmas
   thread_IMPL		+= thread-ia32-nosmas thread-nosmas
-  long_msg_IMPL		:= long_msg long_msg-generic
 endif
 
 ifeq ("$(CONFIG_JDB)","y")
 INTERFACES_KERNEL	+= jdb jdb_symbol jdb_lines jdb_bp jdb_thread_list \
 			   jdb_tbuf jdb_module jdb_core jdb_io_ports \
 			   jdb_kern_info jdb_prompt_module jdb_tbuf_output \
-			   jdb_attach_irq jdb_tbuf_init jdb_perf_cnt \
-			   jdb_trace tb_entry tb_entry_output jdb_exit_module
+			   jdb_input jdb_dump jdb_ptab jdb_misc jdb_mapdb \
+			   jdb_tcb jdb_attach_irq jdb_tbuf_init jdb_trace \
+			   jdb_bt tb_entry tb_entry_output jdb_exit_module \
+			   jdb_tbuf_show jdb_iomap console_buffer virq \
+			   jdb_screen push_console
 
-thread_IMPL		+= thread-log
-jdb_IMPL		:= jdb-ia32
-jdb_bp_IMPL		:= jdb_bp-ia32
+jdb_IMPL		:= jdb-at jdb-ia32 jdb-ia32-ux
+jdb_bp_IMPL		:= jdb_bp-ia32-ux jdb_bp-ia32
+jdb_bt_IMPL		:= jdb_bt-ia32-ux
+jdb_kern_info_IMPL	:= jdb_kern_info jdb_kern_info-ia32 \
+			   jdb_kern_info-ia32-ux
+jdb_misc_IMPL		:= jdb_misc-ia32
+jdb_tcb_IMPL		:= jdb_tcb-ia32-ux
+thread_IMPL		+= thread-log thread-debug thread-ia32-ux-debug
+
+  ifeq ("$(CONFIG_JDB_MISC)","y")
+    INTERFACES_KERNEL	+= jdb_tetris
+  endif
+
+  ifeq ("$(CONFIG_ABI)","v4")
+    jdb_IMPL		+= jdb-v4 jdb-ia32-v4
+  else
+    jdb_IMPL		+= jdb-v2x0 jdb-ia32-v2x0
+  endif
+
 else
-thread_IMPL		+= thread-nolog
+  thread_IMPL		+= thread-nolog
 endif
 
 CXXSRC_KERNEL		:= kernel_panic.cc 
-ASSRC_KERNEL		:= entry.S
+ASSRC_KERNEL		:= entry-ia32-ux.S entry-ia32.S
 ifeq ($(CONFIG_ASSEMBLER_IPC_SHORTCUT),y)
-  ASSRC_KERNEL		+= shortcut.S
+  ASSRC_KERNEL		+= shortcut-ia32-ux.S
 endif
 
-NOOPT			+= jdb jdb-ia32 jdb_lines jdb_symbol jdb_tbuf \
-			   jdb_bp jdb_bp-ia32 jdb_thread_list jdb_core
+NOOPT			+= jdb jdb-ia32 jdb-ia32-v2x0 jdb-ia32-v4 jdb_lines \
+			   jdb_symbol jdb_tbuf jdb_bp jdb_bp-ia32 jdb_core \
+			   jdb_thread_list jdb_bt-ia32-ux jdb_tcb-ia32-ux \
+			   jdb_dump jdb_ptab jdb_tbuf_show jdb_kern_info-ia32 \
+			   jdb_disasm
 
 ### When testing with test threads, uncomment the following:
 #
@@ -217,17 +315,27 @@ BOOT			:= main
 VPATH			+= boot/$(CONFIG_XARCH) boot
 PRIVATE_INCDIR 		+= boot
 
-CSRC_BOOT		:= boot_libc_glue.c oskit_support.c
-CXXSRC_BOOT		:= bootstrap.cc elf.cc
+CSRC_BOOT		:= boot_libc_glue.c
+CXXSRC_BOOT		:= bootstrap.cc elf.cc oskit_support.cc
 ASSRC_BOOT		:= boot.S
-NOPROFILE		+= $(patsubst %.o, %, $(OBJ_BOOT))
+NOOPT			+= $(patsubst %.o, %, $(OBJ_BOOT))
 
 #
 # TCBOFFSET subsystem
 #
 TCBOFFSET		:= auto/tcboffset.h
 CXXSRC_TCBOFFSET	:= genoffset.cc
-#TCBOFFSET_EXTRA_FLAGS	:= -DFIASCO_SMP
+
+#
+# SYMBOLS subsystem
+#
+SYMBOLS			:= Symbols
+
+#
+# LINES subsystem
+#
+LINES			:= Lines
+PROG_LINES		:= genlines
 
 #
 # CHECKSUM subsystem
@@ -264,12 +372,15 @@ PRIVATE_INCDIR	+= lib/kern/include
 CSRC_LIBKERN	:= base_cpu_init.c base_cpu_load.c base_critical.c \
 		   base_gdt.c base_gdt_init.c base_gdt_load.c base_idt.c \
 	           base_idt_load.c base_paging_init.c base_trap_init.c \
-		   base_tss.c base_tss_init.c base_tss_load.c com_cons.c \
+		   base_tss.c base_tss_init.c base_tss_load.c \
 		   base_trap_handler.c cpuid.c direct_cons_getchar.c \
 		   direct_cons_putchar.c gate_init.c gdb_serial.c \
-		   gdb_set_trace_flag.c gdb_trap.c linear_base_va.c \
+		   gdb_set_trace_flag.c linear_base_va.c \
 		   pdir_map_range.c phys_mem_max.c phys_mem_va.c \
 		   trap_dump.c trap_dump_panic.c
+ifeq ("$(CONFIG_KDB)","y")
+CSRC_LIBKERN	+= gdb_trap.c
+endif		     
 ASSRC_LIBKERN	:= base_trap_inittab.S gdb_copy.S gdb_pc_com_intr.S
 NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBKERN))
 
@@ -315,6 +426,16 @@ CSRC_LIBDISASM	:= disasm.c i386-dis.c dis-buf.c
 NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBDISASM))
 
 #
+# LIBPERFCTR subsystem
+#
+LIBPERFCTR	:= libperfctr.a
+VPATH		+= lib/perfctr
+PRIVATE_INCDIR	+= lib/perfctr
+CSRC_LIBPERFCTR	:= event_set_p5.c event_set_p6.c event_set_amd.c \
+		   event_set.c perfctr.c
+NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBPERFCTR))
+
+#
 # MINILIBC Subsystem
 #
 MINILIBC	:= libc.a
@@ -337,3 +458,25 @@ ASSRC_MINILIBC	:= setjmp.S
 # do not profile all of MINILIBC, because it is used in the BOOT
 # subsystem
 NOPROFILE	+= $(patsubst %.o, %, $(OBJ_MINILIBC))
+
+ifeq ("$(CONFIG_JDB)","y")
+
+ifneq ($(wildcard $(srcdir)/lib/disasm),)
+  SUBSYSTEMS		+= LIBDISASM
+  KERNEL_EXTRA_LIBS	+= $(LIBDISASM)
+  INTERFACES_KERNEL	+= jdb_disasm
+endif
+
+ifneq ($(wildcard $(srcdir)/lib/gzip),)
+  SUBSYSTEMS		+= LIBGZIP
+  KERNEL_EXTRA_LIBS	+= $(LIBGZIP)
+  INTERFACES_KERNEL	+= jdb_gzip
+endif
+
+ifneq ($(wildcard $(srcdir)/lib/perfctr),)
+  SUBSYSTEMS		+= LIBPERFCTR
+  KERNEL_EXTRA_LIBS	+= $(LIBPERFCTR)
+  KERNEL_UNRES_SYMS	+= -u perfctr_set_cputype
+endif
+
+endif

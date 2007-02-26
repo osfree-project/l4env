@@ -3,11 +3,9 @@
 SUBDIRS=		v2 x0 x0adapt
 
 noinst_LIBRARIES=	libl4.a
-libl4_a_SOURCES=	L4BECallFunction.cpp \
-			L4BEReplyRcvFunction.cpp \
+libl4_a_SOURCES = L4BECallFunction.cpp \
 			L4BETestServerFunction.cpp \
 			L4BEHeaderFile.cpp \
-			L4BEReplyWaitFunction.cpp \
 			L4BETestsuite.cpp \
 			L4BEMsgBufferType.cpp \
 			L4BESizes.cpp \
@@ -25,13 +23,15 @@ libl4_a_SOURCES=	L4BECallFunction.cpp \
 			L4BETestMainFunction.cpp \
 			L4BEClass.cpp \
 			L4BENameFactory.cpp \
-			L4BEClassFactory.cpp
+			L4BEClassFactory.cpp \
+			L4BEIPC.cpp \
+			L4BEReplyFunction.cpp \
+			L4BEMarshalFunction.cpp \
+			L4BEDispatchFunction.cpp
 
 noinst_HEADERS=		L4BECallFunction.h \
-			L4BEReplyRcvFunction.h \
 			L4BETestServerFunction.h \
 			L4BEHeaderFile.h \
-			L4BEReplyWaitFunction.h \
 			L4BETestsuite.h \
 			L4BEMsgBufferType.h \
 			L4BESizes.h \
@@ -49,4 +49,8 @@ noinst_HEADERS=		L4BECallFunction.h \
 			L4BETestMainFunction.h \
 			L4BEClass.h \
 			L4BENameFactory.h \
-			L4BEClassFactory.h
+			L4BEClassFactory.h \
+			L4BEIPC.h \
+			L4BEReplyFunction.h \
+			L4BEMarshalFunction.h \
+			L4BEDispatchFunction.h 

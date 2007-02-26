@@ -11,7 +11,7 @@
 .PP
 \fBstatic inline void\fP 
 .br
-\fBl4_fpage_unmap(l4_fpage_t \fP\fIfpage\fP,\fBdword_t \fP\fImap_mask\fP\fB);\fP
+\fBl4_fpage_unmap(l4_fpage_t \fP\fIfpage\fP,\fBl4_umword_t \fP\fImap_mask\fP\fB);\fP
 
 .SH " Description"
 The \fBl4_fpage_unmap()\fP system call unmaps the specified flex page

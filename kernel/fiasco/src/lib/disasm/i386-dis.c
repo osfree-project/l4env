@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #define MAXLEN 20
 
+#define abs	__builtin_abs
 
 #ifndef UNIXWARE_COMPAT
 /* Set non-zero for broken, compatible instructions.  Set to zero for
@@ -2283,6 +2284,7 @@ print_insn_i386 (pc, info)
 
       obufp = op1out;
       op_ad = 2;
+//      printf("op1=%08x op2=%08x op3=%08x\n", dp->op1, dp->op2, dp->op3);
       if (dp->op1)
 	(*dp->op1)(dp->bytemode1, sizeflag);
 
@@ -3054,7 +3056,11 @@ OP_E (bytemode, sizeflag)
         if (mod != 0 || base == 5)
           {
 	    set_op(disp); /* fm3 */
-            sprintf (scratchbuf, "0x%x", disp);
+//            sprintf (scratchbuf, "0x%x", disp);
+	    if (abs(disp) < 128)
+	      sprintf (scratchbuf, "%d", disp);
+	    else
+  	      sprintf (scratchbuf, "0x%x", disp);
             oappend (scratchbuf);
           }
 
@@ -3369,7 +3375,11 @@ OP_sI (bytemode, sizeflag)
   if (intel_syntax)
     sprintf (scratchbuf, "%d", op);
   else
-    sprintf (scratchbuf, "$0x%x", op);
+//    sprintf (scratchbuf, "$0x%x", op);
+    if (abs(op) < 128)
+      sprintf (scratchbuf, "%d", op);
+    else
+      sprintf (scratchbuf, "$0x%x", op);
   oappend (scratchbuf);
 }
 

@@ -5,7 +5,7 @@
  *	\date	11/28/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,6 +31,7 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEType.h"
 #include "be/BEDeclarator.h"
+#include "be/sock/BESocket.h"
 
 IMPLEMENT_DYNAMIC(CSockBEWaitAnyFunction);
 
@@ -59,26 +60,9 @@ CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
  */
 void CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
-    // get CORBA_Object and msg buffer
-    String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    String sCorbaEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    // reset msg buffer to zeros
-    pFile->PrintIndent("bzero(%s, sizeof", (const char*)sMsgBuffer);
-    m_pMsgBuffer->GetType()->WriteCast(pFile, false, pContext);
-    pFile->Print(");\n");
     // wait for new request
-    pFile->PrintIndent("dice_ret_size = recvfrom(%s->cur_socket, %s, sizeof",
-        (const char*)sCorbaEnv, (const char*)sMsgBuffer);
-    m_pMsgBuffer->GetType()->WriteCast(pFile, false, pContext);
-    pFile->Print(", 0, (struct sockaddr*)%s, &dice_fromlen);\n", (const char*)sCorbaObj);
-    pFile->PrintIndent("if (dice_ret_size < 0)\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"wait-any\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+	assert(m_pComm);
+	((CBESocket*)m_pComm)->WriteWait(pFile, this, true, pContext);
 }
 
 /** \brief writes additional variable declarations

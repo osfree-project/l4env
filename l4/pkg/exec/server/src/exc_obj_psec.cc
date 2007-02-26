@@ -6,6 +6,11 @@
  *
  * \brief	program section maintenance */
 
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include <malloc.h>
 
 #include <l4/env/errno.h>
@@ -196,6 +201,7 @@ exc_obj_psec_t::lookup_env(l4env_infopage_t *env)
  *
  * \param env		environment infopage 
  * \retval out_l4exc	ptr to new created l4exc section 
+ * \param client	id of client to transfer the ownership to
  * \return		0 on success */
 int
 exc_obj_psec_t::share_to_env(l4env_infopage_t *env, 

@@ -6,21 +6,21 @@
 
 #ifndef L4API_l4v2
 #ifndef L4API_l4x0
-#ifndef SOCKETAPI
+#ifndef L4API_linux
 #warning no L4 API set
 #define L4API_l4v2
-#endif // !SOCKETAPI
+#endif // !linux
 #endif // !L4X0
 #endif // !L4V2
 
-#ifdef SOCKETAPI
-#include "dice-sockets.h"
+#ifdef L4API_linux
+#include "dice/dice-sockets.h"
 #else
 #ifdef L4API_l4v2
-#include "dice-l4-v2.h"
+#include "dice/dice-l4-v2.h"
 #else
 #ifdef L4API_l4x0
-#include "dice-l4-x0.h"
+#include "dice/dice-l4-x0.h"
 #endif // L4X0
 #endif // L4V2
 #endif // SOCKET

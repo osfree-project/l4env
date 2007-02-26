@@ -1,60 +1,75 @@
-INTERFACE:
+IMPLEMENTATION:
 
+#include <limits.h>
+
+#include "jdb.h"
+#include "jdb_module.h"
+#include "jdb_screen.h"
+#include "jdb_thread_list.h"
+#include "kernel_console.h"
+#include "keycodes.h"
+#include "simpleio.h"
 #include "thread.h"
 
-class jdb_thread_list
+class Jdb_list_threads : public Jdb_module
+{
+private:
+  static char subcmd;
+  static char long_output;
+};
+
+class Jdb_thread_list
 {
 private:
   static int _mode;
   static int _count;
   static char _pr;
-  
-  static Thread *_t_head;
-  static Thread *_t_start;
+  static Thread *_t_head, *_t_start;
 
   friend class _foo;
+
+  enum { LIST_UNSORTED, LIST_SORT_PRIO, LIST_SORT_TID };
 };
 
-IMPLEMENTATION:
+char Jdb_list_threads::subcmd;
+char Jdb_list_threads::long_output;
 
-#include <limits.h>
 
+// available from the jdb_tcb module
+extern int jdb_show_tcb(L4_uid tid, int level)
+  __attribute__((weak));
 
-#define LIST_UNSORTED	0
-#define LIST_SORT_PRIO	1
-#define LIST_SORT_TID	2
+char Jdb_thread_list::_pr;
+int  Jdb_thread_list::_mode = LIST_SORT_TID;
+int  Jdb_thread_list::_count;
 
-char jdb_thread_list::_pr;
-int jdb_thread_list::_mode = LIST_SORT_TID;
-int jdb_thread_list::_count;
-
-Thread *jdb_thread_list::_t_head;
-Thread *jdb_thread_list::_t_start;
+Thread *Jdb_thread_list::_t_head;
+Thread *Jdb_thread_list::_t_start;
 
 
 PUBLIC static
 void
-jdb_thread_list::init(char pr, Thread *t_head)
+Jdb_thread_list::init(char pr, Thread *t_head)
 {
   _pr = pr;
   _t_head = t_head;
 }
 
 // return string describing current sorting mode of list
-PUBLIC static
+PUBLIC static inline NOEXPORT
 const char*
-jdb_thread_list::get_mode_str(void)
+Jdb_thread_list::get_mode_str(void)
 {
   static const char *mode_str[] =
     { "(unsorted)", "(prio-sorted)", "(tid-sorted)" };
-  
+
   return mode_str[_mode];
 }
 
 // switch to next sorting mode
 PUBLIC static
 void
-jdb_thread_list::switch_mode(void)
+Jdb_thread_list::switch_mode(void)
 {
   if (++_mode > LIST_SORT_TID)
     _mode = LIST_UNSORTED;
@@ -63,17 +78,17 @@ jdb_thread_list::switch_mode(void)
 // set _t_start element of list
 PUBLIC static
 void
-jdb_thread_list::set_start(Thread *t_start)
+Jdb_thread_list::set_start(Thread *t_start)
 {
   _t_start = t_start;
-  iter(+23, &_t_start);
-  iter(-23, &_t_start);
+  iter(+Jdb_screen::height()-2, &_t_start);
+  iter(-Jdb_screen::height()+2, &_t_start);
 }
 
 // _t_start-- if possible
 PUBLIC static
 int
-jdb_thread_list::line_back(void)
+Jdb_thread_list::line_back(void)
 {
   return iter(-1, &_t_start);
 }
@@ -81,37 +96,37 @@ jdb_thread_list::line_back(void)
 // _t_start++ if possible
 PUBLIC static
 int
-jdb_thread_list::line_forw(void)
+Jdb_thread_list::line_forw(void)
 {
   Thread *t = _t_start;
-  iter(+24, &_t_start);
-  iter(-23, &_t_start);
+  iter(+Jdb_screen::height()-1, &_t_start);
+  iter(-Jdb_screen::height()+2, &_t_start);
   return t != _t_start;
 }
 
 // _t_start -= 24 if possible
 PUBLIC static
 int
-jdb_thread_list::page_back(void)
+Jdb_thread_list::page_back(void)
 {
-  return iter(-24, &_t_start);
+  return iter(-Jdb_screen::height()+1, &_t_start);
 }
 
 // _t_start += 24 if possible
 PUBLIC static
 int
-jdb_thread_list::page_forw(void)
+Jdb_thread_list::page_forw(void)
 {
   Thread *t = _t_start;
-  iter(+47, &_t_start);
-  iter(-23, &_t_start);
+  iter(+Jdb_screen::height()*2-3, &_t_start);
+  iter(-Jdb_screen::height()+2, &_t_start);
   return t != _t_start;
 }
 
 // _t_start = first element of list
 PUBLIC static
 int
-jdb_thread_list::goto_home(void)
+Jdb_thread_list::goto_home(void)
 {
   return iter(-9999, &_t_start);
 }
@@ -119,23 +134,23 @@ jdb_thread_list::goto_home(void)
 // _t_start = last element of list
 PUBLIC static
 int
-jdb_thread_list::goto_end(void)
+Jdb_thread_list::goto_end(void)
 {
   Thread *t = _t_start;
   iter(+9999, &_t_start);
-  iter(-23, &_t_start);
+  iter(-Jdb_screen::height()+2, &_t_start);
   return t != _t_start;
 }
 
 // search index of t_search starting from _t_start
 PUBLIC static
 int
-jdb_thread_list::lookup(Thread *t_search)
+Jdb_thread_list::lookup(Thread *t_search)
 {
-  int i;
+  unsigned int i;
   Thread *t;
   
-  for (i=0, t=_t_start; i<23; i++)
+  for (i=0, t=_t_start; i<Jdb_screen::height()-2; i++)
     {
       if (t == t_search)
 	break;
@@ -148,7 +163,7 @@ jdb_thread_list::lookup(Thread *t_search)
 // get y'th element of thread list starting from _t_start
 PUBLIC static
 Thread*
-jdb_thread_list::index(int y)
+Jdb_thread_list::index(int y)
 {
   Thread *t = _t_start;
 
@@ -159,7 +174,7 @@ jdb_thread_list::index(int y)
 // helper function for iter() -- use priority as sorting key
 static
 int
-jdb_thread_list::get_prio(Thread *t)
+Jdb_thread_list::get_prio(Thread *t)
 {
   return t->sched()->prio();
 }
@@ -167,14 +182,14 @@ jdb_thread_list::get_prio(Thread *t)
 // helper function for iter() -- use thread id as sorting key
 static
 int
-jdb_thread_list::get_tid(Thread *t)
+Jdb_thread_list::get_tid(Thread *t)
 {
   return t->_id.gthread();
 }
 
 static inline
 Thread*
-jdb_thread_list::iter_prev(Thread *t)
+Jdb_thread_list::iter_prev(Thread *t)
 {
   switch (_pr)
     {
@@ -188,7 +203,7 @@ jdb_thread_list::iter_prev(Thread *t)
 
 static inline
 Thread*
-jdb_thread_list::iter_next(Thread *t)
+Jdb_thread_list::iter_next(Thread *t)
 {
   switch (_pr)
     {
@@ -205,7 +220,7 @@ jdb_thread_list::iter_next(Thread *t)
 // do iter if iter != 0
 static
 bool
-jdb_thread_list::iter(int count, Thread **t_start,
+Jdb_thread_list::iter(int count, Thread **t_start,
 		      void (*iter)(Thread *t)=0)
 {
   int i = 0;
@@ -314,22 +329,297 @@ jdb_thread_list::iter(int count, Thread **t_start,
 // show complete page using show callback function
 PUBLIC static
 int
-jdb_thread_list::page_show(void (*show)(Thread *t))
+Jdb_thread_list::page_show(void (*show)(Thread *t))
 {
   Thread *t = _t_start;
   
-  iter(23, &t, show);
+  iter(Jdb_screen::height() - 2, &t, show);
   return _count;
 }
 
 // show complete list using show callback function
 PUBLIC static
 int
-jdb_thread_list::complete_show(void (*show)(Thread *t))
+Jdb_thread_list::complete_show(void (*show)(Thread *t))
 {
   Thread *t = _t_start;
   
   iter(9999, &t, show);
   return _count;
 }
+
+PUBLIC
+Jdb_module::Action_code
+Jdb_list_threads::action(int cmd, void *&, char const *&, int &)
+{
+  if (cmd == 0)
+    {
+      Thread *t = Jdb::get_current_active();
+      switch (subcmd)
+	{
+	case 'r': list_threads(t, 'r'); break;
+	case 'p': list_threads(t, 'p'); break;
+	}
+    }
+  else if (cmd == 1)
+    {
+      if (Kconsole::console()->gzip_available())
+	{
+	  Thread *t = Jdb::get_current_active();
+	  Kconsole::console()->gzip_enable();
+	  long_output = 1;
+	  Jdb_thread_list::init('p', t);
+	  Jdb_thread_list::set_start(t);
+	  Jdb_thread_list::goto_home();
+	  Jdb_thread_list::complete_show(list_threads_show_thread);
+	  long_output = 0;
+	  Kconsole::console()->gzip_disable();
+	}
+      else
+	puts(" gzip module not available");
+    }
+
+  return NOTHING;
+}
+
+static void
+Jdb_list_threads::list_threads_show_thread(Thread *t)
+{
+  char waitfor[24], to[24];
+  
+  *waitfor = *to = '\0';
+
+  Kconsole::console()->getchar_chance();
+
+  if (t->partner()
+      && (t->state() & (  Thread_receiving
+			| Thread_busy
+			| Thread_rcvlong_in_progress)))
+    {
+      if (   t->partner()->id().is_irq())
+	sprintf(waitfor, "w:irq %02x",
+	    t->partner()->id().irq());
+      else
+	sprintf(waitfor, "w:%3x.%02x",
+	    t->partner()->id().task(), 
+	    t->partner()->id().lthread());
+    }
+  else if (t->state() & Thread_waiting)
+    {
+      strcpy(waitfor, "w:  *.**");
+    }
+
+  if (*waitfor)
+    {
+      if (t->_timeout && t->_timeout->is_set())
+	{
+	  Unsigned64 diff = (t->_timeout->get_timeout());
+	  if (diff >= 100000000LL)
+	    strcpy(to, "  to: >99s");
+	  else
+	    {
+	      int us = (int)diff;
+	      if (us < 0)
+		us = 0;
+	      if (us >= 1000000)
+		sprintf(to, "  to: %3us", us / 1000000);
+	      else if (us >= 1000)
+		sprintf(to, "  to: %3um", us / 1000);
+	      else
+		sprintf(to, "  to: %3u\346", us);
+	    }
+	}
+    }
+
+  if (long_output)
+    {
+      printf("%3x.%02x  p:%2x  %8s%-10s  s:",
+       	  t->id().task(), t->id().lthread(), t->sched()->prio(), waitfor, to);
+      t->print_state_long(50);
+      putchar('\n');
+    }
+  else
+    {
+      if (Config::stack_depth)
+	{
+	  unsigned i, stack_depth;
+	  char *c  = (char*)t + sizeof(Thread);
+	  for (i=sizeof(Thread), stack_depth=Config::thread_block_size; 
+	      i<Config::thread_block_size; 
+	      i++, stack_depth--, c++)
+	    if (*c != '5')
+	      break;
+
+	  printf("%3x.%02x  p:%2x  %8s%-10s  (%4d) s:",
+	      t->id().task(), t->id().lthread(), t->sched()->prio(), 
+	      waitfor, to, stack_depth);
+
+	  t->print_state_long(35);
+	}
+      else
+	{
+	  printf("%3x.%02x  p:%2x  %8s%-10s  s:",
+	      t->id().task(), t->id().lthread(), t->sched()->prio(), 
+	      waitfor, to);
+
+	  t->print_state_long(42);
+	}
+      putstr("\033[K\n");
+    }
+}
+
+static void
+Jdb_list_threads::list_threads(Thread *t_start, char pr)
+{
+  unsigned y, y_max;
+  Thread *t, *t_current = t_start;
+
+  // sanity check
+  if (!t_current->is_valid())
+    {
+      printf(" No threads\n");
+      return;
+    }
+
+  // make sure that we have a valid starting point
+  if ((pr=='r') && (!t_current->in_ready_list()))
+    t_current = kernel_thread;
+
+  Jdb::fancy_clear_screen();
+
+  Jdb_thread_list::init(pr, t_current);
+  
+  for (;;)
+    {
+      Jdb_thread_list::set_start(t_current);
+
+      // set y to position of t_current in current displayed list
+      y = Jdb_thread_list::lookup(t_current);
+
+      for (bool resync=false; !resync;)
+	{
+	  // display 24 lines
+	  Jdb::cursor();
+	  y_max = Jdb_thread_list::page_show(list_threads_show_thread);
+
+	  // clear rest of screen (if where less than 24 lines)
+	  for (unsigned int i=y_max; i < Jdb_screen::height() - 2; i++)
+       	    putstr("\033[K\n");
+	  
+	  Jdb::printf_statline("l%c %-15s%56s", 
+	      pr, Jdb_thread_list::get_mode_str(),
+	      "<Space>=mode <Tab>=partner <CR>=select");
+	  
+	  // key event loop
+	  for (bool redraw=false; !redraw; )
+	    {
+	      Jdb::cursor(y+1, 6);
+	      switch (int c=getchar())
+		{
+		case KEY_CURSOR_UP:
+		  if (y > 0)
+		    y--;
+		  else
+		    redraw = Jdb_thread_list::line_back();
+		  break;
+		case KEY_CURSOR_DOWN:
+		  if (y < y_max)
+		    y++;
+		  else
+		    redraw = Jdb_thread_list::line_forw();
+		  break;
+		case KEY_PAGE_UP:
+		  if (!(redraw = Jdb_thread_list::page_back()))
+		    y = 0;
+		  break;
+		case KEY_PAGE_DOWN:
+		  if (!(redraw = Jdb_thread_list::page_forw()))
+		    y = y_max;
+		  break;
+		case KEY_CURSOR_HOME:
+		  redraw = Jdb_thread_list::goto_home();
+		  y = 0;
+		  break;
+		case KEY_CURSOR_END:
+		  redraw = Jdb_thread_list::goto_end();
+		  y = y_max;
+		  break;
+		case ' ': // switch mode
+		  t_current = Jdb_thread_list::index(y);
+		  Jdb_thread_list::switch_mode();
+		  redraw = true;
+		  resync = true;
+		  break;
+		case KEY_TAB: // goto thread we are waiting for
+		  t = Jdb_thread_list::index(y);
+		  if (t->partner()
+		      && (t->state() & (  Thread_receiving
+					| Thread_busy
+					| Thread_rcvlong_in_progress))
+		      && (   (!t->partner()->id().is_irq())
+		          || ( t->partner()->id().irq() > Config::MAX_NUM_IRQ)))
+		    {
+		      t_current = static_cast<Thread*>(t->partner());
+		      redraw = true;
+		      resync = true;
+		    }
+		  break;
+		case KEY_RETURN: // show current tcb
+		  if (jdb_show_tcb != 0)
+		    {
+		      t = Jdb_thread_list::index(y);
+		      if (!jdb_show_tcb(t->id(), 1))
+			return;
+		      redraw = 1;
+		    }
+		  break;
+		case KEY_ESC:
+		  Jdb::abort_command();
+		  return;
+		default:
+		  if (Jdb::is_toplevel_cmd(c)) 
+		    return;
+		}
+	    }
+	}
+    }
+}
+
+PUBLIC
+static void
+Jdb_list_threads::show_thread_list()
+{
+  getchar(); // ignore r/p
+
+  Thread *t = Jdb::get_thread();
+
+  // sanity check
+  if (!t->is_valid())
+    {
+      printf(" No threads\n");
+      return;
+    }
+}
+
+PUBLIC
+Jdb_module::Cmd const *const
+Jdb_list_threads::cmds() const
+{
+  static Cmd cs[] =
+    {
+      Cmd (0, "l", "list", "%c\n", "l{r|p}\tshow ready/present list", &subcmd),
+      Cmd (1, "lgzip", "", "", 0 /* invisible */, 0),
+    };
+
+  return cs;
+}
+
+PUBLIC
+int const
+Jdb_list_threads::num_cmds() const
+{
+  return 2;
+}
+
+static Jdb_list_threads jdb_list_threads INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 

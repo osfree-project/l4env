@@ -24,40 +24,40 @@
  * prototypes
  */
 L4_INLINE void 
-l4_fpage_unmap(l4_fpage_t fpage, 
+l4_fpage_unmap(l4_fpage_t fpage,
 	       l4_umword_t map_mask);
 
 L4_INLINE l4_threadid_t 
 l4_myself(void);
 
 L4_INLINE int 
-l4_nchief(l4_threadid_t destination, 
+l4_nchief(l4_threadid_t destination,
 	  l4_threadid_t *next_chief);
 
 L4_INLINE void
-l4_thread_ex_regs(l4_threadid_t destination, 
-		  l4_umword_t eip, 
+l4_thread_ex_regs(l4_threadid_t destination,
+		  l4_umword_t eip,
 		  l4_umword_t esp,
-		  l4_threadid_t *preempter, 
+		  l4_threadid_t *preempter,
 		  l4_threadid_t *pager,
-		  l4_umword_t *old_eflags, 
-		  l4_umword_t *old_eip, 
+		  l4_umword_t *old_eflags,
+		  l4_umword_t *old_eip,
 		  l4_umword_t *old_esp);
 L4_INLINE void
 l4_thread_switch(l4_threadid_t destination);
 
 L4_INLINE l4_cpu_time_t
-l4_thread_schedule(l4_threadid_t dest, 
+l4_thread_schedule(l4_threadid_t dest,
 		   l4_sched_param_t param,
-		   l4_threadid_t *ext_preempter, 
+		   l4_threadid_t *ext_preempter,
 		   l4_threadid_t *partner,
 		   l4_sched_param_t *old_param);
 
 L4_INLINE l4_taskid_t 
-l4_task_new(l4_taskid_t destination, 
+l4_task_new(l4_taskid_t destination,
 	    l4_umword_t mcp_or_new_chief, 
-	    l4_umword_t esp, 
-	    l4_umword_t eip, 
+	    l4_umword_t esp,
+	    l4_umword_t eip,
 	    l4_threadid_t pager);
 
 
@@ -75,17 +75,17 @@ l4_task_new(l4_taskid_t destination,
 
 #ifdef CONFIG_L4_CALL_SYSCALLS
 #  ifdef CONFIG_L4_ABS_SYSCALLS
-#    define SYS_CALL(s) "call __L4_"#s"_direct  \n\t"
+#    define L4_SYSCALL(s) "call __L4_"#s"_direct  \n\t"
 #  else
-#    define SYS_CALL(s) "call *__L4_"#s"  \n\t"
+#    define L4_SYSCALL(s) "call *__L4_"#s"  \n\t"
 #  endif
 #else
-#  define SYS_CALL(s) SYSCALL_##s
+#  define L4_SYSCALL(s) SYSCALL_##s
 #endif
 
  
 L4_INLINE void
-l4_fpage_unmap(l4_fpage_t fpage, 
+l4_fpage_unmap(l4_fpage_t fpage,
 	       l4_umword_t map_mask)
 {
   unsigned dummy1, dummy2;
@@ -93,7 +93,7 @@ l4_fpage_unmap(l4_fpage_t fpage,
 		 "pushl	%%ebp	\n\t"		/* save ebp, no memory 
 						   references ("m") after 
 						   this point */
-		 SYS_CALL(fpage_unmap)
+		 L4_SYSCALL(fpage_unmap)
 		 "popl	%%ebp	\n\t"		/* restore ebp, no memory 
 						   references ("m") before 
 						   this point */
@@ -119,7 +119,7 @@ l4_myself(void)
 	  "pushl	%%ebp	\n\t"		/* save ebp, no memory 
 						   references ("m") after 
 						   this point */
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 	  "popl	%%ebp		\n\t"		/* restore ebp, no memory 
 						   references ("m") before 
 						   this point */
@@ -135,7 +135,7 @@ l4_myself(void)
 
 
 L4_INLINE int 
-l4_nchief(l4_threadid_t destination, 
+l4_nchief(l4_threadid_t destination,
 	  l4_threadid_t *next_chief)
 {
   int type;
@@ -143,7 +143,7 @@ l4_nchief(l4_threadid_t destination,
 	  "pushl	%%ebp	\n\t"		/* save ebp, no memory 
 						   references ("m") after 
 						   this point */
-	  SYS_CALL(id_nearest)
+	  L4_SYSCALL(id_nearest)
 	  "popl	%%ebp		\n\t"		/* restore ebp, no memory 
 						   references ("m") before 
 						   this point */
@@ -160,20 +160,20 @@ l4_nchief(l4_threadid_t destination,
 
 
 L4_INLINE void
-l4_thread_ex_regs(l4_threadid_t destination, 
-		  l4_umword_t eip, 
+l4_thread_ex_regs(l4_threadid_t destination,
+		  l4_umword_t eip,
 		  l4_umword_t esp,
-		  l4_threadid_t *preempter, 
+		  l4_threadid_t *preempter,
 		  l4_threadid_t *pager,
-		  l4_umword_t *old_eflags, 
-		  l4_umword_t *old_eip, 
+		  l4_umword_t *old_eflags,
+		  l4_umword_t *old_eip,
 		  l4_umword_t *old_esp)
 {
   __asm__ __volatile__(
 	  "pushl	%%ebp	\n\t"	/* save ebp, no memory 
 					   references ("m") after 
 					   this point */
-	  SYS_CALL(lthread_ex_regs)
+	  L4_SYSCALL(lthread_ex_regs)
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory 
 					   references ("m") before 
 					   this point */
@@ -203,7 +203,7 @@ l4_thread_switch(l4_threadid_t destination)
 		 "pushl	%%ebp	\n\t"		/* save ebp, no memory 
 						   references ("m") after 
 						   this point */
-		 SYS_CALL(thread_switch)
+		 L4_SYSCALL(thread_switch)
 		 "popl	%%ebp	\n\t"		/* restore ebp, no memory 
 						   references ("m") before 
 						   this point */
@@ -219,9 +219,9 @@ l4_thread_switch(l4_threadid_t destination)
 
 
 L4_INLINE l4_cpu_time_t
-l4_thread_schedule(l4_threadid_t dest, 
+l4_thread_schedule(l4_threadid_t dest,
 		   l4_sched_param_t param,
-		   l4_threadid_t *ext_preempter, 
+		   l4_threadid_t *ext_preempter,
 		   l4_threadid_t *partner,
 		   l4_sched_param_t *old_param)
 {
@@ -232,7 +232,7 @@ l4_thread_schedule(l4_threadid_t dest,
 						   references ("m") after 
 						   this point */
 /* 		 asm_enter_kdebug("before calling thread_schedule") */
-		 SYS_CALL(thread_schedule)
+		 L4_SYSCALL(thread_schedule)
 /* 		 asm_enter_kdebug("after calling thread_schedule") */
 
 		 "popl	%%ebp		\n\t"	/* restore ebp, no memory 
@@ -256,10 +256,10 @@ l4_thread_schedule(l4_threadid_t dest,
 
 
 L4_INLINE l4_taskid_t 
-l4_task_new(l4_taskid_t destination, 
+l4_task_new(l4_taskid_t destination,
 	    l4_umword_t mcp_or_new_chief, 
-	    l4_umword_t esp, 
-	    l4_umword_t eip, 
+	    l4_umword_t esp,
+	    l4_umword_t eip,
 	    l4_threadid_t pager)
 {
   unsigned dummy1, dummy2, dummy3, dummy4;
@@ -268,7 +268,7 @@ l4_task_new(l4_taskid_t destination,
 		 "pushl	%%ebp		\n\t"	/* save ebp, no memory 
 						   references ("m") after 
 						   this point */
-		 SYS_CALL(task_new)
+		 L4_SYSCALL(task_new)
 		 "popl	%%ebp		\n\t"	/* restore ebp, no memory 
 						   references ("m") before 
 						   this point */
@@ -289,14 +289,5 @@ l4_task_new(l4_taskid_t destination,
 		 );
   return temp_id;
 }
-
-#undef SYSCALL_ipc              
-#undef SYSCALL_id_nearest       
-#undef SYSCALL_fpage_unmap      
-#undef SYSCALL_thread_switch    
-#undef SYSCALL_thread_schedule  
-#undef SYSCALL_lthread_ex_regs  
-#undef SYSCALL_task_new         
-#undef SYS_CALL
 
 #endif /* __L4_SYSCALLS_L4X_GCC295_NOPIC_H__ */

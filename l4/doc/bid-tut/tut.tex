@@ -1,0 +1,580 @@
+\documentclass[a4paper, 10pt]{article}
+\usepackage[latin1]{inputenc}
+\usepackage{html}
+\usepackage{longtable}
+\usepackage{makeidx}
+
+%begin{latexonly}
+\usepackage[a4paper,left=3cm, right=3cm]{geometry}
+\usepackage{fancyvrb}
+\usepackage{fancyhdr}
+\usepackage{syntax}
+\usepackage{array}
+\usepackage{todo}
+\usepackage{times}
+%end{latexonly}
+\begin{htmlonly}
+\newcommand{\todo}[1]{(\textbf{Todo:} \marginpar{Todo}\emph{#1})}
+\end{htmlonly}
+\sloppy
+\makeindex
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{0.2cm plus 0.1cm minus 0.1cm}
+
+\begin{document}
+
+% create a new length, which can be used as a base-length for columns
+% of a table.
+% arguments: #1 - the name of the length
+%            #2 - number of columns of the table
+%
+% The length is calculated as \columnwidth-2*\tabcolsep*#2
+%
+\newcommand{\maketablength}[2]{%
+  \newlength{#1}\setlength{#1}{-#2\tabcolsep}%
+  \addtolength{#1}{#1}\addtolength{#1}{\columnwidth}%
+}
+
+% Create a table, whose first column contains text,
+% and the second column fills the rest. Both columns contain parboxes.
+%
+% arguments: #1 - text with the maximum width of the first column
+\newlength{\descriptiontablelen}
+\newlength{\descriptiontabletextlen}
+\newenvironment{descriptiontable}[1]{%
+  %begin{latexonly}
+  \settowidth{\descriptiontabletextlen}{#1}%
+  \setlength{\descriptiontablelen}{-4\tabcolsep}%
+  \addtolength{\descriptiontablelen}{\columnwidth}%
+  \addtolength{\descriptiontablelen}{-\descriptiontabletextlen}%
+  \begin{longtable}{p{\descriptiontabletextlen}p{\descriptiontablelen}}%
+  %end{latexonly}  
+  \html{\begin{tabular}{tltl}}%
+}{\latexhtml{\end{longtable}}{\end{tabular}}}
+  
+% Create a framed table, whose first column contains text,
+% and the second column fills the rest. Both columns contain parboxes.
+% We can use \# to end a line. In the current version, this separates
+% all rows by single lines. We cheat on latex2html by preprocessing
+% the .tex file substituting the \# with a \\\hline.
+%
+% arguments: #1 - text with the maximum width of the first column
+\newenvironment{parameterlist}[1]{%
+  %begin{latexonly}
+  \renewcommand{\#}{\\\hline}
+  \settowidth{\descriptiontabletextlen}{\tt\small{}#1}%
+  \setlength{\descriptiontablelen}{-4\tabcolsep}%
+  \addtolength{\descriptiontablelen}{\columnwidth}%
+  \addtolength{\descriptiontablelen}{-\descriptiontabletextlen}%
+  \begin{longtable}{|>{\tt\small}p{\descriptiontabletextlen}|p{\descriptiontablelen}|}%
+    \multicolumn{2}{r}{next page \dots}\\\endfoot%
+    \multicolumn{2}{l}{\dots{} continued from last page}\\\endhead%
+    \endfirsthead%
+    \endlastfoot%
+  %end{latexonly}  
+  \html{\begin{tabular}{>{\tt{}}ll}}%
+  \hline%
+}{%
+  %begin{latexonly}
+   \end{longtable}%
+  %end{latexonly}
+  \html{\end{tabular}}}
+
+\latexhtml{
+% an itemized list with no space between the items
+\newcommand{\BI}{\begin{list}{\labelitemi}{%
+        \setlength{\parsep}{0pt}
+        \setlength{\itemsep}{0pt}
+        \setlength{\topsep}{0pt}}}
+\newcommand{\EI}{\end{list}}
+\newcommand{\IT}{\item}
+}{
+\newcommand{\BI}{\begin{itemize}}
+\newcommand{\EI}{\end{itemize}}
+\newcommand{\IT}{\item}
+}
+%begin{latexonly}
+% We use the '§' character to write a '$' without entering math-mode
+\DeclareInputText{167}{\$}
+
+% We use '«' and '»' to begin and end code-pieces
+\renewcommand{\guillemotleft}{\begin{code}{}}
+\renewcommand{\guillemotright}{\end{code}}
+
+\pagestyle{fancy}
+
+% verbatim handling to include other files. Uses fancyvrb.
+\newcommand{\vfontsize}{\small}
+\newcommand{\vframe}{single}
+\newcommand{\examplefile}[2]{\VerbatimInput[fontsize=\vfontsize,%
+               frame=\vframe, label=#1]{#2}}
+\DefineShortVerb{\|}
+%end{latexonly}  
+\newenvironment{code}{\begin{ttfamily}}{\end{ttfamily}}
+\newcommand{\name}[1]{{\sl#1}}
+
+\newenvironment{implemented}{\subsubsection{Implementation status}\
+  \begin{description}}{\end{description}}
+
+\newcommand{\llinux}{\mbox{L\makebox[.4\width]{$^4~$}Linux}}
+\newcommand{\mukernel}{$\mu$-kernel}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% The story starts here.
+%
+% Character-encoding, we do it the following way:
+%
+% (Because that stupid latex2html does not support shortverb, we do
+% not use the shorthand |text| to print the text verbose. This would allow
+% easy writing of variables and text while disallowing line breaking.)
+
+% For tables, we use «text», which expands to \code{text}, which expands
+% to {\tt{}text}. We cheat on latex2html by preprocessing the .tex-file.
+%
+% During the hole text, we can use '_' to write an underscore. We use
+% '§' to write a '$' in non-verbose mode.
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Building Infrastructure for DROPS (BID) Tutorial}
+\author{Jork Löser\\drops@os.inf.tu-dresden.de}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+  BID is a collection of conventions and files that help in the build
+  (compile) process of applications for DROPS. Among the features are:
+  compiler and linker selection, automatically generated rules for
+  linking a binary and archiving a library, dependency generation,
+  installation, documentation compilation.
+
+  BID ensures a defined behavior of packages that is needed for the
+  automatic building process of the project.
+
+  This document describes how to write a package.
+\end{abstract}
+
+\html{This document is also available as \htmladdnormallink{.ps}{tut.ps}
+  and \htmladdnormallink{.pdf}{tut.pdf} file.}
+
+\section{Assumptions}
+\label{sec:assumptions}
+
+This tutorial is to help the reader (you) to write applications using
+BID. We assume you to know the basic Unix commands and concepts of its
+file system. For understanding the example programs, you should be
+familiar with C.
+
+Compiling packages for DROPS requires a specific compilation
+environment to be setup up. This environment contains IDL compilers,
+special versions of a standard C library, various Linux kernel
+sources, compiled DROPS packages and others. A tutorial on how to set
+up this environment can be found in \cite{drops:building}. We assume
+the environment being set up correctly.
+
+\todo{Mention that we do not need the whole environment for our
+tutorial. The different things (Linux kernels, OSKit, tools) must be
+mentioned in the cited tutorial separately, and we have to say here
+which sections in this tutorial require which things. In the cited
+tutorial, also mention that if you are at the Operating Systems Group
+at TU~Dresden (TUD) with access to the file server
+\name{kurt.inf.tu-dresden.de}, most of these files are already
+installed at /home/drops/. Mention which files.
+}
+
+
+\section{Finding around}
+
+Lets assume your base directory where your DROPS-sources are is
+«§(HOME)/src». After checking out the files using CVS, you end up with
+a couple of directories:
+
+\begin{descriptiontable}{oskit10}
+  l4/           & the L4 directory, later referenced as §(L4DIR). \\
+  oskit/        & the ``old'' FLUX OSKit~0.6, a libc. \\
+  oskit10/      & the ``new'' FLUX OSKit~1.0, a collection of libcs.
+                  \\
+  linux22/      & L4Linux 2.2 \\
+\end{descriptiontable}
+
+There might be others as well, likely Linux kernels, which are needed
+by some DROPS packages. Within the L4 directory, you will find
+
+\begin{descriptiontable}{l4/include}
+  l4/kernel     & sources of L4 micro kernel implementations, among
+                  them FIASCO. \\
+  l4/pkg        & base directory of all DROPS packages. \\
+  l4/tool       & tools for compilation, among them the IDL compiler
+                  DICE.\\
+  l4/mk         & BID macros to control compilation and installation.
+                  \\
+  l4/doc        & base directory for documentation, will also contain
+                  compiled packet documentation later. \\
+  l4/include    & base directory for include files exported by
+                  packages. \\
+  l4/lib        & base directory for compiled libraries. \\
+  l4/bin        & base directory for compiled binaries (might be a
+                  symbolic link). \\
+\end{descriptiontable}
+
+
+\section{Your first hello world}
+\label{sec:first.hello}
+
+As DROPS is a multi-server system, programs are seen as servers,
+offering some services to other programs. Our infrastructure reflects
+this by using packages for managing different programs. A package
+typically contains a server, libraries and include files to be exported.
+
+Your first hello world program does not offer any service to clients,
+nonetheless we say it is a server (without any clients, though). Let's
+name it hiworld. You create the package by creating a directory called
+«hiworld» in «l4/pkg»:
+
+|~/src/l4/pkg> mkdir hiworld|
+
+This directory is called \emph{package dir} and will be referenced as
+«§(PKDIR)». Switch to the directory and use the template provided by
+BID to create the basic directory structure together with some
+Makefiles:
+
+|~/src/l4/pkg/hiworld> ../../mk/tmpl/inst|
+
+This results in a couple of directories and a makefile to be created. 
+The makefile is ready to use and builds your whole package when doing
+«make». A first look into it shows the basic scheme of all
+BID-makefiles: After setting «§(PKGDIR)» and «§(L4DIR)» you add your
+commands, and finally a macro-file is included. We refer to the
+macro-file as \emph{role file}, as this file determines a distinct
+role of the current directory. The purpose of «§(PKGDIR)» is just to
+propagate various make commands, which is achieved by the subdir role.
+Fortunately, its default behavior meets our needs, and we need no
+additional commands.
+
+As you want to create a server, switch into the «server/» directory. 
+There is already another makefile, very similar to the one you just
+looked at. Note the modified «§(PKGDIR)» assignment, as the package
+dir is one level up now. Go ahead into the «src/» directory, where you
+finally place your source code.
+
+The makefile prepared in this directory creates executable binaries. 
+Optionally, it uploads them to your file-server (tftp at TUD), so you
+can boot it right afterwards over the network. If you did not do it
+already, this is a good time to fix the paths for later uploading the
+binaries to your file server (see Section~\ref{sec:bootbin} for
+details).
+
+The makefile in «server/src» expects your code in the file «main.c»
+(which we could change, of course), so edit this file.
+
+|~/src/l4/pkg/hiworld/server/src> xemacs main.c|
+
+The file prepared already has an empty «main()» function. Add a
+«printf("Hi world")»:
+
+\examplefile{hiworld/server/src/main.c}{hi-simple.c}
+
+Compile the program:
+
+|~/src/l4/pkg/hiworld/server/src> make|
+
+This will create a directory («OBJ-x86_586-l4v2/») where all compiled
+files will go into. You will find the compiled binary in this
+directory, its name is the name of the package: «hiworld». The binary
+is also installed into «§(L4DIR)/bin». If you did the setup for
+installing the binaries (see Section~\ref{sec:bootbin}), it should be
+installed on your file server this way, and hence is ready for booting
+over the network already. To execute it, boot L4 together with the
+essential servers. Use the following «menu.lst file» after adapting
+the paths to the binaries.
+
+\examplefile{menu.lst}{hi-menu.lst}
+
+If all went right (you installed an L4 version 2 micro-kernel named
+\emph{fiasco} into «§(L4DIR)/bin», and installed all the other
+binaries as well; your boot loader found all the files; your test
+machine executed the micro kernel and the applications), you should
+see the 'Hi world' near the bottom of the screen attached to your test
+node.
+
+In this section we
+\BI
+\IT created a new package
+\IT wrote code printing ``hi world''
+\IT compiled and installed the program, so the file-server could find
+it
+\IT booted L4 to execute our native hello world program
+\EI
+
+\section{Hello world server}
+
+In this section, we create a server that reacts to commands of a
+client. For generating the code for communication between server and
+client we use an IDL compiler.
+
+Our server should offer two services, one is to output the well-known
+``Hi world'' string, and another is to return the number of calls to
+the former function.
+
+\subsection{IDL file}
+
+We start with writing a corresponding IDL file. Therefore, switch
+into «idl/» and create the file «hiworld.idl»:
+
+\examplefile{hiworld/idl/hiworld.idl}{hi-idl}
+
+Modify the prepared makefile to assign the IDL file to the variable
+IDL, and to ask the IDL compiler to generate server skeletons. The
+skeletons will help us later to insert our code:
+
+\examplefile{hiworld/idl/Makefile}{hi-idl-makefile}
+
+Generate the C sources by calling make:
+
+|~/src/l4/pkg/hiworld/idl> make|
+
+If your IDL compiler was installed correctly, you end up with the
+directory «OBJ-x86_586-l4v2» containing the C sources for IPC
+communication between client and server. For details on the IDL file
+syntax, the meaning of the command line switches or the generated
+source code, please see the documentation of the IDL compiler
+\name{dice}, which you can build yourself in «§(L4DIR)/tool/dice/doc/»
+or find it in \cite{dice}.
+
+
+\subsection{Server side}
+
+Next we implement the server-side functionality. Copy the generated
+skeleton file into the already known «server/src/» directory.
+
+|~/src/l4/pkg/hiworld/idl> cp OBJ-x86_586-l4v2/hiworld-template.c \|
+|    ../server/src/server.c|
+
+Modify the functions so they do what we want, write code that
+registers at the DROPS name server and calls the main server loop:
+
+\examplefile{hiworld/server/src/server.c}{hi-server.c}
+
+We still have to tell BID that we want to compile another binary,
+containing the IDL server code and our implementation. Modify the
+makefile the following way:
+
+\examplefile{hiworld/server/src/Makefile}{hi-server-makefile}
+
+You are ready to compile the server. BID knows where to find the
+files generated by the IDL compiler and arranges the include paths and
+additional object files for you.
+
+|~/src/l4/pkg/hiworld/server/src> make|
+
+If there are any problems, they are likely caused by typos, as
+your installation has already been proved correct in the previous
+steps.
+
+\subsection{Client helper library}
+
+Let us build a client library that encapsulates calls to the hello
+world server. The library will be made available for other packages by
+BID, so any package can use the library for easy communicating with
+the hello world server.
+
+The functions exported by the library will be declared as prototypes
+in an include file. The include file will also be made available for
+other packages by BID. Let us create the include file first. Switch to
+the «include/» directory and create the new file «hiworld.h»:
+
+\examplefile{hiworld/include/hiworld.h}{hi-include}
+
+The prepared makefile installs all include files in the directory
+tree, so that other packages can use them. Our newly created file will
+be accessed with «\#include <l4/hiworld/hiworld.h>» later:
+
+|~/src/l4/pkg/hiworld/include> make|
+
+Client libraries are typically build in the «lib/» directory of a
+package. Like in the server directory, there is a «src/» subdirectory. 
+Switch into it and create the new file «encap.c» containing the
+encapsulation code:
+
+\examplefile{hiworld/lib/src/encap.c}{hi-lib.c}
+
+The makefile in this directory is already prepared to create
+libraries. We still have to specify which files go into it. BID also
+knows about generated IDL client files, the according make variable is
+«§(CLIENTIDL)»:
+
+\examplefile{hiworld/lib/src/Makefile}{hi-lib-makefile}
+
+Finally, build the library and install it, so others can use it:
+
+|~/src/l4/pkg/hiworld/lib/src> make|
+
+
+\subsection{Client side}
+\label{sec:helloserver.client}
+
+The last piece is the client program actually triggering the actions
+at the server. We see it as an example on how to use our hello world
+server, and consequently place it into the «examples/» directory tree.
+Create a new subdirectory there:
+
+|~/src/l4/pkg/hiworld/examples> mkdir client|
+
+Switch into it and create the source file «main.c» for sending
+requests to our server:
+
+\examplefile{hiworld/example/client/main.c}{hi-client.c}
+
+Create a makefile that compiles a binary, and tell BID to link the
+client library created in Section~\ref{sec:helloserver.client}.
+
+\examplefile{hiworld/example/client/Makefile}{hi-client-makefile}
+
+Compile the program:
+
+|~/src/l4/pkg/hiworld/examples/client> make|
+
+
+\subsection{Execution}
+
+To execute the code, you need to boot L4 together with the
+essential servers, your hello world server and the hello world client. 
+Adapt and add the following text to the «menu.lst» file you already
+created in Section~\ref{sec:first.hello}:
+
+\examplefile{menu.lst}{hi-menu.lst.server}
+
+Now boot the new configuration on your test machine. If all went right
+you should see the ``Hi world'' issued by the server and a ``Hello
+world server returned 1.'' issued by the client near the bottom of the
+screen attached to your test machine.
+
+
+\subsection{Closing remarks}
+
+With the current version of the makefile in the «examples/» directory,
+our example is only built upon explicit make request in
+«examples/client/». You should modify it to propagate a «make» in the
+package directory, as it is done for all the other directories
+automatically. Thus it becomes:
+
+\examplefile{hiworld/examples/Makefile}{hi-examples-makefile}
+
+Now, you could do a «make» in «hiworld/» to rebuild your whole package
+(probably nothing actually gets actually built, as everything should
+be up to date). Or, you could do a «make clean» in «hiworld/» to
+delete all generated intermediate files in your package and only keep
+the generated library and the binaries. A «make cleanall» removes
+these too.
+
+Note, that BID takes care of build dependencies very carefully. If a
+source-file is changed, a «make» in this directory rebuilds everything
+in this directory that depends on this file. BID also notices modified
+makefiles and client libraries being linked to binaries.
+
+If you trigger a make at the root of a directory tree, BID generally
+brings the tree up to date, but never builds anything outside this
+tree. For example, you build a package by doing a «make» in its
+package directory. However, if it requires include files of libraries
+from other packages, you must either build them before, or go into the
+«§(L4DIR)/pkg» directory and trigger the make there.
+
+In this section we
+\BI
+\IT used an IDL compiler to generate IPC communication code
+\IT used an include file to propagate prototypes and defines to
+    users of our package
+\IT created a server implementing the server side of the IDL
+\IT created a library allowing clients to communicate with our server
+\IT created a client program using that library to communicate with
+    the server
+\IT learned about dependencies and recursive make invocation
+\EI
+
+
+\section{Installing binaries for booting}
+\label{sec:bootbin}
+
+\todo{This section should go into the building tutorial mentioned in
+Section~\ref{sec:assumptions}.}
+
+BID can automatically install your compiled binaries so you can boot
+them later using the network. Therefore, after compilation binaries
+are stripped and copied into «§(L4DIR)/bin» per default. Make this a
+symbolic link to your actual file server directory, and you are set.
+
+At TUD, this requires two steps: Ensure the tftp server finds the
+binaries within your home directory. Then, ensure the binaries are
+installed into this directory. Thus at \emph{erwin.inf.tu-dresden.de}:
+
+|kurt:/home/yourname> mkdir -p boot/bin|\\
+|kurt:/home/yourname> ln -s /tftpboot/yourname boot|
+
+(The latter may require administrator rights, ask the administrator in
+this case.) At your \emph{workstation}, where kurt:oshome is mounted
+(we assume /home to be the mountpoint):
+
+|~/src/l4> ln -s /home/YOURNAME/boot/bin|
+
+\section{FAQ}
+
+\newcommand{\faqQ}[1]{\textbf{Q:} & #1 \\[.4ex]}
+\newcommand{\faqA}[1]{\textbf{A:} & #1 \\\\}
+
+\begin{descriptiontable}{\textbf{Q:}}
+ \faqQ{ We might want to specify the exact CPU types we want to
+        build a target for. example: watchdog example of l4util.
+        However, this must be linked against the according libraries,
+        which may be not available. Do we have CPU-dependent
+        libraries, that should be linked  against other libraries? Or:
+        Do we want to provide libraries that should be used with
+        different CPU types?}
+ \faqA{ No, we have one library for every CPU type.}
+
+ \faqQ{ We want to build several packages with \emph{and} without l4api
+        support, such as the l4util package. The parse_cmdline stuff
+        is independent of the binding, l4_sleep is not. }
+ \faqA{ This must be split into two libraries, one with l4api support
+        and one without. Use the system-specific «§(TARGET_system)»
+        variables to define which library should be built for which system.
+        Then, use the target-specific «§(SRC_C_target)» variables to
+        define which source-files go into which library. }
+
+ \faqQ{ I want to use an own CRT0, and use "CRT0=mycrt0.o". But
+        mycrt0.o is not built automatically. }
+ \faqA{ This is right. The CRT0 variable references an
+        external object already built. You probably want to use
+        "SRC_S=mycrt0.S" (if its assembler). Set "CRT0=" to prevent
+        the standard crt0's to be linked. }
+
+ \faqQ{ I need my own linker to link a specific binary. But BID uses §(CC). }
+ \faqA{ Set the CC variable target-dependent. If your target is
+        mytarget and your favorite linker is mylinker, use
+        "mytarget: CC=mylinker". }
+
+ \faqQ{ Why is mconfig not supported? }
+ \faqA{ «mconfig» is another Linux configuration tool. It has no help,
+        and provides only one menu-like user-interface, which is not
+        very handy. }
+
+\end{descriptiontable}
+
+{ %begin{latexonly}
+    \section{\refname}
+    \renewcommand{\section}[2]{}
+    \footnotesize
+  %end{latexonly}
+  \bibliographystyle{plain} %alpha}
+  \bibliography{own}
+}
+
+\printindex
+
+\end{document}
+
+% Localwords: CVS unset API APIs OSKit IDL xemacs IPC
+% Local variables:
+%  compile-command: "make"
+% End:

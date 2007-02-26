@@ -4,7 +4,7 @@ IMPLEMENTATION:
 
 int foo(char *s);
 
-irq_init(unsigned char master_base, unsigned char slave_base)
+void irq_init(unsigned char master_base, unsigned char slave_base)
 {
   if (!(foo(" -vmware"))
     {
@@ -14,4 +14,10 @@ irq_init(unsigned char master_base, unsigned char slave_base)
     {
       foo("using normal pic mode \n");
     }
+}
+
+void bar()
+{
+  foo ("if (0) {");
+  foo ("} // if(0)");
 }

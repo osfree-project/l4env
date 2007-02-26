@@ -1,6 +1,7 @@
 PKGDIR = ..
-L4DIR  = $(PKGDIR)/../..
+L4DIR  ?= $(PKGDIR)/../..
 
-TARGET = l4io l4io-internal
+SRC_DOX_REF = l4io.cfg
+SRC_DOX_INT = l4io-internal.cfg
 
 include $(L4DIR)/mk/doc.mk

@@ -6,23 +6,13 @@
  *
  * \date   11/22/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -55,28 +45,27 @@
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_lock(sm_request_t * request, 
-			    l4_uint32_t ds_id, 
-			    l4_uint32_t offset, 
-			    l4_uint32_t size, 
-			    sm_exc_t * _ev)
+if_l4dm_mem_lock_component(CORBA_Object _dice_corba_obj,
+                           l4_uint32_t ds_id,
+                           l4_uint32_t offset,
+                           l4_uint32_t size,
+                           CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   l4_size_t ds_size;
 
   /* we do not need to do anything, just check dataspace and region */
-  ret = dmphys_ds_get_check_client(ds_id,caller,&ds);
+  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      caller.id.task,caller.id.lthread,ds_id);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
 #endif
       return ret;
     }
@@ -85,10 +74,10 @@ if_l4dm_memphys_server_lock(sm_request_t * request,
   if (offset + size > ds_size)
     return -L4_EINVAL_OFFS;
 
-#if DEBUG_LOCK
-  INFO("ds %u, caller %x.%x\n",ds_id,caller.id.task,caller.id.lthread);
-  DMSG("  offset 0x%08x, size 0x%08x, ds size 0x%08x\n",offset,size,ds_size);
-#endif
+  LOGdL(DEBUG_LOCK,"ds %u, caller %x.%x\n" \
+        "  offset 0x%08x, size 0x%08x, ds size 0x%08x",ds_id,
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,offset,
+        size,ds_size);
 
   /* done */
   return 0;
@@ -111,28 +100,27 @@ if_l4dm_memphys_server_lock(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_unlock(sm_request_t * request, 
-			      l4_uint32_t ds_id, 
-			      l4_uint32_t offset, 
-			      l4_uint32_t size, 
-			      sm_exc_t * _ev)
+if_l4dm_mem_unlock_component(CORBA_Object _dice_corba_obj,
+                             l4_uint32_t ds_id,
+                             l4_uint32_t offset,
+                             l4_uint32_t size,
+                             CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   l4_size_t ds_size;
 
   /* we do not need to do anything, just check dataspace and region */
-  ret = dmphys_ds_get_check_client(ds_id,caller,&ds);
+  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      caller.id.task,caller.id.lthread,ds_id);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
 #endif
       return ret;
     }
@@ -141,11 +129,11 @@ if_l4dm_memphys_server_unlock(sm_request_t * request,
   if (offset + size > ds_size)
     return -L4_EINVAL_OFFS;
 
-#if DEBUG_LOCK
-  INFO("ds %u, caller %x.%x\n",ds_id,caller.id.task,caller.id.lthread);
-  DMSG("  offset 0x%08x, size 0x%08x, ds size 0x%08x\n",offset,size,ds_size);
-#endif
-
+  LOGdL(DEBUG_LOCK,"ds %u, caller %x.%x\n" \
+        "  offset 0x%08x, size 0x%08x, ds size 0x%08x",ds_id,
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,offset,
+        size,ds_size);
+  
   /* done */
   return 0;
 }

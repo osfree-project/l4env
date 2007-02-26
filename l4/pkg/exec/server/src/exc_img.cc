@@ -1,3 +1,15 @@
+/* $Id$ */
+/**
+ * \file	exec/server/src/exc_img.cc
+ * \brief	class for dealing with binary images
+ *
+ * \date	10/2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include "exc_img.h"
 
@@ -19,74 +31,119 @@ extern "C" {
 #define min(x,y) ((x)<(y)?(x):(y))
 #endif
 
-exc_img_t::exc_img_t(const char *fname, l4env_infopage_t *env)
+exc_img_t::exc_img_t(const char *fname, const l4dm_dataspace_t *ds, 
+		     l4env_infopage_t *env)
   : vaddr(0)
 {
-  set_pathname(fname, env);
-}
+  set_names(fname, env);
+  img_ds = *ds;
 
-/** Set pathname of image. If necessary, prepend it by a path */
-void
-exc_img_t::set_pathname(const char *fname, l4env_infopage_t *env)
-{
-  unsigned int fname_len;
-  unsigned int pathname_len;
-  
-  if (strlen(fname) > EXC_MAXFNAME)
-    Panic("file name too long: %s", fname);
-  
-  *pathname = '\0';
-
-  if (*fname != '(' && *fname != '/')
+  if (!l4dm_is_invalid_ds(img_ds))
     {
-      strncpy(pathname, 
-	      (!strncmp(fname, "lib", 3)) ? env->libpath : env->binpath,
-	      sizeof(pathname)-1);
-      pathname[sizeof(pathname)-1] = '\0';
+      int error;
 
-      if (   ((pathname_len = strlen(pathname)) > 0)
-	  &&  (pathname_len < sizeof(pathname)-1)
-	  &&  (pathname[pathname_len-1] != '/'))
+      if (((error = check(l4dm_mem_size(&img_ds, &size),
+	           "determining size"))) ||
+          ((error = check(l4rm_attach(&img_ds, size, 0, L4DM_RO, 
+				      (void**)&vaddr),
+		   "attaching region"))))
 	{
-	  pathname[pathname_len  ] = '/';
-	  pathname[pathname_len+1] = '\0';
+	  img_ds = L4DM_INVALID_DATASPACE;
 	}
     }
-
-  // append filename
-  pathname_len = strlen(pathname);
-  fname_len = strlen(fname);
-  strncat(pathname, fname, min(sizeof(pathname)-1-pathname_len, fname_len));
-  
-  // store fname identifier
-  set_fname(pathname);
 }
+
+/**\brief Set path of image.
+ *
+ * If we have to use the library path or the binary depends on the name
+ * of the image. If it begins with "lib", we use the library path, else
+ * we use the binary path.
+ */
+void
+exc_img_t::set_names(const char *fname, l4env_infopage_t *env)
+{
+  Assert(fname);
+  Assert(env);
+
+  int len = strlen(fname);
+  if(len > (int)sizeof(pathname)-1){
+      printf("file name too long: %s\n", fname);
+      set_fname("");
+  } else {
+      memcpy(pathname, fname, len+1);
+      // store fname identifier
+      set_fname(pathname);
+  }
+}
+
 
 /** Request ELF object from file provider
  *
- * \param fname		name of ELF file to load
- * \param img		ELF image descriptor
  * \param env		L4 environment infopage
  * \return		0 on success */
 int
 exc_img_t::load(l4env_infopage_t *env)
 {
-  int error;
-  sm_exc_t exc;
-  l4dm_dataspace_t ds;
+  int error = -L4_ENOTFOUND;
+  CORBA_Environment _env = dice_default_environment;
+  l4dm_dataspace_t ds = img_ds;
 
   msg("Loading");
 
   /* ask the file provider server for the plain file image */
-  if (   (error = check(l4fprov_file_open(env->fprov_id, pathname,
-				         (l4fprov_threadid_t*)&env->image_dm_id,
-					 0, (l4fprov_dataspace_t*)&ds, 
-					 &size, &exc),
-			"from file provider"))
-      /* attach the dataspace to the memory region */
-      || (error = check(l4rm_attach(&ds, size, 0, 
-			L4DM_RO | L4RM_LOG2_ALIGNED, (void**)&vaddr),
-			"attaching ds")))
+  if (l4dm_is_invalid_ds(img_ds))
+    {
+	char filename[EXC_MAXFNAME];
+	const char *path;
+
+	if(pathname[0]!='(' && pathname[0]!='/') {
+	    path = (!strncmp(pathname, "lib", 3)) ? env->libpath 
+	                                          : env->binpath;
+	} else {
+	    path = "";
+	}
+	do{
+	    unsigned l, ln;
+	    char *colon;
+
+	    colon = strchr(path, ':');
+	    l = colon ? colon-path : strlen(path);
+	    if(l>EXC_MAXFNAME-2){
+		printf("Skipping long path %*s\n", l, path);
+		path = colon ? colon+1 : path + l;
+		continue;
+	    }
+	    memcpy(filename,path,l);
+	    path = colon? colon+1 : path+l;
+	    if(l)filename[l++]='/';
+	    ln = strlen(pathname)+1;
+	    if(l+ln>EXC_MAXFNAME){
+		printf("Skipping long path+file %s/...\n", filename);
+		continue;
+	    }
+	    memcpy(filename+l, pathname, ln);
+	    
+	    error = l4fprov_file_open_call(&(env->fprov_id), filename,
+					   &env->image_dm_id,
+					   0, &ds, 
+					   &size, &_env);
+	    if(!error){
+		memcpy(pathname, filename, l+ln);
+		break;
+	    }
+	} while(*path);
+	
+	if( check(error, "from file provider, path was \"%s\".",
+		  (!strncmp(pathname, "lib", 3)) ? env->libpath 
+		                                 : env->binpath))
+	    return error;
+    }
+
+  /* attach the dataspace to the memory region */
+  if ((error = check(l4rm_attach(&ds, size, 0, 
+				 L4DM_RO | L4RM_LOG2_ALIGNED, 
+			 	 (void**)&vaddr),
+	  "attaching ds")))
     return error;
 
 #ifdef DEBUG_LOAD

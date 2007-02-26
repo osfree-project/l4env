@@ -5,7 +5,7 @@
  *	\date	Tue Jun 25 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,11 +37,14 @@
 #include "be/BEImplementationFile.h"
 #include "be/BEEnumType.h"
 #include "be/BERoot.h"
+#include "be/BEStructType.h"
+#include "be/BEUnionType.h"
 
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEConstDeclarator.h"
 #include "fe/FEConstructedType.h"
+#include "fe/FEIdentifier.h"
 
 IMPLEMENT_DYNAMIC(CBENameSpace);
 
@@ -251,11 +254,60 @@ bool CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
         if (!CreateBackEnd(pFETaggedType, pContext))
             return false;
     }
+	// search for libraries, which contains base interfaces of our own interfaces
+	// we therefore iterate over the interfaces and try to find their base
+	// interfaces in any nested library
+	// we have to remember those libraries, so we won't initialize them twice
+	Vector vLibraries(RUNTIME_CLASS(CFELibrary));
+	pIter = pFELibrary->GetFirstInterface();
+    CFEInterface *pFEInterface;
+    while ((pFEInterface = pFELibrary->GetNextInterface(pIter)) != 0)
+    {
+        // get base interface names
+		VectorElement *pIBaseName = pFEInterface->GetFirstBaseInterfaceName();
+		CFEIdentifier *pFEBaseName;
+		while ((pFEBaseName = pFEInterface->GetNextBaseInterfaceName(pIBaseName)) != 0)
+		{
+			// search for interface
+			CFEInterface *pFEBaseInterface = pFELibrary->FindInterface(pFEBaseName->GetName());
+			if (pFEBaseInterface)
+			{
+			    CFELibrary *pNestedLib = pFEBaseInterface->GetParentLibrary();
+				if (pNestedLib && (pNestedLib != pFELibrary))
+				{
+					// init nested library
+					CBENameSpace *pNameSpace = FindNameSpace(pNestedLib->GetName());
+					if (!pNameSpace)
+					{
+						pNameSpace = pContext->GetClassFactory()->GetNewNameSpace();
+						AddNameSpace(pNameSpace);
+						if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
+						{
+							RemoveNameSpace(pNameSpace);
+							VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be created\n",
+									(const char*)(pNestedLib->GetName()));
+							return false;
+						}
+					}
+					else
+					{
+						// call create function again to add the interface of the redefined nested lib
+						if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
+						{
+							VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be re-created in scope of %s\n",
+									(const char*)(pNestedLib->GetName()), (const char*)m_sName);
+							return false;
+						}
+					}
+					vLibraries.Add(pNestedLib);
+				}
+			}
+		}
+	}
     // search for interfaces
     // there might be some classes, which have base-classes defined in the libs,
     // which come afterwards.
     pIter = pFELibrary->GetFirstInterface();
-    CFEInterface *pFEInterface;
     while ((pFEInterface = pFELibrary->GetNextInterface(pIter)) != 0)
     {
         if (!CreateBackEnd(pFEInterface, pContext))
@@ -266,6 +318,17 @@ bool CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
     CFELibrary *pNestedLib;
     while ((pNestedLib = pFELibrary->GetNextLibrary(pIter)) != 0)
     {
+	    // if we initialized this lib already, skip it
+		bool bSkip = false;
+		VectorElement *pILib = vLibraries.GetFirst();
+		while (pILib && !bSkip)
+		{
+		    if (pILib->GetElement() && (pILib->GetElement() == pNestedLib))
+			    bSkip = true;
+		    pILib = pILib->GetNext();
+		}
+		if (bSkip)
+		    continue;
         CBENameSpace *pNameSpace = FindNameSpace(pNestedLib->GetName());
         if (!pNameSpace)
         {
@@ -304,7 +367,7 @@ bool CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContex
     CBEClass *pClass = NULL;
     // check if class already exists
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     pClass = pRoot->FindClass(pFEInterface->GetName());
     if (!pClass)
     {
@@ -422,6 +485,43 @@ CBEConstant* CBENameSpace::GetNextConstant(VectorElement *&pIter)
         return GetNextConstant(pIter);
     return pRet;
 }
+
+/** \brief searches for a constants
+ *  \param sConstantName the name of the constants
+ *  \return a reference to the constant if found, zero otherwise
+ */
+CBEConstant* CBENameSpace::FindConstant(String sConstantName)
+{
+    if (sConstantName.IsEmpty())
+        return 0;
+    // simply scan the namespace for a match
+    VectorElement *pIter = GetFirstConstant();
+    CBEConstant *pConstant;
+    while ((pConstant = GetNextConstant(pIter)) != 0)
+    {
+        if (pConstant->GetName() == sConstantName)
+            return pConstant;
+    }
+	// check classes
+	pIter = GetFirstClass();
+	CBEClass *pClass;
+	while ((pClass = GetNextClass(pIter)) != 0)
+	{
+	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
+		    return pConstant;
+	}
+	// check namespaces
+	pIter = GetFirstNameSpace();
+	CBENameSpace *pNameSpace;
+	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+	{
+	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
+		    return pConstant;
+	}
+	// nothing found
+    return 0;
+}
+
 
 /** \brief adds a typedef
  *  \param pTypedef the typedef to add
@@ -636,12 +736,16 @@ void CBENameSpace::Write(CBEImplementationFile *pFile, CBEContext *pContext)
  */
 void CBENameSpace::WriteConstants(CBEHeaderFile *pFile, CBEContext *pContext)
 {
+    bool bWrote = false;
     VectorElement *pIter = GetFirstConstant();
     CBEConstant *pConstant;
     while ((pConstant = GetNextConstant(pIter)) != 0)
     {
         pConstant->Write(pFile, pContext);
+		bWrote = true;
     }
+    if (bWrote)
+	    pFile->Print("\n");
 }
 
 /** \brief writes the typedefs to the header file
@@ -951,8 +1055,18 @@ void CBENameSpace::WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext)
     CBEType *pType;
     while ((pType = GetNextTaggedType(pIter)) != 0)
     {
+		String sTag;
+		if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
+		    sTag = ((CBEStructType*)pType)->GetTag();
+		if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
+		    sTag = ((CBEUnionType*)pType)->GetTag();
+		sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
+		pFile->Print("#ifndef %s\n", (const char*)sTag);
+		pFile->Print("#define %s\n", (const char*)sTag);
         pType->Write(pFile, pContext);
-        pFile->Print(";\n\n");
+        pFile->Print(";\n");
+		pFile->Print("#endif /* !%s */\n", (const char*)sTag);
+		pFile->Print("\n");
     }
 }
 

@@ -1,0 +1,45 @@
+#! /bin/bash
+
+[ -z "$UXMEM" ] && { 
+  echo "overriding memory!"
+  UXMEM=128
+}
+
+[ -n "$LOADERAPP" ] || LOADERAPP=linux.l4env
+
+. ${0%/*}/generic.inc
+
+case "$1" in
+  bare|plain|text|t)
+  	;;
+  dope|d)
+	RES="-G 1024x768@16"
+	CON="-l l4dope-ux"
+  	;;
+  con|c)
+	RES="-G 640x480@16"
+	CON="-l con-ux"
+	RUN="$L4PATH/cfg/run"
+  	;;
+  *)
+  	echo "Unknown mode, you can choose: text, dope, con"
+	exit 1
+  	;;
+esac
+
+shift
+
+fiasco \
+	$RES \
+	-R ./rmgr-ux" task modname \"L4Linux task\"" \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l simple_ts \
+	-l fuxfprov \
+	-l rtc-ux \
+	-l l4exec \
+	$CON \
+	-l loader" $RUN $CFGPATH/$LOADERAPP" \
+	-n9 -n10 "$@"
+

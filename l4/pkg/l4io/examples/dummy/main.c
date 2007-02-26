@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/examples/dummy/main.c
+ * \file   l4io/examples/dummy/main.c
+ * \brief  L4Env I/O client example (dumb dummy)
  *
- * \brief	L4Env I/O client example (dumb dummy)
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/syscalls.h>
@@ -37,6 +26,8 @@
 #include <l4/util/macros.h>
 
 #include <l4/generic_io/libio.h>
+
+#include <stdlib.h>
 
 char LOG_tag[9] = "io_dummy";
 
@@ -111,6 +102,6 @@ int main(void)
 
   exit(0);
 
-  /* prevent silly warnings */
+  /* prevent silly warnings about unused symbols */
   measure_jiffies(100);
 }

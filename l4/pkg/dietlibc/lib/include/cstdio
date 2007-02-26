@@ -1,0 +1,37 @@
+/* -*- c++ -*-*/
+
+#ifndef CSTDIO_INCLUDE
+#define CSTDIO_INCLUDE
+
+// I love Feve, who likes to ignore things 
+// behind its horizon. (C++ really exists)
+extern "C" {
+#include <stdio.h>
+}
+
+#if(__GNUC__>=3) 
+namespace std {
+  using ::putchar;
+  using ::puts;
+  //  using ::putstr;
+  //  using ::putnstr;
+  using ::printf;
+  using ::sprintf;
+  using ::snprintf;
+  using ::asprintf;
+  using ::sscanf;
+  //  using ::scanf;
+  using ::vprintf;
+  using ::vsprintf;
+  using ::vsnprintf;
+  using ::getchar;
+  using ::gets;
+  using ::fgets;
+  using ::vscanf;
+  using ::vsscanf;
+
+};
+#endif
+
+
+#endif // CSTDIO_INCLUDE

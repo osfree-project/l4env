@@ -16,8 +16,7 @@ void test_client(CORBA_Object _server)
   /* calculate start address 
    * should be 4KB aligned address in array
    */
-  base = (unsigned char*)array;
-  base = (unsigned char*)((unsigned long)(base + 0x1000) & ~0xfff); // align to 4KB
+  base = (unsigned char*)l4_round_page(array); // align to 4KB
 
   /* get page for variable data */
   offset = 0x200;
@@ -37,8 +36,13 @@ void test_client(CORBA_Object _server)
   /* get fpage descriptor */
   // call client stub
   LOG("page calc done, send page");
-  ret = test_test_map_call(&_server, page, offset, &_env);
+  ret = test_test_map_call(_server, page, offset, &_env);
   LOG("server returned %d", ret);
+
+  if (_env.major != CORBA_NO_EXCEPTION)
+    {
+      LOG("Exception %d (%d) ipc:%x\n", _env.major, _env.repos_id, _env.ipc_error);
+    }
 
   LOG("data after call=%d\n", *ptr);
 }
@@ -46,13 +50,15 @@ void test_client(CORBA_Object _server)
 int main(int argc, char* argv[])
 { 
   // needed for client
-  CORBA_Object _server;
+  l4_threadid_t _server;
   LOG_init("fpageC");
   // find server
   names_waitfor_name("fpageS", &_server, 120);
   // call server
-  test_client(_server);
-  
+  test_client(&_server);
+
+  l4_sleep(2000);
+  enter_kdebug("*#^fpage2 stopped");
   return 0;
 }
 

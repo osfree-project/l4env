@@ -33,7 +33,7 @@ static void signal_single_user_thread(int irq, client_chain *c){
 
   // set the counter to the current one.
   c->last_irq_num= irqs[irq].counter;
-  error = l4_i386_ipc_send(c->client, L4_IPC_SHORT_MSG, irq+1,
+  error = l4_ipc_send(c->client, L4_IPC_SHORT_MSG, irq+1,
                            #ifdef OMEGA0_DEBUG_MEASUREMENT_SENDTIME
                               (unsigned)(l4_rdtsc().ll),
                            #else
@@ -267,11 +267,10 @@ static void attach_irq(int num){
     irqs[num].available = 0;
     return;
   }
+ 
+  l4_make_taskid_from_irq(num, &irq_th);
   
-  irq_th.lh.low = num + 1;
-  irq_th.lh.high = 0;
-  
-  error = l4_i386_ipc_receive(irq_th, 0, &dummy, &dummy,
+  error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
                               L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
   
   if(error==L4_IPC_RETIMEOUT){
@@ -311,7 +310,7 @@ void irq_handler(int num){
 #endif
   
   do{
-    error = l4_i386_ipc_send(mainthread, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_NEVER,
+    error = l4_ipc_send(mainthread, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_NEVER,
                              &result);
     if(error){
       LOGL("error sending birth-ipc to %#t.\n", mainthread);
@@ -322,14 +321,14 @@ void irq_handler(int num){
 
   /* wait for ipcs now */
 
-  error = l4_i386_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1,
+  error = l4_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1,
                            L4_IPC_NEVER, &result);
   while(1){
 
     while(error){
       LOGl("IRQ %d: ipc error %#x", num, error);
       enter_kdebug(".");
-      error = l4_i386_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1,
+      error = l4_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1,
                                L4_IPC_NEVER, &result);
       enter_kdebug("got irq");
     }
@@ -373,7 +372,7 @@ void irq_handler(int num){
       #ifdef OMEGA0_DEBUG_IRQ_THREADS
         LOG("waiting after IRQ");
       #endif
-      error = l4_i386_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1, 
+      error = l4_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1, 
                                L4_IPC_TIMEOUT(0,3,0,0,0,0), &result);
     } else {
       /* ipc from user thread, must be a request */
@@ -403,7 +402,7 @@ void irq_handler(int num){
 	  LOG("sending ipc to %t and wait\n\n\n", sender);
         #endif
 
-        error = l4_i386_ipc_reply_and_wait(sender, L4_IPC_SHORT_MSG, dw0, dw1,
+        error = l4_ipc_reply_and_wait(sender, L4_IPC_SHORT_MSG, dw0, dw1,
                                        &sender, L4_IPC_SHORT_MSG, &dw0, &dw1,
                                        L4_IPC_TIMEOUT(0,1,0,0,0,0),
 				       &result);
@@ -411,7 +410,7 @@ void irq_handler(int num){
         #ifdef OMEGA0_DEBUG_IRQ_THREADS
           LOG("sending no reply, waiting");
         #endif
-        error = l4_i386_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1, 
+        error = l4_ipc_wait(&sender, L4_IPC_SHORT_MSG, &dw0, &dw1, 
 				 L4_IPC_TIMEOUT(0,4,0,0,0,0), &result);
       }
     }	// ipc from client

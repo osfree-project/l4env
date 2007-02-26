@@ -1,6 +1,15 @@
-/*
- * command handler for the L4Linux stub
- */
+/* $Id$ */
+/**
+ * \file	con/examples/linux_stub/comh.c
+ * \brief	command handler for the L4Linux stub
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <linux/tty.h>
 #include <linux/console_struct.h>
@@ -26,13 +35,13 @@ comh_wakeup(void)
 static inline void
 _comh_fill(comh_fill_t *fill) 
 {
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
    
-  if (con_vc_pslim_fill(dropsvc_l4id, 
+  if (con_vc_pslim_fill_call(&dropsvc_l4id, 
 			&fill->rect, 
 			fill->color, 
-			&_ev)
-      || (_ev._type != exc_l4_no_exception))
+			&_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     printk("comh.c: pslim_fill failed\n");
 }
 
@@ -40,19 +49,15 @@ _comh_fill(comh_fill_t *fill)
 static inline void 
 _comh_puts(comh_puts_t *puts) 
 {
-  l4_strdope_t str;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
    
-  str.snd_str = (l4_umword_t) puts->str;
-  str.snd_size = puts->str_size;
-  str.rcv_size = 0;
-   
-  if (con_vc_puts_attr(dropsvc_l4id, 
-		  str,
+  if (con_vc_puts_attr_call(&dropsvc_l4id, 
+		  puts->str,
+	          puts->str_size,
 		  puts->x, 
 		  puts->y,
-		  &_ev)
-      || (_ev._type != exc_l4_no_exception))
+		  &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     printk("comh.c: pslim_puts failed\n");
 }
 
@@ -60,19 +65,15 @@ _comh_puts(comh_puts_t *puts)
 static inline void 
 _comh_putc(comh_putc_t *putc) 
 {
-  l4_strdope_t str;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
-  str.snd_str = (l4_umword_t) &putc->ch;
-  str.snd_size = 2;
-  str.rcv_size = 0;
-   
-  if (con_vc_puts_attr(dropsvc_l4id,
-		  str,
+  if (con_vc_puts_attr_call(&dropsvc_l4id,
+		  &putc->ch,
+	          2,
 		  putc->x,
 		  putc->y,
-		  &_ev)
-      || (_ev._type != exc_l4_no_exception))
+		  &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     printk("comh.c: pslim_putc failed\n");
 }
 
@@ -82,19 +83,15 @@ _comh_redraw(comh_redraw_t *redraw)
 {
   while (redraw->lines--)
     {
-      l4_strdope_t str;
-      sm_exc_t _ev;
+      CORBA_Environment _env = dice_default_environment;
        
-      str.snd_str  = (l4_umword_t) redraw->p;
-      str.snd_size = redraw->columns*2;
-      str.rcv_size = 0;
-
-      if (con_vc_puts_attr(dropsvc_l4id,
-			   str,
+      if (con_vc_puts_attr_call(&dropsvc_l4id,
+			   redraw->p,
+	                   redraw->columns*2,
 			   redraw->x,
 			   redraw->y,
-			   &_ev)
-	  || (_ev._type != exc_l4_no_exception))
+			   &_env)
+	  || (_env.major != CORBA_NO_EXCEPTION))
 	printk("comh.c: pslim_puts failed\n");
 
       redraw->p += dropscon_num_columns;
@@ -106,14 +103,14 @@ _comh_redraw(comh_redraw_t *redraw)
 static inline void 
 _comh_copy(comh_copy_t *copy)
 {
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
    
-  if (con_vc_pslim_copy(dropsvc_l4id,
+  if (con_vc_pslim_copy_call(&dropsvc_l4id,
 			&copy->rect,
 			copy->dx, 
 			copy->dy,
-			&_ev)
-      || (_ev._type != exc_l4_no_exception))
+			&_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     printk("comh.c: pslim_copy failed\n");
 }
 
@@ -138,7 +135,7 @@ comh_thread(void *data)
   l4_msgdope_t result;
 
   /* hand shake with creator */
-  l4_i386_ipc_call(main_l4id,
+  l4_ipc_call(main_l4id,
 		   L4_IPC_SHORT_MSG, 0, 0,
 		   L4_IPC_SHORT_MSG, &dummy, &dummy,
 		   L4_IPC_NEVER, &result);
@@ -168,7 +165,7 @@ comh_thread(void *data)
 	      l4_msgdope_t result;
 	      
 	      atomic_inc(&comh_sleep_state);
-	      l4_i386_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
+	      l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
 				  L4_IPC_NEVER, &result);
 	    }
 	}

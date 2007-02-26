@@ -5,7 +5,7 @@
  *	\date	Wed Jun 12 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -51,9 +51,9 @@ protected: // Protected methods
     virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
     virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
+	virtual void WriteExceptionCheck(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteFlexpageOpcodePatch(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteIPCWaitOnly(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteLongIPC(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteLongFlexpageIPC(CBEFile *pFile, CBEContext *pContext);

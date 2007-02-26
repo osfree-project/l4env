@@ -28,3 +28,15 @@ int Keyb::write( char const *, size_t len)
   return len;
 }
 
+PUBLIC
+char const *Keyb::next_attribute( bool restart = false ) const
+{
+  static char const *attribs[] = { "direct", "in", 0 };
+  static unsigned pos = 0;
+  if(restart)
+    pos = 0;
+  if(pos<3)
+    return attribs[pos++];
+  else
+    return 0;
+}

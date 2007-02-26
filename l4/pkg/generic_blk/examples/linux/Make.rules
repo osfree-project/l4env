@@ -3,8 +3,8 @@ PKGDIR ?=       ../..
 L4DIR ?=        $(PKGDIR)/../..
 
 # source files
-SRC_C =		blk_stub.c linux_emul.c
-PRIVATE_INCDIR =$(L4LINUXDIR)/include
+SRC_C =		blk_stub.c linux_emul.c emul.c
+PRIVATE_INCDIR =$(L4LINUX22_DIR)/include
 CLIENTIDL =	blk.idl
 DEFINES =       -D__KERNEL__ -DMODULE -DLINUX_ON_L4
 WARNINGS =	-Wall
@@ -23,7 +23,7 @@ include $(L4DIR)/mk/prog.mk
 L4LIBS =	-lnames
 
 l4blk_stub: $(OBJS) $(LIBDEPS)
-	$(LINK_MESSAGE)
+	@$(LINK_MESSAGE)
 	$(VERBOSE)$(LD) -r -o $@ $(OBJS) $(addprefix -L,$(L4LIBDIR)) $(L4LIBS)
 
 clean::

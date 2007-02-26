@@ -83,14 +83,20 @@ void *Vmem_alloc::page_alloc( void *address, int order, Zero_fill zf,
       return 0;
     }
     page = Kmem_alloc::allocator()->virt_to_phys(vpage);
+
+#warning HACK
+    Mem_unit::write_back_data_cache();
+    asm volatile ( "mcr p15, 0, r0, c7, c7, 0x00 \n" ); // Cache flush
   } else {
     page = zero_page;
+    pa = Page::KERN_RO;
   }
   
   // insert page into master page table
   Page_table::Status status;
-  status = Kmem_space::kdir()->insert( page, address, Config::PAGE_SIZE, pa );
-  
+  status = Kmem_space::kdir()->replace( page, address, Config::PAGE_SIZE, pa );
+  Mem_unit::dtlb_flush(address);
+
   if(status==Page_table::E_EXISTS) {
     panic("Vmem_alloc: address already mapped");
   } else if(status!=Page_table::E_OK) {

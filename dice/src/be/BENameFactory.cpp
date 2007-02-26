@@ -5,7 +5,7 @@
  *	\date	01/10/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,6 +37,8 @@
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
+
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CBENameFactory);
 
@@ -104,7 +106,7 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 		(nFileType == FILETYPE_COMPONENTHEADER) ||
 		(nFileType == FILETYPE_OPCODE) ||
 		(nFileType == FILETYPE_TESTSUITE) ||
-		(nFileType == FILETYPE_SKELETON) ||
+		(nFileType == FILETYPE_TEMPLATE) ||
 		(nFileType == FILETYPE_COMPONENTIMPLEMENTATION))
 	{
 		// should only be files
@@ -134,7 +136,7 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 		case FILETYPE_TESTSUITE:
 			sReturn += "-testsuite.c";
 			break;
-		case FILETYPE_SKELETON:
+		case FILETYPE_TEMPLATE:
 			sReturn += "-template.c";
 			break;
 		default:
@@ -186,7 +188,11 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 		}
 		// get libname-name
 		sReturn = sPrefix;
-		sReturn += ((CFELibrary *) pFEBase)->GetName();
+		CFELibrary *pFELibrary = (CFELibrary *) pFEBase;
+		// always prefix with IDL filename
+		sReturn += pFELibrary->GetFile()->GetFileNameWithoutExtension();
+		sReturn += "-";
+		sReturn += pFELibrary->GetName();
 		sReturn += "-client.c";
 	}
 	else if (pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
@@ -210,11 +216,17 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 		// get interface name
 		sReturn = sPrefix;
 		CFEInterface *pFEInterface = (CFEInterface *) pFEBase;
-		if (pFEInterface->GetParentLibrary())
+		// always prefix with IDL filename
+		sReturn += pFEInterface->GetFile()->GetFileNameWithoutExtension();
+		sReturn += "-";
+		String sLibs;
+		CFELibrary *pFELibrary = pFEInterface->GetParentLibrary();
+		while (pFELibrary)
 		{
-			sReturn += pFEInterface->GetParentLibrary()->GetName();
-			sReturn += "_";
+		    sLibs = pFELibrary->GetName() + "_" + sLibs;
+			pFELibrary = pFELibrary->GetParentLibrary();
 		}
+        sReturn += sLibs;
 		sReturn += pFEInterface->GetName();
 		sReturn += "-client.c";
 	}
@@ -247,11 +259,17 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 		// get class
 		sReturn = sPrefix;
 		CFEOperation *pFEOperation = (CFEOperation *) pFEBase;
-		if (pFEOperation->GetParentLibrary())
+		// always prefix with IDL filename
+		sReturn += pFEOperation->GetFile()->GetFileNameWithoutExtension();
+		sReturn += "-";
+		String sLibs;
+		CFELibrary *pFELibrary = pFEOperation->GetParentLibrary();
+		while (pFELibrary)
 		{
-			sReturn += pFEOperation->GetParentLibrary()->GetName();
-			sReturn += "_";
+		    sLibs = pFELibrary->GetName() + "_" + sLibs;
+			pFELibrary = pFELibrary->GetParentLibrary();
 		}
+        sReturn += sLibs;
 		if (pFEOperation->GetParentInterface())
 		{
 			sReturn += pFEOperation->GetParentInterface()->GetName();
@@ -279,14 +297,14 @@ String CBENameFactory::GetFileName(CFEBase * pFEBase, CBEContext * pContext)
 String CBENameFactory::GetIncludeFileName(CFEBase * pFEBase, CBEContext * pContext)
 {
     // first get the file name as usual
+	// adds prefix to non-IDL files
     String sName = GetFileName(pFEBase, pContext);
-    String sPrefix = pContext->GetFilePrefix();
     // extract the relative path from the original FE file
     CFEFile *pFEFile = pFEBase->GetFile();
     // if no IDL file, return original name
     String sOriginalName = pFEFile->GetFileName();
     if (!pFEFile->IsIDLFile())
-        return sPrefix + sOriginalName;
+        return sName;
     // get file name (which contains relative path) and extract it
     // it is everything up to the last '/'
     int nPos = sOriginalName.ReverseFind('/');
@@ -295,6 +313,26 @@ String CBENameFactory::GetIncludeFileName(CFEBase * pFEBase, CBEContext * pConte
         sPath = sOriginalName.Left(nPos + 1);
     // concat path and name and return
     return sPath + sName;
+}
+
+/** \brief gets the filename used in an include statement if no FE class available
+ *  \param sBaseName the name of the original include statement
+ *  \param pContext the context of this operation
+ *  \return the new name in the include statement
+ *
+ * We treat the file as non-IDL file. Otherwise there would have been a FE class
+ * to use as reference.
+ */
+String CBENameFactory::GetIncludeFileName(String sBaseName, CBEContext* pContext)
+{
+	// get file-name
+	String sReturn = pContext->GetFilePrefix() + sBaseName;
+	// deliver filename
+	if (m_bVerbose)
+		printf("CBENameFactory::GetFileName(filetype:%d) = %s (!IDL file)\n",
+				pContext->GetFileType(), (const char *) sReturn);
+
+	return sReturn;
 }
 
 /** \brief creates the name of a type
@@ -319,6 +357,7 @@ String CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCont
         sReturn = "_UNDEFINED_";
         break;
     case TYPE_INTEGER:
+	case TYPE_LONG:
         switch (nSize)
         {
         case 1:
@@ -332,9 +371,13 @@ String CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCont
             break;
         case 4:
             if (bUnsigned)
-                sReturn = "CORBA_unsigned_long";
+                sReturn = "CORBA_unsigned_";
             else
-                sReturn = "CORBA_long";
+                sReturn = "CORBA_";
+	        if (nType == TYPE_LONG)
+			    sReturn += "long";
+	        else
+			    sReturn += "int";
             break;
         case 8:
             if (bUnsigned)
@@ -344,6 +387,9 @@ String CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCont
             break;
         }
         break;
+	case TYPE_MWORD:
+	    sReturn = "CORBA_unsigned_long";
+		break;
     case TYPE_VOID:
         sReturn = "CORBA_void";
         break;
@@ -381,6 +427,7 @@ String CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCont
     case TYPE_CHAR_ASTERISK:
         sReturn = "CORBA_char_ptr";
         break;
+	case TYPE_ARRAY:
     case TYPE_STRUCT:
     case TYPE_TAGGED_STRUCT:
         sReturn = "struct";
@@ -419,8 +466,8 @@ String CBENameFactory::GetTypeName(int nType, bool bUnsigned, CBEContext * pCont
     }
 
     if (m_bVerbose)
-        printf("%s Generated type name \"%s\" for type code %d\n",
-            GetClassName(), (const char *) sReturn, nType);
+        printf("CBENameFactory::%s Generated type name \"%s\" for type code %d\n",
+            __FUNCTION__, (const char *) sReturn, nType);
     return sReturn;
 }
 
@@ -440,6 +487,7 @@ String CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
     switch (nType)
     {
     case TYPE_INTEGER:
+	case TYPE_LONG:
         switch (nSize)
         {
         case 1:
@@ -453,9 +501,11 @@ String CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
             break;
         case 4:
             if (bUnsigned)
-                sReturn = "unsigned long";
-            else
-                sReturn = "long";
+                sReturn = "unsigned ";
+	        if (nType == TYPE_LONG)
+			    sReturn += "long";
+	        else
+			    sReturn += "int";
             break;
         case 8:
             if (bUnsigned)
@@ -511,6 +561,9 @@ String CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
         sReturn.Empty();
         break;
     }
+    if (m_bVerbose)
+        printf("CBENameFactory::%s Generated type name \"%s\" for type code %d\n",
+               __FUNCTION__, (const char *) sReturn, nType);
     return sReturn;
 }
 
@@ -529,17 +582,19 @@ String CBENameFactory::GetCTypeName(int nType, bool bUnsigned, CBEContext *pCont
  * - FUNCTION_RECV: "_recv"
  * - FUNCTION_WAIT: "_wait"
  * - FUNCTION_UNMARSHAL:  "_unmarshal"   (10)
+ * - FUNCTION_MARSHAL:  "_marshal"       (8)
  * - FUNCTION_REPLY_RECV: "_reply_recv"  (11)
  * - FUNCTION_REPLY_WAIT: "_reply_wait"  (11)
  * - FUNCTION_CALL: "_call"
  * - FUNCTION_SWITCH_CASE: "_call"
- * - FUNCTION_SKELETON:   "_component"   (10)
+ * - FUNCTION_TEMPLATE:   "_component"   (10)
  *
  * The three other function types should not be used with this implementation, because these are interface functions.
  * If they are (accidentally) used here, we redirect the call to the interface function naming implementation.
  * - FUNCTION_WAIT_ANY:   "_wait_any"    (9)
  * - FUNCTION_RECV_ANY:   "_recv_any"    (9)
  * - FUNCTION_SRV_LOOP:   "_server_loop" (12)
+ * - FUNCTION_DISPATCH:   "_dispatch"    (9)
  *
  * \todo if nested library use all lib names
  */
@@ -557,6 +612,7 @@ String CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, CBEContext *
     if ((nFunctionType == FUNCTION_WAIT_ANY) ||
         (nFunctionType == FUNCTION_RECV_ANY) ||
         (nFunctionType == FUNCTION_SRV_LOOP) ||
+		(nFunctionType == FUNCTION_DISPATCH) ||
         (nFunctionType == FUNCTION_REPLY_ANY_WAIT_ANY))
         return GetFunctionName(pFEOperation->GetParentInterface(), pContext);
 
@@ -586,7 +642,10 @@ String CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, CBEContext *
     case FUNCTION_UNMARSHAL:
         sReturn += "_unmarshal";
         break;
-    case FUNCTION_SKELETON:
+    case FUNCTION_MARSHAL:
+	    sReturn += "_marshal";
+		break;
+    case FUNCTION_TEMPLATE:
         sReturn += "_component";
         break;
     case FUNCTION_REPLY_RECV:
@@ -595,6 +654,9 @@ String CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, CBEContext *
     case FUNCTION_REPLY_WAIT:
         sReturn += "_reply_wait";
         break;
+    case FUNCTION_REPLY:
+	    sReturn += "_reply";
+		break;
     default:
         break;
     }
@@ -619,6 +681,7 @@ String CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, CBEContext *
  * - FUNCTION_WAIT_ANY: "_wait_any"    (9)
  * - FUNCTION_RECV_ANY: "_recv_any"    (9)
  * - FUNCTION_SRV_LOOP: "_server_loop" (12)
+ * - FUNCTION_DISPATCH: "_dispatch"    (9)
  * - FUNCTION_REPLY_ANY_WAIT_ANY: "_reply_and_wait"  (15)
  *
  *	\todo if nested libraries regard them as well
@@ -648,6 +711,9 @@ String CBENameFactory::GetFunctionName(CFEInterface * pFEInterface, CBEContext *
     case FUNCTION_SRV_LOOP:
         sReturn += "_server_loop";
         break;
+    case FUNCTION_DISPATCH:
+	    sReturn += "_dispatch";
+		break;
     case FUNCTION_REPLY_ANY_WAIT_ANY:
         sReturn += "_reply_and_wait";
         break;
@@ -727,6 +793,15 @@ String CBENameFactory::GetReturnVariable(CBEContext * pContext)
 String CBENameFactory::GetOpcodeVariable(CBEContext * pContext)
 {
     return String("_dice_opcode");
+}
+
+/**	\brief generates a variable name for the server loop reply code variable
+ *	\param pContext the context of the variable
+ *	\return a variable name for the reply code variable
+ */
+String CBENameFactory::GetReplyCodeVariable(CBEContext * pContext)
+{
+    return String("_dice_reply");
 }
 
 /**	\brief generates the variable name for the return variable of the server loop
@@ -973,11 +1048,13 @@ String CBENameFactory::GetComponentIDVariable(CBEContext * pContext)
 String CBENameFactory::GetGlobalTestVariable(CBEDeclarator * pParameter,
 					     CBEContext * pContext)
 {
-    if (!pParameter)
+	if (!pParameter)
+		return String();
+	// can be the parameter of a function
+	CBEFunction *pFunc = pParameter->GetFunction();
+	if (pFunc)
+		return pFunc->GetName() + "_" + pParameter->GetName();
 	return String();
-    CBEFunction *pFunc = pParameter->GetFunction();
-    ASSERT(pFunc);
-    return pFunc->GetName() + "_" + pParameter->GetName();
 }
 
 /**	\brief generate a global variable name for the return value of a function
@@ -989,7 +1066,7 @@ String CBENameFactory::GetGlobalReturnVariable(CBEFunction * pFunction,
 					       CBEContext * pContext)
 {
     if (!pFunction)
-	return String();
+		return String();
     String sRetVar = GetReturnVariable(pContext);
     return pFunction->GetName() + "_" + sRetVar;
 }
@@ -1015,6 +1092,8 @@ String CBENameFactory::GetMessageBufferMember(int nFEType, CBEContext * pContext
     switch (nFEType)
     {
     case TYPE_INTEGER:
+	case TYPE_LONG:
+	case TYPE_MWORD:
     case TYPE_VOID:
     case TYPE_FLOAT:
     case TYPE_DOUBLE:
@@ -1153,4 +1232,12 @@ String CBENameFactory::GetTypeName(CFEBase *pFERefType, String sName, CBEContext
 String CBENameFactory::GetDummyVariable(CBEContext* pContext)
 {
     return String("dummy");
+}
+
+/** \brief returns the variable name of a exception word variable
+ *  \return the string _exception
+ */
+String CBENameFactory::GetExceptionWordVariable(CBEContext *pContext)
+{
+    return String("_exception");
 }

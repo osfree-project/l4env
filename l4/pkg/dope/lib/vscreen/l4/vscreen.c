@@ -1,3 +1,18 @@
+/*
+ * \brief   L4 specific DOpE VScreen library
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
 #include <stdio.h>
 #include <l4/names/libnames.h>
 #include <l4/sys/types.h>
@@ -12,9 +27,9 @@
 //static sm_exc_t _ev;
 static CORBA_Environment env = dice_default_environment;
 
-struct vscr_struct {
-	char			*name;
-	l4_threadid_t	 tid;
+struct vscr {
+	char            *name;
+	l4_threadid_t    tid;
 } vscreens[MAX_VSCREENS];
 
 
@@ -45,11 +60,11 @@ static int valid_index(int id) {
 static void release_index(int i) {
 	
 	if (!valid_index(i)) return;
-	vscreens[i].name = NULL;	
+	vscreens[i].name = NULL;    
 }
 
 
-void *vscr_get_server_id(char *ident) {
+void *vscr_connect_server(char *ident) {
 	int i;
 	
 	if (ident) printf("libVScr(get_id): ident = %s\n",ident);
@@ -93,19 +108,19 @@ static unsigned long hex2u32(char *s) {
 //static char vscr_ident_buf[256];
 
    
-void *vscr_get_fb(char *smb_ident) {
+void *vscr_map_smb(char *smb_ident) {
 	l4dm_dataspace_t ds;
 	long smb_size = 0;
 	void *fb_adr;
 	
-//		int i = ((int)id) - 1;
-//	char *vscr_ident = &vscr_ident_buf[0];
-//		
-//	if (!valid_index(i)) return NULL;
-//	
-//	printf("libVScr(get_fb): dope_vscr_map = %lu\n",(long)
-//		dope_vscr_map_call(&vscreens[i].tid,&vscr_ident,&env)
-//	);
+//  	int i = ((int)id) - 1;
+//  char *vscr_ident = &vscr_ident_buf[0];
+//  	
+//  if (!valid_index(i)) return NULL;
+//  
+//  printf("libVScr(get_fb): dope_vscr_map = %lu\n",(long)
+//  	dope_vscr_map_call(&vscreens[i].tid,&vscr_ident,&env)
+//  );
 //
 
 	printf("libVScreen(get_fb): smb_ident = %s\n",smb_ident);
@@ -120,13 +135,13 @@ void *vscr_get_fb(char *smb_ident) {
 					ds.manager.lh.high,
 					ds.id);
 	
-////	printf("libVScr(get_fb): vscr_ident = %s\n",vscr_ident);
-////	printf("libVScr(get_fb): ds.id = %lu\n",(long)vscreens[i].ds.id);
+////    printf("libVScr(get_fb): vscr_ident = %s\n",vscr_ident);
+////    printf("libVScr(get_fb): ds.id = %lu\n",(long)vscreens[i].ds.id);
 	printf("libVScr(get_fb): l4rm_attach = %lu\n",
-  		(long)(l4rm_attach(&ds, smb_size, 0, L4DM_RW, (void *)&fb_adr))
+    	(long)(l4rm_attach(&ds, smb_size, 0, L4DM_RW, (void *)&fb_adr))
 	);
 	printf("libVScr(get_fb): fb_adr = 0x%x\n",(int)fb_adr);
-//	return vscreens[i].bufadr;
+//  return vscreens[i].bufadr;
 	return fb_adr;
 	
 }
@@ -137,6 +152,13 @@ void vscr_server_waitsync(void *id) {
 	if (!valid_index(i)) return;
 	dope_vscr_waitsync_call(&vscreens[i].tid,&env);
 	l4_thread_switch(L4_NIL_ID);
-//	l4_sleep(10);
+//  l4_sleep(10);
 }
 
+
+void vscr_server_refresh(void *id, int x, int y, int w, int h) {
+	int i = ((int)id) - 1;
+	if (!valid_index(i)) return;
+	dope_vscr_refresh_call(&vscreens[i].tid, x, y, w, h, &env);
+	l4_thread_switch(L4_NIL_ID);
+}

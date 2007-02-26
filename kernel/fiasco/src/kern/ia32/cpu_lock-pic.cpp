@@ -23,7 +23,7 @@ IMPLEMENTATION[pic]:
 // Cpu_lock inlines
 // 
 
-IMPLEMENT 
+IMPLEMENT inline
 Cpu_lock::Cpu_lock() 
   : _is_set(0)
 {

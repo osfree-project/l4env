@@ -1,6 +1,7 @@
 PKGDIR = ..
 L4DIR  = $(PKGDIR)/../..
 
-TARGET = con con-internal
+SRC_DOX_REF = con.cfg
+SRC_DOX_INT = con-internal.cfg
 
 include $(L4DIR)/mk/doc.mk

@@ -5,7 +5,7 @@
  *	\date	01/17/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -37,8 +37,10 @@ class CFEConditionalExpression;
 class CFEBinaryExpression;
 class CFEUnaryExpression;
 class CFEPrimaryExpression;
+class CFESizeOfExpression;
 class CBEContext;
 class CBEFile;
+class CBEType;
 
 /**	\class CBEExpression
  *	\ingroup backend
@@ -71,12 +73,14 @@ public:
     virtual bool CreateBackEndUnary(int nOperator, CBEExpression *pOperand, CBEContext * pContext);
     virtual bool CreateBackEndPrimary(int nType, CBEExpression *pExpression, CBEContext *pContext);
 	virtual bool IsOfType(int nFEType);
+	virtual CObject* Clone();
 
 protected:
     virtual bool CreateBackEndUnary(CFEUnaryExpression *pFEExpression, CBEContext *pContext);
     virtual bool CreateBackEndPrimary(CFEPrimaryExpression *pFEExpression, CBEContext *pContext);
     virtual bool CreateBackEndBinary(CFEBinaryExpression *pFEExpression, CBEContext *pContext);
     virtual bool CreateBackEndConditional(CFEConditionalExpression *pFEExpression, CBEContext *pContext);
+	virtual bool CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression, CBEContext *pContext);
     virtual void WriteUnary(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteBinary(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteConditional(CBEFile *pFile, CBEContext *pContext);
@@ -89,7 +93,7 @@ protected:
 	/**	\var int m_nType
 	 *	\brief defines the type of the expression
 	 *
-	 * The type specifies which values are correct or - if there is no value - an abstract expression, 
+	 * The type specifies which values are correct or - if there is no value - an abstract expression,
 	 * such as NULL, TRUE, FALSE
 	 */
 	int m_nType;
@@ -125,6 +129,10 @@ protected:
 	 *	\brief the condition for the conditional expression
 	 */
 	CBEExpression *m_pCondition;
+	/** \var CBEType *m_pType
+	 *  \brief the type of a size-of expression
+	 */
+	CBEType *m_pType;
 };
 
 #endif // !__DICE_BEEXPRESSION_H__

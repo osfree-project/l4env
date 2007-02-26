@@ -5,7 +5,7 @@ INTERFACE:
 
 #include "slab_cache_anon.h"		// slab_cache_anon
 
-class kmem_slab_simple_t : public slab_cache_anon
+class Kmem_slab_simple : public slab_cache_anon
 {
   // DATA
   Helping_lock _lock;
@@ -13,7 +13,7 @@ class kmem_slab_simple_t : public slab_cache_anon
 
 IMPLEMENTATION:
 
-// kmem_slab_simple_t -- A type-independent slab cache allocator for Fiasco,
+// Kmem_slab_simple -- A type-independent slab cache allocator for Fiasco,
 // derived from a generic slab cache allocator (slab_cache_anon in
 // lib/slab.cpp).
 
@@ -27,13 +27,9 @@ IMPLEMENTATION:
 #include "config.h"
 #include "kmem_alloc.h"
 
-// OSKIT crap
-#include "undef_oskit.h"
-
 // We only support slab size == PAGE_SIZE.
 PUBLIC
-kmem_slab_simple_t::kmem_slab_simple_t(unsigned elem_size, 
-				       unsigned alignment)
+Kmem_slab_simple::Kmem_slab_simple(unsigned elem_size, unsigned alignment)
   : slab_cache_anon(Config::PAGE_SIZE, elem_size, alignment)
 {
 }
@@ -41,14 +37,14 @@ kmem_slab_simple_t::kmem_slab_simple_t(unsigned elem_size,
 // Specializations providing their own block_alloc()/block_free() can
 // also request slab sizes larger than one page.
 PROTECTED
-kmem_slab_simple_t::kmem_slab_simple_t(unsigned long slab_size, 
-				       unsigned elem_size, 
-				       unsigned alignment)
+Kmem_slab_simple::Kmem_slab_simple(unsigned long slab_size, 
+				   unsigned elem_size, 
+				   unsigned alignment)
   : slab_cache_anon(slab_size, elem_size, alignment)
 {}
 
 PUBLIC
-kmem_slab_simple_t::~kmem_slab_simple_t()
+Kmem_slab_simple::~Kmem_slab_simple()
 {
   Helping_lock_guard guard(&_lock);
   destroy();
@@ -57,7 +53,7 @@ kmem_slab_simple_t::~kmem_slab_simple_t()
 // We overwrite some of slab_cache_anon's functions to faciliate locking.
 PUBLIC
 void *
-kmem_slab_simple_t::alloc()		// request initialized member from cache
+Kmem_slab_simple::alloc()		// request initialized member from cache
 {
   Helping_lock_guard guard(&_lock);
   return slab_cache_anon::alloc();
@@ -65,7 +61,7 @@ kmem_slab_simple_t::alloc()		// request initialized member from cache
 
 PUBLIC
 void 
-kmem_slab_simple_t::free(void *cache_entry) // return initialized member to cache
+Kmem_slab_simple::free(void *cache_entry) // return initialized member to cache
 {
   Helping_lock_guard guard(&_lock);
   slab_cache_anon::free(cache_entry);
@@ -73,7 +69,7 @@ kmem_slab_simple_t::free(void *cache_entry) // return initialized member to cach
 
 PUBLIC
 bool 
-kmem_slab_simple_t::reap()
+Kmem_slab_simple::reap()
 {
   if (_lock.test())
     return false;		// this cache is locked -- can't get memory now
@@ -86,7 +82,7 @@ kmem_slab_simple_t::reap()
 // allocate or free blocks
 
 virtual void *
-kmem_slab_simple_t::block_alloc(unsigned long size, unsigned long)
+Kmem_slab_simple::block_alloc(unsigned long size, unsigned long)
 {
   // size must be exactly PAGE_SIZE
   assert(size == Config::PAGE_SIZE);
@@ -96,7 +92,7 @@ kmem_slab_simple_t::block_alloc(unsigned long size, unsigned long)
 }
 
 virtual void 
-kmem_slab_simple_t::block_free(void *block, unsigned long)
+Kmem_slab_simple::block_free(void *block, unsigned long)
 {
   Kmem_alloc::allocator()->free(0,block);
 }
@@ -107,23 +103,23 @@ static void *slab_mem = 0;
 
 PUBLIC
 void *
-kmem_slab_simple_t::operator new(size_t size)
+Kmem_slab_simple::operator new(size_t size)
 {
 //#warning do we really need dynamic allocation of slab allocators?
-  assert(size<=sizeof(kmem_slab_simple_t));
+  assert(size<=sizeof(Kmem_slab_simple));
   (void)size; // prevent gcc warning
   if(!slab_mem)
     {
       slab_mem = Kmem_alloc::allocator()->alloc(0);
       if(!slab_mem)
-	panic("Out of memory (new kmem_slab_simple_t)");
+	panic("Out of memory (new Kmem_slab_simple)");
 
       char* s;
       for( s = (char*)slab_mem; 
-	  s < ((char*)slab_mem) + Config::PAGE_SIZE - sizeof(kmem_slab_simple_t); 
-	  s+=sizeof(kmem_slab_simple_t) ) 
+	  s < ((char*)slab_mem) + Config::PAGE_SIZE - sizeof(Kmem_slab_simple); 
+	  s+=sizeof(Kmem_slab_simple) ) 
 	{
-	  *((void**)s) = s+sizeof(kmem_slab_simple_t);
+	  *((void**)s) = s+sizeof(Kmem_slab_simple);
 	}
 
       *((void**)s) = 0;
@@ -137,9 +133,9 @@ kmem_slab_simple_t::operator new(size_t size)
 
 PUBLIC
 void 
-kmem_slab_simple_t::operator delete(void *block, size_t size)
+Kmem_slab_simple::operator delete(void *block, size_t size)
 {
-  assert(size<=sizeof(kmem_slab_simple_t));
+  assert(size<=sizeof(Kmem_slab_simple));
   (void)size; // prevent gcc warning
   *((void**)block) = slab_mem;
   slab_mem = block;

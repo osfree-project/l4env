@@ -6,23 +6,13 @@
  *
  * \date   11/23/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -66,7 +56,7 @@ l4dm_mem_open(l4_threadid_t dsm_id,
 	      l4dm_dataspace_t * ds)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment _env = dice_default_environment;
 
   if (l4_thread_equal(dsm_id,L4DM_DEFAULT_DSM))
     {
@@ -81,15 +71,15 @@ l4dm_mem_open(l4_threadid_t dsm_id,
 
   /* call dataspace manager */
   if (name != NULL)
-    ret = if_l4dm_mem_open(dsm_id,size,align,flags,name,
-			   (if_l4dm_dataspace_t *)ds,&_exc);
+    ret = if_l4dm_mem_open_call(&dsm_id,size,align,flags,name,
+                                ds,&_env);
   else
-    ret = if_l4dm_mem_open(dsm_id,size,align,flags,"",
-			   (if_l4dm_dataspace_t *)ds,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+    ret = if_l4dm_mem_open_call(&dsm_id,size,align,flags,"",
+                                ds,&_env);
+  if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       ERROR("libdm_mem: open dataspace at %x.%x failed (ret %d, exc %d)",
-	    dsm_id.id.task,dsm_id.id.lthread,ret,_exc._type);
+	    dsm_id.id.task,dsm_id.id.lthread,ret,_env.major);
       if (ret)
         return ret;
       else

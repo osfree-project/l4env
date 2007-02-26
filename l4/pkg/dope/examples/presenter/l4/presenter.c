@@ -8,22 +8,35 @@
  * and displays them using the VScreen widget.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
 #include <stdio.h>
+#include <string.h>
 
 #include <l4/thread/thread.h>
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
-#include <l4/oskit10_l4env/support.h>
-#include <l4/oskit10/grub_mb_info.h>
 #include <l4/sys/types.h>
+#include <l4/env/mb_info.h>
 
 #include <l4/dope/dopelib.h>        /* DOpE client lib */
 #include <l4/dope/vscreen.h>        /* DOpE VScreen lib */
-#include "dope-config.h"
+#include "dopestd.h"
 
 #define MIN(a,b) (a<b?a:b)
 
-struct bmp_struct {
+char LOG_tag[9] = "presenter";
+l4_ssize_t l4libc_heapsize = 500*1024;
+
+
+struct bmp {
 	s32 file_size;
 	s32 reserved1;
 	s32 data_offset;
@@ -45,14 +58,13 @@ static int curr_img_idx=0;
 static s32 scr_w = 1024;
 static s32 scr_h = 768;
 static u16 *scradr;
-static struct grub_mod_list *curr_mod;
-static struct bmp_struct *curr_bmp;
-static char str[256];
+l4util_mb_mod_t *curr_mod;
+static struct bmp *curr_bmp;
 static long app_id;                 /* DOpE application id */
 
 
 /*** CONVERT 24BIT BMP IMAGE TO 16BIT PIXEL DATA ***/
-static int bmp_to_raw16(struct bmp_struct *bmp,u16 *dst) {
+static int bmp_to_raw16(struct bmp *bmp,u16 *dst) {
 	u8 *src;
 	s32 i,j,num_pixels,r,g,b,line_pad;
 	s32 m;
@@ -88,39 +100,30 @@ static int bmp_to_raw16(struct bmp_struct *bmp,u16 *dst) {
 }
 
 
-extern struct grub_multiboot_info *_mbi;
 
 /*** REQUEST BINARY MODULE ***/
-static struct grub_mod_list *get_mod_by_index(int idx) {
-	idx = idx%_mbi->mods_count;
-	return (struct grub_mod_list *)(_mbi->mods_addr + (idx*sizeof(struct grub_mod_list)));	
+static l4util_mb_mod_t *get_mod_by_index(int idx) {
+	idx = idx%l4env_multiboot_info->mods_count;
+	return (l4util_mb_mod_t *) (l4env_multiboot_info->mods_addr
+				+ (idx*sizeof(l4util_mb_mod_t)));
 }
 
 
 static void display_image(int img_idx) {
 
-	sprintf(str, "t.print(\"display image %d:\\n\")", (int)(img_idx%_mbi->mods_count));
-	dope_cmd(app_id, str);
+	dope_cmdf(app_id, "t.print(\"display image %d:\\n\")", (int)(img_idx%l4env_multiboot_info->mods_count));
 
 	curr_mod=get_mod_by_index(img_idx);
 
-	sprintf(str, "t.print(\" mod_start= %lu\\n\")", (adr)curr_mod->mod_start);
-	dope_cmd(app_id, str);
+	dope_cmdf(app_id, "t.print(\" mod_start= %lu\\n\")", (adr)curr_mod->mod_start);
+	dope_cmdf(app_id, "t.print(\" mod_end  = %lu\\n\")", (adr)curr_mod->mod_end);
+	dope_cmdf(app_id, "t.print(\" mod_size = %lu\\n\")", (adr)curr_mod->mod_end - 
+	                                                     (adr)curr_mod->mod_start);
 
-	sprintf(str, "t.print(\" mod_end  = %lu\\n\")", (adr)curr_mod->mod_end);
-	dope_cmd(app_id, str);
+	curr_bmp = (struct bmp *)(2+(adr)curr_mod->mod_start);
 
-	sprintf(str, "t.print(\" mod_size = %lu\\n\")", (adr)curr_mod->mod_end - 
-	                                                (adr)curr_mod->mod_start);
-	dope_cmd(app_id, str);
-
-	curr_bmp = (struct bmp_struct *)(2+(adr)curr_mod->mod_start);
-
-	sprintf(str, "t.print(\" width    = %d\\n\")", (int)curr_bmp->width);
-	dope_cmd(app_id, str);
-
-	sprintf(str, "t.print(\" height   = %d\\n\")", (int)curr_bmp->height);
-	dope_cmd(app_id, str);
+	dope_cmdf(app_id, "t.print(\" width    = %d\\n\")", (int)curr_bmp->width);
+	dope_cmdf(app_id, "t.print(\" height   = %d\\n\")", (int)curr_bmp->height);
 	
 	bmp_to_raw16(curr_bmp, scradr);
 	dope_cmd(app_id,"vscr.refresh()");
@@ -158,9 +161,6 @@ static void vscr_press_callback(dope_event *e,void *arg) {
 
 int main(void) {
 
-	LOG_init("presenter");
-	OSKit_libc_support_init(500*1024);
-
 	/* init DOpE library */
 	dope_init();
 	
@@ -170,7 +170,7 @@ int main(void) {
 	/* create and open window with pSLIM-widget */
 	dope_cmd(app_id, "a=new Window()" );
 	dope_cmd(app_id, "vscr=new VScreen()" );
-	dope_cmd(app_id, "vscr.setmode(1024,768,16)" );
+	dope_cmd(app_id, "vscr.setmode(1024,768,\"RGB16\")" );
 	
 	dope_cmd(app_id, "a.set(-x 100 -y 150 -w 320 -h 240 -fitx yes -fity yes -background off -content vscr)" );
 	dope_cmd(app_id, "a.open();" );
@@ -181,7 +181,11 @@ int main(void) {
 	
 	dope_bind(app_id,"vscr","press",  vscr_press_callback,  (void *)0x456);
 	
-	scradr = vscr_get_fb( dope_cmd(app_id, "vscr.map()") );
+	scradr = vscr_get_fb(app_id, "vscr");
+	if (!scradr) {
+		printf("Presenter(main): unable to map vscreen buffer\n");
+		return -1;
+	}
 	display_image(curr_img_idx);
 	
 	/* enter mainloop */

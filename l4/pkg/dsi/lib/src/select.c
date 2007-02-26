@@ -55,19 +55,17 @@ __select_thread(void * data)
 {
   dsi_select_thread_arg_t * args = (dsi_select_thread_arg_t *)data;
   l4_int32_t mask;
-
-#if DEBUG_SELECT
-  INFO("signalling thread %x.%x\n",
-       args->socket->event_th.id.task,args->socket->event_th.id.lthread);
-  INFO("socket %d, events 0x%08x\n",args->socket->socket,args->events);
-#endif
+  
+  LOGdL(DEBUG_SELECT,"signalling thread %x.%x",
+        args->socket->event_th.id.task,args->socket->event_th.id.lthread);
+  LOGdL(DEBUG_SELECT,"socket %d, events 0x%08x",
+        args->socket->socket,args->events);
 
   /* wait for event notification */
   mask = dsi_event_wait(args->socket->event_th,args->socket->socket,
 			args->events);
-#if DEBUG_SELECT
-  INFO("mask = 0x%08x\n",mask);
-#endif
+
+  LOGdL(DEBUG_SELECT,"mask = 0x%08x",mask);
 
   if (mask < 0)
     args->error = mask;
@@ -178,7 +176,7 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 
   if (error)
     {
-      Error("DSI: select error %d\n",error);
+      Error("DSI: select error %d",error);
       return error;
     }
 
@@ -186,9 +184,9 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
   j = 0;
   for (i = 0; i < num_sockets; i++)
     {
-#if DEBUG_SELECT
-      INFO ("%d, mask=0x%08x, error = %d", i, args[i].mask, args[i].error);
-#endif
+      LOGdL(DEBUG_SELECT,"%d, mask=0x%08x, error = %d", 
+            i, args[i].mask, args[i].error);
+
       if (args[i].mask)
 	{
 	  /* create entry in event list */
@@ -196,19 +194,17 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 	  events[j].component = sockets[i].component;
 	  events[j].events = args[i].mask;
 
-#if DEBUG_SELECT
-	  INFO("events %08x <= %08x\n", events[j].events, args[i].mask);
-	  INFO("reset 0x%08x at %x.%x\n",
-	       args[i].mask,args[i].socket->event_th.id.task,
-	       args[i].socket->event_th.id.lthread);
-#endif
-
+	  LOGdL(DEBUG_SELECT,"events %08x <= %08x", events[j].events, args[i].mask);
+	  LOGdL(DEBUG_SELECT,"reset 0x%08x at %x.%x",
+                args[i].mask,args[i].socket->event_th.id.task,
+                args[i].socket->event_th.id.lthread);
+          
 	  /* reset events */
 	  ret = dsi_event_reset(args[i].socket->event_th,
 				args[i].socket->socket,args[i].mask);
 	  if (ret)
 	    {
-	      Error("DSI: reset events failed: %s (%d)\n",
+	      Error("DSI: reset events failed: %s (%d)",
 		    l4env_errstr(ret),ret);
 	    }
 	  j++;	  

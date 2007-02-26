@@ -5,12 +5,12 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -35,12 +35,13 @@
 class CBEContext;
 class CBETypedDeclarator;
 class CDeclaratorStack;
+class CFEArrayType;
 
 /**	\class CBEStructType
  *	\ingroup backend
  *	\brief the back-end struct type
  */
-class CBEStructType : public CBEType  
+class CBEStructType : public CBEType
 {
 DECLARE_DYNAMIC(CBEStructType);
 // Constructor
@@ -57,6 +58,7 @@ protected:
 	CBEStructType(CBEStructType &src);
 
     virtual void WriteGetMemberSize(CBEFile *pFile, CBETypedDeclarator *pMember, CDeclaratorStack *pStack, CBEContext *pContext);
+    virtual bool CreateBackEndSequence(CFEArrayType *pFEType, CBEContext *pContext);
 
 public:
     virtual void WriteZeroInit(CBEFile *pFile, CBEContext *pContext);
@@ -78,6 +80,9 @@ public:
     virtual void WriteGetSize(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext);
     virtual int GetFixedSize();
     virtual bool IsSimpleType();
+	virtual CBETypedDeclarator* FindMember(String sName);
+	virtual CBETypedDeclarator* FindMemberAttribute(int nAttributeType);
+	virtual CBETypedDeclarator* FindMemberIsAttribute(int nAttributeType, String sAttributeParameter);
 
 protected:
 	/**	\var Vector m_vMembers

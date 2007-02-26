@@ -1,0 +1,34 @@
+/* -*- c -*- */ 
+import <sys/stat.h>
+import <sys/types.h>
+import <fcntl.h>
+import <dirent.h>
+
+import <l4/sys/types.h>
+import <l4/dietlibc/io-types.h>
+
+import "rw.idl"
+
+library io
+{
+    [uuid(50)]
+    interface basic_io : rw
+    {
+        object_handle_t open([in] object_id_t object_id, [in] int flags);
+        int             close([in] object_handle_t object_handle);
+        object_handle_t creat([in] object_id_t parent,
+                              [in, string] char * name,
+                              [in] mode_t mode);
+
+        off_t           lseek([in] object_handle_t fd,
+                              [in] off_t offset,
+                              [in] int whence);
+
+        int             fsync([in] object_handle_t fd);
+
+        int             getdents([in] object_handle_t fd,
+                                 [out, size_is(count), transmit_as(unsigned char),
+                                  ref, prealloc] struct dirent * dirp,
+                                 [in, out] unsigned int * count);
+    };
+};

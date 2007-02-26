@@ -1,0 +1,4 @@
+Simple Task Manager.
+
+This is an implementation of a simple task server implementing the task
+server protocol as defined in the generic_ts package.

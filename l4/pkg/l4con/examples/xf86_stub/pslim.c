@@ -1,3 +1,15 @@
+/*!
+ * \file	con/examples/xf86_stub/pslim.c
+ * \brief	pSLIM interface to console
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
 #include "pslim.h"
 
 #include <l4/sys/syscalls.h>
@@ -269,7 +281,7 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   Gamma gzeros = { 0.0, 0.0, 0.0 };
   rgb rzeros = { 0, 0, 0 };
   int error;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
   l4_uint8_t gmode;
   unsigned bits_per_pixel, bytes_per_pixel, bytes_per_line;
   unsigned xres, yres, fn_x, fn_y;
@@ -303,25 +315,26 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
 	      pSlim->vc_tid.id.task, pSlim->vc_tid.id.lthread);
 
   /* get maximum receive buffer size which was set in dropscon module */
-  if (con_vc_gmode(pSlim->vc_tid, 
-		   &gmode, &sbuf1_size, &sbuf2_size, &sbuf3_size, &exc)
-      || (exc._type != exc_l4_no_exception))
+  if (con_vc_gmode_call(&(pSlim->vc_tid), 
+		   &gmode, &sbuf1_size, &sbuf2_size, &sbuf3_size, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Error determining sbuf_size from console parameters "
-		  "(exc=%d)\n", exc._type);
+		  "(exc=%d, %08x)\n", _env.major, _env.ipc_error);
       return (FALSE);
     }
 
   /* get graphics screen resolution, bpp and Bpp */
-  if (con_vc_graph_gmode(pSlim->vc_tid, &gmode, &xres, &yres, 
+  if (con_vc_graph_gmode_call(&(pSlim->vc_tid), &gmode, &xres, &yres, 
 			&bits_per_pixel, &bytes_per_pixel,
 			&bytes_per_line, &pSlim->accel_flags, 
-			&fn_x, &fn_y, &exc)
-      || (exc._type != exc_l4_no_exception))
+			&fn_x, &fn_y, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		  "Error determining console parameters (exc=%d)\n", exc._type);
+		  "Error determining console parameters (exc=%d, %08x)\n", 
+		  _env.major, _env.ipc_error);
       return (FALSE);
     }
   
@@ -500,7 +513,7 @@ PSLIMMapFB (ScrnInfoPtr pScrn)
   unsigned map_addr;
   l4_uint32_t offset;
   l4_snd_fpage_t snd_fpage;
-  sm_exc_t exc;
+  CORBA_Environment _env = dice_default_environment;
 
   map_addr = (unsigned)(fb_buf+L4_SUPERPAGESIZE-1)&L4_SUPERPAGEMASK;
 
@@ -508,15 +521,16 @@ PSLIMMapFB (ScrnInfoPtr pScrn)
   l4_fpage_unmap(l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE,
 		          L4_FPAGE_RW, L4_FPAGE_MAP),
 		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-  
+ 
+  _env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
   /* map framebuffer from con server */
-  if (con_vc_graph_mapfb(pSlim->vc_tid,
-			 l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0),
-			 &snd_fpage, &offset, &exc)
-      || (exc._type != exc_l4_no_exception))
+  if (con_vc_graph_mapfb_call(&(pSlim->vc_tid),
+			 &snd_fpage, &offset, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		  "Error mapping framebuffer (exc=%d)", exc._type);
+		  "Error mapping framebuffer (exc=%d, %08x)", 
+		  _env.major, _env.ipc_error);
       return (FALSE);
     }
 
@@ -562,7 +576,7 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	  l4_size_t size;
 	  l4dm_dataspace_t ds;
 	  unsigned bpp;
-	  sm_exc_t exc;
+	  CORBA_Environment _env = dice_default_environment;
 
 	  /* where is our default memory dataspace manager */
 	  if (!names_waitfor_name(L4DM_MEMPHYS_NAME, &dm_id, 2000))
@@ -600,12 +614,12 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	      return (FALSE);
 	    }
 
-	  if (con_vc_direct_setfb(pSlim->vc_tid, (con_dataspace_t*)&ds, &exc)
-	      || (exc._type != exc_l4_no_exception))
+	  if (con_vc_direct_setfb_call(&(pSlim->vc_tid), &ds, &_env)
+	      || (_env.major != CORBA_NO_EXCEPTION))
 	    {
 	      xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			 "Can't set framebuffer at console (exc=%d)\n", 
-			 exc._type);
+			 "Can't set framebuffer at console (exc=%d, %08x)\n", 
+			 _env.major, _env.ipc_error);
 	      return (FALSE);
 	    }
 	  
@@ -892,7 +906,7 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
   
   while (nbox--)
     {
-      con_pslim_rect_t rect;
+      l4con_pslim_rect_t rect;
       unsigned stride_width;
       unsigned h, vfbofs;
 
@@ -907,19 +921,16 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 
       while (h--)
 	{
-	  sm_exc_t exc;
-	  l4_strdope_t pmap;
+	  CORBA_Environment _env = dice_default_environment;
 	 
-	  pmap.snd_size = stride_width;
-	  pmap.snd_str  = vfbofs + rect.y*pSlim->maxBytesPerScanline;
-	  pmap.rcv_size = 0;
-      
-	  if (con_vc_pslim_set(pSlim->vc_tid, &rect, pmap, &exc)
-	      || (exc._type != exc_l4_no_exception))
+	  if (con_vc_pslim_set_call(&(pSlim->vc_tid), &rect, 
+		(l4_uint8_t*)(vfbofs + rect.y*pSlim->maxBytesPerScanline), 
+		stride_width, &_env)
+	      || (_env.major != CORBA_NO_EXCEPTION))
 	    {
 	      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-			 "Error updating region at console (exc=%d)\n",
-			 exc._type);
+			 "Error updating region at console (exc=%d, %08x)\n",
+			 _env.major, _env.ipc_error);
 	      return;
 	    }
 	  rect.y++;
@@ -958,8 +969,8 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
   
   while (nbox--)
     {
-      con_pslim_rect_t rect;
-      sm_exc_t exc;
+      l4con_pslim_rect_t rect;
+      CORBA_Environment _env = dice_default_environment;
 
       rect.x = pbox->x1;
       rect.y = pbox->y1;
@@ -967,11 +978,12 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
       rect.h = pbox->y2 - pbox->y1;
       
       /* try to send more than one line */
-      if (con_vc_direct_update(pSlim->vc_tid, &rect, &exc)
-	  || (exc._type != exc_l4_no_exception))
+      if (con_vc_direct_update_call(&(pSlim->vc_tid), &rect, &_env)
+	  || (_env.major != CORBA_NO_EXCEPTION))
 	{
 	  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-	 	     "Error updating region at console (exc=%d)\n", exc._type);
+	 	     "Error updating region at console (exc=%d, %08x)\n", 
+		     _env.major, _env.ipc_error);
 	  return;
 	}
       pbox++;
@@ -1007,16 +1019,17 @@ PSLIMXaaCopy(ScrnInfoPtr pScrn,
 	     int x1, int y1, int x2, int y2, int w, int h)
 {
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
-  con_pslim_rect_t rect = { x1, y1, w, h };
-  sm_exc_t exc;
+  l4con_pslim_rect_t rect = { x1, y1, w, h };
+  CORBA_Environment _env = dice_default_environment;
 
   if (!w || !h)
     return;
 
-  if (con_vc_pslim_copy(pSlim->vc_tid, &rect, x2, y2, &exc)
-      || (exc._type != exc_l4_no_exception))
+  if (con_vc_pslim_copy_call(&(pSlim->vc_tid), &rect, x2, y2, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		"Error copying region at console (exc=%d)\n", exc._type);
+		"Error copying region at console (exc=%d, %08x)\n", 
+		_env.major, _env.ipc_error);
 }
 
 static void
@@ -1032,18 +1045,19 @@ static void
 PSLIMXaaFill(ScrnInfoPtr pScrn, int x, int y, int w, int h)
 {
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
-  con_pslim_rect_t rect = { x, y, w, h };
-  sm_exc_t exc;
+  l4con_pslim_rect_t rect = { x, y, w, h };
+  CORBA_Environment _env = dice_default_environment;
   
   if (!w || !h)
     return;
 
-  if (con_vc_pslim_fill(pSlim->vc_tid, &rect,
-			(con_pslim_color_t)pSlim->SavedFgColor,
-			&exc)
-      || (exc._type != exc_l4_no_exception))
+  if (con_vc_pslim_fill_call(&(pSlim->vc_tid), &rect,
+			(l4con_pslim_color_t)pSlim->SavedFgColor,
+			&_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		"Error filling region at console (exc=%d)\n", exc._type);
+		"Error filling region at console (exc=%d, %08x)\n", 
+		_env.major, _env.ipc_error);
 }
 
 static void

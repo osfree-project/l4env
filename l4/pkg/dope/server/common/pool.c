@@ -1,10 +1,10 @@
 /*
- * \brief	DOpE pool module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   DOpE pool module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  *
  * Pool is the component provider of DOpE.  Each
- * component can register at  Pool by specifying 
+ * component can register at  Pool by specifying
  * an identifier string and a pointer to the its
  * service structure.
  * After that, the component's service structure
@@ -12,14 +12,22 @@
  * associated identifier.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
-#include "dope-config.h"
+#include "dopestd.h"
 
 #define MAX_POOL_ENTRIES 100
 
 struct pool_entry {
-	char	*name;			/* id of system module */
-	void	*structure;		/* system module structure */
+	char    *name;          /* id of system module */
+	void    *structure;     /* system module structure */
 };
 
 static struct pool_entry pool[MAX_POOL_ENTRIES];
@@ -38,12 +46,12 @@ long pool_add(char *name,void *structure) {
 	if (pool_size>=100) return 0;
 	else {
 		for (i=0;pool[i].name!=NULL;i++) {};
-		
+
 		pool[i].name=name;
 		pool[i].structure=structure;
-		
+
 		pool_size++;
-		DOPEDEBUG(printf("Pool(add): %s\n",name));
+		INFO(printf("Pool(add): %s\n",name));
 		return 1;
 	}
 }
@@ -56,24 +64,14 @@ void pool_remove(char *name) {
 	for (i=0;i<100;i++) {
 		s=pool[i].name;
 		if (s!=NULL) {
-			if (strcmp(name,pool[i].name)==0) {
-			 	pool[i].name=NULL;
-			 	pool[i].structure=NULL;
-			 	pool_size--;
-			 	return;
+			if (dope_streq(name,pool[i].name,255)) {
+			    pool[i].name=NULL;
+			    pool[i].structure=NULL;
+			    pool_size--;
+			    return;
 			}
 		}
 	}
-}
-
-
-static int streq(char *s1,char *s2) {
-	int i;
-	for (i=0;i<256;i++) {
-		if (*(s1) != *(s2++)) return 0;
-		if (*(s1++) == 0) return 1;
-	}
-	return 1;
 }
 
 
@@ -84,13 +82,13 @@ void *pool_get(char *name) {
 	for (i=0;i<MAX_POOL_ENTRIES;i++) {
 		s=pool[i].name;
 		if (s!=NULL) {
-			if (streq(name,pool[i].name)) {
-				DOPEDEBUG(printf("Pool(get): module matched: %s\n",name));
-			 	return pool[i].structure;
+			if (dope_streq(name,pool[i].name,255)) {
+				INFO(printf("Pool(get): module matched: %s\n",name));
+			    return pool[i].structure;
 			}
 		}
 	}
 	ERROR(printf("Pool(get): module not found: %s\n",name));
-//	l4_sleep(10000);
+//  l4_sleep(10000);
 	return NULL;
 }

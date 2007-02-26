@@ -6,23 +6,13 @@
  *
  * \date   09/02/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -56,7 +46,7 @@ l4th_tcb_allocate(l4th_tcb_t ** tcb)
   for (i = 0; i < l4thread_max_threads; i++)
     {
       /* try to set internal thread number to index in tcb table */
-      if (cmpxchg16(&l4th_tcbs[i].state,TCB_UNUSED,TCB_SETUP))
+      if (l4util_cmpxchg16(&l4th_tcbs[i].state,TCB_UNUSED,TCB_SETUP))
 	/* found unused tcb */
 	break;
     }
@@ -99,7 +89,7 @@ l4th_tcb_allocate_id(l4thread_t thread, l4th_tcb_t ** tcb)
     return -L4_EINVAL;
 
   /* try to get tcb */
-  if (cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_SETUP))
+  if (l4util_cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_SETUP))
     {
       /* tcb unused */
       l4th_tcbs[thread].id = thread;

@@ -32,15 +32,12 @@ class CL4X0BEReplyAnyWaitAnyFunction : public CL4BEReplyAnyWaitAnyFunction
 DECLARE_DYNAMIC(CL4X0BEReplyAnyWaitAnyFunction);
 
 public:
-  CL4X0BEReplyAnyWaitAnyFunction();
-  ~CL4X0BEReplyAnyWaitAnyFunction();
+	CL4X0BEReplyAnyWaitAnyFunction();
+	~CL4X0BEReplyAnyWaitAnyFunction();
 
 protected:
-    virtual void WriteAsmLongFpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmLongIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmShortFpageIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteAsmShortIPC(CBEFile *pFile, CBEContext *pContext);
-    virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

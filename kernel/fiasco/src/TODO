@@ -1,0 +1,8 @@
+- Prevent that Fiasco maps all physical memory to be able to support more than
+  256MB RAM.
+- Enhance the mapping database to support I/O flexpages for x86.
+- Enhance the mapping database to support Memory-Mapped flexpages.
+- Add scatter/gather as defined in the X.0 specification.
+- Replace fixed addresses of TCBs with e.g. a slab allocator and a hash table
+  for mapping threadid -> TCB
+- Simplify IPC path by reducing the number of possible states

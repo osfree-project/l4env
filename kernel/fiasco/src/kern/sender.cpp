@@ -17,15 +17,12 @@ public:
 private:
   // DATA
 
-  /* offset */
-  /*  0 */   L4_uid _id;
-  /*  8 */   Receiver*   _send_partner;
-  /*  C */   Sender*     sender_next, * sender_prev;
-
-  /* 14 */   // pointer to virtual function table
+  L4_uid _id;
+  Receiver*   _send_partner;
+  Sender*     sender_next, * sender_prev;
 
   friend class Jdb;
-  friend class jdb_thread_list;
+  friend class Jdb_thread_list;
 };
 
 IMPLEMENTATION:

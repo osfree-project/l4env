@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,6 +26,7 @@
  */
 
 #include "fe/FEConditionalExpression.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFEConditionalExpression) 
 
@@ -72,8 +73,11 @@ long CFEConditionalExpression::GetIntValue()
  */
 bool CFEConditionalExpression::IsOfType(TYPESPEC_TYPE nType)
 {
-    return (GetCondition()->IsOfType(TYPE_BOOLEAN) || GetCondition()->IsOfType(TYPE_INTEGER))
-	&& (GetOperand()->IsOfType(nType) && GetOperand2()->IsOfType(nType));
+    return (GetCondition()->IsOfType(TYPE_BOOLEAN)
+	    || GetCondition()->IsOfType(TYPE_INTEGER)
+		|| GetCondition()->IsOfType(TYPE_LONG))
+    	&& (GetOperand()->IsOfType(nType)
+		&& GetOperand2()->IsOfType(nType));
 }
 
 /** returns the condition expression
@@ -120,3 +124,27 @@ void CFEConditionalExpression::Serialize(CFile * pFile)
 	  pFile->PrintIndent("</conditional_expression>\n");
       }
 }
+
+/** \brief print the object to a string
+ *  \return a string with the content of the object
+ */
+String CFEConditionalExpression::ToString()
+{
+    String ret;
+	if (GetCondition())
+	    ret += GetCondition()->ToString();
+	else
+	    ret += "(no condition)";
+	ret += "?";
+	if (GetOperand())
+	    ret += GetOperand()->ToString();
+	else
+	    ret += "(no 1st operand)";
+	ret += ":";
+	if (GetOperand2())
+	    ret += GetOperand2()->ToString();
+	else
+	    ret += "(no 2nd operand)";
+	return ret;
+}
+

@@ -6,23 +6,13 @@
  *
  * \date   11/21/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* standard includes */
 #include <string.h>
@@ -82,9 +72,7 @@ __hash_find_ds(l4_uint32_t id)
   int hash_idx = HASH_IDX(id);
   dsmlib_ds_desc_t * tmp;
 
-#if DEBUG_HASH
-  INFO("id = %u, hash_idx = %d\n",id,hash_idx);
-#endif
+  LOGdL(DEBUG_HASH,"id = %u, hash_idx = %d",id,hash_idx);
 
   tmp = dataspaces[hash_idx];
   while ((tmp != NULL) && (tmp->id < id))
@@ -256,9 +244,7 @@ __find_id(l4_uint32_t * id)
   if (i == last_id)
     return -1;
 
-#if DEBUG_DS_ID
-  INFO("using id %u\n",i);
-#endif
+  LOGdL(DEBUG_DS_ID,"using id %u",i);
 
   *id = i;
   last_id = i;
@@ -590,17 +576,17 @@ dsmlib_show_ds_hash(void)
   int i;
   dsmlib_ds_desc_t * d;
 
-  Msg("Dataspace hash table:\n");
+  printf("Dataspace hash table:\n");
   for (i = 0; i < DSMLIB_DS_HASH; i++)
     {
-      Msg("  Hash idx %d:\n   ",i);
+      printf("  Hash idx %d:\n   ",i);
       d = dataspaces[i];
       while (d != NULL)
 	{
-	  Msg(" %2u",d->id);
+	  printf(" %2u",d->id);
 	  d = d->next;
 	}
-      Msg("\n");
+      printf("\n");
     } 
 }
 
@@ -614,12 +600,12 @@ dsmlib_list_ds(void)
 {
   dsmlib_ds_desc_t * d; 
 
-  Msg("Dataspace list:");
+  printf("Dataspace list:");
   d = ds_list;
   while (d != NULL)
     {
-      Msg(" %2u",d->id);
+      printf(" %2u",d->id);
       d = d->ds_next;
     }
-  Msg("\n");
+  printf("\n");
 }

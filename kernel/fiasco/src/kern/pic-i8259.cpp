@@ -1,5 +1,7 @@
 INTERFACE:
 
+#include "initcalls.h"
+
 EXTENSION class Pic
 {
 public:
@@ -177,7 +179,7 @@ static FIASCO_INIT bool detect_vmware()
 //   this way, the timer interrupt on irq 8 always gets thru (even if 
 //   some user irq handler doesn't acknowledge its irq!)
 //
-static void
+static FIASCO_INIT void
 Pic::pic_init(unsigned char master_base, unsigned char slave_base)
 {
 

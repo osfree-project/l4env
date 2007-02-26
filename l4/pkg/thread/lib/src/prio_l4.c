@@ -7,25 +7,15 @@
  * \date   09/04/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
- *
  * \todo Right now the L4env has no global idea of priorities, applications
  *       use absolute L4 priorities. Fix this?!
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4env includes */
 #include <l4/sys/types.h>
@@ -68,9 +58,7 @@ l4th_prio_init(void)
       l4thread_default_prio = p.sp.prio;
     }
 
-#if DEBUG_PRIO_INIT
-  INFO("default prio = %d\n",l4thread_default_prio);
-#endif
+  LOGdL(DEBUG_PRIO_INIT,"default prio = %d",l4thread_default_prio);
 
   /* done */
   return 0;

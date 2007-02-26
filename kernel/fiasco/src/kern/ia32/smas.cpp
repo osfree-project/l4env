@@ -1,7 +1,6 @@
 INTERFACE:
 
 #include "space_context.h"
-#include "config.h"
 
 class Smas;
 
@@ -31,29 +30,45 @@ IMPLEMENTATION:
 #include <cstdio>
 #include <cassert>
 
+#include "config.h"
 #include "context.h"
 #include "cpu_lock.h"
 #include "globals.h"
+#include "lock_guard.h"
 #include "kdb_ke.h"
 #include "kmem.h"
 #include "space.h"
 #include "panic.h"
+#include "vmem_alloc.h"
 
 
+extern "C" char tramp_small_after_sysexit_func;
+extern "C" char tramp_small_end;
 
 /** Constructor.
  */
 PUBLIC
-Smas::Smas () {
+Smas::Smas () 
+{
   _space_count = -1;
   _available_size = ((Kmem::smas_end - Kmem::smas_start) 
 	                                     >> PDESHIFT) & PDEMASK;
   if (_available_size > 128 )
 	  panic("Too much space for small address spaces.");
 
-  for (int i=0; i < 128; i++ ) {
-	 spaces[i] = 0;
-  }
+  for (int i=0; i < 128; i++ ) 
+    {
+      spaces[i] = 0;
+    }
+
+  if (! Vmem_alloc::page_alloc((void*)Kmem::smas_trampoline, 0,
+			       Vmem_alloc::NO_ZERO_FILL, Page::USER_RO))
+    panic("Cannot allocate trampoline page for smas");
+
+  // copy the code (position independant) to the trampoline page
+  memcpy((void*)Kmem::smas_trampoline, 
+         (const void*)&tramp_small_after_sysexit_func, 
+	 &tramp_small_end - &tramp_small_after_sysexit_func);
 }
 
 /** Translate a linear address to one in a small space.
@@ -67,10 +82,10 @@ Smas::Smas () {
  * @return true, if the address belongs to a small space and it is
  *         occupied.
  */
-PUBLIC inline
-bool Smas::linear_to_small( vm_offset_t linearaddr,
+PUBLIC inline NEEDS ["config.h", "kmem.h"]
+bool Smas::linear_to_small( Address linearaddr,
                              Space_context** space,
-                             vm_offset_t* smalladdr )
+                             Address* smalladdr )
 {
   // bounds checking
   if ( linearaddr < Kmem::smas_start || linearaddr >= Kmem::smas_end
@@ -96,7 +111,7 @@ bool Smas::linear_to_small( vm_offset_t linearaddr,
 /** Lookup space in table.
  * 
  */ 
-PRIVATE inline
+PRIVATE inline NEEDS ["kmem.h"]
 int Smas::lookup( Space_context* space ) const
 {
   //calculate expected position from spaces data segment
@@ -107,7 +122,7 @@ int Smas::lookup( Space_context* space ) const
   unsigned index = ((sbase - Kmem::smas_start) >> PDESHIFT) & PDEMASK;
 
   //now check if it is where expected in the table 
-  assert(index < _available_size & spaces[index] == space);
+  assert(index < _available_size && spaces[index] == space);
 
   return index;
 }
@@ -124,24 +139,21 @@ void Smas::move( Space_context* space, int index )
   //silently ignore requests out of bounds
   if ( index > _space_count ) return;
 
-  bool was_locked = cpu_lock.test_and_set();
+  Lock_guard<Cpu_lock> guard (&cpu_lock);
 
   int old_space = lookup( space );
   int new_space = (index == 0)?(-1):((index - 1) * _space_size);
 
   //already there?
   if ( old_space == new_space ) {
-    cpu_lock.set( was_locked );
     return;
   }
   
   // already occupied?
   if (new_space >= 0 ) {
     for (int i = new_space; i < new_space + _space_size; i++) {
-  	    if (spaces[i] != 0) {
-			 cpu_lock.set( was_locked );
+  	    if (spaces[i] != 0) 
 			 return;
-		 }
     }
   }
 
@@ -149,7 +161,7 @@ void Smas::move( Space_context* space, int index )
 
   //Move out:
   if ( old_space >= 0 ) {
-    vm_offset_t base;
+    Address base;
     int i;
     for (i = old_space, base = space->small_space_base(); 
 	   i < old_space + _space_size; 
@@ -162,7 +174,7 @@ void Smas::move( Space_context* space, int index )
   
   //move in entry
   if ( index > 0 ) {
-    vm_offset_t baseaddr = Kmem::smas_start + (new_space << Config::SUPERPAGE_SHIFT);
+    Address baseaddr = Kmem::smas_start + (new_space << Config::SUPERPAGE_SHIFT);
     space->set_small_space( baseaddr,  _space_size << Config::SUPERPAGE_SHIFT );
     for (int i = new_space; i < new_space + _space_size; i++) {
       spaces[i] = space;
@@ -174,8 +186,8 @@ void Smas::move( Space_context* space, int index )
       space->switchin_context();
     }
   }
-  
- cpu_lock.set( was_locked );
+
+  asm volatile("" : : : "memory");
 
 #if 0
  printf ("KERN: Space movement from %u to %u successful.\n",

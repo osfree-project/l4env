@@ -6,23 +6,13 @@
  *
  * \date   22/11/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -66,9 +56,8 @@ __resize(dmphys_dataspace_t * ds,
   if (new_size == 0)
     {
       /* close dataspace */
-#if DEBUG_RESIZE
-      INFO("new_size 0, close dataspace\n");
-#endif
+      LOGdL(DEBUG_RESIZE,"new_size 0, close dataspace");
+
       ret = dmphys_close(ds);
       if (ret < 0)
 	{
@@ -83,9 +72,7 @@ __resize(dmphys_dataspace_t * ds,
       pages = dmphys_ds_get_pages(ds);
       pool = dmphys_ds_get_pool(ds);
 
-#if DEBUG_RESIZE
-      INFO("size new 0x%x, old 0x%x\n",new_size,old_size);
-#endif	  
+      LOGdL(DEBUG_RESIZE,"size new 0x%x, old 0x%x",new_size,old_size);
 
       if (new_size > old_size)
 	{
@@ -97,7 +84,7 @@ __resize(dmphys_dataspace_t * ds,
 	    {
 	      /* phys. contiguous dataspace, try to enlarge page area */
 #if DEBUG_RESIZE
-	      DMSG("  contiguous ds, enlarge page area by 0x%x\n",add);
+	      printf("  contiguous ds, enlarge page area by 0x%x\n",add);
 #endif
 	      ret = dmphys_pages_enlarge(pool,pages,add,PAGES_USER);
 	      if (ret < 0)
@@ -109,7 +96,7 @@ __resize(dmphys_dataspace_t * ds,
 	  else
 	    {
 #if DEBUG_RESIZE
-	      DMSG("  allocate new page areas, size 0x%x\n",add);
+	      printf("  allocate new page areas, size 0x%x\n",add);
 #endif
 	      ret = dmphys_pages_add(pool,pages,add,PAGES_USER);
 	      if (ret < 0)
@@ -123,7 +110,7 @@ __resize(dmphys_dataspace_t * ds,
 	{
 	  /* shrink dataspace */
 #if DEBUG_RESIZE
-	  DMSG("  shrink dataspace page area list\n");
+	  printf("  shrink dataspace page area list\n");
 #endif
 	  ret = dmphys_pages_shrink(pool,pages,new_size);
 	  if (ret < 0)
@@ -198,30 +185,28 @@ dmphys_resize(dmphys_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_resize(sm_request_t * request, 
-			      l4_uint32_t ds_id, 
-			      l4_uint32_t new_size, 
-			      sm_exc_t * _ev)
+if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
+                             l4_uint32_t ds_id,
+                             l4_uint32_t new_size,
+                             CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   
-#if DEBUG_RESIZE
-  INFO("ds %u, caller %x.%x\n",ds_id,caller.id.task,caller.id.lthread);
-#endif
+  LOGdL(DEBUG_RESIZE,"ds %u, caller %x.%x",
+        ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
 
   /* get dataspace descriptor, check if caller owns the dataspace */
-  ret = dmphys_ds_get_check_rights(ds_id,caller,L4DM_RESIZE,&ds);
+  ret = dmphys_ds_get_check_rights(ds_id,*_dice_corba_obj,L4DM_RESIZE,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id %u, caller %x.%x",ds_id,
-	      caller.id.task,caller.id.lthread);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	ERROR("DMphys: client %x.%x  is not allowed to resize ds %u",
-	      caller.id.task,caller.id.lthread,ds_id);
+	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
 #endif      
       return ret;
     }

@@ -25,7 +25,6 @@ drivers make instant use of PCI specific macros/functions. I think many of the
 structs has to be kept in io and the driver server... we'll see.
 
 \todo What about more than 1 PCI bus?
-\todo UGLY: ##ifdef ... ##endif removed code in Linux .c files
 
 */
 

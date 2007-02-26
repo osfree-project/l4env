@@ -6,23 +6,14 @@
  *
  * \date   11/12/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #ifndef _L4_DM_GENERIC_TYPES_H
 #define _L4_DM_GENERIC_TYPES_H
 
@@ -36,7 +27,7 @@
 
 /**
  * L4 dataspace id
- * \ingroup types
+ * \ingroup api_types
  */
 typedef struct l4dm_dataspace
 {
@@ -46,16 +37,16 @@ typedef struct l4dm_dataspace
 
 /**
  * Invalid dataspace id initializer
- * \ingroup types
+ * \ingroup api_types
  */
 #define L4DM_INVALID_DATASPACE_INITIALIZER  { (l4_uint32_t)-1, L4_INVALID_ID}
-  
+
 /**
  * Invalid dataspace id
- * \ingroup types
+ * \ingroup api_types
  */
 #define L4DM_INVALID_DATASPACE \
-		((l4dm_dataspace_t)L4DM_INVALID_DATASPACE_INITIALIZER)
+               ((l4dm_dataspace_t)L4DM_INVALID_DATASPACE_INITIALIZER)
 
 /*****************************************************************************
  *** prototypes
@@ -65,13 +56,13 @@ __BEGIN_DECLS;
 
 /*****************************************************************************/
 /**
- * \brief Test dataspace ids
- * \ingroup types
+ * \brief   Test dataspace ids
+ * \ingroup api_types
  *	
- * \param  ds1           First dataspace id
- * \param  ds2           Second dataspaces id
+ * \param   ds1          First dataspace id
+ * \param   ds2          Second dataspaces id
  *
- * \return 1 if dataspaces ids are equal, 0 otherwise.
+ * \return  1 if dataspaces ids are equal, 0 otherwise.
  */
 /*****************************************************************************/ 
 L4_INLINE int
@@ -80,12 +71,12 @@ l4dm_dataspace_equal(l4dm_dataspace_t ds1,
 
 /*****************************************************************************/
 /**
- * \brief  Test dataspace id
- * \ingroup types
+ * \brief   Test dataspace id
+ * \ingroup api_types
  * 
- * \param  ds            Dataspace id
+ * \param   ds           Dataspace id
  *	 
- * \return != 0 if ds is invalid dataspace descriptor, 0 if not
+ * \return  != 0 if ds is invalid dataspace descriptor, 0 if not
  */
 /*****************************************************************************/ 
 L4_INLINE int

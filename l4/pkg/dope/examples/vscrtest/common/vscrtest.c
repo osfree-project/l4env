@@ -8,6 +8,15 @@
  * graphical effects that run at a constant frame rate.
  */
 
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
 #include <stdio.h>
 
 /*** DOpE includes ***/
@@ -23,11 +32,11 @@
 
 #define NUM_EFX 4
 
-static struct efxwin_struct {
+static struct efxwin {
 	char *win_name;             /* name of the corresponding window widget */
 	char *but_text;             /* text of the associated button */
 	int flag;                   /* window flag closed (0) or open (1) */
-	void (*init)(void);         /* effect initialisation routine */
+	int  (*init)(void);         /* effect initialisation routine */
 	void (*exec)(int);          /* effect execution routine */
 } efxwin[NUM_EFX] = {
 	{"voxwin",  "Landscape",  0, voxel_init,    voxel_exec},

@@ -1,0 +1,5 @@
+L4Env  Phys. Dataspace Manager
+
+This package contains the L4Env Phys. Dataspace Manager DMphys. DMphys
+manages the phys. memory of the system. For further documentation see
+the reference manual in dm_phys/doc.

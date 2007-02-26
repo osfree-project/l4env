@@ -1,0 +1,205 @@
+/*
+ * This interface tests the usage of complex types
+ */
+
+typedef struct
+{
+  int a;
+  int b;
+  float c;
+} struct_A_t;
+
+interface i_struct
+{
+  /*
+   * This function sends the structure to the server.
+   */
+  void func1([in] struct_A_t ts11);
+  /*
+   * This function waits for a structure, which the server fills
+   */
+  void func2([out] struct_A_t *ts21);
+  /*
+   * Or we send a structure and wait for a changed response
+   */
+  void func3([in,out] struct_A_t *ts31);
+  /*
+   * Or we simple use the struct as return value
+   */
+  struct_A_t func4();
+};
+
+typedef struct
+{
+  unsigned long a;
+  union union_B_t {
+      int u1;
+      float u2;
+      /* this struct is 33 bits -> 5 bytes big */
+      struct {
+	  int c1:1;
+	  int c2:1;
+	  int c3:1;
+	  int c4:2;
+	  int c5:24;
+	  int c6:4;
+      } u3;
+  } b;
+} struct_B_t;
+
+/*
+ * An IDL style union has a switch variable which determines
+ * which of the members is in use and needs to be transmitted.
+ * This switch varible appears inside the 'switch' statement 
+ * at the top of the union.
+ * The union itself contains case branches, which determine
+ * the respective member. The branches may be determined by
+ * any kind of expression, which has the type of the switch
+ * variable. 
+ * The switch variable is later used in a "real" switch
+ * statement to determine the member to marshal. Therefore its
+ * type should be a type which can be used in a C switch 
+ * statement as well.
+ * One of the branches may also be the default branch, which is
+ * declared using the 'default' keyword.
+ * An IDL-style union will result in a C struct, which consists
+ * of an switch variable member and the union.
+ */
+typedef union switch(long sw_t1)
+{
+case 1: 
+  int su1;
+case 2: 
+  long su2;
+case 3:
+case 4:
+  float su3;
+} union_C_t;
+
+interface i_union
+{
+  /*
+   * These function test the usage of the C style union
+   */
+  void func1([in] struct_B_t tu11);
+  void func2([out] struct_B_t *tu21);
+  void func3([in,out] struct_B_t *tu31);
+  /*
+   * And these the usage of the IDL style union
+   */
+  void func4([in] union_C_t tu41);
+  void func5([out] union_C_t *tu51);
+  void func6([in,out] union_C_t *tu61);
+};
+
+
+/*
+ * These interfaces use structs, which are defined in the
+ * imported C header file.
+ */
+
+import "types.h"
+
+interface i1
+{
+  void f1([in] struct A t1);
+  void f2([out] struct A *t1);
+  void f3([in, out] struct A *t1);
+};
+
+interface i2
+{
+  void f1([in] struct B t1);
+  void f2([out] struct B *t1);
+  void f3([in, out] struct B *t1);
+};
+
+
+/*
+ * This interface uses structs which are declared without
+ * a typedef.
+ */
+
+/*
+ * A globally declared struct. It's name in C will be
+ * the same as the name here.
+ */
+struct wo_strA
+{
+  long a;
+  long b;
+};
+
+library wo_typedef
+{
+  /*
+   * A struct declared in the scope of a library. It's name in
+   * C will be a concatenation of the library's name and the
+   * structs name. In C++ it will be declared in the namespace
+   * defined by the library.
+   */
+  struct wo_strB
+    {
+      long a;
+      long b;
+    };
+  
+  interface use_struct
+    {
+  
+      /*
+       * A struct declared in the scope of an interface. It's
+       * name will be concatenated from the library's name, the
+       * interface's name and the struct's name.
+       * In C++ it will be declared in the scope of the class
+       * defined by the interface.
+       */
+      struct wo_strC
+	{
+	  long a;
+	  long b;
+	};
+
+      /*
+       * When using the structs as parameter types, you use the
+       * names of the declarations in the IDL file. Dice will
+       * automatically replace those with the correct names in
+       * C or C++.
+       */
+      void foo([in] struct wo_strA s1);
+      void bar([in] struct wo_strB s1);
+      void done([in] struct wo_strC s1);
+    };
+};
+
+/*
+ * define a new type, which is transmitted as long
+ */
+typedef [transmit_as(long)] float float_as_long;
+
+/*
+ * This interface shows how the attribute 
+ * [transmit_as] is used.
+ */
+interface transmit
+{
+  union uA
+  {
+    long a;
+    short b;
+  };
+
+  /*
+   * This does not conform to the DCE specification, but
+   * with Dice you may use the [transmit_as] attribute
+   * directly with the parameter.
+   */
+  void foo([in, transmit_as(long)] union uA a);
+
+  /*
+   * This function uses the aliased type, which is transmitted
+   * as long.
+   */
+  void bar([in] float_as_long a);
+};
+

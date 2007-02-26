@@ -14,10 +14,10 @@ irq_enable (unsigned)
 
 PUBLIC inline
 void 
-irq_t::maybe_enable()
+Irq::maybe_enable()
 {}
 
 PUBLIC inline
 void 
-irq_t::maybe_acknowledge()
+Irq::maybe_acknowledge()
 {}

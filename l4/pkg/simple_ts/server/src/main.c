@@ -15,13 +15,11 @@
 #include <l4/names/libnames.h>
 #include <l4/generic_ts/generic_ts-server.h>
 #include <l4/util/getopt.h>
+#include <l4/util/bitops.h>
 
 /* other includes */
 #include <stdio.h>
 #include <stdlib.h>
-
-/* private includes */
-#include "bitops.h"
 
 #ifdef L4API_l4x0
 #define TASK_CNT_MAX	256
@@ -87,7 +85,7 @@ task_alloc(l4_threadid_t *caller, unsigned int wish)
   if (wish != 0xffffffff)
     {
       n = wish - taskno_min;
-      if (!test_and_set_bit(n, task_used))
+      if (!l4util_test_and_set_bit(n, task_used))
 	{
 	  task_owner[n] = *caller;
 	  return n + taskno_min;
@@ -99,10 +97,10 @@ task_alloc(l4_threadid_t *caller, unsigned int wish)
       /* return any free task number */
       do 
 	{
-	  if ((n = find_first_zero_bit(task_used, task_cnt)) >= task_cnt)
+	  if ((n = l4util_find_first_zero_bit(task_used, task_cnt)) >= task_cnt)
 	    /* no free task found */
 	    return -L4_ENOTASK;
-	} while (test_and_set_bit(n, task_used));
+	} while (l4util_test_and_set_bit(n, task_used));
       task_owner[n] = *caller;
       return n + taskno_min;
     }
@@ -116,7 +114,7 @@ task_get_owner(int n)
   if (n<0 || n>=task_cnt)
     /* invalid task no */
     return L4_NIL_ID;
-  if (!test_bit(n, task_used))
+  if (!l4util_test_bit(n, task_used))
     /* task not used */
     return L4_NIL_ID;
 
@@ -131,7 +129,7 @@ task_free(l4_threadid_t *caller, int n)
   if (n<0 || n>=task_cnt)
     /* invalid task no */
     return -L4_ENOTFOUND;
-  if (!test_and_clear_bit(n, task_used))
+  if (!l4util_test_and_clear_bit(n, task_used))
     /* task not used */
     return -L4_ENOTFOUND;
   if (!l4_task_equal(task_owner[n], *caller))
@@ -180,7 +178,7 @@ task_init(void)
 					    };
       if ((error = rmgr_get_task(taskno)))
 	/* no permission for task, mark as used */
-	set_bit(i, task_used);
+	l4util_set_bit(i, task_used);
       else
 	{
 	  /* this is a valid task number; however, as we create tasks
@@ -199,20 +197,22 @@ task_init(void)
  * \retval taskid	Task ID of new task
  * \return		0 on success 
  * 			-L4_ENOTASK if no task is available */
-l4_int32_t l4_ts_server_allocate(sm_request_t *request,
-			      l4_ts_taskid_t *taskid, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_allocate_component(CORBA_Object _dice_corba_obj,
+			 l4_taskid_t *taskid,
+			 CORBA_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t *tid;
 
   /* allocate new task number */
-  if ((ret = task_alloc(&request->client_tid, 0xffffffff)) < 0)
+  if ((ret = task_alloc(_dice_corba_obj, 0xffffffff)) < 0)
     return ret;
 
   tid = task_id + ret - taskno_min;
   tid->id.version_low++;
 
-  *taskid = *((l4_ts_taskid_t*)tid);
+  *taskid = *tid;
   return 0;
 }
 
@@ -224,12 +224,14 @@ l4_int32_t l4_ts_server_allocate(sm_request_t *request,
  * 			-L4_ENOTFOUND if task doesn't exist
  * 			-L4_ENOTOWNER if caller isn't the owner
  */
-l4_int32_t l4_ts_server_free(sm_request_t *request,
-			   const l4_ts_taskid_t *taskid, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_free_component(CORBA_Object _dice_corba_obj,
+		     const l4_taskid_t *taskid,
+		     CORBA_Environment *_dice_corba_env)
 {
-  l4_threadid_t tid = *(l4_threadid_t *)taskid;
+  l4_threadid_t tid = *taskid;
 
-  return task_free(&request->client_tid, tid.id.task);
+  return task_free(_dice_corba_obj, tid.id.task);
 }
 
 
@@ -242,24 +244,30 @@ l4_int32_t l4_ts_server_free(sm_request_t *request,
  * \retval taskid	Task ID of new task
  * \return		0 on success 
  * 			-L4_ENOTASK if no task is available */
-l4_int32_t l4_ts_server_create(sm_request_t *request, l4_ts_taskid_t *taskid,
-			       l4_uint32_t entry, l4_uint32_t stack, 
-			       l4_uint32_t mcp, const l4_ts_taskid_t *pager, 
-			       l4_int32_t prio, const char *resname, 
-			       l4_uint32_t flags, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_create_component(CORBA_Object _dice_corba_obj,
+		       l4_taskid_t *taskid,
+		       l4_uint32_t entry,
+		       l4_uint32_t stack,
+		       l4_uint32_t mcp,
+		       const l4_taskid_t *pager,
+		       l4_int32_t prio,
+		       const char* resname,
+		       l4_uint32_t flags,
+		       CORBA_Environment *_dice_corba_env)
 {
-  l4_threadid_t tid = *((l4_threadid_t*)taskid);
+  l4_threadid_t tid = *taskid;
 
   if (  /* check if task is owned by client */
-        !(l4_task_equal(task_get_owner(tid.id.task), request->client_tid)) 
+        !(l4_task_equal(task_get_owner(tid.id.task), *_dice_corba_obj)) 
 	/* check if same task number as returned by task_allocate */
       ||!(l4_thread_equal(tid, task_id[tid.id.task-taskno_min]))
       )
     {
-      printf("task: %x, client: %x.%x, owner: %x.%x\n",
+      printf("ERROR: task #%x doesn't match: client: %x.%02x, owner: %x.%02x\n",
 	  tid.id.task,
-	  request->client_tid.id.task,
-	  request->client_tid.id.lthread,
+	  _dice_corba_obj->id.task,
+	  _dice_corba_obj->id.lthread,
 	  task_get_owner(tid.id.task).id.task,
 	  task_get_owner(tid.id.task).id.lthread);
       return -L4_EINVAL;
@@ -280,7 +288,7 @@ l4_int32_t l4_ts_server_create(sm_request_t *request, l4_ts_taskid_t *taskid,
 
   task_set_prio(&tid, prio);
 
-  *taskid = *((l4_ts_taskid_t*)&tid);
+  *taskid = tid;
   return 0;
 }
 
@@ -290,15 +298,17 @@ l4_int32_t l4_ts_server_create(sm_request_t *request, l4_ts_taskid_t *taskid,
  * \return		0 on success
  *			-L4_ENOTOWNER if not owner of that task number
  *			-L4_ENOTFOUND if task number was not found */
-l4_int32_t l4_ts_server_delete(sm_request_t *request, 
-			     const l4_ts_taskid_t *taskid, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_delete_component(CORBA_Object _dice_corba_obj,
+		       const l4_taskid_t *taskid,
+		       CORBA_Environment *_dice_corba_env)
 {
   int task;
-  l4_threadid_t tid = *(l4_threadid_t*)taskid;
+  l4_threadid_t tid = *taskid;
 
   task = tid.id.task;
-  tid = request->client_tid;
-  tid.id.chief = request->client_tid.id.task;
+  tid = *_dice_corba_obj;
+  tid.id.chief = _dice_corba_obj->id.task;
   tid.id.task = task;
 
   /* delete task (make inactive), return L4 task right back to RMGR */
@@ -310,34 +320,35 @@ l4_int32_t l4_ts_server_delete(sm_request_t *request,
 /** Free all tasks the caller owns
  * \param request	Flick request structure
  * \return		0 on success */
-l4_int32_t l4_ts_server_delete_all(sm_request_t *request, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_delete_all_component(CORBA_Object _dice_corba_obj,
+    CORBA_Environment *_dice_corba_env)
 {
-  return task_free_all(&request->client_tid);
+  return task_free_all(_dice_corba_obj);
 }
 
 /** transmit right to create a task to the caller */
-l4_int32_t l4_ts_server_get_task(sm_request_t *request, 
-			       l4_uint32_t taskno, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_get_task_component(CORBA_Object _dice_corba_obj,
+    l4_uint32_t taskno,
+    CORBA_Environment *_dice_corba_env)
 {
-  return task_alloc(&request->client_tid, taskno);
+  return task_alloc(_dice_corba_obj, taskno);
 }
 
 /** transmit right to create a task back to the server */
-l4_int32_t l4_ts_server_free_task(sm_request_t *request, 
-				l4_uint32_t taskno, sm_exc_t *_ev)
+l4_int32_t 
+l4_ts_free_task_component(CORBA_Object _dice_corba_obj,
+    l4_uint32_t taskno,
+    CORBA_Environment *_dice_corba_env)
 {
-  return task_free(&request->client_tid, taskno);
+  return task_free(_dice_corba_obj, taskno);
 }
 
 /** Main function, server loop. */
 int
 main(int argc, char **argv)
 {
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-  int ret;
-
   /* init log lib */
   LOG_init("smpl_ts");
 
@@ -362,37 +373,7 @@ main(int argc, char **argv)
     }
 
   /* server loop */
-  flick_init_request(&request, &ipc_buf);
-  for (;;)
-    {
-      result = flick_server_wait(&request);
-
-      while (!L4_IPC_IS_ERROR(result))
-	{
-#if DEBUG_REQUEST
-	  printf("request 0x%08x, src %x.%x\n",ipc_buf.buffer[0],
-	         request.client_tid.id.task,request.client_tid.id.lthread);
-#endif
-
-	  /* dispatch request */
-	  ret = l4_ts_server(&request);
-	  switch(ret)
-	    {
-	    case DISPATCH_ACK_SEND:
-	      /* reply and wait for next request */
-	      result = flick_server_reply_and_wait(&request);
-	      break;
-	      
-	    default:
-	      printf("Flick dispatch error (%d)!\n",ret);
-	      
-	      /* wait for next request */
-	      result = flick_server_wait(&request);
-	      break;
-	    }
-	}
-      printf("Flick IPC error (0x%08x)!\n",result.msgdope);
-    }
+  l4_ts_server_loop(NULL);
 
   return 0;
 }

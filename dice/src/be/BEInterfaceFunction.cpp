@@ -5,7 +5,7 @@
  *	\date	01/14/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -32,7 +32,7 @@
 #include "be/BERoot.h"
 
 #include "fe/FEInterface.h"
-#include "fe/FETypeSpec.h"
+#include "TypeSpec-Type.h"
 #include "fe/FEStringAttribute.h"
 
 IMPLEMENT_DYNAMIC(CBEInterfaceFunction);
@@ -68,11 +68,11 @@ bool CBEInterfaceFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext
     CBEFunction::CreateBackEnd(pContext);
     // search for our interface
     CBERoot *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     m_pClass = pRoot->FindClass(pFEInterface->GetName());
-    ASSERT(m_pClass);
+    assert(m_pClass);
     // should be parent
-    ASSERT(m_pClass == m_pParent);
+    assert(m_pClass == m_pParent);
     // set return type
     if (!SetReturnVar(false, 0, TYPE_VOID, String(), pContext))
     {

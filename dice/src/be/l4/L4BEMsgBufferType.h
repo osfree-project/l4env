@@ -5,7 +5,7 @@
  *	\date	02/13/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -32,8 +32,6 @@
 #include "be/BEMsgBufferType.h"
 #include "Vector.h"
 
-//#include "fe/FETypeSpec.h"
-
 /** \def TYPE_MSGDOPE_SIZE
  *  \brief imitates a new type
  *
@@ -54,7 +52,7 @@ class CFEInterface;
  *	\ingroup backend
  *	\brief the back-end struct type
  */
-class CL4BEMsgBufferType : public CBEMsgBufferType  
+class CL4BEMsgBufferType : public CBEMsgBufferType
 {
 DECLARE_DYNAMIC(CL4BEMsgBufferType);
 // Constructor
@@ -74,17 +72,22 @@ public: // Public methods
     virtual void WriteReceiveFlexpageInitialization(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteReceiveIndirectStringInitialization(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual void WriteMemberAccess(CBEFile * pFile, int nMemberType, CBEContext * pContext);
-    virtual void WriteSendDopeInit(CBEFile *pFile, int nSendDirection, CBEContext *pContext);
+    virtual void WriteMemberAccess(CBEFile * pFile, int nMemberType, CBEContext * pContext, String sOffset = String());
+    virtual void WriteSendDopeInit(CBEFile *pFile, int nSendDirection, bool bHasSizeIsParams, CBEContext *pContext);
     virtual void WriteSendDopeInit(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteSizeDopeInit(CBEFile *pFile, CBEContext *pContext);
-    virtual bool IsShortIPC(int nDirection, CBEContext *pContext);
+    virtual bool IsShortIPC(int nDirection, CBEContext *pContext, int nWords = 0);
     virtual void InitCounts(CBEFunction * pFunction, CBEContext *pContext);
     virtual void InitCounts(CBEClass * pClass, CBEContext *pContext);
     virtual void WriteReceiveIndirectStringSetZero(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteSizeOfPayload(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteSizeOfBytes(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteSizeOfRefStrings(CBEFile *pFile, CBEContext *pContext);
+	virtual void WriteDump(CBEFile *pFile, String sResult, CBEContext *pContext);
+	virtual void WriteSetZero(CBEFile *pFile, CBEContext *pContext);
+	virtual void WriteIndirectPartAccess(CBEFile* pFile, int nIndex, CBEContext* pContext);
+	virtual void WriteDefinition(CBEFile* pFile,  bool bTypedef,  CBEContext* pContext);
+	virtual void WriteSendFpageDope(CBEFile* pFile, CBEContext* pContext);
 
 protected: // Protected methods
 	/**	\brief copy constructor

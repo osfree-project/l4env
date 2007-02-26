@@ -1,12 +1,20 @@
 INTERFACE:
 
+#include "types.h"
+
 class Kernel_info
 {
 public:
   static void init_kip( Kernel_info *kip );
   static Kernel_info *const kip();
+
   void print() const;
 
+  Mword const max_threads() const;
+
+  // returns the 1st address beyond all available physical memory
+  Address main_memory_high() const;
+  
 private:
   static Kernel_info *global_kip;
 };

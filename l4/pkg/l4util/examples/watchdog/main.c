@@ -12,14 +12,14 @@
 #include <l4/rmgr/proto.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
+#include <l4/util/irq.h>
 #include <l4/util/apic.h>
 #include <l4/sys/kernel.h>
 
 #include <l4/util/perform.h>
 #include <l4/util/rdtsc.h>
 
-static l4_kernel_info_t *l4_kernel_info = (l4_kernel_info_t *)0x1000;
-
+static l4_kernel_info_t * const l4_kernel_info = (l4_kernel_info_t *)0x1000;
 static long long nmi_perf = 0;
 
 /* Get kernel info page. We need it for the kernel timer tick. */
@@ -34,7 +34,7 @@ map_kernel_info_page(void)
   rmgr_pager_id = rmgr_id;
   rmgr_pager_id.id.lthread = RMGR_LTHREAD_PAGER;
 
-  error = l4_i386_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, 1, 1,
+  error = l4_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, 1, 1,
                            L4_IPC_MAPMSG((l4_addr_t)l4_kernel_info,
                                          L4_LOG2_PAGESIZE),
                            &fpage.snd_base, &fpage.fpage.fpage,
@@ -70,7 +70,7 @@ apic_map_iopage(unsigned long map_addr)
 
   for (;;)
     {
-      error = l4_i386_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, page_addr, 0,
+      error = l4_ipc_call(rmgr_pager_id, L4_IPC_SHORT_MSG, page_addr, 0,
 			       L4_IPC_MAPMSG(map_addr,L4_LOG2_SUPERPAGESIZE),
 			       &dummy, &dummy,
 			       L4_IPC_NEVER, &result);
@@ -119,20 +119,14 @@ apic_unmap_iopage(void)
 static unsigned long
 check_getirqs(void)
 {
-  unsigned long res;
-  asm volatile
-	("movl   (%%ebx), %%ecx\n\t"
-	 "0:cmpl (%%ebx), %%ecx\n\t"
-	 "jne    1f\n\t"
-	 "dec    %%eax\n\t"
-	 "jne    0b\n\t"
-	 "1:"
+  l4_uint32_t clock = (l4_uint32_t)l4_kernel_info->clock;
+  l4_uint32_t count;
+  
+  for (count=0x20000000; count; count--)
+    if (clock != (l4_uint32_t)l4_kernel_info->clock)
+      break;
 
-	:"=a" (res)
-	:"a" (0x20000000), /* hope, that's sufficient :-) */
-	 "b" (&l4_kernel_info->clock)
-	:"ecx");
-  return res;
+  return count;
 }
 
 /* Some newer CPUs (AMD K7, PIII) have disabled the local APIC. Try to 
@@ -248,9 +242,9 @@ main(int argc, char **argv)
     }
 
   /* calibrate delay loop */
-  asm volatile("cli");
+  l4util_cli();
   l4_calibrate_tsc();
-  asm volatile("sti");
+  l4util_sti();
 
   if ((hz = l4_get_hz()))
     {
@@ -320,7 +314,7 @@ main(int argc, char **argv)
 
 #ifdef DEMO
   printf("Going into cli'd sleep ...\n");
-  asm volatile ("cli");
+  l4util_cli();
   for (;;)
       ;
 #endif

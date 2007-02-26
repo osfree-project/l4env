@@ -5,7 +5,7 @@
  *	\date	11/28/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,7 +28,9 @@
 #include "be/sock/SockBESrvLoopFunction.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
-
+#include "be/BETypedDeclarator.h"
+#include "be/BEDeclarator.h"
+#include "be/sock/BESocket.h"
 #include "fe/FEAttribute.h"
 
 IMPLEMENT_DYNAMIC(CSockBESrvLoopFunction);
@@ -50,11 +52,28 @@ CSockBESrvLoopFunction::~CSockBESrvLoopFunction()
 
 }
 
+/** \brief write the declaration of the CORBA_Object variable
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CSockBESrvLoopFunction::WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext)
+{
+    if (m_pCorbaObject)
+    {
+	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
+		CBEDeclarator *pName = m_pCorbaObject->GetNextDeclarator(pIter);
+        pFile->PrintIndent("CORBA_Object_base _%s;\n", (const char*)pName->GetName());
+        pFile->PrintIndent("");
+        m_pCorbaObject->WriteDeclaration(pFile, pContext);
+        pFile->Print(" = (CORBA_Object)&_%s; // is client id\n", (const char*)pName->GetName());
+    }
+}
+
 /**	\brief writes the variable initializations of this function
  *	\param pFile the file to write to
  *	\param pContext the context of the write operation
  *
- * Init the CORBA_object and CORBA_environment variables:
+ * Init the CORBA_Object and CORBA_Environment variables:
  * we have to open a socket (set the socket-descriptor in
  * environment), set the accepted addresses to any address,
  * and bind to socket.
@@ -63,47 +82,24 @@ void CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBECon
 {
     // if server-parameter is given, we init CORBA_Env with it
     WriteEnvironmentInitialization(pFile, pContext);
-    
+
+    assert(m_pComm);
+    CBESocket *pSocket = (CBESocket*)m_pComm;
+	pSocket->CreateSocket(pFile, this, true, pContext);
+
     String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
     String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
 
-    bool bHasServerParameter = DoUseParameterAsEnv(pContext);
+	// init socket address
+	pFile->PrintIndent("bzero(%s, sizeof(struct sockaddr));\n", (const char*)sObj, (const char*)sObj);
+    pFile->PrintIndent("%s->sin_family = AF_INET;\n", (const char*)sObj);
+    if (DoUseParameterAsEnv(pContext))
+        pFile->PrintIndent("%s->sin_port = %s->srv_port;\n", (const char*)sObj, (const char*)sEnv);
+    else
+        pFile->PrintIndent("%s->sin_port = DICE_DEFAULT_PORT;\n", (const char*)sObj);
+    pFile->PrintIndent("%s->sin_addr.s_addr = INADDR_ANY;\n", (const char*)sObj);
 
-    if (bHasServerParameter)
-    {
-        pFile->PrintIndent("%s->cur_socket = socket(PF_INET, SOCK_DGRAM, 0);\n", (const char*)sEnv);
-        pFile->PrintIndent("if (%s->cur_socket < 0)\n", (const char*)sEnv);
-    }
-    else
-    {
-        pFile->PrintIndent("%s.cur_socket = socket(PF_INET, SOCK_DGRAM, 0);\n", (const char*)sEnv);
-        pFile->PrintIndent("if (%s.cur_socket < 0)\n", (const char*)sEnv);
-    }
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"socket--server\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
-    pFile->PrintIndent("bzero(&%s, sizeof(%s));\n", (const char*)sObj, (const char*)sObj);
-    pFile->PrintIndent("%s.sin_family = AF_INET;\n", (const char*)sObj);
-    if (bHasServerParameter)
-        pFile->PrintIndent("%s.sin_port = %s->srv_port;\n", (const char*)sObj, (const char*)sEnv);
-    else
-        pFile->PrintIndent("%s.sin_port = DICE_DEFAULT_PORT;\n", (const char*)sObj);
-    pFile->PrintIndent("%s.sin_addr.s_addr = INADDR_ANY;\n", (const char*)sObj);
-    if (bHasServerParameter)
-        pFile->PrintIndent("if (bind(%s->cur_socket, (struct sockaddr*)&%s, sizeof(%s)) < 0)\n",
-            (const char*)sEnv, (const char*)sObj, (const char*)sObj);
-    else
-        pFile->PrintIndent("if (bind(%s.cur_socket, (struct sockaddr*)&%s, sizeof(%s)) < 0)\n",
-            (const char*)sEnv, (const char*)sObj, (const char*)sObj);
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"bind\");\n");
-    WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    pSocket->BindSocket(pFile, this, true, pContext);
 }
 
 /** \brief write the clean up code
@@ -116,9 +112,7 @@ void CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBECon
  */
 void CSockBESrvLoopFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-    String sEnv = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
-    if (DoUseParameterAsEnv(pContext))
-        pFile->PrintIndent("close(%s->cur_socket);\n", (const char*)sEnv);
-    else
-        pFile->PrintIndent("close(%s.cur_socket);\n", (const char*)sEnv);
+    assert(m_pComm);
+    CBESocket *pSocket = (CBESocket*)m_pComm;
+	pSocket->CloseSocket(pFile, this, true, pContext);
 }

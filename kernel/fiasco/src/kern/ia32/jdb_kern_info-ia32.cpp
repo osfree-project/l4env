@@ -2,22 +2,35 @@ IMPLEMENTATION[ia32]:
 
 #include <cstdio>
 #include <cstring>
+#include "simpleio.h"
+
 #include <flux/x86/base_idt.h>
 #include <flux/x86/tss.h>
 
+#include "apic.h"
 #include "config.h"
-#include "globals.h"
 #include "io.h"
 #include "pic.h"
-#include "regdefs.h"
 #include "space.h"
 #include "kmem.h"
-#include "jdb_perf_cnt.h"
+#include "perf_cnt.h"
 #include "jdb_symbol.h"
 
+class Jdb_kern_info_pic_state : public Jdb_kern_info_module
+{
+};
 
-PRIVATE
-void Jdb_kern_info::show_pic_state()
+static Jdb_kern_info_pic_state k_p INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
+
+PUBLIC
+Jdb_kern_info_pic_state::Jdb_kern_info_pic_state()
+  : Jdb_kern_info_module('p', "PIC ports")
+{
+  Jdb_kern_info::register_subcmd(this);
+}
+
+void
+Jdb_kern_info_pic_state::show()
 {
   int i;
   static char const hex[] = "0123456789ABCDEF";
@@ -64,17 +77,18 @@ void Jdb_kern_info::show_pic_state()
 // missing accessor macros in oskit/flux/x86/proc_reg.h
 
 #define get_idt(pseudo_desc) \
-    ({ \
-	asm volatile("sidt %0" : "=m" ((pseudo_desc)->limit) : : "memory"); \
-    })
+({ \
+ asm volatile("sidt %0" : "=m" ((pseudo_desc)->limit) : : "memory"); \
+ })
 
 #define get_gdt(pseudo_desc) \
-    ({ \
-	asm volatile("sgdt %0" : "=m" ((pseudo_desc)->limit) : : "memory"); \
-    })
+({ \
+ asm volatile("sgdt %0" : "=m" ((pseudo_desc)->limit) : : "memory"); \
+ })
 
-PRIVATE
-void Jdb_kern_info::show_x86_desc(x86_desc *d)
+
+static void
+show_x86_desc(x86_desc *d)
 {
   static char const * const desc_code_data_type[16] = 
     { "data r/o",          "data r/o acc",
@@ -104,7 +118,7 @@ void Jdb_kern_info::show_x86_desc(x86_desc *d)
 	      offset,
 	      (d->access & ACC_PL) >> 5,
 	      ((d->access & 0x7) == 6) ? "int gate " : "trap gate");
-      if ((symbol = Jdb_symbol::match_address_to_symbol(offset, 0)))
+      if ((symbol = Jdb_symbol::match_addr_to_symbol(offset, 0)))
 	{
 	  char str[40];
 	  strncpy(str, symbol, sizeof(str)-1);
@@ -132,8 +146,22 @@ void Jdb_kern_info::show_x86_desc(x86_desc *d)
     }
 }
 
-PRIVATE
-void Jdb_kern_info::show_misc_info()
+class Jdb_kern_info_misc : public Jdb_kern_info_module
+{
+};
+
+static Jdb_kern_info_misc k_i INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
+
+PUBLIC
+Jdb_kern_info_misc::Jdb_kern_info_misc()
+  : Jdb_kern_info_module('i', "miscellanous info")
+{
+  Jdb_kern_info::register_subcmd(this);
+}
+
+PUBLIC
+void
+Jdb_kern_info_misc::show()
 {
   Space *s = current_space();
   pseudo_descriptor gdt_pseudo, idt_pseudo;
@@ -141,7 +169,7 @@ void Jdb_kern_info::show_misc_info()
   get_gdt(&gdt_pseudo);
   get_idt(&idt_pseudo);
   printf("clck: %08x.%08x\n"
-	 "pdir: %08x (taskno=%03x, chief=%03x)\n"
+	 "pdir: %08x (taskno=%x, chief=%x)\n"
 	 "idt : base=%08lx  limit=%04x\n"
 	 "gdt : base=%08lx  limit=%04x\n",
 	 (unsigned) (Kmem::info()->clock >> 32), 
@@ -180,87 +208,92 @@ void Jdb_kern_info::show_misc_info()
 	 get_cr0(), get_cr4());
 }
 
+class Jdb_kern_info_gdt_idt : public Jdb_kern_info_module
+{
+};
 
-PRIVATE
-void Jdb_kern_info::show_gdt_idt()
+static Jdb_kern_info_gdt_idt k_g INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
+
+PUBLIC
+Jdb_kern_info_gdt_idt::Jdb_kern_info_gdt_idt()
+  : Jdb_kern_info_module('g', "show GDT and IDT")
+{
+  Jdb_kern_info::register_subcmd(this);
+}
+
+PUBLIC
+void
+Jdb_kern_info_gdt_idt::show()
 {
   pseudo_descriptor gdt_pseudo, idt_pseudo;
-  int i;
+  unsigned line = 0;
 
   get_gdt(&gdt_pseudo);
   get_idt(&idt_pseudo);
   printf("gdt base=%08lx  limit=%04x (%04x bytes)\n",
 	 gdt_pseudo.linear_base, (gdt_pseudo.limit+1)/8, gdt_pseudo.limit+1);
+  if (!Jdb_kern_info::new_line(line))
+    return;
+
   x86_desc *gdt = reinterpret_cast<x86_desc*>(gdt_pseudo.linear_base);
-  for (i=0; i<(gdt_pseudo.limit+1)/8; i++)
+  for (int i=0; i<(gdt_pseudo.limit+1)/8; i++)
     {
       if (gdt[i].access & ACC_P)
 	{
 	  printf("%3x: ",i);
 	  show_x86_desc(gdt + i);
+	  if (!Jdb_kern_info::new_line(line))
+	    return;
 	}
     }
 
-  printf("\nidt base=%08lx  limit=%04x (%04x bytes)\n",
+  putchar('\n');
+  if (!Jdb_kern_info::new_line(line))
+    return;
+
+  printf("idt base=%08lx  limit=%04x (%04x bytes)\n",
 	 idt_pseudo.linear_base, (idt_pseudo.limit+1)/8, idt_pseudo.limit+1);
   x86_desc *idt = reinterpret_cast<x86_desc*>(idt_pseudo.linear_base);
-  for (i=0; i<(idt_pseudo.limit+1)/8; i++)
+  if (!Jdb_kern_info::new_line(line))
+    return;
+
+  for (int i=0; i<(idt_pseudo.limit+1)/8; i++)
     {
       if (idt[i].access & ACC_P)
 	{
 	  printf("%3x: ",i);
 	  show_x86_desc(idt + i);
+	  if (!Jdb_kern_info::new_line(line))
+	    return;
 	}
     }
 }
 
-PRIVATE
-unsigned
-Jdb_kern_info::show_feature_bits (unsigned features, const char *const *table,
-				  unsigned first_pos, unsigned last_pos)
+class Jdb_kern_info_cpu : public Jdb_kern_info_module
 {
-  unsigned i, count, len, colon;
+};
 
-  for (i=count=colon=0, len=last_pos; *table != (char *) -1; i++, table++)
-    if ((features & (1 << i)) && *table)
-      {
-	printf ("%s%s", colon ? "," : "", *table);
-	len += strlen(*table) + colon;
-	colon = 1;
-	if (len > 50)
-	  {
-	    colon = 0;
-	    len = first_pos;
-	    printf("\n%*s", first_pos, "");
-	  }
-      }
+static Jdb_kern_info_cpu k_c INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
 
-  return len;
+PUBLIC
+Jdb_kern_info_cpu::Jdb_kern_info_cpu()
+  : Jdb_kern_info_module('c', "CPU features")
+{
+  Jdb_kern_info::register_subcmd(this);
 }
 
-PRIVATE
-void Jdb_kern_info::show_cpu_info()
+PUBLIC
+void
+Jdb_kern_info_cpu::show()
 {
-  const char *const simple[] = 
-  {
-    "fpu", "vme", "de", "pse", "tsc", "msr", "pae", "mce", "cx8", "apic",
-    NULL, "sep", "mtrr", "pge", "mca", "cmov", "pat", "pse36", "psn",
-    "clfsh", NULL, "ds", "acpi", "mmx", "fxsr", "sse", "sse2", "ss",
-    "htt", "tm", NULL, "pbe", (char *)(-1)
-  };
-  const char *const extended[] =
-  {
-    "pni", NULL, NULL, "monitor", "dscpl", NULL, NULL, NULL, "tm2", NULL,
-    "cnxtid", (char *)(-1)
-  };
-
-  const char *perf_type = Jdb_perf_cnt::perf_type();
+  const char *perf_type = Perf_cnt::perf_type();
   char cpu_mhz[32];
   char apic_state[80];
+  char time[32];
   unsigned hz, khz;
 
   cpu_mhz[0] = '\0';
-  if ((hz = Cpu::hz()))
+  if ((hz = Cpu::frequency()))
     {
       unsigned mhz = hz / 1000000;
       hz -= mhz * 1000000;
@@ -273,7 +306,7 @@ void Jdb_kern_info::show_cpu_info()
     {
       unsigned mhz = khz / 1000;
       khz -= mhz * 1000;
-      sprintf(apic_state, " %d.%03d MHz"
+      sprintf(apic_state, "yes (%d.%03d MHz)"
 	      "\n  local APIC spurious interrupts/bug/error: %d/%d/%d",
 	      mhz, khz,
 	      apic_spurious_interrupt_cnt,
@@ -285,27 +318,40 @@ void Jdb_kern_info::show_cpu_info()
           Cpu::model_str(), cpu_mhz,
           Config::found_vmware ? "vmware" : "native");
 
-  putstr ("     ");
-  unsigned position = 0;
-  position = show_feature_bits (Cpu::features(), simple, 5, position);
-  position = show_feature_bits (Cpu::ext_features(), extended, 5, position);
+  show_features();
 
-  printf("\nLocal APIC state: %s"
+  if (Cpu::features() & FEAT_TSC)
+    {
+      Unsigned32 hour, min, sec, ns;
+      Cpu::tsc_to_s_and_ns(Cpu::rdtsc(), &sec, &ns);
+      hour = sec  / 3600;
+      sec -= hour * 3600;
+      min  = sec  / 60;
+      sec -= min  * 60;
+      sprintf(time, "%02d:%02d:%02d.%06d", hour, min, sec, ns/1000);
+    }
+  else
+    strcpy(time, "not available");
+
+  printf("\nLocal APIC: %s"
 	 "\nTimer interrupt source: %s"
 	 "\nPerformance counters: %s"
 	 "\nLast branch recording: %s"
 	 "\nWatchdog: %s"
+	 "\nTime stamp counter: %s"
 	 "\n",
 	 apic_state,
 	 Config::scheduling_using_pit ? "PIT" : "RTC",
 	 perf_type ? perf_type : "no",
 	 Cpu::lbr_type() != Cpu::LBR_NONE 
-	 ? Cpu::lbr_type() == Cpu::LBR_P4 ? "P4" : "P6"
-	 : "no",
-	 Config::watchdog 
-	 ? "active" 
-	 : Apic::is_present()
-	 ? "disabled"
-         : "not supported"
+	    ? Cpu::lbr_type() == Cpu::LBR_P4 ? "P4" : "P6"
+	    : "no",
+	 Config::watchdog
+	    ? "active"
+	    : Apic::is_present()
+	       ? "disabled"
+	       : "not supported (no Local APIC)",
+	 time
 	 );
 }
+

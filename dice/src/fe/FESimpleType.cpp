@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -26,12 +26,14 @@
  */
 
 #include "fe/FESimpleType.h"
+#include "Compiler.h"
+#include "File.h"
 
 IMPLEMENT_DYNAMIC(CFESimpleType)
     
-CFESimpleType::CFESimpleType(TYPESPEC_TYPE nType, 
+CFESimpleType::CFESimpleType(TYPESPEC_TYPE nType,
 			     bool bUnSigned,
-			     bool bUnsignedFirst, 
+			     bool bUnsignedFirst,
 			     int nSize,
 			     bool bShowType)
 :CFETypeSpec(nType)
@@ -114,6 +116,9 @@ void CFESimpleType::Serialize(CFile * pFile)
 	    {
 	    case TYPE_INTEGER:
 		pFile->Print("int");
+		break;
+		case TYPE_LONG:
+		pFile->Print("long");
 		break;
 	    case TYPE_VOID:
 		pFile->Print("void");

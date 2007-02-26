@@ -3,9 +3,11 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libcon_hw.a
 NOTARGETSTOINSTALL = 1
+SYSTEMS		= x86-l4v2 x86-l4x0
 
 MODE		= l4env
 SRC_C		= ati.c ati_vid.c \
+		  ati128.c ati128_vid.c \
 		  matrox.c matrox_vid.c \
 		  savage.c savage_vid.c \
 		  vmware.c \

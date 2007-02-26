@@ -5,7 +5,10 @@
  * \date   03/14/2001
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
  */
-
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #ifndef __LOG_INCLUDE_ARCH_X86_SERVER_H_
 #define __LOG_INCLUDE_ARCH_X86_SERVER_H_
 

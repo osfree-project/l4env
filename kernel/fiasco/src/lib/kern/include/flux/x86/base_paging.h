@@ -34,18 +34,18 @@
  * for a particular linear address.
  */
 #define pdir_find_pde(pdir_pa, la)					\
-	(&((pd_entry_t*)phystokv(pdir_pa))[lin2pdenum(la)])
+	(&((Pd_entry*)phystokv(pdir_pa))[lin2pdenum(la)])
 #define ptab_find_pte(ptab_pa, la)					\
-	(&((pt_entry_t*)phystokv(ptab_pa))[lin2ptenum(la)])
+	(&((Pt_entry*)phystokv(ptab_pa))[lin2ptenum(la)])
 
 /*
  * Find a page table entry given a page directory and a linear address.
  * Returns NULL if there is no page table covering that address.
  * Assumes that if there is a valid PDE, it's a page table, _not_ a 4MB page.
  */
-extern __inline pt_entry_t *pdir_find_pte(vm_offset_t pdir_pa, vm_offset_t la)
+extern __inline Pt_entry *pdir_find_pte(vm_offset_t pdir_pa, vm_offset_t la)
 {
-	pd_entry_t *pde = pdir_find_pde(pdir_pa, la);
+	Pd_entry *pde = pdir_find_pde(pdir_pa, la);
 	if (!(*pde & INTEL_PDE_VALID))
 		return 0;
 	return ptab_find_pte(pde_to_pa(*pde), la);
@@ -56,9 +56,9 @@ extern __inline pt_entry_t *pdir_find_pte(vm_offset_t pdir_pa, vm_offset_t la)
  * or return zero if no such entry exists.
  * As above, doesn't check for 4MB pages.
  */
-extern __inline pt_entry_t pdir_get_pte(vm_offset_t pdir_pa, vm_offset_t la)
+extern __inline Pt_entry pdir_get_pte(vm_offset_t pdir_pa, vm_offset_t la)
 {
-	pt_entry_t *pte = pdir_find_pte(pdir_pa, la);
+	Pt_entry *pte = pdir_find_pte(pdir_pa, la);
 	return pte ? *pte : 0;
 }
 
@@ -86,7 +86,7 @@ void ptab_free(vm_offset_t ptab_pa);
  * Otherwise, inserts the mapping and returns zero.
  * Doesn't check for 4MB pages.
  */
-int pdir_map_page(vm_offset_t pdir_pa, vm_offset_t la, pt_entry_t mapping);
+int pdir_map_page(vm_offset_t pdir_pa, vm_offset_t la, Pt_entry mapping);
 
 
 /*
@@ -98,7 +98,7 @@ int pdir_map_page(vm_offset_t pdir_pa, vm_offset_t la, pt_entry_t mapping);
  * and may include other permissions as desired.
  */
 int pdir_map_range(vm_offset_t pdir_pa, vm_offset_t la, vm_offset_t pa,
-		   vm_size_t size, pt_entry_t mapping_bits);
+		   vm_size_t size, Pt_entry mapping_bits);
 
 /*
  * Change the permissions on an existing mapping range.
@@ -109,7 +109,7 @@ int pdir_map_range(vm_offset_t pdir_pa, vm_offset_t la, vm_offset_t pa,
  * with identical linear address and size parameters.
  */
 void pdir_prot_range(vm_offset_t pdir_pa, vm_offset_t la, vm_size_t size,
-		     pt_entry_t new_mapping_bits);
+		     Pt_entry new_mapping_bits);
 
 /*
  * Unmap a continuous range of virtual addresses.

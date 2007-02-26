@@ -5,7 +5,7 @@
  *	\date	01/31/2001
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -28,7 +28,9 @@
 #include "fe/FEConstDeclarator.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FETypedDeclarator.h"
+#include "fe/FEExpression.h"
 #include "fe/FEFile.h"
+#include "Compiler.h"
 
 IMPLEMENT_DYNAMIC(CFEConstDeclarator)
     
@@ -113,7 +115,7 @@ CObject *CFEConstDeclarator::Clone()
 bool CFEConstDeclarator::CheckConsistency()
 {
     CFEFile *pRoot = GetRoot();
-    ASSERT(pRoot);
+    assert(pRoot);
     // try to find me
     if (GetName().IsEmpty())
 	{

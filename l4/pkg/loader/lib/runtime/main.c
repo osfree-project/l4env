@@ -4,17 +4,22 @@
  * \brief	Loader library
  *
  * \date	08/22/2000
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
+#include <l4/crtx/crt0.h>
 #include <l4/env/env.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/log/l4log.h>
@@ -22,17 +27,14 @@
 #include <l4/loader/loader.h>
 #include <l4/thread/thread.h>
 #include <l4/semaphore/semaphore.h>
-#include <l4/util/getopt.h>
-#include <l4/loader/grub_mb_info.h>
+#include <l4/util/mb_info.h>
+#include <l4/util/mbi_argv.h>
 
 l4env_infopage_t* app_envpage = NULL;
 
 #define MAX_FIXED 32
 static l4rm_vm_range_t fixed[MAX_FIXED];
 static int num_fixed = 0;
-
-static void
-__load_error(const char *format, ...) __attribute__ ((__noreturn__));
 
 l4env_infopage_t *
 l4env_get_infopage(void)
@@ -43,7 +45,7 @@ l4env_get_infopage(void)
 // #define DEBUG_SECTIONS
 
 /** print error message and go sleeing */
-static void
+static void __attribute__((noreturn))
 __load_error(const char *format, ...)
 {
   va_list args;
@@ -55,30 +57,26 @@ __load_error(const char *format, ...)
   va_end(args);
 
   /* send answer to loader server */
-  l4_i386_ipc_send(app_envpage->loader_id,
+  l4_ipc_send(app_envpage->loader_id,
 		   L4_IPC_SHORT_MSG, L4_LOADER_ERROR, 0,
 		   L4_IPC_NEVER, &result);
 
   /* sleep forever */
   for (;;)
-    l4_i386_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy, 
+    l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy, 
 		        L4_IPC_NEVER, &result);
 }
 
 /** Helper function to extract command line parameters from multiboot info
  * and to start main then */
-static void
-__start_main(l4_addr_t mb_info)
-{
-  struct multiboot_info;
-  extern void _main(struct multiboot_info *mbi, unsigned int flag);
-  extern int main(int argc, char **argv) __attribute__ ((weak));
- 
-  /* parse command line and fill in _argc, _argv */
-  _main((struct multiboot_info *)mb_info, 1);
+extern int main(int argc, char *argv[]);
 
-  /* start main */
-  main(_argc, _argv);
+static void
+__startup_main(void)
+{
+  crt0_construction();
+
+  exit(main(l4util_argc, l4util_argv));
 }
 
 static void
@@ -154,9 +152,9 @@ __attach_fixed(void)
   if ((error=l4rm_direct_area_reserve_region(addr, size, 0, &area)))
     {
       __load_error("Error %d reserving video memory at %08x-%08x\n",
-		    error, addr, addr+size);
+	  error, addr, addr+size);
     }
-
+	
   /* sections which can't be relocated */
   l4exc_stop = app_envpage->section + app_envpage->section_num;
   for (l4exc=app_envpage->section; l4exc<l4exc_stop; l4exc++)
@@ -325,13 +323,12 @@ __attach_relocateable(void)
 static void
 __fixup_modules(void)
 {
-  struct grub_multiboot_info *mbi = 
-    (struct grub_multiboot_info*)(app_envpage->addr_mb_info);
+  l4util_mb_info_t *mbi = (l4util_mb_info_t*)(app_envpage->addr_mb_info);
 
-  if (mbi->flags & MB_INFO_MODS)
+  if (mbi->flags & L4UTIL_MB_MODS)
     {
       int i;
-      struct grub_mod_list *mods = (struct grub_mod_list*)mbi->mods_addr;
+      l4util_mb_mod_t *mods = (l4util_mb_mod_t*)mbi->mods_addr;
 
       for (i=0; i<mbi->mods_count; i++)
 	{
@@ -364,7 +361,7 @@ __complete_load(void)
   l4_umword_t dw0, dw1;
   l4_msgdope_t result;
   
-  l4_i386_ipc_call(app_envpage->loader_id,
+  l4_ipc_call(app_envpage->loader_id,
 		   L4_IPC_SHORT_MSG, L4_LOADER_COMPLETE, 0,
 		   L4_IPC_SHORT_MSG, &dw0, &dw1,
 		   L4_IPC_NEVER, &result);
@@ -409,17 +406,19 @@ l4loader_init(void *infopage)
 
 /** Second entry point.
  *
- ***/
+ */
 void
 l4env_init(void)
 {
   int ret;
-  extern int main(int argc, char **argv) __attribute__ ((weak));
-  extern void multiboot_main(unsigned int boot_info) __attribute__ ((weak));
 
   /* attach rest of relocated sections which the loader */
   __attach_relocateable();
-  
+
+  /* init command line parameters */
+  l4util_mbi_to_argv(L4UTIL_MB_VALID, 
+		     (l4util_mb_info_t*)app_envpage->addr_mb_info);
+
   /* init thread lib */
   l4thread_init();
 
@@ -440,28 +439,10 @@ l4env_init(void)
     }
 
   /* start thread */
-  if (multiboot_main)
-    {
-      printf("l4env_init: Calling multiboot_main()\n");
-      ret = l4thread_create((l4thread_fn_t)multiboot_main,
-			    (void*)app_envpage->addr_mb_info,
+  if ((ret = l4thread_create((l4thread_fn_t)__startup_main,
+			     (void*)app_envpage->addr_mb_info,
 			    L4THREAD_CREATE_ASYNC | 
-			    L4THREAD_CREATE_SETUP);
-    }
-  else if (main)
-    {
-      printf("l4env_init: Calling main()\n");
-      ret = l4thread_create((l4thread_fn_t)__start_main,
-			    (void*)app_envpage->addr_mb_info,
-			    L4THREAD_CREATE_ASYNC |
-			    L4THREAD_CREATE_SETUP);
-    }
-  else
-    {
-      printf("l4env_init: neither main() or multiboot_main() found\n");
-      enter_kdebug("PANIC");
-    }
-  if (ret < 0)
+			    L4THREAD_CREATE_SETUP)) < 0)
     {
       printf("l4env_init: create main thread failed (%d)!\n",ret);
       enter_kdebug("PANIC");
@@ -469,5 +450,12 @@ l4env_init(void)
 
   /* start service loop */
   l4rm_service_loop();
+}
+
+void __main(void);
+
+void
+__main(void)
+{
 }
 

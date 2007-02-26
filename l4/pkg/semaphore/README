@@ -1,0 +1,4 @@
+L4Env Semaphore
+
+This package provides a simple semaphore implementation for L4Env. For
+further documentation see the reference manual in semaphore/doc.

@@ -1,0 +1,12 @@
+/* -*- c++ -*- */
+
+#ifndef CASSERT_INCLUDE
+#define CASSERT_INCLUDE
+
+// I love Feve, who likes to ignore things 
+// behind its horizon. (C++ really exists)
+extern "C" {
+#include <assert.h>
+}
+
+#endif // CASSERT_INCLUDE

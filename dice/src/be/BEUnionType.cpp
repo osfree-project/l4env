@@ -5,7 +5,7 @@
  *	\date	01/15/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify 
@@ -36,6 +36,9 @@
 
 #include "fe/FETaggedUnionType.h"
 #include "fe/FEFile.h"
+#include "fe/FEAttribute.h"
+
+#include "Compiler.h"
 
 IMPLEMENT_DYNAMIC(CBEUnionType);
 
@@ -166,7 +169,7 @@ bool CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
         // see if we can find the original struct
         String sTag = ((CFETaggedUnionType*)pFEType)->GetTag();
         CFEFile *pFERoot = pFEType->GetRoot();
-        ASSERT(pFERoot);
+        assert(pFERoot);
         CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
         if (pFETaggedDecl)
             m_sTag = pContext->GetNameFactory()->GetTypeName(pFETaggedDecl, sTag, pContext);
@@ -182,6 +185,7 @@ bool CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
         {
             delete m_pUnionName;
             m_pUnionName = 0;
+			VERBOSE("%s failed because union name (DCE) could not be created\n", __PRETTY_FUNCTION__);
             return false;
         }
     }
@@ -307,32 +311,35 @@ void CBEUnionType::Write(CBEFile * pFile, CBEContext * pContext)
     pFile->Print("%s", (const char *) m_sName);	// should be set to "union"
     if (!m_bCORBA && (!m_sTag.IsEmpty()))
         pFile->Print(" %s", (const char*)m_sTag);
-    pFile->Print("\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
+    if (m_vUnionCases.GetSize() > 0)
+	{
+		pFile->Print("\n");
+		pFile->PrintIndent("{\n");
+		pFile->IncIndent();
 
-    // write members
-    VectorElement *pIter = GetFirstUnionCase();
-    CBEUnionCase *pCase;
-    while ((pCase = GetNextUnionCase(pIter)) != 0)
-    {
-        pFile->PrintIndent("");
-        pCase->WriteDeclaration(pFile, pContext);
-        pFile->Print(";\n");
-    }
+		// write members
+		VectorElement *pIter = GetFirstUnionCase();
+		CBEUnionCase *pCase;
+		while ((pCase = GetNextUnionCase(pIter)) != 0)
+		{
+			pFile->PrintIndent("");
+			pCase->WriteDeclaration(pFile, pContext);
+			pFile->Print(";\n");
+		}
 
-    // close union
-    pFile->DecIndent();
-    if (m_pUnionName)
-        pFile->PrintIndent("} %s;\n", (const char *)(m_pUnionName->GetName()));
-    else if (m_bCUnion)
-        pFile->PrintIndent("} "); // a c style union has the "normal" name(declarator) after this type declaration
-//    else
-//        pFile->PrintIndent("} _u;\n");
-    else
-    {
-        ASSERT(false);
-    }
+		// close union
+		pFile->DecIndent();
+		if (m_pUnionName)
+			pFile->PrintIndent("} %s;\n", (const char *)(m_pUnionName->GetName()));
+		else if (m_bCUnion)
+			pFile->PrintIndent("} "); // a c style union has the "normal" name(declarator) after this type declaration
+	//    else
+	//        pFile->PrintIndent("} _u;\n");
+		else
+		{
+			assert(false);
+		}
+	}
 
     // close struct
     if (!m_bCUnion)
@@ -463,7 +470,7 @@ void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pConte
 		// no tag -> we need a typedef to save us
 		// the alias can be used for the cast
 		CBETypedef *pTypedef = GetTypedef();
-		ASSERT(pTypedef);
+		assert(pTypedef);
 		// get first declarator (without stars)
 		VectorElement *pIter = pTypedef->GetFirstDeclarator();
 		CBEDeclarator *pDecl;
@@ -472,7 +479,7 @@ void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pConte
 			if (pDecl->GetStars() <= (bPointer?1:0))
 			    break;
 		}
-		ASSERT(pDecl);
+		assert(pDecl);
 		pFile->Print("%s", (const char*)pDecl->GetName());
 		if (bPointer && (pDecl->GetStars() == 0))
 			pFile->Print("*");
@@ -493,6 +500,14 @@ void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pConte
 bool CBEUnionType::HasTag(String sTag)
 {
     return (m_sTag == sTag);
+}
+
+/** \brief return the tag
+ *  \return the tag
+ */
+String CBEUnionType::GetTag()
+{
+    return m_sTag;
 }
 
 /** \brief write the zero init code for a union
@@ -588,15 +603,15 @@ int CBEUnionType::GetFixedSize()
  */
 void CBEUnionType::WriteGetMaxSize(CBEFile *pFile, Vector *pMembers, VectorElement *pIter, CDeclaratorStack *pStack, CBEContext *pContext)
 {
-    ASSERT(pIter);
+    assert(pIter);
     CBEUnionCase *pMember = (CBEUnionCase*)pIter->GetElement();
     pIter = pIter->GetNext();
     // always write '(<switch> == <case>)?(<member size>)'
     if (m_pSwitchVariable)
     {
         // pop union name, because switch belongs above union
-        int nIndex = pStack->GetTop()->nIndex;
-        CBEDeclarator *pUnionName = pStack->Pop();
+		CDeclaratorStackLocation topSave(*(pStack->GetTop()));
+		pStack->Pop();
         // write cases
         pFile->Print("(");
         VectorElement *pILabel = pMember->GetFirstLabel();
@@ -621,8 +636,7 @@ void CBEUnionType::WriteGetMaxSize(CBEFile *pFile, Vector *pMembers, VectorEleme
         }
         pFile->Print(")?");
         // add union name
-        pStack->Push(pUnionName);
-        pStack->GetTop()->SetIndex(nIndex);
+        pStack->Push(&topSave);
     }
     pFile->Print("(");
     WriteGetMemberSize(pFile, pMember, pStack, pContext);

@@ -9,7 +9,7 @@ struct P_ptr
 public:
 
   typedef _Ty *Raw_type;
-  typedef vm_offset_t Unsigned_type;
+  typedef Address Unsigned_type;
 
 
   P_ptr< _Ty > &operator ++ () // prefix

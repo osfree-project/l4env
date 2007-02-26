@@ -5,7 +5,7 @@
  *	\date	Tue May 28 2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,6 +31,8 @@
 #include "be/BEClient.h"
 #include "be/BEDeclarator.h"
 #include "be/BETestsuite.h"
+#include "be/BEType.h"
+#include "TypeSpec-Type.h"
 
 IMPLEMENT_DYNAMIC(CL4BETestFunction);
 
@@ -78,7 +80,7 @@ void CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStac
     String sTargetName;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))
         sTargetName = " at client side";
-    else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_SKELETON))
+    else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
         sTargetName = " at server side";
     else
         sTargetName = " at unknown side";
@@ -88,14 +90,29 @@ void CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStac
     pFile->PrintIndent("\tLOG(\"WRONG ");
     // if struct add members
     pStack->Write(pFile, false, false, pContext);
-    if (pHead->nIndex >= 0)
-        pFile->Print(" (element %d)", pHead->nIndex);
-    else if (pHead->nIndex == -2)
-        pFile->Print(" (element %%d)");
-    pFile->Print("%s\\n\"", (const char *) sTargetName);
-    if (pHead->nIndex == -2)
-    {
-        pFile->Print(", %s", (const char*)pHead->sIndex);
+	int nIdxCnt = pHead->GetUsedIndexCount();
+	if (nIdxCnt)
+	{
+	    pFile->Print(" (element ");
+        for (int i=0; i<nIdxCnt; i++)
+		{
+		    pFile->Print("[");
+			if (pHead->nIndex[i] >= 0)
+			    pFile->Print("%d", pHead->nIndex[i]);
+			else if (pHead->nIndex[i] == -2)
+			    pFile->Print("%%d");
+			pFile->Print("]");
+		}
+		pFile->Print(")");
+	}
+    pFile->Print("%s\"", (const char *) sTargetName);
+	if (nIdxCnt)
+	{
+        for (int i=0; i<nIdxCnt; i++)
+		{
+			if (pHead->nIndex[i] == -2)
+			    pFile->Print(", %s", (const char*)pHead->sIndex[i]);
+		}
     }
     pFile->Print(");\n");
 }
@@ -145,7 +162,7 @@ void CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorSta
     String sTargetName;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))
         sTargetName = " at client side";
-    else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_SKELETON))
+    else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
         sTargetName = " at server side";
     else
         sTargetName = " at unknown side";
@@ -155,13 +172,30 @@ void CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorSta
     pFile->PrintIndent("\tLOG(\"correct ");
     // if struct add members
     pStack->Write(pFile, false, false, pContext);
-    if (pHead->nIndex >= 0)
-        pFile->Print(" (element %d)", pHead->nIndex);
-    else if (pHead->nIndex == -2)
-        pFile->Print(" (element %%d)");
-    pFile->Print("%s\\n\"", (const char *) sTargetName);
-    if (pHead->nIndex == -2)
-        pFile->Print(", %s", (const char*)pHead->sIndex);
+	int nIdxCnt = pHead->GetUsedIndexCount();
+	if (nIdxCnt)
+	{
+	    pFile->Print(" (element ");
+        for (int i=0; i<nIdxCnt; i++)
+		{
+		    pFile->Print("[");
+			if (pHead->nIndex[i] >= 0)
+			    pFile->Print("%d", pHead->nIndex[i]);
+			else if (pHead->nIndex[i] == -2)
+			    pFile->Print("%%d");
+			pFile->Print("]");
+		}
+		pFile->Print(")");
+	}
+    pFile->Print("%s\"", (const char *) sTargetName);
+	if (nIdxCnt)
+	{
+        for (int i=0; i<nIdxCnt; i++)
+		{
+			if (pHead->nIndex[i] == -2)
+			    pFile->Print(", %s", (const char*)pHead->sIndex[i]);
+		}
+    }
     pFile->Print(");\n");
 }
 
@@ -178,4 +212,68 @@ void CL4BETestFunction::WriteSuccessMessageTask(CBEFile *pFile, CDeclaratorStack
     pFile->PrintIndent("\tenter_kdebug(\"%s: correct ",(const char*)pDecl->GetFunction()->GetName());
     pStack->Write(pFile, false, false, pContext);
     pFile->Print("\");\n");
+}
+
+/** \brief compares two declarators
+ *  \param pFile the file to write to
+ *  \param pType the type of the declarators
+ *  \param pStack the declarator stack
+ *  \param pContext the context of the operation
+ */
+void CL4BETestFunction::CompareDeclarator(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext)
+{
+    // test for special types
+	if (pType->IsSimpleType())
+	{
+	    switch (pType->GetFEType())
+		{
+		case TYPE_FLEXPAGE:
+		case TYPE_RCV_FLEXPAGE:
+		    CompareFlexpages(pFile, pType, pStack, pContext);
+			return;
+			break;
+		default:
+		    break;
+		}
+	}
+	CBETestFunction::CompareDeclarator(pFile, pType, pStack, pContext);
+}
+
+/** \brief compares two flexpages
+ *  \param pFile the file to write to
+ *  \param pType the type of the declarators
+ *  \param pStack the declarator stack
+ *  \param pContext the context of the operation
+ */
+void CL4BETestFunction::CompareFlexpages(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext)
+{
+    CBEDeclarator *pDeclarator = 0;
+	if (pType->GetFEType() == TYPE_FLEXPAGE)
+	{
+	    // compare snd_base (l4_umword_t)
+		// create declarators
+		pDeclarator = new CBEDeclarator();
+		pDeclarator->CreateBackEnd(String("snd_base"), 0, pContext);
+		pStack->Push(pDeclarator);
+		WriteComparison(pFile, pStack, pContext);
+		pStack->Pop();
+		// add fpage member (union)
+		pDeclarator->CreateBackEnd(String("fpage"), 0, pContext);
+		pStack->Push(pDeclarator);
+		// fall thru
+	}
+	// compare fpage (l4_umword_t)
+	CBEDeclarator *pDeclarator2 = new CBEDeclarator();
+	pDeclarator2->CreateBackEnd(String("fpage"), 0, pContext);
+	pStack->Push(pDeclarator2);
+	WriteComparison(pFile, pStack, pContext);
+	pStack->Pop();
+	delete pDeclarator2;
+    // cleanup
+	if ((pType->GetFEType() == TYPE_FLEXPAGE) &&
+	    pDeclarator)
+	{
+		pStack->Pop();
+	    delete pDeclarator;
+	}
 }

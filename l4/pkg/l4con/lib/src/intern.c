@@ -23,8 +23,8 @@ int sb_y       = 0;	/* y cursor offset into vtc_scrbuf */
 int vtc_cols   = 0;	/* number of screen columns */
 int vtc_lines  = 0;	/* number of screen lines */
 
-con_pslim_color_t fg_color = 0x00ffffff;
-con_pslim_color_t bg_color = 0x00000000;
+l4con_pslim_color_t fg_color = 0x00ffffff;
+l4con_pslim_color_t bg_color = 0x00000000;
 
 //*****************************************************************************/
 /**
@@ -92,8 +92,8 @@ _nline(void)
 static void
 _copy_fb(int t, int b, int dir, int lines)
 {
-  con_pslim_rect_t _rect;
-  sm_exc_t _ev;
+  l4con_pslim_rect_t _rect;
+  CORBA_Environment env = dice_default_environment;
   int y;
   
   _rect.x = 0;
@@ -111,8 +111,8 @@ _copy_fb(int t, int b, int dir, int lines)
       y       = BITY(t);
     }
   
-  if (con_vc_pslim_copy(vtc_l4id, &_rect, 0, y, &_ev))
-    LOG("intern.c: pslim_copy failed (exc=%d)", _ev._type);
+  if (con_vc_pslim_copy_call(&vtc_l4id, &_rect, 0, y, &env))
+    LOG("intern.c: pslim_copy failed (exc=%d)", env.major);
 }
 
 
@@ -219,17 +219,14 @@ _cursor(int mode)
   
   if ((cursor_y >= 0) && (cursor_y < vtc_lines))
     { 
-      sm_exc_t _ev;
-      l4_strdope_t str;
-      l4_uint8_t cursor[1];
+      CORBA_Environment env = dice_default_environment;
+      l4_uint8_t cursor[2];
       
       cursor[0] = vtc_scrbuf[sb_y * vtc_cols + sb_x];
+      cursor[1] = 0;
       
-      str.snd_str = (l4_umword_t) cursor;
-      str.snd_size = 1;
-      str.rcv_size = 0;
-
-      con_vc_puts(vtc_l4id, str, BITX(sb_x), BITY(cursor_y), fgc, bgc, &_ev);
+      con_vc_puts_call(&vtc_l4id, (l4_int8_t*)cursor, 1, 
+		       BITX(sb_x), BITY(cursor_y), fgc, bgc, &env);
     }
 }
 
@@ -255,7 +252,7 @@ _flush(l4_uint8_t *s, int len, int __nline)
     {
       for (l=len, d=&vtc_scrbuf[sb_y * vtc_cols + sb_x]; l; l--)
 	*d++ = *s++;
-      
+
       if ((cursor_y >= 0) && (cursor_y < vtc_lines))
 	putstocon(sb_x, cursor_y, &vtc_scrbuf[sb_y * vtc_cols + sb_x], len);
       /* else not visible */

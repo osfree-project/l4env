@@ -1,16 +1,20 @@
 /* $Id$ */
-
-/*!
- * \file	dde_linux/lib/src/mmio.c
+/*****************************************************************************/
+/**
+ * \file   dde_linux/lib/src/mmio.c
+ * \brief  (Fake) Memory Mapped I/O
  *
- * \brief	(Fake) Memory Mapped I/O
- *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ * \date   08/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  * \todo WHAT ABOUT THIS?
  */
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
-/* L4 includes */
+/* L4 */
 #include <l4/env/errno.h>
 #include <l4/sys/types.h>
 
@@ -19,24 +23,21 @@
 /* Linux */
 #include <linux/mm.h>
 
-/* local includes */
+/* local */
 #include "__config.h"
-#include "__macros.h"
 
-/******************************************************************************/
-/*!
- * \brief  Linux' ???
+/** Linux' ???
  * \ingroup grp_misc
  *
- * \param virt_addr	user virtual address where the mapping should start
- * \param phys_addr	physical address to which the mapping maps
- * \param size		size of vma in bytes
- * \param prot		protection for the new vma
+ * \param virt_addr  user virtual address where the mapping should start
+ * \param phys_addr  physical address to which the mapping maps
+ * \param size       size of vma in bytes
+ * \param prot       protection for the new vma
  *
  * \todo Hmm, what was the idea of that?!
- ******************************************************************************/
-int remap_page_range(unsigned long virt_addr, 
-		     unsigned long phys_addr, unsigned long size, pgprot_t prot)
+ */
+int remap_page_range(unsigned long virt_addr,
+                     unsigned long phys_addr, unsigned long size, pgprot_t prot)
 {
   return -ENOMEM;
 }
@@ -76,6 +77,6 @@ int remap_page_range(unsigned long virt_addr,
    - "struct vm_operations_struct"
      ... open/close/unmap/protect/sync/nopage/swapout
 
-   - 
+   -
 
- **/
+ */

@@ -47,7 +47,7 @@ __get_component_id(void)
       /* request send component id */
       if (!names_waitfor_name(DSI_EXAMPLE_RECEIVE_NAMES,&receive_id,10000))
         {
-          Panic("receive component (\"%s\") not found!\n",
+          Panic("receive component (\"%s\") not found!",
 		DSI_EXAMPLE_RECEIVE_NAMES);
           receive_id = L4_INVALID_ID;
           return -1;
@@ -71,20 +71,20 @@ static int
 __receive_connect(dsi_component_t * comp, dsi_socket_ref_t * remote)
 {
   int ret;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
 
   /* get receive component id */
   if (__get_component_id() < 0)
     return -1;
 
   /* call receive component to connect socket */
-  ret = dsi_example_receive_connect(receive_id,
+  ret = dsi_example_receive_connect_call(&receive_id,
 			    (dsi_example_receive_socket_t *)&comp->socketref,
 			    (dsi_example_receive_socket_t *)remote,
-			    &_exc); 
-  if (ret || (_exc._type != exc_l4_no_exception))
+			    &env); 
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("connect failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("connect failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
 
@@ -105,7 +105,7 @@ static int
 __receive_close(dsi_component_t * comp)
 {
   /* do nothing */
-  INFO("receiver closed.\n");
+  LOGL("receiver closed.");
 
   /* done */
   return 0;
@@ -131,7 +131,7 @@ receive_open(l4dm_dataspace_t ctrl_ds,l4dm_dataspace_t data_ds,
 {
   int ret;
   dsi_example_receive_socket_t socket_ref;
-  sm_exc_t _exc;
+  CORBA_Environment env = dice_default_environment;
    
   /* get receive component id */
   if (__get_component_id() < 0)
@@ -153,13 +153,13 @@ receive_open(l4dm_dataspace_t ctrl_ds,l4dm_dataspace_t data_ds,
     }
   
   /* call receive component to create socket */
-  ret = dsi_example_receive_open(receive_id,
+  ret = dsi_example_receive_open_call(&receive_id,
 				 (dsi_example_receive_dataspace_t *)&ctrl_ds,
 				 (dsi_example_receive_dataspace_t *)&data_ds,
-				 &socket_ref,&_exc);
-  if (ret || (_exc._type != exc_l4_no_exception))
+				 &socket_ref,&env);
+  if (ret || (env.major != CORBA_NO_EXCEPTION))
     {
-      Panic("open socket failed (ret %d, exc %d)\n",ret,_exc._type);
+      Panic("open socket failed (ret %d, exc %d)",ret,env.major);
       return -1;
     }
 

@@ -12,10 +12,10 @@ date="27.06.96"
 
 <code/static inline void/ <nl>
 <code/l4_thread_ex_regs(l4_threadid_t / <var/dest/ <code/,
-dword_t / <var/eip/ <code/, dword_t / <var/esp/ <code/,
+l4_umword_t / <var/eip/ <code/, l4_umword_t / <var/esp/ <code/,
 l4_threadid_t / <var/*preempter/ <code/, l4_threadid_t/ <var/*pager/
-<code/, dword_t / <var/*old_eflags/ <code/, dword_t/ <var/*old_eip/
-<code/, dword_t / <var/*old_esp/ <code/);/
+<code/, l4_umword_t / <var/*old_eflags/ <code/, l4_umword_t/ <var/*old_eip/
+<code/, l4_umword_t / <var/*old_esp/ <code/);/
 
 <sect> Description
 

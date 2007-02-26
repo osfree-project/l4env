@@ -1,30 +1,40 @@
 /*
- * \brief	Bumpmapping effect
- * \date	2002-10-10
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   Bumpmapping effect
+ * \date    2002-10-10
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
-/*** GENERAL INCLUDES ***/
-#include <math.h>
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 /*** DOpE SPECIFIC INCLUDES ***/
-#include "dope-config.h"
+#include "dopestd.h"
 #include <dopelib.h>
 #include <vscreen.h>
 
 /*** LOCAL INCLUDES ***/
 #include "bump.h"
 
+/*** DECLARATIONS FROM STANDARD MATH LIB ***/
+double sin(double x);
+double cos(double x);
+
 #define SCR_W 320
 #define SCR_H 240
 
-extern long app_id;					/* DOpE application id */
+extern long app_id;         		/* DOpE application id */
 
 extern u8 _binary____bumpmap_xga_start;
 extern u8 _binary____light_xga_start;
 
 static void *bumpvscr_id;
-static u16 *scr_adr;
+static u16 *scr_adr = NULL;
 static int user_flag = 0;
 static int ux=0,uy=0;
 
@@ -93,7 +103,7 @@ static void prepare_bumpmap(void) {
 	gen_heightmap(&_binary____bumpmap_xga_start,&bumpbuf1[0][0]);
 	filter(&bumpbuf1[0][0],&bumpbuf2[0][0]);
 	filter(&bumpbuf2[0][0],&bumpbuf1[0][0]);
-	filter(&bumpbuf1[0][0],&bumpbuf2[0][0]);	
+	filter(&bumpbuf1[0][0],&bumpbuf2[0][0]);    
 	gen_offset_map(&bumpbuf2[0][0],&bumpbuf1[0][0]);
 }
 
@@ -142,44 +152,31 @@ static void motion_callback(dope_event *e,void *arg) {
 }
 
 
-static void moved_callback(dope_event *e,void *arg) {
-	printf("Window moved!!!\n");
-}
-
-static void resized_callback(dope_event *e,void *arg) {
-	printf("Window resized!!!\n");
-}
-
-static void top_callback(dope_event *e,void *arg) {
-	printf("Window topped!!!\n");
-}
-
 /*** INITIALISATION OF THE EFFECT - MUST BE CALLED DURING THE START UP ***/
-void bump_init(void) {
+int bump_init(void) {
 
 	/* open window with rt-widget */
 	dope_cmd(app_id, "bumpwin=new Window()" );
 	dope_cmd(app_id, "bumpvscr=new VScreen()" );
-	dope_cmd(app_id, "bumpvscr.setmode(320,240,16)" );
-	dope_cmd(app_id, "bumpvscr.set(-framerate 25)");
+	dope_cmd(app_id, "bumpvscr.setmode(320,240,\"RGB16\")" );
+	dope_cmd(app_id, "bumpvscr.set(-framerate 25 -mousemode grab)");
 	dope_cmd(app_id, "bumpwin.set(-x 500 -y 460 -w 330 -h 267 -fitx yes -fity yes -background off -content bumpvscr)" );
 
 	dope_bind(app_id,"bumpvscr","motion", motion_callback, (void *)0x123);
 	dope_bind(app_id,"bumpvscr","enter", enter_callback, (void *)0x123);
 	dope_bind(app_id,"bumpvscr","leave", leave_callback, (void *)0x123);
-	dope_bind(app_id,"bumpwin","moved", moved_callback, (void *)0x123);
-	dope_bind(app_id,"bumpwin","top", top_callback, (void *)0x123);
-	dope_bind(app_id,"bumpwin","resized", resized_callback, (void *)0x123);
 	
 	/* map vscreen buffer to local address space */
-	scr_adr = vscr_get_fb( dope_cmd(app_id, "bumpvscr.map()") );
-
+	scr_adr = vscr_get_fb(app_id, "bumpvscr");
+	if (!scr_adr) return -1;
+	
 	/* get identifier of pSLIM-server */
-	bumpvscr_id = vscr_get_server_id(dope_cmd(app_id,"bumpvscr.getserver()"));
+	bumpvscr_id = vscr_get_server_id(app_id, "bumpvscr");
 	
 	prepare_bumpmap();
 	prepare_light();
 	printf("VScrTest(bump_init): done\n");
+	return 0;
 };
 
 
@@ -188,7 +185,8 @@ void bump_exec(int exec_flag) {
 	static int spot_x,spot_y;
 
 	vscr_server_waitsync(bumpvscr_id);
-	if (!exec_flag) return;
+
+	if (!exec_flag || !scr_adr) return;
 
 	if (user_flag) {
 		spot_x = 160 - ((ux-SCR_W/2)>>1);
@@ -203,6 +201,8 @@ void bump_exec(int exec_flag) {
 	gamm = gamm + 0.083;
 	delt = delt + 0.021;
 
-	bump(&bumpbuf1[0][0],&lightbuf[SCR_H/2+spot_y][spot_x],scr_adr);
+	if (scr_adr) {
+		bump(&bumpbuf1[0][0],&lightbuf[SCR_H/2+spot_y][spot_x],scr_adr);
+	}
 }
 

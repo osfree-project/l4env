@@ -1,13 +1,17 @@
 /* $Id$ */
 /**
  * \file	loader/linux/fprov-l4/main.c
+ * \brief	Linux file server serving L4 generic file provider requests
  *
  * \date	06/10/2001
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- *
- * \brief	Linux file server serving L4 generic file provider requests */
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
@@ -77,10 +81,13 @@ linux_enter_kdebug(void)
  * \return 		0 on success
  * 			-L4_ENOMEM if allocation failed */
 l4_int32_t 
-l4fprov_file_server_open(sm_request_t *request, const char *fname,
-			 const l4fprov_threadid_t *dm, l4_uint32_t flags,
-			 l4fprov_dataspace_t *ds, l4_uint32_t *size,
-			 sm_exc_t *_ev)
+l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
+    const char* fname,
+    const l4_threadid_t *dm,
+    l4_uint32_t flags,
+    l4dm_dataspace_t *ds,
+    l4_uint32_t *size,
+    CORBA_Environment *_dice_corba_env)
 {
   int error;
   gzFile fd;
@@ -97,7 +104,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
   if ((grub_path = strstr(fname, "(nd)/tftpboot/")))
     {
       if ((grub_fname = strchr(grub_path + 14, '/')))
-	fname = grub_fname+1;
+	fname = (char*)(grub_fname+1);
     }
 
   if (!(fname_name = strrchr(fname, '/')))
@@ -106,7 +113,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
     fname_name++;
 
   printf("  open \"%s\" by %x.%x\n", 
-      fname, request->client_tid.id.task, request->client_tid.id.lthread);
+      fname, _dice_corba_obj->id.task, _dice_corba_obj->id.lthread);
       
   if ((fd = gzopen(fname, "r")) == NULL)
     {
@@ -188,7 +195,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
 
   gzclose(fd);
 
-  if ((error = l4dm_transfer((l4dm_dataspace_t*)ds, request->client_tid)))
+  if ((error = l4dm_transfer((l4dm_dataspace_t*)ds, *_dice_corba_obj)))
     {
       printf("Error transfering dataspace ownership: %s (%d)\n",
 	  l4env_errstr(error), error);
@@ -204,35 +211,7 @@ l4fprov_file_server_open(sm_request_t *request, const char *fname,
 static void
 server_loop(void)
 {
-  int ret;
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-  l4_msgdope_t result;
-
-  flick_init_request(&request, &ipc_buf);
-  for (;;)
-    {
-      result = flick_server_wait(&request);
-      while (!L4_IPC_IS_ERROR(result))
-	{
-#if DEBUG_REQUEST
-	  fprintf(stderr, "request 0x%08x, src %x.%x\n", ipc_buf.buffer[0],
-		  request.client_tid.id.task, request.client_tid.id.lthread);
-#endif
-	  switch (ret = l4fprov_file_server(&request))
-	    {
-	    case DISPATCH_ACK_SEND:
-	      result = flick_server_reply_and_wait(&request);
-	      break;
-
-	    default:
-	      fprintf(stderr, "Flick dispatch error (%d)!\n", ret);
-	      result = flick_server_wait(&request);
-	      break;
-	    }
-	}
-      fprintf(stderr, "Flick IPC error (0x%08x)!\n", result.msgdope);
-    }
+  l4fprov_file_server_loop(NULL);
 }
 
 int

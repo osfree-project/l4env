@@ -56,7 +56,7 @@ Stack_top<T>::Stack_top ()
 // Stack
 // 
 
-PUBLIC
+PUBLIC inline
 template<typename T>
 Stack<T>::Stack()
   : _head (0, 0)

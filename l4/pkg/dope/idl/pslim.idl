@@ -1,3 +1,17 @@
+/*
+ * \brief   IDL interface to pSLIM widget server
+ * \date    2002-11-25
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 typedef struct pslim_rect {
   short x, y;
@@ -7,13 +21,13 @@ typedef struct pslim_rect {
 typedef unsigned long pslim_color_t;
 
 interface dope_pslim {
-			
+
       /**************************************************************/
       /*!
        * \brief fill rectangular area of virtual framebuffer with color
        *
-       * \param  rect	vfb area info
-       * \param  color	fill color
+       * \param  rect   vfb area info
+       * \param  color  fill color
        *
        * \return 0 for success
        **************************************************************/
@@ -23,9 +37,9 @@ interface dope_pslim {
       /*!
        * \brief copy rectangular area of virtual framebuffer to (dx,dy)
        *
-       * \param  rect	vfb area info
-       * \param  dx		destination x coordinate (may be negative)
-       * \param  dy		dito for y coordinate
+       * \param  rect   vfb area info
+       * \param  dx     destination x coordinate (may be negative)
+       * \param  dy     dito for y coordinate
        *
        * \return 0 for success
        **************************************************************/
@@ -46,75 +60,75 @@ interface dope_pslim {
        * \return 0 for success
        **************************************************************/
       long bmap([in] pslim_rect_t rect,
-				[in] pslim_color_t fg_color,
-				[in] pslim_color_t bg_color,
-				[in,ref,size_is(bmap_size)] byte *bmap,
-				[in] long bmap_size,
-				[in] long bmap_type);
+                [in] pslim_color_t fg_color,
+                [in] pslim_color_t bg_color,
+                [in,ref,size_is(bmap_size)] byte *bmap,
+                [in] long bmap_size,
+                [in] long bmap_type);
 
       /**************************************************************/
       /*!
        * \brief Set rectangular area of virtual framebuffer with color
-       *	in pixelmap
+       *        in pixelmap
        *
-       * \param  rect		vfb area info
-       * \param  pmap		pixmap
+       * \param  rect   vfb area info
+       * \param  pmap   pixmap
        *
        * \return 0 for success
        **************************************************************/
       long set([in] pslim_rect_t rect,
-			   [in, ref, size_is(pmap_size), max_is(100000)] char *pmap,
-			   [in] int pmap_size);
+               [in, ref, size_is(pmap_size), max_is(100000)] char *pmap,
+               [in] int pmap_size);
 
       /**************************************************************/
       /*!
        * \brief convert pixmap from YUV to RGB color space, scale and 
-       *	set rectangular area of virtual framebuffer
+       *        set rectangular area of virtual framebuffer
        *
-       * \param  rect		vfb area info
-       * \param  yuv		pixmap in YUV color space
-       * \param  yuv_type	type of pixmap's YUV encoding
-       * \param  scale	scale pixmap (defaults to 1) (NOT 
-       *			SUPPORTED YET)
+       * \param  rect       vfb area info
+       * \param  yuv        pixmap in YUV color space
+       * \param  yuv_type   type of pixmap's YUV encoding
+       * \param  scale      scale pixmap (defaults to 1) (NOT 
+       *                    SUPPORTED YET)
        *
        * \return 0 for success
        **************************************************************/
       long cscs([in] pslim_rect_t rect,
-				[in, ref, size_is(yuv_size), max_is(100000)] char  *yuv,
-				[in] int yuv_size,
-				[in] long yuv_type,
-				[in] char scale);
-		
-      /**************************************************************/
-      /*!
-       * \brief put string at x, y
-       *
-       * \param  s      string
-       * \param  x		destination x coordinate
-       * \param  y		dito for y coordinate
-       *
-       * \return 0 for success,
-       **************************************************************/
-      long puts([in, string] char *s,
-				[in] short x,
-				[in] short y,
-				[in] pslim_color_t fg_color,
-				[in] pslim_color_t bg_color);
+                [in, ref, size_is(yuv_size), max_is(100000)] char  *yuv,
+                [in] int yuv_size,
+                [in] long yuv_type,
+                [in] char scale);
 
       /**************************************************************/
       /*!
        * \brief put string at x, y
        *
        * \param  s      string
-       * \param  x		destination x coordinate
-       * \param  y		dito for y coordinate
+       * \param  x      destination x coordinate
+       * \param  y      dito for y coordinate
+       *
+       * \return 0 for success,
+       **************************************************************/
+      long puts([in, string] char *s,
+                [in] short x,
+                [in] short y,
+                [in] pslim_color_t fg_color,
+                [in] pslim_color_t bg_color);
+
+      /**************************************************************/
+      /*!
+       * \brief put string at x, y
+       *
+       * \param  s      string
+       * \param  x      destination x coordinate
+       * \param  y      dito for y coordinate
        *
        * \return 0 for success,
        **************************************************************/
       long puts_attr([in, ref, size_is(strattr_size)] char *s,
-	  				 [in] int strattr_size,
-					 [in] short x,
-					 [in] short y);
+                     [in] int strattr_size,
+                     [in] short x,
+                     [in] short y);
 
 };
 

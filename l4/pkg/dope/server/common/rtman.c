@@ -1,22 +1,31 @@
 /*
- * \brief	DOpE real-time manager module
- * \date	2002-11-13
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
- * 
- * This real-time manager module is just examplary. 
- * It restricts the number of real-time widgets to  
- * four.  There are  also no  time-exceeding tests     
- * performed.                                       
- * There are four time-slots where real-time opera- 
+ * \brief   DOpE real-time manager module
+ * \date    2002-11-13
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ *
+ * This real-time manager module is just examplary.
+ * It restricts the number of real-time widgets to
+ * four.  There are  also no  time-exceeding tests
+ * performed.
+ * There are four time-slots where real-time opera-
  * tions can be  (interleaved) executed.  Given an
- * execution frequency  of 100Hz - this rt-manager 
- * module displays the rt-widgets at 25fps. 
+ * execution frequency  of 100Hz - this rt-manager
+ * module displays the rt-widgets at 25fps.
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
  */
 
 struct private_widget;
 #define WIDGET struct private_widget
 
-#include "dope-config.h"
+#include "dopestd.h"
 #include "thread.h"
 #include "widget_data.h"
 #include "widget.h"
@@ -25,7 +34,7 @@ struct private_widget;
 
 #define NUM_SLOTS 4
 
-struct timeslot_struct {
+struct timeslot {
 	WIDGET *w;
 	float   duration;
 	MUTEX  *sync_mutex;
@@ -40,7 +49,7 @@ WIDGET {
 static struct winman_services *winman;
 static struct thread_services *thread;
 
-static struct timeslot_struct ts[NUM_SLOTS];
+static struct timeslot ts[NUM_SLOTS];
 static s32 curr_slot = 0;
 
 
@@ -59,11 +68,11 @@ static void rt_execute_redraw(void) {
 	long cx1,cy1,cx2,cy2;
 	WIDGET *win=NULL;
 	MUTEX *sync_mutex = ts[curr_slot].sync_mutex;
-	
+
 	/* cycle trough time slots */
 	curr_slot++;
 	if (curr_slot >= NUM_SLOTS) curr_slot -= NUM_SLOTS;
-	
+
 	if (!cw) return;
 
 	/* widget area relative to its parent */
@@ -71,10 +80,10 @@ static void rt_execute_redraw(void) {
 	cy1 = cw->wd->y;
 	cx2 = cx1 + cw->wd->w - 1;
 	cy2 = cy1 + cw->wd->h - 1;
-	
+
 	cw=cw->wd->parent;
 	while ((cw!=NULL) && (cw!=(WIDGET *)'#')) {
-	
+
 		/* shink current area to parent view area */
 		if (cx1 < 0) cx1 = 0;
 		if (cy1 < 0) cy1 = 0;
@@ -85,11 +94,11 @@ static void rt_execute_redraw(void) {
 		cy1+=cw->wd->y;
 		cx2+=cw->wd->x;
 		cy2+=cw->wd->y;
-	
+
 		win=cw;
 		cw=cw->wd->parent;
 	}
-	
+
 	if (cw) winman->draw((WINDOW *)win,cx1,cy1,cx2,cy2);
 	if (sync_mutex) thread->mutex_up(sync_mutex);
 }
@@ -100,19 +109,19 @@ static void rt_execute_redraw(void) {
 static s32 rt_add_widget(WIDGET *w,float duration) {
 	s32 free_slot = -1;
 	s32 i;
-	
+
 	/* search free slot */
 	for (i=0;i<NUM_SLOTS;i++) {
 		if (!ts[i].w) free_slot = i;
 	}
-	
+
 	if (free_slot == -1) return -1;
-	
+
 	/* settle down at time slot */
 	ts[free_slot].w = w;
 	ts[free_slot].duration = duration;
 	w->gen->inc_ref(w);
-	
+
 	return 0;
 }
 
@@ -121,10 +130,10 @@ static s32 rt_add_widget(WIDGET *w,float duration) {
 /*** UNREGISTER A REAL-TIME WIDGET ***/
 static void rt_remove_widget(WIDGET *w) {
 	s32 i;
-	
+
 	/* search slot of the given widget */
 	for (i=0;i<NUM_SLOTS;i++) {
-	
+
 		/* free the widget's time slot */
 		if (ts[i].w == w) {
 			ts[i].w = NULL;
@@ -141,10 +150,10 @@ static void rt_remove_widget(WIDGET *w) {
 /*** SET MUTEX THAT SHOULD BE UNLOCKED AFTER DRAWING OPERATIONS ***/
 static void rt_set_sync_mutex(WIDGET *w,MUTEX *m) {
 	s32 i;
-	
+
 	/* search slot of the given widget */
 	for (i=0;i<NUM_SLOTS;i++) {
-	
+
 		if (ts[i].w == w) {
 			ts[i].sync_mutex = m;
 			return;
@@ -173,7 +182,7 @@ int init_rtman(struct dope_services *d) {
 
 	winman = d->get_module("WindowManager 1.0");
 	thread = d->get_module("Thread 1.0");
-	
+
 	d->register_module("RTManager 1.0",&services);
 	return 1;
 }

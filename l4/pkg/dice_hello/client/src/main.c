@@ -7,11 +7,11 @@
 
 int main(void)
 {
-  CORBA_Object hello_id;
+  l4_threadid_t hello_id;
   CORBA_Environment env = dice_default_environment;
   l4_uint32_t tmp;
 
-  names_waitfor_name("flick_hello_server", &hello_id, 10000);
+  names_waitfor_name("dice_hello_server", &hello_id, 10000);
 
   printf("hello is %x.%x\n", hello_id.id.task, hello_id.id.lthread);
   

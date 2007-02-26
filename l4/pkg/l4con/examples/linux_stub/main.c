@@ -1,6 +1,14 @@
-/*
- *  dropscon.c -- DROPS textbased console driver for L4Linux
- */
+/*!
+ * \file	con/examples/linux_stub/main.c
+ * \brief	DROPS textbased console driver for L4Linux
+ *
+ * \date	01/2002
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the con package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #include <linux/version.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
@@ -30,7 +38,9 @@
 
 /* L4 includes */
 #include <l4/names/libnames.h>
+#include <l4/sys/l4int.h>
 #include <l4/util/atomic.h>
+#include <l4/con/l4con.h>
 
 /* local includes */
 #include "dropscon.h"
@@ -234,7 +244,7 @@ get_comh_req(void)
 	}
     
       /* try to write new index; if failed, retry */
-    } while (! cmpxchg32(&head, old, new));
+    } while (! l4util_cmpxchg32(&head, old, new));
 
   return comh_list + old;
 }
@@ -255,7 +265,7 @@ ack_comh_req(comh_proto_t *comh)
   /* wakeup comh thread? */
   while ((state = atomic_read(&comh_sleep_state)) > 0)
     {
-      if (cmpxchg32((l4_uint32_t*)&comh_sleep_state, state, state-1))
+      if (l4util_cmpxchg32((l4_uint32_t*)&comh_sleep_state, state, state-1))
 	{
 	  l4_threadid_t preempter, pager;
 	  unsigned old_flags, old_eip, old_esp;
@@ -280,7 +290,7 @@ dropscon_clear(struct vc_data *conp,
 	       int height,
 	       int width)
 {
-  con_pslim_rect_t _rect;
+  l4con_pslim_rect_t _rect;
   comh_proto_t *comh;
          
   if (!height || !width)
@@ -418,7 +428,7 @@ dropscon_scroll(struct vc_data *c,
       if (accel_flags & L4CON_FAST_COPY)
 	{
 	  /* copy is faster than redraw */
-	  con_pslim_rect_t _rect;
+	  l4con_pslim_rect_t _rect;
 	  comh_proto_t *comh;
 
 	  _rect.x = 0;
@@ -464,7 +474,7 @@ dropscon_scroll(struct vc_data *c,
       if (accel_flags & L4CON_FAST_COPY)
 	{
 	  /* copy is faster than redraw */
-	  con_pslim_rect_t _rect;
+	  l4con_pslim_rect_t _rect;
 	  comh_proto_t *comh;
 
 	  _rect.x = 0;
@@ -519,7 +529,7 @@ dropscon_bmove(struct vc_data *conp,
   if (accel_flags & L4CON_FAST_COPY)
     {
       /* copy is faster than redraw */
-      con_pslim_rect_t _rect;
+      l4con_pslim_rect_t _rect;
       comh_proto_t *comh;
       
       _rect.x = DROPSCON_BITX(sx);
@@ -578,8 +588,8 @@ static int
 dropscon_blank(struct vc_data *conp, 
 	       int blank)
 {
-  sm_exc_t _ev;
-  con_pslim_rect_t rect;   
+  CORBA_Environment _env = dice_default_environment;
+  l4con_pslim_rect_t rect;   
    
   if (blank) 
     {
@@ -588,8 +598,8 @@ dropscon_blank(struct vc_data *conp,
       rect.h = yres;
       rect.w = xres;
       
-      if (con_vc_pslim_fill(dropsvc_l4id, &rect, black, &_ev)
-	  || (_ev._type != exc_l4_no_exception))
+      if (con_vc_pslim_fill_call(&dropsvc_l4id, &rect, black, &_env)
+	  || (_env.major != CORBA_NO_EXCEPTION))
 	{
 	  printk("dropscon.o: blank fill failed\n");
 	  return 0;
@@ -696,7 +706,7 @@ dropscon_clear_gap(void)
       /* clear rest of screen */
       if ((comh = get_comh_req()))
 	{
-	  con_pslim_rect_t rect = { 0, bottom, xres, yres };
+	  l4con_pslim_rect_t rect = { 0, bottom, xres, yres };
 	  
 	  comh->func.fill.rect = rect;
 	  comh->func.fill.color = black;
@@ -718,7 +728,7 @@ dropsconsole_init(void)
 {
   comh_proto_t *comh;
   l4_uint8_t gmode;
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
   int error;
   unsigned bits_per_pixel;   /* ignored since we don't need it */
   unsigned bytes_per_pixel;  /* ignored since we don't need it */
@@ -738,10 +748,10 @@ dropsconsole_init(void)
     }
   
   /* open con console, string buffer is 65536 bytes */
-  if (con_if_openqry(con_l4id, DROPSCON_MAX_SBUF_SIZE,  0, 0,
+  if (con_if_openqry_call(&con_l4id, DROPSCON_MAX_SBUF_SIZE,  0, 0,
 		     PRIO_KERNEL /*from linux22/include/l4linux/x86/config.h*/,
-		     (con_threadid_t*) &dropsvc_l4id, CON_NOVFB, &_ev)
-      || (_ev._type != exc_l4_no_exception))
+		     &dropsvc_l4id, CON_NOVFB, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
       printk("dropscon.o: open vc failed\n");
       goto fail3;
@@ -754,19 +764,19 @@ dropsconsole_init(void)
   /* init keyboard stub */
   con_kbd_init();
 
-  if (con_vc_smode(dropsvc_l4id, CON_INOUT, 
-		    (con_threadid_t*) &ev_l4id, &_ev)) 
+  if (con_vc_smode_call(&dropsvc_l4id, CON_INOUT, 
+		    &ev_l4id, &_env)) 
     {
       printk("dropscon.o: setup vc failed\n");
       goto fail1;
     }
 
   /* set up lines and rows */
-  if (con_vc_graph_gmode(dropsvc_l4id, &gmode, &xres, &yres, 
+  if (con_vc_graph_gmode_call(&dropsvc_l4id, &gmode, &xres, &yres, 
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
-			 &fn_x, &fn_y, &_ev)
-      || (_ev._type != exc_l4_no_exception))
+			 &fn_x, &fn_y, &_env)
+      || (_env.major != CORBA_NO_EXCEPTION))
     {
       printk("dropscon.o: get graph_gmode failed\n");
       goto fail1;
@@ -844,9 +854,9 @@ dropsconsole_init(void)
        * and need_resched is set because comh_thread will be never call
        * L4Linux */
 
-      l4_i386_ipc_receive(comh_l4id, L4_IPC_SHORT_MSG, &dummy, &dummy,
+      l4_ipc_receive(comh_l4id, L4_IPC_SHORT_MSG, &dummy, &dummy,
 			  L4_IPC_NEVER, &result);
-      l4_i386_ipc_send   (comh_l4id, L4_IPC_SHORT_MSG, 0, 0,
+      l4_ipc_send   (comh_l4id, L4_IPC_SHORT_MSG, 0, 0,
 			  L4_IPC_NEVER, &result);
     }
   
@@ -864,7 +874,7 @@ fail1:
   con_kbd_exit();
   
 fail2:
-  con_vc_close(dropsvc_l4id, &_ev);
+  con_vc_close_call(&dropsvc_l4id, &_env);
 
 fail3:
   return -EINVAL;
@@ -876,11 +886,11 @@ fail3:
 static void 
 dropsconsole_exit(void)
 {
-  sm_exc_t _ev;
+  CORBA_Environment _env = dice_default_environment;
 
   xf86if_done();
    
-  if (con_vc_close(dropsvc_l4id, &_ev))
+  if (con_vc_close_call(&dropsvc_l4id, &_env))
     printk("Close vc failed.");
    
   con_kbd_exit();

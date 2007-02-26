@@ -18,4 +18,7 @@ install::
 clean cleanall::
 	$(MAKE) -C $(DIALOG) $@
 
+doc::
+
+BID_NEED_CONFIG=
 include $(L4DIR)/mk/Makeconf

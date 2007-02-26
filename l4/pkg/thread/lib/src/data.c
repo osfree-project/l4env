@@ -6,23 +6,13 @@
  *
  * \date   07/02/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -64,7 +54,7 @@ __set_data(l4th_tcb_t * tcb, int key, void * data)
 {
   /* sanity checks */
   if ((key < 0) || (key >= L4THREAD_MAX_DATA_KEYS) || 
-      (test_bit(&l4th_data_keys,key) == 0))
+      (l4util_test_bit(key,&l4th_data_keys) == 0))
     return -L4_EINVAL;
 
   /* set data pointer */
@@ -88,7 +78,7 @@ __get_data(l4th_tcb_t * tcb, int key)
 {
   /* sanity checks */
   if ((key < 0) || (key >= L4THREAD_MAX_DATA_KEYS) || 
-      (test_bit(&l4th_data_keys,key) == 0))
+      (l4util_test_bit(key,&l4th_data_keys) == 0))
     return NULL;
   
   /* return data pointer */
@@ -113,7 +103,7 @@ l4thread_data_allocate_key(void)
 
   for (i = 0; i < L4THREAD_MAX_DATA_KEYS; i++)
     {
-      if (bts(&l4th_data_keys,i) == 0)
+      if (l4util_bts(i,&l4th_data_keys) == 0)
 	/* found unused key */
 	break;
     }
@@ -139,7 +129,7 @@ l4thread_data_release_key(int key)
     return;
 
   /* release key */
-  clear_bit(&l4th_data_keys,key);
+  l4util_clear_bit(key,&l4th_data_keys);
 }
 
 /*****************************************************************************/

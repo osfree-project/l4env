@@ -6,23 +6,13 @@
  *
  * \date   11/24/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
@@ -76,13 +66,13 @@ __max_addr_align(l4_addr_t start,
 		 l4_addr_t end)
 {
   if (start != end)
-    return bsr((start - 1) ^ end);
+    return l4util_bsr((start - 1) ^ end);
   else
     {
       if (start == 0)
 	return DMPHYS_AS_LOG2_SIZE;
       else
-	return bsf(start);
+	return l4util_bsf(start);
     }
 }
 
@@ -146,7 +136,7 @@ __max_size(page_area_t * area,
     align_addr = rcv_size2;
   else
     {
-      align_addr = bsf(local_addr ^ rcv_offs);
+      align_addr = l4util_bsf(local_addr ^ rcv_offs);
       if (align_addr > rcv_size2)
 	align_addr = rcv_size2;
     }
@@ -161,13 +151,12 @@ __max_size(page_area_t * area,
   if (align_addr < align)
     align = align_addr;
 
-#if DEBUG_MAP
-  INFO("area 0x%08x-0x%08x\n",area_start,area_end);
-  DMSG("  addr 0x%08x\n",local_addr);
-  DMSG("  remote offset 0x%08x, remote size %d\n",rcv_offs,rcv_size2);
-  DMSG("  align addr %d, align start %d, align end %d, align %d\n",
-       align_addr,align_start,align_end,align);
-#endif
+  LOGdL(DEBUG_MAP,"area 0x%08x-0x%08x\n" \
+        "  addr 0x%08x\n" \
+        "  remote offset 0x%08x, remote size %d\n" \
+        "  align addr %d, align start %d, align end %d, align %d",
+        area_start,area_end,local_addr,rcv_offs,rcv_size2,align_addr,
+        align_start,align_end,align);
 
 #if MAP_FPAGE_PARANOIA
   /* check if size alignment calculation (2)/(3) works */
@@ -177,8 +166,8 @@ __max_size(page_area_t * area,
   map_end = map_start + (1UL << align_size);
   if ((map_start >= area_start) && (map_end <= area_end))
     {
-      Msg("area 0x%08x-0x%08x, offset 0x%08x\n",area_start,area_end,offset);
-      Msg("map area 0x%08x-0x%08x (size %d)\n",map_start,map_end,align_size);
+      printf("area 0x%08x-0x%08x, offset 0x%08x\n",area_start,area_end,offset);
+      printf("map area 0x%08x-0x%08x (size %d)\n",map_start,map_end,align_size);
       Panic("DMphys: wrong size alignment: got %d, but %d also works!\n",
 	    align_size - 1,align_size);
     } 
@@ -231,15 +220,13 @@ __max_size_at_offs(page_area_t * area,
     max_align = rcv_size2;
   else
     {
-      max_align = bsf(a);
+      max_align = l4util_bsf(a);
       if (max_align > rcv_size2)
 	max_align = rcv_size2;
     }
-  max_size = bsr(area->size - offset);
+  max_size = l4util_bsr(area->size - offset);
 
-#if DEBUG_MAP
-  INFO("max align %d, max size %d\n",max_align,max_size);
-#endif
+  LOGdL(DEBUG_MAP,"max align %d, max size %d",max_align,max_size);
 
   return (max_size < max_align ? max_size : max_align);
 }
@@ -305,13 +292,13 @@ __build_map_fpage(page_area_t * area,
   
   if ((fpage_size < size2) && !(flags & L4DM_MAP_PARTIAL))
     {
-      /* requested map area does not fit into page area */
+      /* _dice_corba_objed map area does not fit into page area */
 #if DEBUG_ERRORS
-      DMSG("memory area 0x%08x-0x%08x, offset 0x%08x\n (addr 0x%08x)\n",
-	   AREA_MAP_ADDR(area),AREA_MAP_ADDR(area) + area->size,
-	   offset,addr);
-      DMSG("max. map area 0x%08x-0x%08x, size 0x%08lx (%d)\n",
-	   map_start,map_end,1UL << fpage_size,fpage_size);
+      printf("memory area 0x%08x-0x%08x, offset 0x%08x\n (addr 0x%08x)\n",
+             AREA_MAP_ADDR(area),AREA_MAP_ADDR(area) + area->size,
+             offset,addr);
+      printf("max. map area 0x%08x-0x%08x, size 0x%08lx (%d)\n",
+             map_start,map_end,1UL << fpage_size,fpage_size);
       ERROR("DMphys: could not create fpage with size2 %d!",size2);
 #endif
       return -L4_EINVAL;
@@ -337,11 +324,10 @@ __build_map_fpage(page_area_t * area,
     fpage->fpage = l4_fpage(map_start,fpage_size,L4_FPAGE_RO,L4_FPAGE_MAP);
   fpage->snd_base = rcv_offs - (addr - map_start);
 
-#if DEBUG_MAP
-  INFO("%s fpage 0x%08x-0x%08x\n",
-       (flags & L4DM_WRITE) ? "rw" : "ro",map_start,map_end);
-  DMSG("  size %d, snd_base 0x%08x\n",fpage_size,fpage->snd_base);
-#endif
+  LOGdL(DEBUG_MAP,"%s fpage 0x%08x-0x%08x\n" \
+        "  size %d, snd_base 0x%08x",
+        (flags & L4DM_WRITE) ? "rw" : "ro",map_start,map_end,
+        fpage_size,fpage->snd_base);
 
 #if MAP_FPAGE_PARANOIA
   /* check if fpage fits into memory area and fpage start address / size */
@@ -350,9 +336,9 @@ __build_map_fpage(page_area_t * area,
       ((map_start != addr) && !(flags & L4DM_MAP_MORE)) || 
       (fpage_size < L4_LOG2_PAGESIZE))
     {
-      Msg("memory area 0x%08x-0x%08x, offset 0x%08x\n",
-	  AREA_MAP_ADDR(area),AREA_MAP_ADDR(area) + area->size,offset);
-      Msg("map fpage 0x%08x-0x%08x, size %d\n",map_start,map_end,fpage_size);	  
+      printf("memory area 0x%08x-0x%08x, offset 0x%08x\n",
+             AREA_MAP_ADDR(area),AREA_MAP_ADDR(area) + area->size,offset);
+      printf("map fpage 0x%08x-0x%08x, size %d\n",map_start,map_end,fpage_size);
       Panic("DMphys: fpage calculation failed!");
     }
 #endif
@@ -377,20 +363,16 @@ __unmap_area(l4_addr_t adr,
 
   while (size > 0)
     {
-#if DEBUG_UNMAP
-      INFO("0x%08x, size %u (0x%08x)\n",map_addr,size,size);
-#endif
+      LOGdL(DEBUG_UNMAP,"0x%08x, size %u (0x%08x)",map_addr,size,size);
 
       /* calculate the largest fpage we can unmap at address addr, 
        * it depends on the alignment of addr and of the size */
-      addr_align = (map_addr == 0) ? 32 : bsf(map_addr);
-      log2_size = bsr(size);
+      addr_align = (map_addr == 0) ? 32 : l4util_bsf(map_addr);
+      log2_size = l4util_bsr(size);
       fpage_size = (addr_align < log2_size) ? addr_align : log2_size;
 
-#if DEBUG_UNMAP
-      INFO("align: addr %d, size %d, fpage %d\n",
-	   addr_align,log2_size,fpage_size);
-#endif
+      LOGdL(DEBUG_MAP,"align: addr %d, size %d, fpage %d",
+            addr_align,log2_size,fpage_size);
 
       /* unmap page */
       l4_fpage_unmap(l4_fpage(map_addr,fpage_size,0,0),
@@ -450,7 +432,7 @@ dmphys_unmap_areas(page_area_t * areas)
 /**
  * \brief  Map dataspace pages
  * 
- * \param  request       Flick request structure
+ * \param  _dice_corba_obj       Flick _dice_corba_obj structure
  * \param  ds_id         Dataspace id
  * \param  offset        Offset in dataspace
  * \param  size          Map size 
@@ -462,7 +444,7 @@ dmphys_unmap_areas(page_area_t * areas)
  *                       - \c L4DM_MAP_MORE        allow bigger fpages
  *                       - \c L4DM_MEMPHYS_4MPAGES force 4MB-pages
  * \retval page          Flexpage descriptor
- * \retval _ev           Flick exception structure (unused)
+ * \retval _dice_corba_env           Flick exception structure (unused)
  *	
  * \return 0 on success (page contains a valid flexpage), error code 
  *         otherwise:
@@ -474,18 +456,17 @@ dmphys_unmap_areas(page_area_t * areas)
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_map(sm_request_t * request, 
-			   l4_uint32_t ds_id, 
-			   l4_uint32_t offset, 
-			   l4_uint32_t size, 
-			   l4_uint32_t rcv_size2, 
-			   l4_uint32_t rcv_offs, 
-			   l4_uint32_t flags, 
-			   l4_snd_fpage_t * page, 
-			   sm_exc_t * _ev)
+if_l4dm_generic_map_component(CORBA_Object _dice_corba_obj,
+                              l4_uint32_t ds_id,
+                              l4_uint32_t offset,
+                              l4_uint32_t size,
+                              l4_uint32_t rcv_size2,
+                              l4_uint32_t rcv_offs,
+                              l4_uint32_t flags,
+                              l4_snd_fpage_t *page,
+                              CORBA_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   int ret,size2;
   page_area_t * area;
   l4_offs_t area_offset;
@@ -495,28 +476,30 @@ if_l4dm_memphys_server_map(sm_request_t * request,
   page->fpage = l4_fpage(0,0,0,0);
 
   /* get dataspace descriptor, check access rights */
-  ret = dmphys_ds_get_check_rights(ds_id,caller,flags & L4DM_RIGHTS_MASK,&ds);
+  ret = dmphys_ds_get_check_rights(ds_id,*_dice_corba_obj,
+                                   flags & L4DM_RIGHTS_MASK,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace, id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	{
-	  DMSG("ds %u, caller %x.%x, rights 0x%04x, has 0x%04x\n",
-	       ds_id,caller.id.task,caller.id.lthread,
-	       flags & L4DM_RIGHTS_MASK,dmphys_ds_get_rights(ds,caller));
+	  printf("ds %u, caller %x.%x, rights 0x%04x, has 0x%04x\n",
+                 ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread,
+                 flags & L4DM_RIGHTS_MASK,
+                 dmphys_ds_get_rights(ds,*_dice_corba_obj));
 	  ERROR("DMphys: bad permissions");
 	}
 #endif
       return ret;
     }
 
-#if DEBUG_MAP
-  INFO("caller %x.%x, ds %u\n",caller.id.task,caller.id.lthread,ds_id);
-  DMSG("  offset 0x%08x, size 0x%08x, flags 0x%08x\n",offset,size,flags);
-#endif
+  LOGdL(DEBUG_MAP,"caller %x.%x, ds %u\n" \
+        "  offset 0x%08x, size 0x%08x, flags 0x%08x",
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id,
+        offset,size,flags);
 
   /* round offset / size to pagesize */
   size = (((offset + size) + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK) - 
@@ -527,14 +510,14 @@ if_l4dm_memphys_server_map(sm_request_t * request,
     /* nothing to do */
     return 0;
 
-  size2 = bsr(size);
+  size2 = l4util_bsr(size);
   if (((1UL << size2) != size) && !(flags & L4DM_MAP_PARTIAL))
     {
       if (flags & L4DM_MAP_MORE)
 	size2++;
       else
 	{
-	  ERROR("DMphys: invalid map page size requested: 0x%08x",size);
+	  ERROR("DMphys: invalid map page size _dice_corba_objed: 0x%08x",size);
 	  return -L4_EINVAL;
 	}
     }
@@ -548,10 +531,10 @@ if_l4dm_memphys_server_map(sm_request_t * request,
     }
 
 #if DEBUG_MAP
-  DMSG("  aligned offset 0x%08x, size2 %d\n",offset,size2);
-  DMSG("  page area 0x%08x-0x%08x, area offset 0x%08x\n",
-       area->addr,area->addr + area->size,area_offset);
-  DMSG("  rcv_size %u, rcv_offs 0x%08x\n",rcv_size2,rcv_offs);
+  printf("  aligned offset 0x%08x, size2 %d\n",offset,size2);
+  printf("  page area 0x%08x-0x%08x, area offset 0x%08x\n",
+         area->addr,area->addr + area->size,area_offset);
+  printf("  rcv_size %u, rcv_offs 0x%08x\n",rcv_size2,rcv_offs);
 #endif
 
   /* check receive window specification */
@@ -569,9 +552,9 @@ if_l4dm_memphys_server_map(sm_request_t * request,
 	    "(offset 0x%08x, size %u)",rcv_offs,rcv_size2);
       return -L4_EINVAL_OFFS;
     }
-
+  
 #if DEBUG_MAP
-  DMSG("  aligned rcv_offs 0x%08x\n",rcv_offs);
+  printf("  aligned rcv_offs 0x%08x\n",rcv_offs);
 #endif
 
   /* build map fpage */
@@ -590,11 +573,11 @@ if_l4dm_memphys_server_map(sm_request_t * request,
 /**
  * \brief Handle dataspace fault
  * 
- * \param  request       Flick request structure
+ * \param  _dice_corba_obj       Flick _dice_corba_obj structure
  * \param  ds_id         Dataspace id
  * \param  offset        Offset in dataspace
  * \retval page          Reply flexpage
- * \retval _ev           Flick exception structure (unused)
+ * \retval _dice_corba_env           Flick exception structure (unused)
  *	
  * \return 0 on success (page contains a valid flexpage), error code 
  *         otherwise:
@@ -607,14 +590,13 @@ if_l4dm_memphys_server_map(sm_request_t * request,
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_fault(sm_request_t * request, 
-			     l4_uint32_t ds_id, 
-			     l4_uint32_t offset, 
-			     l4_snd_fpage_t * page, 
-			     sm_exc_t *_ev)
+if_l4dm_generic_fault_component(CORBA_Object _dice_corba_obj,
+                                l4_uint32_t ds_id,
+                                l4_uint32_t offset,
+                                l4_snd_fpage_t *page,
+                                CORBA_Environment *_dice_corba_env)
 {
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
   int rw = offset & 2;  
   l4_uint32_t rights = (rw) ? (L4DM_READ | L4DM_WRITE) : L4DM_READ;
   int ret;
@@ -627,28 +609,27 @@ if_l4dm_memphys_server_fault(sm_request_t * request,
   page->fpage = l4_fpage(0,0,0,0);
 
   /* get dataspace descriptor */
-  ret = dmphys_ds_get_check_rights(ds_id,caller,rights,&ds);
+  ret = dmphys_ds_get_check_rights(ds_id,*_dice_corba_obj,rights,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace, id %u, client %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread);
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
       else
 	{
-	  DMSG("ds %u, client %x.%x, rights 0x%04x, has 0x%04x\n",
-	       ds_id,caller.id.task,caller.id.lthread,rights,
-	       dmphys_ds_get_rights(ds,caller));
+	  printf("ds %u, client %x.%x, rights 0x%04x, has 0x%04x\n",
+                 ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread,
+                 rights,dmphys_ds_get_rights(ds,*_dice_corba_obj));
 	  ERROR("DMphys: bad permissions");
 	}
 #endif
       return ret;
     }
 
-#if DEBUG_FAULT
-  INFO("client %x.%x, ds %u\n",caller.id.task,caller.id.lthread,ds_id);
-  DMSG("  offset 0x%08x, %s\n",offset,(rw) ? "rw" : "ro");
-#endif
+  LOGdL(DEBUG_FAULT,"client %x.%x, ds %u\n  offset 0x%08x, %s",
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,
+        ds_id,offset,(rw) ? "rw" : "ro");
 
   /* round offset to pagesize */
   offset &= DMPHYS_PAGEMASK;
@@ -671,11 +652,8 @@ if_l4dm_memphys_server_fault(sm_request_t * request,
 			   L4_FPAGE_RO,L4_FPAGE_MAP);
   page->snd_base = 0;
 
-#if DEBUG_FAULT
-  INFO("\n");
-  DMSG("  %s fpage 0x%08x-0x%08x\n",(rw) ? "rw" : "ro",
-       map_start,map_start + DMPHYS_PAGESIZE);
-#endif
+  LOGdL(DEBUG_FAULT,"\n  %s fpage 0x%08x-0x%08x",(rw) ? "rw" : "ro",
+        map_start,map_start + DMPHYS_PAGESIZE);
 
   /* done */
   return 0;

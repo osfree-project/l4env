@@ -1,13 +1,15 @@
 /* $Id$ */
-/*****************************************************************************
- * exec/include/l4/exec/errno.h                                              *
- *                                                                           *
- * Created:   08/18/2000                                                     *
- * Author(s): Frank Mehnert <fm3@os.inf.tu-dresden.de>                       *
- *                                                                           *
- * Common L4 environment                                                     *
- * L4 execution layer public error codes                                     *
- *****************************************************************************/
+/**
+ * \file	exec/include/ARCH-x86/errno.h
+ * \brief	L4 execution layer public error codes
+ *
+ * \date	08/18/2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
 
 #ifndef _L4_EXEC_ERRNO_H
 #define _L4_EXEC_ERRNO_H

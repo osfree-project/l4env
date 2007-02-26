@@ -5,7 +5,7 @@
  *	\date	12/01/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,11 +29,10 @@
 #include "be/l4/x0/L4X0BECallFunction.h"
 #include "be/l4/x0/L4X0BERcvAnyFunction.h"
 #include "be/l4/x0/L4X0BEReplyAnyWaitAnyFunction.h"
-#include "be/l4/x0/L4X0BEReplyRcvFunction.h"
-#include "be/l4/x0/L4X0BEReplyWaitFunction.h"
 #include "be/l4/x0/L4X0BESndFunction.h"
 #include "be/l4/x0/L4X0BEWaitAnyFunction.h"
 #include "be/l4/x0/L4X0BEWaitFunction.h"
+#include "be/l4/x0/L4X0BEReplyFunction.h"
 #include "be/l4/x0/L4X0BESizes.h"
 #include "be/BEContext.h"
 
@@ -97,26 +96,6 @@ CBEReplyAnyWaitAnyFunction * CL4X0BEClassFactory::GetNewReplyAnyWaitAnyFunction(
     return new CL4X0BEReplyAnyWaitAnyFunction();
 }
 
-/**	\brief creates a new instance of the class CBEReplyRcvFunction
- *	\return a reference to the new instance
- */
-CBEReplyRcvFunction * CL4X0BEClassFactory::GetNewReplyRcvFunction()
-{
-    if (m_bVerbose)
-        printf("CL4X0BEClassFactory: created class CL4X0BEReplyRcvFunction\n");
-    return new CL4X0BEReplyRcvFunction();
-}
-
-/**	\brief creates a new instance of the class CBEReplyWaitFunction
- *	\return a reference to the new instance
- */
-CBEReplyWaitFunction * CL4X0BEClassFactory::GetNewReplyWaitFunction()
-{
-    if (m_bVerbose)
-        printf("CL4X0BEClassFactory: created class CL4X0BEReplyWaitFunction\n");
-    return new CL4X0BEReplyWaitFunction();
-}
-
 /**	\brief creates a new instance of the class CBESndFunction
  *	\return a reference to the new instance
  */
@@ -145,4 +124,14 @@ CBEWaitFunction * CL4X0BEClassFactory::GetNewWaitFunction()
     if (m_bVerbose)
         printf("CL4X0BEClassFactory: created class CL4X0BEWaitFunction\n");
     return new CL4X0BEWaitFunction();
+}
+
+/**	\brief creates a new instance of the class CBEWaitFunction
+ *	\return a reference to the new instance
+ */
+CBEReplyFunction* CL4X0BEClassFactory::GetNewReplyFunction()
+{
+    if (m_bVerbose)
+        printf("CL4X0BEClassFactory: created class CL4X0BEReplyFunction\n");
+    return new CL4X0BEReplyFunction();
 }

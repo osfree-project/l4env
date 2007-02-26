@@ -6,23 +6,13 @@
  *
  * \date   01/23/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4/L4Env includes */
 #include <l4/env/errno.h>
@@ -54,40 +44,36 @@
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_memphys_server_transfer(sm_request_t * request, 
-				l4_uint32_t ds_id, 
-				const if_l4dm_threadid_t * new_owner, 
-				sm_exc_t * _ev)
+if_l4dm_generic_transfer_component(CORBA_Object _dice_corba_obj,
+                                   l4_uint32_t ds_id,
+                                   const l4_threadid_t *new_owner,
+                                   CORBA_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
-  l4_threadid_t caller = request->client_tid;
-  l4_threadid_t * owner = (l4_threadid_t *)new_owner;
 
-#if DEBUG_TRANSFER
-  INFO("ds %u\n",ds_id);
-  DMSG("  caller %x.%x, new owner %x.%x\n",
-       caller.id.task,caller.id.lthread,owner->id.task,owner->id.lthread);
-#endif
-
+  LOGdL(DEBUG_TRANSFER,"ds %u\n  caller %x.%x, new owner %x.%x",ds_id,
+        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,
+        new_owner->id.task,new_owner->id.lthread);
+  
   /* get dataspace descriptor, check if caller owns the dataspace */
-  ret = dmphys_ds_get_check_owner(ds_id,caller,&ds);
+  ret = dmphys_ds_get_check_owner(ds_id,*_dice_corba_obj,&ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
 	ERROR("DMphys: invalid dataspace id,id %u, caller %x.%x",
-	      ds_id,caller.id.task,caller.id.lthread); 
+	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread); 
       else
 	ERROR("DMphys: caller is not the current owner "
-	      "(ds %u, caller %x.%x)!",ds_id,caller.id.task,
-	      caller.id.lthread);
+	      "(ds %u, caller %x.%x)!",ds_id,_dice_corba_obj->id.task,
+	      _dice_corba_obj->id.lthread);
 #endif	
       return ret;
     }
 
   /* set new owner */
-  dmphys_ds_set_owner(ds,*owner);
+  dmphys_ds_set_owner(ds,*new_owner);
 
   /* done */
   return 0;

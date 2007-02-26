@@ -1,19 +1,31 @@
 /*
- * \brief	Fountain particles effect
- * \date	2002-10-10
- * \author	Norman Feske <nf2@inf.tu-dresden.de>
+ * \brief   Fountain particles effect
+ * \date    2002-10-10
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
-/*** GENERAL INCLUDES ***/
-#include <math.h>
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 
 /*** DOpE SPECIFIC INCLUDES ***/
-#include "dope-config.h"
+#include "dopestd.h"
 #include <dopelib.h>
 #include <vscreen.h>
 
 /*** LOCAL INCLUDES ***/
 #include "fountain.h"
+
+/*** DECLARATIONS FROM STANDARD MATH LIB ***/
+double sin(double x);
+double cos(double x);
+int    abs(int j);
+#define M_PI 3.14159265358979323846
 
 #define SCR_W 320
 #define SCR_H 200
@@ -34,12 +46,12 @@ static u16 ball_gfx[16][16];
 static float sintab[1024];
 static float costab[1024];
 
-static float dots_r[NUM_DOTS];		/* current radius = distance from centre*/
-static float dots_h[NUM_DOTS];		/* current height */
-static float dots_cos[NUM_DOTS];	/* cosine of movement direction */
-static float dots_sin[NUM_DOTS];	/* sine of movement direction */
-static float dots_v[NUM_DOTS];		/* vertical speed */
-static float dots_g[NUM_DOTS];		/* gravity */
+static float dots_r[NUM_DOTS];      /* current radius = distance from centre*/
+static float dots_h[NUM_DOTS];      /* current height */
+static float dots_cos[NUM_DOTS];    /* cosine of movement direction */
+static float dots_sin[NUM_DOTS];    /* sine of movement direction */
+static float dots_v[NUM_DOTS];      /* vertical speed */
+static float dots_g[NUM_DOTS];      /* gravity */
 
 static float dstx[NUM_DOTS];
 static float dsty[NUM_DOTS];
@@ -58,7 +70,7 @@ extern long app_id;
 
 /*** PSEUDO RANDOM VALUE GENERATOR ***/
 static unsigned int SEED = 93186752;
-static int rand (void)  {
+static int pseudo_rand (void)  {
    static unsigned int a = 1588635695, m = 4294967291U, q = 2, r = 1117695901;
    SEED = a*(SEED % q) - r*(SEED / q);
    return (int)(0x0000ffff*(((double)SEED / (double)m)));
@@ -154,32 +166,33 @@ static void motion_callback(dope_event *e,void *arg) {
 	if (e->type == EVENT_TYPE_MOTION) {
 		x = e->motion.abs_x;
 		y = e->motion.abs_y;
-	}	
+	}   
 	px=x;py=y;
 }
 
 
 /*** INITIALISATION OF THE EFFECT - MUST BE CALLED DURING THE START UP ***/
-void fountain_init(void) {
+int fountain_init(void) {
 	int i;
 
 	/* open window with rt-widget */
 	dope_cmd(app_id, "fntnwin=new Window()" );
 	dope_cmd(app_id, "fntnvscr=new VScreen()" );
-	dope_cmd(app_id, "fntnvscr.setmode(320,200,16)" );
+	dope_cmd(app_id, "fntnvscr.setmode(320,200,\"RGB16\")" );
 	dope_cmd(app_id, "fntnvscr.set(-framerate 25)" );
 	dope_cmd(app_id, "fntnwin.set(-x 90 -y 150 -w 330 -h 227 -fitx yes -fity yes -background off -content fntnvscr)" );
-//	dope_cmd(app_id, "fntnwin.open();" );
+//  dope_cmd(app_id, "fntnwin.open();" );
 
 	dope_bind(app_id,"fntnvscr","motion", motion_callback, (void *)0x123);
 	dope_bind(app_id,"fntnvscr","enter", enter_callback, (void *)0x123);
 	dope_bind(app_id,"fntnvscr","leave", leave_callback, (void *)0x123);
 	
 	/* map vscreen buffer to local address space */
-	scr_adr = vscr_get_fb( dope_cmd(app_id, "fntnvscr.map()") );
-
+	scr_adr = vscr_get_fb(app_id, "fntnvscr");
+	if (!scr_adr) return -1;
+	
 	/* get identifier of pSLIM-server */
-	fntnvscr_id = vscr_get_server_id(dope_cmd(app_id,"fntnvscr.getserver()"));
+	fntnvscr_id = vscr_get_server_id(app_id, "fntnvscr");
 	buf_adr1 = &scr_buf[SCR_H/2][0];
 		
 	/* generate sine and cosine table */
@@ -248,16 +261,17 @@ void fountain_init(void) {
 	{
 		int i;
 		for (i=0;i<NUM_DOTS;i++) {
-			dots_r[i]   = ((rand()%MAX_RADIUS) & 0xff0f) + (rand()%130);
+			dots_r[i]   = ((pseudo_rand()%MAX_RADIUS) & 0xff0f) + (pseudo_rand()%130);
 			dots_cos[i] = cos(i);
 			dots_sin[i] = sin(i);
-			dots_v[i]   = rand()%30;
+			dots_v[i]   = pseudo_rand()%30;
 			dots_g[i]   = 0.99;
 		}
 	}
 
 	printf("VScrTest(fntn_init): done\n");
-};
+	return 0;
+}
 
 
 
@@ -268,7 +282,8 @@ void fountain_exec(int exec_flag) {
 	int i;
 
 	vscr_server_waitsync(fntnvscr_id);
-	if (!exec_flag) return;
+	
+	if (!exec_flag || !scr_adr) return;
 	
 	/* change view angles */
 	alph = alph + 13;
@@ -280,7 +295,7 @@ void fountain_exec(int exec_flag) {
 	convert_to_xyz();
 	
 	if (pflag) {
-//		rotate(dstx,dstz,552);
+//  	rotate(dstx,dstz,552);
 		rotate(dstz,dstx,px + 768 + 100);
 		rotate(dsty,dstz,py*3 + 768 - 50);
 	} else {
@@ -293,7 +308,7 @@ void fountain_exec(int exec_flag) {
 
 	/* fade down */
 	dst = buf_adr1;
-	for (i=SCR_W*SCR_H;i--;) *dst = fadetab[*(dst++)];
+	for (i=SCR_W*SCR_H;i--;dst++) *dst = fadetab[*dst];
 
 	/* draw dots */
 	{

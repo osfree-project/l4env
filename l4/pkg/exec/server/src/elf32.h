@@ -1,5 +1,17 @@
-#ifndef __L4_EXEC_SERVER_ELF32_H
-#define __L4_EXEC_SERVER_ELF32_H
+/*!
+ * \file	exec/server/src/elf32.h
+ * \brief	elf32 interface
+ *
+ * \date	2000
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+
+/* (c) 2003 'Technische Universitaet Dresden'
+ * This file is part of the exec package, which is distributed under
+ * the terms of the GNU General Public License 2. Please see the
+ * COPYING file for details. */
+
+#ifndef __ELF32_H_
+#define __ELF32_H_
 
 #include <l4/exec/elf.h>
 
@@ -25,6 +37,15 @@ class elf32_obj_t: public exc_obj_t
     int find_sym(const char *symname, int need_global, Elf32_Sym** sym);
     /** find the symbol in the ELF object */
     int find_sym(const char *symname, l4env_infopage_t *env, l4_addr_t *addr);
+    /** Find the relocation addr belonging to addr. */
+    int addr_to_reloc_offs(l4_addr_t addr, l4env_infopage_t *env,
+			   l4_addr_t *reloc_offs);
+    /** Find the relocation address <reloc_addr> the symbol <sym> was relocated
+     *  * in the context of the envpage <env>. */
+    int sym_to_reloc_offs(Elf32_Sym *sym, const char *strtab,
+			  l4env_infopage_t *env, l4_addr_t *reloc_offs);
+    /** */
+    int sym_vaddr(Elf32_Sym *sym, l4_addr_t *vaddr);
 
     /** get symbols */
     int get_symbols(l4env_infopage_t *env, char **str);
@@ -73,9 +94,9 @@ class elf32_obj_t: public exc_obj_t
 };
 
 
-int
-elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
-              l4_uint32_t _id);
+int elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
+int elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
+		  l4_uint32_t _id);
 
 #endif /* __L4_EXEC_SERVER_ELF32_H */
 

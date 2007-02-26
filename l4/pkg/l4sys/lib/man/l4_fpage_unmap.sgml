@@ -13,7 +13,7 @@ l4_fpage_unmap
 
 <code/static inline void/ <nl>
 <code/l4_fpage_unmap(l4_fpage_t /<var/fpage/,
-<code/dword_t /<var/map_mask/<code/);/
+<code/l4_umword_t /<var/map_mask/<code/);/
 
 <sect> Description
 

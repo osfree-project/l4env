@@ -6,23 +6,13 @@
  *
  * \date   01/28/2002
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2000-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
+
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* standard includes */
 #include <string.h>
@@ -378,17 +368,17 @@ dmphys_ds_show(dmphys_dataspace_t * ds)
   l4_threadid_t ds_owner = dsmlib_get_owner(ds->desc);
   char * name = dsmlib_get_name(ds->desc);
 
-  Msg("DMphys dataspace %u:\n",dsmlib_get_id(ds->desc));
+  printf("DMphys dataspace %u:\n",dsmlib_get_id(ds->desc));
   if (strlen(name) > 0)
-    Msg("  name \"%s\"\n",name);
-  Msg("  owner %x.%x, size 0x%08x (%uKB)\n",ds_owner.id.task,
-      ds_owner.id.lthread,ds->size,ds->size / 1024);
-  Msg("  clients: ");
+    printf("  name \"%s\"\n",name);
+  printf("  owner %x.%x, size 0x%08x (%uKB)\n",ds_owner.id.task,
+         ds_owner.id.lthread,ds->size,ds->size / 1024);
+  printf("  clients: ");
   dsmlib_list_ds_clients(ds->desc);
-  Msg("\n");
+  printf("\n");
   if (strlen(ds->pool->name) > 0)
-    Msg("  memory areas (pool %d, \"%s\"):\n",ds->pool->pool,ds->pool->name);
+    printf("  memory areas (pool %d, \"%s\"):\n",ds->pool->pool,ds->pool->name);
   else
-    Msg("  memory areas (pool %d):\n",ds->pool->pool);
+    printf("  memory areas (pool %d):\n",ds->pool->pool);
   dmphys_pages_list(ds->pages);
 }

@@ -41,6 +41,7 @@ public:
   static unsigned int const 	family();
   static unsigned int const 	model();
   static unsigned int const 	stepping();
+  static Unsigned64		frequency();
   static unsigned int const 	apic();
   static unsigned int const 	features();
   static unsigned int const	ext_features();
@@ -65,7 +66,15 @@ public:
   static unsigned short const	l2_cache_line_size();
 
   static Unsigned64		time_us();
+  static Unsigned64		rdtsc();
+  static Unsigned64		ns_to_tsc(Unsigned64 ns);
   static Unsigned64		tsc_to_us(Unsigned64 tsc);
+  static Unsigned64		tsc_to_ns(Unsigned64 tsc);
+  static void			tsc_to_s_and_ns(Unsigned64 tsc, 
+						Unsigned32 *s, Unsigned32 *ns);
+  static Unsigned32		get_scaler_tsc_to_ns();
+  static Unsigned32		get_scaler_tsc_to_us();
+  static Unsigned32		get_scaler_ns_to_tsc();
 
 private:
 
@@ -85,6 +94,7 @@ private:
   };
 
   static unsigned		cpu_version;
+  static Unsigned64		cpu_frequency;
   static unsigned		cpu_apic;
   static unsigned		cpu_features;
   static unsigned		cpu_ext_features;
@@ -129,6 +139,10 @@ private:
   static void			set_model_str (Cpu::Vendor const vendor,
 	                                       unsigned const version,
         	                               unsigned short const l2_cache);
+
+  static Unsigned32		scaler_tsc_to_ns;
+  static Unsigned32		scaler_tsc_to_us;
+  static Unsigned32		scaler_ns_to_tsc;
 };
 
 IMPLEMENTATION[ia32-common]:
@@ -141,6 +155,7 @@ IMPLEMENTATION[ia32-common]:
 #include "initcalls.h"
 
 unsigned        Cpu::cpu_version;
+Unsigned64	Cpu::cpu_frequency;
 unsigned        Cpu::cpu_apic;
 unsigned        Cpu::cpu_features;
 unsigned	Cpu::cpu_ext_features;
@@ -166,48 +181,50 @@ unsigned short	Cpu::cpu_l2_cache_line_size;
 Cpu::Vendor     Cpu::cpu_vendor;
 char            Cpu::cpu_vendor_str[13];
 char		Cpu::cpu_model_str[32];
-
+  
 Cpu::Vendor_table const Cpu::intel_table[] FIASCO_INITDATA =
 {
-  { 0xFF0,	0x400,	0xFFFF,	"i486 DX-25/33"			},
-  { 0xFF0,	0x410,	0xFFFF,	"i486 DX-50"			},
-  { 0xFF0,	0x420,	0xFFFF,	"i486 SX"			},
-  { 0xFF0,	0x430,	0xFFFF,	"i486 DX/2"			},
-  { 0xFF0,	0x440,	0xFFFF,	"i486 SL"			},
-  { 0xFF0,	0x450,	0xFFFF,	"i486 SX/2"			},
-  { 0xFF0,	0x470,	0xFFFF,	"i486 DX/2-WB"			},
-  { 0xFF0,	0x480,	0xFFFF,	"i486 DX/4"			},
-  { 0xFF0,	0x490,	0xFFFF,	"i486 DX/4-WB"			},
-  { 0xFF0,	0x500,	0xFFFF,	"Pentium A-Step"		},
-  { 0xFF0,	0x510,	0xFFFF,	"Pentium 60-66"			},
-  { 0xFF0,	0x520,	0xFFFF,	"Pentium 75-200"		},
-  { 0xFF0,	0x530,	0xFFFF,	"Pentium Overdrive"		},
-  { 0xFF0,	0x540,	0xFFFF,	"Pentium MMX"			},
-  { 0xFF0,	0x570,	0xFFFF,	"Pentium Mobile"		},
-  { 0xFF0,	0x580,	0xFFFF,	"Pentium MMX Mobile (Tillamook)"},
-  { 0xFF0,	0x600,	0xFFFF,	"Pentium-Pro A-Step"		},
-  { 0xFF0,	0x610,	0xFFFF,	"Pentium-Pro"			},
-  { 0xFF0,	0x630,	512,	"Pentium II (Klamath)"		},
-  { 0xFF0,	0x640,	512,	"Pentium II (Deschutes)"	},
-  { 0xFF0,	0x650,	1024,	"Pentium II (Drake)"		},
-  { 0xFF0,	0x650,	512,	"Pentium II (Deschutes)"	},
-  { 0xFF0,	0x650,	256,	"Pentium II Mobile (Dixon)"	},
-  { 0xFF0,	0x650,	0,	"Celeron (Covington)"		},
-  { 0xFF0,	0x660,	128,	"Celeron (Mendocino)"		},
-  { 0xFF0,	0x670,	1024,	"Pentium III (Tanner)"		},
-  { 0xFF0,	0x670,	512,	"Pentium III (Katmai)"		},
-  { 0xFF0,	0x680,	256,	"Pentium III (Coppermine)"	},
-  { 0xFF0,	0x680,	128,	"Celeron (Coppermine)"		},
-  { 0xFF0,	0x6a0,	1024,	"Pentium III (Cascades)"	},
-  { 0xFF0,	0x6b0,	256,	"Pentium III (Tualatin)"	},
-  { 0xF00,	0x700,	0xFFFF,	"Itanium"			},
-  { 0xFF0,	0xf00,	0xFFFF,	"Pentium 4 (Willamette)"	},
-  { 0xFF0,	0xf10,	0xFFFF,	"Pentium 4 (Willamette)"	},
-  { 0xFF0,	0xf20,	0xFFFF,	"Pentium 4 (Northwood)"		},
-  { 0xFF0,	0xf30,	0xFFFF, "Pentium 4 (Prescott)"		},
-  { 0xFF0,	0xf40,	0xFFFF,	"Pentium 4 (Foster)"		},
-  { 0xFF0,	0xf50,	0xFFFF,	"Pentium 4 (Foster)"		},
-  { 0x0,	0x0,	0xFFFF,	""				}
+  { 0xFF0,	0x400,	0xFFFF,	"i486 DX-25/33"				},
+  { 0xFF0,	0x410,	0xFFFF,	"i486 DX-50"				},
+  { 0xFF0,	0x420,	0xFFFF,	"i486 SX"				},
+  { 0xFF0,	0x430,	0xFFFF,	"i486 DX/2"				},
+  { 0xFF0,	0x440,	0xFFFF,	"i486 SL"				},
+  { 0xFF0,	0x450,	0xFFFF,	"i486 SX/2"				},
+  { 0xFF0,	0x470,	0xFFFF,	"i486 DX/2-WB"				},
+  { 0xFF0,	0x480,	0xFFFF,	"i486 DX/4"				},
+  { 0xFF0,	0x490,	0xFFFF,	"i486 DX/4-WB"				},
+  { 0xFF0,	0x500,	0xFFFF,	"Pentium A-Step"			},
+  { 0xFF0,	0x510,	0xFFFF,	"Pentium 60-66"				},
+  { 0xFF0,	0x520,	0xFFFF,	"Pentium 75-200"			},
+  { 0xFF0,	0x530,	0xFFFF,	"Pentium Overdrive"			},
+  { 0xFF0,	0x540,	0xFFFF,	"Pentium MMX"				},
+  { 0xFF0,	0x570,	0xFFFF,	"Pentium Mobile"			},
+  { 0xFF0,	0x580,	0xFFFF,	"Pentium MMX Mobile (Tillamook)"	},
+  { 0xFF0,	0x600,	0xFFFF,	"Pentium-Pro A-Step"			},
+  { 0xFF0,	0x610,	0xFFFF,	"Pentium-Pro"				},
+  { 0xFF0,	0x630,	512,	"Pentium II (Klamath)"			},
+  { 0xFF0,	0x640,	512,	"Pentium II (Deschutes)"		},
+  { 0xFF0,	0x650,	1024,	"Pentium II (Drake)"			},
+  { 0xFF0,	0x650,	512,	"Pentium II (Deschutes)"		},
+  { 0xFF0,	0x650,	256,	"Pentium II Mobile (Dixon)"		},
+  { 0xFF0,	0x650,	0,	"Celeron (Covington)"			},
+  { 0xFF0,	0x660,	128,	"Celeron (Mendocino)"			},
+  { 0xFF0,	0x670,	1024,	"Pentium III (Tanner)"			},
+  { 0xFF0,	0x670,	512,	"Pentium III (Katmai)"			},
+  { 0xFF0,	0x680,	256,	"Pentium III (Coppermine)"		},
+  { 0xFF0,	0x680,	128,	"Celeron (Coppermine)"			},
+  { 0xFF0,	0x690,	1024,	"Pentium-M (Banias)"			},
+  { 0xFF0,	0x6a0,	1024,	"Pentium III (Cascades)"		},
+  { 0xFF0,	0x6b0,	512,	"Pentium III-S"				},
+  { 0xFF0,	0x6b0,	256,	"Pentium III (Tualatin)"		},
+  { 0xF00,	0x700,	0xFFFF,	"Itanium"				},
+  { 0xFF0,	0xf00,	256,	"Pentium 4 (Willamette/Foster)"		},
+  { 0xFF0,	0xf10,	256,	"Pentium 4 (Willamette/Foster)"		},
+  { 0xFF0,	0xf10,	128,	"Celeron (Willamette)"			},
+  { 0xFF0,	0xf20,	512,	"Pentium 4 (Northwood/Prestonia)"	},
+  { 0xFF0,	0xf20,	128,	"Celeron (Northwood)"			},
+  { 0xFF0,	0xf30,	0xFFFF, "Pentium 4 (Prescott/Nocona)"		},
+  { 0x0,	0x0,	0xFFFF,	""					}
 };
 
 Cpu::Vendor_table const Cpu::amd_table[] FIASCO_INITDATA =
@@ -230,16 +247,18 @@ Cpu::Vendor_table const Cpu::amd_table[] FIASCO_INITDATA =
   { 0xFF0,	0x5c0,	0xFFFF,	"K6-2+"				},
   { 0xFF0,	0x5d0,	0xFFFF,	"K6-3+"				},
   { 0xFF0,	0x600,	0xFFFF,	"K7 ES"				},
-  { 0xFF0,	0x610,	0xFFFF,	"Athlon (K7)"			},
-  { 0xFF0,	0x620,	0xFFFF,	"Athlon (K75)"			},
+  { 0xFF0,	0x610,	0xFFFF,	"Athlon K7 (Argon)"		},
+  { 0xFF0,	0x620,	0xFFFF,	"Athlon K75 (Orion)"		},
   { 0xFF0,	0x630,	0xFFFF,	"Duron (Spitfire)"		},
   { 0xFF0,	0x640,	0xFFFF,	"Athlon (Thunderbird)"		},
   { 0xFF0,	0x660,	256,	"Athlon (Palomino)"		},
   { 0xFF0,	0x660,	64,	"Duron (Morgan)"		},
   { 0xFF0,	0x670,	0xFFFF,	"Duron (Morgan)"		},
-  { 0xFF0,	0x680,	0xFFFF,	"Athlon (Thoroughbred)"		},
+  { 0xFF0,	0x680,	256,	"Athlon (Thoroughbred)"		},
+  { 0xFF0,	0x680,	64,	"Duron (Applebred)"		},
   { 0xFF0,	0x6A0,	0xFFFF,	"Athlon (Barton)"		},
-  { 0xF00,	0xf00,	0xFFFF,	"Clawhammer ES"			},
+  { 0xFF0,	0xf40,	0xFFFF,	"Athlon 64 (Clawhammer)"	},
+  { 0xFF0,	0xf50,	0xFFFF,	"Opteron (Sledgehammer)"	},
   { 0x0,	0x0,	0xFFFF,	""				}
 };
 
@@ -273,13 +292,15 @@ Cpu::Cache_table const Cpu::intel_cache_table[] FIASCO_INITDATA =
   { 0x08,	CACHE_L1_INST,	16,	4,	32	},
   { 0x0A,	CACHE_L1_DATA,	8,	2,	32	},
   { 0x0C,	CACHE_L1_DATA,	16,	4,	32	},
-  { 0x22,	CACHE_L3,	512,	4,	64	}, /* dual sector */
-  { 0x23,	CACHE_L3,	1024,	8,	64	}, /* dual sector */
-  { 0x25,	CACHE_L3,	2048,	8,	64	}, /* dual sector */
-  { 0x29,	CACHE_L3,	4096,	8,	64	}, /* dual sector */
-  { 0x39,	CACHE_L2,	128,	4,	64	}, /* dual sector */
-  { 0x3B,	CACHE_L2,	256,	2,	64	}, /* dual sector */
-  { 0x3C,	CACHE_L2,	256,	4,	64	}, /* dual sector */
+  { 0x22,	CACHE_L3,	512,	4,	64	}, /* sectored */
+  { 0x23,	CACHE_L3,	1024,	8,	64	}, /* sectored */
+  { 0x25,	CACHE_L3,	2048,	8,	64	}, /* sectored */
+  { 0x29,	CACHE_L3,	4096,	8,	64	}, /* sectored */
+  { 0x2C,	CACHE_L1_DATA,	32,	8,	64	},
+  { 0x30,	CACHE_L1_INST,	32,	8,	64	},
+  { 0x39,	CACHE_L2,	128,	4,	64	}, /* sectored */
+  { 0x3B,	CACHE_L2,	256,	2,	64	}, /* sectored */
+  { 0x3C,	CACHE_L2,	256,	4,	64	}, /* sectored */
   { 0x41,	CACHE_L2,	128,	4,	32	},
   { 0x42,	CACHE_L2,	256,	4,	32	},
   { 0x43,	CACHE_L2,	512,	4,	32	},
@@ -291,22 +312,34 @@ Cpu::Cache_table const Cpu::intel_cache_table[] FIASCO_INITDATA =
   { 0x5B,	TLB_DATA,	64,	0,	0	},
   { 0x5C,	TLB_DATA,	128,	0,	0	},
   { 0x5D,	TLB_DATA,	256,	0,	0	},
-  { 0x66,	CACHE_L1_DATA,	8,	4,	64	}, /* dual sector */
-  { 0x67,	CACHE_L1_DATA,	16,	4,	64	}, /* dual sector */
-  { 0x68,	CACHE_L1_DATA,	32,	4,	64	}, /* dual sector */
+  { 0x66,	CACHE_L1_DATA,	8,	4,	64	}, /* sectored */
+  { 0x67,	CACHE_L1_DATA,	16,	4,	64	}, /* sectored */
+  { 0x68,	CACHE_L1_DATA,	32,	4,	64	}, /* sectored */
   { 0x70,	CACHE_L1_TRACE,	12,	8,	0	},
   { 0x71,	CACHE_L1_TRACE,	16,	8,	0	},
   { 0x72,	CACHE_L1_TRACE,	32,	8,	0	},
-  { 0x79,	CACHE_L2,	128,	8,	64	}, /* dual sector */
-  { 0x7A,	CACHE_L2,	256,	8,	64	}, /* dual sector */
-  { 0x7B,	CACHE_L2,	512,	8,	64	}, /* dual sector */
-  { 0x7C,	CACHE_L2,	1024,	8,	64	}, /* dual sector */
+  { 0x77,	CACHE_L1_INST,  16,	4,	64	},
+  { 0x79,	CACHE_L2,	128,	8,	64	}, /* sectored */
+  { 0x7A,	CACHE_L2,	256,	8,	64	}, /* sectored */
+  { 0x7B,	CACHE_L2,	512,	8,	64	}, /* sectored */
+  { 0x7C,	CACHE_L2,	1024,	8,	64	}, /* sectored */
+  { 0x7E,	CACHE_L2,	256,	8,	128	},
   { 0x82,	CACHE_L2,	256,	8,	32	},
   { 0x83,	CACHE_L2,	512,	8,	32	},
   { 0x84,	CACHE_L2,	1024,	8,	32	},
   { 0x85,	CACHE_L2,	2048,	8,	32	},
+  { 0x86,	CACHE_L2,	512,	4,	64	},
+  { 0x87,	CACHE_L2,	1024,	8,	64	},
+  { 0x8D,	CACHE_L3,	3072,	12,	128	},
+  { 0xB0,	TLB_INST,	128,	4,	0	},
+  { 0xB3,	TLB_DATA,	128,	4,	0	},
   { 0x0,	CACHE_UNKNOWN,	0,	0,	0	}
 };
+
+Unsigned32	Cpu::scaler_tsc_to_ns;
+Unsigned32	Cpu::scaler_tsc_to_us;
+Unsigned32	Cpu::scaler_ns_to_tsc;
+
 
 IMPLEMENT inline
 void
@@ -345,10 +378,7 @@ Cpu::family()
 {
   unsigned int val = (cpu_version >> 8) & 0xF;
 
-  if (val == 0xF)
-    val += (cpu_version >> 20) & 0xFF;
-
-  return val;
+  return val == 0xF ? val + ((cpu_version >> 16) & 0xF0) : val;
 }
 
 IMPLEMENT inline
@@ -357,10 +387,7 @@ Cpu::model()
 {
   unsigned int val = (cpu_version >> 4) & 0xF;
 
-  if (val == 0xF)
-    val += (cpu_version >> 12) & 0xF0;
-
-  return val;
+  return val == 0xF ? val + ((cpu_version >> 12) & 0xF0) : val;
 }
 
 IMPLEMENT inline
@@ -368,6 +395,13 @@ unsigned int const
 Cpu::stepping()
 {
   return cpu_version & 0xF;
+}
+
+IMPLEMENT inline
+Unsigned64
+Cpu::frequency()
+{
+  return cpu_frequency;
 }
 
 IMPLEMENT inline
@@ -683,3 +717,136 @@ Cpu::identify()
 
   set_eflags (eflags);
 }
+
+static inline
+Unsigned32
+Cpu::muldiv (Unsigned32 val, Unsigned32 mul, Unsigned32 div)
+{
+  Unsigned32 dummy;
+
+  asm volatile ("mull %3 ; divl %4\n\t"
+               :"=a" (val), "=d" (dummy)
+               : "0" (val),  "d" (mul),  "c" (div));
+  return val;
+}
+
+IMPLEMENT inline
+Unsigned64
+Cpu::ns_to_tsc (Unsigned64 ns)
+{
+  Unsigned32 dummy;
+  Unsigned64 tsc;
+  asm volatile
+	("movl  %%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "movl	%%ecx, %%eax		\n\t"
+	 "movl	%%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "addl	%%ecx, %%eax		\n\t"
+	 "adcl	$0, %%edx		\n\t"
+	 "shld	$5, %%eax, %%edx	\n\t"
+	 "shll	$5, %%eax		\n\t"
+	:"=A" (tsc), "=c" (dummy)
+	: "0" (ns),  "b" (scaler_ns_to_tsc)
+	);
+  return tsc;
+}
+
+IMPLEMENT inline
+Unsigned64
+Cpu::tsc_to_ns (Unsigned64 tsc)
+{
+  Unsigned32 dummy;
+  Unsigned64 ns;
+  asm volatile
+	("movl  %%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "movl	%%ecx, %%eax		\n\t"
+	 "movl	%%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "addl	%%ecx, %%eax		\n\t"
+	 "adcl	$0, %%edx		\n\t"
+	 "shld	$5, %%eax, %%edx	\n\t"
+	 "shll	$5, %%eax		\n\t"
+	:"=A" (ns), "=c" (dummy)
+	: "0" (tsc), "b" (scaler_tsc_to_ns)
+	);
+  return ns;
+}
+
+IMPLEMENT inline
+Unsigned64
+Cpu::tsc_to_us (Unsigned64 tsc)
+{
+  Unsigned32 dummy;
+  Unsigned64 us;
+  asm volatile
+	("movl  %%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "movl	%%ecx, %%eax		\n\t"
+	 "movl	%%edx, %%ecx		\n\t"
+	 "mull	%3			\n\t"
+	 "addl	%%ecx, %%eax		\n\t"
+	 "adcl	$0, %%edx		\n\t"
+	 "shld	$5, %%eax, %%edx	\n\t"
+	 "shll	$5, %%eax		\n\t"
+	:"=A" (us), "=c" (dummy)
+	: "0" (tsc), "S" (scaler_tsc_to_us)
+	);
+  return us;
+}
+
+IMPLEMENT inline
+void
+Cpu::tsc_to_s_and_ns (Unsigned64 tsc, Unsigned32 *s, Unsigned32 *ns)
+{
+    Unsigned32 dummy;
+    __asm__
+	("				\n\t"
+	 "movl  %%edx, %%ecx		\n\t"
+	 "mull	%4			\n\t"
+	 "movl	%%ecx, %%eax		\n\t"
+	 "movl	%%edx, %%ecx		\n\t"
+	 "mull	%4			\n\t"
+	 "addl	%%ecx, %%eax		\n\t"
+	 "adcl	$0, %%edx		\n\t"
+	 "movl  $1000000000, %%ecx	\n\t"
+	 "shld	$5, %%eax, %%edx	\n\t"
+	 "shll	$5, %%eax		\n\t"
+	 "divl  %%ecx			\n\t"
+	:"=a" (*s), "=d" (*ns), "=c" (dummy)
+	: "A" (tsc), "g" (scaler_tsc_to_ns)
+	);
+}
+
+IMPLEMENT inline
+Unsigned64
+Cpu::rdtsc (void)
+{
+  Unsigned64 tsc;
+
+  asm volatile ("rdtsc" : "=A" (tsc));
+  return tsc;
+}
+
+IMPLEMENT inline
+Unsigned32
+Cpu::get_scaler_tsc_to_ns()
+{
+  return scaler_tsc_to_ns;
+}
+
+IMPLEMENT inline
+Unsigned32
+Cpu::get_scaler_tsc_to_us()
+{
+  return scaler_tsc_to_us;
+}
+
+IMPLEMENT inline
+Unsigned32
+Cpu::get_scaler_ns_to_tsc()
+{
+  return scaler_ns_to_tsc;
+}
+

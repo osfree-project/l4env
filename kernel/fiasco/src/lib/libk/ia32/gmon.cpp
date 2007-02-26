@@ -162,7 +162,7 @@ moncontrol( int mode )
     if (mode) {
 	/* start */
 	ret = profil(sbuf + sizeof(struct phdr), ssiz - sizeof(struct phdr),
-		(vm_offset_t)s_lowpc, s_scale);
+		(Address)s_lowpc, s_scale);
 #if 0				// L4 kernel
 	if (ret < 0 && errno == ENOSYS && !warned) {
 #   define	PROFIL_WARN	"warning: kernel does not support profiling\n"

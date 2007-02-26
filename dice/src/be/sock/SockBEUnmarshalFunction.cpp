@@ -5,7 +5,7 @@
  *	\date	11/28/2002
  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2001-2002
+ * Copyright (C) 2001-2003
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -61,4 +61,15 @@ bool CSockBEUnmarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBE
         return false;
     m_pMsgBuffer->GetAlias()->IncStars(-m_pMsgBuffer->GetAlias()->GetStars());
     return true;
+}
+
+/** \brief writes the additional parameters after the "normal" parameters
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \param bComma true if a comma should be written first
+ */
+void CSockBEUnmarshalFunction::WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma)
+{
+    m_bCastMsgBufferOnCall = false;
+	CBEUnmarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
 }

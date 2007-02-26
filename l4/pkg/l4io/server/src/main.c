@@ -1,28 +1,17 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file	l4io/server/src/main.c
+ * \file   l4io/server/src/main.c
+ * \brief  L4Env l4io I/O Server Base Module
  *
- * \brief	L4Env l4io I/O Server Base Module
+ * \date   05/28/2003
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
- * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2002
- * Dresden University of Technology, Operating Systems Research Group
- *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
- * <contact@os.inf.tu-dresden.de>.
  */
-/*****************************************************************************/
+/* (c) 2003 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -33,9 +22,8 @@
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
-#include <l4/generic_io/types.h>	/* IO's types */
-#include <l4/generic_io/generic_io-server.h>	/* FLICK IPC interface */
-#include <l4/oskit10_l4env/support.h>
+#include <l4/generic_io/types.h>                /* IO's types */
+#include <l4/generic_io/generic_io-server.h>    /* IPC interface */
 
 /* OSKit includes */
 #include <stdio.h>
@@ -52,9 +40,9 @@
 #include "jiffies.h"
 #include "omega0lib.h"
 
-/*****************************************************************************
- *** global vars
- *****************************************************************************/
+/*
+ * global vars
+ */
 
 /** I/O info page 
  * \ingroup grp_misc */
@@ -63,12 +51,15 @@ l4io_info_t io_info;
 /** logging tag */
 char LOG_tag[9] = IO_NAMES_STR;
 
+/** heap */
+l4_ssize_t l4libc_heapsize = 1024 * 1024;
+
 /** max number of threads */
 const int l4thread_max_threads = IO_MAX_THREADS;
 
-/*****************************************************************************
- *** module vars
- *****************************************************************************/
+/*
+ * module vars
+ */
 
 /** I/O server claimed resources and root for client list
  *\ingroup grp_misc */
@@ -78,32 +69,27 @@ static io_client_t io_self;
  *\ingroup grp_irq */
 static int io_noirq = 0;
 
-/*****************************************************************************/
-/**
- * \name Miscellaneous Services (IPC interface)
+/** \name Miscellaneous Services (IPC interface)
  *
  * Client registry and special services.
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** Client Registration.
  * \ingroup grp_misc
  *
- * \param  request	FLICK request structure
- * \param  type		client info
+ * \param  _dice_corba_obj	DICE corba object
+ * \param  type			client info
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
  * Register client (driver server).
  * I/O keeps a list of registered clients and only these will be served.
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_register_client(sm_request_t * request, l4_io_drv_t type,
-			     sm_exc_t * _ev)
+l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
+                                           l4_io_drv_t type,
+                                           CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c, *p;
   l4io_drv_t *drv = (l4io_drv_t *) & type;
@@ -117,7 +103,7 @@ l4_io_server_register_client(sm_request_t * request, l4_io_drv_t type,
 
   /* init and enqueue */
   c->next = NULL;
-  c->c_l4id = request->client_tid;
+  c->c_l4id = *_dice_corba_obj;
   c->drv = *drv;
 
 #if DEBUG_REGDRV
@@ -140,13 +126,12 @@ l4_io_server_register_client(sm_request_t * request, l4_io_drv_t type,
   return 0;
 }
 
-/*****************************************************************************/
 /** Client Unregistering.
  * \ingroup grp_misc
  *
- * \param  request	FLICK request structure
+ * \param  _dice_corba_obj	DICE corba object
  *
- * \retval _ev		exception vector (unused)
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -160,24 +145,22 @@ l4_io_server_register_client(sm_request_t * request, l4_io_drv_t type,
  *
  * \todo implement if appropriate; otherwise remove from IDL too
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_unregister_client(sm_request_t * request, sm_exc_t * _ev)
+l4_int32_t l4_io_unregister_client_component(CORBA_Object _dice_corba_obj,
+                                             CORBA_Environment *_dice_corba_env)
 {
 #if DEBUG_REGDRV
-  DMSG("unregistering "IdFmt"\n", IdStr(request->client_tid));
+  DMSG("unregistering "IdFmt"\n", IdStr(*_dice_corba_obj));
 #endif
 
   return -L4_ESKIPPED;
 }
 
-/*****************************************************************************/
 /** Request mapping of I/O's info page.
  *
- * \param  request	FLICK request structure
+ * \param  _dice_corba_obj	DICE corba object
  *
- * \retval info		L4 fpage for I/O info
- * \retval _ev		exception vector (unused)
+ * \retval info			L4 fpage for I/O info
+ * \retval _dice_corba_env	corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -186,14 +169,13 @@ l4_io_server_unregister_client(sm_request_t * request, sm_exc_t * _ev)
  *
  * \todo check registration on info page mapping
  */
-/*****************************************************************************/
-l4_int32_t 
-l4_io_server_map_info(sm_request_t * request,
-		      l4_snd_fpage_t * info, sm_exc_t * _ev)
+l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
+                                    l4_snd_fpage_t *info,
+                                    CORBA_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
-  c = (io_client_t *) flick_server_get_local(request);
+  c = (io_client_t *) (_dice_corba_env->user_data);
 
   /* mapping _after_ register */
 
@@ -209,9 +191,7 @@ l4_io_server_map_info(sm_request_t * request,
   /* done */
   return 0;
 }
-
 /** @} */
-/*****************************************************************************/
 /** Info initialization.
  *
  * \return 0 (at this state no errors may happen)
@@ -220,7 +200,6 @@ l4_io_server_map_info(sm_request_t * request,
  *	- magic number
  *	- jiffies
  */
-/*****************************************************************************/
 static int io_info_init(void)
 {
   io_info.magic = L4IO_INFO_MAGIC;
@@ -230,67 +209,34 @@ static int io_info_init(void)
   return 0;
 }
 
-/*****************************************************************************/
-/**
- * \name Heart of I/O
+/** \name Heart of I/O
  *
  * Entry point (main) and infinite IPC server loop.
  * @{ */
-/*****************************************************************************/
 
-/*****************************************************************************/
 /** I/O server IPC request loop.
  *
- * We act as FLICK server serving IPC requests and _never_ return to main()
+ * We act as DICE server serving IPC requests and _never_ return to main()
  *
  * \krishna Hmm, is it clever to reference io_self in request?
  *
- * \krishna Do we need FLICK receive timeout?
+ * \krishna Do we need receive timeouts?
  *
  * \todo design some lookup macros/functions for traversing our lists
  */
-/*****************************************************************************/
 static void io_loop(void)
 {
-  l4_msgdope_t result;
+  CORBA_Environment _env = dice_default_environment;
+  _env.user_data = (void *) &io_self;
 
-  sm_request_t request;		/* IPC request structure */
-  l4_ipc_buffer_t ipc_buf;	/* IPC request buffer */
-
-  flick_init_request(&request, &ipc_buf);
-
-  flick_server_set_local(&request, (void *) &io_self);
-
-  while (1)
-    {
-      result = flick_server_wait(&request);
-      while (!L4_IPC_ERROR(request.ipc_status))
-	{
-	  switch (l4_io_server(&request))
-	    {
-	    case DISPATCH_ACK_SEND:
-	      result = flick_server_reply_and_wait(&request);
-	      break;
-	    default:
-	      printf("flick communication error");
-	    }
-	}
-#if 0
-      /* receive timeout */
-      if (L4_IPC_ERROR(result) == L4_IPC_RETIMEOUT)
-	{
-	}
-#endif
-    }
+  l4_io_server_loop(&_env);
 
   Panic("Left _infinite_ I/O server loop.");
 }
 
-/*****************************************************************************/
 /** do_args.
  * command line parameter handling
  */
-/*****************************************************************************/
 static void do_args(int argc, char *argv[])
 {
   char c;
@@ -346,22 +292,16 @@ static void do_args(int argc, char *argv[])
     }
 }
 
-/*****************************************************************************/
 /** Main of I/O server.
  *
  * main() function
- *
- * \todo add some command line params to main if appropriate:
- *	- reserved resources
  */
-/*****************************************************************************/
 int main(int argc, char *argv[])
 {
   int error;
 
   /* global init stuff */
   rmgr_init();
-  OSKit_libc_support_init(1024 * 1024);
 
   do_args(argc, argv);
 
@@ -422,5 +362,4 @@ int main(int argc, char *argv[])
 
   exit(0);
 }
-
 /** @} */
