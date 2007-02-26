@@ -161,6 +161,7 @@ typedef struct
 
   l4_umword_t		 user_ptr;
   l4_umword_t		 vhw_offset;
+  l4_uint8_t             vkey_irq;            ///< Number of virtual key interrupt
 
 } l4_kernel_info_t;
 

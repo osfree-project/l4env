@@ -75,9 +75,11 @@ public:
   Mword      sys_task_new;
   Mword      sys_privctrl;
 
-  Mword user_ptr;
-  Mword vhw_offset;
-  char __pad[8];
+  /* 1C0 */
+  Mword      user_ptr;
+  Mword      vhw_offset;
+  Unsigned8  vkey_irq;
+  char       __pad[7];
 };
 
 

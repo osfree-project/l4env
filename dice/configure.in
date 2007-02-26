@@ -30,6 +30,7 @@ AC_CHECK_PROG(BIBTEX,bibtex,bibtex)
 AC_CHECK_PROG(DVIPS,dvips,dvips)
 AC_CHECK_PROG(FIG2DEV,fig2dev,fig2dev)
 AC_CHECK_PROG(PDFLATEX,pdflatex,pdflatex)
+AC_CHECK_PROG(EPS2PDF,epstopdf,epstopdf)
 
 AM_CONDITIONAL(HAS_LATEX, test "x$LATEX" != "x" -a "x$BIBTEX" != "x")
 AM_CONDITIONAL(HAS_DVIPS, test "x$DVIPS" != "x")
@@ -105,7 +106,6 @@ doc/Makefile
 doc/manual/Makefile
 doc/html/Makefile
 doc/user-man/Makefile
-doc/dev-manual/Makefile
 src/Makefile
 src/parser/Makefile
 src/parser/dce/Makefile

@@ -50,7 +50,8 @@ public:
   Mword frequency_cpu;
   Mword frequency_bus;
   Mword user_ptr;
-  Mword _res8[1];
+  Unsigned8 vkey_irq;
+  char _res8[3];
 
   /* 0xC0 */
 

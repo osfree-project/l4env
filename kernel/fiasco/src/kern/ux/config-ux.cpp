@@ -30,6 +30,10 @@ public:
   static const bool old_sigma0_adapter_hack     = false;
 
   static const char char_micro;
+
+  enum {
+    Vkey_irq   = 0,
+  };
 };
 
 IMPLEMENTATION[ux]:

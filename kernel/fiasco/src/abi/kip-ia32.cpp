@@ -52,16 +52,16 @@ public:
   Mword      kdebug_permission;
 
   /* 60 */
-  Mword total_ram;
-  Mword _res6[15];
+  Mword      total_ram;
+  Mword      _res6[15];
 
   /* A0 */
   volatile Cpu_time clock;
   volatile Cpu_time switch_time;
 
   /* B0 */
-  Mword frequency_cpu;
-  Mword frequency_bus;
+  Mword      frequency_cpu;
+  Mword      frequency_bus;
   volatile Cpu_time thread_time;
 
   /* C0 */
@@ -76,11 +76,11 @@ public:
   Mword      sys_task_new;
   Mword      sys_privctrl;
 
-  Mword user_ptr;
-
-  Mword vhw_offset;
-
-  char __pad[8];
+  /* E0 */
+  Mword      user_ptr;
+  Mword      vhw_offset;
+  Unsigned8  vkey_irq;
+  char       __pad[7];
 };
 
 // =======================================================================
@@ -120,5 +120,6 @@ IMPLEMENTATION [ux]:
 PUBLIC
 Vhw_descriptor *
 Kip::vhw() const
-{ 
-  return reinterpret_cast<Vhw_descriptor*>(((unsigned long)this) + vhw_offset); }
+{
+  return reinterpret_cast<Vhw_descriptor*>(((unsigned long)this) + vhw_offset);
+}

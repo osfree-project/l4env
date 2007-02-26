@@ -247,7 +247,7 @@ KIP_KERNEL_FEATURE("deceit_bit_disables_switch");
 KIP_KERNEL_FEATURE("asm_ipc_shortcut");
 #endif
 
-KIP_KERNEL_ABI_VERSION("7");
+KIP_KERNEL_ABI_VERSION("8");
 
 // define some constants which need a memory representation
 const L4_uid Config::kernel_id( L4_uid::Nil );

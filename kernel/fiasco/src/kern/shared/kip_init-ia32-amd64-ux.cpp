@@ -136,6 +136,7 @@ namespace
 	0,
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0,
+	Config::Vkey_irq,
 	{}
       },
       {}

@@ -6,7 +6,6 @@ DISTCLEANFILES= GNUmakefile GNUmakefile.in
 MAINTAINERCLEANFILES= aclocal.m4 depcomp mkinstalldirs stamp-h stamp-h1 install-sh missing config.h.in configure Makefile.in compile $(PACKAGE)-$(VERSION).tar.gz
 
 dist-hook:
-	@perl -p -i -e 's/doc\/dev-manual\/Makefile//g' $(distdir)/configure
 	@perl -p -i -e 's/doc\/html\/Makefile//g' $(distdir)/configure
 
 doc:

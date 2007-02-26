@@ -595,7 +595,7 @@ LIBCLIBS_arm_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_be_l4_start_stop                   \
                                   -ldiet_be_minimal_io                      \
                                   $(MMAP_BACKEND)                           \
-                                  $(GCCLIB) -ldiet_c -ll4sys
+                                  -lsigma0 $(GCCLIB) -ldiet_c
 L4LIBS_arm_tiny_diet            = -static -lmain -ll4util -ll4sys
 CRT0_arm_tiny_diet              = $(CRT0_DEFAULT)
 CRTN_arm_tiny_diet              =

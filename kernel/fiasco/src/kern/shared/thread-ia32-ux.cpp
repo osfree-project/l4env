@@ -242,7 +242,7 @@ Thread::is_tcb_mapped() const
   // setting eax to 0xffffffff
   Mword pagefault_if_0;
   asm volatile ("xorl %%eax,%%eax		\n\t"
-		"andl $0xffffffff, %%ecx	\n\t"
+		"testb $0xff, %%ss:(%%rcx)	\n\t"
 		"setnc %%al			\n\t"
 		: "=a" (pagefault_if_0) : "c" (&_state));
   return pagefault_if_0;

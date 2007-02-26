@@ -143,7 +143,9 @@ REBUILD_LINKS_SRC =                                                     \
     to=$(OBJ_DIR)/$$file;                                               \
     d=$$(dirname $$to);                                                 \
     [ -d "$$d" ] || mkdir -p $$d;                                       \
-    ln -s$(if $(VERBOSE),,v) "$(SRC_DIR)/$$file" "$$to";           \
+    if [ ! -e "$$to" ] ; then                                           \
+      ln -s$(if $(VERBOSE),,v) "$(SRC_DIR)/$$file" "$$to";              \
+    fi;                                                                 \
   done
 
 

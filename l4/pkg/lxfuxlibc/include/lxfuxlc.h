@@ -126,6 +126,13 @@ struct lx_sockaddr_un {
 #define LX_O_DIRECTORY     0200000 /* must be a directory */
 #define LX_O_NOFOLLOW      0400000 /* don't follow links */
 
+#define LX_S_IRUSR           00400
+#define LX_S_IWUSR           00200
+
+#define LX_S_IFMT         00170000
+#define LX_S_IFDIR         0040000
+#define LX_S_ISDIR(m)      (((m) & LX_S_IFMT) == LX_S_IFDIR)
+
 /*
  * Signal numbers
  */
@@ -170,26 +177,31 @@ struct lx_sockaddr_un {
  * Syscall functions
  */
 
-extern void lx_exit(int status) __attribute__ ((noreturn));
-extern lx_pid_t lx_fork(void);
-extern long lx_read(unsigned int fd, const char *buf, unsigned int count);
-extern long lx_write(unsigned int fd, const char *buf, unsigned int count);
-extern long lx_open(const char *filename, int flags, int mode);
-extern long lx_close(unsigned int fd);
-extern lx_pid_t lx_waitpid(lx_pid_t pid, int * wait_stat, int options);
-extern unsigned long lx_lseek(unsigned int fd, unsigned long offset, unsigned int origin);
-extern long lx_getpid(void);
-extern int  lx_kill(lx_pid_t pid, int sig);
-extern int  lx_pipe(int filesdes[2]);
-extern long lx_gettimeofday(struct lx_timeval *tv, struct lx_timezone *tz);
-extern int  lx_stat(const char *filename, struct lx_stat *buf);
-extern int  lx_fstat(int filedes, struct lx_stat *buf);
-extern int  lx_lstat(const char *filename, struct lx_stat *buf);
-extern int  lx_ipc(unsigned int call, int first, int second, int third, const void *ptr, long fifth);
-extern int  lx_select(int n, lx_fd_set *readfds, lx_fd_set *writefds, lx_fd_set *exceptfds, struct lx_timeval *timeout);
-extern int  lx_poll(struct lx_pollfd *fds, lx_nfds_t nfds, int timeout);
-extern long lx_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
-extern int  lx_socketcall(int call, unsigned long *args);
+/*   1 */ extern void          lx_exit(int status) __attribute__ ((noreturn));
+/*   2 */ extern lx_pid_t      lx_fork(void);
+/*   3 */ extern long          lx_read(unsigned int fd, const char *buf, unsigned int count);
+/*   4 */ extern long          lx_write(unsigned int fd, const char *buf, unsigned int count);
+/*   5 */ extern long          lx_open(const char *filename, int flags, int mode);
+/*   6 */ extern long          lx_close(unsigned int fd);
+/*   7 */ extern lx_pid_t      lx_waitpid(lx_pid_t pid, int * wait_stat, int options);
+/*  10 */ extern int           lx_unlink(const char *filename);
+/*  12 */ extern int           lx_chdir(const char *filename);
+/*  19 */ extern unsigned long lx_lseek(unsigned int fd, unsigned long offset, unsigned int origin);
+/*  20 */ extern long          lx_getpid(void);
+/*  37 */ extern int           lx_kill(lx_pid_t pid, int sig);
+/*  39 */ extern int           lx_mkdir(const char *filename, int mode);
+/*  40 */ extern int           lx_rmdir(const char *filename);
+/*  42 */ extern int           lx_pipe(int filesdes[2]);
+/*  54 */ extern long          lx_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
+/*  78 */ extern long          lx_gettimeofday(struct lx_timeval *tv, struct lx_timezone *tz);
+/*  82 */ extern int           lx_select(int n, lx_fd_set *readfds, lx_fd_set *writefds, lx_fd_set *exceptfds, struct lx_timeval *timeout);
+/*  93 */ extern int           lx_ftruncate(int fd, unsigned long ofs);
+/* 102 */ extern int           lx_socketcall(int call, unsigned long *args);
+/* 106 */ extern int           lx_stat(const char *filename, struct lx_stat *buf);
+/* 107 */ extern int           lx_lstat(const char *filename, struct lx_stat *buf);
+/* 108 */ extern int           lx_fstat(int filedes, struct lx_stat *buf);
+/* 117 */ extern int           lx_ipc(unsigned int call, int first, int second, int third, const void *ptr, long fifth);
+/* 168 */ extern int           lx_poll(struct lx_pollfd *fds, lx_nfds_t nfds, int timeout);
 
 /*
  * Wrapper functions
