@@ -31,7 +31,9 @@
 #include "fb.h"             /* frame buffer support */
 #include "afb.h"
 #include "mfb.h"
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
 #include "cfb24_32.h"
+#endif
 
 #include "ovl_screen.h"
 
@@ -114,7 +116,9 @@ static const OptionInfoRec OVLSCREENOptions[] = {
 static const char *fbSymbols[] = {
 	"fbScreenInit",
 	"fbPictureInit",
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
 	"cfb24_32ScreenInit",
+#endif
 	NULL
 };
 

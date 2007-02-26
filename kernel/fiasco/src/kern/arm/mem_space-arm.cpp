@@ -127,15 +127,18 @@ Mem_space::enable_reverse_lookup()
 {
   // Store reverse pointer to Space in page directory
   assert(((unsigned long)this & 0x03) == 0);
-  _dir->insert_invalid((void*)Mem_layout::Space_index, Config::SUPERPAGE_SIZE,
-      (unsigned long)this);
+  Pte pte = _dir->walk((void*)Mem_layout::Space_index, 
+      Config::SUPERPAGE_SIZE, false);
+
+  pte.set_invalid((unsigned long)this, false);
 }
 
 IMPLEMENT inline
 Mem_space *Mem_space::current_mem_space()
 {
-  return reinterpret_cast<Mem_space*>(Page_table::current()
-      ->lookup_invalid((void*)Mem_layout::Space_index));
+  Pte pte = Page_table::current()->walk((void*)Mem_layout::Space_index, 
+      Config::SUPERPAGE_SIZE, false);
+  return reinterpret_cast<Mem_space*>(pte.raw());
 }
 
 inline NEEDS[Mem_space::current_mem_space]
@@ -160,8 +163,11 @@ Page_table *Mem_space::current_pdir()
 IMPLEMENT inline
 Address Mem_space::lookup( void *a ) const
 {
-  P_ptr<void> ph = _dir->lookup( a, 0, 0 );
-  return ph.get_unsigned();
+  Pte pte = _dir->walk(a, 0, false);
+  if (EXPECT_FALSE(!pte.valid()))
+    return ~0UL;
+
+  return pte.phys(a);
 }
 
 
@@ -173,8 +179,7 @@ void Mem_space::switchin_context()
   if (this == kernel_space())
     return;
   
-  _dir->invalidate((void*)Kmem::ipc_window(0), Config::SUPERPAGE_SIZE * 4,
-      true);
+  _dir->invalidate((void*)Kmem::ipc_window(0), Config::SUPERPAGE_SIZE * 4);
   
   if (Page_table::current() != dir())
     make_current();
@@ -258,9 +263,12 @@ IMPLEMENT
 bool Mem_space::v_lookup(Address virt, Address *phys,
 		     Address *size, unsigned *page_attribs)
 {
-  P_ptr<void> p = _dir->lookup( (void*)virt, size, page_attribs );
-  if( phys ) *phys = p.get_unsigned();
-  return ! p.is_null();
+  Pte p = _dir->walk( (void*)virt, 0, false);
+  
+  if (size) *size = p.size();
+  if (page_attribs) *page_attribs = p.attr();
+  if (phys) *phys = p.phys((void*)virt);
+  return p.valid();
 }
 
 IMPLEMENT
@@ -268,44 +276,56 @@ unsigned long
 Mem_space::v_delete(Address virt, unsigned long size,
     unsigned long page_attribs)
 {
-  Address s;
-  Page::Attribs a;
-  P_ptr<void> p = _dir->lookup( (void*)virt, &s, &a );
-  if (p.is_null())
+  bool flush = Page_table::current() == _dir;
+  Pte pte = _dir->walk((void*)virt, 0, false);
+  if (EXPECT_FALSE(!pte.valid()))
     return 0;
 
-  if (s != size)
-    return 0;
-  
+  if (EXPECT_FALSE(pte.size() != size))
+    {
+      kdb_ke("v_del: size mismatch\n");
+      return 0;
+    }
+
+  Mem_unit::flush_cache((void*)(virt & ~(pte.size()-1)), 
+      (void*)((virt & ~(pte.size()-1)) + pte.size()));
+
+  unsigned long a = pte.attr();
+
   if (!(page_attribs & Page_user_accessible))
-    _dir->change( (void*)virt, a & ~page_attribs);
+    pte.attr(a & ~page_attribs, flush);
   else
-    _dir->remove( (void*)virt );
-  
+    pte.set_invalid(0, flush);
+
+  Mem_unit::tlb_flush((void*)virt);
+
   return a & page_attribs;
 }
+
 
 IMPLEMENT
 Mem_space::Status Mem_space::v_insert(Address phys, Address virt, 
 			      size_t size, Mword page_attribs)
 {
-  Address s;
-  Page::Attribs a;
-  P_ptr<void> p = _dir->lookup( (void*)virt, &s, &a );
-  if(p.is_null())
-    return (Status)_dir
-      ->insert( P_ptr<void>(phys), (void*)virt, size, page_attribs);
+  bool flush = Page_table::current() == _dir;
+  Pte pte = _dir->walk((void*)virt, size, flush);
+
+  if (pte.valid())
+    {
+      if (EXPECT_FALSE(pte.size() != size || pte.phys() != phys))
+	return Insert_err_exists;
+      if (pte.attr() == page_attribs)
+	return Insert_warn_exists;
+    }
   else
     {
-      if(p.get_unsigned() != phys || s != size)
-	return Insert_err_exists;
-      if(page_attribs == a)
-	return Insert_warn_exists;
-
-      _dir->change((void*)virt, a | page_attribs);
-
-      return Insert_warn_attrib_upgrade;
+      pte.set(phys, size, page_attribs, flush);
+      return Insert_ok;
     }
+
+  pte.set(phys, size, pte.attr() | page_attribs, flush);
+  Mem_unit::tlb_flush((void*)virt);
+  return Insert_warn_attrib_upgrade;
 }
 
 PUBLIC inline NEEDS[Mem_space::is_sigma0, "config.h"]

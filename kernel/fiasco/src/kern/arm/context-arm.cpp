@@ -84,7 +84,7 @@ void Context::switchin_context()
   // regs() + 1 returns a pointer to the end of our kernel stack.
   Kmem::kernel_sp( reinterpret_cast<Mword*>(regs() + 1) );
 #if 0
-  printf("switch in address space: %p\n",_space_context);
+  printf("switch in address space: %p\n",_space);
 #endif
   
   // switch to our page directory if nessecary

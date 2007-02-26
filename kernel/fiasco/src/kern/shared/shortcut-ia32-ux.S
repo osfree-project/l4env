@@ -288,7 +288,7 @@ i30_test_tcb_mapped:
 	// handler are too expensive for cli mode.
 	// So the pagefault handler will enable interrupts.
 
-	andl	$0xffffffff, %ss:(%ecx)		// can raise pagefault
+	testb	$0xff, %ss:(%ecx)		// can raise pagefault
 	jc	i30_shortcut_failed_1		// tcb is not paged
 
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH
@@ -299,15 +299,6 @@ i30_test_tcb_mapped:
         // gets mapped and filled. The TCB for 7.01 is than
         // mapped AND zero, because it resides in the same page
         // as 7.00. So the assumption, that mapped TCB are always valid, is wrong.
-        //
-        // Normaly replacing 
-        //    andl    $0xffffffff, %ss:(%ecx)         // can raise pagefault
-        //    jc      i30_shortcut_failed_1           // tcb is not paged
-        // with 
-        //    andl    $0xffffffff, %ss:(%ecx)         // can raise pagefault
-        //    jna      i30_shortcut_failed_1           // tcb is not paged and not zero
-        // should be sufficient, if fiasco gurantees, that initalized Threads
-        // (and deleted threads too) have always an valid Context::_sched pointer.
                         
 	testl	$(Thread_receiving), KSEG (%ecx)        // TCB not zero.
 	jz	i30_shortcut_failed_1
@@ -849,7 +840,7 @@ se_test_tcb_mapped:
 	// Here we could raise a pagefault. The pagefault handler notices
 	// that by looking at the pagefault address. In that case the pager
 	// sets the carry flag and returns immediatly.
-	andl	$0xffffffff, %ss:(%ecx)		// can raise pagefault
+	testb	$0xff, %ss:(%ecx)		// can raise pagefault
 	jc	se_shortcut_failed_1		// tcb is not paged
 
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH

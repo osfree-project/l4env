@@ -1,0 +1,12 @@
+This backend provides very simple mmap functionality, as such backing
+malloc & co.
+
+It uses sigma0 protocol for getting pages. This library registers a
+constructor that will fill the pool initially by getting pages from sigma0.
+After setting up the pool no more pages will be requested at sigma0. If the
+pool is empty mmap will fail.
+The size of the pool can be influenced by setting
+
+  const size_t libc_backend_sigma0_pool_mem_size = <value_in_bytes>;
+
+in the program. The used unit is Bytes.

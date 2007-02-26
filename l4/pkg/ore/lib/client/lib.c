@@ -1,3 +1,10 @@
+/****************************************************************
+ * (c) 2005 - 2007 Technische Universitaet Dresden              *
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
+ ****************************************************************/
+
 #include "local.h"
 #include <stdlib.h>
 
@@ -9,6 +16,8 @@ int ore_initialized = 0;
 static int get_free_descriptor(void);
 static void release_descriptor(int idx);
 static int ore_initialize(void);
+
+#define ORE_NUM_LOOKUPS     10
 
 // find the first free connection
 static int get_free_descriptor(void)
@@ -101,14 +110,14 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
         return -L4_ENOMEM;
     }
   
-	// make sure, we have a name for ORe, fallback is always "ORe"
+    // make sure, we have a name for ORe, fallback is always "ORe"
     if (strlen(conf->ro_orename) == 0)
         strncpy(conf->ro_orename, "ORe", sizeof(conf->ro_orename)-1);
-	if (ore_lookup_server(conf->ro_orename, &descriptor_table[desc].remote_manager_thread))
-	{
-		release_descriptor(desc);
-		return -1;
-	}
+    if (ore_lookup_server(conf->ro_orename, &descriptor_table[desc].remote_manager_thread))
+    {
+        release_descriptor(desc);
+        return -1;
+    }
 
 #ifdef ORE_DSI
     // sending via string IPC
@@ -123,7 +132,7 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
         LOG("sending via dataspace");
         descriptor_table[desc].send_func = ore_send_dsi;
         __l4ore_init_send_socket(descriptor_table[desc].remote_manager_thread,
-				                 conf, &send, &descriptor_table[desc].send_addr);
+                                 conf, &send, &descriptor_table[desc].send_addr);
     }
 
     // receiving via string IPC
@@ -140,7 +149,7 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
         descriptor_table[desc].rx_func_blocking      = ore_recv_dsi_blocking;
         descriptor_table[desc].rx_func_nonblocking   = ore_recv_dsi_nonblocking;
         __l4ore_init_recv_socket(descriptor_table[desc].remote_manager_thread,
-				                 conf, &receive, &descriptor_table[desc].recv_addr);
+                                 conf, &receive, &descriptor_table[desc].recv_addr);
     }
 
     descriptor_table[desc].local_send_socket    = send;
@@ -160,7 +169,7 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
             l4dm_is_invalid_ds(conf->ro_recv_ds))
         {
             LOG_Error("ore_open() returned INVALID_ID");
-			release_descriptor(desc);
+            release_descriptor(desc);
             return -1;
         }
         else
@@ -195,7 +204,7 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
         }
     }
 #endif
-    
+
     descriptor_table[desc].remote_worker_thread = ret;
 
     return desc;
@@ -203,18 +212,27 @@ int l4ore_open(char *device, unsigned char mac[6], l4ore_config *conf)
 
 void l4ore_close(int handle)
 {
-  ore_do_close(handle);
+    ore_do_close(handle);
 }
 
 int ore_lookup_server(char *orename, l4ore_handle_t *manager)
 {
-  if (!names_waitfor_name(orename, manager, 10000))
-  {
-	  LOG("Could not find ORe server '%s', aborting.", orename);
-	  return -1;
-  }
-  LOG("ORe server %s = "l4util_idfmt, orename, l4util_idstr(*manager));
+    int i = 0;
 
-  return 0;
+    while(i < ORE_NUM_LOOKUPS)
+    {
+        if (!names_waitfor_name(orename, manager, 10000))
+        {
+            LOG("Could not find ORe server '%s', %d. attempt.", orename, i + 1);
+            i++;
+        }
+        else
+        {
+            LOG("ORe server %s = "l4util_idfmt, orename, l4util_idstr(*manager));
+            return 0;
+        }
+    }
+    LOG("Could not find ORe server '%s', aborting.", orename);
+    return -1;
 }
 

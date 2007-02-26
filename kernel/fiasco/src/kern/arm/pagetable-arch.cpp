@@ -2,6 +2,21 @@ INTERFACE [arm]:
 
 #include "paging.h"
 
+class Pte
+{
+public:
+//private:
+  unsigned long _pt;
+  Mword *_pte;
+
+public:
+  Pte(Page_table *pt, unsigned level, Mword *pte)
+  : _pt((unsigned long)pt | level), _pte(pte)
+  {}
+
+
+};
+
 EXTENSION class Page_table
 {
 private:
@@ -50,6 +65,133 @@ IMPLEMENTATION [arm]:
 #include "kdb_ke.h"
 
 Page_table *Page_table::_current;
+  
+PUBLIC inline
+unsigned long 
+Pte::valid() const
+{ return *_pte & 3; }
+
+PUBLIC inline
+unsigned long 
+Pte::phys() const
+{
+  switch(_pt & 3)
+    {
+    case 0:
+      switch (*_pte & 3)
+	{
+	case 2:  return *_pte & ~((1 << 20) - 1); // 1MB
+	default: return ~0UL;
+	}
+    case 1:
+      switch (*_pte & 3)
+	{
+	case 2: return *_pte & ~((4 << 10) - 1);
+	default: return ~0UL;
+	}
+    default: return ~0UL;
+    }
+}
+
+PUBLIC inline
+unsigned long
+Pte::phys(void *virt)
+{
+  unsigned long p = phys();
+  return p | (((unsigned long)virt) & (size()-1));
+}
+
+PUBLIC inline
+unsigned long 
+Pte::lvl() const
+{ return (_pt & 3); }
+
+PUBLIC inline
+unsigned long
+Pte::raw() const
+{ return *_pte; }
+
+PUBLIC inline
+unsigned long 
+Pte::size() const
+{
+  switch(_pt & 3)
+    {
+    case 0:
+      switch (*_pte & 3)
+	{
+	case 2:  return 1 << 20; // 1MB
+	default: return 1 << 20;
+	}
+    case 1:
+      switch (*_pte & 3)
+	{
+	case 1: return 64 << 10;
+	case 2: return 4 << 10;
+	case 3: return 1 << 10;
+	default: return 4 << 10;
+	}
+    default: return 0;
+    }
+}
+
+PRIVATE inline NEEDS["mem_unit.h"]
+void
+Pte::__set(unsigned long v, bool write_back)
+{
+  *_pte = v;
+  if (write_back) 
+    Mem_unit::clean_dcache(_pte);
+}
+
+PUBLIC inline NEEDS[Pte::__set]
+void 
+Pte::set_invalid(unsigned long val, bool write_back)
+{ __set(val & ~3, write_back); }
+
+PUBLIC inline NEEDS[Pte::__set]
+void 
+Pte::set(Address phys, unsigned long size, Mword attr, bool write_back)
+{
+  switch (_pt & 3)
+    {
+    case 0:
+      if (size != (1 << 20))
+	return;
+      __set(phys | (attr & Page::MAX_ATTRIBS) | 2, write_back);
+      break;
+    case 1:
+	{ 
+	  if (size != (4 << 10))
+	    return;
+	  unsigned long ap = attr & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
+	  __set(phys | (attr & 0x0c) | ap | 2, write_back);
+	}
+      break;
+    }
+}
+
+PUBLIC inline
+unsigned long 
+Pte::attr() const { return *_pte & 0xc0c; }
+
+PUBLIC inline NEEDS["mem_unit.h"]
+void 
+Pte::attr(unsigned long attr, bool write_back)
+{
+  switch (_pt & 3)
+    {
+    case 0:
+      __set((*_pte & ~0xc0c) | (attr & 0xc0c), write_back);
+      break;
+    case 1:
+	{ 
+	  unsigned long ap = attr & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
+	  __set((*_pte & ~0xffc) | (attr & 0x0c) | ap, write_back);
+	}
+      break;
+    }
+}
 
 //#include "panic.h"
 
@@ -153,307 +295,46 @@ size_t const * const Page_table::page_shifts()
   return _page_shifts;
 }
 
-
-PRIVATE inline
-bool Page_table::kb64_present( Mword *pt, unsigned pt_idx )
+PUBLIC
+Pte 
+Page_table::walk(void *va, unsigned long size, bool write_back)
 {
-  for(unsigned i = 0; i<16; ++i)
-    if(pt[(pt_idx & 0x3f0) + i] & PTE_PRESENT) 
-      return true;
-
-  return false;
-}
-
-PRIVATE static inline
-void 
-Page_table::set_pte64kb(Mword *pte, Mword value, bool wb, void *va)
-{
-  for(Mword *p = (Mword*)((Address)pte & ~0x0f);
-      p != (Mword*)(((Address)pte & ~0x0f) + 0x10); p++) 
-    *p = value;
-
-
-  if (wb)
-    {
-      Mem_unit::clean_dcache((Mword*)((Address)pte & ~0x0f), 
-	                     (Mword*)(((Address)pte & ~0x0f) + 0x10));
-      if (va)
-	Mem_unit::dtlb_flush(va);
-    }
-}
-
-PRIVATE static inline
-void 
-Page_table::set_pte(Mword *pte, Mword value, bool wb, void *va)
-{
-  *pte = value; 
-  if (wb)
-    {
-      Mem_unit::clean_dcache(pte, pte);
-      if (va)
-	Mem_unit::dtlb_flush(va);
-    }
-}
-  
-
-IMPLEMENT
-Page_table::Status Page_table::change(void *va, Page::Attribs a, 
-                                      bool force_flush)
-{ 
   unsigned const pd_idx = pd_index(va);
-  unsigned const pt_idx = pt_index(va);
+
+  Mword *pt = 0;
 
   if (!pde_valid(raw + pd_idx)) 
-    return E_INVALID;
-
-  if (pde_section(raw + pd_idx)) 
     {
-      if (force_flush || _current==this)
-	Mem_unit::flush_cache(va, (char*)va + 0x100000);
-      
-      set_pte(raw + pt_idx, (raw[pd_idx] & ~PDE_AP_MASK) | (a & PDE_AP_MASK), 
-	    force_flush || _current==this, va);
-    }
-  else
-    {
-      Mword *pt = (Mword *)Mem_layout::phys_to_pmem
-	(raw[pd_idx] & PT_BASE_MASK);
-
-      if (!pte_valid(pt + pt_idx)) 
-	return E_INVALID;
-
-      unsigned a4 = (a & PDE_AP_MASK);
-      unsigned a5 = a4 | (a4 >> 2) | (a4 >> 4) | (a4 >> 6);
-
-      switch(pte_type(pt + pt_idx)) 
+      if (size == (4 << 10))
 	{
-	case PTE_TYPE_LARGE:
-	  assert(false /*PTE_TYPE_LATGE*/);
-#if 0
-	  set_pte64kb(pt + pt_idx,(pt[pt_idx] & 0x0ff0) | a5, 
-	              force_flush || _current==this, va);
-#endif
-	  break;
-	default:
-	case PTE_TYPE_SMALL:
-	  if (force_flush || _current==this)
-	    Mem_unit::flush_cache(va, (char*)va + 0x1000);
-	  
-	  set_pte(pt + pt_idx, (pt[pt_idx] & ~0x0ff0) | a5,
-	          force_flush || _current==this, va);
-	  break;
-	}
-    }
-  return E_OK;
-}
-
-
-IMPLEMENT inline NEEDS[Page_table::__insert]
-Page_table::Status Page_table::insert_invalid(void *va, size_t size, 
-                                              Mword value, bool flush)
-{
-  return __insert(P_ptr<void>((void*)value), va, size, 0, true, true, flush);
-}
-
-
-#include <cstdio>
-#include "mem_unit.h"
-
-PRIVATE /*inline NEEDS [<cassert>, <cstring>, "mem_unit.h",
-		      Page_table::page_sizes, 
-		      Page_table::page_shifts, Page_table::pd_index,
-		      Page_table::pt_index, Page_table::kb64_present,
-                      "kdb_ke.h"]*/
-Page_table::Status 
-Page_table::__insert(P_ptr<void> pa, void *va, 
-		     size_t size, Page::Attribs a, 
-		     bool replace, bool invalid, 
-		     bool force_flush)
-{
-  size_t const * const sizes = page_sizes();
-  unsigned const pd_idx = pd_index(va);
-  unsigned const pt_idx = pt_index(va);
-  bool need_flush = false;
-
-  if (size == sizes[1]) 
-    { // 1MB
-      // try to insert or replace a 1MB superpage,
-      // which are located in the page directory
-
-      // assert the right alignment
-      assert(invalid || ((pa.get_unsigned() & (sizes[1]-1)) == 0));
-      assert(((Mword)va & (sizes[1]-1)) == 0);
-
-      // printf("X: insert 1MB mapping va=%p, pa=%08x\n", va, pa.get_unsigned());
-
-      if (pde_valid(raw + pd_idx)) 
-	{
-	  if(!replace)
-	    return E_EXISTS;
-
-	  need_flush = true;
-
-	  if (!pde_section(raw + pd_idx)) 
-	    {
-	      kdb_ke("Overwrite non-section in PD");
-	      return E_OK;
-	    }
-	}
-
-      // there was nothing mapped before
-      if (!invalid)
-	set_pte(raw + pd_idx, pa.get_unsigned() | PDE_TYPE_SECTION 
-	                      | (a & Page::MAX_ATTRIBS),
-		force_flush || _current==this, va);
-      else
-        set_pte(raw + pd_idx, pa.get_unsigned() & ~PDE_PRESENT,
-	        force_flush || _current==this, va);
-
-    } 
-  else
-    {
-      //printf("X: insert 4KB mapping va=%p, pa=%08x\n", va, pa.get_unsigned());
-      // A 4KB mapping is requested
-      assert(size == sizes[0]);
-      // assert the right alignment
-      assert(invalid || ((pa.get_unsigned() & (sizes[0]-1)) == 0));
-      assert(((Mword)va & (sizes[0]-1)) == 0);
-
-      Mword *pt = 0;
-
-      if (pde_section(raw + pd_idx)) 
-	{
-	  if(!replace) 
-	    return E_EXISTS;
-	  else 
-	    need_flush = true;
-
-	} 
-      else if (pde_coarse(raw + pd_idx)) 
-	{
-	  pt = (Mword*)Mem_layout::phys_to_pmem(raw[pd_idx] & PT_BASE_MASK);
-
-	  if (pte_valid(pt + pt_idx))
-	    {
-	      if (!replace) 
-		return E_EXISTS;
-	      else 
-		need_flush = true;
-	    }
-	} 
-      else
-	{
-	  // fine page tables are not used !!
-	  assert(!pde_valid(raw + pd_idx));
-	  // no allocate one
 	  pt = (Mword*)alloc()->alloc(10);
 	  if (!pt) 
-	    return E_NOMEM;
+	    return Pte(this, 0, raw + pd_idx);
 
 	  memset(pt, 0, 1024);
+	  
+	  if (write_back)
+	    Mem_unit::clean_dcache(pt, (char*)pt + 1024);
 
-	  // I write back the whole data cache, may be more efficent
-	  // than iterate over 4096 bytes, but also may be not
-	  if (force_flush || _current==this)
-	    Mem_unit::clean_dcache(pt, ((char*)pt) + 1024);
-
-	  // printf("X: write %08x to PD @%p\n", Mem_layout::pmem_to_phys((Address)pt) | PDE_TYPE_COARSE, raw + pd_idx);
-	  set_pte(raw + pd_idx, current()->lookup(pt,0,0).get_unsigned()
-	                        | PDE_TYPE_COARSE,
-		  force_flush || _current==this, 0);
+	  raw[pd_idx] = current()->walk(pt, 0, false).phys(pt)
+	    | PDE_TYPE_COARSE;
+	  
+	  if (write_back)
+	    Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx);
 	}
-
-      if (!invalid)
-	{
-	  unsigned ap = a & PDE_AP_MASK;
-
-	  // printf("X: write %08x to PT @%p\n", pa.get_unsigned() | PTE_TYPE_SMALL | ap | (ap >> 2) | (ap >> 4) | (ap >> 6) | (a & Page::MAX_ATTRIBS), pt + pt_idx);
-
-
-	  set_pte(pt + pt_idx, pa.get_unsigned() | PTE_TYPE_SMALL 
-	                       | ap | (ap >> 2) | (ap >> 4) | (ap >> 6) 
-			       | (a & Page::MAX_ATTRIBS),
-	          force_flush || this==_current, va);
-	} 
       else
-	{
-	  // printf("X: write to PT @ %p\n", pt + pt_idx);
-	  set_pte(pt + pt_idx, pa.get_unsigned() & ~PTE_PRESENT,
-	          force_flush || this==_current, va);
-	}
+	return Pte(this, 0, raw + pd_idx);
     }
+  else if (pde_section(raw + pd_idx)) 
+    return Pte(this, 0, raw + pd_idx);
 
-  if (need_flush && (this==_current))
-    Mem_unit::tlb_flush();
+  if (!pt)
+    pt = (Mword *)Mem_layout::phys_to_pmem(raw[pd_idx] & PT_BASE_MASK);
 
-  return E_OK;
-
-}
-
-IMPLEMENT inline NEEDS [Page_table::__insert]
-Page_table::Status Page_table::insert(P_ptr<void> pa, void* va, size_t size, 
-				      Page::Attribs a, bool force_flush)
-{
-  return __insert(pa, va, size, a, false, false, force_flush);
-}
-
-IMPLEMENT inline NEEDS [Page_table::__insert] 
-Page_table::Status Page_table::replace(P_ptr<void> pa, void* va, size_t size, 
-				       Page::Attribs a, bool force_flush)
-{
-  return __insert(pa, va, size, a, true, false, force_flush);
-}
-
-
-IMPLEMENT /*inline*/
-Page_table::Status Page_table::remove(void *va, bool force_flush)
-{
-  unsigned const pd_idx = pd_index(va);
   unsigned const pt_idx = pt_index(va);
 
-  if (!pde_valid(raw + pd_idx))
-    return E_OK;
-
-  if (pde_section(raw + pd_idx))
-    {
-      if (force_flush || this == _current)
-	Mem_unit::flush_cache(va, (char*)va + 0x100000);
-	
-      set_pte(raw+ pd_idx, 0, force_flush || this == _current, va);
-      return E_OK;
-    }
-
-  Mword *pt = (Mword *)Mem_layout::phys_to_pmem
-    (raw[pd_idx] & PT_BASE_MASK);
-
-  if (!pte_valid(pt + pt_idx))
-    return E_OK;
-  
-  switch (pte_type(pt + pt_idx))
-    {
-    case PTE_TYPE_LARGE: // 64k
-      assert(false /*PTE_TYPE_LARGE*/);
-#if 0
-      for( unsigned idx = pt_idx & ~0x0f, end = idx + 16; idx < end; 
-	   ++idx)
-	pt[idx] = 0;
-      if (force_flush || this == _current)
-        Mem_unit::clean_dcache(pt + (pt_idx & ~0x0f), 
-	                       pt + (pt_idx & ~0x0f) + 16);
-#endif
-      return E_OK;
-    case PTE_TYPE_SMALL: // 4k
-      if (force_flush || this == _current)
-	Mem_unit::flush_cache(va, (char*)va + 4096);
-      
-      set_pte(pt + pt_idx, 0, force_flush || this == _current, va);
-      return E_OK;
-    default:
-      return E_OK;
-    }
+  return Pte(this, 1, pt + pt_idx);
 }
-
-
 PRIVATE inline NEEDS[Page_table::pd_index, Page_table::pt_index,
 	             Page_table::pte_valid, Page_table::pde_valid,
 		     Page_table::pde_section, Page_table::pte_type]
@@ -517,6 +398,7 @@ Mword Page_table::__lookup(void *va, Address *size, Page::Attribs *a,
     }
 }
 
+#if 0
 IMPLEMENT inline NEEDS[Page_table::__lookup]
 P_ptr<void> Page_table::lookup( void *va, Address *size, Page::Attribs *a ) const
 {
@@ -527,21 +409,7 @@ P_ptr<void> Page_table::lookup( void *va, Address *size, Page::Attribs *a ) cons
   else
     return P_ptr<void>();
 }
-
-
-IMPLEMENT inline NEEDS[Page_table::__lookup]
-Mword Page_table::lookup_invalid( void *va ) const
-{
-  bool valid = false;
-  Mword ret = __lookup(va, 0, 0, valid);
-  if(valid)
-    return (Mword)-1;
-  else
-    return ret;
-}
-
-
-
+#endif
 
 
 IMPLEMENT inline
@@ -553,7 +421,7 @@ size_t const Page_table::num_page_sizes()
 PUBLIC /*inline*/
 void Page_table::activate()
 {
-  P_ptr<Page_table> p = P_ptr<Page_table>::cast(current()->lookup(this,0,0));
+  Pte p = current()->walk(this,0,false);
   if(_current!=this) 
     {
       _current = this;
@@ -567,7 +435,7 @@ void Page_table::activate()
 	  "sub pc,pc,#4                 \n"
 	  
 	  : 
-	  : "r"(p.get_unsigned()) 
+	  : "r"(p.phys(this)) 
 	  : "r1" );
       
     }
@@ -591,7 +459,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
 			 void *base, size_t size, bool force_flush )
 {
   unsigned pd_idx = pd_index(my_base);
-  unsigned pd_idx_max = pd_index((char*)my_base + size);
+  unsigned pd_idx_max = pd_index(my_base) + pd_index((void*)size);
   unsigned o_pd_idx = pd_index(base);
   bool need_flush = false;
 
@@ -599,7 +467,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
  
   if (force_flush)
     {
-      for (unsigned i = pd_idx; (i & 0x0fff) != pd_idx_max; ++i)
+      for (unsigned i = pd_idx;  i < pd_idx_max; ++i)
 	if (pde_valid(raw + i))
 	  {
 	    Mem_unit::flush_dcache();
@@ -608,15 +476,14 @@ void Page_table::copy_in(void *my_base, Page_table *o,
 	  }
     }
   
-  for (unsigned i = pd_idx; (i & 0x0fff) != pd_idx_max; ++i, ++o_pd_idx)
+  for (unsigned i = pd_idx; i < pd_idx_max; ++i, ++o_pd_idx)
     raw[i] = o->raw[o_pd_idx];
 
   if (force_flush)
     Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx_max);
-  
+
   if (need_flush && force_flush)
     Mem_unit::dtlb_flush();
-
 }
 
 PUBLIC
@@ -624,14 +491,14 @@ void
 Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
 {
   unsigned pd_idx = pd_index(my_base);
-  unsigned pd_idx_max = pd_index((char*)my_base + size);
+  unsigned pd_idx_max = pd_index(my_base) + pd_index((void*)size);
   bool need_flush = false;
   
   //printf("invalidate: %03x-%03x\n", pd_idx, pd_idx_max);
 
   if (flush)
     {
-      for (unsigned i = pd_idx; (i & 0x0fff) != pd_idx_max; ++i)
+      for (unsigned i = pd_idx; i < pd_idx_max; ++i)
 	if (pde_valid(raw + i))
 	  {
 	    Mem_unit::flush_dcache();
@@ -640,7 +507,7 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
 	  }
     }
 
-  for (unsigned i = pd_idx; (i & 0x0fff) != pd_idx_max; ++i)
+  for (unsigned i = pd_idx; i < pd_idx_max; ++i)
     raw[i] = 0;
   
   if (flush)

@@ -31,7 +31,8 @@ IMPLEMENTATION:
 IMPLEMENT inline NEEDS[<cstdio>,"regdefs.h", "kdb_ke.h","processor.h",
 		       "config.h","std_macros.h","vmem_alloc.h","logdefs.h",
 		       "warn.h",Thread::page_fault_log]
-bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
+int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
+    Return_frame *regs)
 {
   if (Config::Log_kernel_page_faults && !PF::is_usermode_error(error_code))
     {
@@ -85,7 +86,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
         {
           // special case: sigma0 can map in anything from the kernel
 	  if(handle_sigma0_page_fault(pfa))
-            return true;
+            return 1;
 
           ipc_code.error (Ipc_err::Remapfailed);
           goto error;
@@ -94,7 +95,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
       // user mode page fault -- send pager request
       if (!(ipc_code 
 	    = handle_page_fault_pager(_pager, pfa, error_code)).has_error())
-        return true;
+        return 1;
 
       goto error;
     }
@@ -103,20 +104,20 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
   else if (EXPECT_FALSE (Kmem::is_smas_page_fault(pfa)))
     {
       if (handle_smas_page_fault (pfa, error_code, ipc_code))
-        return true;
+        return 1;
 
       goto error;
     }
   
   // Check for page fault in kernel memory region caused by user mode
   else if (EXPECT_FALSE(PF::is_usermode_error(error_code)))
-    return false;             // disallow access after mem_user_max
+    return 0;             // disallow access after mem_user_max
 
   // Check for page fault in IO bit map or in delimiter byte behind IO bitmap
   // assume it is caused by an input/output instruction and fall through to
   // handle_slow_trap
   else if (EXPECT_FALSE(Kmem::is_io_bitmap_page_fault(pfa)))
-    return false;
+    return 0;
 
   // We're in kernel code faulting on a kernel memory region
 
@@ -126,7 +127,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
   else if (EXPECT_TRUE (Kmem::is_ipc_page_fault(pfa, error_code)))
     {
       if (!(ipc_code = handle_ipc_page_fault(pfa, error_code)).has_error())
-        return true;
+        return 1;
 
       goto error;
     }
@@ -136,27 +137,30 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
   // This is the only path that should be executed with interrupts
   // disabled if the page faulter also had interrupts disabled.   
   // thread_page_fault() takes care of that.
-  else 
+  else if (PF::is_translation_error(error_code) &&
 #ifdef CONFIG_ARM
-  if (PF::is_translation_error(error_code) &&
-      Mem_space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
+      Mem_space::kernel_space()->lookup((void*)pfa) != ~0UL
 #else
-  if (PF::is_translation_error(error_code) &&
-      Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != (Mword) -1)
+      Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != ~0UL
 #endif
+      )
     {
       current_mem_space()->kmem_update((void*)pfa);
-      return true;
+      return 1;
     }
 
   // Check for page fault in kernel's TCB area
   else if (Kmem::is_tcb_page_fault(pfa, error_code))
     {
+      // Test for special case -- see function documentation
+      if (pagein_tcb_request(regs))
+	 return 2;
+
+      if (cpu_lock.test())
+	kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
+
       if (PF::is_translation_error(error_code))   // page not present
         {
-	  if (!PF::is_read_error(error_code))
-	    Proc::sti();
-                          
           if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
                                       PF::is_read_error(error_code) ?
 				      Vmem_alloc::ZERO_MAP:
@@ -167,7 +171,6 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
         { 
           // protection fault
           // this can only be because we have the zero page mapped
-	  Proc::sti();
           Vmem_alloc::page_free
 	    (reinterpret_cast<void*> (pfa & Config::PAGE_MASK));
           if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
@@ -189,7 +192,7 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
         }
 
       current_mem_space()->kmem_update((void*)pfa);
-      return true;
+      return 1;
     }
 
   WARN("No page fault handler for 0x%lx, error 0x%lx, pc "L4_PTR_FMT"",
@@ -202,5 +205,5 @@ bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
   if (_recover_jmpbuf)
     longjmp (*_recover_jmpbuf, ipc_code.raw());
 
-  return false;
+  return 0;
 }

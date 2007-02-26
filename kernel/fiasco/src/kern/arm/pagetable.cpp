@@ -4,6 +4,8 @@ INTERFACE:
 #include "kern_types.h"
 #include "mapped_alloc.h"
 
+class Pte;
+
 class Page_table //: public Page_table_defs
 {
 public:
@@ -24,22 +26,7 @@ public:
 
   Page_table();
   
-  Status insert(P_ptr<void>, void*, size_t, 
-		Page::Attribs s = Page::USER_NO | Page::CACHEABLE, 
-		bool force_flush = false);
-
-  Status insert_invalid(void *, size_t, Mword, bool flush = false);
-  Mword lookup_invalid(void *va) const;
-
-  Status replace(P_ptr<void>, void*, size_t, 
-		 Page::Attribs s = Page::USER_NO | Page::CACHEABLE,
-		 bool force_flush = false);
-
-  Status change(void*, Page::Attribs, bool force_flush = false);
-
-  Status remove(void*, bool force_flush = false);
-
-  P_ptr<void> lookup(void *, Address *, Page::Attribs *a) const;
+  //P_ptr<void> lookup(void *, Address *, Page::Attribs *a) const;
 
   void copy_in(void *my_base, Page_table *o, 
 	       void *base, size_t size = 0, bool force_flush = false);

@@ -57,7 +57,7 @@
 #define test(ins) 					\
   do							\
     {							\
-      TIMER_OFF;					\
+      BENCH_BEGIN;					\
       asm volatile ("pushl %%ebp		\n\t"	\
 		    "movl  $"STR(LOOPS)",%%edi	\n\t"	\
 		    "leal  %1, %%esi		\n\t"	\
@@ -96,7 +96,7 @@
 		    : "m" (atomic_ll)			\
 		    : "ebx","ecx","edx",		\
 		      "esi","edi","memory");		\
-      TIMER_ON;						\
+      BENCH_END;					\
       printf("   %-10s takes about %3u cycles\n",	\
 	  STR(ins), (cycles+10*LOOPS)/(20*LOOPS));	\
     } while (0)

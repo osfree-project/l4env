@@ -382,9 +382,6 @@ void Timer::init()
 
   v = Io::read<Mword>(SYSTEM_CONTROL);
   v |= TIMCLK << TIMER1_ENABLE;
-  v |= TIMCLK << TIMER2_ENABLE;
-  v |= TIMCLK << TIMER3_ENABLE;
-  v |= TIMCLK << TIMER4_ENABLE;
   Io::write<Mword>(v, SYSTEM_CONTROL);
 
   // all timers off
@@ -402,7 +399,7 @@ void Timer::init()
 
 static inline
 Unsigned64
-Timer::timer_to_us(Unsigned32 cr)
+Timer::timer_to_us(Unsigned32 /*cr*/)
 { return 0; }
 
 static inline

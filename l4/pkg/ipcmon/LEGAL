@@ -1,0 +1,21 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".	
+include/ipcmon.h : TUD
+idl/ipcmon.idl : TUD
+server/src/components.cc : TUD
+server/src/whitelist.h : TUD
+server/src/capmanager.cc : TUD
+server/src/capdescriptor.h : TUD
+server/src/whitelist.cc : TUD
+server/src/blacklist.h : TUD
+server/src/blacklist.cc : TUD
+server/src/capdescriptor.cc : TUD
+server/src/capmanager.h : TUD
+server/src/Makefile : TUD
+lib/src/libipcmon.c : TUD
+examples/ipcmon_test/main.c : TUD
+examples/ipcmon_test2/main.c : TUD

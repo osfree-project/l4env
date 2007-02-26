@@ -18,9 +18,9 @@ L4LIBS		= -Bstatic $(L4LIBS_$(LIBC_TYPE)) -lgeneric_ts -ll4env \
 		  -llogserver -lnames $(ROOTLIB) -ll4env -ll4env_err -ll4rm \
 		  -ldm_generic -ldm_mem -lthread -lslab -ll4util_root \
 		  -ll4util -lsigma0 -ll4sys
-LIBCLIBS_diet   = -nostdlib -ldiet_c $(GCCLIB) -ldiet_be_sigma0_mem \
+LIBCLIBS_diet   = -nostdlib -ldiet_c $(GCCLIB) -lc_be_sigma0_mem \
 		  -ldiet_be_l4_start_stop
-LIBCLIBS_uc	= -nostdlib -luc_c $(GCCLIB) -luc_be_sigma0_mem \
+LIBCLIBS_uc	= -nostdlib -luc_c $(GCCLIB) -lc_be_sigma0_mem \
 		  -luc_be_l4_start_stop
 
 L4LIBS_diet     = -ldietlibc_support

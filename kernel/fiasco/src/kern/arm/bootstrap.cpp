@@ -79,8 +79,6 @@ static
 void
 map_hw(void *pd)
 {
-  // map the cache flush area
-  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
   // map UART
   map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false);
   // map Timer
@@ -108,8 +106,6 @@ static
 void
 map_hw(void *pd)
 {
-  // map the cache flush area
-  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
   // map devices
   map_1mb(pd, Mem_layout::Devices_map_base, Mem_layout::Devices_phys_base, false);
 }
@@ -135,7 +131,7 @@ asm
 "__init_data:                          \n"
 ".long _stack                          \n"
 ".previous                             \n"
-".section .bss,#alloc                  \n"        
+".section .bss                         \n"        
 "	.space	2048                   \n"
 "_stack:                               \n"
 ".previous                             \n"

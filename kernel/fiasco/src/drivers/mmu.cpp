@@ -15,6 +15,11 @@ public:
   /**
    * Clean given D cache region.
    */
+  static void clean_dcache(void const *va);
+
+  /**
+   * Clean given D cache region.
+   */
   static void clean_dcache(void const *start, void const *end);
   /**
    * Clean and invalidate the entire cache.
@@ -54,6 +59,7 @@ public:
  // static void write_back_data_cache(void *a);
 };
 
+//---------------------------------------------------------------------------
 IMPLEMENTATION [!arm]:
 
 IMPLEMENT inline
@@ -63,7 +69,7 @@ void Mmu<Flush_area, Ram>::flush_cache()
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >
-void Mmu<Flush_area, Ram>::flush_cache(void const *start, void const *end)
+void Mmu<Flush_area, Ram>::flush_cache(void const *, void const *)
 {}
 
 IMPLEMENT inline
@@ -73,7 +79,7 @@ void Mmu<Flush_area, Ram>::clean_dcache()
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >
-void Mmu<Flush_area, Ram>::clean_dcache(void const *start, void const *end)
+void Mmu<Flush_area, Ram>::clean_dcache(void const *, void const *)
 {}
 
 IMPLEMENT inline
@@ -83,12 +89,12 @@ void Mmu<Flush_area, Ram>::flush_dcache()
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >
-void Mmu<Flush_area, Ram>::flush_dcache(void const *start, void const *end)
+void Mmu<Flush_area, Ram>::flush_dcache(void const *, void const *)
 {}
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >
-void Mmu<Flush_area, Ram>::inv_dcache(void const *start, void const *end)
+void Mmu<Flush_area, Ram>::inv_dcache(void const *, void const *)
 {}
 
 

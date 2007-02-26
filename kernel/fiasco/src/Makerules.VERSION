@@ -1,11 +1,15 @@
 # -*- makefile -*-
+# vim:set ft=make:
 
 kip.o:		$(VERSION)
 
-CVS_ENTRIES	:= $(shell find $(srcdir) -name Entries)
-
-$(VERSION):	$(CVS_ENTRIES)
-		$(VERBOSE)$(srcdir)/../tool/checkversion $^ > $@
+$(VERSION): FORCE
+		$(VERBOSE)if [ -d $(srcdir)/.svn ]; then           \
+		   v=`svnversion -nc $(srcdir)`; v=$${v%[A-Z]};    \
+		   echo "#define CODE_VERSION \"r$${v#*:}\"" > $@; \
+		else                                               \
+		   echo "#define CODE_VERSION \"rUNKNOWN\"" > $@;  \
+		fi
 
 clean-VERSION:
 		rm -f $(VERSION)

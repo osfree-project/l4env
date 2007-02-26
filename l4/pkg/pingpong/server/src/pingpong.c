@@ -561,7 +561,7 @@ bench_short_intraAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 
 	  if (callmode == 0)
 	      create_pingpong_threads(cold ?
@@ -590,7 +590,7 @@ bench_short_intraAS(int nr)
 	  /* shutdown pong thread, ping thread already sleeps */
           kill_pong_thread();
 
-	  TIMER_ON;
+	  BENCH_END;
 
 	  /* give ping thread time to go to bed */
 	  send(ping_id);
@@ -612,7 +612,7 @@ bench_short_intraAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 
 	  if (callmode == 0)
 	      create_pingpong_threads(cold ? 
@@ -641,7 +641,7 @@ bench_short_intraAS(int nr)
 	  /* shutdown pong thread, ping thread already sleeps */
           kill_pong_thread();
 
-	  TIMER_ON;
+	  BENCH_END;
 
 	  /* give ping thread time to go to bed */
 	  send(ping_id);
@@ -670,7 +670,7 @@ bench_short_interAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 	  if (callmode == 0)
 	      create_pingpong_tasks(cold ? 
 		  int30_ping_short_cold_thread :
@@ -688,7 +688,7 @@ bench_short_interAS(int nr)
 		  kipcalls_pong_short_thread);
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
-	  TIMER_ON;
+	  BENCH_END;
 	}
     }
 
@@ -702,7 +702,7 @@ bench_short_interAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 	  if (callmode == 0)
 	      create_pingpong_tasks(cold ? 
 		  int30_ping_short_cold_thread :
@@ -720,7 +720,7 @@ bench_short_interAS(int nr)
 		  kipcalls_pong_short_thread);
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
-	  TIMER_ON;
+	  BENCH_END;
 	}
     }
 }
@@ -729,35 +729,27 @@ bench_short_interAS(int nr)
 static void
 test_short_interAS_flood(int nr)
 {
-  int sc;
-
   print_testname("short inter IPC", nr, INTER, 0);
-  printf("   0=shortcut 1=no shortcut: ");
-  sc = getchar_multi();
-  printf("%c\n", sc=='0' ? '0' : '1');
 
-  TIMER_OFF;
-  if (sc == '0')
-    {
-      printf("  === Shortcut (Client=Timeout(NEVER), Server=Timeout(0)) ===\n");
-      create_pingpong_tasks(sysenter_ping_short_cold_thread,
-			    sysenter_pong_short_thread);
+  printf("  === Shortcut (Client=Timeout(NEVER), Server=Timeout(0)) ===\n");
+  BENCH_BEGIN;
+  create_pingpong_tasks(sysenter_ping_short_cold_thread,
+                        sysenter_pong_short_thread);
 
-      /* wait for measurement to be finished, then kill tasks */
-      recv_ping_timeout(timeout_50s);
-      kill_pingpong_tasks();
-    }
-  else
-    {
-      printf("  === No Shortcut (Receive Timeout 1s) ===\n");
-      create_pingpong_tasks(sysenter_ping_short_to_cold_thread,
-			    sysenter_pong_short_to_thread);
+  /* wait for measurement to be finished, then kill tasks */
+  recv_ping_timeout(timeout_50s);
+  kill_pingpong_tasks();
+  BENCH_END;
 
-      /* wait for measurement to be finished, then kill tasks */
-      recv_ping_timeout(timeout_50s);
-      kill_pingpong_tasks();
-    }
-  TIMER_ON;
+  printf("  === No Shortcut (Receive Timeout 1s) ===\n");
+  BENCH_BEGIN;
+  create_pingpong_tasks(sysenter_ping_short_to_cold_thread,
+			sysenter_pong_short_to_thread);
+
+  /* wait for measurement to be finished, then kill tasks */
+  recv_ping_timeout(timeout_50s);
+  kill_pingpong_tasks();
+  BENCH_END;
 }
 
 /** IPC benchmark - short INTER-AS. */
@@ -766,6 +758,13 @@ bench_short_dc_interAS(int nr)
 {
   print_testname("short inter IPC / don't switch to receiver", nr, INTER, 0);
   printf("  Make sure to have enough kernel memory available, test will fail otherwise.\n");
+
+  if (!l4sigma0_kip_kernel_has_feature("deceit_bit_disables_switch"))
+    {
+      printf("Kernel does not support deceit-bit-disables-switch, test skipped.\n");
+      return;
+    }
+
   ping_id = inter_ping;
   pong_id = inter_pong;
 
@@ -992,7 +991,7 @@ bench_shortMap_test(void)
       fpagesize = fpagesizes[i]*L4_PAGESIZE;
       rounds    = SCRATCH_MEM_SIZE/(fpagesize*8);
 
-      TIMER_OFF;
+      BENCH_BEGIN;
       create_pingpong_tasks(callmode ? sysenter_ping_fpage_thread
 				     : int30_ping_fpage_thread, 
 			    callmode ? sysenter_pong_fpage_thread
@@ -1001,7 +1000,7 @@ bench_shortMap_test(void)
       /* wait for measurement to be finished, then kill tasks */
       recv_ping_timeout(timeout_50s);
       kill_pingpong_tasks();
-      TIMER_ON;
+      BENCH_END;
     }
 }
 
@@ -1060,14 +1059,14 @@ bench_pagefault_test(void)
   rounds = SCRATCH_MEM_SIZE/(fpagesize*8);
   /* don't care about kip-calls, because sysenter directly is fastest */
   callmode = 1-dont_do_sysenter;
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_tasks(callmode ? sysenter_ping_pagefault_thread
 				 : int30_ping_pagefault_thread,
 			callmode ? sysenter_pong_pagefault_thread
 				 : int30_pong_pagefault_thread);
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
-  TIMER_ON;
+  BENCH_END;
 }
 
 /** IPC benchmark - pagefaults. */
@@ -1112,7 +1111,7 @@ bench_exceptions(int nr)
 
   move_to_small_space(ping_id, smas_pos[0]);
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_ping_thread(ping_exception_intraAS_idt_thread);
 
   send(ping_id);
@@ -1139,7 +1138,7 @@ bench_exceptions(int nr)
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
   send(ping_id);
-  TIMER_ON;
+  BENCH_END;
 
   if (!l4sigma0_kip_kernel_has_feature("exception_ipc"))
     {
@@ -1153,7 +1152,7 @@ bench_exceptions(int nr)
   ping_id = intra_ping;
   pong_id = intra_pong;
 
-  TIMER_OFF;
+  BENCH_BEGIN;
 
   create_thread(ping_id, (l4_umword_t)ping_exception_IPC_thread,
                 (l4_umword_t)ping_stack + STACKSIZE, pong_id);
@@ -1169,7 +1168,7 @@ bench_exceptions(int nr)
   send(ping_id);
   kill_pong_thread();
 
-  TIMER_ON;
+  BENCH_END;
 
   /* ----- */
   print_testname("inter IPC exception", nr, INTER, 0);
@@ -1185,7 +1184,7 @@ bench_exceptions(int nr)
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
   send(ping_id);
-  TIMER_ON;
+  BENCH_END;
 }
 
 /** IPC benchmark - short INTER-AS with c-bindings. */
@@ -1202,7 +1201,7 @@ bench_short_casm_interAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 	  if (callmode == 0)
 	  {
 	      create_pingpong_tasks(cold ?
@@ -1228,7 +1227,7 @@ bench_short_casm_interAS(int nr)
 	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
-	  TIMER_ON;
+	  BENCH_END;
 	}
     }
 
@@ -1242,7 +1241,7 @@ bench_short_casm_interAS(int nr)
 	  if (callmode == 2 && dont_do_kipcalls)
 	      continue;
 
-	  TIMER_OFF;
+	  BENCH_BEGIN;
 	  if (callmode == 0)
 	  {
 	      create_pingpong_tasks(cold ?
@@ -1268,7 +1267,7 @@ bench_short_casm_interAS(int nr)
 	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
-	  TIMER_ON;
+	  BENCH_END;
 	}
     }
 }
@@ -1283,33 +1282,33 @@ bench_short_compare(int nr)
   ping_id = intra_ping;
   pong_id = intra_pong;
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_threads(sysenter_ping_short_thread,
                           sysenter_pong_short_thread);
   recv(pong_id);
   send(pong_id);
   recv_ping_timeout(timeout_50s);
   kill_pong_thread();
-  TIMER_ON;
+  BENCH_END;
 
   send(ping_id);
   l4_thread_switch(L4_NIL_ID);
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_threads(sysenter_ping_short_to_thread,
                           sysenter_pong_short_to_thread);
   recv(pong_id);
   send(pong_id);
   recv_ping_timeout(timeout_50s);
   kill_pong_thread();
-  TIMER_ON;
+  BENCH_END;
 
   send(ping_id);
   l4_thread_switch(L4_NIL_ID);
 
   print_testname("short IPC inter-AS shortcut/no-shortcut", nr, INTER, 1);
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_tasks(sysenter_ping_short_thread,
 			sysenter_pong_short_thread);
   recv_ping_timeout(timeout_50s);
@@ -1319,7 +1318,7 @@ bench_short_compare(int nr)
 			sysenter_pong_short_to_thread);
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
-  TIMER_ON;
+  BENCH_END;
 }
 
 /* Simple intra and inter IPC using different UTCB sizes,
@@ -1332,7 +1331,7 @@ bench_utcb_ipc(int nr)
   ping_id = intra_ping;
   pong_id = intra_pong;
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_threads(ping_utcb_ipc_thread,
                           pong_utcb_ipc_thread);
 
@@ -1344,20 +1343,20 @@ bench_utcb_ipc(int nr)
 
   kill_pong_thread();
 
-  TIMER_ON;
+  BENCH_END;
 
   print_testname("IPC with UTCB data transfer", nr, INTER, 1);
   ping_id = inter_ping;
   pong_id = inter_pong;
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   create_pingpong_tasks(ping_utcb_ipc_thread,
                         pong_utcb_ipc_thread);
   recv(ping_id);
   send(ping_id);
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
-  TIMER_ON;
+  BENCH_END;
 }
 
 static void
@@ -1373,7 +1372,7 @@ test_rdtsc(void)
   min1 = min2 = min3 = -1;
   max1 = max2 = max3 = 0;
 
-  TIMER_OFF;
+  BENCH_BEGIN;
   for (i = 0; i < TEST_RDTSC_NUM; i++)
     {
       start = l4_rdtsc();
@@ -1405,7 +1404,7 @@ test_rdtsc(void)
 	max3 = diff;
       
     }
-  TIMER_ON;
+  BENCH_END;
 
   printf("Rdtsc impact: 1-2: %u/%u/%u 2-3: %u/%u/%u, 1-3: %u/%u/%u\n",
        min1,(l4_uint32_t)(total1 / TEST_RDTSC_NUM),max1,
@@ -1463,6 +1462,7 @@ help(void)
 "  3: Same as test 2 except that the server replies indirect strings.\n"
 "\n"
 "  Press any key to continue ...");
+  fflush(NULL);
   getchar_multi();
   printf("\r"
 "  4: Same as test 1 except that the server replies one short flexpage.\n"
@@ -1487,6 +1487,7 @@ help(void)
 "  d: Send once to 200 different Tasks without implicit switching to the\n"
 "     receiver. Compared to call/receive+send.\n"
 "  Press any key to continue ...");
+  fflush(NULL);
   getchar_multi();
   printf("\r%40s", "");
 }
@@ -1694,6 +1695,7 @@ invalid_key:
 	    {
 	      printf("\n"
 	             ">> 0: (0-0)  1: (0-2)  2: (1-0)  3:(1-2)");
+	      fflush(NULL);
 	      switch (getchar_multi())
 		{
 		case '0': smas_pos[0] = 0; smas_pos[1] = 0; break;

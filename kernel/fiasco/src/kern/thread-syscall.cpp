@@ -301,14 +301,25 @@ Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
   if (!*dst_thread0)
     return false;		// error
 
-  (*dst_thread0)->thread_lock()->lock();
+  {
+    // avoid race between checking existence of thread and getting the
+    // thread lock
+    Lock_guard<Cpu_lock> guard(&cpu_lock);
 
-  // thread 0 of a task must be created with l4_task_new() ...
-  if (! (*dst_thread0)->exists())
-    {
-      (*dst_thread0)->thread_lock()->clear();
-      return false;		// error
-    }
+    while (EXPECT_FALSE(!(*dst_thread0)->is_tcb_mapped()))
+      {
+	cpu_lock.clear();
+	Mword x = (*dst_thread0)->exists(); // trigger PF and allocate TCB
+        // do not let the compiler optimize away the above existence test
+        asm volatile("" : : "r"(x));
+	cpu_lock.lock();
+      }
+
+    if (! (*dst_thread0)->exists())
+      return false;
+
+    (*dst_thread0)->thread_lock()->lock_dirty();
+  }
 
   // now we own the lock of thread 0 of the target task
 
@@ -355,13 +366,18 @@ Thread::sys_thread_ex_regs()
 						   &dst_task, &dst_thread0)))
     {
       LOG_THREAD_EX_REGS_FAILED;
+      regs->old_eflags(~0U);
       return;
     }
 
   bool new_thread = false;
 
   if (dst != dst_thread0)
-    dst->thread_lock()->lock();
+    {
+      // Allocate TCB before grabbing the CPU lock
+      dst->enforce_tcb_alloc();
+      dst->thread_lock()->lock();
+    }
 
   if (!dst->exists())
     {
@@ -758,6 +774,8 @@ Thread::sys_task_new()
       // create the first thread of the task
       //
       Thread *t = id_to_tcb (id);
+
+      t->enforce_tcb_alloc();
 
       Lock_guard <Thread_lock> guard (t->thread_lock());
 

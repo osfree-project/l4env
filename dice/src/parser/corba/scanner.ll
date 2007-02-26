@@ -343,7 +343,8 @@ valuetype    return VALUETYPE;
 void        return VOID;
 wchar        return WCHAR;
 wstring        return WSTRING;
-fpage        return FPAGE;
+fpage        return FLEXPAGE;
+flexpage     return FLEXPAGE;
 refstring    return REFSTRING;
 
 {Id}        {

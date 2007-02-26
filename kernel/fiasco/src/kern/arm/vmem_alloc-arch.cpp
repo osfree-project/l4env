@@ -3,7 +3,7 @@ INTERFACE [arm]:
 EXTENSION class Vmem_alloc
 {
 private:
-  static P_ptr<void> zero_page;
+  static Address zero_page;
 };
 
 //---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ IMPLEMENTATION [arm]:
 
 
 // this static initializer must have a higer priotity than Vmem_alloc::init()
-P_ptr<void> Vmem_alloc::zero_page INIT_PRIORITY(MAX_INIT_PRIO);
+Address Vmem_alloc::zero_page;
 
 IMPLEMENT
 void Vmem_alloc::init()
@@ -33,9 +33,9 @@ void Vmem_alloc::init()
   printf("Vmem_alloc::init()\n");
   void *zp = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
   std::memset( zp, 0, Config::PAGE_SIZE );
-  zero_page = Kmem_space::kdir()->lookup(zp,0,0);
+  zero_page = Kmem_space::kdir()->walk(zp,0,false).phys(zp);
   printf("  allocated zero page @%p[phys=%p]\n",
-      zp,zero_page.get_raw());
+      zp, (void*)zero_page);
 
   if(Config::VMEM_ALLOC_TEST) 
     {
@@ -67,7 +67,7 @@ void Vmem_alloc::init()
 IMPLEMENT
 void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
 {
-  P_ptr<void> page;
+  Address page;
   void *vpage;
 
   if (zf != ZERO_MAP)
@@ -78,7 +78,8 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
 	  kdb_ke("Vmem_alloc: can't alloc new page");
 	  return 0;
 	}
-      page = Kmem_space::kdir()->lookup(vpage,0,0);
+      page = Kmem_space::kdir()->walk(vpage, 0, false).phys(vpage);
+      //printf("  allocated page (virt=%p, phys=%08lx\n", vpage, page);
       Mem_unit::inv_dcache(vpage, ((char*)vpage) + Config::PAGE_SIZE);
     } 
   else 
@@ -87,17 +88,15 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
       pa = Page::KERN_RO;
     }
 
+#if 0
+  printf("  phys=%08lx\n", page);
+  printf("  address=%p\n", address);
+#endif
   // insert page into master page table
-  Page_table::Status status;
-  status = Kmem_space::kdir()->replace(page, address, Config::PAGE_SIZE, pa, 
-                                       true);
-  //  Mem_unit::dtlb_flush(address);
+  Pte pte = Kmem_space::kdir()->walk(address, Config::PAGE_SIZE, true);
+  pte.set(page, Config::PAGE_SIZE, pa | Page::CACHEABLE, true);
 
-  if(status==Page_table::E_EXISTS) 
-    panic("Vmem_alloc: address already mapped");
-  else if(status!=Page_table::E_OK) 
-    panic("Vmem_alloc: some error mapping page");
-  
+  Mem_unit::dtlb_flush(address);
 
   if (zf == ZERO_FILL)
     memset(address, 0, Config::PAGE_SIZE);
@@ -108,15 +107,18 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
 IMPLEMENT 			   
 void Vmem_alloc::page_free(void *page)
 {
-  P_ptr<void> phys = Kmem_space::kdir()->lookup(page,0,0);
-  if (phys.is_null()) 
+  Pte pte = Kmem_space::kdir()->walk(page, 0, false);
+  if (!pte.valid())
     return;
 
   Mem_unit::inv_dcache(page, ((char*)page) + Config::PAGE_SIZE);
-  Kmem_space::kdir()->remove(page, true);
+
+  Address phys = pte.phys(page);
+  pte.set_invalid(0, true);
+  Mem_unit::dtlb_flush(page);
   
   if (phys != zero_page)
-    Mapped_allocator::allocator()->free_phys(Config::PAGE_SHIFT, phys);
+    Mapped_allocator::allocator()->free_phys(Config::PAGE_SHIFT, (void*)phys);
 
 }
 

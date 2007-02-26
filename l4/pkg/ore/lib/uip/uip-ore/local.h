@@ -1,3 +1,10 @@
+/****************************************************************
+ * (c) 2005 - 2007 Technische Universitaet Dresden              *
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
+ ****************************************************************/
+
 #ifndef __UIP_ORE_LOCAL_H
 #define __UIP_ORE_LOCAL_H
 

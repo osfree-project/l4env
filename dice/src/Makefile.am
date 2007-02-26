@@ -10,7 +10,6 @@ DICELIBS=	$(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/be/l4/v4/libv4.a \
 		$(top_builddir)/src/be/l4/v4/ia32/libv4ia32.a \
 		$(top_builddir)/src/be/sock/libsock.a \
-		$(top_builddir)/src/be/cdr/libcdr.a \
 		$(top_builddir)/src/be/libbe.a \
 		$(top_builddir)/src/fe/libfe.a \
 		$(top_builddir)/src/parser/dce/libdce.a \
@@ -34,7 +33,6 @@ dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v4/ia32 -lv4ia32 \
 		-L$(top_builddir)/src/be/l4 -ll4 \
 		-L$(top_builddir)/src/be/sock -lsock \
-		-L$(top_builddir)/src/be/cdr -lcdr \
 		-L$(top_builddir)/src/be -lbe \
 		-L$(top_builddir)/src/parser/dce -ldce \
 		-L$(top_builddir)/src/parser/corba -lcorba \
@@ -62,8 +60,9 @@ wc:
 stats:
 	cccc --help 2>&1|head -n 1 && rm -rf /tmp/cccc && mkdir /tmp/cccc && find . -name \*.cpp | xargs cccc --outdir=/tmp/cccc && install /tmp/cccc/* /mnt/kurt/public_html/dice_stats/ && ln -f /mnt/kurt/public_html/dice_stats/cccc.html /mnt/kurt/public_html/dice_stats/index.html
 
-.PHONY: svnversion.h
-svnversion.h:
+.PHONY: svnversion.h.new
+
+svnversion.h.new:
 	if [ -d .svn ]; then \
 	    ver=`svnversion -nc . | sed -e 's/^[^:]*://;s/[A-Za-z]//'`; \
 	    echo "#define SVNVERSION \"svn r$$ver\"" > $@; \
@@ -71,8 +70,19 @@ svnversion.h:
 	    ver=`sed -e '/^Revision: */!d;s///;q' SNAPSHOT`; \
 	    echo "#define SVNVERSION \"svn r$$ver\"" > $@; \
 	else \
-	    touch svnversion.h; \
-	fi;
+	    touch $@; \
+	fi
+
+svnversion.h: svnversion.h.new
+	if [ -e $@ ]; then \
+	if [ 0 == `diff $@ $< | wc -l` ]; then \
+	    rm $<; \
+	else \
+	    mv $< $@; \
+	fi; \
+	else \
+	    mv $< $@; \
+	fi
 
 version.o: $(dice_SOURCES) $(DICELIBS) svnversion.h
 

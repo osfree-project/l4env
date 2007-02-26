@@ -24,6 +24,16 @@ void Mem_unit::tlb_flush()
       : "memory" ); // TLB flush
 }
 
+PUBLIC static inline
+void Mem_unit::tlb_flush( void* va )
+{
+  asm volatile (
+      "mcr p15, 0, %0, c8, c7, 0x01 \n" 
+      : 
+      : "r"((unsigned long)va & 0xfffff000) 
+      : "memory" ); // TLB flush
+}
+
 IMPLEMENT inline
 void Mem_unit::dtlb_flush( void* va )
 {

@@ -158,11 +158,18 @@ Thread::is_privileged_for_debug (Trap_state * /*ts*/)
     the code has only to check if the carry flag is set. If yes, there was
     a pagefault at this instruction.
     @param ip pagefault address */
-IMPLEMENT inline NOEXPORT
-Mword
-Thread::pagein_tcb_request (Address ip)
+IMPLEMENT inline
+bool
+Thread::pagein_tcb_request (Return_frame *regs)
 {
-  return *(Unsigned32*)ip == 0xff218336;
+  if (*(Unsigned32*)regs->ip() == 0xff01f636)
+    {
+      regs->ip(regs->ip() + 4);
+      // tell program that a pagefault occured we cannot handle
+      regs->flags(regs->flags() | 1);	// set carry flag in EFLAGS
+      return true;
+    }
+  return false;
 }
 
 IMPLEMENTATION[ia32,ux]:
@@ -218,7 +225,7 @@ Thread::is_tcb_mapped() const
   // setting eax to 0xffffffff
   Mword pagefault_if_0;
   asm volatile ("xorl %%eax,%%eax		\n\t"
-		"andl $0xffffffff, %%ss:(%%ecx)	\n\t"
+		"testb $0xff, %%ss:(%%ecx)	\n\t"
 		"setnc %%al			\n\t"
 		: "=a" (pagefault_if_0) : "c" (&_state));
   return pagefault_if_0;
@@ -534,7 +541,7 @@ thread_page_fault (Address pfa, Mword error_code, Address ip, Mword flags,
   // Pagefault in kernel mode and interrupts were disabled
   else 
     {
-      // page fault in kernel memory region, not present, but mapping exists
+      // page fault in kernel memory region
       if (Kmem::is_kmem_page_fault (pfa, error_code))
 	{
 	  // We've interrupted a context in the kernel with disabled interrupts,
@@ -543,28 +550,11 @@ thread_page_fault (Address pfa, Mword error_code, Address ip, Mword flags,
 	  // actually valid (that is, mapped in Kmem's shared page directory,
 	  // just not in the currently active page directory)
 	  // Remain cli'd !!!
-
-	  // Test for special case -- see function documentation
-	  if (Thread::pagein_tcb_request(ip))
-	    {
-	      // skip faulting instruction
-	      kdb_ke("stop");
-	      regs->ip(regs->ip() + 4);
-	      // tell program that a pagefault occured we cannot handle
-	      regs->flags(regs->flags() | 1);	// set carry flag in EFLAGS
-	      return 2; // handled, set carry flag
-	    }
-
-	  // enable interrupts only if there is no presend mapping 
-	  // in the master directory
-	  if (!PF::is_translation_error(error_code) ||
-	      !Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != (Mword) -1)
-	    Proc::sti();
-	} 
+	}
       else if (!Config::conservative &&
 	       !Kmem::is_kmem_page_fault (pfa, error_code))
 	{
-      	  // No error -- just enable interrupts.
+          // No error -- just enable interrupts.
 	  Proc::sti();
 	}
       else 
@@ -577,7 +567,7 @@ thread_page_fault (Address pfa, Mword error_code, Address ip, Mword flags,
 	}
     }
 
-  return current_thread()->handle_page_fault (pfa, error_code, ip);
+  return current_thread()->handle_page_fault (pfa, error_code, ip, regs);
 }
 
 

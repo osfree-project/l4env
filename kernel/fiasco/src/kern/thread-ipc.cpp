@@ -553,7 +553,7 @@ Thread::sys_ipc()
 	  partner = lookup (id, space());
 	  lookup_done = true;
 
-          if (EXPECT_FALSE (!partner || partner->state() == Thread_invalid))
+          if (EXPECT_FALSE (!partner || !partner->is_tcb_mapped() || partner->state() == Thread_invalid))
             {
               commit_ipc_failure (regs, Ipc_err::Enot_existent);
               return;

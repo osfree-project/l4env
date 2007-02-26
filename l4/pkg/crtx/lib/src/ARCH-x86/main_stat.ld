@@ -49,6 +49,11 @@ SECTIONS
   .ctors :
   {
     KEEP (*(.mark_beg_l4dde_ctors))
+    KEEP (*(SORT(.l4dde_ctors.?)))
+    KEEP (*(SORT(.l4dde_ctors.??)))
+    KEEP (*(SORT(.l4dde_ctors.???)))
+    KEEP (*(SORT(.l4dde_ctors.????)))
+    KEEP (*(SORT(.l4dde_ctors.?????)))
     KEEP (*(.l4dde_ctors))
     KEEP (*(.mark_end_l4dde_ctors))
 

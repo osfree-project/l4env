@@ -21,9 +21,6 @@
 #include <l4/events/events.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
-#ifdef USE_OSKIT
-#include "l4/oskit/support.h"
-#endif
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
@@ -31,7 +28,9 @@
 #include <l4/sys/kernel.h>
 #include <l4/util/getopt.h>
 #include <l4/util/macros.h>
+#ifdef ARCH_x86
 #include <l4/util/rdtsc.h>
+#endif
 #include <l4/util/util.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/util/l4_macros.h>
@@ -50,16 +49,6 @@
 static int debug_malloc = 0;
 
 int verbosity = 0;
-
-#ifdef USE_OSKIT
-#ifdef STATIC_MEMORY
-static char static_memory[MALLOC_POOL_SIZE];
-#else
-/* the address and the total size of dynamic allocated memory */
-static int malloc_pool_addr = MALLOC_POOL_ADDR;
-static int malloc_pool_size = MALLOC_POOL_SIZE;
-#endif
-#endif
 
 /* the  event-nr counter */
 static l4events_nr_t event_nr = 1;
@@ -87,13 +76,17 @@ my_malloc(int size)
   void* addr = NULL;
   l4_uint32_t in=0, out=0;
 
+#ifdef ARCH_x86
   if (debug_malloc)
     in = l4_rdtsc();
+#endif
 
   addr = malloc(size);
 
+#ifdef ARCH_x86
   if (debug_malloc)
     out = l4_rdtsc();
+#endif
 
   if (debug_malloc)
     LOG("malloc size: %d", size);
@@ -123,14 +116,18 @@ my_free(void* addr, int size)
 
   if (debug_malloc)
     {
+#ifdef ARCH_x86
       in = l4_rdtsc();
+#endif
       LOG("free size: %d", size);
     }
 
   free(addr);
 
+#ifdef ARCH_x86
   if (debug_malloc)
     out = l4_rdtsc();
+#endif
 
   if (debug_malloc)
     {
@@ -1329,7 +1326,7 @@ void server_dump(void)
 
 /*********************************************************************
  *
- * command line parameter handling 
+ * command line parameter handling
  *
  *********************************************************************/
 static void parse_args(int argc, const char *argv[])
@@ -1337,14 +1334,6 @@ static void parse_args(int argc, const char *argv[])
   int error;
 
   if ((error = parse_cmdline(&argc, &argv,
-#ifdef USE_OSKIT
-#ifndef STATIC_MEMORY
-		'a', "malloc_pool_addr", "specify malloc pool base address",
-		PARSE_CMD_INT, MALLOC_POOL_ADDR, &malloc_pool_addr,
-		's', "malloc_pool_size", "specify malloc pool size",
-		PARSE_CMD_INT, MALLOC_POOL_SIZE, &malloc_pool_size,
-#endif
-#endif
 		'd', "debug_malloc", "measure time for malloc/free",
 		PARSE_CMD_SWITCH, 1, debug_malloc,
 		'v', "verbose", "specify verbosity",
@@ -1362,7 +1351,7 @@ static void parse_args(int argc, const char *argv[])
 
 /*********************************************************************
  *
- * main 
+ * main
  *
  *********************************************************************/
 char LOG_tag[9] = "events";
@@ -1374,17 +1363,6 @@ int main(int argc, const char *argv[])
 
   /* parse command line */
   parse_args(argc, argv);
-
-#ifdef USE_OSKIT
-#ifdef STATIC_MEMORY
-  init_OSKit_malloc_from_memory((l4_umword_t)static_memory, 
-				sizeof(static_memory));
-#else
-  /* init OSKit */
-  init_OSKit_malloc(malloc_pool_addr, malloc_pool_size,
-                    malloc_pool_size, L4_PAGESIZE);
-#endif
-#endif
 
   /* register to event-server */
   names_register(L4EVENTS_SERVER_NAME);

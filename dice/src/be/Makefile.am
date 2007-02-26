@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS= l4 sock cdr
+SUBDIRS= l4 sock
 
 noinst_LIBRARIES= libbe.a
 libbe_a_SOURCES = BEAttribute.cpp BEInterfaceFunction.cpp BESrvLoopFunction.cpp BECallFunction.cpp BEMarshaller.cpp BEStructType.cpp BEClass.cpp BESwitchCase.cpp BEClassFactory.cpp BENameFactory.cpp BETarget.cpp BEClient.cpp BENameSpace.cpp BEComponent.cpp BEComponentFunction.cpp BEObject.cpp BEConstant.cpp BEOpcodeType.cpp BEContext.cpp BEOperationFunction.cpp BEType.cpp BEDeclarator.cpp BETypedDeclarator.cpp BEEnumType.cpp BETypedef.cpp BEException.cpp BEUnionCase.cpp BEExpression.cpp BEUnionType.cpp BEIDLUnionType.cpp BEFile.cpp BEUnmarshalFunction.cpp BEFunction.cpp BERoot.cpp BEUserDefinedType.cpp BEHeaderFile.cpp BESizes.cpp BEWaitAnyFunction.cpp BEImplementationFile.cpp BESndFunction.cpp BEWaitFunction.cpp BEReplyFunction.cpp BECommunication.cpp BEMarshalFunction.cpp BEDispatchFunction.cpp BEReplyCodeType.cpp BEMsgBuffer.cpp BEMsgBufferType.cpp BECreateException.cpp BETrace.cpp

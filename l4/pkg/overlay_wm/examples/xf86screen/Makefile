@@ -11,8 +11,8 @@ endif
 TARGET          = ovlscreen_drv.o
 SRC_C           = ovlscreen.c
 MODE            = host
-LIBS		= -ll4ovlscreen.p -ldm_generic.p -ldm_mem.p -lnames.p \
-		  -ll4util.p $(ROOTPLIB) -ll4sys.p -ll4sys.p
+LIBS		= -ll4ovlscreen.p -ll4env-l4lx.p -ldm_generic.p -ldm_mem.p -lnames.p \
+		  -ll4util.p $(ROOTPLIB) -ll4sys.p
 LIBCINCDIR      = $(addprefix -I,$(L4INCDIR))
 LDFLAGS         = -shared -nostdlib -nostartfiles
 LDSCRIPT        = $(call findfile,main_rel.ld,$(L4LIBDIR))

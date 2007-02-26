@@ -14,14 +14,17 @@ IMPLEMENTATION [arm]:
     @return true if the binding could be established
  */
 IMPLEMENT inline NEEDS ["atomic.h"]
-bool Dirq::alloc(Receiver *t, bool /*ack_in_kernel*/)
+bool Dirq::alloc(Receiver *t, bool ack_in_kernel)
 {
   bool ret = cas (&_irq_thread, reinterpret_cast<Receiver*>(0), t);
 
   if (ret) 
     {
       int irq = id().irq();
+
+      _ack_in_kernel = ack_in_kernel;
       _queued = 0;
+
       if ((unsigned long)t != ~0UL)
 	// Assign the receivers prio to the IRQ
         Pic::enable(irq, t->sched()->prio());
@@ -55,4 +58,8 @@ bool Dirq::free(Receiver *t)
 PUBLIC
 void 
 Dirq::acknowledge()
-{ Pic::acknowledge(id().irq()); }
+{
+  Lock_guard<Cpu_lock> guard(&cpu_lock);
+  Pic::acknowledge_locked(id().irq());
+  Pic::enable_locked(id().irq());
+}

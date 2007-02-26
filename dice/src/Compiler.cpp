@@ -74,8 +74,6 @@
 #include "be/l4/v4/L4V4BENameFactory.h"
 // Sockets
 #include "be/sock/SockBEClassFactory.h"
-// CDR
-#include "be/cdr/CCDRClassFactory.h"
 // Language C
 //#include "be/lang/c/LangCClassFactory.h"
 // Language C++
@@ -769,11 +767,6 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     {
 			SetBackEndInterface(PROGRAM_BE_SOCKETS);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "use sockets back-end\n");
-                    }
-                    else if (sArg == "CDR")
-                    {
-			SetBackEndInterface(PROGRAM_BE_CDR);
-                        Verbose(PROGRAM_VERBOSE_OPTIONS, "use CDR back-end\n");
                     }
                     else
                     {
@@ -1517,8 +1510,6 @@ void CCompiler::PrepareWrite()
     }
     else if (IsBackEndInterfaceSet(PROGRAM_BE_SOCKETS))
         pCF = new CSockBEClassFactory();
-    else if (IsBackEndInterfaceSet(PROGRAM_BE_CDR))
-        pCF = new CCDRClassFactory();
     assert(pCF);
     SetClassFactory(pCF);
 
@@ -1819,13 +1810,13 @@ void CCompiler::GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg,
         if (nLinenb == 0)
             nLinenb = pFEObject->GetSourceLine();
         // iterate through include hierarchy
-        CFEFile *pCur = (CFEFile*)pFEObject->GetSpecificParent<CFEFile>();
+        CFEFile *pCur = (CFEFile*)pFEObject->GetSpecificParent<CFEFile>(0);
         vector<CFEFile*> *pStack = new vector<CFEFile*>();
         while (pCur)
         {
             pStack->insert(pStack->begin(), pCur);
             // start with parent of current, because GetFile starts with "this"
-            pCur = pCur->GetSpecificParent<CFEFile>(1);
+            pCur = pCur->GetSpecificParent<CFEFile>();
         }
         // need at least one file
         if (!pStack->empty())
@@ -1837,7 +1828,7 @@ void CCompiler::GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg,
             for (iter = pStack->begin();
                 (iter != pStack->end()) && (iter != pStack->end()-1); iter++)
             {
-                std::cerr << "from " << (*iter)->GetFullFileName() << ":1";
+                std::cerr << "from " << (*iter)->GetFileName() << ":1";
                 if (iter+2 != pStack->end())
                     std::cerr << ",\n                 ";
                 else
@@ -1845,7 +1836,7 @@ void CCompiler::GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg,
             }
             if (*iter)
             {
-                std::cerr << (*iter)->GetFullFileName() << ":" << nLinenb << ": warning: ";
+                std::cerr << (*iter)->GetFileName() << ":" << nLinenb << ": warning: ";
             }
         }
         // cleanup

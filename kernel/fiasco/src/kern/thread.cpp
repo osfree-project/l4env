@@ -53,7 +53,8 @@ public:
   void sys_id_nearest();
   void sys_thread_ex_regs();
 
-  bool handle_page_fault (Address pfa, Mword error, Mword pc);
+  int handle_page_fault (Address pfa, Mword error, Mword pc, 
+      Return_frame *regs);
 
   /**
    * Task number for debugging purposes.
@@ -103,7 +104,7 @@ private:
   void disassociate_irq(Irq_alloc *irq);
 
 public:
-  static Mword pagein_tcb_request(Address pc);
+  static bool pagein_tcb_request(Return_frame *regs);
   Mword is_tcb_mapped() const;
 
   inline Mword user_ip() const;
@@ -314,6 +315,13 @@ Preemption *
 Thread::preemption()
 {
   return &_preemption;
+}
+
+PUBLIC inline
+void
+Thread::enforce_tcb_alloc()
+{
+  _magic = magic;
 }
 
 PUBLIC inline NEEDS ["config.h", "timeout.h"]

@@ -64,7 +64,7 @@ Thread::user_invoke()
 #endif
 
   register unsigned long r0 asm ("r0")
-    = Kmem_space::kdir()->lookup(Kip::k(),0,0).get_unsigned();
+    = Kmem_space::kdir()->walk(Kip::k(),0,false).phys(Kip::k());
 
 #if 1
   asm volatile
@@ -139,17 +139,6 @@ extern "C" {
 	    // actually valid (that is, mapped in Kmem's shared page directory,
 	    // just not in the currently active page directory)
 	    // Remain cli'd !!!
-
-	    // Test for special case -- see function documentation
-	    if (Thread::pagein_tcb_request(pc))
-	      {
-		// skip faulting instruction
-		sp[9] += 4;
-		// tell program that a pagefault occured we cannot handle
-		sp[5] |= 0x40000000;	// set zero flag in psr
-
-		return true;
-	      }
 	  }
 	else if (!Config::conservative &&
 	    !Kmem::is_kmem_page_fault (pfa, error_code))
@@ -174,7 +163,8 @@ extern "C" {
         return false;
       }
 
-    return current_thread()->handle_page_fault(pfa, error_code, pc);
+    return current_thread()->handle_page_fault(pfa, error_code, pc, 
+	(Return_frame*)(sp+5));
   }
 
   void slowtrap_entry(Trap_state *ts)
@@ -194,11 +184,20 @@ extern "C" {
 
 };
 
-IMPLEMENT inline NOEXPORT
-Mword
-Thread::pagein_tcb_request(Address pc)
+IMPLEMENT inline
+bool
+Thread::pagein_tcb_request(Return_frame *regs)
 {
-  return *(Mword*)pc == 0xe59ee000 && *(Mword*)(pc + 4) == 0x03a0e000;
+  if (*(Mword*)regs->pc == 0xe59ee000 && *(Mword*)(regs->pc + 4) == 0x03a0e000)
+    {
+      // skip faulting instruction
+      regs->pc += 4;
+      // tell program that a pagefault occured we cannot handle
+      regs->psr |= 0x40000000;	// set zero flag in psr
+
+      return true;
+    }
+  return false;
 }
 
 IMPLEMENT inline
@@ -263,7 +262,7 @@ next_irq:
 	else
 	  {
 	    Irq *i = Dirq::lookup(irq);
-	    Pic::block_locked(irq);
+	    i->maybe_acknowledge();
 	    nonull_static_cast<Dirq*>(i)->hit();
 	  }
       }

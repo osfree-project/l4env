@@ -280,49 +280,32 @@ void Pic::init()
 
 IMPLEMENT inline NEEDS["io.h"]
 void Pic::disable_locked( unsigned irq )
-{
-  Io::write<Mword>(1 << (irq % 32), DIST_ENABLE_CLEAR + (irq / 32) * 4);
-  Io::write<Mword>(irq, CPU_EOI);
-}
+{ Io::write<Mword>(1 << (irq % 32), DIST_ENABLE_CLEAR + (irq / 32) * 4); }
 
 IMPLEMENT inline NEEDS["io.h"]
 void Pic::enable_locked(unsigned irq, unsigned /*prio*/)
-{
-  Io::write<Mword>(1 << (irq % 32), DIST_ENABLE_SET + (irq / 32) * 4);
-}
+{ Io::write<Mword>(1 << (irq % 32), DIST_ENABLE_SET + (irq / 32) * 4); }
 
 IMPLEMENT inline NEEDS [Pic::enable_locked]
 void Pic::acknowledge_locked( unsigned irq )
-{
-  Io::write<Mword>(irq, CPU_EOI);
-}
-
+{ Io::write<Mword>(irq, CPU_EOI); }
 
 IMPLEMENT inline
 Pic::Status Pic::disable_all_save()
-{
-  return 0;
-}
+{ return 0; }
 
 IMPLEMENT inline
 void Pic::restore_all( Status /*s*/ )
-{
-}
+{}
 
 PUBLIC static inline NEEDS["io.h"]
 Unsigned32 Pic::pending()
-{
-  return Io::read<Mword>(CPU_INTACK);
-}
+{ return Io::read<Mword>(CPU_INTACK); }
 
 PUBLIC static inline
 Mword Pic::is_pending(Mword &irqs, Mword irq)
-{
-  return irqs == irq;
-}
+{ return irqs == irq; }
 
 IMPLEMENT inline NEEDS [Pic::disable_locked]
 void Pic::block_locked(unsigned irq)
-{
-  disable_locked(irq);
-}
+{ disable_locked(irq); }

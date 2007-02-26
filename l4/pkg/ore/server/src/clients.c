@@ -3,6 +3,11 @@
  *                                                              *
  * Bjoern Doebel <doebel@os.inf.tu-dresden.de>                  *
  * 2005-08-10                                                   *
+ *                                                              *
+ * (c) 2005 - 2007 Technische Universitaet Dresden				*
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
  ****************************************************************/
 
 #include "ore-local.h"
@@ -74,7 +79,7 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
         }
         else
         {
-            LOG("Physcial MAC address not available!");
+            LOG("Physical MAC address not available!");
             conf->ro_keep_device_mac = 0;
             goto copy;
         }

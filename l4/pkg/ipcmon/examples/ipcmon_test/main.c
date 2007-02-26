@@ -1,3 +1,17 @@
+/*!
+ * \file   examples/ipcmon_test/main.c
+ * \brief  Sample app registering itself at names and printing things
+ *         to the log console. Needs to have the appropriate rights set
+ *         in order to run.
+ *
+ * \date   01/30/2007
+ * \author doebel@os.inf.tu-dresden.de
+ *
+ */
+/* (c) 2007 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #include <stdlib.h>
 #include <string.h>
 

@@ -123,7 +123,6 @@ src/be/l4/x0/Makefile
 src/be/l4/v4/Makefile
 src/be/l4/v4/ia32/Makefile
 src/be/sock/Makefile
-src/be/cdr/Makefile
 include/Makefile
 include/dice/Makefile
 ])

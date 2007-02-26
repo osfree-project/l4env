@@ -35,6 +35,8 @@ Kernel_thread::init_workload()
 
   Thread *sigma0_thread = id_to_tcb (Config::sigma0_id);
   {
+    sigma0_thread->enforce_tcb_alloc();
+
     Lock_guard <Thread_lock> guard (sigma0_thread->thread_lock());
 
     new (Config::sigma0_id) Thread (sigma0_task, Config::sigma0_id,
@@ -58,6 +60,8 @@ Kernel_thread::init_workload()
 
   Thread *boot_thread = id_to_tcb (Config::boot_id);
   {
+    boot_thread->enforce_tcb_alloc();
+
     Lock_guard <Thread_lock> guard (boot_thread->thread_lock());
 
     new (Config::boot_id) Thread (boot_task, Config::boot_id,

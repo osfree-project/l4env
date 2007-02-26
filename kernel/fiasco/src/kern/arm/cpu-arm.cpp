@@ -42,19 +42,6 @@ void Cpu::early_init()
 		 );
 }
 
-IMPLEMENT
-void Cpu::init()
-{
-  extern char ivt_start;
-
-  // map the interrupt vector table to 0xffff0000
-  if(Kmem_space::kdir()->insert( &ivt_start, 
-                                 (void*)Kmem_space::Ivt_base, 4096 )
-     !=Page_table::E_OK) 
-    {
-      panic("FATAL: Error mapping cpu page to %p\n",(void*)Kmem_space::Ivt_base);
-    }
-}
 
 PUBLIC static inline
 bool
@@ -95,3 +82,15 @@ PUBLIC static inline
 Unsigned64
 Cpu::rdtsc (void)
 { return 0; }
+
+IMPLEMENT
+void Cpu::init()
+{
+  extern char ivt_start;
+  // map the interrupt vector table to 0xffff0000
+  Pte pte = Kmem_space::kdir()->walk((void*)Kmem_space::Ivt_base, 4096,
+      true);
+
+  pte.set((unsigned long)&ivt_start, 4096, Page::USER_NO | Page::CACHEABLE,
+      true);
+}

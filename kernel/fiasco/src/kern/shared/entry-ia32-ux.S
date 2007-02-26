@@ -210,9 +210,9 @@ entry_vec0e_page_fault:
 #endif
 	pushl	%eax		/* save pf address */
 	pushl	%edx		/* save error code */
-	pushl	32(%esp)	/* ARG4: eflags */
-	leal	28(%esp),%ecx	/* ARG5: ptr to Return_frame */
+	leal	24(%esp),%ecx	/* ARG5: ptr to Return_frame */
 	pushl	%ecx
+	pushl	36(%esp)	/* ARG4: eflags */
 	movl	32(%esp),%ecx	/* ARG3: eip */
 	call	thread_page_fault
 in_page_fault:

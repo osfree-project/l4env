@@ -40,6 +40,8 @@ LDFLAGS_amd64      += $(LDNMAGIC)
 # switch is necessary since mmap_anon is referenced using a weak symbol.
 MALLOC_BACKEND      ?= -u mmap_anon -lc_be_simple_mem
 
+MMAP_BACKEND		?= -lc_be_sigma0_mem
+
 # Default is dietlibc and uClibc without reentrant functions. If, for example
 # two independant threads of the same application call malloc at the same
 # time, WANT_THREADSAFE _must_ be defined.
@@ -84,7 +86,7 @@ LIBCLIBS_x86_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_minimal_io                      \
                                   -ldiet_be_l4_start_stop                   \
-                                  -ldiet_be_sigma0_mem                      \
+                                  $(MMAP_BACKEND)                           \
                                   -ldiet_c -ll4util -lsigma0                \
                                   -ldiet_c $(GCCLIB) -ldiet_c -ll4sys
 L4LIBS_x86_tiny_diet            = -static -lmain -ll4util -ll4sys
@@ -106,7 +108,7 @@ LIBCLIBS_x86_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
-                                  -luc_be_sigma0_mem                        \
+                                  $(MMAP_BACKEND)                           \
                                   -luc_c -luclibc_support -ll4util -lsigma0 \
                                   -luc_c $(GCCLIB) -luc_c -ll4sys
 L4LIBS_x86_tiny_uc              = $(L4LIBS_x86_tiny_diet)
@@ -148,7 +150,7 @@ LIBCLIBS_x86_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_minimal_io                      \
                                   -ldiet_be_l4_start_stop                   \
-                                  -ldiet_be_sigma0_mem                      \
+                                  $(MMAP_BACKEND)                           \
                                   -ldiet_c                                  \
                                   -llogserver -lnames -lsigma0              \
                                   -ll4util_root -ll4util $(ROOTLIB)         \
@@ -173,7 +175,7 @@ LIBCLIBS_x86_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
-                                  -luc_be_sigma0_mem                        \
+                                  $(MMAP_BACKEND)                           \
                                   -luc_c -luclibc_support                   \
                                   -llogserver -lnames -lsigma0              \
                                   -ll4util_root -ll4util $(ROOTLIB)         \
@@ -591,7 +593,8 @@ LIBCLIBDIR_arm_tiny_diet        =
 LIBCLIBS_arm_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -ldiet_c -ldietlibc_support        \
                                   -ldiet_be_l4_start_stop                   \
-                                  -ldiet_be_minimal_io -ldiet_be_sigma0_mem \
+                                  -ldiet_be_minimal_io                      \
+                                  $(MMAP_BACKEND)                           \
                                   $(GCCLIB) -ldiet_c -ll4sys
 L4LIBS_arm_tiny_diet            = -static -lmain -ll4util -ll4sys
 CRT0_arm_tiny_diet              = $(CRT0_DEFAULT)
@@ -611,7 +614,8 @@ LIBCLIBDIR_arm_tiny_uc          =
 LIBCLIBS_arm_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -luc_c -luclibc_support            \
                                   -luc_be_l4_start_stop                     \
-                                  -luc_be_minimal_io -luc_be_sigma0_mem     \
+                                  -luc_be_minimal_io                        \
+                                  $(MMAP_BACKEND)                           \
                                   -lsigma0 $(GCCLIB) -luc_c
 L4LIBS_arm_tiny_uc              = $(L4LIBS_arm_tiny_diet)
 CRT0_arm_tiny_uc                = $(CRT0_DEFAULT)
@@ -650,7 +654,7 @@ LIBCLIBS_arm_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_l4_start_stop                   \
                                   -ldiet_be_minimal_io                      \
-                                  -ldiet_be_sigma0_mem                      \
+                                  $(MMAP_BACKEND)                           \
                                   -lsigma0 $(GCCLIB) -ldiet_c
 L4LIBS_arm_sigma0_diet          = -static -lmain -llogserver -lnames        \
                                   -ll4util_root -ll4util $(ROOTLIB) -ll4sys
@@ -674,7 +678,7 @@ LIBCLIBS_arm_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luclibc_support                          \
                                   -luc_be_l4_start_stop                     \
                                   -luc_be_minimal_io                        \
-                                  -luc_be_sigma0_mem                        \
+                                  $(MMAP_BACKEND)                           \
                                   -lsigma0 $(GCCLIB) -luc_c
 L4LIBS_arm_sigma0_uc            = $(L4LIBS_arm_sigma0_diet)
 CRT0_arm_sigma0_uc              = $(CRT0_DEFAULT)
@@ -890,7 +894,7 @@ LIBCLIBS_amd64_tiny_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_l4_start_stop                   \
                                   -ldiet_be_minimal_io                      \
-                                  -ldiet_be_sigma0_mem                      \
+                                  $(MMAP_BACKEND)                           \
                                   -ldiet_c $(GCCLIB) -ldiet_c -ll4sys
 L4LIBS_amd64_tiny_diet          = -static -lmain -ll4util -ll4sys
 CRT0_amd64_tiny_diet            = $(CRT0_DEFAULT)
@@ -911,7 +915,7 @@ LIBCLIBS_amd64_tiny_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
-                                  -luc_be_sigma0_mem                        \
+                                  $(MMAP_BACKEND)                           \
                                   -luc_c -luclibc_support -ll4util -lsigma0 \
                                   -luc_c $(GCCLIB) -luc_c -ll4sys
 L4LIBS_amd64_tiny_uc            = $(L4LIBS_amd64_tiny_diet)
@@ -952,7 +956,7 @@ LIBCLIBS_amd64_sigma0_diet      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_minimal_io                      \
                                   -ldiet_be_l4_start_stop                   \
-                                  -ldiet_be_sigma0_mem                      \
+                                  $(MMAP_BACKEND)                           \
                                   -ldiet_c                                  \
                                   -llogserver -lnames                       \
                                   -ll4util_root -ll4util $(ROOTLIB)         \
@@ -977,7 +981,7 @@ LIBCLIBS_amd64_sigma0_uc        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
-                                  -luc_be_sigma0_mem                        \
+                                  $(MMAP_BACKEND)                           \
                                   -luc_c -luclibc_support                   \
                                   -llogserver -lnames -lsigma0              \
                                   -ll4util_root -ll4util $(ROOTLIB)         \

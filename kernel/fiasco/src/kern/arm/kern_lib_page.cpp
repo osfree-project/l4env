@@ -20,15 +20,18 @@ void Kern_lib_page::init()
 {
   extern char kern_lib_start;
 
-  if(Kmem_space::kdir()->insert( &kern_lib_start - Mem_layout::Map_base 
-	                         + Mem_layout::Sdram_phys_base, 
-                                 (void*)Kmem_space::Kern_lib_base, 4096,
-				 Page::USER_RX | Page::CACHEABLE)
-     !=Page_table::E_OK) 
+  Pte pte = Kmem_space::kdir()->walk((void*)Kmem_space::Kern_lib_base, 
+      Config::PAGE_SIZE, true);
+
+  if (pte.lvl() == 0) // allocation of second level faild
     {
       panic("FATAL: Error mapping cpu page to %p\n",
 	    (void*)Kmem_space::Kern_lib_base);
     }
+  
+  pte.set((Address)&kern_lib_start - Mem_layout::Map_base 
+      + Mem_layout::Sdram_phys_base,
+      Config::PAGE_SIZE, Page::USER_RX | Page::CACHEABLE, true);
 
 }
 

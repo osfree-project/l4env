@@ -197,7 +197,7 @@ int nParseErrorCORBA = 0;
 %token VOID
 %token WCHAR
 %token WSTRING
-%token FPAGE
+%token FLEXPAGE
 %token REFSTRING
 /* dice specific token */
 %token EOF_TOKEN
@@ -1825,7 +1825,7 @@ param_type_spec :
     ;
 
 predefined_type :
-      FPAGE
+      FLEXPAGE
     {
         $$ = new CFESimpleType(TYPE_FLEXPAGE);
         $$->SetSourceLine(gLineNumber);

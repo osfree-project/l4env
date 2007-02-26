@@ -87,12 +87,13 @@ L4ENV_SUBDIRS = \
 	x86emu \
 	libc_support \
 	roottask \
+	libc_backends \
 	libc_backends_l4env
 
 
 ifeq ($(USE_UCLIBC),y)
 $(addsuffix .lib,$(filter-out uclibc,$(BUILD_SUBDIRS))): uclibc.lib
-uclibc.lib:	libc_support.lib
+uclibc.lib:	libc_support.lib libc_backends.lib
 uclibc_r.lib:	lock.headers l4env.headers crtx.headers log.headers
 loader.lib:	uclibc.lib
 
@@ -100,8 +101,8 @@ L4ENV_SUBDIRS += uclibc uclibc_r uclibc++
 endif
 
 ifeq ($(USE_DIETLIBC),y)
-$(addsuffix .lib,$(filter-out dietlibc,$(BUILD_SUBDIRS))): dietlibc.lib
-dietlibc.lib:	libc_support.lib
+$(addsuffix .lib,$(filter-out dietlibc libc_support libc_backends,$(BUILD_SUBDIRS))): dietlibc.lib
+dietlibc.lib:	libc_support.lib libc_backends.lib
 loader.lib:	dietlibc.lib
 
 L4ENV_SUBDIRS += dietlibc dietlibc_r

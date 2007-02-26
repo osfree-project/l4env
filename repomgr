@@ -24,7 +24,9 @@ my %modules =
                     l4/pkg/libsigma0 l4/pkg/ldso
                     l4/pkg/sigma0 l4/pkg/simple_ts l4/pkg/slab l4/pkg/tftp
                     l4/pkg/thread l4/pkg/x86emu
-                    l4/pkg/roottask l4/pkg/libc_backends_l4env
+                    l4/pkg/roottask
+		    l4/pkg/libc_backends
+		    l4/pkg/libc_backends_l4env
                     l4/pkg/libc_support l4/pkg/bootstrap
 		    l4/pkg/lxfuxlibc ) ], },
 

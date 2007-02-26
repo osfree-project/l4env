@@ -34,12 +34,15 @@ Kmem_alloc::map_pmem(unsigned long phy, unsigned long size)
     return false;
 
   for (unsigned long i = 0; i <size; i+=Config::SUPERPAGE_SIZE)
-    if (Kmem_space::kdir()->insert(P_ptr<void>((char*)phy+i), 
-	  (char*)next_map+i, Config::SUPERPAGE_SIZE)!= Page_table::E_OK)
-      return false;
+    {
+      Pte pte = Kmem_space::kdir()->walk((char*)next_map+i, 
+	  Config::SUPERPAGE_SIZE, false);
+      pte.set(phy+i, Config::SUPERPAGE_SIZE, Page::USER_NO | Page::CACHEABLE,
+	  true);
+
+    }
   Mem_layout::add_pmem(phy, next_map, size);
   next_map += size;
-  Mem_unit::clean_dcache();
   return true;
 }
 
@@ -54,7 +57,11 @@ Kmem_alloc::Kmem_alloc()
     {
       Mem_region r = Kip::k()->last_free();
       if (r.start > r.end)
+	{
+	  Kip::k()->print();
+
 	  panic("Corrupt memory descscriptor in KIP...");
+	}
       
       if (r.start == r.end)
 	{

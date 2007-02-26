@@ -43,6 +43,18 @@ FIASCO_NOINLINE void Mmu<Flush_area, Ram>::clean_dcache(void const *start, void 
     }
 }
 
+IMPLEMENT
+template< unsigned long Flush_area , bool Ram >
+void Mmu<Flush_area, Ram>::clean_dcache(void const *va)
+{
+#if 1
+  __asm__ __volatile__ (
+      "mcr p15, 0, %0, c7, c10, 1       \n"
+      : : "r"(va) : "memory");
+#endif
+  //clean_dcache();
+}
+
 IMPLEMENT 
 template< unsigned long Flush_area, bool Ram >
 FIASCO_NOINLINE void Mmu<Flush_area, Ram>::flush_dcache(void const *start, void const *end)

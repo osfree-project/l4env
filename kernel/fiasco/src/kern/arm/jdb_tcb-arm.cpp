@@ -6,7 +6,7 @@ IMPLEMENT inline NEEDS["kmem_space.h"]
 bool
 Jdb_tcb::is_mapped(void const* addr)
 {
-  return !Kmem_space::kdir()->lookup(const_cast<void*>(addr),0,0).is_null();
+  return Kmem_space::kdir()->walk(const_cast<void*>(addr),0,false).valid();
 }
 
 IMPLEMENT

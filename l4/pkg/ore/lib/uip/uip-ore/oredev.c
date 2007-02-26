@@ -1,8 +1,18 @@
 /* ORe driver for the UIP TCP/IP stack.
  *
+ * Created from a skeleton provided by uIP, see copyright notices
+ * below.
+ *
  * Bjoern Doebel <doebel@os.inf.tu-dresden.de>
  * 2005-12-12
  */
+
+/****************************************************************
+ * (c) 2005 - 2007 Technische Universitaet Dresden              *
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
+ ****************************************************************/
 
 /*
  * Copyright (c) 2001, Swedish Institute of Computer Science.

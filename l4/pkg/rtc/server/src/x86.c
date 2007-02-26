@@ -46,7 +46,7 @@ void get_base_time(void);
 #  define RTC_REF_CLCK_32KHZ	0x20
 #  define RTC_DIV_RESET1	0x60
 #  define RTC_DIV_RESET2	0x70
-# define RTC_RATE_SELECT 	0x0F
+# define RTC_RATE_SELECT	0x0F
 
 #define RTC_CONTROL		RTC_REG_B
 # define RTC_SET		0x80
@@ -95,7 +95,7 @@ void get_base_time(void);
  * machines were long is 32-bit! (However, as time_t is signed, we
  * will already get problems at other places on 2038-01-19 03:14:08) */
 static inline l4_uint32_t
-mktime (l4_uint32_t year, l4_uint32_t mon, l4_uint32_t day, 
+mktime (l4_uint32_t year, l4_uint32_t mon, l4_uint32_t day,
 	l4_uint32_t hour, l4_uint32_t min, l4_uint32_t sec)
 {
   if (0 >= (int) (mon -= 2))
@@ -125,6 +125,7 @@ get_base_time(void)
   int i;
 
   l4util_cli();
+  fiasco_watchdog_disable();
 
   /* The Linux interpretation of the CMOS clock register contents:
    * When the Update-In-Progress (UIP) flag goes from 1 to 0, the
@@ -139,8 +140,8 @@ get_base_time(void)
   for (i=0 ; i<1000000 ; i++)	/* must try at least 2.228 ms */
     if (!(CMOS_READ(RTC_FREQ_SELECT) & RTC_UIP))
       break;
-  
-  do 
+
+  do
     {
       current_tsc = l4_rdtsc();
 
@@ -164,6 +165,7 @@ get_base_time(void)
     }
 
   l4util_sti();
+  fiasco_watchdog_enable();
 
   if ((year += 1900) < 1970)
     year += 100;
@@ -173,7 +175,7 @@ get_base_time(void)
   seconds_since_1970        = mktime(year, mon, day, hour, min, sec);
   system_time_offs_rel_1970 = seconds_since_1970 - current_s;
 
-  
+
   /* Free I/O space at RMGR (cli/sti mapped L4_WHOLE_IOADDRESS_SPACE) */
   rmgr_free_fpage(l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0));
   /* Unmap I/O space. RMGR should do it but can't because I/O mappings
@@ -184,4 +186,3 @@ get_base_time(void)
   printf("Date:%02d.%02d.%04d Time:%02d:%02d:%02d\n",
 	  day, mon, year, hour, min, sec);
 }
-

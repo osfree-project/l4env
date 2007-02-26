@@ -1,6 +1,12 @@
 #include <l4/events/events.h>
 #include "ore-local.h"
 
+/* (c) 2005 - 2007 Technische Universitaet Dresden			 
+ * This file is part of DROPS, which is distributed under the
+ * terms of the GNU General Public License 2. Please see the 
+ * COPYING file for details.                                 
+ */
+
 /* Thread to care for events. Listens to exit events and closes
  * established connections if a client goes down.
  */

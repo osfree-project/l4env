@@ -1,3 +1,10 @@
+/****************************************************************
+ * (c) 2005 - 2007 Technische Universitaet Dresden              *
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
+ ****************************************************************/
+
 /* Header file for the uIP-ORe library. This lib enables clients to communicate
  * through IP/UDP using the uIP stack and ORe. Originally uIP is not built as a
  * library, but needs to be linked statically against the application. 

@@ -14,6 +14,7 @@ public:
     Tbuf_ustatus_page    = Tbuf_status_page,
     Tbuf_buffer_area	 = Service_page + 0x200000,
     Tbuf_ubuffer_area    = Tbuf_buffer_area,
+    Jdb_tmp_map_area     = Service_page + 0x400000,
     Ipc_window_start     = 0xee000000,
     Ipc_window_end       = 0xef000000,
     Cache_flush_area     = 0xef000000,

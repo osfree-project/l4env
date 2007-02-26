@@ -25,7 +25,7 @@ PUBLIC inline NEEDS["kmem_space.h","pagetable.h"]
 int
 Thread::is_mapped()
 { 
-  return !Kmem_space::kdir()->lookup((void*)this,0,0).is_null();
+  return Kmem_space::kdir()->walk(this,0,false).valid();
 } 
 
 IMPLEMENTATION [debug]:
