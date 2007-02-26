@@ -1,2 +1,0 @@
-This backend provides very simple mmap functionality, as such backing
-malloc & co. It uses sigma0 protocol for getting pages.
