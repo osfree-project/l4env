@@ -1,0 +1,12 @@
+title = DSI example
+kernel = (nd)/tftpboot/rmgr -configfile
+module = (nd)/tftpboot/LN.img nowait
+module = (nd)/tftpboot/dsi_example.cfg
+module = (nd)/tftpboot/names
+module = (nd)/tftpboot/log  
+module = (nd)/tftpboot/buffermgr --addr=0x02000000 --size=0x01000000
+module = (nd)/tftpboot/simple_dm
+module = (nd)/tftpboot/dsi_example_send
+module = (nd)/tftpboot/dsi_example_filter
+module = (nd)/tftpboot/dsi_example_receive
+module = (nd)/tftpboot/dsi_example_app

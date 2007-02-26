@@ -1,0 +1,6 @@
+dice
+.deps
+.buildnumber
+templates
+Makefile
+Makefile.in

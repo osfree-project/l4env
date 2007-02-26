@@ -1,0 +1,14 @@
+$Log$
+Revision 1.2  2002/11/30 13:09:37  ra3
+- added back-end to use sockets for communication
+- cleaned up L4 back-end
+- adapt rest of DICE to support socket backend
+
+Revision 1.1  2002/11/20 17:21:47  ra3
+- removed $Log entries form sources
+- adapted to automake/autoconf
+  -> parser moved into own subdir
+  -> man/html doku in own subdir
+
+
+

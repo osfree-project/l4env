@@ -1,0 +1,2 @@
+#define __ver_atomic_dec_and_lock	smp_ad7738e3
+#define atomic_dec_and_lock	_set_ver(atomic_dec_and_lock)

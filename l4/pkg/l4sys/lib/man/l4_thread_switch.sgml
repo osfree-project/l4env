@@ -1,0 +1,52 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>l4_thread_switch
+<short>release the processor non-preemtively
+<sect> Synopsis
+
+<verb>#include <l4/sys/syscalls.h></verb>
+
+<code/static inline void/ <nl> 
+<code/l4_thread_switch(l4_threadid_t /<var/dest/ <code/);/
+
+<sect> Description
+
+The <code/l4_thread_switch()/ system call frees the processor from the
+invoking thread non-preemptively so that another ready thread can be processed.
+
+<sect> Arguments
+
+<desc
+
+<dt/<var/dest// The identifier of the destination thread the processor
+should switch to. 
+
+<desc
+
+<dt/<code/L4_NIL_ID// Processing switches to an undefined ready thread which
+is selected by the scheduler.
+
+<dt/&lt;valid id>/ If the destination thread is ready, processing
+switches to this thread. Otherwise another ready thread is selected by
+the scheduler.
+
+<sect> Return Values
+
+No return value is sent back.
+
+<sect>See Also
+
+<ref t=m id="l4_thread_ex_regs"//, 
+<ref t=m id="l4_fpage_unmap"//, 
+<ref t=m id="l4_nchief"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 
+
+
+
+

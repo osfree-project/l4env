@@ -1,0 +1,4 @@
+- handling of weak symbols (see LOG_tag of log package)
+- lazy binding on if someone wants it: only bind symbols which are
+  used (on R_386_JUMP_SLOT symbols)
+

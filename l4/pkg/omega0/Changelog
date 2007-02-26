@@ -1,0 +1,10 @@
+0.3 - Krishna, 03/07/2001
+- preparation for io server omega0lib implementation:
+  - separate thread creation
+  - introducing `omega0 management thread'
+
+0.2 - Jork, 02/22/2001
+- implemented the automatic-consume feature
+
+0.1 - Jork
+- original Implementation

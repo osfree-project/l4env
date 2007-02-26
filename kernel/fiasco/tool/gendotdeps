@@ -1,0 +1,545 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+use Pod::Usage;
+
+my $finput      = *STDIN{IO};
+my $output      = *STDOUT{IO};
+my $trivial     = 0;
+my $unused      = 0;
+my $verbose     = 0;
+my $subgraphing = 0;
+
+my $target_bl = "";
+my $source_bl = "";
+
+my $opt = { "verbose"   => \$verbose,
+            "trivial"   => \$trivial,
+            "unused"    => \$unused,
+	    "subgraphs" => \$subgraphing,
+	  };
+
+Getopt::Long::Configure ('bundling','no_ignore_case','auto_abbrev');
+
+GetOptions( $opt,
+	    "help|?|h",
+	    "man|m",
+	    "verbose|v+",
+	    "trivial|t:i",
+	    "unused|u:i",
+	    "output|o=s",
+	    "blacklist|b=s",
+	    "sysincludes|s",
+	    "nosysincludes",
+	    "subgraphs",
+	    "includepath|I=s@",
+	    "descend|d",
+	    "fancy|f",
+	  );
+# the next two lines may be omitted if the trivial|t:1 syntax works
+$trivial = 1 unless defined $trivial;
+$unused  = 1 unless defined $unused;
+$$opt{sysincludes} = 1 unless defined $$opt{sysincludes};
+$$opt{sysincludes} = 0 if $$opt{nosysincludes};
+
+pod2usage(1) if defined $$opt{help};
+pod2usage(-exitstatus => 0, -verbose => 2, -output=>\*STDOUT) if defined $$opt{man};
+
+if( defined $$opt{output} ) {
+  open( $output, ">$$opt{output}" ) || die "can't open output file: '$$opt{output}' - $!!";
+}
+
+if( defined $$opt{blacklist} ) {
+  open( I, "$$opt{blacklist}") || die "can't open black list file: '$$opt{blacklist}' - $!!";
+  while(<I>) {
+    chomp;
+    next if (/^\#/);
+    if (/^:(.*)$/) {
+      $target_bl .= $1." ";
+    }
+    if (/^->(.*)$/) {
+      $source_bl .= $1." ";
+    }
+    if (/^\*(.*)$/) {
+      $target_bl .= $1." ";
+      $source_bl .= $1." ";
+    }
+  }
+
+  $target_bl =~ s/\s+/|/g;
+  $source_bl =~ s/\s+/|/g;
+}
+
+my $args   = join(' ',@ARGV);
+
+if ( $args =~ s/\s*(\S+)// ) {
+  open( $finput, "$1" ) || die "can't open input file: '$1' - $!!";
+}
+
+my %all_deps;
+my %modules;
+my %module_struct;
+
+read_input();
+#print STDERR "READ:-----------------------------------------------\n";
+#list_modules();
+gen_all_deps();
+#print STDERR "GENALL:---------------------------------------------\n";
+#list_modules();
+remove_black_listed();
+#print STDERR "BL:-------------------------------------------------\n";
+#list_modules();
+
+while($unused-- && remove_unused()) {}
+while($trivial-- && remove_trivial()) {}
+
+#print STDERR "UT:-------------------------------------------------\n";
+#list_modules();
+
+remove_isolated();
+
+print_dot();
+close $output;
+
+
+#sub list_modules {
+#  print STDERR join('; ',sort keys %{$modules{"thread"}})."\n";
+#}
+
+
+sub module_name {
+  my ($module) = @_;
+  $module =~ s|.*/(\S+)|$1|;  # remove path
+  $module =~ s|(\S+)\..*|$1|; # remove extension
+  $module =~ s|_i$||; # cpp remove private include ext
+  return $module;
+}
+
+#--------------------------------------------------------------------
+sub read_input {
+  my %descends;
+  my $incregexp = "[\\\"<](\\S+)[\\\">]";
+  $incregexp = "\\\"(\\S+)\\\"" if $$opt{sysincludes} == 0;
+  my $input;
+  while(<$finput>) {
+    push @$input ,(split('\s',$_));
+  }
+
+  push @$input, ("---descend---");
+  my $descend = 0;
+
+  input_file: foreach my $inp (@$input) {
+
+    my $cpp_module = 0;
+
+    if( $inp eq "---descend---" ) {
+      $descend = 1;
+      next;
+    }
+
+    if($descend) {
+      next if defined $modules{module_name($inp)};
+      if($inp =~ /^\//) {
+	if (! open( C, $inp )) {
+	  print STDERR "couldn't open include: $inp: $!\n";
+	  next input_file;
+	}
+      } else {
+	foreach my $sdir (@{$$opt{"includepath"}},'.') {
+	  if( -f $sdir."/".$inp ) {
+	    if( !open( C, $sdir."/".$inp ) ) {
+	      print STDERR "couldn't open include: $sdir"."/"."$inp: $!\n";
+	      next input_file;
+	    } 
+	    goto end_search_path;
+	  }
+	}
+	print STDERR "couldn't find include: $inp\n";
+	next input_file;
+      end_search_path:
+      }
+    } else {
+      open ( C, $inp ) || die "can't open input file: '$inp' - $!!";
+    }
+    print STDERR "read: $inp" if $verbose>1;
+    my $module = module_name($inp);
+    
+    my @includes;
+    my $implname;
+    while(<C>) {
+      chomp;
+      if (/^\#include\s+$incregexp.*$/ && $1 !~ /_i$/ ) {
+	my $inc = $1;
+	my $incname = $1;
+	$inc =~ s|.h$||;
+	$inc =~ s|[/.]|_|g;
+	push @includes, ($inc);
+	if ($$opt{descend}) {
+	  if ( !defined $descends{$inc} ) {
+	    push @$input, ($incname);
+	    $descends{$inc} = 1;
+	  }
+	}
+      }
+      $cpp_module = 1 if /^(INTERFACE|IMPLEMENTATION).*:/;
+      if (/^IMPLEMENTATION\s*\[(\S+)\].*$/) {
+	$implname = $1;
+      }
+    }
+
+    $module =~ s|[/.]|_|g;
+
+    if (! defined $implname ) {
+      $implname = "**generic**";
+      push @{$module_struct{$module}{sub}}, ('"'.$module.'"');
+    } else {
+      $module =~ s/-($implname)$//;
+      push @{$module_struct{$module}{sub}}, ('"'.$module.'-'.$implname.'"');
+    }
+
+    print STDERR "[module=$module, implementation=$implname]\n" if $verbose>1;
+
+    @includes = grep {!/^$module$/} @includes; # remove self references
+    if (! defined $modules{$module}) {
+      $modules{$module} = {};
+    }
+    $module_struct{$module}{descend} = $descend;
+    $module_struct{$module}{cpp} = $cpp_module;
+    foreach my $inc (@includes) {
+      ${${%{$modules{$module}}}{$inc}}{$implname} = 1;
+    }
+
+    close C;
+  }
+
+  close $finput;
+}
+
+#-----------------------------------------------------
+sub gen_all_deps {
+  %all_deps = ();
+  foreach my $module (keys %modules) {
+    $all_deps{$module} = finddeps ($module, {});
+  }
+}
+
+#-----------------------------------------------------
+sub remove_black_listed {
+  print STDERR "remove blacklisted: " if $verbose>0;
+  foreach my $mod (keys %modules) {
+    if( $mod =~ /^($target_bl)$/ && !defined $all_deps{$mod}->{$mod}) {
+      print STDERR "$mod " if $verbose>0;
+      delete $modules{$mod};
+      delete $all_deps{$mod};
+      next;
+    }
+    foreach my $calling (keys %{$modules{$mod}}) {
+      if( $calling =~ /^($source_bl)$/ && !defined $all_deps{$calling}->{$calling}) {
+	delete ${%{$modules{$mod}}}{$calling};
+        print STDERR "->$calling<- " if $verbose>2;
+      }
+    }
+  }
+
+  print STDERR "\n" if $verbose>0;
+
+}
+
+sub remove_isolated {
+  print STDERR "remove isolated: " if $verbose>0;
+  modu: foreach my $mod (keys %modules) {
+    next if (scalar (keys %{$modules{$mod}})) > 0;
+    foreach my $calling (keys %modules) {
+      next modu if defined $modules{$calling}->{$mod};
+    }
+    delete $modules{$mod};
+    delete $all_deps{$mod};
+    print STDERR "$mod " if $verbose >0;
+  }
+  print STDERR "\n" if $verbose>0;
+}
+
+#-----------------------------------------------------
+sub remove_trivial {
+  my $count = 0;
+  print STDERR "remove trivial: " if $verbose>0;
+  foreach my $mod (keys %modules) {
+    if (scalar keys %{$modules{$mod}} == 0) {
+      $count++;
+      delete $modules{$mod};
+      delete $all_deps{$mod};
+      print STDERR "$mod " if $verbose>0;
+      foreach my $m (keys %modules) {
+	if (defined ${%{$modules{$m}}}{$mod}) {
+  	  delete ${%{$modules{$m}}}{$mod};
+        }
+      }
+    }
+  }
+  print STDERR "\n" if $verbose>0;
+  return $count;
+}
+
+#-------------------------------------------------------------
+sub remove_unused {
+  my $count = 0;
+  print STDERR "remove unused: " if $verbose>0;
+  foreach my $mod (keys %modules) {
+    foreach my $calling (keys %modules) {
+      goto used if defined $all_deps{$calling}->{$mod};
+    }
+    print STDERR "$mod " if $verbose>0;
+    delete $modules{$mod};
+    delete $all_deps{$mod};
+    $count++;
+  used:
+  }
+  print STDERR "\n" if $verbose>0;
+  return $count;
+}
+
+#-------------------------------------------------------------
+sub print_dot {
+
+  #
+  # Print dependencies per module
+  #
+
+  print "digraph G {\n";
+  print "  compound=true;\n";
+
+  if($subgraphing) {
+    foreach my $module (sort keys %modules) {
+      my $subs = \@{$module_struct{$module}{sub}};
+      if( defined @$subs && scalar @$subs > 1 ) {
+	my $subgraph;
+	if( defined @$subs ) {
+#	  $subgraph = " ".join( '; ', sort @$subs )."; "; 
+	  $subgraph = " ".join( '; ', sort grep (!/^\"$module\"$/, @$subs))."; ";
+	} else {
+	  $subgraph = "\"$module\";";
+        }
+	  
+#	print 
+#	  "  subgraph cluster_$module \{\n".
+#	  "    rank=min; label=$module; style=filled; color=lightgrey;\n".
+#          "    node [shape=record];\n".
+# 	  "    ".$subgraph. "\n".
+#	  "  };\n";
+
+	print 
+	  "  subgraph xcluster_$module \{\n".
+	  "    edge [color=blue];\n".
+#          "    node [shape=record];\n".
+ 	  "    \"$module\" -> { node [color=blue]; ".$subgraph. "}; \n".
+	  "  };\n";
+
+      }
+    }
+  }
+
+  if( $$opt{fancy} ) {
+    foreach my $mod (keys %modules) {
+      next if ! defined $all_deps{$mod};
+      my $m = \%{$module_struct{$mod}};
+      if( $$m{descend} ) {
+	print "  node [style=filled, fillcolor=beige]; \"$mod\";\n";
+      } elsif ( $$m{cpp} ) {
+	print "  node [style=filled, fillcolor=LightSkyBlue]; \"$mod\";\n";
+      }
+    }
+    print "  node [fillcolor=lightgrey, style=solid];\n";
+  }
+  
+  foreach my $module (sort keys %modules) {
+    my $target_deps = target_deps($module);
+    next if scalar @$target_deps == 0;
+
+    my %found = ();
+    my $first = 1;
+
+    foreach my $calling (@$target_deps)	{
+      next if defined $found{$calling};
+      $found{$calling} = 1;
+
+      $calling =~ s,[/],_,g;
+      next if ($calling eq "");
+      next if ($module eq "");
+
+      my $label = $module.'-'.join('\n'.$module.'-',(keys %{${%{$modules{$module}}}{$calling}}));
+      $label =~ s/-\*\*generic\*\*//g;
+
+      if($subgraphing) {
+	my $so = ' '.join(' ', (keys %{${%{$modules{$module}}}{$calling}})).' ';
+        while($so =~ s/\s+(\S+)\s+/\"$module-$1\"; /) {}
+        $so =~ s/-\*\*generic\*\*//g;
+	my $target = "\"$calling\"";
+#        $target = $calling if ! defined $module_struct{$calling};
+
+#        = $module_struct{$calling}[0];
+#	$target = $calling if ! defined $target;
+#        print "  { $so } -> ".$target." [lhead=cluster_$calling, color=".
+#	  (defined $all_deps{$calling}->{$module}
+#	   ? "red, label=\"$label\"" : "black, label=\"\"") .
+#	     "];\n";
+
+        print "  { $so } -> ".$target." [color=".
+	  (defined $all_deps{$calling}->{$module}
+	   ? "red, label=\"$label\"" : "black, label=\"\"") .
+	     "];\n";
+      } else {
+
+	my $circ_edge    = '[color=red, label="'.$label.'"]';
+	my $normal_edge  = '[color=black, label=""]'; #.$label.'"]';
+
+	my $calling_p = '"'.$calling.'"';
+
+	if( $$opt{fancy} && !defined @{$module_struct{$calling}{sub}} ) {
+	  $calling_p = '{ node [style=filled]; "'.$calling.'"; }';
+	}
+
+        print "  \"$module\" -> ".$calling_p.' '.(defined $all_deps{$calling}->{$module}
+					    ? $circ_edge : $normal_edge).";\n";
+      }
+    }
+
+  }
+
+  print "};\n";
+}
+
+#-------------------------------------------------------------
+sub target_deps {
+  my ($module) = @_;
+  my @deps;
+  push @deps, (keys %{$modules{$module}}) if defined $modules{$module};
+  return \@deps;
+}
+
+#-------------------------------------------------------------
+sub finddeps {
+  my ($module, $traversed) = @_;
+  my $target_deps = target_deps($module);
+  #return {} if ! defined $target_deps{$module};
+  return {} if defined $traversed->{$module};
+  $traversed->{$module} = 1;
+  my @alldeps = @$target_deps;
+
+  foreach my $dep (@$target_deps) {
+    push @alldeps, keys %{finddeps ($dep, $traversed)};
+  }
+
+  my %unique_names;
+
+  foreach my $dep (@alldeps) {
+    $unique_names{$dep} = 1;
+  }
+  return \%unique_names;
+}
+
+__END__
+
+=head1 NAME
+
+gendotdeps - generate module (.cpp) dependencies in dot format.
+
+=head1 SYNOPSIS
+
+gendotdeps [options] [input_file]
+
+ Options:
+   --blacklist=file, -b   use file as modules black list
+   --descend, -d          descend into included files
+   --fancy, -f            use fancy colors
+   --help, -h             show brief help message
+   --includepath, -I      specify an include path for '--descend'
+   --man, -m              show complete documentation
+   --nosysincludes        do not care about system includes (<gixgax.h>)
+   --output=file, -o      write output to file instead of standard out
+   --subgraphs            (BROKEN) show cpp modules with their submodules
+   --sysincludes, -s      consider even system includes (<gixgax.h>) as
+                          dependencies (default)
+   --trivial=n, -t        remove n levels of trivial modules
+   --unused=n, -u         remove n levels of unused modules
+   --verbose, -v          increase verbosity level
+
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--blacklist>=file, B<-b>
+
+Use <file> as module black list. In the black-list file modules can be
+specified to be ignored as source of any dependency, as target of any
+dependency, or at all.
+
+=item B<--descend, -d>
+
+Descend into included files, if this option is enabled gendotdeps
+tries to open included files and track down also their
+dependecies. The files are looked up in the specified include
+directory (see B<--includepath, -I>).
+
+=item B<--fancy, -f>
+
+Use fancy colors for the different kinds of modules. If this option is
+enabled directly specified 'cpp' modules are filled sky-blue, directly
+specified non-'cpp' modules are filled white, not inspected includes
+are filled grey, and descended includes are filled beige.
+
+=item B<--help, -h, -?>
+
+Prints a brief help message and exits.
+
+=item B<--includepath> dir, B<-I>
+
+Adds dir to the search path for includes (see B<--descend>).
+
+=item B<--man, -m>
+
+Prints the manual page and exits.
+
+=item B<--nosysincludes>
+
+This option disables --sysincludes, this means that no system includes
+are taken into account for the dependency generation.
+
+=item B<--output>=file, B<-o>
+
+Write the generated dependency graph to <file> instead of standard
+output.
+
+=item B<--subgraphs>
+
+Generates a subgraph for every cpp module, which shows the submodules.
+
+=item B<--sysincludes, -s>
+
+This option is the default (see --nosysincludes). If this option is
+enabled also system includes are taken into account (<gixgax.h>) for
+the dependency calculations.
+
+=item B<--trivial>=n, B<-t>
+
+Remove <n> levels of trivial modules from the dependency
+graph. Trivial modules are modules that do not depend on any other
+modules.
+
+=item B<--unused>=n, B<-u>
+
+Remove <n> levels of unused modules from the dependency graph. Unused
+modules are modules that have no other modules depend on them.
+
+=item B<--verbose, -v>
+
+Each time this option occurs the verbosity level is increased.
+
+=back
+
+=head1 DESCRIPTION
+
+Should be done, sorry!
+
+=cut

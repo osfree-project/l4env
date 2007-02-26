@@ -1,0 +1,31 @@
+# directories we need to know
+PKGDIR ?=       ../..
+L4DIR ?=        $(PKGDIR)/../..
+
+# source files
+SRC_C =		blk_stub.c linux_emul.c
+PRIVATE_INCDIR =$(L4LINUXDIR)/include
+CLIENTIDL =	blk.idl
+DEFINES =       -D__KERNEL__ -DMODULE -DLINUX_ON_L4
+WARNINGS =	-Wall
+
+DEBUG =		1
+
+# overwrite default target
+all:: l4blk_stub
+
+# we have no target, build OBJ list manually
+OBJS =          $(SRC_C:.c=.o) $(CLIENTIDL:.idl=-client.o)
+
+# include prog role
+include $(L4DIR)/mk/prog.mk
+
+L4LIBS =	-lnames
+
+l4blk_stub: $(OBJS) $(LIBDEPS)
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) -r -o $@ $(OBJS) $(addprefix -L,$(L4LIBDIR)) $(L4LIBS)
+
+clean::
+cleanall::
+	$(VERBOSE)$(RM) l4blk_stub

@@ -1,0 +1,33 @@
+int l4_call(l4_threadid_t dest, 
+	    const void *snd_msg, dword_t snd_dword0, dword_t snd_dword1, 
+	    void *rcv_msg, dword_t *rcv_dword0, dword_t *rcv_dword1, 
+	    l4_timeout_t timeout, l4_msgdope_t *result);
+
+/*
+ * stack layout                             	send          receive
+ * ___________________
+ * | result           |       ebp + 44				EAX
+ * |------------------|
+ * | time_out         |       ebp + 40		ECX
+ * |------------------|
+ * | rcv_dword1       |       ebp + 36				EDX
+ * |------------------|
+ * | rcv_dword0       |       ebp + 32				EBX
+ * |------------------|
+ * | rcv_msg          |       ebp + 28		(EDI)
+ * |------------------|
+ * | snd_dword1       |       ebp + 24		EDX
+ * |------------------|
+ * | snd_dword0       |       ebp + 20		EBX
+ * |------------------|
+ * | snd_msg          |       ebp + 16		EAX
+ * |------------------|
+ * | dest.lh.high     |       ebp + 12		
+ * |------------------|
+ * | dest.lh.low      |       ebp + 8		(ESI)
+ * |------------------|
+ * | return addr      |       ebp + 4
+ * |------------------|
+ * | old ebp          |   <-- ebp
+ * |------------------|
+ */

@@ -1,0 +1,13 @@
+PKGDIR  = ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+SRC_C   = main.c
+TARGET  = names_lister
+MODE    = host
+
+INCS    = -I$(L4DIR)/include \
+           -I../../server/include
+LIBS    = -L$(L4DIR)/lib -lnames\
+           -lrmgr
+
+include $(L4DIR)/mk/prog.mk

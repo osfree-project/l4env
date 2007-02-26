@@ -1,0 +1,18 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Lock Source Code Documentation
+
+The L4 lock library is a simple, semaphore-based lock implementation. 
+
+It is possible for a thread to reenter a lock it already owns, the 
+lock structure contains a reference counter which is used to count the 
+number of lock-operations by a thread. The lock operations checks the 
+owner of a lock, if the thread already owns the lock, the reference 
+counter is incremented by 1, otherwise it tries to occupy the lock.  
+The unlock operation decrements this counter by 1 and releases 
+the lock if the counter becomes 0.
+
+*/
+ 

@@ -1,0 +1,139 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file    dm_phys/idl/dm_phys.idl
+ * \brief   Phys. memory dataspace manager interface
+ * \ingroup idl_phys
+ *
+ * \date    11/24/2001
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *
+ * Copyright (C) 2000-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+
+#include <l4/dm_mem/dm_mem.idl>
+//#include <dm_mem.idl>
+
+/**
+ * Dataspace manager interface 
+ */
+module if_l4dm
+{
+  /**
+   * Phys. memory dataspace manager interface
+   * \ingroup idl_phys
+   */
+  interface memphys : mem
+    {
+      /***********************************************************************/
+      /**
+       * \brief   Create a new dataspace
+       * \ingroup idl_phys
+       * 
+       * \param   pool        Memory pool
+       * \param   addr        Physical address
+       * \param   size        Dataspace size
+       * \param   align       Alignment
+       * \param   flags       Flags
+       * \param   name        Dataspace name
+       * \retval  ds          Dataspace id
+       *	
+       * \return  0 on success (\a ds contains the id of the newly created 
+       *          dataspace), error code otherwise:
+       *          - -#L4_ENOMEM  out of memory
+       */
+      /***********************************************************************/ 
+      long dmphys_open(in unsigned long pool, 
+		       in unsigned long addr, 
+		       in unsigned long size, 
+		       in unsigned long align, 
+		       in unsigned long flags, 
+		       in string name,
+		       out if_l4dm_dataspace_t ds);
+
+      /***********************************************************************/
+      /**
+       * \brief   Create a copy of a dataspace
+       * \ingroup idl_phys
+       * 
+       * \param   ds_id       Source dataspace id
+       * \param   src_offs    Offset in source dataspace
+       * \param   dst_offs    Offset in destination dataspace
+       * \param   num         Number of bytes to copy
+       * \param   dst_pool    Memory pool to use to allocate destination ds
+       * \param   dst_addr    Physical address of destination dataspace
+       * \param   dst_size    Destination dataspace size
+       * \param   dst_align   Destination alignment
+       * \param   flags       Flags
+       * \param   name        Destination dataspace name
+       * \retval  copy        Copy dataspace id
+       *
+       * \return  0 on success (\a ds contains the id of the newly created 
+       *          dataspace), error code otherwise:
+       *          - -#L4_ENOMEM  out of memory
+       */
+      /***********************************************************************/ 
+      long dmphys_copy(in unsigned long ds_id, 
+		       in unsigned long src_offs, 
+		       in unsigned long dst_offs, 
+		       in unsigned long num,
+		       in unsigned long dst_pool, 
+		       in unsigned long dst_addr, 
+		       in unsigned long dst_size, 
+		       in unsigned long dst_align, 
+		       in unsigned long flags, 
+		       in string name,
+		       out if_l4dm_dataspace_t copy);
+
+      /***********************************************************************/
+      /**
+       * \brief   Check phys. pagesize for dataspace region
+       * \ingroup idl_phys
+       * 
+       * \param   ds_id       Datasspace id
+       * \param   offs        Offset in dataspace 
+       * \param   size        Dataspace area size
+       * \param   pagesize    Log2 pagesize
+       * \retval  ok          1 if dataspace region can be mapped with given
+       *                      pagesize, 0 if not
+       * 
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EPERM       operation not permitted
+       *          - -#L4_EINVAL      invalid dataspace id
+       *          - -#L4_EINVAL_OFFS offset points beyond end of dataspace
+       */
+      /***********************************************************************/ 
+      long dmphys_pagesize(in unsigned long ds_id, 
+			   in unsigned long offs,
+			   in unsigned long size, 
+			   in unsigned long pagesize, 
+			   out unsigned long ok);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: show DMphys debug information
+       * \ingroup idl_phys
+       * 
+       * \param   key         Debug key
+       * \param   data        Data
+       */
+      /***********************************************************************/ 
+      void dmphys_debug(in unsigned long key, 
+			in unsigned long data);
+    };
+};

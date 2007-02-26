@@ -1,0 +1,72 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>
+l4_fpage_unmap
+<short> unmap an L4 flex page
+<sect> Synopsis
+
+<verb>#include <l4/sys/syscalls.h></verb>
+
+<code/static inline void/ <nl>
+<code/l4_fpage_unmap(l4_fpage_t /<var/fpage/,
+<code/dword_t /<var/map_mask/<code/);/
+
+<sect> Description
+
+The <code/l4_fpage_unmap()/ system call unmaps the specified flex page
+in all address spaces into which the invoker mapped it directly or
+indirectly.
+
+<sect> Arguments
+
+<desc
+
+<dt/<var/fpage// Fpage to be unmapped.
+
+<dt/<var/map_mask// 
+
+The following values are possible and can be combined partially:
+
+<desc
+
+<dt/<code/L4_FP_REMAP_PAGE//
+
+The flex page is set to read-only. 
+
+<dt/<code/L4_FP_FLUSH_PAGE//
+
+The flex page is completely unmapped.
+
+<dt/<code/L4_FP_OTHER_SPACES//
+
+The flex page is unmapped in all address spaces into which it has been
+mapped. The original flex page remains mapped.
+
+<dt/<code/L4_FP_ALL_SPACES//
+
+The flex page is unmapped everywhere, including the original page.
+
+<sect>Return Values
+
+No return value is sent back.
+
+
+<sect>See Also
+
+<ref t=m id="l4_thread_ex_regs"//, 
+<ref t=m id="l4_myself"//, 
+<ref t=m id="l4_nchief"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 
+
+
+
+
+
+
+

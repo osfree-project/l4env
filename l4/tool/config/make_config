@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# $Id$
+#
+# build script for scsi/server/include/linux/config.h
+#
+
+function header()
+{
+  echo "/*"
+  echo " * Automatically generated C config: don't edit"
+  echo " */"
+}
+
+function main_loop()
+{
+  IFS='='
+  while read left right; do
+    left_cut=$(echo $left|sed 's/\ *#.*//g')
+    if [ -n "$left_cut" ]; then
+      right_cut=$(echo $right|sed 's/\ *#.*//g')
+      if [ "$right_cut" = "n" -o "$right_cut" = "N" ]; then
+        echo "#undef $left_cut"
+      else
+        if [ "$right_cut" = "y" -o "$right_cut" = "Y" ]; then
+          echo "#define $left_cut 1"
+        else
+          echo "#define $left_cut $right_cut"
+        fi
+      fi
+    fi
+  done
+}
+
+header > $2
+main_loop < $1 >> $2

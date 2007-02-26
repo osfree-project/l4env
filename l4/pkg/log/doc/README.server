@@ -1,0 +1,18 @@
+$Id$
+
+
+Log-Server for use with libl4log
+
+
+- serializes log-requests from client-threads and prints them via
+  printf() from oskit (current implementation: characterwise kdebug_out ?)
+
+- needs nameserver started, registers as "stdlog"
+
+- does not break long lines (todo?)
+
+optional cmdline-argument: "--verbose"
+  - prints the task- and threadid of the calling thread before each message
+
+
+Jork Loeser

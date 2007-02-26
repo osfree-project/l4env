@@ -1,0 +1,39 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>
+l4_myself
+<short> deliver the id of the current thread
+<sect> Synopsis
+
+<verb>#include <syscalls.h></verb>
+
+
+<code/static inline volatile l4_threadid_t/ <nl>
+<code/l4_myself(void); 
+<sect> Description
+
+The <code/l4_myself()/ system call returns the id of the current thread.
+
+<sect>Arguments
+
+The system call requires no arguments.
+
+<sect>Return Values
+
+The thread id of the current thread is returned.
+
+<sect>See Also
+
+<ref t=m id="l4_thread_ex_regs"//, 
+<ref t=m id="l4_fpage_unmap"//, 
+<ref t=m id="l4_nchief"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 
+
+
+

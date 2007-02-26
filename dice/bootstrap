@@ -1,0 +1,9 @@
+#! /bin/sh
+#
+# (Auto-)Generate necessary files for compilation
+
+
+aclocal
+autoheader
+automake -a
+autoconf

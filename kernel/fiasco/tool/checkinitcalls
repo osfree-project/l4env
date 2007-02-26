@@ -1,0 +1,125 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+use Pod::Usage;
+
+my $sym_objdump  = 'nm -nC';
+my $objdump      = 'objdump -drlCj ".text"';
+my $cppfilt      = 'c++filt';
+my $start_symbol = '_initcall_start';
+my $end_symbol   = '_initcall_end';
+my $kernel       = 'kernel.image';
+my $error        = 0;
+my $werror       = 0;
+my @Wswitch      = ();
+my @ignore_funcs = ();
+
+my $opt = { "kernel"          => \$kernel,
+	    "start-symbol"    => \$start_symbol,
+	    "end-symbol"      => \$end_symbol,
+	    "W"               => \@Wswitch,
+	    "ignore-function" => \@ignore_funcs };
+
+Getopt::Long::Configure ('bundling','no_ignore_case','auto_abbrev');
+
+GetOptions( $opt,
+	    "help|?|h",
+	    "man|m",
+	    "W=s@",
+	    "start-symbol=s",
+	    "end-symbol=s",
+	    "ignore-function=s@",
+	    "kernel|k=s",
+	  );
+
+sub have_warn_opt {
+  my $opt = shift @_;
+  my @gr = grep /$opt/, @Wswitch;
+#  print "W: ".join(" ",@gr)."\n";
+  return scalar @gr;
+}
+
+$werror = 1 if have_warn_opt("error");
+push @ignore_funcs, ("__static_initialization_and_destruction_0") 
+  unless have_warn_opt("static-construction");
+
+my $ignore_funcs = join("|",@ignore_funcs);
+
+#print "Ignore: $ignore_funcs\n";
+
+my @symbols = split($/,qx{$sym_objdump $kernel});
+
+my @start = grep /^[0-9a-fA-F]+\s+[A-Z]\s+$start_symbol\s*$/, @symbols;
+my @end   = grep /^[0-9a-fA-F]+\s+[A-Z]\s+$end_symbol\s*$/, @symbols;
+
+if(! defined $start[0] || ! defined $end[0]) {
+  die 'start ('.$start_symbol.') or end ('.$end_symbol.') symbol not found!';
+}
+
+my $start = $start[0];
+my $end   = $end[0];
+
+$start =~ s/^([0-9a-fA-F]+).*$/$1/;
+$end   =~ s/^([0-9a-fA-F]+).*$/$1/;
+
+#print "start of init area: $start\n";
+#print "end if init area  : $end\n";
+
+$start = hex($start);
+$end   = hex($end);
+
+my %init_syms;
+
+while($_ = shift @symbols) {
+  if(/^([0-9a-fA-F]+)\s+[A-Z]\s+(\S+)/) {
+    my $saddr  = $1;
+    my $addr   = hex($1);
+    my $symbol = $2;
+    if( $symbol ne $start_symbol
+	&& $symbol ne $end_symbol
+	&& $addr>=$start
+	&& $addr<$end ) {
+      $init_syms{$symbol} = $addr;
+    }
+  }
+}
+
+while($_ = shift @ARGV) {
+  my $file = $_;
+
+  my @dump = split $/, qx{$objdump $file};
+  #my @und  = grep /^\s+U\s+(\S+)\s*$/, @syms;
+  #my @und  = split $/, qx{$objdump $file};
+
+  my $source;
+  my $function;
+  my $warn;
+  if($werror) {
+    $warn = "error";
+  } else {
+    $warn = "warning";
+  }
+
+  foreach $_ (@dump) {
+    if(/^(\S+:[0-9]+)\s*$/) {
+      $source = $1;
+      next;
+    }
+    if(/^([0-9a-fA-F]+)\s+<(.*)>:$/) {
+      $function = $2;
+    }
+    if(/^\s*([0-9a-fA-F]+):\s+\S+\s+(\S+)\s*$/) {
+      my $sym = $2;
+      if( defined $function
+	  && $function !~ /^($ignore_funcs)(\(.*\))?$/
+	  && defined $init_syms{$sym} ) {
+	print STDERR $source.": $warn: uses initcall ($sym) from normal text section\n";
+	$error++ if $werror;
+      }
+      next;
+    }
+  }
+}
+
+exit(1) if $error;

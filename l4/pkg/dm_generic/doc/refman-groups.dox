@@ -1,0 +1,126 @@
+/* -*- c -*- */
+/*****************************************************************************
+ *** client API
+ *****************************************************************************/
+/**
+\defgroup api Dataspace Manager Client API
+Documentation of the Dataspace manager client library API.
+*/
+
+/**
+\defgroup api_open Open/Close/Copy Dataspaces 
+\ingroup  api
+\brief    Functions to open / close dataspaces and to create copies of 
+          dataspaces.
+*/
+
+/**
+\defgroup api_alloc Memory Allocation
+\ingroup  api
+\brief    Memory allocation convenience functions.
+*/
+
+/**
+\defgroup api_map Map Dataspace Regions
+\ingroup  api
+\brief    Functions to map dataspace pages / regions.
+*/
+
+/**
+\defgroup api_client Dataspace Client Handling
+\ingroup  api
+\brief    Functions to control dataspace client access rights.
+
+Currently, dataspace managers implement a thread-based access control list
+for each dataspace. 
+
+Each dataspace is owned by a thread. Initialy, the thread which createded
+the dataspace owns it. The ownership can be transfered using l4dm_transfer().
+The owner has full control over the dataspace, in particular only the owner 
+can close a dataspace.
+
+Access rights for other threads can be granted using l4dm_share(). A thread
+can only grant access rights to a dataspace up to the rights it owns itself
+on the dataspace. Access rights can be revoked using l4dm_revoke().
+
+*/
+
+/**
+\defgroup api_mem Miscellaneous Memory Functions
+\ingroup  api
+\brief    Lock/unlock dataspace regions, get memory size, ...
+*/
+
+/**
+\defgroup api_debug Debugging
+\ingroup  api
+\brief    Various functions to show debug information.
+*/
+
+/*****************************************************************************
+ *** IDL
+ *****************************************************************************/
+
+/**
+\defgroup idl Dataspace Manager Interface IDL Specifications 
+\brief Usually there is no need for a client to call the Dataspace Manager 
+Interface functions directly. Instead, clients should use the function 
+provided by the \htmlonly <a href="group__api.html"> \endhtmlonly Dataspace 
+Manager client library. \htmlonly </a> \endhtmlonly
+*/
+
+/**
+\defgroup idl_generic Generic Dataspace Manager Interface 
+\ingroup idl
+*/ 
+
+/**
+\defgroup idl_mem Memory Dataspace Manager Interface
+\ingroup idl
+*/
+
+/**
+\defgroup idl_phys Physical Memory Dataspace Manager Interface
+\ingroup  idl
+*/
+
+/*****************************************************************************
+ *** DSMlib
+ *****************************************************************************/
+
+/**
+\defgroup dsmlib Dataspace Manager Server Support Library
+\brief The Dataspace Manager server support library provides functions which 
+can be used to implement dataspace managers. 
+*/
+
+/**
+\defgroup dsmlib_ds Dataspace Management
+\ingroup  dsmlib
+*/
+
+/**
+\defgroup dsmlib_client Client Handling
+\ingroup  dsmlib
+*/
+
+/**
+\defgroup dsmlib_iterate Iterate Dataspace List
+\ingroup  dsmlib
+*/
+
+/**
+\defgroup dsmlib_init Initialization
+\ingroup  dsmlib
+*/
+
+/**
+\defgroup dsmlib_debug Debugging
+\ingroup  dsmlib
+*/
+
+
+
+
+
+

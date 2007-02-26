@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+$, = ' ';		# set output field separator
+$\ = "\n";		# set output record separator
+
+my $doit = 1;
+
+while(<>) {
+  my @stuff = split /\s+/;
+
+ line: while ($_ = shift @stuff) {
+    chomp;	# strip record separator
+    if (/^else$/) {
+      $doit = 1;
+      next line;
+    }
+    
+    if (/^endif$/) {
+      print "";
+      $doit = 0;
+    }
+    
+    if ($doit) {
+      s/Makefile//g;
+      
+      /auto\// || /:/ || next line;
+      print $_." \\";
+    }
+  }
+}
+
+print "";

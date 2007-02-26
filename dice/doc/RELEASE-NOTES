@@ -1,0 +1,20 @@
+	WHAT'S NEW IN DICE 2.2.0 - Nov 19th 2002
+	========================================
+
+This is the latest development version of DICE. Please send bug reports
+and suggestions for new features to ra3@os.inf.tu-dresden.de.
+
+New releases are announced on the DICE mailing list. You can subscribe
+to this list at http://os.inf.tu-dresden.de/mailmain/listinfo/dice/.
+
+Changes in 2.2.0
+----------------
+
+
+==========================================================================
+
+If you think you have found a bug, please email a report to
+ra3@os.inf.tu-dresden.de and include all details necessary to
+reproduce the problem, such as input files and command line options
+as well as the version of DICE you used.
+

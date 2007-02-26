@@ -1,0 +1,57 @@
+			TO DO:
+
+* Can we detect the processor type on minx yet?
+
+* Write up explanations of the tags and the autoconfigurator,
+  also a kernel-hacker's guide to config maintainance.
+
+* Look at Red Hat's sndconfig for sound card probes.  Giacomo suggests we
+  should wait on this until ALSA comes in, as that may make matters simpler.
+
+* Better reasoning about disjuncts in suppress/depend guards.  We should be 
+  able to force a symbol in a disjunct if all the others are frozen.
+
+* Enable the menu-bar stuff in treeconfig.
+
+* Add suppression state information to top of screen in xconfig and menuconfig.
+
+* Tk interface bugs:
+
+If you're running KDE 2.1.1 with the dock bar extension, the dock bar 
+may swallow your CML2 instance.  The reason for this is unknown
+There's probably something deep in Tkinter that is weirdly fux0red, but
+that code is a nasty swamp.  Urgh...
+
+* One proposal for supporting internationalization at runtime:
+
+import locale, translations
+# Get the first two chars of the users current locale, so en_UK and
+# en_US both use the en dictionary.
+loc = locale.setlocale(locale.LC_CTYPE, "")[0:2]
+try:
+        lang = getattr(translations, loc)
+except:
+        lang = getattr(translations, 'en')
+
+* More features for the Adventure interface:
+
+Thief periodically materializes and steals some of your options.
+Dwarf occasionally throws a sharp nasty knife at you.
+Symbols with sub-configuration options are containers.
+Monsters are summoned by constraint violations.
+
+Monsters:
+A large green fierce snake, barring the way,
+The wumpus.
+A killer rabbit
+A fairy penguin
+A rabid gnu
+Chuck, the BSD daemon
+The Death of Rats
+The Ravenous Bugblatter Beast of Traal
+Clippy
+Hello Kitty
+A Slashdot troll
+Lord Crud
+
+

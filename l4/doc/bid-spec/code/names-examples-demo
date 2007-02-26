@@ -1,0 +1,10 @@
+PKGDIR  = ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+SRC_C           = demo.c
+MODE            = sigma0
+
+TARGET          = names_demo
+DEFAULT_RELOC   = 0x00E00000
+
+include $(L4DIR)/mk/prog.mk

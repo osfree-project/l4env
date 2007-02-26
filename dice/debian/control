@@ -1,0 +1,18 @@
+Source: dice
+Section: devel
+Priority: optional
+Maintainer: Adam Lackorzynski <adam@os.inf.tu-dresde.de>
+Build-Depends: doxygen
+Standards-Version: 3.5.7
+
+Package: dice
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: DROPS' IDL compiler
+ DICE is an IDL compiler. It translates interface specification into
+ communication stubs. It is a tool, which component developers use to ease
+ the implementation of the communication interface of their components.
+ .
+ DICE is especially used in the DROPS project
+ (http://os.inf.tu-dresden.de/drops) at the University of Dresden.
+

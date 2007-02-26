@@ -1,0 +1,22 @@
+/* $Id$ */
+
+/** \page pg_todo General TODO Page
+
+\section sec_todo_intro Introduction
+
+This collection of risks and just planned features completes the <em>TODO
+list</em>.
+
+
+\section sec_todo_1 1. The task_struct Structure
+
+The current \c struct \c task_struct structure contains about 1700 bytes and
+this is pretty large. Unfortunately any Linux source code can acces any member
+of this structure via the \c current macro and nearly all <em>user context</em>
+related code will do - source code files and interface definitions (headers).
+
+DDE allocates and initializes one process descriptor for each interface
+thread. It is leaved untouched except for the addition of special per Thread
+information, e.g. \c dde_sema. <em>(see linux/sched.h)</em>
+
+*/

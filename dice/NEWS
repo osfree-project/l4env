@@ -1,0 +1,6 @@
+2.2.1
+ - added 'socket' Back-End
+
+2.2.0
+ - BE: flexpages, indirect strings
+ - works for L4 version 2

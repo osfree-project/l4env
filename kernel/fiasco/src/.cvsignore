@@ -1,0 +1,24 @@
+Makeconf.local
+kernel.image
+kernel.image.s
+main
+.gdb_history
+.gdbinit
+.emacs-flc
+Symbols
+DEPS
+.stamp-createdfiles
+dep-aliases dep-compalias dep-files dep-list
+Makerules.local
+dep-list-long
+.Modules.deps
+Modules
+Modules.md5*
+tcboffset.h
+genoffset
+genchecksum
+checksum
+globalconfig.h
+globalconfig.out
+rules.out
+genoffset.s.o

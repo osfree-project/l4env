@@ -1,0 +1,13 @@
+PKGDIR  = ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+INCS            = -I../include
+
+TARGET          = names
+DEFAULT_RELOC   = 0x00F00000
+MODE            = sigma0
+LIBS            = -llogserver
+
+SRC_C           = names.c
+
+include $(L4DIR)/mk/prog.mk

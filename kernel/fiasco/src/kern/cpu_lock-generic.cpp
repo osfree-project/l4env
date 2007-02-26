@@ -1,0 +1,32 @@
+IMPLEMENTATION[generic]:
+/**
+ * Generic implementation of the CPU lock. 
+ * This implementation uses Proc::cli and
+ * Proc::sti from the processor headers.
+ *
+ */
+
+#include "processor.h"
+
+IMPLEMENT
+Cpu_lock::Cpu_lock()
+{}
+
+IMPLEMENT inline NEEDS ["processor.h"]
+void Cpu_lock::lock()
+{
+  Proc::cli();
+}
+
+IMPLEMENT inline NEEDS ["processor.h"]
+void
+Cpu_lock::clear()
+{
+  Proc::sti();
+}
+
+IMPLEMENT inline NEEDS ["processor.h"]
+Cpu_lock::Status Cpu_lock::test() const
+{
+  return ! Proc::interrupts();
+}

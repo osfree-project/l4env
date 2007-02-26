@@ -1,0 +1,6 @@
+#define __ver_ohci1394_stop_context	smp_c3f9ee57
+#define ohci1394_stop_context	_set_ver(ohci1394_stop_context)
+#define __ver_ohci1394_register_video	smp_b5efc73b
+#define ohci1394_register_video	_set_ver(ohci1394_register_video)
+#define __ver_ohci1394_unregister_video	smp_8289947e
+#define ohci1394_unregister_video	_set_ver(ohci1394_unregister_video)

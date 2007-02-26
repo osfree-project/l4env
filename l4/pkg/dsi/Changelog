@@ -1,0 +1,6 @@
+R_0_4
+  - Event signalling, the application can wait for events set by the 
+    components.
+	
+R_0_3
+  - Implemented stop/close socket

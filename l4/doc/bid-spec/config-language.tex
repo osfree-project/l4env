@@ -1,0 +1,813 @@
+
+
+\subsection{Introduction}
+
+Config Language is not 'bash'.
+
+This document describes Config Language, the Linux Kernel Configuration
+Language.  config.in and Config.in files are written in this language.
+
+Although it looks, and usually acts, like a subset of the 'sh' language,
+Config Language has a restricted syntax and different semantics.
+
+Here is a basic guideline for Config Language programming: use only the
+programming idioms that you see in existing Config.in files.  People often
+draw on their shell programming experience to invent idioms that look
+reasonable to shell programmers, but silently fail in Config Language.
+
+Config Language is not 'bash'.
+
+
+
+\subsection{Interpreters}
+
+Four different configuration programs read Config Language:
+
+\begin{tabular}{ll}
+    scripts/Configure  & make config, make oldconfig\\
+    scripts/Menuconfig & make menuconfig\\
+    scripts/tkparse    & make xconfig\\
+    mconfig            & ftp.kernel.org/pub/linux/kernel/people/hch/mconfig/\\
+\end{tabular}
+
+\textbf{'Configure'} is a bash script which interprets Config.in files by sourcing
+them.  Some of the Config Language commands are native bash commands;
+simple bash functions implement the rest of the commands.
+
+\textbf{'Menuconfig'} is another bash script.  It scans the input files with a
+small awk script, builds a shell function for each menu, sources the
+shell functions that it builds, and then executes the shell functions
+in a user-driven order.  Menuconfig uses 'lxdialog', a back-end utility
+program, to perform actual screen output.  'lxdialog' is a C program
+which uses curses.
+
+\textbf{'scripts/tkparse'} is a C program with an ad hoc parser which translates
+a Config Language script to a huge TCL/TK program.  'make xconfig'
+then hands this TCL/TK program to 'wish', which executes it.
+
+\textbf{'mconfig'} is the next generation of Config Language interpreters.  It is a
+C program with a bison parser which translates a Config Language script
+into an internal syntax tree and then hands the syntax tree to one of
+several user-interface front ends.
+
+
+
+\subsection{Statements}
+
+A Config Language script is a list of statements.  There are 21 simple
+statements; an 'if' statement; menu blocks; and a 'source' statement.
+
+A '\verb"\"' at the end of a line marks a line continuation.
+
+'\#' usually introduces a comment, which continues to the end of the line.
+Lines of the form '\# \dots is not set', however, are not comments.  They
+are semantically meaningful, and all four config interpreters implement
+this meaning.
+
+Newlines are significant.  You may not substitute semicolons for newlines.
+The 'if' statement does accept a semicolon in one position; you may use
+a newline in that position instead.
+
+Here are the basic grammar elements.
+\begin{itemize}
+
+\item  A \textit{/prompt/} is a single-quoted string or a double-quoted string.
+    If the word is double-quoted, it may not have any \$ substitutions.
+
+\item A \textit{/word/} is a single unquoted word, a single-quoted string, or a
+    double-quoted string.  If the word is unquoted or double quoted,
+    then \$-substitution will be performed on the word.
+
+\item A \textit{/symbol/} is a single unquoted word.  A symbol must have a name of
+    the form \texttt{CONFIG\_*}.  scripts/mkdep.c relies on this convention in order
+    to generate dependencies on individual \texttt{CONFIG\_*} symbols instead of
+    making one massive dependency on include/linux/autoconf.h.
+
+\item A \textit{/dep/} is a dependency.  Syntactically, it is a \textit{/word/}.
+    At run
+    time, a \textit{/dep/} must evaluate to "y", "m", "n", or "".
+
+\item An \textit{/expr/} is a bash-like expression using the operators
+    '=', '!=', '-a', '-o', and '!'.
+
+\end{itemize}
+
+Here are all the statements:
+
+\begin{itemize}
+
+\item Text statements:
+
+\begin{tabular}{l}
+ \texttt{mainmenu\_name}\quad\textit{/prompt/}\\
+ \texttt{comment}\quad\textit{/prompt/}\\
+ \texttt{text}\quad\textit{/prompt/}\\
+\end{tabular}
+
+\item  Ask statements:
+
+\begin{tabular}{l}
+ \texttt{bool}\quad\textit{/prompt/}\quad\textit{/symbol/}\\
+ \texttt{hex}\quad\textit{/prompt/}\quad\textit{/symbol/}\quad\textit{/word/}\\
+ \texttt{int}\quad\textit{/prompt/}\quad\textit{/symbol/}\quad\textit{/word/}\\
+ \texttt{string}\quad\textit{/prompt/}\quad\textit{/symbol/}\quad\textit{/word/}\\
+ \texttt{tristate}\quad\textit{/prompt/}\quad\textit{/symbol/}\\
+\end{tabular}
+
+\item  Define statements:
+
+\begin{tabular}{l}
+ \texttt{define\_bool}     \quad\textit{/symbol/} \quad\textit{/word/}\\
+ \texttt{define\_hex}      \quad\textit{/symbol/} \quad\textit{/word/}\\
+ \texttt{define\_int}      \quad\textit{/symbol/} \quad\textit{/word/}\\
+ \texttt{define\_string}   \quad\textit{/symbol/} \quad\textit{/word/}\\
+ \texttt{define\_tristate}  \quad\textit{/symbol/} \quad\textit{/word/}\\
+\end{tabular}
+
+\item  Dependent statements:
+
+\begin{tabular}{l}
+ \texttt{dep\_bool}    \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/dep/} \dots\\
+ \texttt{dep\_mbool}   \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/dep/} \dots\\
+ \texttt{dep\_hex}     \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/word/} \quad\textit{/dep/} \quad\dots\\
+ \texttt{dep\_int}     \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/word/} \quad\textit{/dep/} \quad\dots\\
+ \texttt{dep\_string}  \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/word/} \quad\textit{/dep/} \quad\dots\\
+ \texttt{dep\_tristate} \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/dep/} \quad\dots\\
+\end{tabular}
+
+\item Unset statement:
+
+\begin{tabular}{l}
+ \texttt{unset} \quad\textit{/symbol/}\quad\dots\\
+\end{tabular}
+
+\item  Choice statements:
+
+\begin{tabular}{l}
+  \texttt{choice}          \quad\textit{/prompt/} \quad\textit{/word/} \quad\textit{/word/}\\
+  \texttt{nchoice}         \quad\textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/prompt/} \quad\textit{/symbol/}\quad\dots\\
+\end{tabular}
+
+\item If statements:
+
+\begin{tabular}{l}
+ \texttt{if}\quad [ \textit{/expr/} ] \quad;\quad \texttt{then}\\
+          \qquad\textit{/statement/}\\
+          \qquad\dots\\
+        \texttt{fi}\\
+
+ \texttt{if} \quad[ \textit{/expr/} ] \quad;\quad then\\
+          \qquad\textit{/statement/}\\
+          \qquad\dots\\
+        \texttt{else}\\
+          \qquad\textit{/statement/}\\
+          \qquad\dots\\
+        \texttt{fi}\\
+\end{tabular}
+
+\item Menu block:
+
+\begin{tabular}{l}
+   \texttt{mainmenu\_option} \texttt{next\_comment}\\
+   \texttt{comment}\quad \textit{/prompt/}\\
+         \qquad\textit{/statement/}\\
+         \qquad\dots\\
+        \texttt{endmenu}\\
+\end{tabular}
+
+\item Source statement:
+
+\begin{tabular}{l}
+ \texttt{source} \textit{/word/}
+\end{tabular}
+
+\end{itemize}
+
+
+
+\subsubsection{\texttt{mainmenu\_name}\quad \textit{/prompt/}}
+
+This verb is a lot less important than it looks.  It specifies the top-level
+name of this Config Language file.
+
+\begin{tabular}{ll}
+Configure:  &ignores this line\\
+Menuconfig: &ignores this line\\
+Xconfig:    &uses \textit{/prompt/} for the label window.\\
+mconfig:    &ignores this line (mconfig does a better job without it).\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # arch/sparc/config.in
+  mainmenu_name "Linux/SPARC Kernel Configuration"
+\end{verbatim}}
+
+
+\subsubsection{\texttt{comment} \quad\textit{/prompt/}}
+
+This verb displays its prompt to the user during the configuration process
+and also echoes it to the output files during output.  Note that the
+prompt, like all prompts, is a quoted string with no dollar substitution.
+
+The \texttt{comment} verb is not a Config Language comment.  It causes the
+user interface to display text, and it causes output to appear in the
+output files.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/net/Config.in
+  comment 'CCP compressors for PPP are only built as modules.'
+\end{verbatim}}
+
+
+\subsubsection{\texttt{text} \quad\textit{/prompt/}}
+
+This verb displays the prompt to the user with no adornment whatsoever.
+It does not echo the prompt to the output file.  mconfig uses this verb
+internally for its help facility.
+
+\begin{tabular}{ll}
+Configure:  &not implemented\\
+Menuconfig: &not implemented\\
+Xconfig:    &not implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # mconfig internal help text
+  text 'Here are all the mconfig command line options.'
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{bool}\quad \textit{/prompt/}\quad\textit{/symbol/}}
+
+This verb displays \textit{/prompt/} to the user, accepts a value from the user,
+and assigns that value to \textit{/symbol/}.  The legal input values are "n" and
+"y".
+
+Note that the \texttt{bool} verb does not have a default value.  People keep
+trying to write Config Language scripts with a default value for \texttt{bool},
+but \textbf{all} of the existing language interpreters discard additional values.
+Feel free to submit a multi-interpreter patch to linux-kbuild if you
+want to implement this as an enhancement.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # arch/i386/config.in
+  bool 'Symmetric multi-processing support' CONFIG_SMP
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{hex}\quad\textit{/prompt/}\quad\textit{/symbol/}\quad\textit{/word/}}
+
+This verb displays \textit{/prompt/} to the user, accepts a value from the user,
+and assigns that value to \textit{/symbol/}.  Any hexadecimal number is a legal
+input value.  \textit{/word/} is the default value.
+
+The \texttt{hex} verb does not accept range parameters.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/sound/Config.in
+  hex 'I/O base for SB Check from manual of the card' \
+    CONFIG_SB_BASE 220
+\end{verbatim}}
+
+
+\subsubsection{\texttt{int}\quad \textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/word/}}
+
+This verb displays \textit{/prompt/} to the user, accepts a value from the user,
+and assigns that value to \textit{/symbol/.  /word/} is the default value.
+Any decimal number is a legal input value.
+
+The \texttt{int} verb does not accept range parameters.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/char/Config.in
+  int 'Maximum number of Unix98 PTYs in use (0-2048)' \
+        CONFIG_UNIX98_PTY_COUNT 256
+\end{verbatim}}
+
+
+\subsubsection{\texttt{string}\quad \textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/word/}}
+
+This verb displays \textit{/prompt/} to the user, accepts a value from the user,
+and assigns that value to \textit{/symbol/.  /word/} is the default value.  Legal
+input values are any ASCII string, except for the characters '"' and '\verb"\"'.
+Configure will trap an input string of "?" to display help.
+
+The default value is mandatory.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/sound/Config.in
+  string '  Full pathname of DSPxxx.LD firmware file' \
+        CONFIG_PSS_BOOT_FILE /etc/sound/dsp001.ld
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{tristate}\quad \textit{/prompt/}\quad \textit{/symbol/}}
+
+This verb displays \textit{/prompt/} to the user, accepts a value from the user,
+and assigns that value to \textit{/symbol/}.  Legal values are "n", "m", or "y".
+
+The value "m" stands for "module"; it indicates that \textit{/symbol/} should
+be built as a kernel module.  The value "m" is legal only if the symbol
+CONFIG\_MODULES currently has the value "y".
+
+The \texttt{tristate} verb does not have a default value.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # fs/Config.in
+  tristate 'NFS filesystem support' CONFIG_NFS_FS
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{define\_bool}\quad \textit{/symbol/}\quad \textit{/word/}}
+
+This verb the value of \textit{/word/} to \textit{/symbol/}.  
+Legal values are "n" or "y".
+
+For compatibility reasons, the value of "m" is also legal, because it
+will be a while before \texttt{define\_tristate} is implemented everywhere.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # arch/alpha/config.in
+  if [ "$CONFIG_ALPHA_GENERIC" = "y" ]
+  then
+    define_bool CONFIG_PCI y
+    define_bool CONFIG_ALPHA_NEED_ROUNDING_EMULATION y
+  fi
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{define\_hex} \quad\textit{/symbol/}\quad \textit{/word/}}
+
+This verb assigns the value of \textit{/word/} to \textit{/symbol/}.  Any hexadecimal
+number is a legal value.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # Not from the corpus
+  bool 'Specify custom serial port' CONFIG_SERIAL_PORT_CUSTOM
+  if [ "$CONFIG_SERIAL_PORT_CUSTOM" = "y" ]; then
+    hex 'Serial port number' CONFIG_SERIAL_PORT
+  else
+    define_hex CONFIG_SERIAL_PORT 0x3F8
+  fi
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{define\_int} \quad\textit{/symbol/}\quad \textit{/word/}}
+
+This verb assigns \textit{/symbol/} the value \textit{/word/}.  
+Any decimal number is a legal value.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/char/ftape/Config.in
+  define_int CONFIG_FT_ALPHA_CLOCK 0
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{define\_string}\quad \textit{/symbol/} \quad\textit{/word/}}
+
+This verb assigns the value of \textit{/word/} to \textit{/symbol/}. 
+Legal input values are any ASCII string, except for the characters '"' 
+and '\verb"\"'.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # Not from the corpus
+  define_string CONFIG_VERSION "2.2.0"
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{define\_tristate}\quad \textit{/symbol/} \quad\textit{/word/}}
+
+This verb assigns the value of \textit{/word/} to \textit{/symbol/}.  
+Legal input values are "n", "m", and "y".
+
+As soon as this verb is implemented in all interpreters, please use it
+instead of \texttt{define\_bool} to define tristate values.  This aids in static
+type checking.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/video/Config.in
+  if [ "$CONFIG_FB_AMIGA" = "y" ]; then
+     define_tristate CONFIG_FBCON_AFB y
+     define_tristate CONFIG_FBCON_ILBM y
+    else
+     if [ "$CONFIG_FB_AMIGA" = "m" ]; then
+        define_tristate CONFIG_FBCON_AFB m
+        define_tristate CONFIG_FBCON_ILBM m
+     fi
+  fi
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{dep\_bool} \quad\textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/dep/} \quad\dots}
+
+This verb evaluates all of the dependencies in the dependency list.
+Any dependency which has a value of "y" does not restrict the input
+range.  Any dependency which has an empty value is ignored.
+Any dependency which has a value of "n", or which has some other value,
+(like "m") restricts the input range to "n".  Quoting dependencies is not
+allowed. Using dependencies with an empty value possible is not
+recommended.  See also \texttt{dep\_mbool} below.
+
+If the input range is restricted to the single choice "n", \texttt{dep\_bool}
+silently assigns "n" to \textit{/symbol/}.  If the input range has more than
+one choice, dep\_bool displays \textit{/prompt/} to the user, accepts a value
+from the user, and assigns that value to \textit{/symbol/}.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+XConfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/net/Config.in
+  dep_bool 'Aironet 4500/4800 PCI support 'CONFIG_AIRONET4500_PCI \
+    $CONFIG_PCI
+\end{verbatim}}
+
+Known bugs:
+\begin{itemize}
+\item Xconfig does not write "\# foo is not set" to .config (as well as
+  "\#undef foo" to autoconf.h) if command is disabled by its dependencies.
+\end{itemize}
+
+
+\subsubsection{\texttt{dep\_mbool} \quad\textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/dep/} \quad\dots}
+
+This verb evaluates all of the dependencies in the dependency list.
+Any dependency which has a value of "y" or "m" does not restrict the
+input range.  Any dependency which has an empty value is ignored.
+Any dependency which has a value of "n", or which has some other value,
+restricts the input range to "n".  Quoting dependencies is not allowed.
+Using dependencies with an empty value possible is not recommended.
+
+If the input range is restricted to the single choice "n", dep\_bool
+silently assigns "n" to \textit{/symbol/}.  If the input range has more than
+one choice, \texttt{dep\_bool} displays \textit{/prompt/} to the user, accepts a value
+from the user, and assigns that value to \textit{/symbol/}.
+
+Notice that the only difference between \texttt{dep\_bool} and \texttt{dep\_mbool}
+is in the way of treating the "m" value as a dependency.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+XConfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # Not from the corpus
+  dep_mbool 'Packet socket: mmapped IO' CONFIG_PACKET_MMAP \
+    $CONFIG_PACKET
+\end{verbatim}}
+
+Known bugs:
+\begin{itemize}
+\item Xconfig does not write "\# foo is not set" to .config (as well as
+  "\#undef foo" to autoconf.h) if command is disabled by its dependencies.
+\end{itemize}
+
+
+\subsubsection{\texttt{dep\_hex}\quad \textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/word/}\quad \textit{/dep/}\quad \dots\newline
+dep\_int\quad \textit{/prompt/} \quad\textit{/symbol/}\quad \textit{/word/}\quad \textit{/dep/}\quad \dots\newline
+dep\_string \quad\textit{/prompt/}\quad \textit{/symbol/}\quad \textit{/word/}\quad \textit{/dep/}\quad \dots}
+
+I am still thinking about the semantics of these verbs.
+
+\begin{tabular}{ll}
+Configure:  &not implemented\\
+Menuconfig: &not implemented\\
+XConfig:    &not implemented\\
+mconfig:    &not implemented\\
+\end{tabular}
+
+
+
+\subsubsection{\texttt{dep\_tristate}\quad \textit{/prompt/} \quad\textit{/symbol/} \quad\textit{/dep/}\quad \dots}
+
+This verb evaluates all of the dependencies in the dependency list.
+Any dependency which has a value of "y" does not restrict the input range.
+Any dependency which has a value of "m" restricts the input range to
+"m" or "n".  Any dependency which has an empty value is ignored.
+Any dependency which has a value of "n", or which has some other value,
+restricts the input range to "n".  Quoting dependencies is not allowed.
+Using dependencies with an empty value possible is not recommended.
+
+If the input range is restricted to the single choice "n", dep\_tristate
+silently assigns "n" to \textit{/symbol/}.  If the input range has more than
+one choice, \texttt{dep\_tristate} displays \textit{/prompt/} to the user, accepts a value
+from the user, and assigns that value to \textit{/symbol/}.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # drivers/char/Config.in
+  dep_tristate 'Parallel printer support' CONFIG_PRINTER $CONFIG_PARPORT
+\end{verbatim}}
+
+Known bugs:
+\begin{itemize}
+\item Xconfig does not write "\# foo is not set" to .config (as well as
+  "\#undef foo" to autoconf.h) if command is disabled by its dependencies.
+\end{itemize}
+
+
+\subsubsection{\texttt{unset}\quad \textit{/symbol/} \quad\dots}
+
+This verb assigns the value "" to \textit{/symbol/}, but does not cause 
+\textit{/symbol/}
+to appear in the output.  The existence of this verb is a hack; it covers
+up deeper problems with variable semantics in a random-execution language.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented (with bugs)\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # arch/mips/config.in
+  unset CONFIG_PCI
+  unset CONFIG_MIPS_JAZZ
+  unset CONFIG_VIDEO_G364
+\end{verbatim}}
+
+
+
+\subsubsection{\texttt{choice}\quad \textit{/prompt/}\quad\textit{/word/}\quad\textit{/word/}}
+
+This verb implements a choice list or "radio button list" selection.
+It displays \textit{/prompt/} to the user, as well as a group of sub-prompts
+which have corresponding symbols.
+
+When the user selects a value, the choice verb sets the corresponding
+symbol to "y" and sets all the other symbols in the choice list to "n".
+
+The second argument is a single-quoted or double-quoted word that
+describes a series of sub-prompts and symbol names.  The interpreter
+breaks up the word at white space boundaries into a list of sub-words.
+The first sub-word is the first prompt; the second sub-word is the
+first symbol.  The third sub-word is the second prompt; the fourth
+sub-word is the second symbol.  And so on, for all the sub-words.
+
+The third word is a literal word.  Its value must be a unique abbreviation
+for exactly one of the prompts.  The symbol corresponding to this prompt
+is the default enabled symbol.
+
+Note that because of the syntax of the \texttt{choice} verb, the sub-prompts
+may not have spaces in them.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Example:
+{\small\begin{verbatim}
+  # arch/i386/config.in
+  choice '  PCI access mode'         \
+    "BIOS      CONFIG_PCI_GOBIOS     \
+     Direct    CONFIG_PCI_GODIRECT   \
+     Any       CONFIG_PCI_GOANY"     Any
+\end{verbatim}}
+
+
+
+\subsubsection{nchoice\quad \textit{/prompt/}\quad\textit{/symbol/}\quad\textit{/prompt/}\quad\textit{/symbol/}\dots}
+
+This verb has the same semantics as the choice verb, but with a sensible
+syntax.
+
+The first \textit{/prompt/} is the master prompt for the entire choice list.
+
+The first \textit{/symbol/} is the default symbol to enable (notice that this
+is a symbol, not a unique prompt abbreviation).
+
+The subsequent \textit{/prompt/} and \textit{/symbol/} pairs are the prompts and symbols
+for the choice list.
+
+\begin{tabular}{ll}
+Configure:  &not implemented\\
+Menuconfig: &not implemented\\
+XConfig:    &not implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+
+
+\subsubsection{\texttt{if}\quad [ \textit{/expr/} ]\quad; \quad\texttt{then}}
+
+This is a conditional statement, with an optional \texttt{else} clause.  You may
+substitute a newline for the semicolon if you choose.
+
+\textit{/expr/} may contain the following atoms and operators.  Note that, 
+unlike shell, you must use double quotes around every atom.
+
+    \textit{/atom/}:
+        "\dots"                 a literal
+        "\$\dots"                       a variable
+
+    \textit{/expr/}:
+        \textit{/atom/  = /atom/}       true if atoms have identical value
+        \textit{/atom/ != /atom/}       true if atoms have different value
+
+    \textit{/expr/}:
+        \textit{/expr/} -o \textit{/expr/}      true if either expression is true
+        \textit{/expr/} -a \textit{/expr/}      true if both expressions are true
+        ! \textit{/expr/}               true if expression is not true
+
+Note that a naked \textit{/atom/} is not a valid \textit{/expr/}.  If you try to use it
+as such:
+
+{\small\begin{verbatim}
+  # Do not do this.
+  if [ "$CONFIG_EXPERIMENTAL" ]; then
+    bool 'Bogus experimental feature' CONFIG_BOGUS
+  fi
+\end{verbatim}}
+
+\dots then you will be surprised, because \texttt{CONFIG\_EXPERIMENTAL} never 
+has a
+value of the empty string!  It is always "y" or "n", and both of these
+are treated as true (non-empty) by the bash-based interpreters Configure
+and Menuconfig.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+XConfig:    &implemented, with bugs\\
+mconfig:    &implemented\\
+\end{tabular}
+
+Xconfig has some known bugs, and probably some unknown bugs too:
+\begin{itemize}
+\item literals with an empty "" value are not properly handled.
+\end{itemize}
+
+
+
+\subsubsection{\texttt{mainmenu\_option} \quad\texttt{next\_comment}}
+
+This verb introduces a new menu.  The next statement must have a comment
+verb.  The \textit{/prompt/} of that comment verb becomes the title of the menu.
+(I have no idea why the original designer didn't create a 'menu \dots' verb).
+
+Statements outside the scope of any menu are in the implicit top menu.
+The title of the top menu comes from a variety of sources, depending on
+the interpreter.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+
+
+\subsubsection{\texttt{endmenu}}
+
+This verb closes the scope of a menu.
+
+\begin{tabular}{ll}
+Configure:  &implemented\\
+Menuconfig: &implemented\\
+Xconfig:    &implemented\\
+mconfig:    &implemented\\
+\end{tabular}
+
+
+
+\subsubsection{\texttt{source} \quad\textit{/word/}}
+
+This verb interprets the literal \textit{/word/} as a filename, and interpolates
+the contents of that file.  The word must be a single unquoted literal
+word.
+
+Some interpreters interpret this verb at run time; some interpreters
+interpret it at parse time.
+
+Inclusion is textual inclusion, like the C preprocessor \#include facility.
+The \texttt{source} verb does not imply a submenu or any kind of block nesting.
+
+\begin{tabular}{ll}
+Configure:  &implemented (run time)\\
+Menuconfig: &implemented (parse time)\\
+Xconfig:    &implemented (parse time)\\
+mconfig:    &implemented (parse time)\\
+\end{tabular}
+

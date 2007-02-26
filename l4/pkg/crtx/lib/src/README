@@ -1,0 +1,39 @@
+crt0_getopt.S:
+  - for simple L4 applications (sigma0, optional OSKit 0.6)
+  - initialization of argc/argv
+  - falls asleep after main function exited
+
+crt0_l4env_stat.S (OBSOLETE, use crt0_l4env.S):
+  - for L4env applications (l4env, optional OSKit 1.0)
+  - initialization of argv/argv
+  - calls l4_startup for L4env initialization
+  - OBSOLETE: still used by scsi, dsi_meteor, semaphore
+
+crt0_l4env.S:
+  - for L4env applications (l4env, optional OSKit 1.0)
+  - initialization for static constructors
+  - initialization of argv/argv
+  - calls l4env_startup for L4env initialization
+  - use in conjunction with crtn.S!
+
+crt0_l4env_dyn.S:
+  - for L4env applications with dynamic libloader/libl4env libraries
+  - application is only startable by L4 loader
+  - does nothing because the whole work is done by the L4 loader
+
+crt0_l4env_freebsd.S:
+  - for L4env applications (l4env, OSKit 1.0)
+  - initialization of is done by multiboot_main
+  - calls l4env_startup for L4env initialization
+  - use in conjunction with crtn.S!
+
+crt0_oskit10_support.S:
+  - for sigma0 applications linked against the OSKit 1.0
+  - calls multiboot_main
+
+crtn.S:
+  - close .ctors, .dtors, .eh_frame sections
+
+main_stat.ld:
+  - linker script for standard L4 applications
+

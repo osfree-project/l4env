@@ -1,0 +1,99 @@
+<!-- -*-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN" [
+<!Entity % Docchars system "docchars.ent"> %Docchars;
+
+<!entity myself cdata "Uwe Dannowski">
+<!entity my-Inst cdata "DROPS">
+
+]>
+
+<manpage sect=kernel date="13 October 1998">names
+<short>DROPS Name Service
+<sect>Synopsis
+
+<code/names/
+
+<sect>Description
+
+Names is a simple name service for DROPS. It provides a mapping of names (strings) to L4 <code/thread_id/s and vice versa.
+
+<sect>Features
+Names implements the following primitives:
+<list>
+<o>register a name with a thread_id
+<o>unregister name
+<o>query thread_id of a name
+<o>query name of a thread_id
+</list>
+Names enforces a string being registered at most once at a certain time.
+
+<sect>Limitations
+The number of names that can be registered is MAX_ENTRIES, the maximum name length is MAX_NAME_LEN. These values are defined in <code/names.h/ .
+
+Security is currently not a big thing in names. A thread can register a name for an arbitrary thread_id - and unregister it as well.
+
+<sect>Usage
+The DROPS Name Service is implemented as an L4 server. Currently it has only one command line option:
+
+<desc>
+<dt/<code/ -verbose/ <var/verbosity//
+When <var/verbosity/ is 1 all <code/register/ and <code/unregister/ requests are logged.
+With <var/verbosity/ set to 2 also all <code/query_*/ requests are logged.
+</desc>
+
+The library <code/libnames.a/ provides a convenient way to access the DROPS Name Service through a set of C function calls:
+
+<verb>
+
+#include <l4/libnames.h>
+
+int names_register(const char* name);
+int names_unregister(const char* name);
+int names_query_name(const char* name,
+                     l4_threadid_t* id);
+int names_query_id(const l4_threadid_t id,
+                   char* name,
+                   const int length);
+int names_waitfor_name(const char* name,
+                       l4_threadid_t* id,
+                       const int timeout);
+</verb>
+
+<sect>Library Functions
+<code/<verb/
+int names_register(const char* name);/
+<desc>
+<dt//The string <code/name/ is registered with the caller's own thread_id. A nonzero value is returned on success. A value of zero may be returned due to the same name already being registered.
+</desc>
+
+<code/<verb/
+int names_unregister(const char* name);/
+<desc>
+<dt//The string <code/name/ is unregistered. A nonzero value is returned on success. A value of zero may be returned due to the name not being registered before.
+</desc>
+
+<code/<verb/
+int names_query_name(const char* name,
+                     l4_threadid_t* id);/
+<desc>
+<dt//The name service is queried for the string <code/name/. If found, the associated thread_id is written to the buffer referenced by <code/id/. A nonzero value is returned on success. A value of zero may be returned due to the name not being registered before.
+</desc>
+
+<code/<verb/
+int names_query_id(const l4_threadid_t id,
+                   char* name,
+                   const int length);/
+<desc>
+<dt//The name service is queried for the thread_id <code/id/. If there is a name registered for <code/id/, the associated name is copied to the buffer referenced by <code/name/ (<code/length/ is the size of the buffer). A nonzero value is returned on success. A value of zero may be returned due to the name not being registered before.
+</desc>
+
+<code/<verb/
+int names_waitfor_name(const char* name,
+                       l4_threadid_t* id,
+                       const int timeout);/
+<desc>
+<dt//The name service is repeatedly queried for the string <code/name/. If the name gets registered before <code/timeout/ is over, the associated thread_id is copied into the buffer referenced by <code/id/. A nonzero value is returned on success. A value of zero may be returned due to a timeout.
+</desc>
+
+<sect>Dependencies
+<code/names/ depends on libl4util, libmc and liboskit_support. <code/libnames/ depends on librmgr and libl4util.

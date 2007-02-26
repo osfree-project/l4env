@@ -1,0 +1,339 @@
+# This is a script exercising Richard Todd's weird test cases for the
+# side-effect deducer.  It is intended to be fed to cmlconfigure -s.
+
+l EOF
+condition nohelp on y
+condition trits on y
+
+symbols
+  MARKET "Market"
+  EAT    "Eat"
+  FORK   "Fork"
+  SPOON  "Spoon"
+  KNIFE  "Knife"
+  SPATULA "Spatula"
+
+  HAS_CAR   "Car"
+  HAS_ROLEX "Rolex"
+  HAS_MERCEDES "Mercedes"
+  HAS_PINTO    "Pinto"
+
+derive MIN_FORK_SPOON  from FORK & SPOON
+derive MAX_FORK_SPOON  from FORK | SPOON
+derive EQL_FORK_SPOON  from FORK == SPOON
+derive TRN_FORK_SPOON  from FORK!=n ? FORK : SPOON
+derive NEQ_FORK_SPOON  from FORK != SPOON
+derive SIM_FORK_SPOON  from FORK $ SPOON
+derive LT_FORK_SPOON   from FORK < SPOON
+derive GT_FORK_SPOON   from FORK > SPOON
+derive LTEQ_FORK_SPOON   from FORK <= SPOON
+derive GTEQ_FORK_SPOON   from FORK >= SPOON
+
+# conventional logic rules say these must always be true...
+# We'll make sure CML2 know that they are.
+require (EQL_FORK_SPOON != NEQ_FORK_SPOON) implies
+        (FORK==SPOON or (FORK$SPOON == n))
+
+require (y or n) implies ((MIN_FORK_SPOON | n) <= (MAX_FORK_SPOON | n))
+
+require ((EQL_FORK_SPOON == n) or (EQL_FORK_SPOON == y)) implies 
+           ( (EQL_FORK_SPOON >= NEQ_FORK_SPOON) or 
+             (EQL_FORK_SPOON <= NEQ_FORK_SPOON) ) and
+           ( EQL_FORK_SPOON or NEQ_FORK_SPOON )
+
+require (FORK > SPOON) implies ((FORK >= SPOON) and (FORK != SPOON))
+require (FORK < SPOON) implies ((FORK <= SPOON) and (FORK != SPOON))
+
+derive HAS_MONEY from HAS_ROLEX
+require HAS_MONEY >= HAS_MERCEDES
+require (HAS_MERCEDES != n) implies  
+   (HAS_PINTO == (EQL_FORK_SPOON == NEQ_FORK_SPOON))
+
+menus
+  main 'Simple menu'
+  whoami "Todd's test"
+
+banner whoami
+
+start main
+
+menu main
+    MARKET {EAT? { FORK? SPOON? KNIFE SPATULA }}
+    HAS_CAR { HAS_MERCEDES? HAS_PINTO? }
+    HAS_ROLEX?
+EOF
+
+v 0
+
+#------------------------------------------------------------------------ 
+# Case 1: Ancestors stay bound to a valid value when its largest
+#         dependent drops to 'n'
+c
+y FORK
+V MARKET=y EAT=y FORK=y SPOON=n
+m SPOON
+V MARKET=y EAT=y FORK=y SPOON=m
+n FORK
+V MARKET=y EAT=m FORK=n SPOON=m
+
+#------------------------------------------------------------------------ 
+# Case 2:  Ancestors stay bound to a valid value when the dependent
+#          which forced them on is moving.
+c
+y FORK
+V MARKET=y  EAT=y  FORK=y  SPOON=n
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+n FORK
+V MARKET=n  EAT=n  FORK=n  SPOON=n
+
+#------------------------------------------------------------------------ 
+# Case 3:  When a distant ancestor flips between 'n' and 'y', the
+#          binding history is remembered. 
+c
+y EAT
+V MARKET=y  EAT=y  FORK=n   SPOON=n
+m FORK
+V MARKET=y  EAT=y  FORK=m   SPOON=n
+n MARKET
+V MARKET=n  EAT=n  FORK=n   SPOON=n
+y MARKET
+V MARKET=y  EAT=y  FORK=m   SPOON=n
+
+#------------------------------------------------------------------------ 
+# Case 4: Variation on case 3.
+c
+m EAT
+V MARKET=y  EAT=m  FORK=n  SPOON=n
+y FORK
+V MARKET=y  EAT=y  FORK=y  SPOON=n
+n MARKET
+V MARKET=n  EAT=n  FORK=n  SPOON=n
+y MARKET
+V MARKET=y  EAT=y  FORK=y  SPOON=n
+
+#------------------------------------------------------------------------ 
+# Case 5:  As two dependents swap values, the ancestors remain
+#          valid for all the intermediate configurations. 
+c
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+y SPOON
+V MARKET=y  EAT=y  FORK=m  SPOON=y
+y FORK
+V MARKET=y  EAT=y  FORK=y  SPOON=y
+m SPOON
+V MARKET=y  EAT=y  FORK=y  SPOON=m
+
+#------------------------------------------------------------------------ 
+# Case 6:  Avoid 'false memory' when one dependent has been forced
+#          to 'n', and another dependent is set to 'y' later.  Only the
+#          second dependent should be set at the end.  
+c
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+n EAT
+V MARKET=y  EAT=n  FORK=n  SPOON=n
+y SPOON
+V MARKET=y  EAT=y  FORK=n  SPOON=y
+
+#------------------------------------------------------------------------ 
+# Case 7:  Continuation of case 6.  Make sure we can actually go back
+#          and select the first dependent again, without falsely waking
+#          up the second.
+c
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+n EAT
+V MARKET=y  EAT=n  FORK=n  SPOON=n
+y SPOON
+V MARKET=y  EAT=y  FORK=n  SPOON=y
+n EAT
+V MARKET=y  EAT=n  FORK=n  SPOON=n
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+
+#------------------------------------------------------------------------ 
+# Case 8:  Make sure that UNCHANGED handling works properly.
+c
+y FORK
+V MARKET=y  EAT=y  FORK=y  SPOON=n
+y FORK
+V MARKET=y  EAT=y  FORK=y  SPOON=n
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+m FORK
+V MARKET=y  EAT=m  FORK=m  SPOON=n
+n FORK
+V MARKET=n  EAT=n  FORK=n  SPOON=n
+n FORK
+V MARKET=n  EAT=n  FORK=n  SPOON=n
+
+#------------------------------------------------------------------------ 
+# Case 9:  Check to make sure the insertion point for a binding in
+#          the binding cache is selected properly when a large binding
+#          is hidden by a smaller one.  In this case, EAT has a dormant
+#          binding to 'y' from FORK, but it should not affect the insertion
+#          point when SPOON becomes active.
+c
+y FORK
+V MARKET=y  EAT=y  FORK=y SPOON=n
+n EAT
+V MARKET=y  EAT=n  FORK=n SPOON=n
+m SPOON
+V MARKET=y  EAT=m  FORK=n SPOON=m
+
+#------------------------------------------------------------------------ 
+# Case 10:  Make sure bools can force their ancestors, even when their
+#           ancestors are not 'n'
+c
+y KNIFE
+y SPATULA
+n KNIFE
+V EAT=m KNIFE=n SPATULA=y
+n SPATULA
+V MARKET=n EAT=n KNIFE=n SPATULA=n
+
+#------------------------------------------------------------------------ 
+# Case 11:  Ensure that the constraint on HAS_MERCEDES holds
+c
+m HAS_ROLEX 
+V HAS_ROLEX=m HAS_MERCEDES=n HAS_MONEY=m HAS_CAR=n HAS_PINTO=n
+m HAS_MERCEDES
+V HAS_ROLEX=m HAS_MERCEDES=m HAS_MONEY=m HAS_CAR=y HAS_PINTO=n
+# next line should cause rollback due to violation....
+y HAS_MERCEDES
+V HAS_ROLEX=m HAS_MERCEDES=m HAS_MONEY=m HAS_CAR=y HAS_PINTO=n
+y HAS_ROLEX
+V HAS_ROLEX=y HAS_MERCEDES=m HAS_MONEY=y HAS_CAR=y HAS_PINTO=n
+y HAS_MERCEDES
+V HAS_ROLEX=y HAS_MERCEDES=y HAS_MONEY=y HAS_CAR=y HAS_PINTO=n
+n HAS_CAR
+V HAS_ROLEX=y HAS_MERCEDES=n HAS_MONEY=y HAS_CAR=n HAS_PINTO=n
+
+#------------------------------------------------------------------------ 
+# Case 12:  Bool dependent forces ancestor 'n' to 'y'
+c
+y KNIFE
+V MARKET=y EAT=m KNIFE=y
+
+#------------------------------------------------------------------------ 
+# Case 13:  Bool dependent does *not* change ancestor 'm' to 'y'
+c
+m SPOON 
+V EAT=m SPOON=m
+y KNIFE
+V EAT=m KNIFE=y SPOON=m
+
+#------------------------------------------------------------------------ 
+# Case 14:  Trit ancestor does not change 'y' bool dependent when
+#           going from 'y' to 'm' 
+c
+y KNIFE
+V EAT=m KNIFE=y 
+m EAT
+V EAT=m KNIFE=y
+
+#------------------------------------------------------------------------ 
+# Case 15:  Ensure that derived values are derived properly
+#          
+c
+V EQL_FORK_SPOON=y MAX_FORK_SPOON=n MIN_FORK_SPOON=n TRN_FORK_SPOON=n
+V NEQ_FORK_SPOON=n SIM_FORK_SPOON=n 
+V LT_FORK_SPOON=n GT_FORK_SPOON=n LTEQ_FORK_SPOON=y GTEQ_FORK_SPOON=y
+m SPOON
+V EQL_FORK_SPOON=n MAX_FORK_SPOON=m MIN_FORK_SPOON=n TRN_FORK_SPOON=m
+V NEQ_FORK_SPOON=y SIM_FORK_SPOON=n
+V LT_FORK_SPOON=y GT_FORK_SPOON=n LTEQ_FORK_SPOON=y GTEQ_FORK_SPOON=n
+m FORK
+V EQL_FORK_SPOON=y MAX_FORK_SPOON=m MIN_FORK_SPOON=m TRN_FORK_SPOON=m
+V NEQ_FORK_SPOON=n SIM_FORK_SPOON=m
+V LT_FORK_SPOON=n GT_FORK_SPOON=n LTEQ_FORK_SPOON=y GTEQ_FORK_SPOON=y
+y FORK
+V EQL_FORK_SPOON=n MAX_FORK_SPOON=y MIN_FORK_SPOON=m TRN_FORK_SPOON=y
+V NEQ_FORK_SPOON=y SIM_FORK_SPOON=n
+V LT_FORK_SPOON=n GT_FORK_SPOON=y LTEQ_FORK_SPOON=n GTEQ_FORK_SPOON=y
+y SPOON
+V EQL_FORK_SPOON=y MAX_FORK_SPOON=y MIN_FORK_SPOON=y TRN_FORK_SPOON=y
+V NEQ_FORK_SPOON=n SIM_FORK_SPOON=y
+V LT_FORK_SPOON=n GT_FORK_SPOON=n LTEQ_FORK_SPOON=y GTEQ_FORK_SPOON=y
+n MARKET
+V EQL_FORK_SPOON=y MAX_FORK_SPOON=n MIN_FORK_SPOON=n TRN_FORK_SPOON=n
+V NEQ_FORK_SPOON=n SIM_FORK_SPOON=n
+V LT_FORK_SPOON=n GT_FORK_SPOON=n LTEQ_FORK_SPOON=y GTEQ_FORK_SPOON=y
+
+#------------------------------------------------------------------------ 
+# Case 16:  Ensure, in one case,  that a constraint that can force a 
+#           value, does so.
+c
+y HAS_ROLEX
+m HAS_PINTO
+# Next line forces PINTO to 'n', since that's the only possible
+# valid value for it
+m HAS_MERCEDES
+V HAS_PINTO=n HAS_MERCEDES=m HAS_CAR=y
+# Next line can't force mercedes, though, since implication only
+# goes one direction. 
+y HAS_PINTO
+V HAS_PINTO=n HAS_MERCEDES=m HAS_CAR=y
+# Next line,  CML2 remembers that PINTO used to be m, and puts it
+# back...
+n HAS_MERCEDES
+V HAS_PINTO=m HAS_MERCEDES=n HAS_CAR=y
+n HAS_PINTO
+V HAS_PINTO=n HAS_MERCEDES=n HAS_CAR=n
+
+#------------------------------------------------------------------------ 
+# Case 17:  Show that false memory can produce invalid configurations.
+#         
+c
+y HAS_ROLEX
+m HAS_MERCEDES
+n HAS_CAR
+m HAS_PINTO
+n HAS_CAR
+V HAS_PINTO=n HAS_MERCEDES=n HAS_CAR=n
+# the next line causes a combination of MERCEDES and PINTO that
+# violates one of the 'require' lines in the rule set.
+y HAS_CAR
+V HAS_PINTO=n HAS_MERCEDES=n HAS_CAR=n
+
+#------------------------------------------------------------------------ 
+# Case 18:  Show that a frozen value cannot be changed by a  
+#           dependent which wants to force it.
+c
+m EAT
+V EAT=m MARKET=y
+f EAT
+# next line should fail since EAT has been frozen
+y SPOON
+V EAT=m SPOON=n MARKET=y
+#------------------------------------------------------------------------ 
+# Case 19:  But show that a frozen symbol can be set to its existing value.
+c
+m EAT
+V EAT=m MARKET=y
+f EAT
+m SPOON
+V SPOON=m EAT=m MARKET=y
+
+#------------------------------------------------------------------------
+# Case 20:  Make sure that constraints won't alter
+#           a frozen binding
+c
+y HAS_ROLEX
+m HAS_PINTO
+V HAS_MERCEDES=n HAS_PINTO=m HAS_ROLEX=y
+f HAS_PINTO
+# if PINTO weren't frozen, the next line would force it to 'n'
+m HAS_MERCEDES
+V HAS_MERCEDES=n HAS_PINTO=m HAS_ROLEX=y
+
+#------------------------------------------------------------------------ 
+# Case 21:  Trit ancestor changing around bool dependents
+c
+y EAT
+y KNIFE
+V EAT=y KNIFE=y
+m EAT
+V EAT=m KNIFE=y

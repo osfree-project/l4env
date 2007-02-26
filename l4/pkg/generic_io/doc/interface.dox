@@ -1,0 +1,15 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/*! \mainpage L4Env Generic I/O IPC Interface
+
+\section sec_intro Introduction
+
+The IPC interface is not needed in the `reference' because there is \c
+libio. On the other side \c doxygen creates <em>lots of cruft around
+nothing</em> to document IDLs and so I hate it in the `internals'.
+
+Consequently I extracted the interface of the server and put it in here
+for them who care about it.
+
+*/

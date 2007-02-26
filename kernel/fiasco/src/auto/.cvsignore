@@ -1,0 +1,4 @@
+*.S
+*.cc
+*.h
+stamp-*.ready

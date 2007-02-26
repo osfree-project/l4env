@@ -1,0 +1,87 @@
+			READ.ME for CML2
+
+This is CML2, the second Configuration Menu Language.  It was
+originally written to support configuration of the Linux kernel, but
+no kernel-specific knowledge is built into the language and it may be
+useful for other tasks.
+
+For specific directions on configuring Linux, see READ.ME.LINUX.
+
+			Prerequisites
+
+You will need Python 2.0 or later to run CML2.  Note: some Linux
+distributions still ship only with the older Python 1.5.2 version, so
+you may find you need to upgrade.  I made the jump to requiring 2.0
+because doing so reduces the amount of Python code that will have to
+ship with kernels and other CML2-configured systems by almost 500
+lines and should improve the Tcl/Tk support.
+
+For detailed Python-2.0 installation instructions, see
+<http://www.pythonlabs.com/2.0/>.  You will need the Python-2.0 and
+Tkinter-2.0-8.0 packages, but not expat.  Note: if you install from
+sources, you will have to configure in curses in the Modules/Setup
+file in order for `make menuconfig` to work.
+
+			How To Report Bugs
+
+Report bugs to esr@thyrsus.com.
+
+The best way to report an apparent bug varies depending on what kind
+it is.  Many CML2 `bugs' are actually user-interface feature requests;
+many other `bugs' are actually problems with the CML2 rules files (among
+other things, the rulesfile controls the shape of the menu hierarchy).
+
+If you think you've found a rules-file problem, the best kind of bug
+report is a rulesfile patch accompanied by an explanation.
+
+Things that look like deduction bugs are almost always problems in the
+rules files.  When a symbol BAR seems to have been set incorrectly,
+try typing `C BAR' to see all the constraints that symbol participates
+in (this works in -t or -s modes).  If you can pin down which rule is
+at fault, please report that.
+
+If you think you've found a genuine bug in how CML2 does its
+deduction, please send me three things:
+
+1. Your config.out before.  (If you're starting with a
+   blank slate, no .config.out, it's OK to just tell me that.)
+
+2. A session transcript made with ttyconfig or the -s debugger mode
+illustrating the problem.
+
+3. Your config.out afterwards.
+
+A session transcript made with the -t mode or the -s debug mode is
+usually much more helpful than your natural-language description of
+the problem, because when you try to describe the problem you won't
+necessarily know what important information you're leaving out.
+
+This kind of debugging is what the -s mode of the configurator is for,
+and it has some special comments to support making these bug-trace
+transcripts.  Use 'e' to display the state of a symbol.  Also, the `y'
+command has a suffix form; you can say "y FOO" and symbol FOO will be
+set to y without affecting the symbol you're currently being prompted
+for.  This also works for 'm' and 'n'.  (These commands also work in
+the -t mode.)
+
+			Credits and Licensing
+
+Credit where credit is due, to the intrepid early adopters on the
+linux-kernel list who helped CML2 get past its teething stage: David
+Kamholz, Robert Wittams, Randy Dunlap, Urban Widmark, André Dahlqvist,
+and Zack Weinberg.  Particular thanks go to Giacomo Catenazzi and David
+Relson, who tested the code with great thoroughness. 
+
+André Dahlqvist and Drago Goricanec contributed UI code for the Tk
+front end.  William Stearns contributed many bus dependencies for the
+rules file.  Richard Todd found and fixed some bugs in the
+theorem-prover and helped develop the regression-test system for it.
+Gary Lawrence Murphy translated the CML2 spec to DocBook.
+
+This software is copyright by Eric S. Raymond 2001, and is released
+under the terms of the GNU General Public License, version 2.  When
+CML2 is incorporated into the Linux kernel tree, the kernel copyright
+holder (Linus Torvalds now and for the forseeable future) is
+specifically granted the authority to change the license on the
+kernel's instance of the software to conform with the kernel's policy.
+

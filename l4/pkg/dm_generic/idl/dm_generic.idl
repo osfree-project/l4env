@@ -1,0 +1,329 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file    dm_generic/idl/dm_generic.idl
+ * \brief   L4 generic dataspace manager interface
+ * \ingroup idl_generic
+ *
+ * \date    11/19/2001
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *
+ * Copyright (C) 2000-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+
+/**
+ * L4 threadid type
+ * \ingroup idl
+ */
+typedef struct if_l4dm_threadid
+{
+  unsigned long low;
+  unsigned long high;
+} if_l4dm_threadid_t;
+
+/**
+ * Dataspace id type
+ * \ingroup idl
+ */
+typedef struct if_l4dm_dataspace
+{
+  unsigned long      id;
+  if_l4dm_threadid_t manager;
+} if_l4dm_dataspace_t;
+
+/**
+ * Dataspace manager interface 
+ * \ingroup idl
+ */
+module if_l4dm
+{
+  /**
+   * Generic dataspace manager interface 
+   * \ingroup idl_generic
+   */
+  interface generic
+    {
+      /***********************************************************************/
+      /**
+       * \brief   Map dataspace pages (full version)
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   offset      Offset in dataspace
+       * \param   size        Map size
+       * \param   rcv_size2   Receive window size (log2)
+       * \param   rcv_offs    Offset in receive window
+       * \param   flags       Access rights / flags
+       * \retval  page        Flexpage descriptor
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id / offset
+       *          - -#L4_EPERM   operation not permitted
+       *
+       * Handle pagefault in dataspace, map the page which belongs to 
+       * \a offset.
+       */
+      /***********************************************************************/ 
+      long map(in unsigned long ds_id, 
+	       in unsigned long offset,
+	       in unsigned long size, 
+	       in unsigned long rcv_size2, 
+	       in unsigned long rcv_offs, 
+	       in unsigned long flags, 
+	       out fpage page);
+
+      /***********************************************************************/
+      /**
+       * \brief   Handle dataspace fault
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   offset      Offset in dataspace
+       * \retval  page        Flexpage descriptor
+       *	
+       * \return 0 on success, error code otherwise:
+       *         - -#L4_EINVAL  invalid dataspace id
+       *         - -#L4_EPERM   operation not permitted
+       *
+       * This is a special case of the map call with just the requested page 
+       * as receive window.
+       */
+      /***********************************************************************/ 
+      long fault(in unsigned long ds_id, 
+		 in unsigned long offset,
+		 out fpage page);
+
+      /***********************************************************************/
+      /**
+       * \brief   Close dataspace
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted, only the owner
+       *                         is allowed to close a dataspace
+       */
+      /***********************************************************************/ 
+      long close(in unsigned long ds_id);
+
+      /***********************************************************************/
+      /**
+       * \brief   Close all dataspaces of a client
+       * \ingroup idl_generic
+       * 
+       * \param   client      Client thread id
+       * \param   flags       Flags
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EPERM  permission denied
+       */
+      /***********************************************************************/ 
+      long close_all(in if_l4dm_threadid_t client, 
+		     in unsigned long flags);
+
+      /***********************************************************************/
+      /**
+       * \brief   Grant access rights to dataspace to other clients
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   client      Client id
+       * \param   rights      Rights bit mask
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       *
+       * Grant / extend access rights to a dataspace. 
+       */
+      /***********************************************************************/ 
+      long share(in unsigned long ds_id, 
+		 in if_l4dm_threadid_t client,
+		 in unsigned long flags);
+
+      /***********************************************************************/
+      /**
+       * \brief   Revoke access rights to dataspace to other clients
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   client      Client id
+       * \param   rights      Rights bit mask
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       *
+       * Revoke / restrict access rights to a dataspace. 
+       */
+      /***********************************************************************/ 
+      long revoke(in unsigned long ds_id, 
+		  in if_l4dm_threadid_t client,
+		  in unsigned long flags);
+
+      /***********************************************************************/
+      /**
+       * \brief   Check access rights
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   rights      Rights bit mask
+       *	
+       * \return  0 if requested operations are allowed, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   requested operations not allowed
+       *
+       * Check whether the caller can perform the specified operations on the 
+       * dataspace.
+       */
+      /***********************************************************************/ 
+      long check_rights(in unsigned long ds_id, 
+			in unsigned long flags);
+
+      /***********************************************************************/
+      /**
+       * \brief   Transfer ownership of a dataspace
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   new_owner   New owner
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted, only the previous 
+       *                         owner can transfer the ownership 
+       *
+       * Transfer the ownership of the dataspace to \a new_owner.
+       */
+      /***********************************************************************/ 
+      long transfer(in unsigned long ds_id, 
+		    in if_l4dm_threadid_t new_owner);
+
+      /***********************************************************************/
+      /**
+       * \brief   Create a copy of a dataspace
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Source dataspace id
+       * \param   src_offs    Offset in source dataspace
+       * \param   dst_offs    Offset in destination dataspace
+       * \param   num         Number of bytes to copy
+       * \param   flags       Flags
+       * \param   name        Destination dataspace name
+       * \retval  copy        Dataspace id of copy
+       *         
+       * \return  0 on success (\a copy contains the id of the newly created 
+       *          copy), error code otherwise:
+       *          - -#L4_EINVAL invalid dataspace id
+       *          - -#L4_EPERM  operation not permitted
+       *        
+       * Create a copy of a dataspace.
+       */
+      /***********************************************************************/ 
+      long copy(in unsigned long ds_id, 
+		in unsigned long src_offs, 
+		in unsigned long dst_offs, 
+		in unsigned long num, 
+		in unsigned long flags, 
+		in string name, 
+		out if_l4dm_dataspace_t copy);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: set dataspace name
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   name        Dataspace name
+       *	
+       * \return  0 on success, error code otherwise:
+       *         - -#L4_EINVAL  invalid dataspace id
+       *         - -#L4_EPERM   operation not permitted, only the owner can 
+       *                        set the name
+       */
+      /***********************************************************************/ 
+      long set_name(in unsigned long ds_id, 
+		    in string name);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: get dataspace name
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       * \retval  name        Dataspace name
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       */
+      /***********************************************************************/ 
+      long get_name(in unsigned long ds_id, 
+		    out string name);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: show information about dataspace
+       * \ingroup idl_generic
+       * 
+       * \param   ds_id       Dataspace id
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       */
+      /***********************************************************************/ 
+      long show_ds(in unsigned long ds_id);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: dump description of all dataspaces of a client 
+       * \ingroup idl_generic
+       * 
+       * \param   owner       Owner of the dataspaces
+       * \param   flags       Flags
+       * \retval  dump_ds     Dataspace id
+       *	
+       * \return  0 on success, error code otherwise.
+       *
+       * Create a dataspace which contains a description of all dataspaces 
+       * owned by \a client. 
+       */
+      /***********************************************************************/ 
+      long dump(in if_l4dm_threadid_t owner, 
+		in unsigned long flags, 
+		out if_l4dm_dataspace_t dump_ds);
+
+      /***********************************************************************/
+      /**
+       * \brief   DEBUG: List dataspaces of a client
+       * \ingroup idl_generic
+       * 
+       * \param   owner       Owner of the dataspaces
+       * \param   flags       Flags
+       *	
+       * \return  0 on success, error code otherwise.
+       *
+       * List all dataspaces owned by \a client.
+       */
+      /***********************************************************************/ 
+      void list(in if_l4dm_threadid_t owner, 
+		in unsigned long flags);
+    };
+};
+

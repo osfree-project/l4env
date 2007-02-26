@@ -1,0 +1,8 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+ * \defgroup lock Lock / Unlock
+ *
+ * Lock and unlock functions.
+ */

@@ -1,0 +1,4 @@
+#define __ver_loop_register_transfer	smp_35dc50aa
+#define loop_register_transfer	_set_ver(loop_register_transfer)
+#define __ver_loop_unregister_transfer	smp_bfee3ad5
+#define loop_unregister_transfer	_set_ver(loop_unregister_transfer)

@@ -1,0 +1,42 @@
+timing-measureaments
+--------------------
+
+15.02.2000, Jork Loeser
+
+we use pit (programmable interval timer) to generate high interrupt traffic.
+We accept IRQ-ipcs and count how much we get in 1 sec. If we assume the
+count will saturate above a certain IRQ frequency we can compare the
+accumulated values. At the client-side we use locking and cli/sti-pairs as
+in the server to protect multiple instances of interacting. In a second run,
+clients use neither locking nor cli, which is much faster (but unsafe).
+
+
+Dietrich, P100, LN, no small address spaces
+
+Omega0: 		 25.000 IRQs -> 4000 cycles per IRQ
+
+native:			 65.000 IRQs -> 1500 cycles per IRQ
+
+native, w/o CLI & lock:	125.000 IRQs ->  800 cycles per IRQ
+
+
+Dietrich, P100, LN, with small address spaces
+
+Omega0:			 34.000 IRQs -> 3000 cycles per IRQ
+
+
+Friedrich, PII400, LN, no small addres spaces
+
+Omega0:			 70.000 IRQs -> 5700 cycles per IRQ
+
+native:		up to	110.000 IRQs -> 3636 cycles per IRQ
+
+native:		up to	150.000 IRQs -> 2666 cycles per IRQ
+
+
+To compare fair: on a P100, Omega0 makes IRQs by a factor of 2.6 slower,
+on a P400 by a factor of 1.5.
+
+
+Perhaps the Omega0 interface should be implemented as a lib with
+communication between the lib-clients. Think about security.

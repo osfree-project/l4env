@@ -1,0 +1,12 @@
+#define __ver_slhc_init	smp_2e0e927f
+#define slhc_init	_set_ver(slhc_init)
+#define __ver_slhc_free	smp_2894cfb0
+#define slhc_free	_set_ver(slhc_free)
+#define __ver_slhc_remember	smp_0bc55868
+#define slhc_remember	_set_ver(slhc_remember)
+#define __ver_slhc_compress	smp_76135e6c
+#define slhc_compress	_set_ver(slhc_compress)
+#define __ver_slhc_uncompress	smp_3bc1319e
+#define slhc_uncompress	_set_ver(slhc_uncompress)
+#define __ver_slhc_toss	smp_f89e3455
+#define slhc_toss	_set_ver(slhc_toss)

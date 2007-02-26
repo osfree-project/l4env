@@ -1,0 +1,14 @@
+This directory contains the sources for the L4 Lock Library documentation. 
+
+To create the documentation, run 'doxygen doxygen-refman.cfg' and 
+'doxygen doxygen-internal.cfg', this will create the directories 
+refman and internal.
+
+There are two different documentations:
+
+- 'L4 Lock Reference Manual' (refman/html/index.html)
+  Information about how to use the Lock Library.
+
+- 'L4 Lock Source Code Documentation (internal/html/index.html)
+  Implementation docs.
+ 

@@ -1,0 +1,319 @@
+/*! \page dice an IDL Compiler for L4
+
+\section SYNOPSIS SYNOPSIS
+\b dice [options] <i>&lt;input-file&gt;</i>
+
+\section DESCRIPTION DESCRIPTION
+DICE is an IDL compiler, which translates an Interface Definition 
+Language (IDL) file into communication stubs for the L4 
+micro-kernel. It is mainly used as an tool for the DROPS 
+environment. That's where its name is from:
+<b>D</b>rops <b>I</b>dl <b>C</b>ompil<b>E</b>r.
+
+Input files should be written in either DCE IDL or CORBA IDL. If 
+the IDL file is written using the latter language, the -C option 
+should be used. IDL files should have the suffix <b>.idl</b>. The 
+compiler uses this suffix to differentiate different kinds of input 
+files. Inside an IDL file the <i>include</i> command can be used to 
+include other IDL files. To import the type and constant definitions 
+from an C header file use the <i>import</i> command inside an DCE 
+IDL file.
+
+The DCE IDL and CORBA IDL used by the compiler mostly correspond to 
+the public standards, which describe these languages. Some 
+additions have been made to the languages to support kernel data 
+types of L4. In the CORBA IDL exist the keywords <b>refstring</b> 
+to describe a parameter as indirect string and <b>fpage</b> to 
+describe a parameter as memory page (flexpage). The DCE IDL has
+been extended by some attributes indicating L4 special types and
+the <b>fpage</b> type.
+
+The compiler generates several files, also depending on the 
+specified options. Using the standard configuration five files are 
+generated. The client header and implementation file, the opcode 
+file - containing the function codes, the server header file and 
+the server-loop file. If the inline code option is specified only 
+one client file - the client header file - is generated. If the
+server skeleton option is specified a server template file is 
+generated, which contains function templates for the functions. If 
+the test-suite option is specified the server-template file is 
+generated with server functions to test the transmitted values. 
+There is also a test-suite file generated, which starts the server 
+loop threads and calls the client stubs.
+
+\section REQUIREMENTS REQUIREMENTS
+This compiler uses 'cpp' for preprocessing its input files. Thus 
+gcc (at least version 2.95) should be installed.
+
+\section OPTIONS OPTIONS
+
+Most `<b>-W</b>' options have two contrary forms: <b>-W</b>name and
+<b>-Wno-</b>name. Only the non-default forms are shown here.
+
+\subsection general General Options
+--help, --version, --verbose
+
+\subsection preprocess Preprocessing Options
+-E, --preprocess, -I, -nostdinc, --corba, -M, -MM, -MD, -MD
+
+\subsection backend Code Generation Options
+--create-inline, --no-opcodes, --create-skeleton, --template, --server-timeout,
+--server-return-code, --filename-prefix, --include-prefix, -f, 
+--back-end, --client, --server, -O, --testsuite, --message-passing
+
+<DL>
+
+<DT><b>--help, -h</b></DT>
+<DD>Displays the help for dice, which is a short list of its 
+options.</DD>
+
+<DT><b>--version, -V</b></DT>
+<DD>Display the version of dice and its build date.
+This may also display a remark describing the version and
+a build number. The build number is <b>not</b> a reliable information.
+It is useful if you use dice from a distributed binary package.
+It is <b>not</b> useful if you use dice from a source code package.</DD>
+
+<DT><b>--verbose, -v</b> &lt;level&gt;</DT>
+<DD>Sets the verbose level of the compiler. The verbose level 
+specifies, how much of the debug output the user will see. The 
+level may be one of the following numbers:
+<BR>1 - lets only the back-end generate output
+<BR>2 - lets the back-end and the data-representation generate output
+<BR>3 - lets the back-end, the data-representation and the front-end classes
+generate output
+<BR>4 - lets the factories (name and class factory) generate output
+<BR>5 - lets all of the above generate output
+<BR>6 - lets all of the above plus the parser generate output
+<BR>7 - lets only the parser generate output
+</DD>
+
+<DT><b>-E</b></DT>
+<DD>Stops the compiler after parsing the input file and checking 
+its integrity. The compiler generates and intermediate output in 
+an XML file. The file name is the same as the IDL file's with the 
+idl extension replaced with xml.</DD>
+
+<DT><b>--preprocess, -P</b> &lt;string&gt;</DT>
+<DD>Hands the string as is to the preprocessor (gcc).</DD>
+
+<DT><b>-I, -nostdinc</b></DT>
+<DD>Same as -P-I or -P-nostdinc</DD>
+
+<DT><b>--corba, -C</b></DT>
+<DD>Regards the input file as CORBA IDL file. If not specified the 
+input file is regarded as DCE IDL file.</DD>
+
+<DT><b>-M</b></DT>
+<DD>Print the <i>#include</i>d file hierarchy to stdout. Does not compile or
+generate intermediate files.</DD>
+
+<DT><b>-MM</b></DT>
+<DD>Print the <i>#include</i>d file hierarchy to stdout. Skip standard includes
+(the ones included with '<''>'). Does not compile or generate intermediate
+files.</DD>
+
+<DT><b>-MD</b></DT>
+<DD>Print the <i>#include</i>d file hierarchy to a file with the extension
+<i>.d</i> (for IDL file test.idl the file test.d is generated). Dice then
+continues with the compilation or generation of intermediate files.</DD>
+
+<DT><b>-MMD</b></DT>
+<DD>Same as <b>-MD</b> but does skip standard include files, just like
+<b>-MM</b>.</DD>
+
+<DT><b>--create-inline, -i &lt;mode&gt;</b></DT>
+<DD>Creates the client stubs as inline functions. No client 
+implementation file is generated. Set &lt;mode&gt; to
+<BR><i>static</i> to generate &quot;static inline&quot; or
+<BR><i>extern</i> to generate &quot;extern inline&quot;.
+<BR>Both options are optional. Without them a simple
+&quot;inline&quot; is generated.</DD>
+
+<DT><b>--no-opcode, -n</b></DT>
+<DD>Does not generate the opcode header file. The generated code 
+does use the constants as would have been specified in the opcode 
+file. You could use this option if you already have an opcode
+file with different function codes than the compiler would have 
+generated.</DD>
+
+<DT><b>--create-skeleton, --template, -t</b></DT>
+<DD>Generates a server implementation file, which contains function 
+skeletons for the server functions. You could use this option the 
+first time you compile an IDL file to generate the function 
+skeletons.</DD>
+
+<DT><b>--server-return-code, -r</b></DT>
+<DD>Generates a return code from the server to the client. This 
+return code contains status information about the server (e.g. 
+internal processing error).</DD>
+
+<DT><b>--filename-prefix, -F</b> &lt;string&gt;</DT>
+<DD>Prefixes each generated file-name with <i>string</i>.</DD>
+
+<DT><b>--include-prefix, -p</b> &lt;string&gt;</DT>
+<DD>Prefixes each filename inside an include statement with 
+<i>string</i>.</DD>
+
+<DT><b>-f</b> &lt;string&gt;</DT>
+<DD>Supply flags to the compiler. See the following options for details.
+</DD>
+
+<DT><b>-ff</b>&lt;string&gt;</DT>
+<DD>Sets the granularity which is used to generate target files:
+<BR><i>idlfile</i> or 1 to generate one client C file per IDL file 
+(default)
+<BR><i>module</i> or 2 to generate one client C file per module
+<BR><i>interface</i> or 3 to generate one client C file per 
+interface
+<BR><i>function</i> or 4 to generate one client C file per function
+</DD>
+
+<DT><b>-fctypes</b></DT>
+<DD>Use C-sytle type names instead of CORBA type names ('long'
+instead of 'CORBA_long').
+</DD>
+
+<DT><b>-fl4types</b></DT>
+<DD>Use L4-style type names instead of CORBA type names
+('l4_int32_t' instead of 'CORBA_long'). This option implies
+<i>-fctypes</i> for all non-C-style type names.
+</DD>
+
+<DT><b>-fopcode-size=</b>&lt;size&gt;</DT>
+<DD>Set the size, which is used when transmitting the opcode. Set
+<i>size</i> to:
+<BR><i>byte</i> or 1 to use a byte
+<BR><i>short</i> or 2 to use two bytes
+<BR><i>long</i> or 4 to use four bytes
+<BR><i>longlong</i> or 8 to use eight bytes
+<BR>It is recommended to use the <i>--no-opcode</i> options with
+sizes smaller than four bytes, since Dice generated opcodes use
+four bytes.
+</DD>
+
+<DT><b>-fserver-parameter</b></DT>
+<DD>Generates a server loop which expects a void* parameter, which
+is cast to the internal CORBA_Environment variable. This way the
+user can specify if he wants to provide own values in for the 
+CORBA_Environment.
+<BR>However, there are cases, where the parameter is mandatory.
+For example if the server receives flexpages, the parameter has
+to provide an environment whith a proper receive flexpage set.
+</DD>
+
+<DT><b>-finit-rcvstring</b>[ =&lt;name&gt; ]</DT>
+<DD> Makes the server loop use the user specified function to
+set the buffers for the received indirect strings. The name of
+the function can be specified or is set to <i>dice_init_rcvstring</i>.
+<BR>The function has the format:
+<BR>void &lt;name&gt;(int, l4_umword_t*, l4_umword_t*, CORBA_Environment*)
+<BR>where the int is the number of the currently set string, starting
+with zero. The first l4_umword_t should be set to the address of the
+buffer, whereas the second contains the buffer's size. The environment
+is passed if there are any user-provided information, etc.
+</DD>
+
+<DT><b>-fforce-corba-alloc</b></DT>
+<DD>Force the use of the 'CORBA_alloc' function. Otherwise the 
+'malloc' function pointer in the CORBA_Environment structure
+would be used. These functions are only invoked to allocate
+memory for variable or fixed sized arrays dynamically.
+</DD>
+
+<DT><b>-fforce-c-bindings</b></DT>
+<DD>For use of L4 C-bindings. Otherwise dice generates the
+communication code in inline assemlber directly.
+</DD>
+
+<DT><b>-ftrace-server</b></DT>
+<DD>Trace all messages received by the server loop. The
+print-out contains the opcode, and the thread-ID of the
+client.
+</DD>
+
+<DT><b>--back-end, -B</b> &lt;string&gt;</DT>
+<DD>Defines the back-end to use:
+<BR><i>string</i> starts with a letter specifying the platform,
+kernel interface or language mapping.
+<BR><i>p</i> specifies the platform (IA32, IA64, ARM) (default: IA32)
+<BR><i>i</i> specifies the kernel interface (v2, x0, x0adapt, v4, sock[et]) (default: v2)
+<BR><i>m</i> specifies the language mapping (C, CPP) (default: C)
+<BR>(For platform and language mapping, only default values are
+currently supported. For kernel interface only v4 is not supported.)
+<BR>The kernel interface denotes the ABI used to communicate with
+other threads. The 'x0adapt' kernel interface is a support option
+to allow V2 applications to run on an X0 kernel. The X0 kernel uses
+32Bit thread IDs, wehreas the V2 kernel uses 64Bit thread IDs. X0
+can transmit one more double word in a short IPC. The x0adapt interface
+maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
+<BR>example: -Bpia32 -Biv2 -BmC
+</DD>
+
+<DT><b>--client, -c</b></DT>
+<DD>Generates client side code only.</DD>
+
+<DT><b>--server, -s</b></DT>
+<DD>Generates server side code only.</DD>
+
+<DT><b>-O</b> &lt;level&gt;</DT>
+<DD>Sets the optimization level. Currently level 0 and 1 are implemented.
+Optimization level 0 does not optimize at all (you should use this for
+debugging only). Optimization level 1 currently optimizes marshalling
+of arrays and contructed types. If no <i>level</i> is given or -O is not
+specified, the highest optimization level is chosen.</DD>
+
+<DT><b>--testsuite, -T</b> &lt;<i>thread</i> | <i>task</i>&gt;</DT>
+<DD>Generates a testsuite for the specified IDL file. The compiler 
+will overwrite any server skeleton files. It generates additionally 
+a test-suite file. You may compile the generated C files and link 
+them to an executable, which will run on a bare L4 environment. 
+The test application will output any transmission error between 
+client and server. You can also specify whether the generated testsuites
+run in seperated threads (but the same address space) or in
+speperate tasks. If neither is specified <i>thread</i> is chosen.</DD>
+
+<DT><b>--message-passing, -m</b></DT>
+<DD>Generates the message passing functions for RPC style functions
+as well. E.g. is an unmarshal, receive-any and wait-any function
+added for an RPC function at the client's side.</DD>
+
+<DT><b>-Wall</b></DT>
+<DD>Ignore all warnings. Or rather combines all of the following options.
+</DD>
+
+<DT><b>-Wignore-duplicate-fid</b></DT>
+<DD>Duplicate assigned function IDs will not fault in an error, but
+initiate a warning.</DD>
+
+<DT><b>-Wprealloc</b></DT>
+<DD>Warn if CORBA_alloc is used to allocate memory for unbound
+variable sized parameters. CORBA_alloc has to be implemented by
+the user, the syntax of this function is the same as malloc, 
+which would make a simple implementation simply wrap malloc.</DD>
+
+<DT><b>-Wmaxsize</b></DT>
+<DD>Warn if no maximum size is given for a variable sized parameter.
+This usually means that the compiler has to guess the size of the
+receive buffer and may choose an value wich is either far to large
+or far to small. Sometimes the receive buffer is then allocated 
+using CORBA_alloc (see -Wprealloc for details on that).</DD>
+
+</DL>
+
+\section AUTHOR AUTHOR
+Ronald Aigner <ra3@os.inf.tu-dresden.de>
+
+\section SEE SEE ALSO
+gcc(1) for preprocessing options.
+
+http://www.omg.org/ for a specification of the CORBA IDL (or OMG 
+IDL). 
+or http://www.infosys.tuwien.ac.at/Research/Corba/OMG/corb2prf.htm
+
+http://www.opengroup.org/onlinepubs/9629399/chap4.htm for the DCE IDL
+specification.
+
+Project web page: http://os.inf.tu-dresden.de/dice/
+
+*/

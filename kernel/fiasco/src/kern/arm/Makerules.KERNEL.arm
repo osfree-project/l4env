@@ -1,0 +1,18 @@
+# -*- makefile -*-
+
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(LD) line.
+
+$(KERNEL): $(srcdir)/kernel.arm.ld $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(LIBLMM) $(ABI) libdrivers.a $(CXXLIB) $(MINILIBC) libgluedriverslibc.a
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) -N -T $< -o $@ $(filter-out $<,$+) $(LIBGCC)
+#	$(OBJCOPY) -O binary $@ fiasco	
+
+Symbols: $(KERNEL)
+	$(NM) $(KERNEL) | c++filt | sort > $@.new
+	mv $@.new $@
+	chmod 755 $@
+
+
+clean-KERNEL:

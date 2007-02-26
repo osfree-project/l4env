@@ -1,0 +1,4 @@
+#define __ver_ip_ftp_lock	smp_7c27ef4c
+#define ip_ftp_lock	_set_ver(ip_ftp_lock)
+#define __ver_ip_conntrack_ftp	smp_ed617569
+#define ip_conntrack_ftp	_set_ver(ip_conntrack_ftp)

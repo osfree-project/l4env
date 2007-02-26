@@ -1,0 +1,332 @@
+\documentclass[twocolumn,10pt]{article}
+\usepackage[a4paper,dvips]{geometry}
+\usepackage{fancyvrb}
+
+\title{Building DROPS HOWTO}
+\author{Frank Mehnert}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\section{The \texttt{drops-gcc} Compiler}
+The best way to build libraries or applications for DROPS is to use
+the \texttt{drops-gcc} compiler. This wrapper script for gcc/g++
+automaticly uses the proper header files and links against several
+standard libraries.
+
+To work correct, the \texttt{drops-gcc} compiler itself has to be
+installed (\texttt{make} is insufficient, \texttt{make install} is
+needed) and depends at least on an installed version of the OSKit 1.0
+(either as a local or global -- see next chapter for details)
+
+
+\subsection{Local Installation}
+In the global installation, the \texttt{drops-gcc} compiler itself
+and appendant libraries are installed in subdirectories of 
+\texttt{/home/drops}. For local installations (e.g. on Laptops),
+these files can be installed into an \textbf{user specified}
+directory (e.g. \texttt{\$HOME/src/drops}). In the following text,
+this directory is called the \textsl{local DROPS directory}.
+
+\begin{description}
+\item[\textsl{local DROPS directory}]
+  Create that directory (e.g. \$HOME/src/drops):
+\begin{verbatim}
+  mkdir $HOME/src/drops
+\end{verbatim}
+  Edit the global config script for the L4 build tree 
+  (e.g. \texttt{\$HOME/src/l4/Makeconf.local}) and set
+  the \texttt{DROPS\_STDDIR} variable to point to that
+  directory.
+
+\item[OSKit 0.6 libraries]
+Check out, compile and install the OSKit Version 1.0.
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout oskit
+  cd oskit
+  ./configure --prefix=$HOME/src/drops
+  make
+  make install
+\end{verbatim}
+
+\item[OSKit 1.0 libraries]
+Check out, compile and install the OSKit Version 1.0.
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout oskit10
+  cd oskit10
+  ./configure --prefix=$HOME/src/drops
+  make
+  make install
+\end{verbatim}
+
+After installation, the checked out version of the OSKit 1.0 can
+be removed.
+
+\item[The \texttt{drops-gcc} compiler]
+Checkout the \texttt{drops-gcc} compiler:
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout l4/tool/gcc-wrap
+\end{verbatim}
+There are two individual settings for the local installation in
+the \texttt{drops-gcc.in} script but there is \textbf{no need to change}
+something here.
+
+\begin{itemize}
+\item \texttt{DROPSDIR} points to the \textsl{local DROPS directory}.
+  The default setting has the value of make's \texttt{\$DROPS\_STDDIR}
+  variable.
+\item \texttt{L4DIR} points to the directory the L4 tree resides in 
+  (e.g. \$HOME/src/l4). If this variable is not set, \textbf{all} 
+  libraries the application should linked against must reside in the 
+  \textsl{local DROPS directory}. In default, this setting has the
+  value of make's \texttt{\$L4DIR} variable.
+\end{itemize}
+
+If you want to change one of these values then you have to edit the 
+\texttt{drops-gcc.in} script. Again: The default settings should be
+suitable in most cases.
+
+Compile and install the compiler.
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout l4/tool/gcc-wrap
+  cd l4/tool/gcc-wrap
+  make
+  make install
+\end{verbatim}
+
+\item[Flick]
+Checkout and compile Flick.
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout l4/tool/flick
+  cvs checkout l4/tool/flick-obj
+  cd l4/tool/flick-obj
+  make
+\end{verbatim}
+
+Optional, install Flick by
+\begin{verbatim}
+  make install
+\end{verbatim}
+With this command, Flick will be installed into your 
+\textsl{local DROPS directory}.
+
+\item[Common L4 Environment]
+Checkout and compile the Common L4 Environment. You can do it
+using
+\begin{verbatim}
+  cd $HOME/src/l4/pkg
+  make l4env_update
+  make l4env
+\end{verbatim}
+
+or checking out the following packages by hand:
+
+L4 packages are needed: \texttt{l4sys, l4util, names, log, rmgr,
+l4env, lock, thread, semaphore, l4rm, generic\_dm, generic\_ts,
+generic\_fprov, oskit10\_support\_l4env\_full}.
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout l4/pkg/<pkg_name>
+  cd l4/pkg
+  make pkg-links
+  make lib
+  make
+\end{verbatim}
+
+\item[Standard C++ library]
+Checkout, compile and install the \texttt{libstdc++} library:
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout l4/pkg/libstdc++
+  cd l4/pkg/libstdc++
+  ln -s ../pkg.Makefile.tmpl .
+  make
+  make install
+\end{verbatim}
+
+After installing, this package can be removed.
+
+\item[Other L4 packages]
+To compile other L4 packages, it is necessary to install the
+L$^{4}$Linux sources:
+\begin{verbatim}
+  cd $HOME/src
+  cvs checkout linux22
+  cd linux22
+  make oldconfig
+  make dep
+\end{verbatim}
+
+\end{description}
+
+\subsection{Usage}
+The \texttt{dropsgcc} compiler has several build mode.
+
+\begin{description}
+\item[oskit10\_sigma0]
+  When using this mode, the application will be linked against OSKit 1.0
+  libraries and the \texttt{oskit10\_support} library making her a 
+  \textsl{Sigma~0} client. The OSKit's FreeBSD C library is used.
+  Dependant libraries:
+  \begin{description}
+  \item[OSKit]
+  \texttt{liboskit\_startup, liboskit\_clientos, liboskit\_bootp,
+  liboskit\_linux\_fs, liboskit\_diskpart, liboskit\_linux\_dev, 
+  liboskit\_freebsd\_net, liboskit\_kern, liboskit\_lmm, liboskit\_amm, 
+  liboskit\_freebsd\_c, liboskit\_com}
+  \item[other]
+  \texttt{librmgr, libgcc, liboskit10\_support}
+  \end{description}
+
+\item[oskit10\_l4env]
+  The application is linked against OSKit 1.0 libraries and the Common L4
+  Environment together with the \texttt{oskit10\_support\_l4env\_full}
+  library. This is the default mode of \texttt{drops-gcc}. The OSKit's
+  FreeBSD C library is used. Dependant libraries:
+  \begin{description}
+  \item[OSKit]
+  \texttt{liboskit\_startup, liboskit\_clientos, liboskit\_bootp,
+  liboskit\_linux\_fs, liboskit\_diskpart, liboskit\_linux\_dev,
+  liboskit\_freebsd\_net, liboskit\_kern, liboskit\_lmm, liboskit\_amm,
+  liboskit\_freebsd\_c, liboskit\_com}
+  \item[Common L4 Environment]
+  \texttt{libthread, libsemaphore, libl4rm, libgeneric\_dm, liblogserver,
+  libnames, libl4env, libl4util}
+  \item[other]
+  \texttt{librmgr, libgcc, liboskit10\_support\_l4env\_full}
+  \end{description}
+
+\item[oskit10\_l4env\_tiny]
+  The application is linked against the OSKit 1.0 and the Common L4
+  Environment together with the \texttt{oskit10\_support\_l4env} library.
+  Use this mode for simple servers (without C++ and special OSKit features,
+  e.g. memory file system).
+  There are many functions in this mode which don't work (e.g. 
+  \texttt{sleep()}). Tested functions are memory management
+  (\texttt{malloc()}/\texttt{free()} and console input/output
+  (\texttt{printf()}, \texttt{getchar()}). Therefore it is recommended
+  to use the \texttt{oskit10\_l4env} mode instead. The OSKit's tiny C
+  library is used.
+  Dependant libraries:
+  \begin{description}
+  \item[OSKit]
+  \texttt{liboskit\_clientos, liboskit\_kern, liboskit\_lmm, liboskit\_c}
+  \item[Common L4 Environment]
+  \texttt{libthread, libsemaphore, libl4rm, libgeneric\_dm, liblogserver,
+  libnames, liblenv, libl4util}
+  \item[other]
+  \texttt{librmgr, liboskit10\_support\_l4env}
+  \end{description}
+
+\end{description}
+
+To specifiy the mode the project should built with, \textbf{either}
+
+\begin{itemize}
+\item add \texttt{-}\textsl{$<$mode\_name$>$} as command line parameter
+  of \texttt{drops-gcc} \textbf{or}
+\item export the \texttt{DROPS\_BUILD\_MODE} envionment variable
+  from the Makefile.
+\end{itemize}
+
+To simplify this task, a new Makefile template
+(\texttt{Makeconf.oskit10\_lenv}) was created.
+The template does also define a \texttt{DROPS\_LIB}
+variable which includes the libraries the application is linked
+against for using as dependency.
+
+
+\section{The \texttt{oskit10\_support\_l4env\_full} library}
+The \texttt{oskit10\_support\_l4env\_full} library is the glue code
+which allows applications to use code of the OSKit 1.0 together with
+services of the Common L4 Environment.
+
+
+\subsection{Global Heap Management}
+The malloc()/free() functions of the OSKit access a memory chunk
+located at a dataspace provided by a dataspace manager. The default
+size of the memory chunk is 4MB (defined in file 
+\textsl{base\_multiboot\_init\_mem.c}). At boot time, the size can be
+specified using the command line parameter
+\texttt{--heap}=\textsl{$<$size in bytes$>$}.
+
+The memory allocator is protected by a simple locking mechanism.
+For this, a semaphore of the \texttt{semaphore} library is used
+(file \textsl{lock.c}).
+
+
+\subsection{Accessing Physical Memory}
+Some applications need access to physical memory regions. Until now,
+such requests are sent to RMGR.
+
+\begin{description}
+\item[0x00000000-0x00001000] The \textsl{first page} holds the BIOS
+  data area.
+\item[0x000A0000-0x000FFFFF] The \textsl{adapter area} holds the BIOS
+  ROM area.
+\item[0x80000000-0xFFFFFFFF] The \textsl{device area} can be accessed
+  in memory chunks of 4MB.
+\item[TODO] Unmapping of physical memory?
+\end{description}
+
+\subsection{Accessing the multiboot info}
+There are two global symbols defined for accessing the multiboot info
+which is provided by the bootloader:
+
+\begin{description}
+\item[boot\_info] holds the multiboot info as provided by the
+  old grub bootloader.
+
+\item[grub\_boot\_info] holds the extended multiboot info as
+  provided by newer (hacked) versions of GRUB. The size of the
+  structure depends on \texttt{grub\_boot\_info.flags}. One important
+  feature of newer GRUB version is the VESA video mode information.
+  For an example how to use that information, see the \texttt{vesaview}
+  server of the \texttt{smart\_mpeg package}.
+\end{description}
+
+
+\subsection{Helpers}
+
+Some helper functions of the OSKit 1.0 are overwritten:
+\begin{description}
+\item[exit] 
+  The exit function prints the exit code of the application. If
+  the exit code was not equal zero, the user will be prompted for
+  an key. Pressing s sets the task into sleep, pressing k enters
+  the L4 kernel debugger and Return reboots immediatly.
+\item[pc\_reset]
+  After showing an appropriate message, the code jumps into the kernel
+  debugger. On continue, the machine is rebootet.
+\end{description}
+
+\section{Example}
+For an example how to use the \texttt{drops-gcc} compiler, see the
+tftp package. Especially notice the Makefile.
+
+
+\section{Changelog}
+\begin{description}
+\item[22.01.2001] initial release
+\item[25.01.2001] first review by Jork
+\item[26.01.2001] new targets for checking out and building the
+  Common L4 Environment
+\item[29.01.2001] added dependant libraries for each mode of 
+  \texttt{drops-gcc}
+\item[17.04.2001] changed drops-gcc.in so that it doesn't need to
+  be patched anymore -- use \texttt{DROPS\_STDDIR} instead
+\item[01.02.2002] added dependency to OSKit 0.6 and L4Linux
+
+
+\end{description}
+
+
+\end{document}
+

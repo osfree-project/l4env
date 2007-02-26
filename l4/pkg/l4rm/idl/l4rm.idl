@@ -1,0 +1,47 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   l4rm/idl/l4rm.idl 
+ * \brief  Region mapper IPC interface. 
+ *
+ * \date   06/02/2000
+ * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *
+ * Copyright (C) 2000-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+
+module l4
+{
+  interface rm
+    {
+      /* add entry to region tree */
+      long add();
+
+      /* remove entry region tree */
+      long remove();
+
+      /* lookup address in region tree */
+      long lookup();
+
+      /* add client for region mapper thread */
+      long add_client();
+
+      /* remove client */
+      long remove_client();
+    };
+};

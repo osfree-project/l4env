@@ -1,0 +1,16 @@
+#define __ver_sb_dsp_init	smp_e986438b
+#define sb_dsp_init	_set_ver(sb_dsp_init)
+#define __ver_sb_dsp_detect	smp_d8a2731c
+#define sb_dsp_detect	_set_ver(sb_dsp_detect)
+#define __ver_sb_dsp_unload	smp_c4884969
+#define sb_dsp_unload	_set_ver(sb_dsp_unload)
+#define __ver_sb_dsp_disable_midi	smp_732f38df
+#define sb_dsp_disable_midi	_set_ver(sb_dsp_disable_midi)
+#define __ver_sb_be_quiet	smp_42424109
+#define sb_be_quiet	_set_ver(sb_be_quiet)
+#define __ver_probe_sbmpu	smp_ddc8ad00
+#define probe_sbmpu	_set_ver(probe_sbmpu)
+#define __ver_unload_sbmpu	smp_74afd69c
+#define unload_sbmpu	_set_ver(unload_sbmpu)
+#define __ver_smw_free	smp_450f9aea
+#define smw_free	_set_ver(smw_free)

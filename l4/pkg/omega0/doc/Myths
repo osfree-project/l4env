@@ -1,0 +1,44 @@
+facts out of experiments to reveal the myths about irq's and 8250A PIC
+
+
+Q: Is it true, that in sfnm (special fully nested mode) specific EOI (end
+   of interrupt) can NOT be used?
+A: No. Specific EOI can be used. At least on my mainboard.
+
+   Experiment: 2 serial lines, com1 with irq4, com2 with irq3. com2 with
+               higher hardware prio. coms generate irqs after received and
+               sent chars.
+               
+               COM1 generates irq 4, mask irq 4, not(!) ack, handle, unmask.
+               COM2 generates irq 3, mask irq3, ack specific irq 4 (lower
+                    hardware prio) -> irq 4 is triggered, mask 4, handle 4,
+                    unmask 4.
+                    ack irq 3 now, handle it, unmask it.
+    
+    If specific ack would not work, irq 4 would not have been triggerd 2nd
+    time. The other way (genrate irq 3, but do not ack, wait for irq 4)
+    would not work, because all irqs with lower prio than 3 would be blocked.
+
+Q: If I use level-triggered IRQ's and the reaction to a triggered one is
+   mask, ack, handle, unmask, do I get a 2nd IRQ? I ask because the IRR
+   might be stay active after the IRQ is accepted by the processor (ISR
+   set), then I mask and ack which clears the ISR but not the IRR, then I
+   unmask which causes IRR to trigger the 2nd IRQ.
+A: Experiment: use serial interface, enable irqs. Send char -> UART sent irq
+   set, IRR set. Read IRQ status from serial -> UART irq reset, IRR reset.
+   So the answer is NO. If I mask the IRQ and ack it, it is still active at
+   the IRR, but will not be propagated to ISR (masked, no accept at the CPU).
+   The I remove the IRQ reason resulting in lowering the interrupt line.
+   This causes IRR to drop. The I unmask, no problem.
+
+Q: I want to deal with the serial COM interface. I miss IRQ's.
+A: Enable IRQs at: IMR (pic), interrupt activate register (COM, offs 1, bits
+   1 and 2), master-interrupt-bit (COM, offs 4, bit 3).
+   Use the interrupt identification register (offs 2) to get the reason of
+   an IRQ. Poll it until it's 1. Reading a 4 means char received (cleared
+   by reading the char at offs 0), reading a 2 means char sent (cleared by
+   either reading this status register or by sending a char). Receive takes
+   preceedence over send. Here is the pit I fell in: I read the status, got
+   a 4 (rcvd), sent a char as echo and missed my sent-irq (sent status was
+   cleared by sending the echo-char).
+

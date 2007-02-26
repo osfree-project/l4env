@@ -1,0 +1,38 @@
+<!--
+Die entities "myself" und "my-Inst" werden fuer die jfw dtd
+benoetigt. Unbedingt definieren!
+-->
+
+<![ %HTML [
+<!ENTITY my-Inst SDATA
+"TU Dresden, Dept. of Computer Science, OS Group"
+>
+]]>
+
+<![ %ASCII [
+<!ENTITY my-Inst cdata
+"TU Dresden, Dept. of Computer Science, OS Group"
+>
+]]>
+
+<![ %LaTeX [
+<!ENTITY codenl SDATA "\\">
+<!ENTITY my-Inst cdata
+"TU Dresden, Dept. of Computer Science, OS Group"
+>
+]]>
+
+<![ %Man [
+<!ENTITY my-Inst cdata
+"TU Dresden"
+>
+]]>
+
+<![ %Info [
+<!ENTITY my-Inst cdata
+"TU Dresden, Dept. of Computer Science, OS Group"
+>
+]]>
+
+<!ENTITY myself "" >
+<!ENTITY my-email "l4-linux@os.inf.tu-dresden.de">

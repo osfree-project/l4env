@@ -1,0 +1,930 @@
+				CML2 NEWS
+
+The latest version is always available at <http://www.tuxedo.org/~esr/cml2/>.
+
+Release 2.3.0: Thu Feb 14 19:20:38 EST 2002
+	* Resync with 2.5.4, 2.5.4-dj1 and 2.4.18-pre9.
+	* `menus' and `explanations' declarations are gone from the language;
+	  all prompts and help info are declared by `symbols` declarations
+	  now.
+	* Partial fixes to support autoconfigure on Sparc by Mike Cramer.
+
+Release 2.2.0: Mon Jan 28 18:33:25 EST 2002
+	* Resync with 2.5.3-pre5 and 2.4.18-pre7.
+	* Symbol files are split up per directory now.
+	* More order dependencies removed in the compiler.
+
+Release 2.1.9: Wed Jan 23 11:28:32 EST 2002
+	* Fixed an xconfig-only bug in editing of the single enum field in
+	  the kernel rulebase :-).
+
+Release 2.1.8: Tue Jan 22 19:22:43 EST 2002
+	* Resync with 2.4.18-pre6.
+	* Make oldconfig quieter.
+	* Proper visibility check for message symbols.
+	* Dealt with a bug report in xconfig help.
+
+Release 2.1.7: Tue Jan 22 09:04:22 EST 2002
+	* Resync with 2.5.3-pre3.
+	* Complete hardware probes for MCA by David Weinehall (untested).
+	* By popular demand, `make autoconfigure' is now `make autoconfig'.
+
+Release 2.1.6: Thu Jan 17 09:42:47 EST 2002
+	* Oops.  Allow rulebases without a prefix declaration.
+	* Autoconfigurator now has MCA-bus test.
+
+Release 2.1.5: Thu Jan 17 00:11:42 EST 2002
+	* Added --help option to configurator.
+	* Fixed the hang bug on initial frozen menus.
+	* Better root-device discovery in autoconfigurator; should be 
+	  able to handle NFS mounts now (but not yet tested theere).
+
+Release 2.1.4: Wed Jan 16 14:42:57 EST 2002
+	* Resync with 2.4.18-pre4 and 2.5.3-pre1.
+	* Fixed a nasty little bug in property computation.
+	* Fixed another nasty little bug in display of constraint violations.
+
+Release 2.1.3: Tue Jan 15 14:41:45 EST 2002
+	* Resync with 2.4.18-pre3 and 2.5.2.
+	* It is now possible to declare explicit saveability predicates.
+	* The `vitality' flag is gone from the language.  Instead, the 
+	  autoprober detects the type of your root filesystem and forces
+	  its symbol to Y.
+
+Release 2.1.2: Fri Jan 11 03:50:36 EST 2002
+	* Resync with 2.5.2-pre11.
+	* Properties introduced.  Symbols can now have associated class flags,
+	  to be used by configurator programs.
+	* Frozen symbols are no longer visible.
+
+Release 2.1.1: Wed Jan  9 22:28:17 EST 2002
+	* Autoconfigurator tables now have PRIORITY declaration for 
+	  resolving multiple drivers being enabled by the same probe.
+	* Pychecker cleanup of everything.
+
+Release 2.1.0: Wed Jan  9 02:19:00 EST 2002
+	* Autoconfigurator now detects mice.  Standalone mode seems to 
+	  scope out modern PCI-based Intel boxes pretty completely now.
+
+Release 2.0.4: Tue Jan  8 22:55:43 EST 2002
+	* Rulebase and help sync with 2.4.18-pre2/2.5.2-pre10.
+	* kxref.py can report dependency/ancestry relationships and
+	  label status now.
+	* More autoconfigurator improvements, including --standalone option.
+
+Release 2.0.3: Sun Jan  6 19:04:28 EST 2002
+	* Massive autoprobe rules update by Giacomo.
+	* Vital symbols (those that are critical, like disk drivers for 
+	  potential root devices) are now forced to Y when the autoconfigurator
+	  finds their hardware.
+
+Release 2.0.2: Sun Jan  6 04:14:28 EST 2002
+	* Autoprobe fixes by Giacomo Catenazzi.
+	* Fixed bug in range validation of hex symbols (RADIO_RTRACK_PORT).
+	* New GREP test in autoprobe.
+
+Release 2.0.1: Sat Jan  5 18:41:47 EST 2002
+	* The now-traditional fix for the now-traditional brown-paper-bag
+	  major release.
+	* Rulebase and help sync with 2.4.18-pre1/2.5.2-pre8.
+
+Release 2.0.0: Sat Jan  5 13:30:28 EST 2002
+	* Added autoconfigurator.py derived from Giacomo Catenazzi's bash
+	  script.  Combining this with CML2's rulebase knowledge allows us
+	  to eliminate huge numbers of questions.
+	* Rulebase and help sync with 2.4.18-pre1/2.5.2-pre7.
+	* Clean out cruft in the top-level rules file.
+	* Inequality value forcing now handles trits better.
+	* It is now possible to declare symbols and menus *after* they occur.
+	* 'private' declaration has been replaced with "label...with...";
+	  see the reference manual for details.
+	* 'choicegroup' declaration introduced.
+
+Release 1.9.20: Mon Dec 31 12:33:41 EST 2001
+	* Corrected a rulebase bug that prevented proper initialization
+	  in some cases.
+	* Constraint-violation messages now include a list of relevant 
+	  variable bindings.
+
+Release 1.9.19: Mon Dec 31 00:10:06 EST 2001
+	* Rulebase and help sync with 2.4.18-pre1/2.5.2-pre5.
+	* Jeff Epler reported and fixed a menuconfig bug in handling
+	  of invalid regular expressions -- one found, for all love, by 
+	  his cat!  Seems the feline wandered across his keyboard...
+
+Release 1.9.18: Sun Dec 30 12:15:47 EST 2001
+	* Anticipatory UML port merge.
+
+Release 1.9.17: Sat Dec 29 19:08:06 EST 2001
+	* Minor rulebase fixes from lkml.
+	* Fixed the last reported of Richard Todd's edge cases.
+	* Nailed a lurking compiler bug that prevented < and > from being
+	  handled properly.
+	* James Mayer's fix for trit comparison.
+
+Release 1.9.16: Fri Dec 28 01:02:17 EST 2001
+	* Rulebase and help sync with 2.4.18-pre1/2.5.2-pre3.
+	* More logic fixes by Richard Todd.
+	* Split out ISA_SLOTS in the rulebase.
+
+Release 1.9.15: Thu Dec 27 04:44:31 EST 2001
+	* Alternate tree-widget-based X interface by W. Chang 
+	  <wchkang@etri.re.kr> introduced.
+	* Corrected a CML2 compiler bug in `suppress depends' handling,
+	  thanks to Rob Landley.
+
+Release 1.9.14: Wed Dec 26 22:10:25 EST 2001
+	* Rulebase and help sync with 2.4.18-pre1/2.5.2-pre2.
+	* Fix a bug in handling of the private bit.
+
+Release 1.9.13: Mon Dec 24 13:36:24 EST 2001
+	* SuperH rulebase corrections from Niibe Yutaka.
+	* Corrections for Richard Todd's logic bugs.
+
+Release 1.9.12: Sat Dec 22 13:35:14 EST 2001
+	* Rulebase and help sync with 2.4.17-rc2/2.5.2-pre1.
+	* Corrected a typo in kxref.py that caused portability problems.
+
+Release 1.9.11: Wed Dec 19 23:57:21 EST 2001
+	* Added a ruleset-debugging mode to cmlconfigure.py.
+	* Add 'like' keyword so help entries can be re-used by reference.
+	* Fix some scoping problems in kxref.py that confused pre-2.2 Pythons.
+
+Release 1.9.10: Mon Dec 17 16:23:01 EST 2001
+	* Rulebase and help sync with 2.4.17-rc1/2.5.1.
+	* Configure.help now covers every live symbol in these kernels.
+	* SuperH port update by Niibe Yutaka.
+	* Ooops...edit hex values in hex!
+	* Rob Landley's UI changes in menuconfig.
+	* Backed out Richard Todd's fix for dependent binding.  We found 
+	  a case that broke it; Todd acknowledged the problem.
+	* Compiler can now handle "suppress depend" on an "impure" guard,
+	  that is one that contains disjunctions and other logical operations.
+	* User is now warned when setting an invisible symbol that might 
+	  not be saved out.
+
+Release 1.9.9: Thu Dec 13 18:36:26 EST 2001
+	* Minor cleanups by Richard Todd.
+	* Passed Keith Owens's regression tests against CML1 make oldconfig.
+
+Release 1.9.8: Thu Dec 13 03:52:38 EST 2001
+	* Rulebase and help sync with 2.4.17-pre8/2.5.1-pre11.
+	* Saveability predicate simplified drastically.
+
+Release 1.9.7: Wed Dec 12 02:34:34 EST 2001
+	* Rulebase and help sync with 2.4.17-pre8/2.5.1-pre10.
+	* Richard Todd corrected an obscure bug in unbinding of dependents.
+	* Various small enhancements and cleanups by Richard Todd.
+	* Relaxed string length limit in menuconfig.
+	* Bug in visiting of choice menus corrected.
+
+Release 1.9.6: Sun Dec  9 03:23:55 EST 2001
+	* Rulebase and help sync with 2.4.17-pre6/2.5.1-pre8.
+	* Corrected casting in default computation.
+
+Release 1.9.5: Sat Dec  8 02:47:21 EST 2001
+	* Rulebase and help sync with 2.4.17-pre6/2.5.1-pre7.
+	* Some edge cases in casting of default expressions are handled better.
+	* It is documented that suppressing a symbol suppresses all its 
+	  dependents.
+	* Correction for Keith Owens's visibility bug.
+
+Release 1.9.4: Sun Dec  2 14:12:18 EST 2001
+	* Rulebase and help sync with 2.4.17-pre2/2.5.1-pre5.
+	* Symbols are now unsaveable when an ancestor is n (that is,
+	  the ancestor may now be unfrozen).
+
+Release 1.9.3: Thu Nov 29 17:16:57 EST 2001
+	* Oops -- make sure Configure.help is included in the tarball!
+	* Rulebase update for SOUND_IT8172.
+	* Go back to using -I for oldconfig.
+
+Release 1.9.2: Thu Nov 29 05:43:40 EST 2001
+	* Rulebase and help sync with 2.4.17-pre1/2.5.1-pre3.
+	* Rulebase now includes a KERNEL symbol usable in visibilities 
+	  so it can track both sides of the 2.4/2.5 fork.
+	* Search no longer disables suppression of invisible symbols;
+	  they still show up on the results menu, however.
+	* Fix for a bug in the compiler's type deduction for derived symbols.
+	* Attempted fix for a visibility bug reported by Keith Owens.
+
+Release 1.9.1: Tue Nov 27 13:29:50 EST 2001
+	* Rulebase and help sync with 2.4.16/2.5.1-pre1 (except for SH port).
+	* APIC rulebase correction by Damian M Gryski <dgryski@uwaterloo.ca>.
+	* It is now possible to selectively suppress the emission of derived
+	  symbols to the configuration file with an unless...suppress.
+	* Improvements to compiler's well-formedness checking.
+
+Release 1.9.0: Sat Nov 24 18:50:22 EST 2001
+	* Rulebase sync with 2.4.15/2.5.0 (except for SH port).
+	* Correct a minor bug in validation of trit expressions.
+	* Improved visibility computation: symbols with ancestors
+	  frozen at n are no longer saved to config.out.
+
+Release 1.8.9: Wed Nov 21 15:10:29 EST 2001
+	* Rulebase sync with 2.4.15-pre8 (except for SH port).
+	* Attempted fix for FONT8x{8,16} rulebase bug reported by David 
+	  Relson.
+
+Release 1.8.8: Wed Nov 21 14:26:34 EST 2001
+	* Rulebase sync with 2.4.15-pre7 (except for SH port).
+	* Back out y-value change in 1.8.7.
+
+Release 1.8.7: Sat Nov 17 12:23:43 EST 2001
+	* Rulebase sync with 2.4.15-pre5 (except for SH port).
+	* Better CML1 type harvesting in kxref.py.
+	* Minor USB rulebase corrections.
+	* Force symbols with a y value to be written out even if the
+	  parent menu is not visible.
+	* It is now possible to derive string constants.
+
+Release 1.8.6: Wed Nov 14 16:58:03 EST 2001
+	* Fixed three logic bugs reported by Frederic Gobry, David Kamholz,
+	  and Danni Junglas.  These mainly affected rollback when a variable 
+	  is unset; sometimes this wasn't being done properly.
+
+Release 1.8.5: Wed Nov 14 12:15:10 EST 2001
+	* It is now possible to say "condition trits on y".
+
+Release 1.8.4: Tue Nov 13 17:31:15 EST 2001
+	* Resync with 2.4.15-pre4 (except for SH port).
+	* Rulebase corrections from Keith Owens and Colin Slater.
+	* DANGEROUS is now a warndepend condition; this means there is a policy
+	  symbol DANGEROUS, and any symbol dependent on it will show DANGEROUS
+	  in its legend.
+	* Visibility improvement from Romain BEAUGRAND.
+          <rbeaugrand@easter-eggs.com>
+	* Complete coverage check -- CML1 fossil symbols eliminated.
+	* Matthieu Verbert's configtrans.py fix.
+
+Release 1.8.3: Sun Nov 11 14:50:48 EST 2001
+	* Resync with 2.4.15-pre2 (except for SH port).
+	* Fix bluetooth rulebase bugs.
+
+Release 1.8.2: Sat Aug 18 03:59:12 EDT 2001
+	* Rulesfiles updated to 2.4.9.
+	* Fix .h format file bug noted by Giacomo Catenazzi.
+
+Release 1.8.1: Tue Jul 17 00:21:18 EDT 2001
+	* Return 1 when the configurator is interrupted.
+	* Fixed bug in autoconf.h output reported by Keith Owens.
+
+Release 1.8.0: Fri Jul 13 05:38:58 EDT 2001
+	* Don't re-quote text fields every time they're exited.
+	* Translate .config files before reading them in so that
+	  "# FOO is not set" becomes FOO=n.
+	* Better side-effect computation in expressions like FOO == BAR.
+	* More UI fixes by Danni Junglas.
+
+Release 1.7.3: Thu Jul 12 02:04:50 EDT 2001
+	* Rulebase resync with 2.4.7-pre6.
+
+Release 1.7.2: Tue Jul 10 16:39:43 EDT 2001
+	* Do the right thing when a prompt window is destroyed.
+
+Release 1.7.1: Sat Jul  7 04:03:23 EDT 2001
+	* Minor compiler and UI fixes by Danni Junglas.
+
+Release 1.7.0: Fri Jul  6 07:33:45 EDT 2001
+	* Tkinter numeric and string-field widgets now update properly 
+          when set by side effect.
+	* Resynchronize with 2.4.7-pre3.
+
+Release 1.6.9: Wed Jul  4 11:56:09 EDT 2001
+	* Resync with ac24 and 2.4.6.
+
+Release 1.6.8: Tue Jul  3 15:12:21 EDT 2001
+	* Better compile-time type checking in expressions.
+
+Release 1.6.7: Tue Jul  3 04:47:51 EDT 2001
+	* Synchronized with ac22 and 2.4.6-pre9.
+
+Release 1.6.6: Fri Jun 29 00:59:00 EDT 2001
+	* Synchronized with 2.4.6-pre6 and ac20.
+	* Handle relative path arguments to install-cml2.
+	* The CML2 Adventure dungeon now has room decorations.
+	* Fixes for empty-string and default type mismatch compiler bug 
+          noted by Daniel Junglas.
+
+Release 1.6.5: Mon Jun 25 22:58:24 EDT 2001
+	* Added Niels van den Broek's autotester to the resource page.
+	* Prevent crash on search function.
+
+Release 1.6.4: Sat Jun 23 10:24:27 EDT 2001
+	* MODVERSIONS temporarily disabled at Keith Owens's request.
+	* Minor menuconfig fixes by Niels van den Broek <meander@chello.nl>.
+
+Release 1.6.3: Thu Jun 21 17:11:03 EDT 2001
+	* Rules file synchronized with 2.4.6-pre5 and ac16.
+	* -x option fixed.
+	* Menus may now have multiple declarations, which are concatenated.
+
+Release 1.6.2: Tue Jun 19 11:34:32 EDT 2001
+	* By popular demand, install-cml2 now installs CML2 Adventure.
+
+Release 1.6.1: Sat Jun 16 21:40:40 EDT 2001
+	* Rules file synchronized with 2.4.6-pre3 and ac15.
+	* First version of CML2 Adventure released.
+	* Fix a bug in field editing that sometimes resulted in bad 
+	  string conversions.
+
+Release 1.6.0: Sun Jun 10 12:03:03 EDT 2001
+	* Rules file synchronized with 2.4.6-pre2.
+
+Release 1.5.8: Sat Jun  9 11:18:03 EDT 2001
+	* Configure.help synchronized with ac12.
+	* Bug fix: menu value cell wasn't being set properly when a 
+	  choice was rolled back (thanks to Frederic Gobry for the report).
+	* RIGHT key no longer toggles booleans.
+
+Release 1.5.7: Tue Jun  5 13:57:50 EDT 2001
+	* Synchronized with 2.4.6-pre1 and ac8.
+	* More minor menuconfig fixes from Peter Kovacs <peter@kovax.org>.
+	* Much more info on MPC8xx-based SBCs for Configure.help.
+
+Release 1.5.6: Thu May 31 12:44:46 EDT 2001
+	* Minor PPC rulesfile fixes.
+	* Configure.help now completely covers all symbols used in the 2.4.5
+	  and ac5 codebase.
+
+Release 1.5.5: Wed May 30 20:07:39 EDT 2001
+	* Minor menuconfig fixes from Peter Kovacs <peter@kovax.org>.
+	* Only 5 missing Configure.help entries; synced with ac5.
+
+Release 1.5.4: Tue May 29 23:23:13 EDT 2001
+	* Synced with 2.4.5; Configure.help synced to ac4.
+
+Release 1.5.3: Fri May 25 00:54:08 EDT 2001
+	* Synced with 2.4.5-pre4 and ac17.
+	* MIPS- and SuperH-related rulesfile fixes.
+	* Only 55 missing help entries.
+
+Release 1.5.2: Wed May 23 20:01:52 EDT 2001
+	* Synced with 2.4.5-pre4 and ac15.
+	* Better reporting from the helpfile consistency checker.
+
+Release 1.5.1: Wed May 23 15:41:14 EDT 2001
+	* Hotlink feature in xconfig help now understands file: URLS.
+	* Appletalk rules tweaks by Arjan de Ven.
+
+Release 1.5.0: Wed May 23 04:47:27 EDT 2001
+	* Fixed a bug in numeric field entry reported by Roman Zippel.
+
+Release 1.4.9: Tue May 22 18:52:35 EDT 2001
+	* Synced with 2.4.5-pre4 and ac14.
+	* Oops -- found two mainline symbols I was missing help for.
+
+Release 1.4.8: Mon May 21 19:14:52 EDT 2001
+	* All symbols outside the individual port trees
+	  now have Configure.help entries.
+
+Release 1.4.7: Mon May 21 18:57:40 EDT 2001
+	* Resync with 2.4.5-pre4 and ac12.
+	* ARM rules fixes for bugs pointed out by Russell King.
+	* MVME on-board devices are questions again.
+
+Release 1.4.6: Fri May 18 19:41:09 EDT 2001
+	* Menuconfig bug fixes from Peter Kovacs <pkovacs@webmachines.com>:
+		- Entering in data larger than the width of the entry box.
+		- Preserving what you've entered when query_popup is called.
+	* Turn mail addresses in Configure.help into mailto URLs, so they 
+	  can become hotlinks.
+
+Release 1.4.5: Fri May 18 02:02:27 EDT 2001
+	* Rulesfile updated for 2.4.5pre3, 2.4.4ac10.
+
+Release 1.4.4: Wed May 16 00:16:29 EDT 2001
+	* Minor speedup -- use 'is' rather than '==' for type comparisons
+	* Fix a bonehead bug in mec's trit-turned-boolean case.
+
+Release 1.4.3: Mon May 16 15:35:07 EDT 2001
+	* Rulesfile sync with 2.4.5-pre2.
+
+Release 1.4.2: Mon May 14 01:35:07 EDT 2001
+	* Ray Knight's rules corrections for the Macintosh.
+
+Release 1.4.1: Tue May  8 13:32:14 EDT 2001
+	* kxref.py -n now filters listing generated by the -l option.
+	* Rules file updates, including S390 reorganization.
+
+Release 1.4.0: Fri May  4 18:18:15 EDT 2001
+	* Ugly hack for recovery from inconsistent configurations.
+
+Release 1.3.7: Fri May  4 13:15:49 EDT 2001
+	* Fixed a rulesfile bug near EFI_RTC that prevented the generated 
+          kernel from linking properly.
+
+Release 1.3.6: Fri May  4 03:04:14 EDT 2001
+	* -W option is gone. The configurator now always tolerates (and 
+	   reports on) unknown symbols in a configuration load. 
+	* Token Ring rules correction from Mike Phillips.
+
+Release 1.3.5: Wed May  2 12:38:22 EDT 2001
+	* Added -n option to kxref to suppress listing of unwanted file types.
+	* Reorganized character-devices menu; serial devices are now a submenu
+	  of their own, as are dongles.
+	* Found a nasty bug in the code for rolling back bindings, thanks
+	  to Martin Schwidefsky.
+
+Release 1.3.4: Tue May  1 14:41:48 EDT 2001
+	* Added -l (list) switch to kxref.py.
+	* Always leave Quit enabled on the file ops menu in xconfig.
+	* S390 rules updates from Martin Schwidefsky.
+	* Corrected an error in the installation script; it now detects
+	  and uses python2 (if present) to run helpmerge.
+	* menuconfig was stepping on frozen variables set at startup;
+	  this is now corrected so cross-configuration works properly.
+
+Release 1.3.3: Sun Apr 29 23:00:33 EDT 2001
+	* Resync with 2.4.4.
+	* Help texts merged into symbols file; the `helpfile' declaration
+	  is gone.  (Text is merged in from Documentation/Configure.help
+	  at CML2 installation time.)
+	* Tweaked the appearance of inactive help buttons by popular demand.
+
+Release 1.3.2: Sat Apr 28 12:57:27 EDT 2001
+	* Embarrassing bug (in the rollback logic) showed up on schedule.
+	* Nohelp tie temporarily disabled.
+
+Release 1.3.1: Fri Apr 27 19:02:31 EDT 2001
+	* kxref.py can now replace the unmaintained checkhelp.pl,  
+	  checkconfig.pl, and checkincludes.pl scripts.
+
+Release 1.3.0: Thu Apr 26 19:58:58 EDT 2001
+	* Another major speedup.  Baton prompts and fastmode are gone now.
+
+Release 1.2.8: Thu Apr 26 15:18:38 EDT 2001
+	* Major internal speedup; symbol evaluation is much faster now.
+
+Release 1.2.7: Thu Apr 26 01:48:41 EDT 2001
+	* Better type deduction for ternary derived symbols.
+
+Release 1.2.6: Wed Apr 25 18:53:29 EDT 2001
+	* Menuconfig bug fix from Adam Lackorzynski.
+	* Corrected and completed description of side-effect semantics
+	  in the reference manual.
+	* Version number in the compiled rulebase, and a check for mismatches.
+
+Release 1.2.5: Wed Apr 25 13:55:02 EDT 2001
+	* Synchronized with 2.4.4-pre6.
+	* Fixed KEY_HOME bug reported by Alex L. Mauer.
+	* Tom Rini's next round of PPC patches.
+	* Reference manual updated to reflect gcml implementation experience.
+
+Release 1.2.4: Mon Apr 23 23:50:59 EDT 2001
+	* Rules file fix from <hklygre@online.no>.
+	* Typo fixes from Steven Cole.
+	* Suppression-button fix from Simon Cozens.
+	* Cleanup to eliminate PyChecker warnings by Neal Norwitz.
+	* 'e' display fix by Adam Lackorzynski.
+	* Rules file fixes from Greg Banks.
+	* Better error messages on compile-time constraint violations.
+
+Release 1.2.3: Mon Apr 23 00:57:39 EDT 2001
+	* Taral's corrections to the rulefiles.
+	* Linux kernel version now shows up in the configurator via -B flag.
+
+Release 1.2.2: Thu Apr 19 16:45:41 EDT 2001
+	* More speed-tuning.
+
+Release 1.2.1: Thu Apr 19 13:35:19 EDT 2001
+	* kxref.py now alpha-sorts its output report.
+	* Another round of rulesfile patches from Tom Rini.
+	* kxref can now be used to automatically generate cleanup patches
+	  in some cases (e.g. for defconfigs).
+
+Release 1.2.0: Wed Apr 18 22:09:57 EDT 2001
+	* Synchronized with 2.4.4-pre4.
+	* First release of kxref.py.
+
+Release 1.1.6: Tue Apr 17 17:34:05 EDT 2001
+	* Steven Cole caught a buggy baton.
+
+Release 1.1.5: Tue Apr 17 15:17:36 EDT 2001
+	* Fix brown-paper-bag display bug.
+
+Release 1.1.4: Tue Apr 17 14:02:17 EDT 2001
+	* Tom Rini's patches for the PPC port tree.
+	* Correct handling of booleans when trits are disabled.
+	* `nohelp' tie symbol introduced.
+	* Code audited with PyChecker.
+
+Release 1.1.3: Mon Apr 16 17:45:32 EDT 2001
+	* Freeze color changed from cyan to blue.
+	* Tom Rini's network-configuration patches.
+	* Better detection of set variables to be colored green.
+	* Minor resize and scrolling fixes in menuconfig.
+	* Fixed a rather nasty bug involving side-effect computation 
+	  that showed up if you set, unset, and reset a symbol in a
+	  choices menu.
+	* In non-choice menus, select bar is now advanced after [ymn].
+
+Release 1.1.2: Sun Apr 15 14:26:07 EDT 2001
+	* Synchronized with 2.4.4-pre3.
+	* Screen flicker in menuconfig is gone.
+	* KEY_HOME and KEY_END now go to top or bottom of menu.
+	* Zack Weinberg's patch reorganizing the block devices menus.
+
+Release 1.1.1: Sat Apr 14 23:41:34 EDT 2001
+	* Synchronized with 2.4.4-pre1.
+	* Adam Lackorzynski's patch to make install-cml2 do the right thing 
+	  with relative installation paths.
+	* The old menuconfig shortcut that 'm' in a boolean entry field
+	  sets 'y' is now implemented. 
+	* Simplified color scheme.
+	* Added fast-mode command to suppress side-effect computation 
+	  on slow machines.
+
+Release 1.1.0: Fri Apr 13 23:10:56 EDT 2001
+	* Better-controlled recursivity in the theorem prover; reading in
+	  defconfigs is much faster now.
+	* Revised config/xconfig/menuconfig/oldconfigs productions, these
+	  should be a better match for the expected behavior now.
+	* Ternary-select (a ? b : c) added to the language.
+
+Release 1.0.3: Wed Apr 11 13:13:07 EDT 2001
+	* Added "(NEW)" to prompts where appropriate.
+
+Release 1.0.2: Tue Apr 10 13:38:48 EDT 2001
+	* Better environment probes in the install script.
+	* Insert a sleep after tkinter failure message before going to curses.
+	* Report constraint violations using the unreduced constraints.
+
+Release 1.0.1: Tue Apr 10 12:18:30 EDT 2001
+	* Fix a typo in install-cml2.
+
+Release 1.0.0: Mon Apr  9 22:00:30 EDT 2001
+	* Rules file synchronized to 2.4.3.
+	* Added help-search command.
+	* Added '!' declaration for `vital' trits that should remain 
+	  visible even if the modules-suppressed bit has been set.
+	* Use color in the curses and tkinter UIs.
+
+Release 0.9.8: Fri Mar 30 09:51:32 EST 2001
+	* Rules file synchronized to 2.4.3-pre8.
+	* Compiler now emits a twirling-baton progress indication.
+	* Properly notify user of nonexistent include file.
+	* Detect impossible combinations of -I and -D options on startup.
+	* Deduced side effects of symbol settings are now shown in a popup.
+	* Configurator can be told to default all module symbols to m.
+
+Release 0.9.7: Mon Mar 26 16:55:48 EST 2001
+	* Can now configure everything except the CONFIG_-less CRIS symbols.
+	* Prefix-stripping for backward compatibility with, e.g. CONFIG_3C515.
+	* Resolve all FIXMES, including Andre Hedrick's IDE vendor stuff.
+
+Release 0.9.6: Fri Mar 23 05:16:05 EST 2001
+	* When we return from a submenu in the tk interface, restore
+	  the scrolling location in the parent.
+	* Disable width resizing in tk front end, it only confuses matters.
+	* Hack makefile to use `python2' if it's present.
+	* Use the full height of the screen to avoid having scrolling menus.
+
+Release 0.9.5: Thu Mar 22 18:21:12 EST 2001
+	* Put Python version guard up front so user won't see a stack
+	  trace from bad imports.
+	* Follow through on representing numbers as numbers internally.
+
+Release 0.9.4: Sun Mar 18 01:48:12 EST 2001
+	* Move to hand-rolled LL parser for increased compilation speed.
+	* Compile numbers as numbers (solves Giacomo's 0.9.3 bug).
+
+Release 0.9.3: Mon Mar 12 18:13:10 EST 2001
+	* Don't crap out if the directory structure doesn't match what
+	  you are expecting.
+	* Added profiling switch to compiler.
+
+Release 0.9.2: Sat Feb 24 20:17:44 ESR 2001
+	* Windows porting fixes (open files in binary mode)
+	* Synchronized with 2.4.2.
+
+Release 0.9.1: Sun Jan  7 18:05:36 EST 2001
+	* Synchronized with 2.4.0 final.
+	* Fixed bugs in handling of -W and -D flags.
+	* "source" pathnames are now evaluated relative relative to the 
+	  directory of the including file, so it's now possible to compile
+	  in a directory other than that of the rules file.
+
+Release 0.9.0: Wed Dec 13 01:30:21 EST 2000
+	* Now uses Python 2.0 (this cuts down the code size significantly).
+	* Synchronized with 2.4.0-test12.
+
+Release 0.8.3: Wed Nov  8 08:31:56 EST 2000
+	* Synchronized with 2.4.0-test10.
+
+Release 0.8.2: Sun Oct 22 21:52:47 EDT 2000
+	* Added -W option to permit undefined symbols in -I files.
+	* Miscellaneous typo fixes.
+
+Release 0.8.1: Wed Oct 18 21:17:56 EDT 2000
+	* Synchronized with 2.4.0-test9.
+
+Release 0.8.0: Wed Sep 27 03:08:53 EDT 2000
+	* Synchronized with 2.4.0-test8.
+	* Added `explanation' facility so rulebase designers can associate
+	  text messages with constraints to be displayed when they're broken.
+	* Added enumerations to the language.
+	* Minor bugfixes from Frank Smith.
+
+Release 0.7.6: Fri Aug 11 23:45:38 EDT 2000
+	* Synchronized with 2.4.0-test6
+	* Better bug reporting when included files don't exist.
+	* Fixed a minor bug that caused menus in the Tk front end to be 
+	  sometimes refreshed in reverse order (thanks to Jorg Reuter
+	  for pointing this out).
+
+Release 0.7.5: Sat Jul 29 05:34:59 EDT 2000
+	* Synchronized with 2.4.0-test5
+
+Release 0.7.4: Wed Jul 26 12:07:47 EDT 2000
+	* Randy Dunlap has certified the USB configuration.
+	* 'x' and 'q' reversed in curses and tty modes.  'q' now matches
+	  the semantics of the Tk Quit menu entry.
+	* We no longer write FOO=n in defconfig; this turned out
+	  to break a large number of ifdefs in old-style makefiles 
+	  in the Linux kernel tree.
+
+Release 0.7.3: Sat Jul 22 22:20:59 EDT 2000
+	* Fixed a bug in -i handling.
+	* Added -b (batch mode) option.
+	* -DFOO=x now handles y,m,n as x values.
+	* Warn user when no output files have been specified.
+
+Release 0.7.2: Mon Jul 17 18:17:01 EDT 2000
+	* Enable trits properly when default of y is compiled in.
+	* X86 rule fixes from Sebastian Kuzminsky.
+
+Release 0.7.1: Fri Jul 14 17:35:30 EDT 2000
+	* Rulebase is synchronized with 2.4.0-test4.
+	* Fix for the documented Tk race problem in 0.7.0.
+
+Release 0.7.0: Fri Jul 14 15:49:02 EDT 2000
+	* Ready for production use; makefile now overwrites CML1 configs.
+	* Failure to find a -i file is now a nonfatal error.
+	* The "options" directive is removed from the language.
+	* Default setting in pop-ups now works correctly.
+	* Rulebase is synchronized with 2.4.0-test3.
+	* Andreas Bombe has certified the IEEE1394 configuration.
+
+Release 0.6.4: Wed Jul  5 17:08:35 EDT 2000
+	* Symbols with help are now marked in the curses front end.
+	* Rulebase is synchronized with 2.4.0-test2.
+	* To-do list is empty.  All items have been either done or 
+	  considered and dropped.
+
+Release 0.6.3: Wed Jul  5 08:23:11 EDT 2000
+	* Dynamic resizing of the panel works now.  It seems to interfere
+	  with Enlightenment's window-placement algorithm, though -- the
+	  panel always gets placed at the left margin.
+	* Navigation menu in Tk front end now has "Show ancestors of..."
+	  and "Show dependents of..." functions.
+
+Release 0.6.2: Tue Jul  4 21:20:20 EDT 2000
+	* We supply HTML documentation now.
+	* Prompt strings are now indented according  to depth in the curses 
+	  front end.
+	* Completed type-deduction logic for derived symbols.
+	* Better detection of ambiguous uses of trit symbols in the compiler.
+
+Release 0.6.1: Tue Jul  4 06:07:08 EDT 2000
+	* "source" now has cpp-like relative-path behavior.
+	* Everybody's most-requested front-end feature; choices menus and 
+	  discrete ranges are now edited through pulldown menus in the Tk
+	  front end.
+
+Release 0.6.0: Sun Jul  2 00:53:39 EDT 2000
+	* Abolished the configsymbol lexical class.
+	* Rulebase corrections for HP300 by Tamminen Eero.
+	* Don't croak on a malformed -i or -I file.
+	* Fixed bugs in curses mode g and / commands.
+
+Release 0.5.3: Fri Jun 30 10:35:10 EDT 2000
+	* Fixed an extremely obscure bug in side-effect propagation 
+	  pointed out by Simon Vogl.
+
+Release 0.5.2: Fri Jun 30 05:17:57 EDT 2000
+	* Fixed a reversed test that was messing up the ymn commands
+	  in the curses front end.
+	* Improve upward dependencies through menus.
+
+Release 0.5.1: Fri Jun 30 02:45:10 EDT 2000
+	* Fixed a bug in Tk-mode handling of the suppress button.
+	* Choices now show up on their menu bar.
+	* SuperH port changes -- port certified by Niibe Yutaka.
+	* Fixed a compiler bug that affected indirection of dependencies 
+	  through menus.
+
+Release 0.5.0: Mon Jun 26 16:01:34 EDT 2000
+	* Added full support for ranges plus discrete values.
+	* Language description moved to DocBook markup.
+	* Many bus dependencies folded into the rules file by William Stearns 
+	  <wstearns@pobox.com>.
+
+Release 0.4.1: Tue Jun 20 16:25:31 EDT 2000
+	* Fixed a brown-paper-bag bug in the assignment logic.
+
+Release 0.4.0: Tue Jun 20 09:59:26 EDT 2000
+	* CMLOPTIONS environment variable now available to pre-set options
+	* Frozen symbols are now visible in menus, though not modifiable.
+	* -E (elision) option becomes -S (suppression) option.
+	* ^G now does an exit and revert to initial value when field editing
+	  in curses mode.
+	* Fixed a subtle compiler error that screwed up the processing of
+	  "suppress depends" -- it now propagates down through menus as
+	  it should.
+	* Value stacking is now implemented; see the end of section IV.4, 
+	  "Symbol Assignment and Side Effects", for discussion.
+	* Bugs in configuration saving fixed.  Among other things, derived
+	  symbols are written out properly now.
+
+Release 0.3.5: Mon Jun 12 12:11:55 EDT 2000
+	* Stutter bug solved; we now have range validation in the Tk mode.
+	* Rules changes by Andrzej Krzysztofowicz.
+	* First translation section certified -- NLS, by Urban Widmark.
+
+Release 0.3.4: Mon Jun 12 03:06:05 EDT 2000
+	* The initial value is now properly filled in when editing a 
+	  string in a popup window.
+	* In curses mode, you can no longer deselect the selected 
+	  item in a choice menu.
+	* Backspace now deletes backward in the field editor.
+	* Curses help key is now TAB; hitting TAB again gets you expert help.
+
+Release 0.3.3: Sun Jun 11 15:54:54 EDT 2000
+	* Emacs-like binding now supported in both curses-mode 
+          popup query windows and curses-mode field editing.
+	* Numeric symbols can now have associated range checks.
+	* Curses mode can now edit long fields with popup windows.
+
+Release 0.3.2: Sat Jun 10 03:06:42 EDT 2000
+	* Drago Goricanec contributed improvements for the Tk UI.
+	* André Dahlqvist contributed URL browsing from help.
+	* Somehow a fatal bug crept into the save logic.  Fixed.
+
+Release 0.3.1: Fri Jun  9 17:59:23 EDT 2000
+	* Documented the defconfig and macrofile format.
+	* Fix -i and -I command-line options, the got broken in the
+	  last round of refactoring.
+
+Release 0.3.0: Fri Jun  9 16:52:10 EDT 2000
+	* Complete rewrite of the deduction algorithm. It is now guaranteed
+	  to find all side effects.  Deduction algorithm is now documented,
+	  with an explanation of why it isn't a full SAT algorithm.
+	* Field-mode editing help now actually works :-)
+
+Release 0.2.13: Thu Jun  8 17:56:34 EDT 2000
+	* Proper sanity checking when MODULES is toggled.
+	* D'oh! ungetch is curses module function, not an object method.
+	* F1 key changed to 'H'
+	* cmlconfigure -V runs without rules.out.
+
+Release 0.2.12: Wed Jun  7 01:59:41 EDT 2000
+	* Suppress menubar ops during search, go, etc.
+	* Less voluminous logging.
+	* Slightly more graceful handing of mindow resizes in curses mode.
+	* Scrolling menu frames!
+
+Release 0.2.11: Mon Jun  5 14:13:33 EDT 2000
+	* Fixed an error in the Tk save dialog.
+	* Fixed some minor bugs in numeric field handling.
+	* Fixed two bugs that prevented symbol values from being 
+	  redisplayed properly on rollback.
+
+Release 0.2.10: Mon Jun  5 05:24:29 EDT 2000
+	* Fix for typo reported by Giacomo Catenazzi.
+
+Release 0.2.9: Sun Jun  4 22:36:17 EDT 2000
+	* Choice menu bugfix by André Dahlqvist.
+	* It is now possible to flag a symbol so that it will appear as
+	  a warning in the prompts of all symbols that transitively
+	  depend on it.  Currently this is used for "EXPERIMENTAL".
+
+Release 0.2.8: Sun Jun  4 18:29:42 EDT 2000
+	* Nicer scrolling behavior in the curses front end.
+
+Release 0.2.7: Sun Jun  4 12:38:08 EDT 2000
+	* Tk frontend now has a toolbar button to get at choice menu help.
+	  (using the CML1 convention of attaching it to the first symbol).
+	* Disabled special treatment of KEY_UP and KEY_DOWN when browsing help;
+	  they now scroll up or down one line consistently.
+	* File loads work, and now report syntax errors in the defconfigs.
+
+Release 0.2.6: Sat Jun  3 17:43:41 EDT 2000
+	* Better handling of message items.  USB menu looks really spiffy now!
+	* Yet another swing at getting the timing of default-setting on choice
+	  menus right.  This is the bug behind a lot of the constraint 
+	  violations people have been reporting.
+	* Sanity check on exit.
+
+Release 0.2.5: Sat Jun  3 13:29:39 EDT 2000
+	* Fix brown-paper-bag bug in dependency handling.
+
+Release 0.2.4: Sat Jun  3 05:04:41 EDT 2000
+	* André Dahlqvist contributed some fixes for the Search, Load and
+	  Save commands; they behave better on error now.
+	* There is now a built-in event logger in the curses mode.  I hope this
+	  will enable us to catch and kill the out-of-range selection crashes
+	  that several early testers have reported.  If this mode crashes on
+	  you, please email me the configure.log file it leaves behind.
+	* Fixed Urban Widmark's restore-on-pop bug.  It's possible this was
+	  the one causing the crashes...
+	* Totally rewrote the logic for forcing values in ancestors and
+	  descendants.  It's cleanly separated from the constraint stuff
+	  now and works much better.
+	* Choices menu defaults are handled differently now.  An effect of
+	  this is that it should no longer be possible to save a 
+	  configuration that fails constraints because no architecture is
+	  set.
+
+Release 0.2.3: Fri Jun  2 03:35:54 EDT 2000
+	* Found and optimized away the quadratic search that was making
+	  0.2.2 painfully slow.
+	* Correct checkbuttons for boolean values.
+
+Release 0.2.2: Thu Jun  1 19:42:20 EDT 2000
+	* Added condition-on statement.  Module value support can now
+	  be tied to a symbol (MODULES, in the Linux kernel ruleset).
+	  If module values are off, the front end doesn't present
+	  m as an alternative for trit symbols.
+	* No confirm on quit unless you've actually changed a symbol
+	  since the last save.
+	* Fix some errors in range computation introduced by the
+	  trit switch change.
+	* Speed optimization for elision computations (mainly affects
+	  tty mode, which uses the elision check for skip to next query).
+
+Release 0.2.1: Wed May 31 23:50:07 EDT 2000
+	* Added Load command to Tk version, i and I commands to curses mode.
+	* Added Freeze command to Tk mode
+	* Added / search command to the curses interface.
+	* Selection is no longer reset to top of screen on a redraw.
+
+Release 0.2.0: Wed May 31 16:53:34 EDT 2000
+	* Full atemporal deduction with a baby theorem prover!
+	* Whenever/sets are gone from the language.  Those deductions
+	  are now done directly from requires.
+	* Setting a symbol may now set symbols in its visibility guard,
+	  if we can deduce that relationals in the guard must be true.
+
+Release 0.1.11: Tue May 30 19:55:11 EDT 2000
+	* Beginnings of atemporal deduction.
+
+Release 0.1.10: Tue May 30 17:36:13 EDT 2000
+	* Improved error handling.
+
+Release 0.1.9: Tue May 30 15:11:07 EDT 2000
+	* Curses mode no longer requires LINES or COLUMNS from environment.
+
+Release 0.1.8: Tue May 30 12:38:04 EDT 2000
+	* Fixed lockups in curses mode.
+	* On-line help and navigation bar.
+	* Internal pager for tty-mode help.
+	* Save As, Goto and Search commands.
+	* Padding around popup windows in curses mode.
+
+Release 0.1.7: Tue May 29 10:24:50 EDT 2000
+	* Add confirm dialog on exit without saving.
+	* Fix brown-paper-bag-bug with configuration saving.
+
+Release 0.1.6: Mon May 29 22:19:05 EDT 2000
+	* Tk mode knows about bools now and excludes 'm' value.
+	* Can now edit string, hex, and decimal symbols (with validation!)
+	* curses mode now has a working 'g' command.
+	* It is now possible to toggle whether suppressed symbols are displayed
+	  or not.
+	* New `icon' declaration.
+	* -x now forces Tk mode.  The debug option is now -d.
+
+Release 0.1.5: Sat May 27 02:54:09 EDT 2000
+	* Repacking when a menu is incrementally updated due to
+	  visibility changes now works.
+
+Release 0.1.4: Fri May 26 18:43:39 EDT 2000
+	* Help buttons now work.
+
+Release 0.1.3: Fri May 26 16:57:14 EDT 2000
+	* Added `prohibit'.
+	* The whenever statement changed; now allows full expressions on the
+	  right-hand side of assignments, but each assignment requires
+	  a leading "set" keyword.
+	* Almost-working Tkinter interface (can't edit string or integer
+	  symbols yet; doesn't really know trits from booleans).
+	* Don't rely on DISPLAY, run xdpyinfo instead.
+	* Fixes for Giacomo Catenazzi's bugs.
+	* Incorporated many suggestions from Riley Williams.
+	* Added -V option.
+
+Release 0.1.2: Thu May 25 03:05:40 EDT 2000
+	* Demonstration of the top-level menu in Tkinter.
+	* Fixed bug in setting of final symbols.
+	* Improvements in the language description
+
+Release 0.1.1: Wed May 24 13:29:09 EDT 2000
+	* Suggestions by John Cowan:
+		radiomenu -> choices
+		when -> whenever
+	* Configurator now pops up a demonstration window in TkInter mode.
+
+Release 0.1.0: Wed May 24 12:01:10 EDT 2000
+	* Initial beta release.  Working line-oriented and curses modes;
+	  no Tk interface yet.

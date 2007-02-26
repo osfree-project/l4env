@@ -1,0 +1,14 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+ * \defgroup api L4 Lock API
+ * 
+ * Documentation of the L4 Lock API
+ */
+
+/**
+ * \defgroup lock Lock / Unlock
+ *
+ * Lock and unlock functions.
+ */

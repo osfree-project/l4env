@@ -1,0 +1,44 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+ * \defgroup api L4 Region Mapper Library API Reference
+ *
+ * Documentation of the L4 Region Mapper library user API.
+ */
+
+/**
+ * \defgroup api_attach Attach / Detach Dataspaces
+ * \ingroup api
+ */
+
+/**
+ * \defgroup api_vm Virtual Memory Management
+ * \ingroup api
+ */
+
+/**
+ * \defgroup api_client Region Mapper Client Handling
+ * \ingroup api
+ */
+
+/**
+ * \defgroup api_init Library Initialization
+ * \ingroup api
+ */
+
+/**
+ * \defgroup api_setup L4env Setup Functions
+ * \ingroup api
+ *
+ * These functions provide the region mapper functionality without calling 
+ * the region mapper thread. Use these functions carefully, no synchronization 
+ * of accesses to the region mapper data structures is done. These functions
+ * are intended to be used by the L4env startup code of a task, where the
+ * region mapper thread might not run yet.
+ */
+
+/**
+ * \defgroup api_debug Debugging
+ * \ingroup api
+ */   

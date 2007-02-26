@@ -1,0 +1,655 @@
+<!DOCTYPE ARTICLE PUBLIC "-//OASIS//DTD DocBook V4.1//EN"[
+<!ENTITY CML1 "<productname>CML1</productname>">
+<!ENTITY CML2 "<productname>CML2</productname>">
+]>
+
+<!-- Version: $Id$ -->
+
+<article class="whitepaper" status="DRAFT" lang="EN" ID="cml2"
+         xreflabel="cml2" 
+         revision="$Id$"
+         vendor="Thyrsus Enterprises">
+<articleinfo>
+  <title>The CML2 Language</title>
+  <subtitle>
+      Constraint-based configuration for the Linux kernel and elsewhere.
+  </subtitle>
+  <author>
+    <firstname>Eric</firstname>
+    <othername>Steven</othername>
+    <surname>Raymond</surname>
+    <affiliation>
+      <orgname><ulink url="http://www.tuxedo.org/~esr">
+      Thyrsus Enterprises</ulink></orgname> 
+      <address>
+      <email>esr@thyrsus.com</email>
+      </address>
+    </affiliation>
+  </author>
+  <pubdate role="cvs">$Date$</pubdate>
+  <releaseinfo>This is version 0.9.1</releaseinfo>
+  <copyright>
+    <year>2000</year>
+    <holder role="mailto:esr@thyrsus.com">Eric S. Raymond</holder> 
+  </copyright>
+  <legalnotice>
+    <title>Copyright</title>
+    <para>Permission is granted to copy, distribute and/or modify
+    this document under the terms of the Open Publication License,
+    version 2.0.</para>
+  </legalnotice>
+
+<abstract><para>
+This paper describes CML2, the Configuration Menu Language
+designed to support Linux kernel configuration.  It is written as
+a historical narrative because that provides a good frame for
+describing the design issues in the language.  For a reference
+manual, see <citetitle>CML2 Reference Manual</citetitle>.
+</para><para>
+This paper was presented at the 9th International Python conference,
+5-8 March 2001. It has since been lightly revised to reflect current
+reality.
+</para></abstract>
+</articleinfo>
+
+<sect1 id="why"> <title>Why CML2?</title>
+<epigraph>
+  <attribution>Alan Perlis</attribution>
+  <para><quote>
+     Every program eventually becomes rococo, and then rubble.
+  </quote></para>
+  </epigraph>
+
+<para>The &CML2; project was launched because in March 2000, in the
+process of building 2.3.51 Linux kernels, I discovered that the original
+<productname>kbuild</productname> configure language had reached the
+rococo stage; it had become so brittle that any attempt to change or
+extend it would break everything.</para>
+
+<para>This matters, because the kernel-configuration process has grown
+excessively complex.  The configuration system's job is to turn the
+user's answers to configuration questions into a file of
+<function>#define</function> constructs used to condition features in
+or out of the C code.  As Linux has grown more features and more
+driver support, the number of menus and prompts one must navigate to
+choose the appropriate subset of those features has become forbidding
+even to expert users, and outright impossible for the novice users
+Linux increasingly seeks to attract.</para>
+
+<para>To properly manage the complexity we have created, we need a
+configuration interface that can support better chunking and
+progressive disclosure.  Ideally, novices building kernels should see
+only the choices they <emphasis>need</emphasis> to make.  As they gain
+competence and cue the configuration system that they are ready, they
+should see more options for tuning and exotic hardware.  The full
+process should be accessible to expert kernel hackers, but not
+inflicted willy-nilly on everyone else as it now is.</para>
+
+<para>With the brittle old configure language (which we'll call &CML1;) this
+kind of redesign would simply not have been possible at all.  &CML1; had
+started out life as a set of simple shell scripts, but evolved into a
+massive hairball featuring three different interpreters, C code
+customized to generate Tcl/Tk, and source files so difficult
+to read that (according to the unanimous report of &CML1;'s own
+maintainers) latter-day &CML1; users rarely try to program it
+by any means more sophisticated than a cut-paste-edit of the
+menus for existing features.</para>
+
+<para>Here is a relatively painless sample of the CML1 language:</para>
+
+<programlisting> <![CDATA[
+      bool '  Other IDE chipset support' CONFIG_IDE_CHIPSETS
+      if [ "$CONFIG_IDE_CHIPSETS" = "y" ]; then
+	 comment 'Note: most of these also require special kernel boot parameters'
+	 bool '    Generic 4 drives/port support' CONFIG_BLK_DEV_4DRIVES
+	 bool '    ALI M14xx support' CONFIG_BLK_DEV_ALI14XX
+	 bool '    DTC-2278 support' CONFIG_BLK_DEV_DTC2278
+	 bool '    Holtek HT6560B support' CONFIG_BLK_DEV_HT6560B
+	 if [ "$CONFIG_BLK_DEV_IDEDISK" = "y" -a "$CONFIG_EXPERIMENTAL" = "y" ]; then
+	    bool '    PROMISE DC4030 support (EXPERIMENTAL)' CONFIG_BLK_DEV_PDC4030
+	 fi
+	 bool '    QDI QD6580 support' CONFIG_BLK_DEV_QD6580
+	 bool '    UMC-8672 support' CONFIG_BLK_DEV_UMC8672
+      fi
+]]> </programlisting>
+
+<para>I had a second reason for getting involved besides wanting to see
+the configuration process simplified; I like designing little 
+languages more than any other kind of programming.  The interesting
+challenge I saw was to design a language that would (a) capture all
+the right domain-specific abstractions, but (b) remain flexible
+enough to allow configuration-system maintainers to experiment with
+different progressive-disclosure policies.</para>
+</sect1>
+
+<sect1><title>Design Problems in &CML2;'s Domain</title>
+
+<para>Achieving both a good map of the territory and sufficient
+flexibility was not an easy problem.  My first straw-man design
+(<quote>Thesis</quote>, for purposes of this paper) was essentially a
+cleaned-up, stripped-down &CML1;.  The process of hand-translating a
+few hundred lines of the roughly 7000-line &CML1; corpus into Thesis
+showed me that a conventional imperative language would not be
+adequate for this problem.</para>
+
+<para>The cause of the mismatch is that most of the complexity in the
+&CML1; corpus expresses neither actions nor values, but rather
+visibility constraints.  Most of the program's decision points have to
+do with whether the question that sets a given configuration symbol
+needs to be asked at all.  The logic for deriving a final set of
+configuration <function>#define</function> symbols from the answers to
+the subset of questions a user actually answers is comparatively
+trivial.  Its most important part is the checking of various
+constraints on combinations of configuration options.</para>
+
+<para>This description strongly suggests that what was really needed
+was a language not for describing menu actions but rather for
+<emphasis>declaring rules</emphasis>. This should work with an
+interpreter that would query the user according to those rules in the
+process of building a correct solution.</para>
+
+<para>Seen in this light, &CML1;'s rigidity and complexity was partly
+a direct result of trying to do declarative things with imperative
+machinery.  My second straw-man design, which I'll call
+<quote>Antithesis</quote> here, was a short-lived attempt to do away
+with the concept of explicit configuration menus entirely.  In
+Antithesis, all queries would have been driven by a process that
+started from a set of initial conditions (such as specifying the
+processor architecture and the user's expertise level) and got to a
+valid configuration end state by something like
+theorem-proving.</para>
+
+<para>I say <quote>would have been</quote> and <quote>something
+like</quote> because Antithesis never got beyond the concept stage.  I
+quickly realized that the ability to group questions into explicit
+menus and specify the order of menus was a valuable way to chunk the
+problem domain, to convey a mental model of the relationships between
+different configuration options.</para>
+</sect1>
+
+<sect1><title>Design and Philosophy of &CML2;</title>
+
+<para>&CML2;, therefore, has a view of the world that includes both menus and
+rules.  A &CML2; system specifies the following things:</para>
+
+<itemizedlist>
+<listitem><para>
+   A tree of menus.  This tree is explicitly declared by the &CML2;
+   programmer.  Each menu contains a sequence of questions; each
+   answer to a question sets the value of a configuration symbol.
+   Menus may also contain submenus.
+</para></listitem>
+
+<listitem><para>
+   A set of visibility predicates. At any given time, only a subset of
+   the menu tree is visible.  Each node in the tree (each symbol or menu)
+   has a predicate associated with it that controls whether it is visible 
+   or suppressed.  Input (independent) variables in the predicate may be 
+   set from &CML2;'s startup options, or they may be set by the results
+   of previous queries.
+</para></listitem>
+
+<listitem><para>
+   A set of validity constraints.  These are predicates that connect 
+   two or more configuration symbols.  Each constraint is checked
+   every time the user tries to change the value of one of its input symbols;
+   if the constraint would not be satisfied by the change, the change
+   is disallowed and the user notified.  Other, user-interface-dependent
+   actions to recover from the constraint violation may follow.
+</para></listitem>
+
+<listitem><para>
+   A set of derivations.  A derivation is a formula that ties the
+   value of an output symbol to the value of one or more input
+   symbols.  Derived symbols may either be computed for direct use
+   in a final configuration, or used as input variables of constraints
+   or predicates.  Whenever a derived symbol is evaluated, the formula
+   behind it is recomputed from the current values of the formula's input
+   symbols (like a cell in a spreadsheet).
+</para></listitem>
+</itemizedlist>
+
+<para>This is a very different view of the world from &CML1;'s
+conventional imperative one, and will have significant implications
+for configuration file maintainers.  Notably, the &CML1; configuration
+tree had multiple roots: one top-level config-language file for each
+port subdirectory.  &CML2; defines one big menu tree, with portions
+suppressed during the configuration process.</para>
+
+<para>Some indication of the power of these concepts may be gleaned from the
+compression ratio of &CML1;-to-&CML2; translation.  As of the 2.4.2 kernel,
+total lines of code and rule files in &CML1; was 17297, in &CML2; 10273.
+This represented a 41% decrease in system size and complexity. But that
+figure actually understates the case, because &CML2; has many capabilities
+not supported in &CML1;.</para>
+
+<para>Another decision I made early was to have no information or constraints
+specific to the Linux-kernel configuration problem in the code of the system.
+Thus, a CML rules file contains not just the menu declarations, visibility
+predicates, validity constraints, and derivations derived above; it includes
+various auxiliary declarations including the locations of help files, a common
+prefix to be added when writing out symbols, and even the image to be used
+when the configurator iconifies under X.</para>
+
+<para>Thus, CML2 is designed to conveniently be used for a much larger
+class of configuration-management problems than just Linux kernels.
+It could be used, in particular, for configuring systems from
+libraries of programs or libraries with `requires' dependencies on
+each other.  All this would require would be a custom rules file
+expressing the dependencies.</para>
+
+<para>This decision also paid off.  Within weeks after CML2 went public,
+it was selected to handle configuration for the Embedded Debian Project.
+The rules file for this system includes not just constraints for
+the kernel but for package configuration of the entire system.</para>
+</sect1>
+
+<sect1><title>A Language Example</title>
+
+<para>For a complete description of the &CML2; language, see the
+<citetitle>CML2 Reference Manual</citetitle>, available at the <ulink
+url="http://www.tuxedo.org/~esr/cml2/">CML2 project website</ulink>.
+The contents of that manual was formerly two-thirds of this paper,
+until a sound drubbing from a pre-publication reviewer brought me
+belatedly to my senses. Instead, I'll provide and discuss a motivating
+example -- a section from the Linux configuration rulebase chosen to
+illustrate the use of the language in practice. </para>
+
+<para>The following two listings describe the configuration of the network 
+scheduling faculities in the Linux kernel. First, the rules:</para>
+
+<programlisting> <![CDATA[
+unless ATM suppress NET_SCH_ATM 
+unless NETFILTER suppress NET_SCH_INGRESS
+
+menu netsched # Traffic control configuration
+	NET_SCH_CBQ? NET_SCH_CSZ?
+	NET_SCH_ATM NET_SCH_PRIO? NET_SCH_RED? NET_SCH_SFQ?
+	NET_SCH_TEQL? NET_SCH_TBF? NET_SCH_GRED?
+	NET_SCH_DSMARK? NET_SCH_INGRESS? 
+	NET_QOS {
+		NET_ESTIMATOR 
+		NET_CLS {
+			NET_CLS_TCINDEX? NET_CLS_ROUTE4? NET_CLS_FW? 
+			NET_CLS_U32? NET_CLS_RSVP? NET_CLS_RSVP6? NET_CLS_POLICE
+		}
+	}
+require NET_SCHED implies NETLINK==y and RTNETLINK==y
+
+derive NET_CLS_ROUTE from NET_CLS_ROUTE4!=n
+]]> </programlisting>
+
+<para>Next, the symbol declarations that associate question prompts with 
+symbols:</para>
+
+<programlisting> <![CDATA[
+NET_SCH_CBQ		'CBQ packet scheduler'
+NET_SCH_CSZ		'CSZ packet scheduler'
+NET_SCH_ATM		'ATM pseudo-scheduler'
+NET_SCH_PRIO		'The simplest PRIO pseudoscheduler'
+NET_SCH_RED		'RED queue'
+NET_SCH_SFQ		'SFQ queue'
+NET_SCH_TEQL		'TEQL queue'
+NET_SCH_TBF		'TBF queue'
+NET_SCH_GRED		'GRED queue'
+NET_SCH_DSMARK		'Diffserv field marker'
+NET_SCH_INGRESS		'Ingress Qdisc'
+NET_QOS			'QoS support'
+NET_ESTIMATOR		'Rate estimator'
+NET_CLS			'Packet classifier API'
+NET_CLS_TCINDEX		'TC index classifier'
+NET_CLS_ROUTE4		'Routing table based classifier'
+NET_CLS_FW		'Firewall based classifier'
+NET_CLS_U32		'U32 classifier'
+NET_CLS_RSVP		'Special RSVP classifier'
+NET_CLS_RSVP6		'Special RSVP classifier for IPv6'
+NET_CLS_POLICE		'Traffic policing (needed for in/egress)'
+]]> </programlisting>
+
+<para>What's being declared here is a single menu in the  menu tree, named
+netsched. The menu has potentially up to 20 entries.  Each defines a
+question which might be asked of the user and a symbol that will hold
+the result and be written to the configuration file(s).</para>
+
+<para>Most of the symbols in this menu are tristates, which means they
+can also have the value <constant>m</constant> for module, telling the
+build machinery to compile in kernel module stubs for dynamic loading
+after boot time.  A few are boolean symbols that can only have the
+values <constant>y</constant> or <constant>n</constant>.</para>
+
+<para>The menu has a subsection which is invisible when the value of
+<symbol>NET_QOS</symbol> is <constant>n</constant>.  That subsection
+has a sub-subsection that is invisible when the value of
+<symbol>NET_CLS</symbol> is <constant>n</constant>.  If a question is
+not asked because the symbol is invisible, the associated symbol
+defaults to <constant>n</constant> for both boolean and tristate
+symbols.  About the only important language construct not shown in
+this example is the <symbol>default</symbol> statement, which can be
+used to explicitly change a symbol's default.</para>
+
+<para>There are other, more explicit, visibility constraints.  The
+'ATM pseudo-scheduler' question won't be asked unless the symbol
+<symbol>ATM</symbol> has previously been set to a
+<constant>y</constant> or <constant>m</constant> value elsewhere.
+Similarly, the <symbol>NET_SCH_INGRESS</symbol> question won't be
+asked unless <symbol>NETFILTER</symbol> is set.</para>
+
+<para>The <symbol>require</symbol> statement forces the values of
+<symbol>NETLINK</symbol> and <symbol>RTNETLINK</symbol> to be
+<constant>y</constant> if <symbol>NET_SCHED</symbol> is on.  If
+setting <symbol>NETLINK</symbol> and <symbol>RTNETLINK</symbol> has
+side-effects, those are forced too (the theorem prover can detect and
+flag circular or inconsistent constraints).  It's not shown here, but
+<symbol>NET_SCHED</symbol> is a guard that maskes the whole netsched
+menu invisible if it is off.</para>
+
+<para>The example derivation sets <symbol>NET_CLS_ROUTE</symbol>
+according to whether <symbol>NET_CLS_ROUTE4</symbol> is off or
+on.</para>
+
+<para>Any of the symbols in this menu may themselves be used in
+expressions that are visibility guards for other symbols, or on the
+right side of other derivations.</para>
+
+<para>There are other language constructs not illustrated here.  But
+with the exception of <symbol>default</symbol>, most of them are
+one-time declarations used to specify things like the location of
+help files and other features of the configurator environment.</para>
+</sect1>
+
+<sect1><title>Implementation of &CML2;</title>
+
+<sect2><title>Program Partitioning</title>
+
+<para>The &CML2; implementation consists of two Python programs:
+<command>cmlcompile</command> and <command>cmlconfigure</command>.
+The compiler, <command>cmlcompile</command>, generates a pickled
+representation of a rulebase from one or more files of &CML2; rules.
+The interpreter, <command>cmlconfigure</command>, reads in a rulebase
+and uses it to inform a configuration dialogue with the user.</para>
+
+<para>The cmlconfigure program queries its environment to discover
+what I/O facilities are available.  It will use X if it's on an
+X display and Tkinter can be found.  Otherwise, it will look for the
+curses library and support a full-screen character interface.  If it
+can't find curses and a <envar>TERM</envar> in the environment, it 
+will fall back to a line-oriented mode.  Python's ability to recover
+from failed imports is valuable here.</para>
+
+<para>The separation between front and back ends serves two purposes.
+One: Front ends don't need to know about and are not affected by
+the details of the compiler implementation.  Two: The &CML2; rulebase
+doesn't have to be recompiled every time a front end is run.</para>
+
+<para>The end result is a pair of configuration files, the
+<filename>defconfig</filename> and the <filename>macrofile</filename>.
+These are in formats inherited from &CML1;.  The
+<filename>defconfig</filename> consists of a set of variable
+definitions in shell syntax; it can be re-read by a future instance of
+cmlconfigure to set defaults.  The macrofile is a list of C-style
+<function>#define</function> macros intended to be included in kernel
+C code.  These are the same outputs the CML1 configuration machinery
+produces.</para>
+</sect2>
+
+<sect2><title>Deduction algorithm</title>
+
+<para>&CML2; is <emphasis>not</emphasis> built around an algorithm for
+the propositional satisfiability (or <acronym>SAT</acronym>) problem ,
+such as <acronym>GSAT</acronym> or <acronym>SATO</acronym>.  Given
+that &CML2; is a constraint-based language, this might at first seem
+curious. But there are special features of &CML2;'s domain that would
+make these relatively poor choices and difficult to apply.</para>
+
+<para>The Linux kernel configuration problem for which &CML2; was originally
+invented and tuned involves approximately 1750 symbols.  Of these,
+however, fewer than 400 participate in about the same number of
+constraints, mostly implied constraints of simple (a &lt;= b) form.
+However, many of the variables are not booleans but tristates, blowing
+the equivalent problem back up to about 1600 boolean shadow variables
+over 400 constraints, and making the translation of the problem into pure
+boolean-propositional form a significant exercise in itself.</para>
+
+<para>Complete SAT algorithms like SATO are very time-consuming (the
+problem is NP-complete), enough to cause unacceptable lag in an
+interactive configurator on a problem this size.  Incomplete SAT
+algorithms like the stochastic GSAT technique are not guaranteed to
+yield an answer even though one may exist.  But there is a more
+fundamental problem: we do not actually want a <quote>model</quote> in
+the SAT sense; where variables are under-constrained we want to leave
+them as don't-cares (e.g. not set them.)</para>
+
+<para>(Good references on the SAT problem are available on the Web.
+<ulink url="http://www.cs.uiowa.edu/~hzhang/sato.html">SATO</ulink> is
+the best-of-breed among complete SAT algorithms and the <ulink
+url="http://www.owlnet.rice.edu/~tdanner/gsat/">GSAT Page</ulink>
+includes a Python implementation, and some good discussion of
+the algorithm's limitations.  Michael Littman has also assembled
+<ulink url="http://www.cs.duke.edu/~mlittman/topics/sat.html">a
+mini-survey of the literature</ulink>.)</para>
+
+<para>&CML2; instead uses a relatively simple custom algorithm
+independently invented by the author, and more closely related to the
+resolution method of the original Davis-Putnam elimination algorithm
+than to the splitting-rule approach of SATO and other modern SAT
+techniques.  The &CML2; algorithm exploits facts about the domain.
+One is the fact that we don't actually need to find a full model.
+Another is the fact that many of the constraints (about 3/4 in the
+Linux-kernel problem) are simple chains of the form <symbol>x1 &lt;= x2 &lt;=
+x3...&lt;= xn</symbol> created by <symbol>suppress dependent</symbol>
+declarations or sub-menu bracketing with <token>{</token>
+<token>}</token>.</para>
+
+<para>When the value of a symbol is changed, &CML2; tries to find
+variables it can force.  It does this by simplifying the value of all
+frozen, <quote>chilled</quote>, and tentatively set variables out of
+constraints.  In any conjunction that this simplification leaves, the
+code looks for relationals with a constant on one side and a mutable
+symbol on the other.  When these relationals constrain the symbol to a
+single value, that value is forced and the symbol is marked
+<quote>chilled</quote>.</para>
+
+<para>The assignment of the forced symbol is itself done using the same 
+algorithm.  Redundant assignments are ignored; an attempt to set
+a chilled symbol means the ruleset has inconsistent constraints
+and raises a fatal error.</para>
+
+<para>An assignment and its side-effects have to be associated so they
+can be backed out when the value of the assigned symbol next changes.
+In the reference implementation, this is done by implementing a
+bindings list consisting of records each keyed by primary symbol
+and constraining all the side-effect bindings associated with the
+last set of the symbol.  This bindings list is searched from the
+most recent such record backwards.</para>
+
+</sect2>
+
+<sect2><title>Implementation</title>
+
+<para>The reference implementation of &CML2; is written in straight
+Python 2.0, no extensions.  The choice of languages has an obvious virtue and
+a couple of non-obvious ones.</para>
+
+<para>The obvious virtue is that Python is a a truly high-level language
+that does memory management automatically, eliminating the single
+most common source of bugs in languages without this property.
+However, several other non-obvious virtues are equally important.  Here
+are some of them:</para>
+
+<itemizedlist>
+<listitem><para>
+   <quote>Batteries are included.</quote> While Python does not have
+   as rich an extension-module base as its main competitor Perl,
+   rather more of that capability is bundled with the stock Python
+   interpreter.  One built-in facility that is particularly important
+   for &CML2; is Python's <quote>pickle</quote> or
+   object-serialization support. A &CML2; rulebase is a pickled
+   object.
+</para></listitem>
+
+<listitem><para>
+   Python, unlike other scripting languages, can be (effectively)
+   compiled to pure C using the <command>freeze</command> facility.
+   The translation is not pretty, and produces rather large C programs
+   from even small Python sources, but it does meet the problem of
+   portability head-on.  Kernels could be shipped with a precompiled
+   rulebase and a frozen C version of the &CML2; interpreter to avoid
+   the requirement for Python.
+</para></listitem>
+
+<listitem><para>
+   Another non-obvious virtue is the way that Python supports
+   conditional runtime loading of support modules.  We can use this to
+   detect and recover from situations in which the library support does
+   not exist to provide Tcl-based or curses-based front end.
+</para></listitem>
+</itemizedlist>
+
+<para>Though the Python implementation of CML2 is pleasingly compact
+at 4800-odd lines, there are theoretical reasons Scheme or Prolog might
+have been a better vehicle &mdash; in particular, in Prolog I might
+have been able to make the compiler unnecessary by simply having the
+rulebase be itself a set of Prolog assertions.  I rejected both from
+very practical considerations; these languages are not ubiquitous on
+modern Linux systems, and would have made the job of persuading the
+Linux kernel maintainers to switch over effectively impossible.</para>
+
+<para>The side-effect resolution code in CML2 looks like a relatively
+simple operation, taking only a few hundred lines (rather less than
+the Tk front end code, by way of comparison).  But this apparent
+simplicity is deceptive; it depends on the complexity of the central
+data structure, an annotated class instance dictionary with a lot of
+carefully-arranged crosslinks between entries.</para>
+
+<para>While Scheme and Prolog are theoretically adequate to handle
+such a ramified data structure, in practice the code to support and
+traverse it would have been complex and not very natural in either
+language.  Scheme wants to think in trees, Prolog in Horn clauses; a
+dictionary is not a first-class object in either language, and classes
+must be erected as elaborate superstructures in both.</para>
+
+<para>Thus, the CML2 implementation achieves its compactness through
+making heavy and sophisticated use of a combination of facilities
+specific to Python -- first-class dictionaries, classes, pickling, and
+a standard library rich enough to support all three front ends.</para>
+
+<para>That having been said, however, the design of Python itself did
+not influence or leak into CML2's to any extent.  I did not (for
+example) try to identify CML2 rulesfile symbols with Python variables
+and use Python's <function>eval()</function> to handle expression
+evaluation.  I was saved from such temptation by the knowledge that
+the CML2 language needed to be declarative rather than imperative; a
+thin layer over imperative Python would not therefore have served.
+The CML2 language is truly independent from its implementation
+language because it must be.</para>
+
+<para>One pleasant lesson of this project is that stock Python does in
+fact includes in its standard library almost everything that is
+necessary to engineer an application-specific language that is not
+particularly like Python at all.</para>
+</sect2>
+</sect1>
+
+<sect1><title>Good style in rulebase design</title>
+
+<para>The configuration experience defined by a CML2 rulebase can vary greatly 
+in its degree of apparent complexity to a human user, depending on how
+much context and interdependency information the user has to keep in mind
+to get through the process.  In general, you want to minimize this cognitive
+load. </para> 
+
+<para>Good choices of menu organization and rules can help accomplish this.
+In particular, human beings will find easiest a sequential set of
+questions in which few questions depend on questions previously asked,
+and <emphasis>no</emphasis> questions depend on questions that are
+asked after them.</para>
+
+<para>Most CML2 declarations can be written in any order (but see the
+section on order dependencies in the reference manual), and CML2
+constraints can reach either forwards or backwards in that order.  But
+the full power of this generality unleashed creates rulesets that are
+hard for humans to reason about.  So it's good style to use that power
+in a more controlled way.</para>
+
+<para>To do this, it's important to think about three different
+ordering relationships.  The first is the order of declarations in the
+rulebase.  The second is the "natural" order of questions in the menu
+tree -- a depth-first or preorder traversal defined by the ordering
+and inclusion relationships in the menus.  And the third is the order
+in which human users driving the configurator will normally answer the
+questions.</para>
+
+<para>To make life as simple as possible for developers and users,
+these three orders should largely coincide (though the order of
+declarations in the rulebase is only important for readability by
+developers, and need not be as tightly coupled to the other two
+orderings as they should be to each other).</para>
+
+<para>To remind you of this, the compiler warns about uses of question
+symbols in a visibility-guard or dependency expression for a symbol
+occuring <emphasis>before</emphasis> the associated question in
+preorder.  This is what the compiler warning "FOO depends on ['BAR']
+forward" means.</para>
+
+<para>There are other heuristics you can follow to keep life simple.
+Holding explicit dependencies, requirements, and visibility
+expressions (as opposed to implicit ones defined by the menu
+structure) to a minimum is an important one; these, typically,
+represent links across the tree rather than locally from parent to
+child nodes, and complicate things.</para>
+
+<para>Also, put global questions that will greatly constrain other choices 
+early in the preorder, even if this sometimes means separating them
+from submenus that perhaps would naturally go beneath them.</para>
+
+<para>In the Linux kernel configuration rulebase, for example, there
+is a `buses' menu that contains enabling symbols for major subsystems
+like IDE, SCSI, and PCMCIA.  The menus for IDE, SCSI, and PCMCIA are
+not beneath this menu as might seem natural but rather later on in the
+preorder.  The reason for this is that some devices have
+cross-dependencies on more than one bus or controller type (there are
+PCMCIA SCSI cards, for example.)  To avoid forward dependencies, it's
+best to group all of these bus/controller symbols before the hardware
+driver menus they control.</para>
+
+</sect1>
+<sect1><title>Current limitations of &CML2;</title>
+
+<para>There are no composition operators for string types.  (These would be
+trivial to implement, but are not yet needed.)</para>
+
+<para>Some CML1 symbols are set by user queries in one place and by the
+bodies of CML1 conditionals depependent on other symbols
+in another.  This is awkward to express in CML2, in which query symbols are
+query symbols and derivations are derivations, and never the twain shall
+meet.  The workaround is to create a private symbol to be set by the user
+and use it in a derivation that covers both cases.</para>
+
+<para>The compiler's algorithm for deducing the types of derived symbols
+sometimes results in hex-valued symbols being formatted as decimal in the
+output configuration.</para>
+</sect1>
+
+<sect1 id="acknowledgements"><title>Acknowledgements</title> 
+
+<para>Credit where credit is due, to the intrepid early adopters on
+the linux-kernel list who helped CML2 get past its teething stage:
+David Kamholz, Giacomo Catenazzi, Robert Wittams, Randy Dunlap, Urban
+Widmark, and Andr&eacute; Dahlqvist.</para>
+
+<para>Andr&eacute; Dahlqvist and Drago Goricanec contributed UI code for the
+Tk front end.  William Stearns contributed many bus dependencies for
+the rules file.  Gary Lawrence Murphy translated the &CML2; spec to
+DocBook. Danni Junglas caught and fixed numerous UI buglets.</para>
+
+</sect1>
+</article>
+<!-- 
+Local Variables:
+mode:sgml
+mode:auto-fill
+sgml-doctype:("cml2-paper.sgml" "article" "chapter")
+sgml-insert-missing-element-comment: nil
+sgml-indent-step: 2
+End:
+-->

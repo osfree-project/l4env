@@ -1,0 +1,44 @@
+/* -*- c -*- */
+/*****************************************************************************
+ *** client API
+ *****************************************************************************/
+
+/**
+\defgroup api L4 Thread Library API Reference
+Documentation of the L4 Thread Library user API.
+*/
+
+/**
+\defgroup api_create Create new threads
+\ingroup api
+*/
+
+/**
+\defgroup api_exit Exit / shutdown threads
+\ingroup api
+*/
+
+/**
+\defgroup api_prio Priority management
+\ingroup api
+*/
+
+/**
+\defgroup api_sleep Thread sleep
+\ingroup api
+*/
+
+/**
+\defgroup api_data Thread data
+\ingroup api
+*/
+
+/**
+\defgroup api_misc Miscellaneous
+\ingroup api
+*/
+
+/**
+\defgroup api_config Thread library configuration and initialization
+\ingroup api
+*/

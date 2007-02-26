@@ -1,0 +1,50 @@
+/*
+ * This is a small dice example.
+ *
+ * It looks the same as the flick-example, so people
+ * will recognize similarities and differences fast.
+ */
+
+/*
+ * You may use libraries to divide interfaces into
+ * name-spaces. Libraries may be nested.
+ * 'library' == 'module'
+ */
+library hello 
+{
+  /*
+   * An interface is represented by a server-loop.
+   * If you wish to handle multiple interfaces in
+   * one server-loop, derive a new interface from 
+   * the interfaces you wish to support.
+   */
+  interface test 
+    {
+      /*
+       * This function sends a long value and
+       * receives another long value. This should
+       * be transmitted using a short IPC.
+       *
+       * Difference to flick:
+       * - attributes are surrounded by brackets []
+       * - out values must be references
+       */
+      void f1([in] unsigned long t1, 
+	  [out] unsigned long *t2);
+      /*
+       * This function receives the out value
+       * as return value.
+       */
+      unsigned short f2([in] long t1);
+      /*
+       * This function transmits a string.
+       *
+       * Differences to flick:
+       * - no string type, instead an attribute is used
+       * - the maximum size can either be set as array 
+       *   boundary ([in, string] char s[200]) or via
+       *   attributes ([in, string, max_is(200)] char* s)
+       */
+      unsigned long f3([in, string, max_is(200)] char* s);
+  };
+};

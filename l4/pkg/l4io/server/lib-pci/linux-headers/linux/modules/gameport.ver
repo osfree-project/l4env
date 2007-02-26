@@ -1,0 +1,16 @@
+#define __ver_gameport_register_port	smp_aa96bd99
+#define gameport_register_port	_set_ver(gameport_register_port)
+#define __ver_gameport_unregister_port	smp_ec101047
+#define gameport_unregister_port	_set_ver(gameport_unregister_port)
+#define __ver_gameport_register_device	smp_2396c158
+#define gameport_register_device	_set_ver(gameport_register_device)
+#define __ver_gameport_unregister_device	smp_3f30ffb5
+#define gameport_unregister_device	_set_ver(gameport_unregister_device)
+#define __ver_gameport_open	smp_e13f41c7
+#define gameport_open	_set_ver(gameport_open)
+#define __ver_gameport_close	smp_758298cb
+#define gameport_close	_set_ver(gameport_close)
+#define __ver_gameport_rescan	smp_49065b4a
+#define gameport_rescan	_set_ver(gameport_rescan)
+#define __ver_gameport_cooked_read	smp_585124db
+#define gameport_cooked_read	_set_ver(gameport_cooked_read)

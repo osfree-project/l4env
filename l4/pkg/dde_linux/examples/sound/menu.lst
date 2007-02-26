@@ -1,0 +1,19 @@
+title sounddrv-foo
+ kernel (nd)/tftpboot/USER/rmgr -sigma0 task modname "sounddrv-foo" module
+ module (nd)/tftpboot/USER/fiasco -nowait -nokdb
+ module (nd)/tftpboot/USER/sigma0
+ module (nd)/tftpboot/USER/names
+ module (nd)/tftpboot/USER/log
+ module (nd)/tftpboot/USER/dm_phys
+ module (nd)/tftpboot/USER/l4io --noirq
+ module (nd)/tftpboot/USER/sounddrv-foo
+ modaddr 0x01000000
+ module (nd)/tftpboot/USER/sample.pcm sample1
+
+# sample.pcm should be:
+#
+#   format:  AFMT_S16_LE (16 bit, signed, little-endian)
+# channels:  2
+#     rate:  44 kHz
+#
+# or you have to adopt settings in server.c line 38.

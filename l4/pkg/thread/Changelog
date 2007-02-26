@@ -1,0 +1,19 @@
+0.5 - Lars, 04/23/2002
+- added library configuration
+- added exit handler
+- added startup return data
+- added thread locks
+- code restructured to better support thread_linux and thread_linux_kernel
+
+0.4 - Jork, 01/09/2002
+- moved thread_linux and thread_linux_kernel into separate packages. Don't
+  forget maintaining them if the API changes!
+
+0.3 - Jork, 06/20/2001
+- added support for L4Linux kernel- and userland
+
+0.2 - Lars, 03/16/2001
+- Use the priority of thread 0 for the default priority
+	
+0.1 - Lars, 01/08/2001
+- Initial release

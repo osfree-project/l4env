@@ -1,0 +1,73 @@
+# -*- makefile -*-
+
+L4STD_INCDIR	:=
+CPPFLAGS	+= -D_GNU_SOURCE
+
+ifeq ($(CONFIG_IA32_586),y)
+  CFLAGS += -march=i586
+  CXXFLAGS += -march=i586
+endif
+
+ifeq ($(CONFIG_IA32_686),y)
+  CFLAGS += -march=i686
+  CXXFLAGS += -march=i686
+endif
+
+ifeq ($(CONFIG_IA32_P3),y)
+  CFLAGS += -march=pentium3
+  CXXFLAGS += -march=pentium3
+endif
+
+ifeq ($(CONFIG_IA32_P4),y)
+  CFLAGS += -march=pentium4
+  CXXFLAGS += -march=pentium4
+endif
+
+ifeq ($(CONFIG_IA32_K6),y)
+  CFLAGS += -march=k6
+  CXXFLAGS += -march=k6
+endif
+
+ifeq ($(CONFIG_IA32_K6_2),y)
+  CFLAGS += -march=k6-2
+  CXXFLAGS += -march=k6-2
+endif
+
+ifeq ($(CONFIG_IA32_ATHLON),y)
+  CFLAGS += -march=athlon
+  CXXFLAGS += -march=athlon
+endif
+
+ifeq ($(CONFIG_IA32_ATHLON_4),y)
+  CFLAGS += -march=athlon-4
+  CXXFLAGS += -march=athlon-4
+endif
+
+ifeq ($(CONFIG_IA32_ATHLON_XP),y)
+  CFLAGS += -march=athlon-xp
+  CXXFLAGS += -march=athlon-xp
+endif
+
+ifeq ($(CONFIG_IA32_ATHLON_MP),y)
+  CFLAGS += -march=athlon-mp
+  CXXFLAGS += -march=athlon-mp
+endif
+
+ifeq ($(CONFIG_IA32_ATHLON_TBIRD),y)
+  CFLAGS += -march=athlon-tbird
+  CXXFLAGS += -march=athlon-tbird
+endif
+
+ifeq ($(CONFIG_NDEBUG),y)
+  CPPFLAGS += -DNDEBUG
+endif
+
+ifeq ($(CONFIG_PROFILE),y)
+  PROF_FLAGS = -pg
+endif
+
+ifeq ($(CONFIG_NO_FRAME_PTR),y)
+  CPPFLAGS += -fomit-frame-pointer
+endif
+
+SHARED_FLAGS	+= -mpreferred-stack-boundary=2

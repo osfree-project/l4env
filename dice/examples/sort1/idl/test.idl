@@ -1,0 +1,7 @@
+interface simple
+{
+  long gmode([out] byte *mode,
+      [out] unsigned long *sbuf_1size,
+      [out] unsigned long *sbuf_2size,
+      [out] unsigned long *sbuf_3size);
+};

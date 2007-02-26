@@ -1,0 +1,79 @@
+#
+# Automatically generated, don't edit
+#
+# Generated on: erwin
+# At: Wed, 12 Feb 2003 22:51:15 +0000
+# Linux version 2.4.20 (adam@erwin) (gcc version 2.95.4 20011002 (Debian prerelease)) #1 SMP Fri Nov 29 12:09:40 CET 2002
+
+#
+# Main menu
+#
+
+#
+# Compiler
+#
+CONFIG_USE_GCC=y
+CONFIG_USE_GCC_3_X=n
+
+
+#
+# Target Architectures
+#
+
+#
+# Target platform
+#
+CONFIG_IA32=y
+CONFIG_IA64=n
+CONFIG_ARM=n
+CONFIG_UX=n
+
+
+#
+# Kernel ABI Version
+#
+CONFIG_ABI_V2=y
+CONFIG_ABI_X0=n
+
+
+#
+# Target processor
+#
+CONFIG_IA32_586=y
+CONFIG_IA32_686=n
+CONFIG_IA32_K6=n
+CONFIG_IA32_K6_2=n
+CONFIG_IA32_K6_3=n
+
+CONFIG_ASSEMBLER_IPC_SHORTCUT=n
+CONFIG_SCHED_RTC=y
+CONFIG_SLOW_RTC=n
+CONFIG_DECEIT_BIT_DISABLES_SWITCH=n
+CONFIG_APIC_MASK=n
+CONFIG_POWERSAVE_GETCHAR=y
+CONFIG_X2_LIKE_SYS_CALLS=n
+CONFIG_SYNC_TSC=n
+
+
+#
+# Kernel Debugging
+#
+CONFIG_INLINE=n
+CONFIG_NDEBUG=n
+CONFIG_PROFILE=n
+CONFIG_NO_FRAME_PTR=n
+CONFIG_KDB=y
+CONFIG_JDB=y
+CONFIG_JDB_LOGGING=n
+CONFIG_CHECK_CIRCULAR=n
+
+
+#
+# Derived symbols
+#
+CONFIG_ABI="v2"
+CONFIG_IA32_TARGET="Intel Pentium"
+CONFIG_XARCH="ia32"
+CONFIG_SCHED_PIT=n
+#
+# That's all, folks!

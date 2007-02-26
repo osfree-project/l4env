@@ -1,0 +1,12 @@
+import "l4/sys/types.h"
+
+library l4
+{
+    interface ping
+    {
+	int l([in] int data);
+	short s([in] short data);
+	long add([in] long v1, [in] long v2);
+	l4_threadid_t id();
+    };
+};

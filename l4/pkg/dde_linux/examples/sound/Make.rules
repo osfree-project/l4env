@@ -1,0 +1,34 @@
+# -*- Makefile -*-
+
+TARGET		= sounddrv-foo
+DEFAULT_RELOC	= 0x00800000
+
+SRC_C		= server.c
+
+### specialties
+PRIVATE_INCDIR	= $(PKGDIR)/include/ARCH-$(ARCH) \
+		  $(DDE_LINUX_DIR)/include
+
+LIBS		= -ldde_linux -ldde_linux-sound -lio -lomega0
+
+DEFINES		= -D__KERNEL__ -DDDE_LINUX
+WARNINGS        = -Wall -Wstrict-prototypes
+
+# If you have complete Linux sources use this in Makeconf.local:
+#
+# MY_DRV_PATH = LINUX_DIR/drivers/sound
+# MY_DRV_FILES = <files>
+#
+# That will overwrite these standard settings.
+MY_DRV_PATH ?= $(PKGDIR)/examples/sound/contrib
+MY_DRV_FILES ?= ac97_codec.c es1371.c
+
+SRC_C		+= $(MY_DRV_FILES)
+VPATH		+= $(MY_DRV_PATH)
+
+### act the role of ...
+include $(L4DIR)/mk/prog.mk
+
+ifdef DEBUG
+  DEFINES += -DDEBUG_ERRORS -DDEBUG_ASSERTIONS
+endif

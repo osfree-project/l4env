@@ -1,0 +1,2 @@
+#define __ver_skb_migrate	smp_36c12596
+#define skb_migrate	_set_ver(skb_migrate)

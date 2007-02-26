@@ -1,0 +1,68 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4Env Generic I/O Reference Manual
+
+\section content Content
+
+- \ref sec_intro
+- \ref sec_usage
+- \htmlonly<a href="modules.html">\endhtmlonly Client library API 
+  documentation Part I\htmlonly</a>\endhtmlonly
+- \ref page_omega0
+
+\section sec_intro Introduction
+
+This package defines the generic interface of I/O managers. It is (like \a
+dm_generic) not an implementation. generic_io includes a wrapper library \a
+libio. This is the I/O manager API to be used.
+
+An I/O manager provides services to access I/O related resources. These
+resources are (at least on x86) I/O port regions, memory-mapped I/O regions and
+PCI configuration space. Interrupt handling is also in scope of an I/O manager
+and handled as proposed for Omega0 (http://os.inf.tu-dresden.de/~hohmuth/prj/omega0.ps.gz).
+A brief Omega0 introduction is included in this manual.
+
+\section sec_usage Usage
+
+libio is linked via "-lio" command line switch to the client program. I/O
+client programs depend on a running L4Env including region mapper thread within
+client's address space and common L4Env servers names, log, io and appropriate
+dataspace managers.
+
+*/
+
+/**
+\defgroup grp_misc Miscellaneous
+
+Library initialization.
+
+*/
+
+/**
+\defgroup grp_pci PCI Support
+
+Identification of devices and support for configuration space access.
+
+*/
+
+/**
+\defgroup grp_res Resource Allocation
+
+Allocation and deallocation of shared system resources - ports, memory, ISA DMA
+channels.
+
+*/
+
+/** \page page_omega0 Client library API documentation Part II (Omega0)
+
+Omega0 is a portable interface to interrupt hardware for L4 systems. It was
+outlined in the "Omega0" paper
+<http://os.inf.tu-dresden.de/~hohmuth/prj/omega0.ps.gz>.
+
+Currently omega0 is implemented as server on L4 and the package includes a easy
+to use client library and examples too. The \c irqmeter example shall be used
+as first reference how to attach to interrupts.
+
+*/

@@ -1,0 +1,194 @@
+/* -*- c -*- */
+/**
+\mainpage L4Env Phys. Memory Dataspace Manager Reference Manual
+
+\section content Contents
+
+- \ref intro
+- \ref use
+  - \ref use_server
+  - \ref use_client_lib
+  - \ref use_dsm_lib
+- \htmlonly<a href="group__api.html">\endhtmlonly 
+  Client Library API Documentation
+  \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__open.html">\endhtmlonly
+    Open/Close/Copy Dataspaces
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__alloc.html">\endhtmlonly
+    Various Memory Allocation Support Functions
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__map.html">\endhtmlonly
+    Map Dataspace Regions
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__client.html">\endhtmlonly
+    Dataspace Client Handling
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__mem.html">\endhtmlonly
+    Miscellaneous Function to Manage Memory Dataspaces
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__debug.html">\endhtmlonly
+    Debug Functions
+    \htmlonly</a>\endhtmlonly
+- \htmlonly<a href="group__dsmlib.html">\endhtmlonly
+  Dataspace Manager Server Support Library Documentation
+  \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__dsmlib__ds.html">\endhtmlonly
+    Dataspace Management
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__dsmlib__client.html">\endhtmlonly
+    Client Handling
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__dsmlib__iterate.html">\endhtmlonly
+    Iterate Dataspace List
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__dsmlib__init.html">\endhtmlonly
+    Initialization
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__dsmlib__debug.html">\endhtmlonly
+    Debugging
+    \htmlonly</a>\endhtmlonly
+- \htmlonly<a href="group__idl.html">\endhtmlonly IDL Interface 
+  Documentation\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__idl__generic.html">\endhtmlonly
+    Generic Dataspace Manager Interface
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__idl__mem.html">\endhtmlonly
+    Memory Dataspace Manager Interface
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__idl__phys.html">\endhtmlonly
+    Physical Memory Dataspace Manager Interface
+    \htmlonly</a>\endhtmlonly
+- \ref page_client
+
+\section intro Introduction
+
+The L4Env Phys. Memory Dataspace Manager (DMphys) manages the available phys. 
+memory of a system. It implements and extents the 
+\htmlonly <a href="group__idl.html"> \endhtmlonly L4Env Dataspace Manager 
+Interface \htmlonly </a> \endhtmlonly.
+
+<b>Features:</b>
+- DMphys support the definition of various memory pools. Each memory pool
+  exclusively manages an area of the phys. memory. Memory pools can be used 
+  to reserve and use certain memory areas for special purposes. There are 
+  two predefined memory pools, one which holds ISA DMA capable memory 
+  (memory below 16MB) and one which holds all the remaining available 
+  memory (note that by default no memory is assigned to the ISA DMA
+  memory pool, it must be configured with the <tt>--isa</tt> command line 
+  option of DMphys).
+- DMphys supports the allocation of phys. contiguous and aligned memory.
+- The memory provided by DMphys is "pinned". That means that once the 
+  memory is mapped to a client, no pagefaults will occur accessing that 
+  memory.
+- DMphys supports 4MB-pages (aka superpages). 
+
+\section use Usage
+
+DMphys consists of two main parts, the DMphys server (\a dm_phys) and the
+dataspace manager client libraries (\a libdm_phys.a, \a libdm_mem.a and
+\a libdm_generic.a).
+
+\subsection use_server Starting the DMphys Server (dm_phys)
+
+The DMphys server depends on the name server \a names and \a log. It is 
+registered at the name server as \c "DM_PHYS".
+
+Example grub boot menu entry:
+\verbatim 
+module = (nd)/tftpboot/names
+module = (nd)/tftpboot/log  
+module = (nd)/tftpboot/dm_phys
+
+\endverbatim
+
+For most purposes, starting DMphys without any arguments should be sufficient.  
+Possible command line arguments are:
+<dl>
+<dt><tt> -v | --verbose </tt></dt>
+  <dd> Show memory and pool list on startup.</dd>
+
+<dt><tt> -p | --pool=pool,size[,low,high[,name]] </tt></dt>
+  <dd> Memory pool configuration
+       <dl>
+       <dt><tt>pool</tt></dt>
+         <dd> Memory pool number (0..7), predefined pools are pool 0
+              (default pool) and pool 7 (ISA DMA capable memory)</dd>
+       <dt><tt>size</tt></dt>
+         <dd> Memory pool size, if set to -1 DMphys will use all 
+              available memory</dd>
+       <dt><tt>low,high</tt></dt>
+         <dd> Memory pool min/max address. If set to -1, DMphys will
+              use default values for low (0) and high (max phys. 
+	      memory).</dd>
+       <dt><tt>name</tt></dt>
+         <dd> Memory pool name.</dd>
+       </dl>
+  </dd>
+
+<dt><tt> -m | --mem=size[,low,high[,name]] </tt></dt>
+  <dd> Configuration for default memory pool (0). Default is to use all
+       available memory. </dd>
+
+<dt><tt> -i | --isa=size[,low,high[,name]] </tt></dt>
+  <dd> Configuration for ISA DMA memory pool (7). Default is to not allocate
+       memory for the pool and set <tt>high</tt> to 16MB.</dd>
+
+<dt><tt> -r | --reserve=low,high </tt></dt>
+  <dd> Do not use memory area (<tt>low,high</tt>) for any memory pool.</dd>
+
+<dt><tt> -l | --low=low </tt></dt>
+  <dd> Set default min. address to <tt>low</tt>. It will be used if the 
+       min. address of a pool is set to -1.</dd>
+
+<dt><tt> -h | --high=high </tt></dt>
+  <dd> Set default max. address to <tt>high</tt>. It will be used if the
+       max. address of a poll is set to -1.</dd>
+
+<dt><tt> -R | --rmgr </tt></dt>
+  <dd> Use the Resource Manager to allocate pool memory. If this option is 
+       set, a poll size must be specified for all pools (including the 
+       default memory pool!). Default is to allocate memory directly
+       at Sigma0.</dd>
+
+<dt><tt> -n | --no_4M_pages </tt></dt>
+  <dd> Do not use 4MB-pages (aka superpages) to map memory. If this option 
+       is set, DMphys will not be able to provide 4MB-pages to clients and
+       the initialization of DMphys will take a longer time.</dd>
+
+</dl>
+
+\subsection use_client_lib Using the Client Libraries
+
+According to the IDL interface specification, the dataspace manager client
+API is seperated into serveral libraries:
+
+- Generic dataspace manager client library (\a libdm_generic.a)
+- Memory dataspace manager client library (\a libdm_mem.a)
+- Physical memory dataspace manager client library (\a libdm_phys.a)
+
+Each of these libraries provides wrapper functions for the according
+IDL interface functions and additional support functions to ease the 
+use of the dataspace managers. Like the IDL interfaces, the libraries
+extend each other. This means that you must link \a libdm_generic.a 
+and \a libdm_mem.a to your applications if you want to use functions of 
+the memory dataspace manager interface, resp. all three libraries if
+you want to use functions of the physical memory dataspace manager
+interface.
+
+Applications should always use the functions provided by the client 
+libraries instead of the IDL interface functions. See the 
+\htmlonly<a href="group__api.html">\endhtmlonly Client Library API 
+Documentation\htmlonly</a>\endhtmlonly for a detailed description of 
+the API functions.
+
+\subsection use_dsm_lib  Using the Dataspace Manager Server Support Library
+
+The Dataspace Manager Server Support Library (\a libdm_generic-server.a)
+provides several functions to ease the implementation of dataspace managers.
+The library mainly contains functions for bookkeeping and dataspace 
+client handling. See the \htmlonly<a href="group__dsmlib.html">\endhtmlonly
+Dataspace Manager Server Support Library Documentation
+\htmlonly</a>\endhtmlonly for a detailed description of the API 
+functions.
+**/

@@ -1,0 +1,12 @@
+interface test {
+
+  void ein_string  ([in, string] char *str1);
+  void zwei_string ([in, string] char *str1,
+                    [in, string] char *str2);
+  void gib_string  ([in] long a,
+  					[in, string] char *instr,
+  					[out, string] char **outstr);
+  void drei_string([in, string, max_is(256)] char* str);
+  void vier_string([in, ref, string, max_is(256)] char* refstr);
+  void fuenf_string([in, ref, string, max_is(100)] char* refstr2);
+};

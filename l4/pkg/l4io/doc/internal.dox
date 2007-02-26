@@ -1,0 +1,48 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4Env l4io I/O Server Internals
+
+*/
+
+/**
+\defgroup grp_misc Main of l4io (including IPC server loop) and Miscellaneous Services
+
+Herein resides everything concerning general io server purposes and
+miscellaneous functions not worth an own module.
+
+*/
+
+/**
+\defgroup grp_pci PCI (wrapper) Module and PCIlib
+
+IO serves PCI requests with it's \e wrapper module and uses an internal
+PCIlib extracted from Linux 2.4.x.
+
+For now I don't know where to draw the red line in the PCI subsystem. Linux
+drivers make instant use of PCI specific macros/functions. I think many of the
+structs has to be kept in io and the driver server... we'll see.
+
+\todo What about more than 1 PCI bus?
+\todo UGLY: ##ifdef ... ##endif removed code in Linux .c files
+
+*/
+
+/**
+\defgroup grp_res Resource Allocation Module
+
+Io serves several resource allocation requests and thereby manages I/O
+ports, I/O memory, and ISA DMA channels \e exclusively in the <em>Common L4
+Environment</em>.
+
+*/
+
+/**
+\defgroup grp_o0 Omega0 Module
+
+This Module is fully compatible to the Omega0 specification (uses the
+original \c omega0 sources and provides the interface) and implements an
+Omega0 server inside io's address space.
+
+*/

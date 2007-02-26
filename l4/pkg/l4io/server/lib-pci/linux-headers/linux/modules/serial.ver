@@ -1,0 +1,4 @@
+#define __ver_register_serial	smp_a18dc2b1
+#define register_serial	_set_ver(register_serial)
+#define __ver_unregister_serial	smp_ce8a3e65
+#define unregister_serial	_set_ver(unregister_serial)

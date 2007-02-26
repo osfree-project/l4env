@@ -1,0 +1,149 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Thread Library Reference Manual
+
+\section content Contents
+
+- \ref intro
+- \ref config
+- \htmlonly<a href="group__api.html">\endhtmlonly User API 
+  reference\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__create.html">\endhtmlonly 
+    Create new threads\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__exit.html">\endhtmlonly 
+    Exit / shutdown threads\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__prio.html">\endhtmlonly 
+    Priority management\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__sleep.html">\endhtmlonly 
+    Thread sleep\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__data.html">\endhtmlonly 
+    Thread data\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__misc.html">\endhtmlonly 
+    Miscellaneous\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__config.html">\endhtmlonly 
+    Thread library configuration and initialization
+    \htmlonly</a>\endhtmlonly
+- \htmlonly<a href="examples.html">\endhtmlonly 
+  Examples\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_simple">\endhtmlonly 
+    Simple thread creation\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_sync">\endhtmlonly 
+    Syncronous thread creation / startup return data
+    \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_long">\endhtmlonly 
+    Thread creation, long version \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_exit">\endhtmlonly 
+    Thread shutdown / exit functions \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_data">\endhtmlonly 
+    Thread local data \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_config">\endhtmlonly 
+    Library configuration \htmlonly</a>\endhtmlonly
+
+\section intro Introduction
+
+The L4 Thread Library (l4thread) encapsulates native L4 threads 
+and provides a basic abstraction to the thread related system 
+call interface of the L4 microkernel. It provides functionality 
+to ease the usage of threads, this includes:
+<dl>
+<dt><i>Thread creation / shutdown</i></dt>
+  <dd>L4thread provides functions to create and shutdown L4 threads.
+      Threads can register exit handlers, which will be executed 
+      during the shutdown of the thread.</dd>
+
+<dt><i>Stack allocation</i></dt>
+  <dd>The allocation of stacks for new threads can be done internally
+      by l4thread. For special purposes the application can provide
+      its own stack.
+      By having an own stack management l4thread can implement 
+      some optimizations, e.g. it uses a stack placement which 
+      allows the calculation of the thread id from the stack 
+      pointer of a thread, this speeds up the access to the 
+      thread management structures. 
+  </dd>
+
+<dt><i>Basic priority handling</i></dt>
+  <dd>L4thread includes function to set/request the L4 priority of 
+      threads. </dd>
+
+<dt><i>Thread data management</i></dt>
+  <dd>Threads can have private data (void pointers) assigned to them. 
+      To avoid conflicts e.g. by various libraries accessing that private 
+      data, l4thread supports serveral data pointers, referenced by 
+      <i>data keys</i>. Libraries can allocate a data key and use it to 
+      exclusively access the data pointer assigned to that key. 
+  </dd> 
+</dl>
+
+The intention of l4thread is not to compete with other thread libraries 
+(like pthreads), it should rather provide a basis to implement other 
+high-level thread packages without the need to care for too much L4 details.
+
+\section config Usage / Library Configuration
+
+To use the L4 Thread Library you need to include the file 
+\<l4/thread/thread.h\> and link libthread.a to the binary. L4thread 
+depends on other L4Env libraries, namely \a l4env, the Region Mapper 
+\a l4rm, the Memory Dataspace Manager \a dm_mem and the Logserver 
+\a log.
+
+The L4 Thread Library is usually initialized by the L4Env startup code 
+during the setup of a new task, the application does not need to do 
+anything. Therefore the configuration of l4thread works a bit different,
+since there is no initialization function which can be used to set
+configuration values. Instead, l4thread can be configured redefining
+some symbols which are weakly defined in l4thread. These parameters
+can be configured:
+<dl>
+<dt><i>Maximum number of threads (#l4thread_max_threads)</i></dt>
+  <dd>Max. number of threads l4thread can manage. This mainly 
+      affects how much memory is allocated by l4thread for 
+      internal thread descriptors, each thread descriptor needs about
+      128 Bytes. Default is 16.
+  </dd>
+
+<dt><i>Default stack size (#l4thread_stack_size)</i></dt>
+  <dd>Default stack size for new threads. Default is 64 KB.
+  </dd>
+
+<dt><i>Maximum stack size (#l4thread_max_stack)</i></dt>
+  <dd>Max. stack size for new threads. This value is required for the 
+      optimized stack placement described above, it affects how much
+      virtual memory is reserved to arrange stacks 
+      (#l4thread_max_stack times #l4thread_max_threads). 
+      Threads can be created with a larger stack size, but they will 
+      not benefit from the described optimizations.
+      Default is 1 MB.
+  </dd>
+
+<dt><i>Default priority (#l4thread_default_prio)</i></dt>
+  <dd>Default priority for new threads, default is to use the priority 
+      of the initial thread.
+  </dd>
+
+<dt><i>Stack map area (#l4thread_stack_area_addr)</i></dt>
+  <dd>Start address of the virtual memory area used to map the stacks of 
+      new threads. Default is to ask the Region Mapper to find a suitable 
+      map area. Note that the map area must be big enough to hold the 
+      stacks of all threads (specified by #l4thread_max_threads and 
+      #l4thread_max_stack) and that the start address must be aligned 
+      to the maximum stack size (#l4thread_max_stack).
+  </dd>
+
+<dt><i>TCB table map address (#l4thread_tcb_table_addr)</i></dt>
+  <dd>Start address of the virtual memory area used to map the thread 
+      control blocks (TBC). The map area must be big enough to hold 
+      the TCBs of all threads (the size of a TCB is about 128 byte, the 
+      number of threads is specified by #l4thread_max_threads) and
+      the start address must be page-aligned.
+  </dd>  
+</dl>
+
+See the \htmlonly<a href="group__api.html">\endhtmlonly User API 
+reference\htmlonly</a>\endhtmlonly for a description of the l4thread 
+functions.
+
+**/
+

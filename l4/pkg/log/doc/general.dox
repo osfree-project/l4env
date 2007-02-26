@@ -1,0 +1,294 @@
+/*!\file doc/general.dox
+ *
+ * \brief Mainpage definition and some concept description.
+ */
+
+
+/*!\mainpage LOG - Logging and output facility for DROPS
+
+\section p_intro Overview
+
+The LOG-package offers functionality for logging data of DROPS programs.
+The package consists of a set of macros, application libraries and a
+logging server.
+
+The \ref p_macros "Log macros" allow to easily genearate verbose
+logging messages which may contain the position (file and line) in the
+program code. The \ref p_libs "libraries" are responsible for actually
+generating the output messages, and are mostly transparent to the
+user. The purpose of the \ref p_server "logserver" is to order the
+messages so that they do not intermix. If also supports buffering the
+messages and forwarding them to a telnet-client via tcp.
+
+
+\ref p_macros
+
+\ref p_libs
+
+\ref p_server
+
+\ref p_muxed
+
+\ref p_faq
+
+\ref p_doc
+
+*/
+/*!\page p_libs The LOG libraries
+
+Actually, there are three libararies, \c liblog.a, \c liblogserver.a
+and libloglinux.a. For L4 applications, either \a liblog.a or \a
+liblogserver.a must be linked to the application.
+
+\b liblog.a outputs the data directly using the external function \c
+putchar().
+
+\b liblogserver.a sends the data to the \ref p_server "LOG server", where
+they are ordered, buffered and optionally send over the network.
+If the LOG server cannot be contacted, this library outputs the data
+using the \c putchar() function.
+
+\b libloglinux.a allows the \ref p_macros "LOG macros" to be used with
+Linux applications.
+
+Both L4 libraries offer an own \c printf() implementation sending its
+output to special hook-functions instead of printing directly to the
+screen. This \c printf() version supports the tag "\%t" to print the
+current threadid. The alternate version of the tag, "\%\#t", surrounds
+the thread-id with squared brackets.
+
+Both L4 libraries can be initialized using the LOG_init() function.
+This initialization sets the LOG-tag, which is prepended to all
+outputs done by the program. The LOG-tag is used to easily distinguish
+between the outputs of different programs and should be 8 characters
+in length. An alternative to calling LOG_init() is to define the symbol
+\ref LOG_tag as a 0-terminated character-field with 9 characters in length, which
+contains the logtag.
+
+All libraries support the LOG_flush() function. This function ensures
+that all data logged so far is actually printed. If used with the
+\ref p_server "LOG server", the logserver flushs all its buffered data.
+
+*/
+/*!\page p_macros The LOG macros
+
+The macros offered by the LOG-package expect printf-compatible format
+strings with any number of arguments.
+
+\#include <l4/log/l4log.h>
+
+\par LOG(format...)
+		output the log-tag followed by the formatted message.
+
+\par LOGl(format...)
+		output the log-tag, the source-code file,
+		the line number, the function number and the formatted
+		message.
+
+\par LOGL(format...)
+		output the log-tag, the source-code file, the line
+		number, the function name, the thread-id and the message.
+
+\par LOGI(format...)
+		output the log-tag, some other information, and the
+		formatted message.
+
+\par LOG_Enter(format...)
+		output the function name followed by "() called" and the
+		formatted message. This macro should be placed in the
+		beginning of a function to indicate the function call.
+
+\par LOG_Error(format...)
+		output "Error: " and the formatted message.
+
+\section s_cond_macros Conditional Logging
+
+The macros LOG, LOGl, LOGL and LOG_Enter come in a second flavor,
+with a condition variable as the first argument. They are called LOGd,
+LOGdl, LOGdL and LOGd_Enter. Use a condition-expression as first
+argument to the LOGd...-macros. The logging will accur if the
+expression evaluates to true. If the condition-expression is constant
+and false, the whole Log-Statement will be null and void for the
+compiler.
+
+*/
+
+/*!\page p_server The LOG Server
+
+The LOG Server orders the logged data to avoid them to intermix with
+each other on the output media. The server offers buffering of the
+data to minimalize the impact to timing caused by the output. The
+logserver comes in two flavours. The simple one outputs the data using
+a \c putchar() function, which must be provided at compile-time. A
+network-flavoured version allows data to be transfered over the
+network using the tcp-based protocol.
+
+\section p_server_invocation Invocation
+
+The logserver is a sigma0-client and should be loaded and started
+using the grub/rmgr pair. It requires the nameserver. The logserver
+supports the following cmdline-options:
+
+\par --verbose
+	Print the task- and threadid of the thread that sent logging
+	data together with the data.
+\par --buffer <size>
+	Set the size of the buffer to hold the log-data. If this option is
+	not specified when compiled in no-net flavor, received log-data is
+	printed immediately.  With net flavor, the default buffer size is
+	4KB.
+\par --net
+	Forward log-output to the network (ignored by simple flavour)
+\par --nonet
+	Turn off network logging. (default)
+\par --local
+	Print the log-output to the console. (default)
+\par --nolocal
+	Turn off local logging.
+\par --muxed
+	Flush the buffers in muxed format. This is only relevant when logging
+	to the network. Then, this option allows to send data on
+	\ref p_muxed. (default in network flavour)
+\par --nomuxed
+	Turn of the muxed mode. With the muxed mode beeing disabled, the
+	data on a remote host can simply be shown using "telnet". However,
+	binary data cannot be transfered this way.
+\par --ip <ipaddr>
+	Set the IP-address used for network-logging (ingored by simple
+	flavour). If this option is not specified, the logserver will
+	issue a bootp-request prior to network logging.
+\par --prio <priority>
+	Set the L4-priority of the request thread (default 0x20).
+\par --flushprio <priority>
+	Set the L4-priority of the flusher threads (default 0x20).
+
+\section p_server_receive Receiving the logging data
+
+To receive the logging data over the network, you need a suitable
+client-application. For non-muxed flushing mode (server cmdline-option
+"--nomuxed"), open a telnet-connection to the machine running the LOG
+server. When using the muxed flushing mode, you need an application the
+understands the \ref p_muxed_format.  In both modes, the status messages of
+the LOG server itself will not be sent over the network, they are printed to
+the local terminal. The following box shows the begin example-session using
+the non-muxed flushing mode.
+
+\code
+/home/jork/src/l4/pkg/log/server/src> telnet amalia      
+Trying 141.76.48.118...
+Connected to amalia.inf.tu-dresden.de.
+Escape character is '^]'.
+
+Welcome to the L4-Logserver.
+Using a Buffersize of 14000. Log follows.
+\endcode
+
+If you abort the TCP connection by stopping the remote client-applications,
+the LOG server will continue to fill its buffers. However, if the buffer is
+filled, local L4 clients trying to send data will be stopped until a new TCP
+connection is established and the data is flushed to the network.
+
+
+\section p_server_flush Flushing the data
+
+The buffered data is flushed regularly, if the server has the time to
+do so. A thread running at a low priority (1) triggers the flushing in
+a loop. The flushing is enforced by calling the LOG_flush() function
+at a log client, or by sending data on the telnet connection.
+
+\section p_server_building Building the LOG server
+
+The directory of the Logserver (server/src/) contains a \c Makefile
+where you must specify the flavour of the server your want to
+build. Set the variable \c CONFIG_USE_TCPIP to 1 if you want
+networking support, set it to 0 if local printing is sufficient.
+
+The server directory also contains a configfile (config.h), where you
+can tune the logserver to your needs.
+
+
+\section p_server_hardware Supported Network-Hardware
+
+The logserver supports the following network cards:
+
+- ne2000
+- EEPro100
+- tulip (DEC 41040)
+- WD80x3
+
+*/
+
+/*! \page p_muxed Logging using multiple binary channels
+
+The logserver version 0.5 introduces binary channels. These channels can be
+used by clients to easily transfer bulk data to remote machines. Multiple
+clients/programs can send data on the same channel, the data is merged then.
+Although it is ensured that data that was sent from different clients does
+not intercept each other, it is recommended to use an additional
+encapsulation. This allows to easily demultiplex the data on the remote
+machine.
+
+\see \ref muxed_api
+\see \ref p_muxed_format
+
+*/
+
+/*! \page p_muxed_format The wire format of the muxed format
+
+Each chunk of data sent to the network is prepended by an 8-byte header. The
+description of the header in C-syntax is as following:
+
+\code
+struct muxed_header {
+        unsigned char  version;		// =0x01
+        unsigned char  channel;
+        unsigned char  type;		// =2
+        unsigned char  flags;		// =0
+        unsigned int   data_length;
+};
+\endcode
+
+The \c channel field contains the channel the data should be sent on
+(1..255). The \c data_length field contains the length of the data that will
+immediately follow the header in the output TCP stream. Note that channel 1
+is used by the logserver for sending the standard logging text.
+
+While the \c version must be 1 for this format, the \c type is somewhat up
+to the user. It has no specific meaning at the moment. The same holds for
+the \c flags, there are no flags defined now.
+
+*/
+
+/*!\defgroup muxed_api The client-API for using the binary channels
+   \anchor g_muxed_api
+
+   \brief These functions can be used by L4 client-application to use the
+          binary channels.
+*/
+
+/*! \page p_doc About this documentation
+
+This documentation was created using Doxygen, a source-code documentation
+system.
+
+Documentation of functions, structures and defines is done in the
+source code. Documentation of concepts is done in separate files. To
+get an overview of the general concepts, browse through the pages
+referenced by the <a href=http:index.html> main page</a>. These pages
+will contain links to documented source-files describing things in
+more detail.
+
+A documented source-file contains a comment about what the file is dealing
+with. In some cases, a more detailed description of the file is available.
+File members are listed then together with their desrciption. A formated
+version of the source-files itself is also available via links within
+these documented source-files.
+
+The concept pages together with this page are generated from the file
+general.dox. Source-file documentation is generated from c-files in
+\a lib/src, \a server/src and from some header files in \a include/l4/log.
+
+\requires	OSKit1.0, rmgr, names, l4utils, l4sys
+\author		Jork Loeser
+\version	0.5
+*/

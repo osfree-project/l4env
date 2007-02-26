@@ -1,0 +1,2 @@
+#define __ver_generic_file_open	smp_b0de159a
+#define generic_file_open	_set_ver(generic_file_open)

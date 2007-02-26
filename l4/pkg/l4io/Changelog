@@ -1,0 +1,12 @@
+0.3 - Krishna (October 2002)
+- adapted to BID
+
+0.2 - Krishna (March 2002)
+First public version
+- mem_region release implementation
+- sigma0/rmgr calls fixed
+- new configuration scheme (esp. for debugging output)
+- loads of cosmetix and cleanups
+
+0.1 - Krishna
+- Initial release

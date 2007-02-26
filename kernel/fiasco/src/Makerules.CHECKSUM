@@ -1,0 +1,27 @@
+# -*- makefile -*-
+
+$(CHECKSUM): genchecksum $(KERNEL)
+	@echo "  ... Generating kernel text section checksum"
+	$(VERBOSE)$(OBJDUMP) \
+	  --start-address=0x`nm $(KERNEL) | grep crt0_start | cut -f1 -d' '` \
+	  --stop-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
+	  -s $(KERNEL) | cut -f3,4,5,6 -d' ' | ./$< > $@
+	@echo -n " " >> $@
+	@echo "  ... Generating kernel data section checksum"
+	$(VERBOSE)$(OBJDUMP) \
+	  --start-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
+	  --stop-address=0x`nm $(KERNEL) | grep _edata | cut -f1 -d' '` \
+	  -s $(KERNEL) | cut -f3,4,5,6 -d' ' | ./$< >> $@
+
+genchecksum: $(OBJ_CHECKSUM)
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(CXX) -o $@ $^
+
+$(OBJ_CHECKSUM): %.o: %.cc
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -c -MD -O2 $< -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $*.d, .$*.cc.d)
+
+clean-CHECKSUM:
+	rm -f genchecksum
+

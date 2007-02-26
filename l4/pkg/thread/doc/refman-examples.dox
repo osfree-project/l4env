@@ -1,0 +1,300 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\page examples Examples
+
+- \ref example_simple "Simple thread creation"
+- \ref example_sync "Synchronous thread creation"
+- \ref example_long "Thread creation, long version"
+- \ref example_exit "Thread shutdown / exit functions"
+- \ref example_data "Thread data"
+- \ref example_config "Library configuration"
+
+\anchor example_simple
+<b>Simple, asynchronous thread creation.</b>
+\code 
+
+#include <l4/thread/thread.h>
+
+/* thread function */
+void
+thread_fn(void * data)
+{
+  /* do something */
+  ...
+}
+
+/* parent */
+int 
+main (int argc, char * argv[])
+{
+  l4thread_t t;
+
+  /* create thread */
+  t = l4thread_create(thread_fn,             // thread function
+                      NULL,                  // no thread data
+		      L4THREAD_CREATE_ASYNC  // do not wait for thread
+		      );
+  if (t < 0)
+    {
+      /* thread creation failed */
+      ...
+    }
+
+  /* do something */
+  ...
+}
+
+\endcode
+
+\anchor example_sync
+<b>Synchronous thread creation.</b>
+\code
+
+#include <l4/thread/thread.h>
+
+/* thread function */
+void
+thread_fn(void * data)
+{
+  void * ret_val;
+
+  /* thread initialization */
+  ...
+
+  /* we are up */
+  if (l4thread_started(ret_val) < 0)
+    {
+      /* startup notification failed */
+      ...
+    }
+
+  /* do something */
+  ... 
+}
+
+/* parent */
+int 
+main (int argc, char * argv[])
+{
+  l4thread_t t;
+  void * ret_val;
+
+  /* create thread */
+  t = l4thread_create(thread_fn,             // thread function
+                      NULL,                  // no thread data
+		      L4THREAD_CREATE_SYNC   // wait for new thread
+		      );
+  if (t < 0)
+    {
+      /* thread creation failed */
+      ...
+    }
+
+  /* read startup return data */
+  ret_val = l4thread_startup_return(t);
+
+  /* do something */
+  ...
+}
+
+\endcode
+
+\anchor example_long
+<b>Thread creation, long version</b>
+\code
+
+#include <l4/thread/thread.h>
+
+/* thread function */
+void
+thread_fn(void * data)
+{
+  /* do something */
+  ...
+}
+
+#define STACK_SIZE 1024
+static unsigned char stack[STACK_SIZE];
+
+/* parent */
+int 
+main (int argc, char * argv[])
+{
+  l4thread_t t;
+  
+  /* create thread */
+  t = l4thread_create_long(5,                              // create thread 5
+			   thread_fn,                      // thread function
+			   (l4_addr_t)&stack[STACK_SIZE],  // initial stack pointer
+			   STACK_SIZE,                     // stack size
+			   L4THREAD_DEFAULT_PRIO,          // use default priority
+			   NULL,                           // no thread data
+			   L4THREAD_CREATE_ASYNC           // do not wait for thread
+			   );
+  if (t < 0)
+    {
+      /* thread creation failed */
+      ...
+    }
+
+  /* do something */
+  ...
+}
+
+\endcode    
+
+\anchor example_exit
+<b>Thread shutdown / exit functions</b>
+\code
+
+#include <l4/thread/thread.h>
+
+/* exit handler */
+void
+on_exit(l4thread_t thread, void * data)
+{
+  /* do cleanup */
+  ...
+}
+
+/* declare exit function descriptor */
+L4THREAD_EXIT_FN(exit_fn,on_exit);
+
+/* thread function */
+void
+thread_fn(void * data)
+{
+  void * ret_val;
+  int ret;
+
+  /* register exit function */
+  ret = l4thread_on_exit(&exit_fn,           // exit function descriptor
+			 NULL                // no data pointer
+			 );
+  if (ret < 0)
+    {
+      /* register error function failed */
+      ...
+    }
+
+  /* we are up */
+  if (l4thread_started(ret_val) < 0)
+    {
+      /* startup notification failed */
+      ...
+    }
+
+  /* do something */
+  ... 
+}
+
+/* parent */
+int 
+main (int argc, char * argv[])
+{
+  l4thread_t t;
+  void * ret_val;
+
+  /* create thread */
+  t = l4thread_create(thread_fn,             // thread function
+                      NULL,                  // no thread data
+		      L4THREAD_CREATE_SYNC   // wait for new thread
+		      );
+  if (t < 0)
+    {
+      /* thread creation failed */
+      ...
+    }
+
+  /* read startup return data */
+  ret_val = l4thread_startup_return(t);
+
+  /* do something */
+  ...
+
+  /* shutdown thread */
+  if (l4thread_shutdown(t) < 0)
+    {
+      /* shutdown failed */
+      ...
+    }
+}
+
+\endcode
+
+\anchor example_data
+<b>Thread data</b>
+\code
+
+#include <l4/thread/thread.h>
+
+/* data key */
+int data_key;
+
+/* thread function */
+void
+thread_fn(void * data)
+{
+  /* set thread local data */
+  if (l4thread_data_set_current(data_key,...) < 0)
+    {
+      /* set data failed */
+    }
+
+  /* do something */
+  ...
+}
+
+/* parent */
+int 
+main (int argc, char * argv[])
+{
+  l4thread_t t;
+
+  /* allocate data key */
+  data_key = l4thread_data_allocate_key();
+  if (data_key < 0)
+    {
+      /* allocation failed */
+      ...
+    }
+
+  /* create thread */
+  t = l4thread_create(thread_fn,             // thread function
+                      NULL,                  // no thread data
+		      L4THREAD_CREATE_ASYNC  // do not wait for thread
+		      );
+  if (t < 0)
+    {
+      /* thread creation failed */
+      ...
+    }
+
+  /* do something */
+  ...
+}
+
+\endcode
+
+\anchor example_config
+<b>Library configuration</b>
+\code
+
+#include <l4/thread/thread.h>
+
+/* overwrite l4thread configuration */
+const int l4thread_max_threads = 127;
+const l4_size_t l4thread_stack_size = 131072;
+
+/* do something */
+int 
+main (int argc, char * argv[])
+{
+  ...
+}
+
+\endcode
+
+**/

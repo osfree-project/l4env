@@ -1,0 +1,65 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>
+l4_nchief
+<short> deliver the thread id of the nearest partner of the invoker
+<sect> Synopsis
+
+<verb>#include <syscalls.h></verb>
+
+<code/static inline int/ <nl>
+<code/l4_nchief(l4_threadid_t /<var/dest/ , 
+<code/l4_threadid_t /<var/*next_chief/<code/);/
+
+<sect>Description
+
+The <code/l4_nchief()/ system call delivers the id of the nearest partner
+which would be engaged when sending a message to the specified destination.
+
+<sect>Arguments
+
+<desc
+
+<dt/<var/dest// Thread id of the destination.
+
+<dt/<var/*next_chief// Pointer to thread id of the nearest partner,
+depending on return value.
+
+<sect>Return Values
+
+The following values determine the contents of the thread id,
+next_chief is pointing to:
+
+<desc
+
+<dt/<code/L4_NC_SAME_CLAN//
+
+The destination resides in the same clan, its id is returned. 
+
+<dt/<code/L4_NC_INNER_CLAN//
+
+The destination resides in an inner clan, whose chief is in the same
+clan as the caller. The call returns the id of this chief.
+
+<dt/<code/L4_NC_OUTER_CLAN//
+
+The destination is outside of the invoker's clan. It's own chief's id
+is returned.
+
+<sect>See Also
+
+<ref t=m id="l4_thread_ex_regs"//, 
+<ref t=m id="l4_fpage_unmap"//, 
+<ref t=m id="l4_myself"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 
+
+
+
+
+

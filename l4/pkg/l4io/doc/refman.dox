@@ -1,0 +1,46 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4Env l4io I/O Server Reference Manual
+
+\section intro Introduction
+
+L4io is a simple I/O manager. It implements the Generic I/O Manager Interface
+as defined in the \a generic_io package (see the generic_io documentation for a
+detailed description).
+
+
+\section use Usage
+
+L4io depends on some L4 Environment servers and is registered at the name
+server as \c "io".
+
+Grub boot menu entry:
+\verbatim 
+module = (nd)/tftpboot/names
+module = (nd)/tftpboot/log  
+module = (nd)/tftpboot/dm_phys
+module = (nd)/tftpboot/l4io
+
+\endverbatim
+
+Possible command line arguments are:
+<dl>
+<dt><tt> --noirq </tt></dt>
+  <dd> Do not manage IRQs and leave this task to external managers (original omega0
+  or RMGR).</dd>
+<dt><tt> --exclude xxxx:yyyy</tt></dt>
+  <dd> Do not allocate the IO-memory for device with vendor-ID xxxx and
+       device-ID yyyy. Use this switch to give non-L4Env apps access to
+       their PCI-devices. Multiple instances of switch are supported.
+  </dd>
+<dt><tt> --include xxxx:yyyy</tt></dt>
+  <dd> Do allocate IO-memory only for device with vendor-ID xxxx and
+       device-ID yyyy. Use this switch to give non-L4Env apps access to
+       their PCI-devices. You can use this switch for every device L4IO
+       should handle. If this switch is given at least once, no other
+       devices will be handled.
+  </dd>
+</dl>
+*/

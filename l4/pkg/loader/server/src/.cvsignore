@@ -1,0 +1,5 @@
+cfg-scan.c
+cfg-parse.c
+loader
+loader.stripped
+relocatable.loader

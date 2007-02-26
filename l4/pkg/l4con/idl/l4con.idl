@@ -1,0 +1,461 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/*!
+ * \file	con/idl/con/con.idl
+ *
+ * \brief	con IDL interface
+ *
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>,
+ * 		Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ */
+
+/** L4 threadid type */
+typedef struct con_threadid
+{
+  unsigned long low;
+  unsigned long high;
+} con_threadid_t;
+
+/** con rectangle type */
+typedef struct con_pslim_rect
+{
+  short x, y;
+  unsigned short w, h;
+} con_pslim_rect_t;
+
+/** con color type */
+typedef unsigned long con_pslim_color_t;
+
+/** Dataspace id type */
+typedef struct con_dataspace
+{
+  unsigned long id;		/**< dataspace id */
+  con_threadid_t manager;	/**< dataspace manager */
+} con_dataspace_t;
+
+/** DSI socket type */
+typedef struct con_dsi_socket
+{
+  unsigned long socket;		
+  con_threadid_t work_th;	/**< id of socket thread */
+  con_threadid_t sync_th;	/**< id of sync thread */
+  con_threadid_t event_th;	/**< id of event thread */
+} con_dsi_socket_t;
+
+/** DSI jcp stream type */
+typedef struct con_dsi_jcp_stream
+{
+  unsigned long bw;
+  unsigned long tau;
+  unsigned long size;
+} con_dsi_jcp_stream_t;
+
+/** DSI configuration type */
+typedef struct con_dsi_cfg
+{
+  unsigned long num_packets;
+  unsigned long max_sg;
+} con_dsi_cfg_t;
+
+/** console interface */
+module con
+{
+  /**
+   * generic interface
+   */
+  interface if
+    {
+      /**************************************************************/
+      /** Get and assign first available vc
+       *
+       * \param sbuf1_size	size of string receive buffer
+       * \param sbuf2_size, sbuf3_size	size of string receive buffer,
+       * 			only sed for pslim_cscs() where the 
+       * 			three components are written into
+       * 			separate buffers.
+       * \param priority	priority of belonging vc thread
+       * 			L4THREAD_DEFAULT_PRIO for default prio
+       * \param vfbmode		Is it a virtual frame buffer?
+       *
+       * \retval vcid		thread id of virtual console 
+       *			thread
+       *
+       * \return 0 on success, negative error codes otherwise
+       **************************************************************/
+      long openqry(in unsigned long sbuf1_size,
+		   in unsigned long sbuf2_size,
+		   in unsigned long sbuf3_size,
+		   in octet priority,
+		   out con_threadid_t vcid,
+      		   in short vfbmode);
+
+      /**************************************************************/
+      /** Get first available vc for DSI communication
+       *
+       * \param  vfbmode	Is it a virtual frame buffer?
+       * \retval dsi_vcid	thread id of DSI console thread
+       *
+       * \return 0 on success, negative error codes otherwise
+       **************************************************************/
+      long dsi_openqry(out con_threadid_t dsi_vcid,
+		       in short vfbmode);
+
+      /**************************************************************/
+      /** Take screenshot of a virtual console
+       *
+       * \param  vc_nr          Number of console, 0 for current
+       *                        foreground console
+       * \retval ds             DS which contains the fb data
+       * \retval xres           Picture width
+       * \retval yres           Picture height
+       * \retval bpp            Bits per pixel
+       *
+       * \return 0 on success, negative error code otherwise
+       **************************************************************/
+      long screenshot(in  short vc_nr,
+                      out con_dataspace_t ds,
+	              out unsigned long xres,
+		      out unsigned long yres,
+		      out unsigned long bpp);
+
+      /**************************************************************/
+      /** Close all vc's of an application
+       *
+       * \param client		task id of client to close vcs
+       *
+       * \return 0 on success, negative error codes otherwise
+       * ************************************************************/
+      long close_all(in con_threadid_t client);
+    };
+
+  /**
+   * virtual console (thread) interface
+   */
+  interface vc
+    {
+      /**************************************************************/
+      /** Set vc IN/OUT mode
+       *
+       * \param  mode		con protocol macro describing vc mode:
+       *			- \c CON_OUT, \c CON_INOUT
+       * \param  ev_handler	thread id of event handler
+       *
+       * \return 0 on success, negative error codes otherwise
+       **************************************************************/
+      long smode(in octet mode, in con_threadid_t ev_handler);
+
+      /**************************************************************/
+      /** Get IN/OUT mode
+       *
+       * \retval mode		con protocol macro describing vc mode
+       * \retval sbuf_1size, sbuf_2size, sbuf_3size size of receive buffers
+       *
+       * \return 0 on success, negative error codes otherwise
+       **************************************************************/
+      long gmode(out octet mode, 
+		 out unsigned long sbuf_1size,
+		 out unsigned long sbuf_2size,
+		 out unsigned long sbuf_3size);
+
+      /**************************************************************/
+      /** Close virtual console
+       *
+       * \return 0 for success
+       **************************************************************/
+      long close();
+		
+      /**************************************************************/
+      /** Fill rectangular area of virtual framebuffer with color.
+       * Make use of hardware support if possible.
+       *
+       * \param  rect		vfb area info
+       * \param  color	fill color
+       *
+       * \return 0 for success
+       **************************************************************/
+      long pslim_fill(in con_pslim_rect_t rect,
+		      in con_pslim_color_t color);
+
+      /**************************************************************/
+      /** Copy rectangular area of virtual framebuffer. Make use of
+       * hardware support if possible.
+       *
+       * \param  rect		vfb area info
+       * \param  dx		destination x coordinate (may be 
+       *			negative)
+       * \param  dy		dito for y coordinate
+       *
+       * \return 0 for success
+       **************************************************************/
+      long pslim_copy(in con_pslim_rect_t rect,
+		      in short dx,
+      		      in short dy);
+
+      /**************************************************************/
+      /** Set rectangular area of virtual framebuffer with foreground 
+       * and background color mask in (monochrome) bitmap.
+       *
+       * \param  rect		vfb area info
+       * \param  fg_color	foreground color
+       * \param  bg_color	background color
+       * \param  bmap		mask as bitmap
+       * \param  bmap_type	type of bitmap: starting most or least
+       *			significant bit (START_MSB/_LSB)
+       *
+       * \return 0 for success
+       **************************************************************/
+      long pslim_bmap(in con_pslim_rect_t rect,
+		      in con_pslim_color_t fg_color,
+      		      in con_pslim_color_t bg_color,
+		      in refstring bmap,
+		      in octet bmap_type);
+
+      /**************************************************************/
+      /** Set rectangular area of virtual framebuffer with color
+       *  in pixelmap. Pixelmap is a colored bitmap.
+       *
+       * \param  rect		vfb area info
+       * \param  pmap		pixmap
+       *
+       * \return 0 for success
+       **************************************************************/
+      long pslim_set(in con_pslim_rect_t rect,
+		     in refstring pmap);
+
+      /**************************************************************/
+      /** Convert pixmap from YUV to RGB color space, scale and 
+       *  set rectangular area of virtual framebuffer.
+       *
+       * \param  rect		vfb area info
+       * \param  yuv_type	type of pixmap's YUV encoding
+       * \param  scale		scale factor of pixmap (defaults to 1) 
+       * 			(NOT SUPPORTED YET)
+       * \param  y, u, v	YUV values
+       *
+       * \return 0 for success
+       **************************************************************/
+      long pslim_cscs(in con_pslim_rect_t rect,
+		      in refstring y,
+		      in refstring u,
+		      in refstring v,
+		      in octet yuv_type,
+		      in char scale);
+
+      /**************************************************************/
+      /** Streaming version of pslim_cscs(). 
+       * 
+       * This function is intended to make use of hardware accelerator 
+       * support of modern graphics cards. The client writes YUV data
+       * to a non-visible "offscreen" region of the graphics memory. 
+       * The backend scaler of the graphics card converts the data into
+       * RGB values and scales the window to fit into the destination
+       * rectangle. Most speed is gained by reducing the transported
+       * amount of data when using YV12 mode: Instead of 16 bits per
+       * pixel we use 12 bits which saves 25% memory writes to the very
+       * slow video memory of the graphics card.
+       *
+       * \param  rect_src	dimensions of the original YUV picture
+       * \param  rect_dst	dimensions of the scaled RGB picture
+       * \param  yuv_type	type of pixmap's YUV encoding, currently
+       *                        only formats pSLIM_CSCS_PLN_YV12 and 
+       *                        pSLIM_CSCS_PCK_YUY2 are supported.
+       * \param buffer		offscreen buffer to copy the YUV picture
+       * 			into
+       * \param offs_y		Y offset into buffer
+       * \param offs_u		U offset into buffer
+       * \param offs_v		V offset into buffer
+       *
+       * \return 0 for success
+       **************************************************************/
+      long stream_cscs(in con_pslim_rect_t rect_src,
+		       in con_pslim_rect_t rect_dst,
+		       in octet yuv_type,
+		       out fpage buffer,
+		       out unsigned long offs_y,
+		       out unsigned long offs_u,
+		       out unsigned long offs_v);
+
+      /**************************************************************/
+      /** Setup graphics mode of current virtual console
+       *
+       * \param g_mode		con protocol macro describing graphics
+       *			mode. Currently not implemented because
+       *			the DROPS console uses the video mode
+       *			which is activated at boottime.
+       *
+       * \return 0 for success, negative error codes otherwise
+       *
+       * \todo implementation
+       **************************************************************/
+      long graph_smode(in octet g_mode);
+
+      /**************************************************************/
+      /** Get graphics mode and mode parameters of current virtual
+       * console.
+       *
+       * \retval g_mode		con protocol macro describing graphics 
+       *			mode
+       * \retval xres, yres	x/y dimension of the accessible screen
+       * \retval bits_per_pixel	bits per pixel in this graphics mode
+       * \retval bytes_per_pixel bytes per pixel in this graphics mode
+       * \retval bytes_per_line	bytes per line in this graphics mode
+       * \retval flags		acceleration capabilities
+       * \retval xtxt, ytxt	x/y dimension of the font
+       *
+       * \return 0 for success, negative error codes otherwise
+       **************************************************************/
+      long graph_gmode(out octet g_mode,
+		       out unsigned long xres,
+		       out unsigned long yres,
+		       out unsigned long bits_per_pixel,
+		       out unsigned long bytes_per_pixel,
+		       out unsigned long bytes_per_line,
+		       out unsigned long flags,
+		       out unsigned long xtxt,
+		       out unsigned long ytxt);
+
+      /**************************************************************/
+      /** Map the graphics memory into the client.
+       *
+       * \retval page		graphics memory
+       * \retval offset		offset into mapped memory
+       *
+       * \return 0 for success, negative error codes otherwise
+       **************************************************************/
+      long graph_mapfb(out fpage page,
+		       out unsigned long offset);
+
+      /**************************************************************/
+      /** Setup input event filter.
+       *
+       * \param  filter
+       *
+       * \return 0 for success, negative error codes otherwise
+       *
+       * \todo implementation
+       **************************************************************/
+      long ev_sflt(in unsigned long filter);
+
+      /**************************************************************/
+      /** Get event filter of current virtual console.
+       *
+       * \retval filter
+       *
+       * \return 0 for success, negative error codes otherwise
+       *
+       * \todo implementation
+       **************************************************************/
+      long ev_gflt(out unsigned long filter);
+		
+      /**************************************************************/
+      /** Put string at x, y.
+       * This is an extension of the original SLIM protocol to reduce
+       * the communication overhead of large text strings. Otherwise
+       * we would have to transmit graphics data between client and
+       * DROPS console to write text.
+       *
+       * \param  s		string containing char
+       * \param  x		destination x coordinate
+       * \param  y		dito for y coordinate
+       * \param  fg_color	foreground color
+       * \param  bg_color	background color
+       *
+       * \return 0 for success,
+       **************************************************************/
+      long puts(in refstring s,
+		in short x,
+      		in short y,
+		in con_pslim_color_t fg_color,
+		in con_pslim_color_t bg_color);
+
+      /**************************************************************/
+      /** Put colored string at x, y.
+       * An extended version of puts especially designed for Linux.
+       *
+       * \param  s		string containing char/attr.
+       * \param  x		destination x coordinate
+       * \param  y		dito for y coordinate
+       *
+       * \return 0 for success,
+       **************************************************************/
+      long puts_attr(in refstring s,
+		     in short x,
+	   	     in short y);
+      
+      /**************************************************************/
+      /** Make virtual framebuffer public to console.
+       * This function makes it possible for a client to map a
+       * virtual framebuffer into the console. If something of the
+       * virtual framebuffer changes, the client sends an update
+       * event (using direct_update). This mechanism was especially
+       * designed for use with the XFree86 stub of the DROPS console.
+       *
+       * \param  data_ds	dataspace of virtual framebuffer
+       *
+       * \return 0 for success,
+       **************************************************************/
+      long direct_setfb(in con_dataspace_t data_ds);
+      
+      /**************************************************************/
+      /** Update region using virtual framebuffer.
+       * See direct_setfb for more explanations.
+       *
+       * \param  rect		region to update
+       *
+       * \return 0 for success,
+       **************************************************************/
+      long direct_update(in con_pslim_rect_t rect);
+    };
+  
+  /**
+   * DSI console (thread) interface
+   *
+   * \todo documentation of `broken' DSI interface
+   */
+  interface dsi_vc
+    {
+      long open(in con_dsi_jcp_stream_t jcp_stream,
+		in con_dsi_cfg_t cfg,
+      		in con_dataspace_t ctrl_ds,
+		in con_dataspace_t data_ds,
+		out con_dsi_socket_t socket_ref);
+		
+      long smode(in octet mode,
+		 in con_threadid_t ev_handler);
+
+      long graph_gmode(out octet g_mode,
+		       out unsigned long xres,
+		       out unsigned long yres,
+		       out unsigned long bits_per_pixel,
+		       out unsigned long bytes_per_pixel,
+		       out unsigned long flags,
+		       out unsigned long xtxt,
+		       out unsigned long ytxt);
+
+      long rawset_open(in con_dsi_jcp_stream_t jcp_stream,
+		       in con_dsi_cfg_t cfg,
+      		       in con_dataspace_t ctrl_ds,
+		       in con_dataspace_t data_ds,
+		       in con_pslim_rect_t area,
+		       out con_dsi_socket_t socket_ref);
+
+      long rawcscs_open(in con_dsi_jcp_stream_t jcp_stream,
+			in con_dsi_cfg_t cfg,
+	      		in con_dataspace_t ctrl_ds,
+			in con_dataspace_t data_ds,
+			in con_pslim_rect_t area,
+			in octet type,
+			out con_dsi_socket_t socket_ref);
+		
+      long bmap_open(in con_dsi_jcp_stream_t jcp_stream,
+		     in con_dsi_cfg_t cfg,
+      		     in con_dataspace_t ctrl_ds,
+		     in con_dataspace_t data_ds,
+		     out con_dsi_socket_t socket_ref);
+
+      long connect(in con_dsi_socket_t local,
+		   in con_dsi_socket_t remote);
+    };
+};
+

@@ -1,0 +1,78 @@
+/*! \page libgendep.so dependency file generator
+
+\section SYNOPSIS SYNOPSIS
+<br>LD_PRELOAD=\b libgendep.so GENDEP_TARGET=<i>target</i> 
+    GENDEP_BINARY=<i>compiler</i> 
+    [ GENDEP_<i>cmd</i>=<i>compiler</i> ]
+    [ GENDEP_DEPFILE=<i>depfilename</i> ]
+    cmd [options]
+
+\section DESCRIPTION DESCRIPTION
+<br>libgendep is a library to build dependency files. By preloading
+\b libgendep.so with the dynamic linker \b ld.so, the <b>open</b>(2)
+function of libc is overloaded. \b libgendep.so logs all calls to
+<b>open</b>(2) and creates an according dependency file.
+
+The name of a file is added to the dependency list, if:
+<ul>
+<li> the file is opened read-only
+<li> and the name of the file does not match the environment variable
+    <i>GENDEP_TARGET</i>
+<li> and the name of the binary currently executed matches the
+    environment variable <i>GENDEP_BINARY</i>.
+<li> and the filename matches the regex given in the envirnoment variable
+     <i>GENDEP_[cmd]</i>, with [cmd] beeing substituted by the value of
+     <i>GENDEP_BINARY</i>.
+     <ul>
+     <li> some special regexps for exclusion are predefined (see below) </li>
+     </ul>
+</ul>
+
+If <i>GENDEP_[cmd]</i> is not set, the last condition is not checked.
+
+As the current libc for Linux looks into /proc/meminfo and /etc/mtab for
+some internal management, gendep ignores accesses to /etc/mtab and /proc/*.
+
+
+\section ENVIRONMENT ENVIRONMENT
+<br>\b libgendep.so is controlled by the following environment variables.
+
+<DL>
+<DT>GENDEP_TARGET</DT>
+<DD>The target, the dependency has to be build for. This string is used
+    as the target within the make-rule in the dependency file.
+    Unless GENDEP_DEPFILE is set, the name of the dependency file
+    is build by prepending then name portion of the target with '.',
+    and suffixing this with '.d'. </DD>
+
+<DT>GENDEP_BINARY</DT>
+<DD>The name portion of the command that actually builds the target.</DD>
+
+<DT>GENDEP_DEPFILE</DT>
+<DD>The name of the dependency file. If this variable is unset,
+    <b>.</b><i>GENDEP_TARGET</i><b>.d</b> will be used.
+
+<DT>GENDEP_[cmd] ([cmd]=$<i>GENDEP_BINARY</i>)</DT>
+<DD>Optional. If set, the value is interpreted as an regex. A file is
+    included within the dependency list only if its name matches this 
+    regex.</DD>
+</DL>
+
+\section EXAMPLES EXAMPLES
+
+LD_PRELOAD=libgendep.so GENDEP_TARGET=main.o GENDEP_BINARY=cpp gcc main.c -o main.o
+
+This creates a dependency file ".main.o.d" containing all header
+files opened by the C preprocessor <b>cpp</b>(1) during the compilation of
+main.o.
+ 
+\section AUTHOR AUTHORS
+<BR>Han-Wen Nienhuys <hanwen@cs.uu.nl>
+<BR>Jork Loeser <jork.loeser@inf.tu-dresden.de>
+
+\section SEE SEE ALSO
+<br>ld.so(1) - dynamic linker/loader
+<br>open(2) - open and possibly create a file or device
+<br>cpp(1) - The GNU C-Compatible Compiler Preprocessor
+
+*/

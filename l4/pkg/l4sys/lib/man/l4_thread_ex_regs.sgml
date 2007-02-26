@@ -1,0 +1,66 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>l4_thread_ex_regs
+<short> read and write register values of a thread, create a thread
+<sect> Synopsis
+
+<verb>#include <l4/sys/syscalls.h></verb>
+
+<code/static inline void/ <nl>
+<code/l4_thread_ex_regs(l4_threadid_t / <var/dest/ <code/,
+dword_t / <var/eip/ <code/, dword_t / <var/esp/ <code/,
+l4_threadid_t / <var/*preempter/ <code/, l4_threadid_t/ <var/*pager/
+<code/, dword_t / <var/*old_eflags/ <code/, dword_t/ <var/*old_eip/
+<code/, dword_t / <var/*old_esp/ <code/);/
+
+<sect> Description
+
+The <code/l4_thread_ex_regs()/ system call reads and writes user-level 
+register values of a thread in the current task. Ongoing kernel
+activities are not effected. An ipc operation is cancelled or aborted,
+however. Setting stack and instruction pointer to different valid
+values results in the creation of a new thread. 
+
+<sect> Arguments
+
+<desc
+
+<dt/<var/dest// The identifier of the destination thread.
+
+<dt/<var/eip// The new instruction pointer of the thread. It must
+point into the user-accessible part of the address space. The existing
+instruction pointer is not modified if <code/0xFFFFFFFF/ is given. 
+
+<dt/<var/esp// The new stack pointer for the thread. It must point into the
+user-accessible part of the address space. The existing stack
+pointer is not modified if <code/0xFFFFFFFF/ is given. 
+
+<dt/<var/*preempter// Defines the internal preempter used by the thread. The
+current preempter id is not modified if <code/L4_INVALID_ID/ is given. 
+
+<dt/<var/*pager// Defines the pager used by the thread. the current pager id
+is not modified if <code/L4_INVALID_ID/ is given. 
+
+<dt/<var/*old_flags// Flags of the thread.
+
+<dt/<var/*old_eip// Old instruction pointer of the thread.
+
+<dt/<var/*old_esp// Old stack pointer of the thread.
+
+<sect> Return Values
+
+The thread id of the current thread is returned.
+
+<sect> See Also
+
+<ref t=m id="l4_fpage_unmap"//, 
+<ref t=m id="l4_myself"//, 
+<ref t=m id="l4_nchief"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 
+

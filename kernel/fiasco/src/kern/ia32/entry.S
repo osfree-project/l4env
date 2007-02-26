@@ -1,0 +1,914 @@
+/* -*- c -*- */
+/* large parts of the code copied from
+   oskit/libkern/x86/base_trap_inittab */
+
+/* 
+ * Mach Operating System
+ * Copyright (c) 1993,1992,1991,1990 Carnegie Mellon University
+ * Copyright (c) 1991 IBM Corporation 
+ * All Rights Reserved.
+ * 
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation,
+ * and that the nema IBM not be used in advertising or publicity 
+ * pertaining to distribution of the software without specific, written
+ * prior permission.
+ * 
+ * CARNEGIE MELLON AND IBM ALLOW FREE USE OF THIS SOFTWARE IN ITS "AS IS"
+ * CONDITION.  CARNEGIE MELLON AND IBM DISCLAIM ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ * 
+ * Carnegie Mellon requests users of this software to return to
+ * 
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ * 
+ * any improvements or extensions that they make and grant Carnegie Mellon
+ * the rights to redistribute these changes.
+ */
+/*
+ * This file contains a 'gate_init' initialization table
+ * to initialize the x86 processor trap vectors to default entrypoints.
+ * These entrypoints simply push a standard trap_state frame
+ * and jump to the 'trap_handler' routine.
+ */
+
+#define ASSEMBLER
+
+#include <flux/x86/asm.h>
+#include <flux/x86/trap.h>
+#include <flux/x86/seg.h>
+#include <flux/x86/gate_init.h>
+#include <flux/x86/base_trap.h>
+
+#include "config_tcbsize.h"
+#include "config_gdt.h"
+#include "globalconfig.h"
+#include "low_level.h"
+#include "shortcut.h"
+#include "tcboffset.h"
+
+/* We make the trap handler an interrupt gate, because for debugging
+   purposes, we don't want any interrupts to occur until they're
+   explicitly enabled in the base_trap_handler (usually
+   thread_t::handle_slow_trap). */
+
+/*
+ * No error code.  Clear error code and push trap number.
+ */
+#define	EXCEPTION(n,name)					\
+	GATE_ENTRY(n,name,ACC_PL_K | ACC_INTR_GATE)		;\
+	P2ALIGN(TEXT_ALIGN)		      	 		;\
+name:								;\
+	pushl	$(0)						;\
+	pushl	$(n)						;\
+	pusha							;\
+	jmp	slowtraps
+
+/*
+ * User-accessible exception.  Otherwise, same as above.
+ */
+#define	EXCEP_USR(n,name)					\
+	GATE_ENTRY(n,name,ACC_PL_U | ACC_INTR_GATE)		;\
+	P2ALIGN(TEXT_ALIGN)		      	 		;\
+name:								;\
+	pushl	$(0)						;\
+	pushl	$(n)						;\
+	pusha							;\
+	jmp	slowtraps
+
+/*
+ * Error code has been pushed.  Just push trap number.
+ */
+#define	EXCEP_ERR(n,name)					\
+	GATE_ENTRY(n,name,ACC_PL_K | ACC_INTR_GATE)		;\
+	P2ALIGN(TEXT_ALIGN)		      	 		;\
+name:								;\
+	pushl	$(n)						;\
+	pusha							;\
+	jmp	slowtraps
+
+/*
+ * RESET_THREAD_STATE resets the Thread_cancel flag in the TCB.  See thread.h
+ */
+#define RESET_THREAD_STATE_AT(reg)				\
+       andl    $~0x100, OFS__THREAD__STATE(reg)
+
+#define RESET_THREAD_STATE_WITH(reg)				\
+       movl    %esp,reg						;\
+       andl    $~(THREAD_BLOCK_SIZE - 1),reg			;\
+       RESET_THREAD_STATE_AT(reg)
+
+GATE_INITTAB_BEGIN(idt_init_table)
+
+EXCEPTION(0x00,t_zero_div)
+EXCEPTION(0x01,t_debug)
+EXCEP_USR(0x02,t_nmi)
+EXCEP_USR(0x03,t_int3)
+EXCEP_USR(0x04,t_into)
+EXCEP_USR(0x05,t_bounds)
+EXCEPTION(0x06,t_invop)
+/* EXCEPTION(0x07,t_nofpu) */
+EXCEP_ERR(0x08,a_dbl_fault)
+EXCEPTION(0x09,a_fpu_over)
+EXCEP_ERR(0x0a,a_inv_tss)
+EXCEP_ERR(0x0b,t_segnp)
+EXCEP_ERR(0x0c,t_stack_fault)
+EXCEP_ERR(0x0d,t_gen_prot)
+/* EXCEP_ERR(0x0e,t_page_fault) */
+/* EXCEPTION(0x0f,t_trap_0f) */
+EXCEPTION(0x10,t_fpu_err)
+EXCEP_ERR(0x11,t_align)
+EXCEPTION(0x12,t_trap_12)
+EXCEPTION(0x13,t_trap_13)
+EXCEPTION(0x14,t_trap_14)
+EXCEPTION(0x15,t_trap_15)
+EXCEPTION(0x16,t_trap_16)
+EXCEPTION(0x17,t_trap_17)
+EXCEPTION(0x18,t_trap_18)
+EXCEPTION(0x19,t_trap_19)
+EXCEPTION(0x1a,t_trap_1a)
+EXCEPTION(0x1b,t_trap_1b)
+EXCEPTION(0x1c,t_trap_1c)
+EXCEPTION(0x1d,t_trap_1d)
+EXCEPTION(0x1e,t_trap_1e)
+EXCEPTION(0x1f,t_trap_1f)
+
+
+	P2ALIGN(TEXT_ALIGN)
+	FUNCSYM(slowtraps)
+slowtraps:
+
+slow_2:	/* entry point if regs have already been saved */
+	pushl	%ds		/* we save the segment regs in the trap   */
+	pushl	%es		/* state, but we do not restore them.  We */
+	pushl	%fs		/* rather reload them using               */
+	pushl	%gs		/* RESET_{KERNEL,USER}_SEGMENTS           */
+
+	/* Load the kernel's segment registers.  */
+	RESET_KERNEL_SEGMENTS(60(%esp))	/* scratches cx, dx */
+
+	/* Note: we do not use RESET_THREAD_STATE_* here as that is
+	   needed only when an I/O-page-fault IPC is sent, and could
+	   be harmful when using this trap handler in debugging.
+	   Instead, we clear this flag in thread_t::handle_slow_trap()
+	   just before sending the IPC message.  That's OK, because it
+	   is still atomic -- we never enable IRQs (sti) before that
+	   point. */
+
+	/* GCC likes the direction flag cleared.  */
+	cld
+
+	movl	%esp,%edx		/* save address of trap_state */
+#ifndef CONFIG_NO_FRAME_PTR
+	movl    56(%esp),%eax		/* create artificial stack frame */
+	pushl   %eax
+	pushl	%ebp
+# ifndef CONFIG_PROFILE
+	leal	(%esp),%ebp
+# else
+	movl	$0,%ebp
+# endif
+#endif
+
+        /* Call the C handler function if one has been installed.  */
+        movl    EXT(base_trap_handler),%eax
+        orl     %eax,%eax
+        jz      unexpected_trap
+        pushl   %edx			/* push address of trap state */
+        call    *%eax
+in_slowtrap:
+
+#ifndef CONFIG_NO_FRAME_PTR
+	leal	12(%esp),%esp	
+#else
+        popl    %edx
+#endif
+
+	/* If the handler function returned zero (success),
+	   then resume execution as if the trap never happened.
+	   Otherwise, just panic.  */
+	orl	%eax,%eax
+	jnz	unexpected_trap
+
+	RESET_USER_SEGMENTS(60(%esp))	/* scratches cx, dx */
+
+	addl	$4*4,%esp	/* Pop segment registers from stack */
+	popa
+	addl	$4*2,%esp	/* Pop trap number and error code */
+	iret
+
+unexpected_trap:
+	/* Dump the register state and panic.  */
+	UNEXPECTED_TRAP
+
+
+/* page fault */
+GATE_ENTRY(0x0e,page_fault,ACC_PL_K | ACC_INTR_GATE)
+	       
+/* we must save %cr2 before we can be preempted -- therefore we're an
+   interrupt gate (invoked with interrupts turned off).  Also, we
+   don't turn them on again here, but only after checking for
+   page-ins from the global page directory in thread_page_fault().
+   XXX: If you make changes to stack layout here, fix thread_page_fault */
+
+/* XXX slow version - sets up nice stack frame for debugger */
+
+	P2ALIGN(TEXT_ALIGN)
+	FUNCSYM(page_fault)
+page_fault:
+	pushl	%eax			/* save registers modifiable by C functions */
+	pushl	%ecx
+	pushl	%edx
+	RESET_KERNEL_SEGMENTS(20(%esp))		/* scratches cx, dx */
+	movl    12(%esp),%edx		/* save error code in %edx ... */
+	movl    %cr2,%eax		/* save page fault address in %eax */
+
+/* We must reset the cancel flag here atomically 
+   if we are entering fresh from user mode and an IPC might occur. 
+   NOTE: We cannot test the user-mode bit in the error code because
+   it will flag "kernel" in case an I/O-bitmap page is not mapped
+   during an I/O access. */
+
+	movl    20(%esp),%ecx   /* get CS from stack */
+        andb    $3,%cl		/* retrieve current privilege level (CPL) */
+	jz	1f		/* CPL == 0 -> kernel, skip resetting state */
+	RESET_THREAD_STATE_WITH(%ecx)
+
+1:	movl	%ebp,12(%esp)	/* save frame pointer */
+	leal    12(%esp),%ebp	/* load new frame pointer */
+#ifdef CONFIG_PROFILE
+	call	EXT(mcount)
+#endif
+	cld
+     	pushl	%edx		/* push the error code as 2nd argument */
+	pushl	%eax		/* push page fault address as 1st argument */
+	pushl	%esp
+	call	EXT(thread_page_fault)
+in_page_fault:
+	orl	%eax,%eax
+	jz	bad_page_fault
+	addl	$12,%esp
+	RESET_USER_SEGMENTS(20(%esp))
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	popl	%ebp
+	iret
+
+/* recover from a bad page fault by invoking the slow_trap handler */
+	P2ALIGN(TEXT_ALIGN)
+bad_page_fault:
+	cli
+	addl	$4,%esp
+	popl	%edx		/* page fault address */
+	popl	%ecx		/* restore error code */
+	movl	(%ebp),%eax	/* old %ebp */
+	movl	%ecx,(%ebp)
+	movl	%eax,%ebp
+
+	/* we have on stack: error code, eax, ecx, edx
+	   move registers down to make room for trap number */
+	subl	$4,%esp
+	movl	4(%esp),%eax
+	movl	%eax,(%esp)
+	movl	8(%esp),%eax
+	movl	%eax,4(%esp)
+	movl	12(%esp),%eax
+	movl	%eax,8(%esp)
+
+	/* push error code */
+	movl	$0x0e,12(%esp)
+
+	/* push rest of struct trap_state */
+	pushl	%ebx
+	pushl	%edx		/* the page fault address */
+	pushl	%ebp
+	pushl	%esi
+	pushl	%edi
+
+	jmp	slow_2
+
+/* FPU not available in this context. */
+GATE_ENTRY(0x07,fpu_unavail, ACC_PL_K | ACC_INTR_GATE)
+
+/* do all of this with disabled interrupts */
+	P2ALIGN(TEXT_ALIGN)
+	FUNCSYM(fpu_unavail)
+fpu_unavail:
+	pushl	%eax		/* save registers modifiable by C functions */
+	pushl	%ecx
+	pushl	%edx
+	RESET_KERNEL_SEGMENTS(16(%esp))	/* scratches cx, dx */
+	call	EXT(thread_handle_fputrap)
+in_handle_fputrap:
+	RESET_USER_SEGMENTS(16(%esp))
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	iret
+
+/* PPro spurious interrupt bug: 
+ * See "Pentium Pro Processor Specification Update / January 1999"
+ * Erratum "Virtual Wire mode through local APIC may cause int 15"
+ * This exception can be silently ignored */
+GATE_ENTRY(0x0f,apic_spurious_interrupt_bug_entry,ACC_PL_K | ACC_INTR_GATE)
+	P2ALIGN(4)
+apic_spurious_interrupt_bug_entry:
+	pushl	%ecx
+	pushl	%edx
+	RESET_KERNEL_SEGMENTS(12(%esp))	/* scratches cx, dx */
+	incl	EXT(apic_spurious_interrupt_bug_cnt)
+	RESET_USER_SEGMENTS(12(%esp))
+	popl	%edx
+	popl	%ecx
+	iret
+
+/* APIC error interrupt */
+GATE_ENTRY(0x3e,apic_error_interrupt_entry,ACC_PL_K | ACC_INTR_GATE)
+	P2ALIGN(4)
+apic_error_interrupt_entry:
+	pushl	%eax		/* save registers modifiable by C functions */
+	pushl	%ecx
+	pushl	%edx
+	RESET_KERNEL_SEGMENTS(16(%esp))	/* scratches cx, dx */
+	leal	12(%esp), %ecx
+	pushl	%ecx
+	call	EXT(apic_error_interrupt)
+	addl	$4, %esp
+	RESET_USER_SEGMENTS(16(%esp))
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	iret
+
+/* Intel Architecture Software Developer's Manual Volume 3,
+ * Advanced Programmable Interrupt Controller (APIC):
+ * Spurious Interrupt: "If at the time the INTA cycle is issued, the
+ * interupt that was to be dispensed has become masked (programmed by
+ * software), the local APIC will deliver a spurious-interrupt vector." */
+GATE_ENTRY(0x3f,apic_spurious_interrupt_entry,ACC_PL_K | ACC_INTR_GATE)
+	P2ALIGN(4)
+apic_spurious_interrupt_entry:
+	pushl	%ecx
+	pushl	%edx
+	RESET_KERNEL_SEGMENTS(12(%esp))	/* scratches cx, dx */
+	incl	EXT(apic_spurious_interrupt_cnt)
+	RESET_USER_SEGMENTS(12(%esp))
+	popl	%edx
+	popl	%ecx
+	iret
+
+/* timer interrupt */
+#ifdef CONFIG_SCHED_PIT
+GATE_ENTRY(0x20,timer_interrupt,ACC_PL_K | ACC_INTR_GATE)
+#else
+GATE_ENTRY(0x28,timer_interrupt,ACC_PL_K | ACC_INTR_GATE)
+#endif
+
+	P2ALIGN(4)
+	.globl	timer_interrupt
+timer_interrupt:
+#ifndef CONFIG_NO_FRAME_PTR
+	pushl	%ebp
+#ifndef CONFIG_PROFILE
+	movl	%esp,%ebp
+#else
+	movl	$0,%ebp
+#endif
+#endif
+	pushl	%eax
+	pushl	%edx
+	pushl	%ecx
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_KERNEL_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_KERNEL_SEGMENTS(16(%esp))   /* scratches cx,dx */
+#endif
+	call	EXT(thread_timer_interrupt) /* enter with disabled irqs */
+in_timer_interrupt:
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+#endif
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+#ifndef CONFIG_NO_FRAME_PTR
+	popl	%ebp
+#endif
+	iret
+
+	P2ALIGN(4)
+	.globl	timer_interrupt_slow
+timer_interrupt_slow:
+#ifndef CONFIG_NO_FRAME_PTR
+	pushl	%ebp
+#ifndef CONFIG_PROFILE
+	movl	%esp,%ebp
+#else
+	movl	$0,%ebp
+#endif
+#endif
+	pushl	%eax
+	pushl	%edx
+	pushl	%ecx
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_KERNEL_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_KERNEL_SEGMENTS(16(%esp))   /* scratches cx,dx */
+#endif
+	call	EXT(thread_timer_interrupt_slow) /* enter with disabled irqs */
+in_timer_interrupt_slow:
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+#endif
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+#ifndef CONFIG_NO_FRAME_PTR
+	popl	%ebp
+#endif
+	iret
+	
+	
+	P2ALIGN(4)
+	.globl	timer_interrupt_stop
+timer_interrupt_stop:
+#ifndef CONFIG_NO_FRAME_PTR
+	pushl	%ebp
+#ifndef CONFIG_PROFILE
+	movl	%esp,%ebp
+#else
+	movl	$0,%ebp
+#endif
+#endif
+	pushl	%eax
+	pushl	%edx
+	pushl	%ecx
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_KERNEL_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_KERNEL_SEGMENTS(16(%esp))   /* scratches cx,dx */
+#endif
+	call	EXT(thread_timer_interrupt_stop) /* enter with disabled irqs */
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+#endif
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+#ifndef CONFIG_NO_FRAME_PTR
+	popl	%ebp
+#endif
+	iret
+
+
+/* profiling timer interrupt entry point */
+#ifdef CONFIG_PROFILE
+
+	P2ALIGN(4)
+	.globl profile_interrupt_entry
+	FUNCSYM(profile_interrupt_entry)
+profile_interrupt_entry:
+#ifndef CONFIG_NO_FRAME_PTR
+	pushl	%ebp
+	movl	%esp,%ebp
+	pushl	%eax
+	movl    8(%esp),%eax	/* %eax = return address */
+#else
+	pushl	%eax
+	movl    4(%esp),%eax	/* %eax = return address */
+#endif
+	pushl	%edx
+	pushl	%ecx
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_KERNEL_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_KERNEL_SEGMENTS(16(%esp))   /* scratches cx,dx */
+#endif
+	pushl	%eax		/* pass return address as parameter */
+	call	EXT(profile_interrupt) /* enter with disabled irqs */
+	addl	$4,%esp
+#ifndef CONFIG_NO_FRAME_PTR
+	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+#else
+	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+#endif
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+#ifndef CONFIG_NO_FRAME_PTR
+	popl	%ebp
+#endif
+	iret
+
+#endif /* CONFIG_PROFILE */
+
+/* other interrupts */
+
+#define INTERRUPT(int,entrypoint)				\
+	GATE_ENTRY(int,entry_##entrypoint,ACC_PL_K | ACC_INTR_GATE) ;\
+	P2ALIGN(4)			      	 		;\
+entry_##entrypoint:			      	 		;\
+	pushl	%eax						;\
+	pushl	%edx						;\
+	pushl	%ecx						;\
+	pushl	$ (int - 0x20)					;\
+	jmp	all_irqs
+
+	P2ALIGN(4)
+	FUNCSYM(all_irqs)
+all_irqs:
+#ifdef CONFIG_APIC_MASK
+	movl	0(%esp), %eax		// get irq number
+	mov	EXT(apic_io_base), %ecx
+	cmpl	apic_irq_nr, %eax
+	jnz	1f
+
+	// get current time
+	movl	0x390 (%ecx), %edx
+	movl	%edx, apic_timer_entry
+
+#if 0
+	movl	0x380 (%ecx), %ecx
+	subl	%edx, %ecx
+	cmpl	$1500, %ecx
+	jb	apic_nostore
+
+	movl	apic_irq_late_ptr, %ecx
+	movl	16(%esp), %edx
+	cmpl	$0x0040a356, %edx
+	je	apic_nostore
+
+	movl	%edx, apic_irq_late (%ecx)
+	movl	%esp, apic_irq_late+4 (%ecx)
+	addl	$8, %ecx
+	andl	$0x3f, %ecx
+	movl	%ecx, apic_irq_late_ptr
+#endif
+
+apic_nostore:
+	// save eax
+	movl	%eax, %edx
+	
+	// mask all other irqs (except irq3/irq4 for COM1/COM2) to prevent
+	// APIC irq service preemtion
+	inb	$0x21, %al
+	movb	%al, apic_irq_mask
+	movb	$0xe7, %al
+	outb	%al, $0x21
+
+	// restore eax
+	movl	%edx, %eax
+	1:
+#endif /* CONFIG_APIC_MASK */
+	RESET_KERNEL_SEGMENTS(16(%esp))	/* scratches cx,dx */
+	call	EXT(irq_interrupt) /* enter with disabled irqs */
+in_interrupt:
+	addl	$4,%esp
+	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+	iret
+
+#ifndef CONFIG_SCHED_PIT
+INTERRUPT(0x20,int0)
+#endif
+INTERRUPT(0x21,int1)
+INTERRUPT(0x22,int2)
+INTERRUPT(0x23,int3)
+INTERRUPT(0x24,int4)
+INTERRUPT(0x25,int5)
+INTERRUPT(0x26,int6)
+INTERRUPT(0x27,int7)
+#ifdef CONFIG_SCHED_PIT
+INTERRUPT(0x28,int8)
+#endif
+INTERRUPT(0x29,int9)
+INTERRUPT(0x2a,inta)
+INTERRUPT(0x2b,intb)
+INTERRUPT(0x2c,intc)
+INTERRUPT(0x2d,intd)
+INTERRUPT(0x2e,inte)
+INTERRUPT(0x2f,intf)
+
+
+/* system calls */
+
+#define SYSTEM_CALL(int,entrypoint)				\
+	GATE_ENTRY(int,entry_##entrypoint,ACC_PL_U | ACC_INTR_GATE) ;\
+	P2ALIGN(4)		 	     	 		;\
+entry_##entrypoint:			      	 		;\
+	pushl	%eax						;\
+	movl	$ (int - 0x30), %eax				;\
+	jmp	all_syscalls
+
+	P2ALIGN(4)
+	FUNCSYM(all_syscalls)
+all_syscalls:
+	SAVE_STATE
+	RESET_KERNEL_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	movl	%esp,%ebx
+	andl	$~(THREAD_BLOCK_SIZE - 1),%ebx
+
+	movl	%esp,%ecx
+
+#warning OBSOLETE_LOGGING
+#if 0
+	cmpb	$0,EXT(log_system_call)
+	jne	logged_syscall
+#endif
+
+	pushl	%eax		/* pass syscall number as arg */
+	pushl	%ecx		/* pass pointer to regs structure as arg  */
+	pushl	%ebx		/* pass "this" pointer as arg */
+	call	EXT(dispatch_syscall)
+	addl	$12, %esp
+	
+ret_from_syscall:
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	RESTORE_STATE
+	popl	%eax
+	iret
+
+#if !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
+GATE_ENTRY(0x30,sys_ipc_entry_c,ACC_PL_U | ACC_INTR_GATE);
+#else
+GATE_ENTRY(0x30,sys_ipc_entry,ACC_PL_U | ACC_INTR_GATE);
+#endif
+        P2ALIGN(4)
+	.globl	sys_ipc_entry_c
+sys_ipc_entry_c:
+	pushl	%eax
+	SAVE_STATE
+	RESET_KERNEL_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	movl	%esp,%ebx
+	movl	%ebx,%ecx
+	andl	$~(THREAD_BLOCK_SIZE - 1),%ebx
+
+	pushl	$0x0		/* pass syscall number as arg */	
+	pushl   %ecx            /* pass pointer to regs structure as arg */
+	pushl   %ebx            /* pass "this" pointer as arg */
+	call    EXT(call_ipc_short_cut)
+in_sc_ipc1:
+	movl	(%esp), %ebx
+	andl	$~Thread_ipc_mask, OFS__THREAD__STATE (%ebx)
+	cmpb    $0,%al
+	jz      shortcut_failed
+
+        /* ipc_short_cut returned true -> ipc finished */
+	addl	$12, %esp	/* remove arguments */
+
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	RESTORE_STATE
+	popl    %eax
+	iret
+
+shortcut_failed:
+	/* We don't push syscall number, regs and "this" again to the stack.
+	 * This assumes that call_ipc_short_cut doesn't manipulate these args
+	 * on stack. */
+	call	EXT(dispatch_syscall)
+in_slow_ipc3:
+
+	addl	$12, %esp		/* remove arguments */
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	RESTORE_STATE
+	popl	%eax
+	iret
+
+	.globl	in_sc_ipc1
+	.globl	in_slow_ipc3
+
+	P2ALIGN(4)
+#warning OBSOLETE_LOGGING
+#if 0
+logged_syscall:
+	/* XXX */
+	sti
+	pushl	%eax		/* pass syscall number as arg */
+	pushl	%ecx		/* pass pointer to regs structure as arg  */
+	pushl	%ebx		/* pass "this" pointer as arg */
+	call	EXT(thread_syscall_log_begin)
+
+	/* We don't push syscall number, regs and "this" again to the stack.
+	 * This assumes that thread_syscall_log_begin doesn't manipulate these
+	 * args on stack. */
+	call	EXT(dispatch_syscall)
+
+	call	EXT(thread_syscall_log_end)
+
+	addl	$12, %esp
+	jmp	ret_from_syscall
+#endif
+
+/* SYSTEM_CALL(0x30,sys_ipc) */
+SYSTEM_CALL(0x31,sys_id_nearest)
+SYSTEM_CALL(0x32,sys_fpage_unmap)
+SYSTEM_CALL(0x33,sys_thread_switch)
+SYSTEM_CALL(0x34,sys_thread_schedule)
+SYSTEM_CALL(0x35,sys_thread_ex_regs)
+SYSTEM_CALL(0x36,sys_task_new)
+
+GATE_INITTAB_END
+
+
+/* The slow variant of sys_ipc_entry is used when logging IPC
+   (see thread_t::hook_ipc_vector() and thread_t::restore_ipc_vector) */
+        P2ALIGN(4)
+	.globl	sys_ipc_entry_log
+sys_ipc_entry_log:
+	pushl	%eax
+	SAVE_STATE
+	RESET_KERNEL_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	movl	%esp,%ebx
+	movl	%ebx,%ecx
+	andl	$~(THREAD_BLOCK_SIZE - 1),%ebx
+	pushl	$0
+	pushl	%ecx
+	pushl	%ebx
+	call	EXT(dispatch_syscall)
+in_slow_ipc4:
+	addl	$12, %esp	/* remove arguments */
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	RESTORE_STATE
+	popl	%eax
+	iret
+
+	P2ALIGN(4)
+	.global do_sysenter_log
+do_sysenter_log:
+	pop	%esp
+	pushl	$(GDT_DATA_USER|3)		/* user ss */
+	subl	$4, %esp			/* room for user esp */
+	pushl	$0x3200				/* fake user eflags */
+	// Fake user cs. This cs value is never used with exception
+	// that the thread is ex_regs'd before we leave with sysexit.
+	// lthread_ex_regs has to check user cs for that value. If
+	// it is faked, the thread would leave the kernel by sysexit
+	// and the thread is in the slow ipc path. Sysexit would
+	// adapt the user eip (by subtracting 2) to ensure the user
+	// executes the "mov %ebp,%edx" sequence. This is wrong if
+	// the thread is ex_regs'd. In that case, we modify the return
+	// value from "call dispatch_syscall" to an alternate exit
+	// path using "iret".
+	pushl	$(GDT_CODE_USER|SEL_PL_U|0x80)	/* user cs */
+	pushl	(%ecx)				/* user eip */
+
+	pushl	$0x00003000
+	popf
+
+	pushl	%eax			/* SAVE_STATE */
+	pushl	%ebp
+	pushl	%ebx
+	pushl	%edi
+	pushl	%esi
+	pushl	%edx
+	pushl	12(%ecx)		/* save ecx */
+
+	leal	16(%ecx), %edx		/* adapt user esp */
+	movl	%edx, 40(%esp)		/* store user esp */
+
+	RESET_KERNEL_SEGMENTS(32(%esp))	/* scratches cx,dx */
+
+	movl	%esp,%ebx
+	andl	$~(THREAD_BLOCK_SIZE - 1),%ebx
+
+	movl	%esp,%ecx
+	pushl	$0
+	pushl   %ecx            /* pass pointer to regs structure as arg */
+	pushl   %ebx            /* pass "this" pointer as arg */
+	call    EXT(dispatch_syscall)
+in_slow_ipc5:
+
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	SYSEXIT_AFTER_DISPATCH_SYSCALL
+
+	.globl	in_slow_ipc4
+	.globl	in_slow_ipc5
+
+
+	P2ALIGN(4)
+	.global do_sysenter_c
+do_sysenter_c:
+	pop	%esp
+	pushl	$(GDT_DATA_USER|SEL_PL_U)	/* user ss */
+	subl	$4, %esp			/* room for user esp */
+	pushl	$0x3200				/* fake user eflags */
+	// Fake user cs. This cs value is never used with exception
+	// that the thread is ex_regs'd before we leave with sysexit.
+	// lthread_ex_regs has to check user cs for that value. If
+	// it is faked, the thread would leave the kernel by sysexit
+	// and the thread is in the slow ipc path. Sysexit would
+	// adapt the user eip (by subtracting 2) to ensure the user
+	// executes the "mov %ebp,%edx" sequence. This is wrong if
+	// the thread is ex_regs'd. In that case, we modify the return
+	// value from "call dispatch_syscall" to an alternate exit
+	// path using "iret".
+        pushl	$(GDT_CODE_USER|SEL_PL_U|0x80)	/* user cs */
+	pushl	(%ecx)				/* user eip */
+
+	pushl	%eax				/* SAVE_STATE */
+	pushl	%ebp
+	pushl	%ebx
+	pushl	%edi
+	pushl	%esi
+	pushl	%edx
+	pushl	12(%ecx)			/* save ecx */
+
+	pushl	$0x00003000
+	popf
+
+	leal	16(%ecx), %edx		/* adapt user esp */
+	movl	%edx, 40(%esp)		/* store user esp */
+
+	RESET_KERNEL_SEGMENTS(32(%esp))	/* scratches cx,dx */
+
+	movl	%esp,%ebx
+	andl	$~(THREAD_BLOCK_SIZE - 1),%ebx
+
+	movl	%esp, %ecx
+	sub	$4, %esp
+	pushl   %ecx            /* pass pointer to regs structure as arg */
+	pushl   %ebx            /* pass "this" pointer as arg */
+	call    EXT(call_ipc_short_cut)
+in_sc_ipc2:
+	movl	(%esp), %ebx
+	andl	$~Thread_ipc_mask, OFS__THREAD__STATE (%ebx)
+
+	cmpb	$0, %al
+	jz	sysenter_shortcut_failed
+	/* ipc_short_cut returned true -> ipc finished */
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	SYSEXIT_AFTER_SHORTCUT
+
+
+sysenter_shortcut_failed:
+	/* We don't push syscall number, regs and "this" again to the stack.
+	 * This assumes that call_ipc_short_cut doesn't manipulate these args
+	 * on stack. */
+	movl	$0, 8(%esp)
+	call	EXT(dispatch_syscall)
+in_slow_ipc6:
+
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
+	SYSEXIT_AFTER_DISPATCH_SYSCALL
+
+
+	P2ALIGN(4)
+	.globl	leave_from_sysenter_by_iret
+leave_from_sysenter_by_iret:
+	popl	%ebx
+	addl	$8, %esp
+	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx, dx */
+	andl	$~Thread_ipc_mask, OFS__THREAD__STATE (%ebx)
+	RESTORE_STATE
+	popl    %eax
+	iret
+
+
+	// these labels help show_tcb to guess the thread state
+	.globl	in_sc_ipc2
+	.globl	in_slow_ipc6
+	.globl	in_slowtrap
+	.globl	in_page_fault
+	.globl	in_handle_fputrap
+	.globl	in_interrupt
+	.globl	in_timer_interrupt
+	.globl	in_timer_interrupt_slow
+
+
+#ifdef CONFIG_APIC_MASK
+	.bss
+	.globl	apic_timer_entry
+apic_timer_entry:
+	.space	4
+	.globl	apic_irq_mask
+apic_irq_mask:
+	.space	4
+	.globl	apic_irq_waiting
+apic_irq_waiting:
+	.space	4
+apic_irq_late_ptr:
+	.space	4
+apic_irq_late:
+	.space	0x40
+
+	.data
+	.globl	apic_irq_nr
+apic_irq_nr:
+	.long	-2
+#endif /* CONFIG_APIC_MASK */
+

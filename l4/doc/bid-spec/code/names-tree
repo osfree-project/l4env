@@ -1,0 +1,12 @@
+pkg/
+ +- names/
+     +- examples/
+     |   +- demo/
+     |   +- lister/
+     +- include/
+     +- lib/
+     |   +- src/
+     +- man/
+     +- server/
+         +- src/
+         +- include/

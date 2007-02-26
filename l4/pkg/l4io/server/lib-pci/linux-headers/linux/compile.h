@@ -1,0 +1,6 @@
+#define UTS_VERSION "#12 SMP Fri Jun 8 09:33:08 CEST 2001"
+#define LINUX_COMPILE_TIME "09:33:08"
+#define LINUX_COMPILE_BY "ch12"
+#define LINUX_COMPILE_HOST "erwin"
+#define LINUX_COMPILE_DOMAIN "inf.tu-dresden.de"
+#define LINUX_COMPILER "gcc version 2.95.2 20000220 (Debian GNU/Linux)"

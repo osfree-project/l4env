@@ -1,0 +1,42 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Environment Library Reference Manual
+
+\section intro Introduction
+
+The L4 Environment Library is a collection of functions and glue code 
+to support applications which use the Common L4 Environment. It provides
+
+- startup code which initialized the various L4env libraries
+- common type definitions / functions / defines
+- functions to request various configuration parameters
+- misc. support functions for other L4env libraries
+
+\section support Support functions
+
+\subsection slab Slab Allocator 
+
+The L4 Environment Library provides a very simple memory allocator based 
+on the idea of slab caches (Jeff Bonwick: "\em The \em Slab \em Allocator: 
+\em An \em Object-Caching \em Kernel \em Memory \em Allocator"). It is not
+an independent library for several reasons:
+
+- it is not a full-grown Slab Cache implementation. The size of a single 
+  slab is exactly one page, multi-paged slabs are not implemented. According 
+  to the Slab Allocator paper this kind of an implementation is suitable for 
+  objects up to a size of 1/8th of a page, which is about 500 bytes in this 
+  implementation (the slab descriptor is also stored on the page, so it's not
+  512 bytes ;-)
+- there is no synchronization at all. This is due to the special requirements 
+  of the other L4env libraries. E.g. the Region Mapper needs no special 
+  synchronization, all operations are serialized by the region mapper thread. 
+  The Semaphore library also requires no synchronization, it implements the 
+  basic L4 environment synchronization primitive.
+
+Of course this implementation can be used to build a fully-featured Slab 
+Allocator. See \ref g_slab "Slab Allocator module" for a description of the 
+API.
+
+*/

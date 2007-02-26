@@ -1,0 +1,160 @@
+# -*- makefile -*-
+
+SUBSYSTEMS = JABI ABI KERNEL LIBK LIBAMM LIBLMM CXXLIB LIBKERN TCBOFFSET
+
+#
+# TYPES subsystem
+#
+PRIVATE_INCDIR 		+= types/$(CONFIG_XARCH) types
+
+#
+# ABI Subsystem
+#
+ABI			:= libabi.a
+VPATH			+= abi/$(CONFIG_XARCH) abi
+INTERFACES_ABI		:= l4_types kip
+l4_types_IMPL		:= l4_types l4_types-$(CONFIG_ABI) \
+			   l4_types-32bit l4_types-iofp
+kip_IMPL		:= kip kip-ia32
+
+#
+# JABI Subsystem
+#
+JABI			:= libjabi.a
+VPATH			+= jabi/$(CONFIG_XARCH) jabi
+INTERFACES_JABI		:= jdb_ktrace
+jdb_ktrace_IMPL		:= jdb_ktrace-arch jdb_ktrace
+
+#
+# DRIVERS subsystem
+#
+#DRIVERS		:= libdrivers.a
+#VPATH			+= drivers/$(CONFIG_XARCH) drivers
+
+# for processor.h
+PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
+
+#
+# KERNEL subsystem
+#
+KERNEL			:= kernel.image
+KERNEL_EXTRA		:= Symbols irq0
+VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
+PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern
+
+INTERFACES_KERNEL	:= boot_info cpu mapdb region space_context \
+			   space space_index space_index_util stack kmem \
+			   kmem_alloc slab_cache_anon kmem_slab_simple \
+			   kmem_slab switch_lock thread_lock helping_lock \
+			   cpu_lock timer pic thread_state sched context \
+			   threadid sender receiver thread \
+			   kernel_thread thread_util kdb_ke dirq \
+			   fpu fpu_alloc fpu_state map_util irq globals \
+		       	   main config usermode mapped_alloc idt \
+			   trampoline loader kern_types vmem_alloc \
+			   panic paging entry_frame startup emulation \
+                           hostproc task irq_alloc libc_support long_msg
+
+main_IMPL		:= main-ia32-ux main-ux
+pic_IMPL		:= pic pic-ux
+long_msg_IMPL		:= long_msg long_msg-ux
+timer_IMPL 		:= timer timer-ia32 timer-ux
+entry_frame_IMPL	:= entry_frame entry_frame-ia32-common-$(CONFIG_ABI)
+cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
+paging_IMPL		:= paging paging-ia32-ux
+boot_info_IMPL		:= boot_info boot_info-ux
+globals_IMPL		:= globals globals-ia32-ux
+config_IMPL		:= config config-ux config-ia32-ux
+kmem_IMPL		:= kmem-ia32-ux kmem-ux
+kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-ux
+map_util_IMPL		:= map_util map_util-ia32-ux
+pmem_alloc_IMPL		:= pmem_alloc pmem_alloc-ia32-ux
+vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-ux vmem_alloc-ux
+context_IMPL		:= context context-ia32-ux context-ux
+sched_IMPL		:= sched sched-ia32-ux
+space_IMPL		:= space space-ia32-ux space-ux
+space_context_IMPL	:= space_context-ia32-ux space_context-ux
+irq_IMPL		:= irq irq-ipc irq-ux
+dirq_IMPL		:= dirq dirq-ia32-ux
+cpu_IMPL		:= cpu-ia32-common cpu-ux
+fpu_IMPL		:= fpu fpu-ia32-ux fpu-ux
+idt_IMPL		:= idt-ia32-ux idt-ux
+kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-ux
+thread_IMPL		:= thread thread-ia32-ux thread-ux thread-$(CONFIG_ABI) \
+			   thread-syscall thread-syscall-$(CONFIG_ABI)	\
+			   thread-ipc thread-msg thread-msg-ux		\
+			   thread-list thread-nolog thread-user-ux thread-nosmas
+
+ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS)","y")
+  INTERFACES_KERNEL	+= sys_call_page
+  sys_call_page_IMPL	:= sys_call_page
+  ifeq ("$(CONFIG_X2_LIKE_SYS_CALLS_ABS)","y")
+    sys_call_page_IMPL	+= sys_call_page-abs-ux                   
+  else
+    sys_call_page_IMPL	+= sys_call_page-rel-ia32-ux
+  endif
+  task_IMPL		:= task task-auto-map-kip
+else
+  task_IMPL		:= task task-no-auto-map-kip
+endif
+
+ASSRC_KERNEL		:= entry.S sighandler.S
+ifeq ($(CONFIG_ASSEMBLER_IPC_SHORTCUT),y)
+  ASSRC_KERNEL		+= shortcut.S
+endif
+
+#
+# TCBOFFSET subsystem
+#
+TCBOFFSET		:= auto/tcboffset.h
+CXXSRC_TCBOFFSET	:= genoffset.cc
+
+#
+# CXXLIB Subsystem
+#
+CXXLIB			:= libcxx.a
+VPATH			+= lib/cxxlib
+INTERFACES_CXXLIB	:= s_cruft
+
+#
+# LIBK subsystem
+#
+LIBK			:= libk.a
+VPATH			+= lib/libk/$(CONFIG_XARCH) lib/libk
+PRIVATE_INCDIR		+= lib/libk/$(CONFIG_XARCH) lib/libk
+INTERFACES_LIBK		:= atomic lock_guard auto_ptr std_macros
+atomic_IMPL		:= atomic atomic-arch
+
+#
+# LIBKERN Subsystem
+#
+LIBKERN			:= libkern.a
+VPATH			+= lib/kern
+PRIVATE_INCDIR		+= lib/kern/include
+CSRC_LIBKERN		:= base_trap_handler.c cpuid.c gate_init.c \
+			   gdb_trap.c trap_dump.c trap_dump_panic.c
+
+#
+# LIBAMM subsystem
+#
+LIBAMM			:= libamm.a
+VPATH			+= lib/amm 
+PRIVATE_INCDIR		+= lib/amm 
+CSRC_LIBAMM		:= amm_alloc_entry.c amm_allocate.c amm_deallocate.c \
+			   amm_destroy.c amm_dump.c amm_find_addr.c \
+			   amm_find_gen.c amm_free_entry.c amm_init.c \
+			   amm_init_gen.c amm_iterate.c amm_iterate_gen.c \
+			   amm_join.c amm_modify.c amm_protect.c \
+			   amm_reserve.c amm_select.c amm_split.c
+
+#
+# LIBLMM Subsystem
+#
+LIBLMM			:= liblmm.a
+VPATH			+= lib/lmm
+PRIVATE_INCDIR		+= lib/lmm
+CSRC_LIBLMM		:= lmm_alloc.c lmm_avail.c lmm_find_free.c \
+			   lmm_add_free.c lmm_alloc_aligned.c lmm_avail_in.c \
+			   lmm_free.c lmm_init.c lmm_alloc_gen.c lmm_dump.c \
+			   lmm_remove_free.c lmm_add_region.c \
+			   lmm_alloc_page.c lmm_free_page.c

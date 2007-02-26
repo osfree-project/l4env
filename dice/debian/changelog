@@ -1,0 +1,76 @@
+dice (2.2.1-2) unstable; urgency=low
+
+  * CVS update as of 26th Feb 2003.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Wed, 26 Feb 2003 23:30:52 +0100
+
+dice (2.2.1-1) unstable; urgency=low
+
+  * New upstream.
+  * Supports sockets now.
+  * Remove hacks from rules files as upstream does it right now.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Tue,  3 Dec 2002 19:32:27 +0100
+
+dice (2.2.0-3) unstable; urgency=low
+
+  * Remove my own manpage and take good hidden one from dice.
+  * Hack rules so that package installs with boths automake (1.4 and 1.7).
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Tue,  3 Dec 2002 19:32:23 +0100
+
+dice (2.2.0-2) unstable; urgency=low
+
+  * Convert to automake/autoconf setup.
+  * Add NEWS, README, AUTHORS, Changelog (aka changelog.gz)
+      to /usr/share/doc/dice
+  * Wrote man page template (dice.1).
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Sun, 24 Nov 2002 00:01:11 +0100
+
+dice (2.2.0-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Mon, 18 Nov 2002 18:59:20 +0100
+
+dice (1.3-cvs20011117) unstable; urgency=low
+
+  * New upstream version from CVS.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Sat, 17 Nov 2001 16:32:23 +0100
+
+dice (1.3-cvs20010718) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Wed, 18 Jul 2001 13:14:33 +0200
+
+dice (1.3-cvs20010716) unstable; urgency=low
+
+  * New upstream version (with better manpage). 
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Mon, 16 Jul 2001 17:54:57 +0200
+
+dice (1.3-cvs20010713) unstable; urgency=low
+
+  * Various improvements to build process
+  * New upstream version.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Fri, 13 Jul 2001 18:49:20 +0200
+
+dice (1.0-cvs20010711) unstable; urgency=low
+
+  * CVS update. 
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Wed, 11 Jul 2001 18:27:17 +0200
+
+dice (1.0-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresde.de>  Fri, 29 Jun 2001 19:00:30 +0200
+
+Local variables:
+mode: debian-changelog
+End:

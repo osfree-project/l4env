@@ -1,0 +1,3 @@
+
+transmit / receive needs physical buffers!
+(until now, all is static in bss...)

@@ -1,0 +1,96 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=syscall
+date="27.06.96"
+>l4_task_new
+<short>create or delete a task
+<sect> Synopsis
+
+<verb>#include <l4/sys/syscalls.h></verb>
+
+<code/static inline l4_taskid_t/ <nl>
+<code/l4_task_new(l4_taskid_t/ <var/dest/ <code/, dword_t/ <var/
+mcp_or_new_chief/ <code/, dword_t/ <var/esp/ <code/, dword_t/
+<var/eip/ <code/, l4_threadid_t/ <var/pager/ <code/);/
+
+<sect> Description
+
+The <code/l4_task_new()/ system call deletes and/or creates a task. Deletion
+of a task means that the address space of the task and all threads of
+the task disappear. The cpu time of all deleted threads is added to
+the cputime of the deleting thread. If the deleted task was chief of a
+clan, all tasks of the clan are deleted as well.
+
+Tasks may be created as active or inactive. For an active task, a new
+address space is created together with 128 threads. Lthread 0 is
+started, the other ones wait for a "real" creation using 
+<code/l4_thread_ex_regs()/. An inactive task is empty. It occupies no
+resources, has no address space and no threads. Communication with
+inactive tasks is not possible.
+
+A newly created task gets the creator as its chief, i.e. it is created
+inside the creator's clan. Symmetrically, a task can only be deleted
+either directly by its chief or indirectly by a higher-level chief.
+
+<sect>Arguments
+
+<desc
+
+<dt/<var/dest// Task id of an existing task whose chief is the
+current task. If this is not fulfilled, the system call has no effect. 
+Simultaneously, a new task with the same task number is created. It
+may be active or inactive.
+
+<dt/<var/mcp_or_new_chief// Depending on the state of the task (active or
+inactive), two variants are possible here: 
+
+<desc
+
+<dt/&lt;mcp>/
+Maximum controlled priority defines the highest priority which can be
+ruled by the new task acting as a scheduler. The new task's effective
+mcp is the minimum of the creator's mcp and the specified mcp.
+Use this parameter if the newly generated task is an active task.
+
+<dt/&lt;new_chief>/ Specifies the chief of the new inactive task. This
+mechanism permits to transfer inactive tasks to other
+tasks. Transferring an inactive task to the specified chief means to
+transfer the related right to create a task.
+Use this parameter if the newly generated task is an inactive task.
+
+</desc>
+
+<dt/<var/esp// Initial stack pointer for lthread 0 if the new task is
+created as an active one. Ignore otherwise.
+
+<dt/<var/eip// Initial instruction pointer for lthread 0 if the new task is
+created as an active one. Ignored otherwise.
+
+<dt/<var/pager// If <code/L4_NIL_ID/ is used, the new task is created as
+inactive. Lthread 0 is not created. Otherwise the new task is created
+as active and the specified pager is associated to Lthread 0.  
+
+<sect>Return Values 
+
+If task creation succeeded its id is delivered
+back. If the new task is active, the new task id will have a new
+version number so that it differs from all task ids used
+earlier. Chief and task number are the same as in dest task. If the
+new task is created inactive, the chief is taken from the chief
+parameter; the task number remains unchanged. The version is undefined
+so that the new task id might be identical with a formerly (but not
+currently and not in future) valid task id. This is safe since
+communication with inactive tasks is impossible.
+
+If task creation failed  <code/L4_NIL_ID/ is returned.
+
+<sect>See Also
+
+<ref t=m id="l4_thread_ex_regs"//, 
+<ref t=m id="l4_myself"//, 
+<ref t=m id="l4_nchief"//, 
+<ref t=m id="l4_thread_switch"//, 
+<ref t=m id="l4_thread_schedule"//, 
+<ref t=m id="l4_task_new"// 

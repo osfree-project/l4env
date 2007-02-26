@@ -1,0 +1,16 @@
+#define __ver_queue_initialise	smp_efa10bb9
+#define queue_initialise	_set_ver(queue_initialise)
+#define __ver_queue_free	smp_7c8c084d
+#define queue_free	_set_ver(queue_free)
+#define __ver___queue_add	smp_4a3fc909
+#define __queue_add	_set_ver(__queue_add)
+#define __ver_queue_remove	smp_c44348b5
+#define queue_remove	_set_ver(queue_remove)
+#define __ver_queue_remove_exclude	smp_ec1a29d5
+#define queue_remove_exclude	_set_ver(queue_remove_exclude)
+#define __ver_queue_remove_tgtluntag	smp_2eee5c65
+#define queue_remove_tgtluntag	_set_ver(queue_remove_tgtluntag)
+#define __ver_queue_remove_cmd	smp_a26dcfb1
+#define queue_remove_cmd	_set_ver(queue_remove_cmd)
+#define __ver_queue_probetgtlun	smp_a74439a9
+#define queue_probetgtlun	_set_ver(queue_probetgtlun)

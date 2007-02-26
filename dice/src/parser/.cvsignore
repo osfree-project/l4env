@@ -1,0 +1,8 @@
+parser-dce.h
+parser-corba.h
+parser-dce.output
+parser-corba.output
+Makefile
+Makefile.in
+.buildnumber
+.deps

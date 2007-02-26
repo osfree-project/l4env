@@ -1,0 +1,4 @@
+a meter that indicates incoming irqs.
+
+This prog tries to attach to all interrupt sources Omega0 offers. Then it
+signals incoming IRQs with one spinning wheel per IRQ.

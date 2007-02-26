@@ -1,0 +1,20 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+ * \defgroup api L4 Semaphore API
+ *
+ * Documentation of the L4 Semaphore API.
+ */
+
+/**
+ * \defgroup api_sem Semaphore Usage
+ * \ingroup api
+ * \brief L4 Semaphore usage.
+ */
+
+/**
+ * \defgroup api_init Init
+ * \ingroup api
+ * \brief Library initialization
+ */

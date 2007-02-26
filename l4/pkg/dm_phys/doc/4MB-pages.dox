@@ -1,0 +1,20 @@
+The current support for 4MB-pages (aka superpages) in DMphys uses several
+assumptions / restrictions:
+
+- The phys. memory is mapped with the largest possible pagesize to DMphys.
+  This means that any 4MB-area of the phys. memory which is completely
+  available to a DMphys memory pool must be mapped as a 4MB-page. 
+- If the request for a 4MB-page to sigma0 succeeds, the page is really
+  mapped as a 4MB-page, not as 1024 4KB-pages. This should be a trivial 
+  assumption, but this part of the sigma0 protocol specification is vague,
+  i.e. it does not exist.
+- The allocation of 4MB-paged memory areas implies the allocation of a
+  contiguous memory area. This means that it is not possible to construct
+  a dataspace from several non-contiguous 4MB-pages. 
+
+With this assumptions the support for 4MB-pages is fairly easy, we just 
+have to make sure that we use appropriate alignments and sizes to allocate
+4MB-paged memory.
+
+The third restriction could be removed if we change the allocation 
+strategy used to allocate page areas (server/src/pages.c). 

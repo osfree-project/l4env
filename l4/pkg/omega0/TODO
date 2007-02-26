@@ -1,0 +1,39 @@
+unsolved:
+
+0. we currently only support one irq per client-thread.
+
+1. general: if we number irqs from above 1, we will get confused with
+   standard pc irq enumeration.
+
+2. how to deal with pending irqs when clients detach?
+3. how to deal with pending irqs when clients attach (pending from last
+   attachment)?
+
+4. is it allowed to mask an irq an detach then? (UNSOLVED_MASK_DETACH)
+
+5. when passing the attachment to another thread returnes an error, the
+   state of attachment is undefined. It can be that the irq is still
+   attached to the old thread, but it may happen that it is not attached to
+   any thread. Another point: The code currently returned on success is
+   not 0 like documentation claims, so check against -1. (UNSOLVED_PASS)
+
+6. If a client does a wait-request and an irq is still pending, immediately
+   return with the irq. Problem: distinguish between a new irq and an old
+   one which cannot be handled by the client. Possibility: What happens
+   if an IRQ occures while this irq is 'in service'?
+
+7. denial-of-service attacks: If we mask an irq everytime a client newly
+   attaches an irq, it is possible to block irqs for realtime threads. One
+   solution is not to use shared irqs, which is impractical. Another
+   solution is to limit the clients which are allowed to attach by, e.g.
+   capabilities.
+
+8. special handling of IRQ 7: The PIC may raise an IRQ 7 under a special#
+   condition: The interrupt line goes low before the falling edge of INT#A.
+   Then the PIC cannot determine the correct IRQ, so it triggers an IRQ 7.
+   Should be handled in a reasonable way. You can determine if the IRQ 7 is
+   a real one: A 'faked' one does not set ISR, it also does not need to be
+   acknowledged by an EOI.
+
+fixed 11.02.2000: locking is unimplemented. Set real functionality behind
+   the lock stuff.  (easy job).

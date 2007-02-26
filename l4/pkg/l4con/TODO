@@ -1,0 +1,3 @@
+- set priority of vc thread depending if client is a real-time task or not
+- initiate client callbacks with timeout 0
+

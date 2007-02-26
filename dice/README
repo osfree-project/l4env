@@ -1,0 +1,41 @@
+Read Me First file for DICE (DROPS IDL Compiler) Project
+
+Welcome
+=======
+ Dice is an IDL compiler for the L4 microkernel. It translates
+CORBA IDL and DCE IDL files into L4 specific communication stubs.
+To be able to support L4 specific IPC, some special types and
+attributes have been added to the IDLs.
+
+ Currently Dice supports only the V2 ABI of the L4 microkernel,
+but work is under way to add support for the X0 and X2/V4 ABIs
+asap.
+
+Compiling for the first time:
+=============================
+ If you have checked out a fresh version from the remote CVS,
+you will have noticed that there is no Makefile. Please run
+'make -f Makefile.cvs', 
+which invokes the bootstrap script, then configure, and 
+eventually make again to build Dice. If you wish to configure 
+Dice manually, run the bootstrap script first to create the 
+configure script.
+
+Compiling for DROPS Environment
+===============================
+ If you have checked out a fresh version from the (remote) CVS,
+and wish to build all the Makefiles and Dice for the DROPS build
+environment using DROPS_STDDIR, you can do so buy running
+'make -f Makefile.drops', 
+which performs the same steps as above, but uses the variable 
+DROPS_STDDIR as prefix for configure. DROPS_STDDIR is set in 
+$(L4DIR)/Makeconf.local.
+
+
+Thanx for using DICE (let's roll the dice)
+Ronald Aigner
+
+send bugs to: ra3@os.inf.tu-dresden.de
+dice mailing list: dice@os.inf.tu-dresden.de
+
+file last modified: 11/24/02

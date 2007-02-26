@@ -1,0 +1,29 @@
+
+typedef union dope_event_union switch(long type) {
+
+	case 1:	struct command_struct {
+				[string] char *cmd;
+			} command;
+
+	case 2: struct motion_struct {
+				long rel_x;
+				long rel_y;
+				long abs_x;
+				long abs_y;
+			} motion;
+
+	case 3:	struct press_struct {
+				long code;
+			} press;
+
+	case 4:	struct release_struct {
+				long code;
+			} release;
+
+	default: long type;
+} dope_event;
+
+interface test {
+	long	event	([in] dope_event e, [in, ref, string] char *bindarg);
+};
+

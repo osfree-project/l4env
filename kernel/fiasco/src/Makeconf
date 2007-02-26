@@ -1,0 +1,191 @@
+# -*- Makefile -*-
+# DROPS Make configuration file
+#
+# created 1996/04/20 by hohmuth
+# $Id$
+#
+
+SYSTEM= $(shell uname)
+
+srcdir = .
+tooldir = $(srcdir)/../tool
+
+L4DIR ?= $(srcdir)/../../..
+
+SHARED_FLAGS := 
+
+# only pass the -ffreestanding argument to gcc if it understands it
+CFLAGS := #\
+#  $(shell if $(CC) -xc -ffreestanding -c /dev/null -o .test.o \
+#          >/dev/null 2>&1 ; then echo ' -ffreestanding'; fi; \
+#	  rm -f .test.o)
+
+
+# only pass the -fno-exceptions argument to g++ if it understands it
+CXXFLAGS := -fno-rtti \
+  $(shell if $(CXX) -xc++ -fno-exceptions -c /dev/null -o .test.o \
+          >/dev/null 2>&1 ; then echo ' -fno-exceptions'; fi; \
+	  rm -f .test.o)
+
+PROF_FLAGS :=
+OPT_CFLAGS :=
+OPT_CXXFLAGS :=
+
+ARFLAGS := rs
+
+###########################################################
+# you either change these two values here, or override it
+# in the Makeconf.<arch>.
+###########################################################
+CC3	:= gcc-3.2
+CXX3	:= g++-3.2
+
+ifeq ("$(CONFIG_USE_GCC_3_X)","y")
+  CC	= $(SYSTEM_TARGET)$(CC3)
+  CXX	= $(SYSTEM_TARGET)$(CXX3)
+else
+  CC	= $(SYSTEM_TARGET)gcc
+  CXX	= $(SYSTEM_TARGET)g++
+endif
+
+AWKP	?= gawk --posix
+AS	= $(SYSTEM_TARGET)as
+LD	= $(SYSTEM_TARGET)ld
+AR	= $(SYSTEM_TARGET)ar
+NM	= $(SYSTEM_TARGET)nm
+RANLIB	= $(SYSTEM_TARGET)ranlib
+SIZE	= $(SYSTEM_TARGET)size
+STRIP	= $(SYSTEM_TARGET)strip
+OBJCOPY	= $(SYSTEM_TARGET)objcopy
+OBJDUMP	= $(SYSTEM_TARGET)objdump
+RM	:= rm -f
+CP	:= cp
+
+MOVE_IF_CHANGE = $(srcdir)/../tool/move-if-change
+SHOWDEPS = $(srcdir)/../tool/showdeps
+PREPROCESSDEPS = $(srcdir)/../tool/parsedeps
+CIRCULAR = $(srcdir)/../tool/circular
+
+ifeq ($(SYSTEM),FreeBSD)
+MD5SUM = /sbin/md5
+else
+MD5SUM = md5sum
+endif
+
+PREPROCESS = \
+  $(word 1, $(wildcard $(shell cd $(L4DIR)/tool/preprocess/src 2>/dev/null; \
+                               pwd)/preprocess \
+		       $(DROPS_STDDIR)/tool/bin/preprocess) preprocess)
+
+ifeq ($(CONFIG_INLINE),y)
+  PREPROCESS_FLAGS = -i -L
+else
+  PREPROCESS_FLAGS = -L
+endif
+
+CCVER  := $(shell $(CXX) -dumpversion | cut -d . -f 1)
+
+include $(srcdir)/Makeconf.$(CONFIG_XARCH)
+-include Makeconf.local
+
+LIBGCC := $(shell $(CXX) -print-libgcc-file-name)
+
+#######################################################
+# These can be overridden in Makeconf.$(CONFIG_XARCH) #
+#######################################################
+L4STD_INCDIR	?= -I$(dir $(LIBGCC))include -nostdinc
+L4ALL_INCDIR	?= $(addprefix -I,	\
+		   $(PRIVATE_INCDIR))
+
+
+
+ifdef NDEBUG
+  CPPFLAGS	+= -DNDEBUG
+endif
+
+ifdef DEBUG
+  CPPFLAGS	+= -DDEBUG
+
+ifndef NO_DEBUG_ERRORS
+  CPPFLAGS	+= -DDEBUG_ERRORS
+endif
+
+ifndef NO_DEBUG_ASSERTION
+  CPPFLAGS	+= -DDEBUG_ASSERTIONS
+endif
+endif
+
+ifdef OPT
+  OPT_CFLAGS	+= -O$(OPT)
+  OPT_CXXFLAGS	+= -O$(OPT)
+else
+  OPT_CFLAGS	+= -O3
+  OPT_CXXFLAGS	+= -O3
+endif
+
+ifdef ASM
+  CPPFLAGS	+= -S
+endif
+
+ifdef PRE
+  CPPFLAGS	+= -E
+endif
+
+SHARED_FLAGS	+= -fno-defer-pop -freg-struct-return -g -Wall
+
+ifeq ($(CCVER),3)
+  SHARED_FLAGS	+= -W -finline-limit=2000
+ifeq ($(CONFIG_UNREACHABLE_CODE),y)
+  SHARED_FLAGS	+= -Wunreachable-code
+endif
+endif
+
+CFLAGS		+= $(SHARED_FLAGS)
+CXXFLAGS	+= $(SHARED_FLAGS)
+CPPFLAGS	+= $(L4ALL_INCDIR) $(INCLUDES)
+
+# output formating
+# set VERBOSE := @ to prevent command lines 
+VERBOSE		?=
+AR_MESSAGE	?= @echo -e "  ==> Archiving into $@"
+COMP_MESSAGE	?= @echo -e "  ... Making $@"
+COMP_P_MESSAGE	?= @echo -e "  ... Making PIC $@"
+COMP_PR_MESSAGE	?= @echo -e "  ... Making PROFILE $@"
+LINK_MESSAGE	?= @echo -e "  ==> Linking $@"
+DEP_MESSAGE	?= @echo -e "  ... Building dependencies for $<"
+STRIP_MESSAGE	?= @echo -e "  ... Stripping $@"
+CLEAN_MESSAGE	?= @echo -e "Removing created files"
+CLEANALL_MESSAGE?= @echo -e "Removing all created files"
+INST_MESSAGE	?= @echo -e "Installing $(^F)"
+
+DEPEND_IGNORE_ERRORS= false
+DEPEND_VERBOSE= @
+DEPEND_EXTEND_CMD = $(AWKP) '			\
+/^[^:]*: ..*/{					\
+	while(sub("\\\\$$","")){		\
+		getline nextline ;		\
+		$$0=$$0 " " nextline		\
+	}					\
+	split($$0,field,": ");			\
+	sub("^$(*F).o","$*.s $*.E $@",field[1]);\
+	nr=split(field[2],deps) ;		\
+	printf("%s: Makefile\n",	                \
+	  	field[1],field[1]);		\
+	for(i=1;i<=nr;){			\
+	  printf("%s: ",				\
+	  	field[1],field[1]);		\
+	  for(j=0; j<100 && i+j<=nr; j++){	\
+	    printf("%s ",deps[i+j]);		\
+	  }					\
+	  printf("\n");			        \
+	  i+=j;					\
+	}					\
+}'
+DEPEND_EXTEND_FUNC = ( $(DEPEND_EXTEND_CMD) < $(1) > $(2).new && rm -f $(1) && mv $(2).new $(2) ) || ( rm -f $(1) $(2).new $(2) ; $(DEPEND_IGNORE_ERRORS) )
+
+SRC_ALL = $(SRC_S) $(SRC_CPP) $(SRC_C) $(SRC_CC)
+ifeq ($(filter clean cleanall mrproper,$(MAKECMDGOALS)),)
+DEPS	= $(foreach file,$(SRC_ALL), $(dir $(file)).$(notdir $(file)).d)
+else
+DEPS    = /dev/null
+endif

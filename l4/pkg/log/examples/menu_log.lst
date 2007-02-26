@@ -1,0 +1,61 @@
+default=0
+color light-gray/blue black/light-gray
+
+title Printf example (printf)
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_pr
+
+title Example with user-defined outstring (simple)
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_ud
+
+title Multithreaded example w/o logserver (threads)
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_t1
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_t2
+
+title Multithreaded example with logserver (ex_logserver)
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_s1
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_s2
+
+title Example with logserver_capsule
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_ca
+
+title Example with sprintf
+  kernel= (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module= (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -vmware
+  module= (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/logex_sp
+
+
+title=Reload Configfile
+configfile=(nd)/tftpboot/jork/menu.lst
+

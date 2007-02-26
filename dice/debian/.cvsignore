@@ -1,0 +1,4 @@
+dice
+dice.substvars
+*.debhelper
+files

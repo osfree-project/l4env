@@ -1,0 +1,3 @@
+pci-i386.S
+pci-pc.S
+pci-irq.S

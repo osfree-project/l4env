@@ -1,0 +1,16 @@
+/* -*- c -*- */
+/**
+\page page_client Notes on Dataspace Access Rights
+
+Currently, dataspace managers implement a thread-based access control list
+for each dataspace. 
+
+Each dataspace is owned by a thread. Initialy, the thread which createded
+the dataspace owns it. The ownership can be transfered using l4dm_transfer().
+The owner has full control over the dataspace, in particular only the owner 
+can close a dataspace.
+
+Access rights for other threads can be granted using l4dm_share(). A thread
+can only grant access rights to a dataspace up to the rights it owns itself
+on the dataspace. Access rights can be revoked using l4dm_revoke().
+*/

@@ -1,0 +1,21 @@
+# -*- makefile -*-
+# Boot Makefile
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(LD) line.
+
+$(BOOT):	kernel.o $(OBJ_BOOT) $(LIBKERN) $(MINILIBC) 
+		@echo "  ... Building boot image"
+		$(LINK_MESSAGE)
+		$(VERBOSE)$(LD) -Ttext 0x300000 -s --gc-sections \
+		-o $@ $^ $(LIBGCC) \
+		-defsym checksum_ro=0x`cut -f1 -d' ' $(CHECKSUM)` \
+		-defsym checksum_rw=0x`cut -f2 -d' ' $(CHECKSUM)`
+		chmod 755 $@
+		ln -sf $@ fiasco
+		$(call INSTALLFILE_RULE,fiasco,fiasco)
+		$(call INSTALLFILE_RULE,Symbols,fiasco_symbols)
+
+kernel.o:	$(KERNEL) $(CHECKSUM)
+		$(OBJCOPY) -S $(KERNEL) $*
+		$(OBJCOPY) -B i386 -I binary -O elf32-i386 $* $@

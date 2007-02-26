@@ -1,0 +1,180 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file    dm_mem/idl/dm_mem.idl
+ * \brief   L4 memory dataspace manager interface
+ * \ingroup idl_mem
+ *
+ * \date    11/19/2001
+ * \author  Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *
+ * Copyright (C) 2000-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+
+#include <l4/dm_generic/dm_generic.idl>
+
+/**
+ * Dataspace manager interface 
+ */
+module if_l4dm
+{
+  /**
+   * Memory dataspace manager interface
+   * \ingroup idl_mem
+   */
+  interface mem : generic
+    {
+      /***********************************************************************/
+      /**
+       * \brief   Create a new dataspace
+       * \ingroup idl_mem
+       * 
+       * \param   size        Dataspace size
+       * \param   align       Alignment
+       * \param   flags       Flags
+       * \param   name        Dataspace name
+       * \retval  ds          Dataspace id
+       *	
+       * \return  0 on success (\a ds contains the id of the newly created 
+       *          dataspace), error code otherwise:
+       *          - -#L4_ENOMEM  out of memory
+       *
+       * Create a new memory dataspace.
+       */
+      /***********************************************************************/ 
+      long open(in unsigned long size, 
+		in unsigned long align, 
+		in unsigned long flags, 
+		in string name, 
+		out if_l4dm_dataspace_t ds);
+
+      /***********************************************************************/
+      /**
+       * \brief   Request the size of a dataspace
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \retval  size        Dataspace size
+       *	
+       * \return  0 on success (\a size contains the size of the dataspace), 
+       *          error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       */
+      /***********************************************************************/ 
+      long size(in unsigned long ds_id, 
+		out unsigned long size);
+
+      /***********************************************************************/
+      /**
+       * \brief   Resize dataspace
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   new_size    New dataspace size
+       *	
+       * \return  0 on success (resized dataspace), error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted, only the owner 
+       *                         can change the size of a dataspace
+       *          - -#L4_ENOMEM  out of memory
+       */
+      /***********************************************************************/ 
+      long resize(in unsigned long ds_id, 
+		  in unsigned long new_size);
+
+      /***********************************************************************/
+      /**
+       * \brief   Request phys. address of a dataspace region
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   offset      Offset in dataspace
+       * \param   size        Region size
+       * \retval  paddr       Phys. address of offset
+       * \retval  psize       Size of phys. contiguous region, if this is 
+       *                      smaller than the requested region size, the 
+       *                      phys. address of the remaining region must be 
+       *                      requested with subsequent calls of \a phys_addr
+       *	
+       * \return  0 on success , error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id or dataspace not pinned
+       *          - -#L4_EPERM   operation not permitted
+       */
+      /***********************************************************************/ 
+      long phys_addr(in unsigned long ds_id, 
+		     in unsigned long offset,
+		     in unsigned long size,
+		     out unsigned long paddr, 
+		     out unsigned long psize);
+
+      /***********************************************************************/
+      /**
+       * \brief   Check if dataspace is allocated on contiguous phys. memory
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \retval  is_cont     1 if memory is phys. contiguous, 0 if not
+       *	
+       * \return  0 on success , error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       */
+      /***********************************************************************/ 
+      long is_contiguous(in unsigned long ds_id, 
+			 out long is_cont);
+
+      /***********************************************************************/
+      /**
+       * \brief   Lock ("pin") a region of a dataspace
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   offset      Offset in dataspace
+       * \param   size        region size
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted, the caller must 
+       *                         either be the owner or must have the 
+       *                         lock-right on the dataspace
+       */
+      /***********************************************************************/ 
+      long lock(in unsigned long ds_id, 
+		in unsigned long offset,
+		in unsigned long size);
+
+      /***********************************************************************/
+      /**
+       * \brief   Unlock a region of a dataspace
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \param   offset      Offset in dataspace
+       * \param   size        region size
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       */
+      /***********************************************************************/ 
+      long unlock(in unsigned long ds_id, 
+		  in unsigned long offset,
+		  in unsigned long size);
+    };
+};

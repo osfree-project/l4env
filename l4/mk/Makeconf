@@ -1,0 +1,230 @@
+# -*- Makefile -*-
+#
+# DROPS (Dresden Realtime OPerating System) Component
+#
+# Make configuration file
+#
+# $Id$
+#
+# $Author$
+#
+# This file is included by all Makefile-templates. This file defines macros
+# for div commands, sets general DROPS-Makefile variables, ensures the
+# dependencies from the various Makeconf.locals, defines the messages for
+# div actions, and permits the dependency-creation on clean-rules.
+#
+# The macros BUILD_MULTIPLE_ARCHITECTURES and BUILD_ONE_ARCHITECTURE are
+# defined here.
+#
+# BUILD_MULTIPLE_ARCHITECTURES is set if ARCHS is set to multiple
+# architectures in the Makefile. If ARCHS is not set, the default value
+# l4_i386 will be assumed, not defining BUILD_MULTIPLE_ARCHITECTURES.
+# In the muli-arch case, binary.inc triggers build the files into subdirs,
+# dir-name is the architecture. Then, make is called recursively with ARCH
+# set to one architecture.
+#
+# BUILD_ONE_ARCHITECTURE is set if ARCH contains one architecture, and we
+# actually build files (in subdirs for multi-arch case, in the same dir in
+# the single-arch case).
+
+# the default target is all
+all::
+
+# make .general.d dependent on the role-file
+$(if $(ROLE),.general.d: $(L4DIR)/mk/$(ROLE))
+
+SYSTEM_TARGET = $(SYSTEM_TARGET_$(ARCH))
+SYSTEM_TARGET_ia64 = /usr/local/ia64-linux/bin/
+
+AR=     $(SYSTEM_TARGET)ar
+AS=     $(SYSTEM_TARGET)as
+AWKP=	gawk --posix
+CC=     $(SYSTEM_TARGET)gcc
+CXX=    $(SYSTEM_TARGET)g++
+CP=     cp
+DICE=	$(firstword $(wildcard $(L4DIR)/tool/dice/src/dice \
+				 /usr/local/bin/dice \
+				 $(shell which dice) ) false )
+
+FLICK_BIN_DIR= $(L4DIR)/tool/flick-$(SYSTEM_TARGET)obj/bin
+ifeq ($(shell test -x $(FLICK_BIN_DIR)/flick-fe-newcorba && echo y),)
+FLICK_BIN_DIR = $(DROPS_STDDIR)/tool/bin
+endif
+
+DROPS_CC= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-gcc\
+                                 $(DROPS_STDDIR)/tool/bin/drops-gcc\
+                                 ) false )
+DROPS_CXX= L4DIR=$(L4DIR) $(firstword $(wildcard $(L4DIR)/tool/gcc-wrap/drops-c++ \
+                                 $(DROPS_STDDIR)/tool/bin/drops-c++\
+                                 ) false )
+ECHO=	echo
+FLICK_CPP_NAME = $(INT_CPP_NAME)
+INDENT= indent -sob
+INSTALL=$(SYSTEM_TARGET)install
+INT_CPP_NAME = cpp0
+LD=     $(SYSTEM_TARGET)ld
+LATEX=	latex
+LEX=	flex
+LN=	ln
+MKDIR=	mkdir -p
+NM=	$(SYSTEM_TARGET)nm
+OBJCOPY=$(SYSTEM_TARGET)objcopy
+PWD=    pwd
+RANLIB= $(SYSTEM_TARGET)ranlib
+RM=     rm -f
+SCRUB=	$(RM) $(wildcard *.old) $(wildcard *~) $(wildcard *.bak) \
+                        $(wildcard \#*\#)
+SED=	sed
+SIZE=   $(SYSTEM_TARGET)size
+STRIP=  $(SYSTEM_TARGET)strip
+TR=	tr
+YACC=	byacc
+
+# functions that are handy
+absfilename     = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&pwd)))
+findfile	= $(firstword $(wildcard $(addsuffix /$(1),$(2))))
+
+# Makeconf.local handling
+-include $(L4DIR)/Makeconf.local
+# if it is not already set, we use this in the local dir
+MAKECONFLOCAL ?= Makeconf.local
+-include $(MAKECONFLOCAL)
+ifneq ($(PKGDIR),)
+-include $(PKGDIR)/Makeconf.local
+endif
+
+DROPS_STDDIR	?= /home/drops
+STATICFILE	?= $(L4DIR)/pkg/STATIC
+HAVE_LDSO	?= y
+
+ifneq ($(HAVE_LDSO),)
+# MAKEDEP-call:
+# arg1 - compiler binary name
+# arg2 - [opt] compiler target. Will be written as target within the
+# 	       dependency file
+# arg3 - [opt] name of the dependency file. If unset, .<arg2>.d will be used.
+MAKEDEP=LD_PRELOAD=$(firstword $(wildcard $(call absfilename, \
+				 $(L4DIR)/tool/gendep/libgendep.so \
+				 $(DROPS_STDDIR)/tool/lib/libgendep.so ))) \
+		GENDEP_TARGET=$(if $(2),$(2),$@) GENDEP_BINARY=$(1) \
+		$(if $(3),GENDEP_DEPFILE=$(3))
+endif
+
+# the gcc specific variables: include dir and gcc lib
+ifeq ($(origin GCCDIR), undefined)
+export GCCDIR := $(shell $(CC) -print-search-dirs|grep ^install:|cut -f2 -d' ')
+endif
+ifeq ($(origin GCCLIB), undefined)
+export GCCLIB	 := $(shell $(CC) -print-libgcc-file-name)
+endif
+GCCINCDIR = $(GCCDIR)/include
+
+ifneq ($(PKGDIR),)
+  PKGNAME ?= $(notdir $(shell cd $(PKGDIR);pwd))
+endif
+
+# we have at least one architecture
+ARCHS ?= x86-v2
+
+
+#
+# SUBDIR handling
+#
+ifneq ($(SUBDIRS),)
+.PHONY: $(SUBDIRS)
+$(SUBDIRS):
+	$(MAKE) -C $@ all
+
+# we know that SUBDIRS isn't empty, hence we can avoid the dir-test
+scrub clean cleanall::
+	set -e; for i in $(SUBDIRS) ; do $(MAKE) -C $$i $@ ; done
+endif
+
+#
+# Dependency section
+#
+#
+
+# the general dependencies: All generated files depend on ".general.d".
+# ".general.d" itself depends on the mk-Makeconf, the optional
+# Makeconf.local, the packet-Makeconf.local and the Makeconf.local. This
+# ensures a rebuilt if any of the configuration- or make-files changes.
+#
+# We have this nasty if-readable-magic to allow the files to disappear
+# or to appear. Depending on if the according makeconf exists now, the
+# if-readable magic .general.d is used on existance or non-existence.
+
+DEPEND_GENERAL_D_COND = \
+	if [ -r $(1) ] ; then echo -e '$@: $(1)\n$(1):\n' >>$@ ; \
+	  else echo '$$(if $$(wildcard $(1)), $@: FORCE)' >>$@; fi
+
+.general.d: $(L4DIR)/mk/Makeconf
+	$(BUILD_MESSAGE)
+	$(DEPEND_VERBOSE)echo '$@:	Makefile ' > $@
+	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
+		$(L4DIR)/Makeconf.local)
+	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
+		$(MAKECONFLOCAL))
+ifneq ($(PKGDIR),)
+	$(DEPEND_VERBOSE)$(call DEPEND_GENERAL_D_COND,\
+		$(PKGDIR)/Makeconf.local)
+endif
+
+DEPS	+= .general.d
+
+#
+# Messages
+#
+
+# set SHOWMESSAGES=false to prevent textual action description
+SHOWMESSAGES ?= true
+
+# coloring on vt100-, xterm-, linux- and console-consoles
+# enbaled by setting USE_EMPHASIZE_PHASES to true
+ifeq ($(USE_EMPHASIZE_PHASES),true)
+ifneq (,$(findstring ${TERM},vt100 xterm linux console))
+  EMPHSTART = '\033[34m'
+  EMPHSTOP  = '\033[0m'
+else
+  EMPHSTART =
+  EMPHSTOP  =
+endif
+endif
+
+
+ifeq "$(SHOWMESSAGES)" "true"
+AR_MESSAGE=	@echo -e "  ==> Archiving into $@"
+BUILD_MESSAGE=	@echo -e "  ... Building $@"
+BUILT_MESSAGE=  @echo -e $(EMPHSTART)'  ==> "$@" built'$(EMPHSTOP)
+COMP_MESSAGE=	@echo -e "  ... Compiling $@"
+COMP_P_MESSAGE=	@echo -e "  ... Compiling PIC $@"
+COMP_PR_MESSAGE=@echo -e "  ... Compiling PROFILE $@"
+GEN_MESSAGE=	@echo -e "  ... Generating $@"
+LINK_MESSAGE=	@echo -e "  ==> Linking $@"
+DEP_MESSAGE=	@echo -e "  ... Building dependencies for $<"
+CLEAN_MESSAGE=	@echo -e "  ... Removing created files"
+CLEANALL_MESSAGE=@echo -e "  ... Removing all created files"
+INSTALL_DOC_MESSAGE=   @echo -e "  ==> Installing $(<) documentation"
+INSTALL_DOC_LOCAL_MESSAGE = @echo -e "  ==> Installing $(<) documentation locally"
+INSTALL_MESSAGE=   @echo -e "  ==> Installing $^"
+INSTALL_LOCAL_MESSAGE = @echo -e "  ==> Installing $(<) to local build-tree"
+UPDATE_HTML_MESSAGE = @echo -e "  ! You should remake you doc directory in $(1)"
+endif
+
+
+# allows an include $(DEPSVAR) at the end of the makefile
+# but prevents rebuilding them on a scrub, clean, cleanall and help
+ifneq ($(filter scrub clean cleanall help,$(MAKECMDGOALS)),)
+DEPSNULL = /dev/null
+DEPSVAR	= $(DEPSNULL)
+else
+DEPSVAR	= $(DEPS)
+endif
+
+#
+# Some rules
+#
+reloc::
+
+.PHONY: reloc FORCE
+

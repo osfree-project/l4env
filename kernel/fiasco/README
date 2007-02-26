@@ -1,0 +1,86 @@
+
+Welcome to Fiasco 1.0!
+----------------------
+
+Fiasco is a new microkernel intended to be compatible with the L4 microkernel
+for x86. It implements the L4 ABI as defined in the L4/x86 Reference Manual,
+which can be found at: http://os.inf.tu-dresden.de/L4/bib.html
+
+The Fiasco kernel can be used to construct flexible systems. We at TU Dresden
+will use it as a base for our DROPS system which supports running real-time
+and time-sharing applications concurrently on one computer. However, Fiasco
+is not only suitable for big and complex systems, but also for small,
+embedded applications.
+
+Fiasco is freely redistributable under the GPL (see l4/kernel/fiasco/COPYING).
+For different licensing schemes please contact us at:
+  fiasco-core@os.inf.tu-dresden.de
+
+For more details, see our webpage at: http://os.inf.tu-dresden.de/fiasco/
+
+
+Currently Fiasco supports the following architectures:
+
+  - Intel and AMD IA-32 CPUs, i486 and above
+  - A Linux usermode emulation of Fiasco/L4 (Fiasco-UX)
+
+The following L4 ABIs are supported:
+
+  - L4/v2 (version 2 of the L4 ABI)
+  - L4/x0 (experimental version x0 of the L4 ABI)
+
+
+Additional features like I/O-Flexpages and Small Address Spaces are also
+implemented.
+
+This distribution contains the Fiasco 1.0 microkernel, plus recent versions
+of the following L4 software packages:
+
+sigma0   - The L4 root pager
+rmgr     - The L4 resource manager
+hello    - A simple L4 application
+
+For your convenience we also provide binaries from these packages for both
+the X0 and V2 ABIs in the fiasco-1.0/l4/bin/ subdirectories.
+
+Building Fiasco
+---------------
+
+To compile Fiasco you need gcc 2.95 or gcc 3.2, GNU binutils 2.12 or later,
+GNU make and Perl version 5.6 or later. For the configuration tool you also
+need python version 2.
+
+Change to the directory fiasco-1.0/l4/kernel/fiasco/build and simply type
+"make" without the quotes. This will build a standard IA-32 kernel. For other
+configurations use "make menuconfig" to run the configuration tool.
+
+For further information refer to: http://os.inf.tu-dresden.de/fiasco/use.html
+
+Building custom L4 binaries
+---------------------------
+
+If you intend to build your own L4 binaries, you will also need the OSKIT
+tarball shipped with this version and flex and byacc. First build the OSKIT,
+then build the L4 packages in fiasco-1.0/l4/pkg/ by typing "make".
+
+Mailing List
+------------
+
+For problem reports and suggestions regarding the Fiasco microkernel,
+please subscribe and send mail to the l4-hackers mailing list:
+   http://os.inf.tu-dresden.de/mailman/listinfo/l4-hackers/
+
+Remote CVS
+----------
+
+The latest development versions are available from our Remote-CVS server.
+The truly bleeding edge will want to check out daily snapshots from there.
+However, be aware that these may not always build or run correctly.
+
+For information how to use Remote-CVS see:
+http://os.inf.tu-dresden.de/drops/download.html
+
+
+Enjoy!
+
+The Fiasco Team

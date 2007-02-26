@@ -1,0 +1,186 @@
+\documentclass[twocolumn]{article}
+\usepackage[latin1]{inputenc}
+
+\title{Protocol of discussion between Jork, Lars and Sebastian on 02/01/2001}
+\date{02/02/2001}
+\author{Jork Löser}
+
+\newcommand{\BI}{\begin{itemize}}
+\newcommand{\EI}{\end{itemize}}
+\newcommand{\BE}{\begin{enumerate}}
+\newcommand{\EE}{\end{enumerate}}
+\newcommand{\IT}{\item}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Problem}
+
+Currently, there is no uniform way for components to signal the end of
+data-transmission to the controlling application.
+
+\section{Ad-hoc ideas}
+
+One solution could be to offer an additional flick-interface at the
+components in separate threads. For security and isolation reasons and
+because of flick limitations, this requires one additional thread per socket
+and component. At the controlling application this also requires an
+additional thread per socket.
+
+\section{Solution}
+
+DSI offers events. DSI-Events (referenced to as events in this
+document) can be sent from components to applications. Sending the
+events is done using IPCs with timeout 0, preventing to be blocked by
+DoS-attacks. Receiving events imposes blocking until the event is set.
+
+
+\section{Implementation}
+
+The number of different event types is limited, enumerated from 0 to
+E-1. A component can set an event on a socket, the event can be
+received and reset by the creator of the socket. The events are
+counted, which means a component can set the same event multiple
+times, and the receiver can receive the same amount of events of this
+type.
+
+\subsection{Component Side}
+
+DSI defines a function to be used by the component implementation to
+set events. DSI also creates a thread at the component, called
+signalling thread. This thread serves all requests regarding
+event-handling at this component.
+
+\subsubsection{Event-related Function}
+
+DSI defines the following function to be used by a component
+implementation:
+
+\verb'dsi_set_event(socket, event_type)': This function increments
+the event-counter for the event of the specified type for the
+specified socket. It also sends an request with timeout never(!) to the
+signalling thread. The timeout imposes a break of limited, but unknown
+length. Thus, this function should not be used in a time-critical
+environment.
+
+\subsubsection{The Signalling thread at the component}
+
+The signalling thread uses an open-wait function to receive IPCs from
+the threads of the component and to receive IPCs from DSI
+applications.  The requests are not necessarily answered in-order.
+
+The following component-requests (request from the component) is defined:
+\BI
+\IT \verb'notify-event-change(event)': The
+    \verb'dsi_set_event()'-function generates this request to notify
+    the signalling thread about a changed event-status. In reaction,
+    the signalling thread checks for pending application-requests and
+    answers as appropriate.
+\EI
+
+The following application-requests (requests from applications) are defined:
+\BI
+\IT \verb'wait-for-event(socket, event_type)': This request will be
+    answered immediately if the event-counter of the specified
+    event-type and socket is 1 or greater. Otherwise, the answer will
+    be postponed until a notify-event-change request is received and
+    the event-counter is 1 or greater at this time.
+
+\IT \verb'reset-event(socket, event_type)': This request will
+    decrement the event-counter of the specified event-type and socket.
+\EI
+
+The application-requests are sent with an IPC-call allowing the
+signalling thread to answer with a timeout 0. This ensures that
+component-requests will be answered by the signalling thread at some
+point in time. But the maximum delay is influenced by incoming
+client-requests and cannot be calculated.
+
+\subsubsection{Coding Issues}
+
+As far as we see, the implementation is straight-forward.
+
+Just make sure to check if the application-requests are sent from the
+same task that created the socket.
+
+
+\subsection{Application Side}
+
+
+\subsubsection{Event-related Functions}
+
+DSI offers the following functions to deal with events at
+applications:
+
+\BI
+\IT \verb'dsi_get_events(stream)': This function returns the events
+     that are set and received for the given stream (as a bit-mask,
+     separate for send and receive). This does not necessarily
+     correspond to the current situation at the component. This
+     function should be called only after calling \verb'dsi_select()'.
+
+\IT \verb'dsi_select(in stream[], out ev_stream[]': This function
+    operates similar to the Unix-select() system-call. It blocks until
+    an event on one of the given streams in \verb'stream' is set. Some
+    of the streams having events set are returned in
+    \verb'ev_stream[]', at least one. It is up to the caller to
+    determine which events are set by iterating through
+    \verb'ev_stream' using \verb'dsi_get_events'.
+
+\IT \verb'dsi_reset_event(stream, event_type, send_receive)': This
+    function decrements the event-counter for the given event-type of
+    the specified socket of the stream at the according component.
+\EI
+
+
+\subsubsection{Coding issues}
+
+The implementation of \verb'dsi_get_events()' is straight-forward,
+the same holds for \verb'dsi_reset_event'.
+
+\verb'dsi_select()' is implemented using multiple threads and a semaphore.
+This function does the following steps:
+
+\BE
+\IT create a semaphore (\verb'sem')
+\IT creates a thread for each socket of the given streams in \verb'stream'
+\IT do \verb'down(sem)'
+\IT kills all the created threads
+\EE
+
+Each created thread does the following steps:
+
+\BE
+\IT issue a wait-for-event-request to the component owning the socket
+\IT after reply, mark the event in the local socket-reference in the
+    stream
+\IT do \verb'up(sem)'
+\IT wait
+\EE
+
+\paragraph{Discussion}
+Bear in mind, that the threads can be stopped every time. As a
+result, we can miss some of the event notifications. Thats why, the
+components must not reset an event themselves. Instead, we need the
+explicit reset-request to signal that we got the event.
+
+For the signalling-thread at the components it is no problem that we
+kill the requesting threads. They are sending their reply with timeout
+0 and ignore any errors.
+
+
+\section{Evaluation}
+
+This solution allows to send a number of events from components to
+applications. This is suited to implement the end-notification, and
+might be used to pass other events.
+
+The API follows well-established methods, such as the select-call.
+
+The implementation requires the creation of a number of threads on
+every select-call, which is costly. However, this effort is reasonable
+for end-of-transmission-notifications.
+
+\end{document}

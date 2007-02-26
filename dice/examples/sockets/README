@@ -1,0 +1,10 @@
+A simple socket to demonstrate the ability of dice to
+build for Linux sockets. The same IDL and source files
+can be used for L4. Please visit the
+idl/Makefile
+server/src/Makefile
+client/src/Makefile
+file for the make rules to turn on/off for building 
+for sockets or L4.
+
+Bug/Comments to ra3@os.inf.tu-dresden.de

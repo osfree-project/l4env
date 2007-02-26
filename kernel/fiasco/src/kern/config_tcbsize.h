@@ -1,0 +1,6 @@
+#ifndef CONFIG_TCBSIZE_H
+#define CONFIG_TCBSIZE_H
+
+#define THREAD_BLOCK_SIZE (0x800)
+
+#endif

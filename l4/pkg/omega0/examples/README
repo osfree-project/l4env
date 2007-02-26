@@ -1,0 +1,17 @@
+Some examples of Omega0 usage.
+
+irqmeter - a meter that indicates incoming irqs.
+Probably the easiest of the examples that shows best how to use Omega0.
+Details of thread creation and memory management are hidden within l4env
+libraries. see irqmeter/README
+
+serial - serial communication
+see serial/README
+
+pit - a measurement tool to get Omega0 performance numbers
+see pit/SPEED
+
+delay - measure delay in interrupt propagation
+This tool triggers an interrupt at the serial line while its interrupt is
+disabled. Then it enables the interrupt at the pic, and measures the time
+until it is signalled to the CPU.

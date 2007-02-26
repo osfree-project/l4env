@@ -1,0 +1,24 @@
+0.6 - Frank, Jork
+- added own set of printxxx-functions (logprintfxxx), which are used by the
+  LOG-Macros. With the upcoming L4 console there was the wish to send
+  standard printf-output to this l4 console, but to send log-macros to
+  another instance as usual (screen, kernel debugger, LOG server). Therefore
+  we needed different channels for output.  As nobody wanted to write a
+  file-based implementation of print, we decided to use different functions,
+  which could be overloaded/replaced by the linker.
+
+0.5 - Jork
+- added binary channels
+
+0.4 - Jork
+- user can specify the priorities of the threads at the logserver
+
+0.3 - Jork
+- conditional Log macros
+
+0.2 - Jork
+- network and buffering support added
+- alternative initialization to set the logtag
+
+0.1 - Jork
+- original Implementation

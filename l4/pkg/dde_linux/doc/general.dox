@@ -1,0 +1,112 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/*! \mainpage Linux Device Driver Environment Manual
+
+\section content Content
+
+- \ref pg_req
+- \htmlonly<a href="modules.html">\endhtmlonly
+  Modules \htmlonly</a>\endhtmlonly
+- \ref pg_todo
+
+This version supports Linux 2.4.20 device drivers.
+
+*/
+
+/*! \page pg_req Global Requirements
+
+Though the Linux DDE is designed to be highly configurable and each module can
+be used stand-alone, there are some assumptions resp. requirements what the
+environment should look like. These are defined in two steps:
+
+-# Global requirements for all Linux DDE modules defined in this section
+-# Module specific requirements defined in the module specific documentation
+
+Using this approach it should be simple to add new modules or implement parts
+of the environment independently.
+
+
+\section sec_req_gen General Environment
+
+Linux DDE was developed for the Common L4 Environment. So strictly spoken any
+module requires a running L4Env:
+
+- L4 Semaphore and Lock implementation
+- L4 Thread library
+- L4 Region Mapping
+- printf/logging facility
+
+For some modules these strict requirements could be avoided by providing
+features in an emulation implementation but this is out of the scope of Linux
+DDE.
+
+
+\section sec_req_lock Global Linux DDE lock
+
+The Linux 2.4 kernel is not preemptible, so if any kernel activity is running
+on one CPU it is guaranteed to finish before another activity is executed on
+this CPU. There are two exceptions from this general rule:
+
+-# Any process level kernel activity may call #schedule() to voluntarily
+release the CPU. The state of the activity can be blocked or \e non-blocked.
+-# Occuring interrupts are handled immediately at interrupt level (using the
+current thread) and consequently preempt any running activity. As it is the
+same thread once the interrupt handling (including pending <em>deferred
+activities</em>) is finished the preempted activity will be executed, i.e. no
+scheduling.
+
+Therefore global synchronisation of kernel activities can be done by not
+calling schedule() in any way and inhibit interrupts. Since disabling
+interrupts is unacceptable in DROPS (discussed in "Taming Linux" paper) Linux
+DDE uses the lock based scheme described there.
+
+So calls to cli() and sti() are mapped to routines aquiring and releasing the
+global interrupt lock #irq_lock.
+
+\sa global.c
+
+
+\section Common L4 Environment I/O Server
+
+Some modules need services provided by the I/O Server. Before using these
+modules the I/O Server client library - libio - has to be initialized.
+
+A service of the I/O server is a jiffies tick provided via the <em>I/O Info
+Page</em> (for more details refer to <em>L4Env Generic I/O Reference
+Manual</em>). Also described there is a solution to put some symbols inside
+this page at compile time.
+
+For Linux DDE there are 2 relevant symbols inside the Info Page: \c jiffies and
+\c HZ. So if your drivers really need these symbols you could initialize the
+I/O Server client library before using Linux DDE and use some assembler magic
+to put your symbols at the right place.
+
+*/
+
+/**
+\defgroup mod_envs Linux DDE Libraries
+
+These libraries provide the kernel interface expected by Linux device drivers.
+
+DDE Linux-based device driver environments are modified Linux headers plus
+driver class specific libraries. These libraries consist of 2 parts - common
+and specific. The common functions are expected to be used by nearly all device
+drivers and provide the general Linux kernel interface (see \ref
+mod_common). Specific functions are closely linked to one driver class or
+subsystem, e.g. SCSI hard disks.
+
+Writers of specific device driver libraries utilize the \e common
+implementation to provide special environments. For reference see \ref
+mod_sound.
+
+**/
+
+/** \ingroup mod_envs
+\defgroup mod_common Linux DDE Common
+
+Linux general kernel interface emulation.
+
+Look into subsections for detailed description.
+
+**/

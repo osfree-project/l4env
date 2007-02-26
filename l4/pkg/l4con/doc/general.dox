@@ -1,0 +1,33 @@
+/*!\mainpage con - Graphical Console Server Reference Manual
+
+\section sec_intro Introduction
+
+Con is graphical console server for DROPS. The hardware is hidden behind the
+`virtual framebuffer' abstraction and accesses from multiple clients are
+synchronized.
+
+Con clients may receive input events (currently only from keyboard) by
+implementing the \c stream server interface.
+
+Now a rudimentary (and broken) DSI support is provided.
+
+(For detailed documentation look at http://os/~ch12/con/spec/index.html or
+http://os/~ch12/con/spec/spec.ps)
+
+\section sec_usage Usage
+
+Con expects a Common L4 Environment.
+
+A GRUB menu file resides in con/doc (menu.lst) and you should read
+con/doc/README.
+
+\section sec_about About this documentation
+
+Additional information can be found at http://os/~ch12/con/con.xml .
+
+\author		Christian Helmuth
+\reviewer	Lars Reuther, Michael Hohmuth
+\witness	Lars Reuther
+\date		March 2001
+\version	Preliminary 0.3
+*/

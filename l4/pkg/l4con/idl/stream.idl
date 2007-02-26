@@ -1,0 +1,28 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/*	con/idl/stream/stream.idl
+ *
+ *	streaming IPC interface
+ */
+
+typedef struct stream_io_timeval {
+	long tv_sec;
+	long tv_usec;
+} stream_io_timeval_t;
+
+typedef struct stream_io_input_event
+{
+	stream_io_timeval_t time;		/* not used */
+	unsigned short type;
+	unsigned short code;
+	unsigned long value;
+} stream_io_input_event_t;
+
+module stream
+{
+  interface io
+    {
+      void push(in stream_io_input_event_t event);
+    };
+};

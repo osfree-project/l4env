@@ -1,0 +1,12 @@
+Lock-functions
+--------------
+
+- wait-queue-based Locks
+- bases on xchg/cmpxchg-commands of the 80486
+- need no CLI/STI
+- for synchronisation of threads of one task
+- call needs one global lock-variable and a locale queue-variable,
+  which is needed for lock aswell as for unlock
+
+
+Jork Loeser

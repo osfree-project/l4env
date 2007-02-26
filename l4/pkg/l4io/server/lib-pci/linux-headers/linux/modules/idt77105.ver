@@ -1,0 +1,4 @@
+#define __ver_idt77105_init	smp_e8d72ec4
+#define idt77105_init	_set_ver(idt77105_init)
+#define __ver_idt77105_stop	smp_f1b10c59
+#define idt77105_stop	_set_ver(idt77105_stop)

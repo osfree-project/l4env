@@ -1,0 +1,20 @@
+
+[uuid(3),default_function(error_handling)]
+interface base
+{
+  int func1([in] int t11, [out] int *t12);
+  [uuid(1)] void func2([in] int t21, [out] int *t22);
+}
+
+interface derived1 : base
+{
+  [uuid(1)] void func3([in] int t31, [out] int *t32);
+}
+
+[uuid(3)]
+interface derived2 : base
+{
+  int func4([in] int t41, [out] int *t42);
+  [uuid(5)] int func5([in] int t51, [out] int *t52);
+}
+

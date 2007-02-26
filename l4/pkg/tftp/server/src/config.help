@@ -1,0 +1,59 @@
+Allow burst-test
+CONFIG_OSHK_BURSTY_SEND
+  This build a server, which substitutes the real-time send function
+  with a special burst send function. Each packet given to the driver
+  to be sent, is analysed. The first few bytes of the data of the
+  packet are used to determine size and numbers of bursts. These
+  bursts are sent to the net then.
+  
+  This is a really weird hack. Say N here to get a working server.
+  
+Allow in-driver UDP sink
+CONFIG_OSHK_UDP_SINK
+  This hack creates already opened connections. The data is removed
+  in the driver already and not sent to any clients. This is for test
+  purposes only.
+
+  Say N here for a fully-functional driver.
+  
+Base-port for UDP sink
+CONFIG_OSHK_UDP_SINK_PORT
+  This is the base port where the range of special ports used for
+  CONFIG_OSHK_UDP_SINK starts.
+  
+Port count for UDP sink
+CONFIG_OSHK_UDP_SINK_COUNT
+  This is the port count of special ports used for
+  CONFIG_OSHK_UDP_SINK.
+
+Special nasty UDP hack
+CONFIG_SPECIAL_UDP_HACK
+  This is a special nasty hack. If UDP-Packets on a special UDP-port
+  are received, some action is triggered. Highly experimental.
+
+  You should say N here.
+
+Special nasty UDP hack port number
+CONFIG_SPECIAL_UDP_PORT
+  This is the special nasty UDP port used for
+  CONFIG_SPECIAL_UDP_HACK.
+
+
+mainmenu_option next_comment
+comment 'Functional configuration for the Linux emulation lib'
+
+bool 'use the L4 environment (highly recommended)' CONFIG_OSHK_NICDRV_L4ENV
+bool 'tag real-time ethernet frames as 802.1Q frames' CONFIG_VLAN
+bool 'use Omega0 interface for interrupt access' CONFIG_USE_OMEGA0
+bool 'enable verbose irq tracing' CONFIG_IRQ_DEBUG
+int  'irq emulation thread stacksize' EMUL_IRQ_STACKSIZE 2048
+hex  'priority of irq emulation threads' CONFIG_OSHK_NICDRV_IRQ 0xE0
+hex  'priority of the DSI synchronization threads' CONFIG_OSHK_NICDRV_DSI 0xE0
+hex  'priority of the L4-semaphore thread' CONFIG_OSHK_NICDRV_SEMAPHORE 0xE0
+hex  'priority of the be send worker thread' CONFIG_OSHK_NICDRV_BE_WRITE_PRIO 0xD0
+hex  'priority of the rt send worker thread' CONFIG_OSHK_NICDRV_RT_WRITE_PRIO 0xD8
+
+endmenu
+
+
+

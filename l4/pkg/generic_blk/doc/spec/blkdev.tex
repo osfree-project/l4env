@@ -1,0 +1,301 @@
+\documentclass{article}
+\usepackage[a4paper]{geometry}
+\usepackage[dvips]{epsfig}
+\usepackage{times}
+\usepackage{listings}
+
+% formating stuff
+\emergencystretch 10mm
+\clubpenalty 10000
+\widowpenalty 10000
+
+% some macros
+
+% display eps figure
+% arg 1 ... eps file
+% arg 2 ... minipage width
+% arg 3 ... caption 
+% label -> fig:<eps file>
+\newcommand{\epsfigure}[3]
+{
+  \begin{figure}[ht]
+    \centering
+    \begin{minipage}{#2}
+      \epsfig{file=#1.eps,width=\columnwidth}
+      \caption{#3}
+      \label{fig:#1}
+    \end{minipage}
+  \end{figure}
+}
+
+% customization of listings
+\lstset{
+  language=C,
+  basicstyle=\footnotesize,
+  keywordstyle=\tt\bf,
+  nonkeywordstyle=\tt,
+  labelstyle=\tiny,
+  labelstep=10}
+
+\title{DROPS Block Device Driver Interface Specification\\
+--- DRAFT ---}
+\author{Lars Reuther}
+\date{February 2001 \\ \small $Revision$}
+
+\begin{document}
+\maketitle
+
+\section*{Change History}
+
+\begin{description}
+\item[2000-02-01]
+  Created. Author: Lars Reuther
+\end{description}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\part{Project Info}
+
+\section{Change Control}
+
+\begin{description}
+\item[Current owner:] Lars Reuther
+\item[Change Control Board:] 
+\item[User components:] Ext2fs-Server
+\item[Dependencies:]
+\end{description}
+
+\section{Risks}
+
+\begin{enumerate}
+\item This document specifies a preliminary version of the DROPS Block 
+  Device Driver Interface. It might change once we have the next version of 
+  the DROPS Streaming Interface (DSI), then the Block Device Driver Interface 
+  might use the DSI instead of the RPC protocol to send requests to a device
+  driver.
+\item The Quality of Service management in DROPS is not yet finally 
+  specified. Once it is specified, the Block Device Driver Interface might
+  need to be changed to use the correct type for the quality argument of 
+  real-time streams.
+\item A naming scheme is still missing in DROPS. Drivers use the standard 
+  DROPS nameserver to register itself, different devices of a driver (e.g. 
+  different disks) are specified using the minor number scheme of Linux.
+\item Flick cannot create asynchronous interfaces directly. The driver RPC 
+  interface is defined using two different Flick interfaces to emulate 
+  an asynchronous interface.
+\item Advanced driver functionality like \emph{ioctls} are not yet 
+  considered in this specification.
+\end{enumerate}
+
+\clearpage
+\part{DROPS Block Device Driver Interface Specification} 
+
+\section{Introduction}
+
+The DROPS Block Device Driver Interface specifies how block device drivers
+like a SCSI or IDE disk driver provide their functionality to DROPS 
+components like a real-time filesystem. Fig. \ref{fig:drops} shows such an  
+application scenario in DROPS. 
+
+\epsfigure{drops}{7.6cm}{Application Scenario}
+
+\section{Block Request Scheduling}
+
+To provide the context of real-time disk requests, this section briefly 
+describes the request scheduling algorithm used in block device drivers.
+
+\emph{to be done...}
+
+\subsection{Filesystem Metadata}
+
+To create the request list for a file, the filesystem must access metadata
+like inodes and blocklists of the file. This metadata is typically also stored 
+on the disk, thus the accesses must be considered in the request scheduling. 
+Because of the structure of the metadata all requests to metadata blocks must 
+be mandatory. A disk block containing a part of a blocklist can hold up to 
+several thousand block numbers, thus the loss of a single blocklist block 
+would affect a huge part of the data stream and therefore is not acceptable.
+
+To avoid an overreservation of disk bandwidth for metadata requests, the
+requests are spread across a large time interval. By that, we only need 
+to reserve a few requests in a request period (idealy just one) for 
+metadata requests.
+
+\epsfigure{metadata}{8cm}{Metadata request scheduling}
+
+All metadata requests must be available at the beginning of the metadata 
+request period, and are assigned to one of the reserved requests slots in 
+the request periods. The number of required requests slots depends on
+\begin{itemize}
+\item the total number of metadata requests
+\item the length of the metadata request period. Because all requests must 
+  be available at the beginning of the period and the order of the requests
+  within the period is not fixed, the length of the period determines the 
+  request latency for the filesystem. The period length must be set to 
+  a value which is acceptable for the filesystem, e.g. dependent on the 
+  buffer requirements.
+\item the number of streams. Each stream needs at least one request per 
+  period.
+\end{itemize}
+
+\emph{to do: example calculation}
+
+\section{Block Device Driver Interface}
+
+\subsection{Block Device Abstraction}
+
+The Block Device Driver Interface uses the same block device abstraction 
+like the Linux kernel:
+\begin{itemize}
+\item the block size is 1kByte
+\item logical block addressing, the blocks of a device are addressed 
+  with numbers $<0, number of blocks - 1>$
+\item partitions of a device are specified with a number scheme similar to 
+  linux, the upper 4 bit of an 8 bit device id specify the device 
+  (e.g. a harddisk), the lower 4 bit the partition number, partition number
+  0 specifies the whole device.
+\end{itemize}
+
+\subsubsection{Real-time Requests}
+
+\subsection{Driver RPC Interface}
+
+Device drivers implement an asynchronous interface. Clients send requests
+to the driver using the \emph{put\_requests} RPC call, this call immediately
+returns after the requests are enqueued to the driver's request list. If one the 
+requests is processed, the driver sends a notification which includes the 
+status of the request (success / error) to the client.
+
+\epsfigure{rpc}{5.5cm}{Block Device Driver RPC protocol}
+
+Fig.~\ref{fig:rpc} shows the principle mechanism of the interface. Before 
+a client can send requests to a driver, the driver must be opened. Explicitly  
+open the driver enables the driver to allocate resources necessary to 
+serve the new client, e.g. to create new instances of the service threads.
+The \emph{open} function returns a handle which describes the new instance of 
+the driver, among other things this handle  contains the ids of the threads 
+which can be used by the client to send the requests to the driver and to wait 
+for the processed notifications. After the driver is opened, the client can
+send requests to the driver. A single \emph{put\_request}-call can contain 
+several requests, but the driver sends for each request a separate processed 
+notification. The connection to the driver must be closed explicitly with a 
+\emph{close}-call. 
+
+\subsubsection{RPC functions}
+
+The RPC protocol contains following function:
+\begin{description}
+\item[\emph{open}] Open a new instance of the driver, the function returns a 
+  handle which describes the new instance.
+\item[close] Close driver instance.
+\item[\emph{create\_stream}] Create a new real-time stream. The arguments 
+  are the bandwidth, blocksize and quality parameter of the stream. If the 
+  driver can serve this stream, it returns a handle for the stream which must 
+  be used to mark the requests of that stream in the request list of 
+  \emph{put\_request}.
+\item[\emph{close\_stream}] Close a real-time stream.
+\item[\emph{put\_requests}] Send a request list to the driver. Each request 
+  contains a handle wich is used by the driver to identify the request in the
+  precessed notification message.
+\item[\emph{wait}] Wait for a processed notification. The function returns the 
+  request handle specified in \emph{put\_requests} and a status code.
+\end{description}
+See Section~\ref{app:rpc} for the exact definition of the RPC protocol 
+(IDL specification).
+
+\subsubsection{Implementation Remarks}
+\label{sec:rpc_remarks}
+
+Because Flick cannot handle asynchronous interfaces, the driver RPC protocol
+must be implemented using several threads to emulate the asynchronous
+interface. Fig.~\ref{fig:threads} shows how the interface functions are mapped
+to the different threads.
+
+\epsfigure{threads}{5cm}{Interface Threads}
+
+The main thread of the driver is used to open and close instances of the 
+driver, its id must be registered at the DROPS nameserver to enable clients 
+to find the driver. The driver's command and notification threads are used 
+to do the request processing, a driver instance can create its own versions 
+of those threads or share existing threads, it depends on the requirements of 
+the driver. Clients need a separate wait thread, it calls the wait thread of 
+the driver to wait for processed notifications.
+
+\subsection{Application Interface}
+
+The previous section defined the RPC interface which a block device driver 
+must implement. To ease the use of the interface clients do not use the 
+RPC stubs functions directly, instead the RPC client stubs are encapsulated 
+by a client library and this library provides an API to the client. 
+The main reasons to build a sparate client library are:
+\begin{itemize}
+\item hide the complexity of the RPC interface, especially thread structure 
+  described in Section~\ref{sec:rpc_remarks} and
+\item add functionality, e.g. a synchronous request handling.
+\end{itemize}
+The client API contains following functions:
+\begin{description}
+\item[\emph{int blk\_open\_driver(const char * name, blk\_driver\_t * driver)}]
+  Open a new driver instance. \emph{name} is the name of the driver which must
+  be registered at the nameserver, the function returns the handle of the 
+  driver instance. The implementation requests the the id of the main thread of 
+  the driver at the nameserver and calls the \emph{open} RPC functions.
+\item[\emph{int blk\_close\_driver(blk\_driver\_t driver)}] 
+  Close a driver instance.
+\item[\emph{blk\_stream\_t create\_stream(
+    blk\_driver\_t driver, unsigned long bandwidth, 
+    unsigned long blk\_size,unsigned int q)}]
+ Create a new real-time stream.
+\item[\emph{int blk\_close\_stream(blk\_driver\_t driver, 
+    blk\_stream\_t stream)}]
+  Close real-time stream.
+\item[\emph{int blk\_put\_requests(blk\_request\_t requests[],
+    int num\_requests)}]
+  Send requests to the driver. Besides the usual arguments (driver handle, 
+  device id, block number, number of blocks, buffer address) the request 
+  descriptor can contain a stream handle and a request number. The stream
+  handle must be set to identify real-time requests, the request number
+  specifies the position of the request in a real-time stream and is 
+  used by the driver to calculate the request period in which the request 
+  must be processed.
+\item[\emph{int blk\_get\_status(blk\_request\_t * request)}]
+  Return the status of the request. The status can be:
+  \begin{itemize}
+  \item \emph{unprocessed} request not yet processed by the driver
+  \item \emph{done} request successfully finished by the driver
+  \item \emph{error} error processing the request. One possible reason of an 
+    error is that there was not time left to process a real-time request.
+  \end{itemize}
+  \emph{blk\_get\_status} can be called at any time, thus it is possible
+  to poll the status of requests if the synchronization through the 
+  semaphore is not appropriate.
+\item[\emph{int blk\_do\_request(blk\_driver\_t driver, blk\_stream\_t stream,
+    blk\_request\_t * request)}]
+  Execute request synchronously. \emph{blk\_do\_request} blocks until the
+  processed notification is received from the driver. The return value 
+  indicates the request status (success/error). 
+\end{description}
+See Section~\ref{app:api} for the exact definition of the API (C header file).
+
+A drawback of the current asynchronous request handling is that through the 
+semaphore it is only signaled that a request is finished, but not which 
+request. The client must check which of its outstanding requests was finished
+using \emph{blk\_get\_status}. A different approach would be to specify a 
+callback function which is called if the processed notification is received and
+which gets the request handle as argument. The problem is that the callback
+function is executed by the wait thread of the client, it is not clear if this
+causes any problems.
+
+\clearpage
+\part{Appendix}
+
+\section{Device Driver RPC Interface}
+\label{app:rpc}
+
+\section{User API}
+\label{app:api}
+
+\end{document}
+

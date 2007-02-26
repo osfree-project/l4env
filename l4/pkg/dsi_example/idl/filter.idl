@@ -1,0 +1,54 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   dsi_example/idl/filter/filter.idl
+ * \brief  Interface definition filter component.
+ * 
+ * \date   01/15/2001
+ * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
+ */
+/*****************************************************************************/
+
+typedef struct dsi_example_filter_threadid
+{
+  unsigned long low;
+  unsigned long high;
+} dsi_example_filter_threadid_t;
+  
+typedef struct dsi_example_filter_socket
+{
+  unsigned long socket;
+  dsi_example_filter_threadid_t work_th;
+  dsi_example_filter_threadid_t sync_th;
+  dsi_example_filter_threadid_t event_th;
+} dsi_example_filter_socket_t;
+  
+typedef struct dsi_example_filter_dataspace
+{
+  unsigned long id;
+  dsi_example_filter_threadid_t manager;
+} dsi_example_filter_dataspace_t;
+
+module dsi_example
+{
+  interface filter
+    {
+      /**
+       * Open send/receive sockets of filter 
+       */
+      long open(in long num,
+		in dsi_example_filter_dataspace_t rcv_ctrl_ds,
+		in dsi_example_filter_dataspace_t rcv_data_ds,
+		out dsi_example_filter_socket_t rcv_s,
+		out dsi_example_filter_socket_t snd_s,
+		out dsi_example_filter_dataspace_t snd_ctrl_ds,
+		out dsi_example_filter_dataspace_t snd_data_ds);
+
+      /**
+       * Connect with sender/receiver
+       */
+      long connect(in dsi_example_filter_socket_t local,
+		   in dsi_example_filter_socket_t remote);
+    };
+};

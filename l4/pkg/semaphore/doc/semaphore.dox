@@ -1,0 +1,38 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Semaphore Reference Manual
+
+\section content Contents
+
+- \ref intro
+- \ref use
+- \htmlonly<a href="group__api.html">\endhtmlonly User API 
+  reference\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__sem.html">\endhtmlonly
+    Semaphore Usage\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__init.html">\endhtmlonly
+    Library Initalization\htmlonly</a>\endhtmlonly
+- \htmlonly<a href="examples.html">\endhtmlonly 
+  Examples\htmlonly</a>\endhtmlonly
+
+\section intro Introduction
+
+The L4 Semaphore library provides a simple, task-local counting semaphore 
+implementation on L4. In case of no contention on the semaphore the up() and 
+down() operations are simple increment resp. decrement operations on the 
+semaphore counter. In case of contention on the semaphore a semaphore thread
+is used to block and wakeup threads and to manage the semaphore wait queues.
+
+\section use Library Usage
+
+To use the L4 Semaphore library you need to include \<l4/semaphore/semaphore.h\> 
+and link libsemaphore.a to your binaries, the library depends on the L4 thread 
+library (l4thread).
+
+The L4 Semaphore library is usually initialized by the L4Env startup code during 
+the setup of a new task, the application does not need to do anything.
+
+*/
+

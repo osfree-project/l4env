@@ -1,0 +1,2 @@
+#define __ver_parse_afs_partitions	smp_e6d0a3b5
+#define parse_afs_partitions	_set_ver(parse_afs_partitions)

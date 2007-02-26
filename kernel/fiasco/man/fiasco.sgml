@@ -1,0 +1,169 @@
+<!-- -*-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN" [
+<!Entity % Docchars system "docchars.ent"> %Docchars;
+
+<!entity myself cdata "Michael Hohmuth">
+<!entity my-Inst cdata "DROPS">
+
+]>
+
+<manpage sect=kernel date="1998/10/15">Fiasco
+<short>L4-compatible real-time &micro;-kernel
+<sect>Synopsis
+
+<code/main/
+[<code/-nowait/]
+[<code/-nokdb/]
+[<code/-comspeed/ <var/n/]
+[<code/-comport/ <var/n/]
+[<code/-hercules/]
+[<code/-serial/] [<code/-VT/[<code/+/]]
+[<code/-serial_esc/]
+[<code/-tbuf_entries/ <var/n/]
+[<code/-out_buf/ <var/n/]
+[<code/-esc/]
+[<code/-watchdog/]
+[<code/-no_serial_fifo/]
+[<code/-profile/]
+[<code/-profstart/]
+[<code/-irq0/]
+[<code/-irqcom/ | <code/-I-/]
+[<code/-vmware/]
+<code/ proto=/<var/physical_address/
+
+<sect>Description
+
+Fiasco is a new &micro;-kernel (microkernel) running on x86 PCs intended to
+be compatible with the L4/x86 &micro;-kernel for x86. It implements the L4 ABI
+as defined in the L4/x86 Reference Manual.  The Fiasco kernel can be
+used to construct flexible systems. We at TU Dresden will use it as a
+base for our DROPS system which supports a running real-time and
+time-sharing application concurrently on one computer. However, Fiasco
+is not only suitable for big and complex systems, but also for small,
+embedded applications.
+
+<sect>Options
+
+<desc>
+<dt/<code/-nowait//Removes the initial "KDB: init" breakpoint.  The
+installation instructions on the Fiasco web site recommend this
+option; if you plan to do some serious debugging, you shouldn't use
+it. 
+
+<dt/<code/-nokdb//Disables the kernel debugger.  Should Fiasco raise an
+exception, it will just call the builtin jdb.
+
+<dt/<code/-comspeed/ <var/n//Will set the rate of the serial interface to n
+bytes/second.  115200 bytes/second is the default.
+
+<dt/<code/-comport/ <var/n//Will use COMn for serial
+communication. COM2 is the default.  Possible values for <var/n/ are 1
+and 2.
+
+<dt/<code/-hercules//Redirect kernel messages to the Hercules (or
+other MGA-compatible) console.
+
+<dt/<code/-no_serial_fifo//Disable seriel fifo buffer. Might be
+required by some older (buggy) UARTs to work properly.
+
+<dt/<code/-serial/ or <code/-VT/[<code/+/]/Will additionally output
+kernel messages to the serial interface; this can save you copying
+kernel messages by hand.  If <code/-nokdb/ is also enabled, you can
+use a terminal program on the host to control Fiasco.  If you are
+connected to a remote GDB, messages are copied to GDB's console.
+
+<dt/<code/-esc//Enable esc hack. On every timer interrupt, ask the
+keyboard if the Escape key was pressed. If so, do enter into kernel
+debugger. Applications (e.g. L4Linux) may be confused by dropped
+key events so better use <code/-serial_esc/.
+
+<dt/<code/-watchdog//Enable watchdog. On every timer interrupt, tell
+the watchdog that we are sill alive. If a task disables the interrupts
+and loops, the timer interrupt is'nt called anymore and after 2 seconds
+the watchdog releases an non maskable interrupt (NMI) which forces
+Fiasco to step into the kernel debugger. Works on >= Intel PPro and
+>= AMD K7 Model 2.
+
+<dt/<code/-serial_esc//Enter jdb on serial receive interrupts. This
+is only necessary if kdb was disabled by <code/-nokdb/.
+
+<dt/<code/-tbuf_entries/ <var/n//Set number of lines to store in the 
+debugging trace buffer. Default is 200.
+
+<dt/<code/-out_buf/ <var/n//Set output buffer for kd_display functions
+to n bytes. Default is 4096.
+
+<dt/<code/-profile//Enable kernel profiling support; you need to
+compile it with <code/-DPROFILE/ for this to work.  Profiling needs to
+be started with either the <code/-profstart/ option or using the
+kernel-debugger interface.  When you terminate Fiasco (e.g., using the
+remote debugger), the profiling information is printed in uuencoded
+4.4BSD gmon.out format to the serial interface; you can capture it
+using a terminal program.
+
+Unfortunately, current versions of GNU `gprof' don't understand the
+4.4BSD gmon.out format; the next version hopefully does.  I've sent a
+patch to the `gprof' maintainer (the patch is also available on
+request from me).
+
+<dt/<code/-profstart//Immediately start profiling after boot.  This
+option requires the <code/-profile/ option.
+
+<dt/<code/-irq0//Enable IRQ0 for user tasks.  Normally, IRQ0 is
+reserved for kernel use.
+
+<dt/<code/-irqcom/ or <code/-I-//Disable for user tasks the IRQ
+associated with the serial port used for I/O or the kernel debugger.
+
+<dt/<code/-vmware//Disable the usage of the fully special nested PIC
+mode since VMware isn't able to handle it (it crashes with an internal
+monitor error -- BUG F(152):393 bugNr=4388).
+ 
+<dt/<code/proto=/<var/physical_address//This argument is automatically
+added by RMGR when starting Fiasco.  It communicates the address of a
+template for the kernel's info page which contains configuration
+information for Fiasco.  For details on the kernel info page, please
+see the L4 Reference Manual.
+
+</desc>
+
+<sect>Booting
+
+Fiasco should be booted using RMGR.  Please see the RMGR manual page
+for details.
+
+It is important to load a Sigma0 server along with Fiasco, because
+unlike L4/x86, Fiasco doesn't contain its own Sigma0 implementation.  Here
+is a sample GRUB configuration file (menu.lst) which accomplishes
+this:
+
+<quote><verb>
+# RMGR is the boot kernel
+kernel= (fd0)/rmgr -configfile -sigma0
+# The Fiasco kernel must be the first boot module
+module= (fd0)/main -nowait
+# Sigma0
+module= (fd0)/sigma0
+# The RMGR config file (if any) must come just before the boot servers
+module= (fd0)/rmgr.cfg
+# boot server tasks follow
+module= (fd0)/glinux.gz root=/dev/sda5
+module= (fd0)/hello
+</verb></quote>
+
+<sect>Bugs
+
+Many.
+
+Please report bugs to &ltc;l4-hackers@os.inf.tu-dresden.de>.
+
+<sect>See Also
+
+<ref t=m id="rmgr"//
+
+L4 Reference Manual
+
+<ref t=u id="http://www.gnu.org/software/grub/"/GRUB, the Grand Unified Bootloader/
+
+<ref t=u id="http://www.uruk.org/grub/boot-proposal.html"/Multiboot
+standard proposal/

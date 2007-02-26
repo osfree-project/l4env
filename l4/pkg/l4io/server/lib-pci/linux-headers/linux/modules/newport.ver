@@ -1,0 +1,2 @@
+#define __ver_npregs	smp_f7e03752
+#define npregs	_set_ver(npregs)

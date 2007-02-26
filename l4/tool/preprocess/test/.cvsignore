@@ -1,0 +1,25 @@
+test_rules
+comment_in_string.t.ok comment_in_string.h comment_in_string_i.h comment_in_string.cc
+mapping.t.ok mapping.h mapping_i.h mapping.cc
+mapping_inline.t.ok mapping_inline.h mapping_inline_i.h mapping_inline.cc
+random.t.ok random.h random_i.h random.cc
+random_inline.t.ok random_inline.h random_inline_i.h random_inline.cc
+random.cpp
+extern_c.t.ok extern_c.h extern_c_i.h extern_c.cc
+static.t.ok static.h static_i.h static.cc
+inline.t.ok inline.h inline_i.h inline.cc
+noinline.t.ok noinline.h noinline_i.h noinline.cc
+explicit.t.ok explicit.h explicit_i.h explicit.cc
+operator.t.ok operator.h operator_i.h operator.cc
+template.t.ok template.h template_i.h template.cc
+template_inline.t.ok template_inline.h template_inline_i.h template_inline.cc
+c-preproc.t.ok c-preproc.h c-preproc_i.h c-preproc.cc
+parser.t.ok parser.h parser_i.h parser.cc
+parser_noinline.t.ok parser_noinline.h parser_noinline_i.h parser_noinline.cc
+multifile.t.ok multifile.h multifile_i.h 
+multifile.cc multifile-part1.cc multifile-part2.cc
+variable.t.ok variable.h variable_i.h variable.cc
+line.t.ok line.h line_i.h line.cc
+line_not.t.ok line_not.h line_not_i.h line_not.cc
+line_nh.t.ok line_nh.h line_nh_i.h line_nh.cc
+interface.t.ok interfacepublic.h interface_i.h interface.cc

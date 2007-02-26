@@ -1,0 +1,12 @@
+#define __ver_search_tc_card	smp_e9e470a1
+#define search_tc_card	_set_ver(search_tc_card)
+#define __ver_claim_tc_card	smp_c3590835
+#define claim_tc_card	_set_ver(claim_tc_card)
+#define __ver_release_tc_card	smp_a21e1f66
+#define release_tc_card	_set_ver(release_tc_card)
+#define __ver_get_tc_base_addr	smp_ee4c9afa
+#define get_tc_base_addr	_set_ver(get_tc_base_addr)
+#define __ver_get_tc_irq_nr	smp_5a380707
+#define get_tc_irq_nr	_set_ver(get_tc_irq_nr)
+#define __ver_get_tc_speed	smp_518d3099
+#define get_tc_speed	_set_ver(get_tc_speed)

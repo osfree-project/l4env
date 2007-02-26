@@ -1,0 +1,5 @@
+Basic console and logging support.
+
+This package provides a basic console for the L4 userland. It also offers
+macros for logging data during program execution, which can be used with
+basic L4, L4Linux and standard Linux.

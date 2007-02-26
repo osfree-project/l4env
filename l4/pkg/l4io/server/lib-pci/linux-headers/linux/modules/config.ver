@@ -1,0 +1,8 @@
+#define __ver_hisax_init_pcmcia	smp_d79b7b53
+#define hisax_init_pcmcia	_set_ver(hisax_init_pcmcia)
+#define __ver_HiSax_closecard	smp_fc27303b
+#define HiSax_closecard	_set_ver(HiSax_closecard)
+#define __ver_hisax_register	smp_ee93522c
+#define hisax_register	_set_ver(hisax_register)
+#define __ver_hisax_unregister	smp_07f4f2ce
+#define hisax_unregister	_set_ver(hisax_unregister)

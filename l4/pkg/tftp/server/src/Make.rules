@@ -1,0 +1,15 @@
+# -*- Makefile -*-
+
+PKGDIR		?= ../..
+L4DIR		?= $(PKGDIR)/../..
+
+TARGET		= tftp
+DEFAULT_RELOC	= 0x01000000
+
+SRC_C		= main.c
+LIBS		= -lgeneric_fprov-server \
+		  -L../netboot/OBJ-$(SYSTEM) -lnetboot -lpci -lio
+
+ifeq ($(CONFIG_OSHKOSH),y)
+LIBS		+= -loshkoshnicdrv -ldsi
+endif

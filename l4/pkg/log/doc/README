@@ -1,0 +1,50 @@
+Log-Libary mit Logserver-Anbindung unter L4
+-------------------------------------------
+
+Ziel: Bereitstellen einer einfachen Logging-Moeglichkeit, die dennoch
+      flexibel ist.
+
+Die Implementation ist zweistufig vorgenommen: Ein Satz Makros, die
+ihrerseits Funktionen benutzen. Die Entscheidung liegt darin begruendet,
+dass ein String teilweise mit mehreren printf-Aufrufen zusammengebaut werden
+muss (einzige Ausnahme: einfaches LOG, s.u.). Die eigentliche Ausgabe
+erfolgt ueber eine Funktion, welche einen Zeiger auf den bereits fertig
+formatierten String bekommt. Dies ist sinnvoll, wenn eigene
+Ausgabefunktionen genutzt werden sollen (z.b. Logserver unter L4, siehe
+l4/server/stdlog im cvs-tree sowie logserver-Beispiel in examples/). Diese
+Funktion ist in der Variable STDLOG_outstring zuzuweisen. Standardmaessig
+wird STDLOG_outstring bereits intialisiert. Dazu spaeter mehr.
+
+Es wird ebenfalls ein printf zur Verfuegung gestellt, welches seinerseits
+auf vsnprintf des OSKit beruht. Dammit ist es moeglich, vor jede Ausgabe ein
+Logtag zu schreiben. Dies ist sinnvoll, wenn mehrere Programme Ausgaben
+machen, diese koennen dann einfacher zugeordnet werden. Das Logtag sollte
+daher programmspezifisch gewaehlt werden, es wird mit einer Laenge von 8
+Zeichen ausgegeben. Um diese Moeglichkeit nutzen zu koennen, muss der Lib
+das Logtag mit der Init-Funktion LOG_init() bekannt gegeben werden. Soll die
+OSKit-printf-Funktion benutzt werden, ist liboskit vor liblog (oder
+liblogserver) zu linken. Damit entfaellt die Moeglichkeit des Logtag.
+
+Saemtliche Log-Makros verarbeiten printf-Ausdruecke, also Formatstring mit
+optionalen Argumenten. Der String wird vorher nicht in einem Puffer
+aufgebaut, er ist daher nicht Laengenbegrenzt. Um ein gegenseitiges
+Durcheinanderschreiben mehrerer Threads einer Task zu vermeiden, werden
+Lock-Makros eingesetzt, dazu siehe README.lock.
+
+Um ein durcheinanderschreiben der Log-Aufrufe verschiedener Tasks zu
+verhindern, wird der komplette String zusammengebaut, ehe die
+Ausgabefunktion aufgerufen wird: Wird der Logserver genutzt, garantiert
+dieser nur, dass einzelne Strings sich nicht ueberlagern. Kommt die
+Nachricht in Haeppchen an, ist das nicht mehr garantiert.
+
+Folgende Makros stehen zur Verfuegung:
+  LOG(format...)	- gibt das Tag, die Funktion und die Message aus
+  LOGl(format...)	- gibt das Tag, das C-File, die Zeilennummer,
+                          den Funktionsnamen und die Message aus
+  LOGL(format...)	- gibt das Tag, das C-File, die Zeilennummer,
+                          den Funktionsnamen, task- und thread-id unter L4,
+                          PID unter Linux und schliesslich die Message aus.
+
+
+
+Jork Loeser

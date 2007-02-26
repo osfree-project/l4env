@@ -1,0 +1,52 @@
+/* $Id$ */
+/*! \file exec/idl/exec.idl
+ * 
+ * \date   08/22/2000
+ * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ * 
+ * \brief Common L4 Environment, EXEC layer
+ */
+
+/** l4 namespace */
+module l4exec
+{
+  struct threadid_t
+    {
+      unsigned long low;
+      unsigned long high;
+    };
+  
+  struct dataspace_t
+    {
+      unsigned long id;
+      threadid_t manager;
+    };
+  
+  /** structure that is exchanged by the interface */
+  typedef long envpage_t[500];
+
+  interface bin
+    {
+      /** Open the binary file.
+       * Get the file image from the file provider, analyse the header
+       * information, and load all dependant libraries. The envpage
+       * describes what servers to use to open dataspaces. */
+      long open(in string fname, inout envpage_t envpage,
+		in unsigned long flags);
+
+      /** Close binary */
+      long close(inout envpage_t envpage);
+      
+      /** Relocate/link the binary described by envpage. */
+      long link(inout envpage_t envpage);
+
+      /** Get debug symbols.
+       * The dataspace is contiguous. */
+      long get_symbols(in envpage_t envpage, out dataspace_t sym_ds);
+
+      /** Get debug lines info.
+       * The dataspace is contiguous. */
+      long get_lines(in envpage_t envpage, out dataspace_t lines_ds);
+    };
+};
+

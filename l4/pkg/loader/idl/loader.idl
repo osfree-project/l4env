@@ -1,0 +1,75 @@
+/* $Id$ */
+/*! \file loader/idl/loader.idl
+ * 
+ * \date	06/10/2001
+ * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ * 
+ * \brief	Loader interface
+ */
+
+/** l4 namespace */
+module l4loader
+{
+  /** thread id */
+  struct threadid_t
+    {
+      unsigned long low;
+      unsigned long high;
+    };
+  
+  /** dataspace descriptor */
+  struct dataspace_t
+    {
+      unsigned long id;
+      threadid_t manager;
+    };
+  
+  /** IDL Interface for the loader module. */
+  interface app
+    {
+      /** Load application(s) through config script. 
+       * 
+       * The loader interpretes the script and executes the included 
+       * commands. See \ref p_script for a description of the script syntax.
+       *
+       * \param fname		file name to load
+       * \param fprov		id of file provider to use
+       * \param flags		flags
+       * \return		0 on success */
+      long open(in string fname, in threadid_t fprov, in unsigned long flags);
+
+      /** Kill task. 
+       * 
+       * The task must have been loaded by the Loader. The
+       * L4 task will be killed and all resources which are occupied inside
+       * loader, names, l4exec, dm_phys and rmgr will be released.
+       *
+       * \param task_id	id of task to terminate
+       * \param flags		flags
+       * \return		0 on success */
+      long kill(in unsigned long task_id, in unsigned long flags);
+
+      /** Dump task info
+       *
+       * Print out task info for the task to L4 debugging console.
+       * Only useful for debugging purposes.
+       *
+       * \param task_id		id of task to dump
+       * \param flags		flags
+       * \return		0 on success */
+      long dump(in unsigned long task_id, in unsigned long flags);
+
+      /** Get task info.
+       * 
+       * Return an L4 infopage for the specified task.
+       *
+       * \param task_id	id of task to get info from
+       * \param flags		flags
+       * \retval fname		application name
+       * \retval l4env_page	l4env_infopage of process
+       * \return		0 on success */
+      long info(in unsigned long task_id, in unsigned long flags,
+	        out string fname, out dataspace_t l4env_page);
+    };
+};
+

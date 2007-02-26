@@ -1,0 +1,14 @@
+#define __ver_pm_register	smp_8dbab11c
+#define pm_register	_set_ver(pm_register)
+#define __ver_pm_unregister	smp_eccd1e64
+#define pm_unregister	_set_ver(pm_unregister)
+#define __ver_pm_unregister_all	smp_9c0ba5b2
+#define pm_unregister_all	_set_ver(pm_unregister_all)
+#define __ver_pm_send	smp_38ff3ed1
+#define pm_send	_set_ver(pm_send)
+#define __ver_pm_send_all	smp_ecbf9cad
+#define pm_send_all	_set_ver(pm_send_all)
+#define __ver_pm_find	smp_1a55780a
+#define pm_find	_set_ver(pm_find)
+#define __ver_pm_active	smp_ebd387f6
+#define pm_active	_set_ver(pm_active)

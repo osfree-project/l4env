@@ -1,0 +1,33 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+ * \defgroup atomic Common atomic operations
+ */
+
+/**
+ * \defgroup bitops Common bit manipulation functions 
+ */
+
+/**
+ * \defgroup types Common datatypes
+ */
+
+/**
+ * \defgroup errno Common error codes and error handling functions
+ */
+
+/**
+ * \defgroup env Environment functions
+ */
+
+/**
+ * \defgroup misc Misc. other type definitions / functions / defines
+ */
+
+/**
+ * \defgroup slab Slab Allocator
+ * \anchor g_slab
+ *
+ * A simple memory allocator based on the idea of slab caches.
+ */

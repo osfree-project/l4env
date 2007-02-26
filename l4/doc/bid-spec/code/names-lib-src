@@ -1,0 +1,10 @@
+PKGDIR  = ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+TARGET  = lib$(PKGNAME).a
+
+INCS    = -I../../server/include
+
+SRC_C   = $(wildcard *.c)
+
+include $(L4DIR)/mk/lib.mk

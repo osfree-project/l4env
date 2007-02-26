@@ -1,0 +1,21 @@
+			 - The Common L4 Environment -
+
+		      Input/Output server implementation
+________________________________________________________________________________
+
+basic documentation:
+
+* l4io/doc:
+	README		this file
+
+after make in l4io/doc:
+
+* l4io/doc/l4io:
+	html		l4io server reference manual
+
+* l4io/doc/l4io-internal:
+	html		l4io server implementation details
+
+________________________________________________________________________________
+
+- io expects a `common L4 environment'

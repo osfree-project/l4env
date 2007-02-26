@@ -1,0 +1,12 @@
+#define __ver_bttv_get_cardinfo	smp_48320158
+#define bttv_get_cardinfo	_set_ver(bttv_get_cardinfo)
+#define __ver_bttv_get_id	smp_294b5550
+#define bttv_get_id	_set_ver(bttv_get_id)
+#define __ver_bttv_gpio_enable	smp_11dc4b6d
+#define bttv_gpio_enable	_set_ver(bttv_gpio_enable)
+#define __ver_bttv_read_gpio	smp_bcf2d2fb
+#define bttv_read_gpio	_set_ver(bttv_read_gpio)
+#define __ver_bttv_write_gpio	smp_8ecf4acc
+#define bttv_write_gpio	_set_ver(bttv_write_gpio)
+#define __ver_bttv_get_gpio_queue	smp_a6788968
+#define bttv_get_gpio_queue	_set_ver(bttv_get_gpio_queue)

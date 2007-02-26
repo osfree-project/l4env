@@ -1,0 +1,9 @@
+0.3 - Lars, 06/05/2001
+- modified typedefs to enable use with C++
+
+0.2 - Lars, 03/16/2001
+- Added l4_semaphore_set_thread_prio, it is a workaround until we've found 
+  a descent priority scheme for L4 tasks.
+	
+0.1 - Lars, 01/08/2001
+- Initial release.

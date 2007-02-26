@@ -1,0 +1,28 @@
+Documentation:
+- write doc/dsi.txt
+
+- On connect, check for compatibility of streams (mapped vs. static).
+
+- Doku: Are the control/data-areas mapped after socket creation? Document
+  this!
+
+Naming scheme:
+- A client referencing a sender ends up using constructs like
+  "sender.socket.socket" to get the socket-id of the sender-sockref. It is
+  absolutely unintuitive, because it is a socket-reference and nobody gets
+  the message what 'socket.socket' could be. Probably, dsi_component_t
+  contains a field named sockref instead of socket.
+- we have dsi_jcp_stream_t and dsi_stream_cfg_t, both are configuration
+  structures
+
+Dataspaces:
+- replace map area management in dataspace.c with map area allocation 
+  in libdrm
+
+Threads:
+- rewrite thread.c if thread library is available
+
+Synchronization:
+- currently we don't support multiple work threads using the same socket 
+  (get/commit_packet don't do any synchronization on that)
+

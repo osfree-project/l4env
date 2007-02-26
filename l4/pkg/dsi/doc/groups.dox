@@ -1,0 +1,74 @@
+/*!\file doc/groups.dox
+ *
+ * \brief Group definitions.
+ *
+ * Groups (in the generated documentation referred to as modules) are
+ * used to separate the typedefs and functions. Unfortunately, there
+ * seems to be a bug in doxygen 1.2.3, in that a function cannot be in
+ * multiple groups. Thatswhy we introduced the \ref g_general 
+ * "General Functions for DSI users" group, where the functions both
+ * for applications and components are placed.
+ */
+
+/*!\defgroup internal	Internal functions
+ *
+ * \brief DSI-Internal functionality. Not exported by libdsi-functions.
+ *
+ * Functions provided by this module should not be used directly by
+ * external programms. They are subject to change. This covers structures
+ * and defines aswell.
+ */
+
+/*!\defgroup general	General Functions for DSI users
+ * \anchor g_general
+ *
+ * \brief General things to be used by libdsi-users.
+ */
+
+/*!\defgroup app 	DSI API for client applications
+ * \anchor g_app
+ *
+ * \brief Relevant things for in-the-middle applications. Client applications
+ *	  might also need the functions provided by the \ref g_general
+ *	  "General Functions for DSI users" module.
+ *
+ * \see g_stream.
+ * 
+ */
+
+/*!\defgroup stream 	DSI Stream API
+ * \anchor g_stream
+ *
+ * \brief Functions operating on DSI streams.
+ *
+ * Streams connect a send and a receive socket. Usually, they are
+ * created by in-the-middle client applications.
+ */
+
+/*!\defgroup component	DSI API for components
+ * \anchor g_component
+ *
+ * \brief Relevant things for DSI-compontents. Component applications
+ *	  might also need the functions provided by the \ref g_general 
+ *	  "General functions for DSI users" module.
+ *
+ * \see g_socket and g_packet
+ */
+
+/*!\defgroup socket	DSI socket interface
+ * \anchor g_socket
+ *
+ * \brief Functions operating on sockets.
+ */
+
+/*!\defgroup packet	DSI packet interface
+ * \anchor g_packet
+ *
+ * \brief Functions operating on packets.
+ */
+ 
+/*!\defgroup thread	DSI threading helpers
+ * \anchor g_thread
+ *
+ * \brief Functions helping to operate witch threads.
+ */

@@ -1,0 +1,14 @@
+0.3 - Lars, 03/16/2001
+- Added done-callback function to the client library. There are now two ways
+  to wait for requests to be finished, specifying a semaphore or a callback 
+  function. The callback function is executed by the notification thread of
+  the blk-client-library, therefore clients may need to implement their own
+  synchronization scheme.
+	
+0.2 - Lars, 03/13/2001 
+- added ctrl-function to command handling interface
+- changed type of quality argument to float
+	
+0.1 - Lars, 02/12/2001 (untagged)
+- initial release of the DROPS Block Device Driver Interface
+

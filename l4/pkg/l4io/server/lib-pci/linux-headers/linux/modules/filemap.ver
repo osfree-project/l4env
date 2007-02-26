@@ -1,0 +1,6 @@
+#define __ver_vm_max_readahead	smp_f8c9aa3c
+#define vm_max_readahead	_set_ver(vm_max_readahead)
+#define __ver_vm_min_readahead	smp_41ef314d
+#define vm_min_readahead	_set_ver(vm_min_readahead)
+#define __ver_fail_writepage	smp_e4382aa1
+#define fail_writepage	_set_ver(fail_writepage)

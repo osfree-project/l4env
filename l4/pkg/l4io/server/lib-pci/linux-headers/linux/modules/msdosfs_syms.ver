@@ -1,0 +1,16 @@
+#define __ver_msdos_create	smp_152a0594
+#define msdos_create	_set_ver(msdos_create)
+#define __ver_msdos_lookup	smp_29918033
+#define msdos_lookup	_set_ver(msdos_lookup)
+#define __ver_msdos_mkdir	smp_5ad99164
+#define msdos_mkdir	_set_ver(msdos_mkdir)
+#define __ver_msdos_rename	smp_2cc83605
+#define msdos_rename	_set_ver(msdos_rename)
+#define __ver_msdos_rmdir	smp_403de8f4
+#define msdos_rmdir	_set_ver(msdos_rmdir)
+#define __ver_msdos_unlink	smp_f33796ad
+#define msdos_unlink	_set_ver(msdos_unlink)
+#define __ver_msdos_read_super	smp_b062fb57
+#define msdos_read_super	_set_ver(msdos_read_super)
+#define __ver_msdos_put_super	smp_ef5995c2
+#define msdos_put_super	_set_ver(msdos_put_super)

@@ -1,0 +1,217 @@
+# -*- makefile -*-
+
+
+
+####################################################################################
+
+SUBSYSTEMS = ABI LIBAMM LIBLMM KERNEL CRT0 LIBK DRIVERS MINILIBC BOOT CXXLIB
+
+#ifneq ($(wildcard $(srcdir)/disasm),)
+#SUBSYSTEMS += LIBDISASM
+#endif
+#ifneq ($(wildcard $(srcdir)/gzip),)
+#SUBSYSTEMS += LIBGZIP
+#endif
+
+
+#
+# TYPES subsystem
+#
+
+PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
+
+
+#
+# DRIVERS Subsystem
+#
+DRIVERS 		:= libdrivers.a libgluedriverslibc.a
+VPATH			+= drivers/$(CONFIG_XARCH) drivers
+PRIVATE_INCDIR		+= drivers/$(CONFIG_XARCH) drivers
+INTERFACES_DRIVERS 	:= mux_console console uart 
+uart_IMPL		:= uart uart-sa1100
+CXXSRC_DRIVERS		:= glue_libc.cc
+
+
+#
+# MINILIBC Subsystem
+#
+MINILIBC	:= libc.a
+VPATH		+= lib/minilibc/$(CONFIG_XARCH) lib/minilibc
+PRIVATE_INCDIR	+= lib/minilibc/$(CONFIG_XARCH)/include lib/minilibc/include
+CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
+		   memchr.c \
+		   panic.c strchr.c strcmp.c strcpy.c strlen.c strncmp.c \
+		   strncpy.c strstr.c __assert_fail.c printf.c __v_printf.c \
+		   vprintf.c strtol.c strtoul.c __lltostr.c \
+		   __ltostr.c putchar.c puts.c getchar.c gets.c __v_scanf.c \
+		   vsscanf.c sscanf.c construction.c sprintf.c snprintf.c \
+		   vsnprintf.c vsprintf.c longjmp.c \
+		   isalnum.c isalpha.c isascii.c isblank.c \
+		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
+		   ispunct.c isspace.c isupper.c isxdigit.c \
+		   strspn.c strcspn.c
+
+ASSRC_MINILIBC	:= setjmp.S
+
+#
+# LIBLMM Subsystem
+#
+
+LIBLMM 		:= liblmm.a
+VPATH		+=lib/lmm
+PRIVATE_INCDIR	+=lib/lmm
+CSRC_LIBLMM	:= lmm_alloc.c lmm_avail.c lmm_find_free.c \
+		   lmm_add_free.c lmm_alloc_aligned.c lmm_avail_in.c \
+		   lmm_free.c lmm_init.c lmm_alloc_gen.c lmm_dump.c \
+		   lmm_remove_free.c lmm_add_region.c lmm_alloc_page.c \
+		   lmm_free_page.c
+
+#
+# LIBAMM subsystem
+#
+LIBAMM		:= libamm.a
+VPATH		+= lib/amm
+PRIVATE_INCDIR	+= lib/amm
+CSRC_LIBAMM	:= amm_alloc_entry.c amm_allocate.c amm_deallocate.c amm_destroy.c \
+		   amm_dump.c amm_find_addr.c amm_find_gen.c amm_free_entry.c \
+		   amm_init.c amm_init_gen.c amm_iterate.c amm_iterate_gen.c \
+		   amm_join.c amm_modify.c amm_protect.c amm_reserve.c \
+		   amm_select.c amm_split.c
+
+
+#
+# ABI Subsystem
+#
+
+ABI 		:= libabi.a
+VPATH 		+= abi/$(CONFIG_XARCH) abi
+
+INTERFACES_ABI 	:= l4_types kip
+
+l4_types_IMPL 	:= l4_types l4_types-x0 l4_types-32bit 
+# x0!=32Bit UIDs
+kip_IMPL	:= kip kip-arm
+
+#
+# JABI Subsystem
+#
+
+JABI 		:= libjabi.a
+VPATH 		+= jabi/$(CONFIG_XARCH) jabi
+
+INTERFACES_JABI := jdb_ktrace
+
+jdb_ktrace_IMPL := jdb_ktrace-arch jdb_ktrace
+
+#
+# BOOT subsystem
+#
+BOOT			:= main
+VPATH			+= boot/$(CONFIG_XARCH) boot
+PRIVATE_INCDIR 		+= boot
+
+INTERFACES_BOOT		+= loader_main __loader_main
+
+CXXSRC_BOOT		:= elf.cc
+NOPROFILE		+= $(patsubst %.o, %, $(OBJ_BOOT))
+
+#
+# KERNEL subsystem
+#
+KERNEL 		:= kernel.image
+KERNEL_EXTRA 	:= Symbols
+VPATH 		+= kern/$(CONFIG_XARCH) kern
+PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH) kern
+
+INTERFACES_KERNEL := 	kmem boot_info __main globals config main \
+			kernel_uart pagetable kern_types  \
+			mapped_alloc kmem_alloc kip_init kmem_space \
+			mem_unit boot_uart_init kernel_console cpu \
+			thread paging vmem_alloc kdb_ke terminate \
+			cpu_lock irq sender startup boot_console \
+			entry_frame irq_alloc helping_lock switch_lock stack \
+			kmem_slab_simple region kmem_slab slab_cache_anon \
+			mapdb thread_state space_context context sched fpu \
+			fpu_state sa_1100 space space_index space_index_util \
+			map_util task thread_lock receiver timer \
+			dirq threadid thread_util fpu_alloc long_msg \
+			kernel_thread
+
+
+INTERFACES_KERNEL 	+= jdb jdb_core jdb_module jdb_prompt_module \
+			   jdb_exit_module
+
+boot_info_IMPL	  	:= boot_info boot_info-arch
+config_IMPL	  	:= config config-arch
+context_IMPL	  	:= context context-arm
+cpu_IMPL	  	:= cpu-arm
+cpu_lock_IMPL  	  	:= cpu_lock cpu_lock-generic
+dirq_IMPL		:= dirq dirq-arm
+entry_frame_IMPL  	:= entry_frame entry_frame-arm entry_frame-ipc-arm \
+			   entry_frame-id_nearest-arm entry_frame-thread_switch-arm \
+			   entry_frame-thread_schedule-arm entry_frame-unmap-arm \
+			   entry_frame-ex_regs-arm entry_frame-task_new-arm
+fpu_IMPL		:= fpu fpu-arm
+globals_IMPL	  	:= globals globals-arch
+irq_IMPL		:= irq irq-arm irq-ipc
+kernel_thread_IMPL	:= kernel_thread kernel_thread-std
+kernel_uart_IMPL  	:= kernel_uart kernel_uart-sa1100
+long_msg		:= long_msg long_msg-generic
+map_util_IMPL		:= map_util map_util-arm
+kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
+kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-arm
+pagetable_IMPL	  	:= pagetable pagetable-arch
+paging_IMPL	  	:= paging paging-arch
+sched_IMPL		:= sched sched-arm
+space_context_IMPL	:= space_context-arm
+task_IMPL		:= task task-no-auto-map-kip
+thread_IMPL	  	:= thread-entry thread thread-list thread-arm thread-nosmas \
+			   thread-syscall thread-syscall-x0 thread-ipc thread-msg \
+			   thread-msg-arm
+timer_IMPL		:= timer timer-arm
+vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
+
+CXXSRC_KERNEL		:= kernel_panic.cc 
+ASSRC_KERNEL	  	:= ivt.S
+
+
+
+
+#INTERFACES_KERNEL = boot_info __main mapdb region \
+#  space_context space space_index space_index_util \
+#  stack kmem kmem_alloc slab_cache_anon kmem_slab_simple kmem_slab \
+#  switch_lock thread_lock helping_lock kernel_lock timer \
+#  thread_state sched context threadid thread_regs sender receiver \
+#  thread kernel_thread thread_util \
+#  map_util irq dirq virq console paranoia globals \
+#  checksum main config
+
+#
+# CRT0 subsystem
+#
+CRT0 		:= crt0.o
+CSRC_CRT0	:= atest.c
+#ASSRC_CRT0 	:= crt0.S
+
+
+#
+# CXXLIB Subsystem
+# 
+CXXLIB 			:= libcxx.a
+VPATH			+= lib/cxxlib
+INTERFACES_CXXLIB 	:= paranoia s_cruft
+CXXSRC_CXXLIB		:= cxa_atexit-gixgax.cc
+
+#
+# LIBK subsystem
+#
+LIBK 		:= libk.a
+VPATH          	+= lib/libk/$(CONFIG_XARCH) lib/libk
+PRIVATE_INCDIR 	+= lib/libk/$(CONFIG_XARCH) lib/libk
+
+#INTERFACES_LIBK:= atomic lock_guard profile uuencode gmon unistd panic auto_ptr
+INTERFACES_LIBK := std_macros atomic lock_guard auto_ptr
+atomic_IMPL     := atomic atomic-arch
+
+
+

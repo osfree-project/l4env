@@ -1,0 +1,425 @@
+/* -*- c -*- */
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file	generic_io/idl/generic_io.idl
+ *
+ * \brief	Common L4 Environment I/O Server Interface
+ *
+ * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ *
+ * Copyright (C) 2001-2002
+ * Dresden University of Technology, Operating Systems Research Group
+ *
+ * This file contains free software, you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License, Version 2 as 
+ * published by the Free Software Foundation (see the file COPYING). 
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * For different licensing schemes please contact 
+ * <contact@os.inf.tu-dresden.de>.
+ */
+/*****************************************************************************/
+
+#if 0
+#include <types.h>		/* would be the common way ... */
+#else
+/* ... owing to FLICK we have to typedef it again here */
+
+#if 0
+/* ... lucky another weakness of FLICK is the lack of bitarrays */
+typedef struct l4_io_drv {
+  unsigned src:2;
+  unsigned dsi:8;
+  unsigned class:8;
+  unsigned padding:14;
+} l4_io_drv_t;
+#else
+/**
+ *  driver type
+ */
+typedef unsigned long l4_io_drv_t;
+#endif
+
+/**
+ *  resource type (for PCI devices)
+ */
+typedef struct l4_io_res {
+  unsigned long start;
+  unsigned long end;
+  unsigned long flags;
+} l4_io_res_t;
+
+/**
+ *  PCI device handle type
+ */
+typedef unsigned short l4_io_pdev_t;
+
+/**
+ * PCI device struct
+ */
+typedef struct l4_io_pci_dev {
+  octet bus;		/* PCI bus number */
+  octet devfn;		/* encoded device & function index */
+  unsigned short vendor;
+  unsigned short device;
+  unsigned short sub_vendor;
+  unsigned short sub_device;
+  unsigned long class;		/* 3 bytes: (base,sub,prog-if) */
+
+  unsigned long irq;
+#define MAX_PCIDEV_RES	12	/**< max number of resource regions */
+  l4_io_res_t res[MAX_PCIDEV_RES];
+				/* resource regions used by device: 
+				 * 0-5 standard PCI regions (base addresses) 
+				 * 6 expansion ROM 
+				 * 7-10 unused for devices */
+  char name[80];
+  char slot_name[8];
+
+  l4_io_pdev_t handle;		/* handle for this device */
+} l4_io_pci_dev_t;
+#endif
+
+/**
+ * Generic L4 Interface
+ */
+module l4 
+{
+  /**
+   * I/O Server Interface
+   */
+  interface io
+    {
+      /** 
+       * \name Miscellaneous Services
+       *
+       * Client registration and information purposes.
+       *
+       * \todo   define client_info_t (driver class, ...)
+       * @{
+       */
+
+      /***********************************************************************/
+      /**
+       * \brief  Register new io client.
+       *
+       * \param  type	client info
+       * 
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long register_client(in l4_io_drv_t type);
+
+      /***********************************************************************/
+      /**
+       * \brief  Unregister io client.
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long unregister_client();
+
+      /***********************************************************************/
+      /**
+       * \brief  Initiate mapping of io info page.
+       *
+       * \param  info		flexpage for io info
+       * 
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long map_info(out fpage info);
+      /** @} */
+
+      /** 
+       * \name Resource Allocation
+       *
+       * Allocation and release of shared system resources - ports, memory, DMA
+       * channels.
+       *
+       * @{ 
+       */
+
+      /***********************************************************************/
+      /**
+       * \brief  Register for exclusive use of IO port region.
+       *
+       * \param  addr	start of IO port region
+       * \param  len	length of IO port region
+       *
+       * \return 0 on success, negative error code otherwise 
+       *
+       * \krishna request_region ALWAYS succeeds under Linux; here it could
+       * FAIL!
+       */
+      /***********************************************************************/
+      long request_region(in unsigned long addr, in unsigned long len);
+
+      /***********************************************************************/
+      /**
+       * \brief  Release IO port region.
+       *
+       * \param  addr	start of IO port region
+       * \param  len	length of IO port region
+       */
+      /***********************************************************************/
+      long release_region(in unsigned long addr, in unsigned long len);
+
+      /***********************************************************************/
+      /**
+       * \brief  Register for exclusive use of IO memory region.
+       *
+       * \param  addr	start of memory region
+       * \param  len	length of memory region
+       *
+       * \retval region fpage for memory region
+       * \retval offset in io region the requested memory starts
+       * \return 0 on success, negative error code otherwise
+       *
+       * If available the region is reserved and replied as fpage.
+       *
+       * \krishna This is Linux' request_mem_region()+ioremap().
+       */
+      /***********************************************************************/
+      long request_mem_region(in unsigned long addr,
+			      in unsigned long len,
+			      out fpage region, out unsigned long offset);
+
+      /***********************************************************************/
+      /**
+       * \brief	 Release IO memory region.
+       *
+       * \param  addr	start of memory region
+       * \param  len	length of memory region
+       *
+       * Release initiates page flushing.
+       *
+       * \krishna This'll be Linux' iounmap()+release_mem_region().
+       *
+       * \todo check if flushing works
+       */
+      /***********************************************************************/
+      long release_mem_region(in unsigned long addr, in unsigned long len);
+
+      /***********************************************************************/
+      /**
+       * \brief  Register for exclusive use of ISA DMA channel.
+       *
+       * \param  channel	DMA channel number
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long request_dma(in unsigned long channel);
+
+      /***********************************************************************/
+      /** 
+       * \brief  Release ISA DMA channel.
+       *
+       * \param  channel	DMA channel number
+       */
+      /***********************************************************************/
+      long release_dma(in unsigned long channel);
+      /** @} */
+
+      /**
+       * \name PCI Services
+       *
+       * Identification of devices and support for configuration space access.
+       *
+       * @{
+       */
+
+      /***********************************************************************/
+      /**
+       * \brief  Locate PCI device from a given PCI slot.
+       *
+       * \param  bus		number of PCI bus on which desired device
+       *			resides
+       * \param  slot		number of PCI slot in which desired device 
+       *			resides
+       *
+       * \retval pci_dev	data structure for PCI device found
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_find_slot(in unsigned long bus, in unsigned long slot,
+			 out l4_io_pci_dev_t pci_dev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Search for PCI device by vendor/device id.
+       *
+       * \param  vendor_id	PCI vendor id to match (maybe PCI_ANY_ID)
+       * \param  device_id	PCI device id to match (maybe PCI_ANY_ID)
+       * \param  start_at	previous PCI device found, or 0 for new search
+       *
+       * \retval pci_dev	data structure for PCI device found
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_find_device(in unsigned short vendor_id,
+			   in unsigned short device_id,
+			   in l4_io_pdev_t start_at,
+			   out l4_io_pci_dev_t pci_dev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Search for PCI device by class.
+       *
+       * \param  class_id		class designation
+       * \param  start_at	previous PCI device found, or 0 for new search
+       *
+       * \retval pci_dev	data structure for PCI device found
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_find_class(in unsigned long class_id,
+			  in l4_io_pdev_t start_at,
+			  out l4_io_pci_dev_t pci_dev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Initialize device before it's used by a driver.
+       *
+       * \param  pdev	handle of PCI device to be initialized
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_enable_device(in l4_io_pdev_t pdev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Finalize device after use.
+       *
+       * \param  pdev	handle of PCI device to be initialized
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_disable_device(in l4_io_pdev_t pdev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Enable busmastering for PCI device.
+       *
+       * \param  pdev	handle of PCI device
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_set_master(in l4_io_pdev_t pdev);
+
+      /***********************************************************************/
+      /**
+       * \brief  Set power management state of PCI device.
+       *
+       * \param  pdev	handle of PCI device
+       * \param  state	new PM state
+       *
+       * \retval state	old PM state
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_set_power_state(in l4_io_pdev_t pdev, inout long state);
+
+      /***********************************************************************/
+      /**
+       * \brief  Read configuration BYTE registers of PCI device.
+       * \ingroup pcicfg
+       *
+       * \param  pdev	PCI device handle
+       * \param  offset	PCI configuration register
+       *
+       * \retval val	register value read
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_read_config_byte(in l4_io_pdev_t pdev, in long offset,
+				out octet val);
+
+      /***********************************************************************/
+      /**
+       * \brief  Read configuration WORD registers of PCI device.
+       *
+       * \param  pdev	PCI device
+       * \param  offset	PCI configuration register
+       *
+       * \retval val	register value read
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_read_config_word(in l4_io_pdev_t pdev,
+				in long offset, out unsigned short val);
+
+      /***********************************************************************/
+      /**
+       * \brief  Read configuration DWORD registers of PCI device.
+       *
+       * \param  pdev	PCI device
+       * \param  offset	PCI configuration register
+       *
+       * \retval val	register value read
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_read_config_dword(in l4_io_pdev_t pdev,
+				 in long offset, out unsigned long val);
+
+      /***********************************************************************/
+      /**
+       * \brief  Write configuration BYTE registers of PCI device.
+       *
+       * \param  pdev	PCI device
+       * \param  offset	PCI configuration register
+       * \param  val	register value to write
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_write_config_byte(in l4_io_pdev_t pdev, in long offset,
+				 in octet val);
+
+      /***********************************************************************/
+      /**
+       * \brief  Write configuration WORD registers of PCI device.
+       *
+       * \param  pdev	PCI device
+       * \param  offset	PCI configuration register
+       * \param  val	register value to write
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_write_config_word(in l4_io_pdev_t pdev,
+				 in long offset, in unsigned short val);
+
+      /***********************************************************************/
+      /**
+       * \brief  Write configuration DWORD registers of PCI device.
+       *
+       * \param  pdev	PCI device
+       * \param  offset	PCI configuration register
+       * \param  val	register value to write
+       *
+       * \return 0 on success, negative error code otherwise
+       */
+      /***********************************************************************/
+      long pci_write_config_dword(in l4_io_pdev_t pdev,
+				  in long offset, in unsigned long val);
+      /** @} */
+  };
+};

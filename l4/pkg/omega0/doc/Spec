@@ -1,0 +1,43 @@
+The specification of omega0 is given in the paper "Omega0: A portable
+interface to interrupt hardware for L4 systems" which can be found in
+"omega0.ps.gz".
+
+We changed this specification as following:
+
+Automatic consume:
+------------------
+A client can signal that it does *not know* if it consumed the interrupt.
+This is important for Linux-drivers. The client signals that it does not
+know if it consumed this interrupt by doing a wait-request for the
+next interrupt without the consume-bit set. 
+
+If all clients that were signalled by Omega0 are waiting for the next
+interrupt, it is assumed that one of them consumed the irq, and the irq is
+automatically consumed by Omega0. If one client signals that it consumed the
+irq, the irq is consumed immediately. Each irq is consumed only once.
+
+Automatic consume requires all clients to either issue a wait-request to the
+next interrupt or to issue a consume-request, or both. It is not allowed to
+silently ignore an irq and to something else, even if the irq was for
+another device.
+
+This behaviour is enabled by setting the OMEGA0_STRATEGY_AUTO_CONSUME-define
+in config.h in the server/src dir.
+
+
+
+Jork Loeser
+02/22/2001
+
+Omega0 management thread:
+-------------------------
+The mention of `local thread 0 of the Omega0 task' in section 3.4 of the
+specification as the `all RPCs except request RPC' partner is to restrictive.
+
+The `management thread' of the Omega0 task is registered at the name service
+and should be the addressed by all RPCs except the `request' RPC.
+
+
+
+Christian Helmuth
+03/02/2001

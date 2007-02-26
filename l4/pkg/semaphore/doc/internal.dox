@@ -1,0 +1,11 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Counting Semaphores Source Code Documentation
+
+\note This semaphore implementation is mostly written in C, it only 
+      uses the atomic compare and exchange function defined in l4/atomic.h.
+      Hopefully, this will ease future ports to other hardware architecures. 
+
+*/

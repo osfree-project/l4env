@@ -1,0 +1,100 @@
+		Using CML2 to configure Linux
+
+CML2 is scheduled to be incorporated in the Linux kernel tree during
+2.5.1 -> 2.5.2.  After that point this file will go away.
+
+To install CML2, run the `install-cml2' script.  It has some header
+comments you may want to read first.  The installation will patch the
+top-level Makefile in the Linux source tree you specify, but not touch any
+other files.  (`install-cml2 -u' will uninstall CML2.)
+
+The CML2 installation supplies oldconfig, menuconfig, and xconfig make
+productions that are drop-in replacements for their CML1 equivalents.
+The `make config' production is different in that it tries to pick
+the best user interface for your environment rather than doing line mode;
+to force line mode, do `make ttyconfig'.  The `make advent' production
+runs a somewhat different line-oriented configurator.
+
+There is a new `make autoprobe' production that gathers information on
+your hardware and software configuration and generates a config.out
+from it.  It is strongly recommended that you check the generated 
+configuration with one of the manual configurators; recommended usage
+is to run `make autoprobe config'
+
+You should be aware that the CML2 configurators no longer generate
+.config and autoconf.h files directly.  Instead, they read and
+generate and edit a config.out file that is like a .config except for
+having explicit sets to 'n'; that is, where the .config format said "#
+FOO is not set" a CML2 config may say "FOO=n".  This change supports
+passing around partial configurations with drivers and features
+explicitly configured out.  It is intended to help support tools like
+Giacomo Catenazzi's kernel-autoconfiguration program.
+
+Ordinarily this change should be transparent.  The `make *config'
+functions automatically follow the configurator run with a run of a
+script called configtrans that reads the new-format config.out you
+just generated and writes translations in the old format to the right
+places (.config and include/linux/autoconf.h).  If the `make
+oldconfig' and `make editconfig' productions don't find a config.out
+but do find an existing .config, they'll copy it.
+
+When you want to save a configuration, save the config.out file
+rather than the .config file.  You can always regenerate .config
+and include/linux/autoconf.h from it by running `make oldconfig'
+
+
+			System Footprint
+
+A comparison of sizes between CML1 in kernel version 2.4.4, and CML2:
+
+Version		Code	Data	Total
+CML1 2.4.4	9218	8526	17744
+CML2 1.3.3	5660	5951	11611
+          	------	------	------
+% shrinkage	-38%	-30%	-34%
+
+Version    	Code	Data	Total
+2.5.1-pre11	9941	35173	45114
+CML2 1.9.8     	6904	26155	33059
+          	------	------	------
+% shrinkage    	-31%	-26%	-27%
+
+(Sizes are in lines.)
+
+CML2 data is the .cml files; code is the .py files.
+
+CML1 data includes the config.in and Config.in files scattered through the
+kernel C sources; code is the following files:
+
+scripts/Configure
+scripts/Makefile
+scripts/Menuconfig
+scripts/README.Menuconfig
+scripts/header.tk
+scripts/tail.tk
+scripts/tkcond.c
+scripts/tkgen.c
+scripts/tkparse.c
+scripts/tkparse.h
+scripts/checkhelp.pl
+scripts/checkconfig.pl
+scripts/checkincludes.pl
+scripts/lxdialog/BIG.FAT.WARNING
+scripts/lxdialog/Makefile
+scripts/lxdialog/checklist.c
+scripts/lxdialog/colors.h
+scripts/lxdialog/dialog.h
+scripts/lxdialog/inputbox.c
+scripts/lxdialog/lxdialog*
+scripts/lxdialog/lxdialog.c
+scripts/lxdialog/menubox.c
+scripts/lxdialog/msgbox.c
+scripts/lxdialog/textbox.c
+scripts/lxdialog/util.c
+scripts/lxdialog/yesno.c
+Documentation/kbuild/config-language.txt
+
+The following file is used during CML2 installation, and can be 
+removed afterwards:
+
+Documentation/Configure.help

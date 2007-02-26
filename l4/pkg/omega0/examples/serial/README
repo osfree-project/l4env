@@ -1,0 +1,11 @@
+Example for omega0- use.
+
+We configure com1 and com2 to communicate using IRQs. Every char received
+will be echoed. IRQs occur on received and sent chars. Depending on the log
+settings (especially at the omega0-server side) you will see more or less of
+these internal details.
+
+Special meanings of several chars:
+
+d	- enter_kdebug
+return	- return CR+LF

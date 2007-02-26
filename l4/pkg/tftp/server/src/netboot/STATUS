@@ -1,0 +1,14 @@
+The eth_disable function has to make sure that the ethernet card is not
+receiving/transmitting packets anymore. The eth_enable function has to
+re-enable the ethernet card after L4Linux was terminated.
+
+		| tested on			| eth_disable/eth_enable
+----------------+-------------------------------+------------------------
+eepro100	| antonia			|         ok
+tulip		| christian			|         ok
+pcnet32		| VMware			|         ok
+3c595		|				|
+3c509		|				|
+3c90x		|				|
+rtl8139		|				|     not working
+

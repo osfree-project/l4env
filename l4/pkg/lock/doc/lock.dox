@@ -1,0 +1,30 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 Lock Reference Manual
+
+\section content Contents
+
+- \ref intro
+- \ref use
+- \htmlonly<a href="group__api.html">\endhtmlonly User API 
+  Reference\htmlonly</a>\endhtmlonly
+- \htmlonly<a href="examples.html">\endhtmlonly 
+  Examples\htmlonly</a>\endhtmlonly
+
+\section intro Introduction
+
+The L4 lock library is a simple, semaphore-based lock implementation.
+A lock can be reentered by the thread which owns the lock, but the number of 
+lock operations must equal the number of unlock operations.
+
+\section use Usage
+ 
+The L4 Lock Library uses semaphores to implement locks, thus the semaphore lib 
+must be linked  to the binaries (see the Semaphore Library Reference Manual for 
+more information). The lock implemenation itself
+consists only of inline functions, so there is no library to link.
+
+*/
+

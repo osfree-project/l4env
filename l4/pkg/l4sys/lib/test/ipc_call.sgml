@@ -1,0 +1,203 @@
+<!-- -*-jfw-sgml-*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+date="today"
+>l4_ipc_call
+<short>
+send a request to another thread and wait for a reply
+<synopsis>
+<p>
+<verb>
+#include <l4/ipc.h>
+int l4_ipc_call(l4_threadid_t dest, 
+                const void *snd_msg, 
+                dword_t snd_dword0, dword_t snd_dword1, 
+                void *rcv_msg, 
+                dword_t *rcv_dword0, dword_t *rcv_dword1, 
+                l4_timeout_t timeout, l4_msgdope_t *result);
+</verb>
+<descript>
+
+The l4_ipc_call system call sends a messsage to distinct thread and
+waits for a reply from that thread.
+
+<sect1>ARGUMENTS
+
+<desc
+
+<dt/dest/ The identifier of the destination thread.
+<dt/snd_msg/ 
+
+L4 knows about two types of messages, short and long messages. snd_msg
+can have two kinds of values:
+
+<desc
+
+<dt/L4_IPC_SHORT_MSG/
+
+The message to be send is a short message and consists only of two
+dwords given in snd_dword0 and snd_dword1. There is no message buffer
+at all. 
+
+<dt/&lt;address of a message buffer>/
+
+The address of a message buffer in the senders address space.  The
+address should be aligned to 4 byte boundaries. The message buffer
+includes snd_dword0 and snd_dword1, which aren't taken from the buffer
+, but the kernel expects the space to be there.
+</desc>
+
+<dt/snd_dword0, snd_dword1/
+
+The first dwords of a message. You have to supply them regardless of
+shorter messages and the reserved place within the message buffer.
+
+<dt/rcv_msg/
+
+The address of a message buffer in the callers address space. Like
+snd_msg rcv_msg can have two kinds of values:
+
+<desc
+<dt/L4_IPC_SHORT_MSG/
+
+The message to be received is a short message and consists only of two
+dwords received in rcv_dword0 and rcv_dword1. There is no message
+buffer at all.
+
+<dt/&lt;address of a message buffer>/
+
+The address of a message buffer in the callers address space.  The
+address has to be aligned to 4 byte boundaries. The message buffer
+includes rcv_dword0 and rcv_dword1, which aren't received in the
+buffer, but the kernel expects the space to be there.
+</desc>
+
+<dt/rcv_dword0, rcv_dword1/
+
+The address of dwords in which the first dwords of a message should be
+received. You have to supply them regardless of shorter messages and
+the reserved place within the message buffer.
+
+<dt/timeout/
+
+The timeout specifies:
+
+<desc
+
+<dt/snd timeout/
+
+how long the caller should wait for the receiver to become ready
+to receive,
+
+<dt/rcv timeout/
+
+how long the caller should wait for the receiver to sent a reply
+
+<dt/snd page fault timeout/
+
+how long the caller should wait if a page fault occures in the
+receivers address space while message transfer.
+
+<dt/rcv page fault timeout/
+
+how long the caller should wait if a page fault occures in the
+senders address space while message transfer.
+
+</desc>
+
+
+<dt/result/
+
+result is an address in the callers address space in which the result
+of the operation should be placed by the kernel. After return from
+system call result contains a description of the received message (a
+message dope) and a result code describing the result of the
+operation. If an error occurs, the error is returned as result of the
+function. To find out, wether the send or the receive part was
+responsible for the error you can use
+
+<desc
+
+<dt/L4_IPC_SND_ERROR/
+
+This makro returns true if an error regards to the send part of the
+operation. Otherwise it returns false.
+
+</desc>
+
+To check, if a message is redirected through a chief, result
+contains the relevant information. There are the following macros,
+which allow to check for redirection and other interesting
+information.
+
+<desc
+
+<dt/L4_IPC_MSG_REDIRECTED/
+
+This macros returns true if a message is redirected through a chief.
+
+<dt/L4_IPC_MSG_DECEITED/
+
+This macros returns true if the chief has deceited. In this case the
+sender id is the id specified by the chief. If the message wasn't
+redirected the result is undefined.
+
+<dt/L4_IPC_SRC_INSIDE/
+
+This macro returns true if the redirected message comes from an inner
+clan and false if it comes from outside the own clan. If the message
+wasn't redirected the result is undefined.
+
+</desc>
+
+<sect1>RETURN VALUES
+
+On success, zero is returned. On error, one of the following
+error codes is returned:
+
+<desc
+
+<dt/[L4_IPC_TIMEOUT]/
+
+A send/receive timeout occured.
+
+<dt/[L4_IPC_NOT_EXISTENT]/
+
+The destination/source didn't exist.
+
+<dt/[L4_IPC_DW_OVERFLOW]/
+
+Recipient's dword buffer was too short.
+
+<dt/[L4_IPC_STR_OVERFLOW]/
+
+Recipient accepts less strings the specified by the sender.
+
+<dt/[L4_IPC_STR_BUFF_OVERFLOW]/
+
+Recipient's string buffer was to short for the sent string.
+
+<dt/[L4_IPC_FPAGE_OVERFLOW]/
+
+Recipient's accepts less fpages then specified by the receiver.
+
+<dt/[L4_IPC_FPAGE_TOO_SMALL]/
+
+Specified fpage was too small (less then 4 kb on ix86)
+
+<dt/[L4_IPC_INVAL]/
+
+Invalid parameters for call (e.g. dest=myself)
+
+</desc>
+
+<sect1>SEE ALSO
+
+<ref t=m id="l4_ipc"//, 
+<ref t=m id="l4_ipc_reply_and_wait"//, 
+<ref t=m id="l4_ipc_send"//, 
+<ref t=m id="l4_ipc_receive"//, 
+<ref t=m id="l4_ipc_wait"//, 
+<ref t=m id="l4_ipc_send_deceiting"//, 
+<ref t=m id="l4_ipc_reply_deceiting_and_wait"// 

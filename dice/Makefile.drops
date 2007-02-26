@@ -1,0 +1,29 @@
+L4DIR= 	../..
+
+-include $(L4DIR)/Makeconf.local
+
+ifeq ($(DROPS_STDDIR),)
+$(error "DROPS_STDDIR not set. Please set it in $(L4DIR)/Makeconf.local")
+endif
+
+# added this for people with CDPATH set
+ifneq (${CDPATH},)
+$(warning Please do not export CDPATH in your shell!!)
+$(warning CDPATH only makes sense in interactive mode.)
+$(warning Change "export CDPATH=<dirs>" to "CDPATH=<dirs>")
+$(warning in your shell init script .bashrc, .profile, ...)
+$(error Please fix that error)
+endif
+
+all:
+
+-include Makefile
+
+# the ifeq prevents the warning regarding overiding rules for Makefile
+ifeq ($(wildcard Makefile),)
+Makefile:
+	@echo "Calling bootstrap..."
+	@./bootstrap
+	@echo "Calling configure..."
+	@./configure --prefix=$(DROPS_STDDIR)
+endif

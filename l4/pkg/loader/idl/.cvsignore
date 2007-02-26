@@ -1,0 +1,4 @@
+*.aoi
+*.prc
+loader-client.*
+loader-server.*

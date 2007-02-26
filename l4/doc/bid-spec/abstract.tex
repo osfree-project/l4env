@@ -1,0 +1,468 @@
+\documentclass[a4paper, 10pt, twocolumn]{article}
+
+\usepackage{epsfig}
+\usepackage[latin1]{inputenc}
+
+\usepackage{makeidx}
+\usepackage{graphicx}
+\usepackage{html}
+\usepackage{verbatim}
+
+%\begin{latexonly}
+\usepackage{fancyvrb}
+\usepackage{syntax}
+\usepackage{array}
+\usepackage{todo}
+%\end{latexonly}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{0.2cm plus 0.1cm minus .1cm}
+
+\usepackage{times}
+\sloppy
+\pagestyle{empty}
+
+\begin{document}
+\thispagestyle{empty}
+
+% create a new length, which can be used as a base-length for columns
+% of a table.
+% arguments: #1 - the name of the length
+%            #2 - number of columns of the table
+%
+% The length is calculated as \columnwidth-2*\tabcolsep*#2
+%
+\newcommand{\maketablength}[2]{%
+  \newlength{#1}\setlength{#1}{-#2\tabcolsep}%
+  \addtolength{#1}{#1}\addtolength{#1}{\columnwidth}%
+}
+
+% Create a table, whose first column contains text,
+% and the second column fills the rest. Both columns contain parboxes.
+%
+% arguments: #1 - text with the maximum width of the first column
+\newlength{\descriptiontablelen}
+\newlength{\descriptiontabletextlen}
+\newenvironment{descriptiontable}[1]{%
+  %begin{latexonly}
+  \settowidth{\descriptiontabletextlen}{#1}%
+  \setlength{\descriptiontablelen}{-4\tabcolsep}%
+  \addtolength{\descriptiontablelen}{\columnwidth}%
+  \addtolength{\descriptiontablelen}{-\descriptiontabletextlen}%
+  \begin{tabular}{p{\descriptiontabletextlen}p{\descriptiontablelen}}%
+  %end{latexonly}  
+  \html{\begin{tabular}{ll}}%
+}{\end{tabular}}
+  
+% Create a framed table, whose first column contains text,
+% and the second column fills the rest. Both columns contain parboxes.
+% We can use \# to end a line. In the current version, this separates
+% all rows by single lines. We cheat on latex2html by preprocessing
+% the .tex file substituting the \# with a \\\hline.
+%
+% arguments: #1 - text with the maximum width of the first column
+\newenvironment{parameterlist}[1]{%
+  %begin{latexonly}
+  \renewcommand{\#}{\crcr\hline}
+  \settowidth{\descriptiontabletextlen}{\tt\small{}#1}%
+  \setlength{\descriptiontablelen}{-4\tabcolsep}%
+  \addtolength{\descriptiontablelen}{\columnwidth}%
+  \addtolength{\descriptiontablelen}{-\descriptiontabletextlen}%
+  \begin{tabular}{|>{\tt\small}p{\descriptiontabletextlen}|p{\descriptiontablelen}|}%
+  %end{latexonly}  
+  \html{\begin{tabular}{>{\tt{}}ll}}%
+  \hline%
+}{%
+  %begin{latexonly}
+   \end{tabular}%
+  %end{latexonly}
+  \html{\end{tabular}}}
+
+%begin{latexonly}
+% We use the '§' character to write a '$' without entering math-mode
+\DeclareInputText{167}{\$}
+
+% We use '«' and '»' to begin and end code-pieces
+\renewcommand{\guillemotleft}{\begin{code}{}}
+\renewcommand{\guillemotright}{\end{code}}
+%end{latexonly}  
+\newenvironment{code}{\tt}{}
+
+\newcommand{\llinux}{\mbox{L\makebox[.4\width]{$^4~$}Linux}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% The story starts here.
+%
+% Character-encoding, we do it the following way:
+%
+% (Because that stupid latex2html does not support shortverb, we do
+% not use the shorthand |text| to print the text verbose. This would allow
+% easy writing of variables and text while disallowing line breaking.)
+
+% For tables, we use «text», which expands to \code{text}, which expands
+% to {\tt{}text}. We cheat on latex2html by preprocessing the .tex-file.
+%
+% During the hole text, we can use '_' to write an underscore. We use
+% '§' to write a '$' in non-verbose mode.
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{DROPS Building Infrastructure Proposal}
+\author{Jork Löser}
+\date{}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+  
+  To ease the writing of DROPS components, we wrote a document
+  defining the unified infrastructure of the DROPS source tree. We
+  implemented a set of macros and some tools providing the described
+  functionality.
+
+\end{abstract}
+
+\section{History}
+
+In 2000, some people (see Section \ref{sec:acknowledgements})
+began to write down their expectations to a build system and defined its
+behavior. A macro-system implementing this behavior was implemented
+and is ready to use since then \cite{cvs:dropsmk}. However, there were
+some features missing, such as support for an easy IDL compilation.
+Since then, the macros were modified and adapted a little bit, but
+they are still unused.
+
+Within the last two years, the structure of the building system
+changed and today, we have a quite clean source tree with a lot of
+unwritten rules. Hence, writing a Makefile still bears some
+uncertainties. Users fall back to copy-and-paste usually, accompanied
+by praying or just hoping depending on personal taste.
+
+We think, the macro-system written two years ago is not used for two
+reasons: Firstly, it was not well documented. There is an ASCII file
+describing some of the magic, but there is not everything in it.
+Secondly, the availability of the macro-system was not communicated.
+Especially for students, it should have been a big help: Writing 5
+lines and getting every functionality we ever thought about should be
+much easier than reinventing all that stuff over and over again.
+
+To sum it up, we give it another try. This time, there is a spec
+\cite{www:buildingInfra}, 29~pages currently. It is comprising as
+there is nearly every functionality in it our DROPS system currently
+offers (and a bit more). We communicate that there is help for writing
+Makefiles. Finally, migrating to the proposed system can be done on a
+directory-by-directory base, placing no burden for keeping old code.
+
+\section{Features}
+\subsection{Roles}
+\label{sec:rolefiles}
+
+Each directory in the source-tree has a distinct task, i.e., each
+directory builds special kinds of targets. This disctinct task is
+expressed by a role, while each role is one of the following:
+
+\begin{descriptiontable}{include:}
+subdir:  & be a container for other directories\\
+prog:    & build executable binaries \\
+lib:     & build libraries \\
+idl:     & translate IDL definitions into code \\
+include: & hold include-files which have to be installed \\
+\end{descriptiontable}
+
+To define the role of a directory, the Makefile of that directory has
+to include an according Makefile-include, the \emph{role-file}. The
+role-files are templates that define rules and variables to build the
+proper targets. Make-variables are used to control the behaviour of
+the role-files. Each Makefile must include exactly one role-file.
+
+As usual, defining the Make-variables to control the role-files can
+happen in 4 different places: The Makefile, a local «Makeconf.local»,
+a packet-local «Makeconf.local», and a global «Makeconf.local».
+
+\subsection{Provided Make-Targets}
+
+With all roles, the following phony targets can be built using «make
+<target>».
+
+\begin{description}
+%\setlength{\parskip}{0pt}
+\item [all::]           The default target. Builds binaries,
+                        libraries, generating .c and .h files from
+                        IDLs. It depends on the role, what exactly is done.
+\item [\{txt, old,\}config::]
+                        Run the DROPS Configuration Tool. See
+                        Section \ref{sec:config} for details on this.
+\item [install::]       Installs the generated files into the
+                        installation-tree «§(DROPS_STDDIR)».
+\item [clean::]         Deletes all intermediate files generated
+                        during compilation. This does \emph{not}
+                        delete the generated targets such as binaries
+                        or libraries.
+\item [cleanall::]      Deletes all generated files. Depends on
+                        \textbf{clean::}.
+\item [help::]          Displays a short overview of the make-targets
+                        available with the role.
+\end{description}
+                
+\subsection{DROPS Configuration Tool}
+\label{sec:config}
+
+Most role-files provide support for an interactive configuration tool,
+which is derived from the \emph{config} and \emph{menuconfig} tools of
+Linux. It differs in that it can be configured using environment
+variables. Some minor extensions are build in too.
+
+The configuration tool is run if the user runs ``«make config»'',
+``«make txtconfig»'' or ``«make oldconfig»''.
+
+As within Linux, the configuration tool creates two files: One to be
+included within the Makefile itself. This file also stores the
+configuration. The other generated file is an include file to be
+included in C source files. It is ensured that a default configuration
+file and a default configuration include file is created prior to
+compiling other source files. Do we have to mention that you can
+define every filename according to your personal taste, even
+«__many_underscores__in_name___»?\footnote{Though we do not recommend
+  this example}
+
+
+\subsection{Target-specific variables}
+
+With all building roles, there can be multiple targets. This is, you
+can build multiple binaries or libraries within one directory. This
+requires configuration variables to be interpreted on a per-target
+base. For an example, we look at the «SRC_C» variable. With the prog
+role, this variable defines which .c-files go into a binary. If you
+want the two binaries {\bf{}A} and {\bf{}B} to be created in the
+directory, with {\bf{}A} having «a.c» and «x.c» compiled in, and
+{\bf{}B} having «b.c» and «x.c» compiled in, specify «SRC_C=x.c»,
+«SRC_C_A=a.c» and «SRC_C_B=b.c». Further specify «TARGET=A B», and
+that's it.
+
+\subsection{Dependencies}
+
+Dependencies are built automatically. Each source-file is accompanied
+by an according «.x.d» file with x being replaced by the original
+filename. Typically these files contain header files. Also, each
+binary is accompanied by an according «.y.d» file with y being
+replaced by the binary filename. These files typically contain
+libraries. Dependency files are created automatically and they are
+used automatically. Removing a dependency (e.g., an include-file),
+does not harm the build process. If this is not the case, the
+build-system has a bug.
+
+
+\subsection{Relocation of Binaries}
+\label{sec:reloc}
+
+We support two flavors of finally linking: Relocating a formerly
+relocatable binary or build relocated binaries in a normal link
+process. With the former method, all binaries a built relocatable
+first. These relocatable binaries have all symbols resolved and all
+required libraries linked, but the final start-address is not yet
+defined. In a second step, invoked with «make reloc», a program
+determines the memory ranges required by each binary and links them to
+different but contiguous locations.
+
+The other method is the approach using the STATIC file. A default link
+address must be specified in the Makefile.
+
+\subsection{IDL files}
+
+The purpose of the IDL role is to translate IDL definition files into
+appropriate .c- and .h-files. Different compilers are supported and
+the user needs not to take care of the resulting filenames. To compile
+the generated files, directories with the prog or lib role are used.
+These import the generated files using IDL-related parameters.
+
+\subsection{Profiling and Shared libraries}
+
+Compiling profiling versions of libraries and binaries is easy: The
+user just has to specify one target-specific flag: BUILD_PROFILE. As a
+result, profiling versions of objects, libraries and binaries are
+built additionally to the normal ones.
+
+Building shared libraries is easy too, the build-parameter is
+BUILD_SHARED resp. BUILD_PIC.
+
+\subsection{Installation}
+
+When includes, libraries or binaries are built, they are installed
+into a \emph{local installation directory}. This local installation
+directory is a parameter of the according role-file and is
+«§(L4DIR)/include» for includes, «§(L4DIR)/bin» for binaries and
+«§(L4DIR)/lib» for libraries per default. The commands used for
+installation can be selected as well. Includes and libraries use
+symbolic links, binaries are copied and stripped.
+
+Using «make install» installs includes, libraries and binaries into
+the \emph{global installation directory}, aka «/home/drops». Of
+course, no symbolic links are used here.
+
+
+\section{Open Issues}
+
+\subsection{Architectures and Modes}
+
+Currently, there is something like a support for different
+architectures: We allow different sets of source-files and options
+depending on the architecture to build. When building for multiple
+architectures from one source-tree, each architecture is built into a
+separate subdirectory. However, for compatibility reasons all binaries
+and libraries are installed into the same installation directories.
+Hence, this support is really suboptimal.
+
+There is no final consensus on how to support different target
+systems. This is, the same hardware platform and the same kernel, but
+different execution environments. We see the need to support the
+following ones:
+
+\begin{description}
+
+\item[oskit10]
+
+  aka «oskit10_l4env_full». This mode allows to use drivers and the
+  infrastructure from the Flux OSKit 0.97, together with the L4Env
+  \cite{www:l4env}. Binaries are linked against the huge freebsd-libc.
+
+\item[loader]
+
+  Like oskit10 mode, but libraries are dynamically linked. Binaries
+  must be loaded with the L4Env loader \cite{www:l4envloader}.
+
+\item[l4env]
+
+  aka «oskit10_l4env_tiny». This mode allows to use some basic libc
+  functionality from the Flux OSKit 0.97, together with the L4Env.
+  Binaries are linked against the small mini-libc «libmc».
+
+\item[sigma0]
+
+  This has no support for L4Env, the result is a plain L4 application.
+  Binaries are linked against the small mini-libc «libmc» from the
+  Flux OSKit 0.6.
+
+\item[l4linux]
+
+  Use this mode to build \llinux{} user-mode applications with L4Env
+  support. Binaries are linked statically against special L4Env
+  libraries and dynamically against standard-libc.
+
+
+\item[l4linux-kern]
+
+  Use this mode to build \llinux{} kernel-mode modules with L4Env
+  support. Modules are linked against special L4Env libraries.
+
+\item[host]
+
+  Build an application for the host operating system.
+
+\end{description}
+
+\subsection{"doc" Role}
+
+A role for documentation might be handy. This should have a nice
+environment for doxygenned documentation and should provide support
+for latex, xdvi, postscript and PDF generation. We also have to unify
+how to publish this documentation on the web.
+
+\begin{description}
+\setlength{\parskip}{0pt}
+
+\item[Request from Lars:] Allow to define the target directory in the
+  global Makeconf.local.
+
+\item[Answer:] Define a variable, e.g., «§(HTML_DOC_DIR)» specifying
+were to install the html-files. This could then be set to
+«§(HOME)/public_html/docs/§(PKGNAME)/».
+
+\end{description}
+
+
+\section{Acknowledgements}
+\label{sec:acknowledgements}
+
+This document is based on the work of Lukas Grützmacher, Michel
+Hohmuth, Jork Löser and Lars Reuther done in 2000. Since then, Frank Mehnert
+proposed a lot of functionality which is included in this document as well.
+
+{ %begin{latexonly}
+    \section{\refname}
+    \renewcommand{\section}[2]{}
+    \footnotesize
+  %end{latexonly}
+  \bibliographystyle{plain} %alpha}
+  \bibliography{own}
+}
+\section{Examples}
+
+%\newcommand{\exmpl}{1}{\begin{minipage}{\columnwidth}%
+%      \VerbatimInput{#1}\end{minipage}}
+
+Here we show some Makefile examples. As a base, we used the names
+package and modified its Makefiles. The names package has the
+following subtree structure:
+
+\newcommand{\vfontsize}{\small}
+\newcommand{\vframe}{single}
+
+\begin{minipage}{\columnwidth}
+\VerbatimInput[xleftmargin=3ex]{code/names-tree}
+\end{minipage}
+
+The Makefiles for the subdirectories names/, examples/, lib/ and
+server/ only differ in the values for «§PKGDIR», we only list one.
+
+\noindent\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\vfontsize,
+               frame=\vframe, label=Subdirs]
+               {code/names-subdir}
+\end{minipage}
+
+\noindent\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\vfontsize,
+               frame=\vframe, label=examples/demo/Makefile]
+               {code/names-examples-demo}
+\end{minipage}
+
+\noindent\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\vfontsize,
+               frame=\vframe, label=examples/lister/Makefile]
+               {code/names-examples-lister}
+\end{minipage}
+
+\noindent\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\vfontsize,
+               frame=\vframe, label=lib/src/Makefile]
+               {code/names-lib-src}
+\end{minipage}
+
+\noindent\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\vfontsize,
+               frame=\vframe, label=server/src/Makefile]
+               {code/names-server-src}
+\end{minipage}
+
+The server/include subdirectory contains no Makefile. We did not look
+at the Makefile in the man/ subdirectory.
+
+For comparison, the original Makefile from the server/src/ directory
+is printed here:
+
+\begin{minipage}{\columnwidth}
+\VerbatimInput[fontsize=\tiny,
+               frame=\vframe, label=Original server/src/Makefile]
+               {code/names-orig-server-src}
+\end{minipage}
+
+% align the last column
+\pagebreak
+
+\end{document}
+% Localwords: CVS unset
+% Local variables:
+%  compile-command: "make"
+% End:

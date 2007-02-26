@@ -1,0 +1,49 @@
+/* -*- c -*- */
+/* $Id$ */
+
+/**
+\mainpage L4 System Call C-Bindings Reference Manual (L4 Version 2)
+
+\section content Contents
+
+- \ref intro
+- \htmlonly<a href="group__api.html">\endhtmlonly API reference
+  \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__types.html">\endhtmlonly
+    Datatypes, Defines and Macros\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__id.html">\endhtmlonly
+      Unique ids\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__fpage.html">\endhtmlonly
+      Flexpages\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__msg.html">\endhtmlonly
+      Message structures / dopes \htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__timeout.html">\endhtmlonly
+      Timeouts\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__sched.html">\endhtmlonly
+      Scheduling parameter\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__kip.html">\endhtmlonly
+      Kernel Info Page\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__common.html">\endhtmlonly
+      Common types and defines\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__types__compiler.html">\endhtmlonly
+      Compiler related defines\htmlonly</a>\endhtmlonly  
+  - \htmlonly<a href="group__api__calls.html">\endhtmlonly
+    System calls\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__calls__ipc.html">\endhtmlonly
+      IPC\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__calls__other.html">\endhtmlonly
+      Other system calls\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__calls__kdebug.html">\endhtmlonly
+      L4 kernel debugger\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__calls__fiasco.html">\endhtmlonly
+      Fiasco extensions\htmlonly</a>\endhtmlonly
+
+\section intro Introduction
+
+This manual describes the C-Bindings for the L4 system calls (L4 version 2). 
+See also \htmlonly
+<a href="http://i30www.ira.uka.de/research/documents/l4ka/Ln-86-21.pdf">
+\endhtmlonly Jochen Liedtke: Lava Nucleus (LN) Reference Manual
+\htmlonly</a>\endhtmlonly
+
+*/

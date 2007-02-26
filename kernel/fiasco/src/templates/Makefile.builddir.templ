@@ -1,0 +1,18 @@
+# This makefile is a template for a build in a directory other 
+# than src. 
+# The only thing you have to do is to copy this template to
+# your build dir (cp Makefile.builddir.templ <builddir>/Makefile)
+# and change srcdir to the relative path to your fiasco/src.
+#
+
+srcdir := ../src
+
+all:
+
+%:: force-the-rule
+	$(MAKE) -I$(srcdir)  -f $(srcdir)/Makefile \
+	  srcdir=$(srcdir) "$@"
+
+force-the-rule: ; 
+
+.PHONY: Makefile

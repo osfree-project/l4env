@@ -1,0 +1,37 @@
+-*- outline -*-
+
+			 - The Common L4 Environment -
+
+			      Input/Output Server
+________________________________________________________________________________
+
+note: The DROPS Device Driver Environment is based on the I/O server.
+
+* Subdirectories
+
+** lib-pci
+
+... PCI oriented LINUX source code	(version 2.4.17, included)
+
+    arch/i386/kernel/pci-*.[ch]		in lib-pci/src/arch-i386
+    (w/o pci-visws.c)
+
+    drivers/pci/*			in lib-pci/src/pci
+    (w/o setup-irq.c setup-bus.c syscall.c Config.in Makefile)
+
+... some glue code			in lib-pci/src/*.c
+					and lib-pci/include
+
+04/09/01	removed arch-i386/pci-dma.c
+		not needed (only callbacks for PCI DMA mem) here, but an
+		dde_lib issue
+
+** lib-omega0
+
+... omega0 sources
+
+    server/src/*			in lib-omega0/src/omega0
+    (used via VPATH)
+
+    server/include/omega0_proto.h	in lib-omega0/include/omega0
+    (included)				modified (MANAGEMENT_THREAD)

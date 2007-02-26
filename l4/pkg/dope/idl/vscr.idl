@@ -1,0 +1,6 @@
+interface dope_vscr {
+	
+		/** wait for vertical synchronisation */
+		void waitsync();
+};
+

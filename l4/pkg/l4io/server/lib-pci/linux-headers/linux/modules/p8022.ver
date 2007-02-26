@@ -1,0 +1,4 @@
+#define __ver_register_8022_client	smp_b68581e8
+#define register_8022_client	_set_ver(register_8022_client)
+#define __ver_unregister_8022_client	smp_7acef15d
+#define unregister_8022_client	_set_ver(unregister_8022_client)

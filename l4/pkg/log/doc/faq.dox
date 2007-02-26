@@ -1,0 +1,38 @@
+/*!\file doc/faq.dox
+ *
+ * \brief Frequently asked questions
+ */
+
+
+/*!\page p_faq Frequently asked questions
+
+\section p_faq_1 The binary with networking support is huge.
+
+If this is really a problem to you, look in the linux driver code and
+-glue of the oskit sources. For some reason, parts of the SCSI stack
+are linked with the binary. Maybe you can safe some bytes by splitting
+the appropriate object.
+
+\section p_faq_2 Sometimes, the LOG server traps into the kernerl-debugger.
+
+This is a combined problem with fiasco and the output routines. To
+collect all the screen-output at one place, an to allow serial
+debugging of the kernel at the same console that gets the user output,
+the logserver uses the kernel-debug interface to output
+characters. With fiasco, there is a problem when using the kernel
+debugger while beeing "exregs'd" by another thread. The result is
+that you observed.
+
+A workaround is to remove the '\c console.c' from the \c SRC_C -variable
+in the file \c lib/src/Makefile of the oskit10_support package,
+rebuild the package and relink the logserver.
+
+\section p_faq_3 My network adapter is not listed as supported, can you support it ?
+
+Look into the oskit10 sources, \c linux/src/drivers/net. If a suitable
+driver is listed there, enable it in the LOG server, \c
+server/src/tcpip.c:init_ethernet(). If not, you must write your own
+driver.
+
+
+*/

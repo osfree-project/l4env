@@ -1,0 +1,70 @@
+<!ENTITY % FINAL "INCLUDE">
+
+<!ENTITY % LaTeX "IGNORE" >
+<!ENTITY % HTML "IGNORE" >
+<!ENTITY % Man "IGNORE" >
+
+<![ %FINAL [
+<!ENTITY % DRAFT "IGNORE">
+<!entity hohmuth cdata ''>
+<!entity sr1 cdata ''>
+]]>
+
+<!ENTITY % DRAFT "INCLUDE">
+
+
+<![ %LaTeX [
+<!Entity micro sdata '$\mu$' >
+<!Entity mu sdata '$\mu$' >
+<!ENTITY Auml sdata '\"A' >
+<!ENTITY Ouml sdata '\"O' >
+<!ENTITY Uuml sdata '\"U' >
+<!ENTITY auml sdata '\"a' >
+<!ENTITY ouml sdata '\"o' >
+<!ENTITY uuml sdata '\"u' >
+<!ENTITY szlig sdata '\ss{}' >
+<!ENTITY ccedil sdata '\c c' >
+<!ENTITY eacute sdata "\'e" >
+<!ENTITY dots sdata '\dots{}' >
+<!ENTITY emdash sdata '---' >
+<!ENTITY endash sdata '--' >
+
+<![ %DRAFT [
+<!entity hohmuth sdata '\leavevmode\marginpar[{\raggedleft [hohmuth]}]{[hohmuth]}%'>
+<!entity sr1 sdata '\leavevmode\marginpar[{\raggedleft [rudolph]}]{[rudolph]}%'>
+]]>
+]]>
+
+<![ %HTML [
+<!entity micro sdata '&#181;'>
+<!entity mu sdata '&#181;'>
+<!Entity auml sdata '&auml;'>
+<!Entity ouml sdata '&ouml;'>
+<!Entity uuml sdata '&uuml;'>
+<!Entity Auml sdata '&Auml;'>
+<!Entity Ouml sdata '&Ouml;'>
+<!Entity Uuml sdata '&Uuml;'>
+<!Entity szlig sdata '&szlig;'>
+<!ENTITY ccedil sdata '&ccedil;' >
+<!ENTITY eacute sdata '&eacute;' >
+<!ENTITY dots sdata '...' >
+<!ENTITY emdash sdata ' - ' >
+<!ENTITY endash sdata '-' >
+<!ENTITY le sdata '<=' >
+
+<![ %DRAFT [
+<!entity hohmuth cdata '[hohmuth:] '>
+<!entity sr1 cdata '[sr1:] '>
+]]>
+
+]]>
+
+<![ %Man [
+<!entity micro sdata '\(*m' >
+<!entity mu sdata '\(*m' >
+<!ENTITY emdash sdata '\(em' >
+<!ENTITY endash sdata '\(en' >
+<!ENTITY le sdata '\(<=' >
+
+]]>
+

@@ -1,0 +1,42 @@
+/*
+ * init-rcvstring
+ * 
+ * This example demonstrates the usage of the interface attribute
+ * 'init-rcvstring'. It can be used to define a function which is 
+ * called to initialize the receive buffers for indirect strings
+ * at the server's side.
+ *
+ * The function has to be of the type:
+ * void <name>(int, l4_umword_t*, l4_umword_t*, CORBA_Environment*)
+ *
+ * The first parameter defines the number of the currently initialized 
+ * string. This is generally the first string - there is no difference
+ * between the first string of function f1 and function f2 - they
+ * are received in the same buffer. You have to be aware of this when
+ * setting the receive buffer.
+ *
+ * The function is called for the first receive buffer like this:
+ * <name>(0, &(msgbuffer->_strings[0].rcv_str), 
+ *        &(msgbuffer->_strings[0].rcv_size), &env);
+ * An implementation might look like this:
+ * 
+ * void 
+ * <name>(int nb, l4_umword_t *addr, l4_umword_t *size, CORBA_Environment *env)
+ * {
+ *     *addr = my_buffers[nb];
+ *     *size = BUFFER_SIZE;
+ * }
+ */
+[init_rcvstring(my_init)]
+interface test
+{
+  /*
+   * This function sends and receives an string via indirect string IPC
+   */
+  void f1([in, out, ref, string] char** t1);
+  /*
+   * This function just sends an indirect string
+   */
+  void f2([in, ref, string] char* t2);
+};
+

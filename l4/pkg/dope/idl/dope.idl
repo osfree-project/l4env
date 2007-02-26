@@ -1,0 +1,13 @@
+interface dope_manager {
+
+    long init_app		([in, string] char *appname, 
+						 [in, string] char *listener);
+	void deinit_app 	([in] long appid);
+	long exec_cmd		([in] long appid, 
+						 [in, string] char *cmd, 
+/*						 [out, string, max_is(256)] char **result);*/
+						 [out, string] char **result);
+	long get_keystate	([in] long keycode);
+	char get_ascii		([in] long keycode);
+
+};

@@ -1,0 +1,3 @@
+# -*- makefile -*-
+
+include kern/$(CONFIG_XARCH)/Makerules.KERNEL.$(CONFIG_XARCH)

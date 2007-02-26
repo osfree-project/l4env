@@ -1,0 +1,22 @@
+# -*- makefile -*-
+
+$(TCBOFFSET): genoffset
+	./$< > $@.new
+	mv $@.new $@
+
+FLAGS_TCBOFFSET = $(filter-out -nostdinc, $(CXXFLAGS)) \
+		  -idirafter auto $(filter-out -Iauto,$(CPPFLAGS)) \
+		  $(TCBOFFSET_EXTRA_FLAGS)
+
+genoffset: $(OBJ_TCBOFFSET)
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) -r -T$(srcdir)/genoffset.ld -o genoffset.s.o $^
+	$(VERBOSE)$(CXX) -o $@ genoffset.s.o
+
+$(OBJ_TCBOFFSET): %.o: %.cc
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -c -MD $(FLAGS_TCBOFFSET) $< -o $@
+	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $*.d, .$*.cc.d)
+
+clean-TCBOFFSET:
+	rm -f genoffset genoffset.s.o

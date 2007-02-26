@@ -1,0 +1,9 @@
+
+module test
+{
+  interface test
+  {
+    void test(in long t1, out long t2);
+  };
+};
+

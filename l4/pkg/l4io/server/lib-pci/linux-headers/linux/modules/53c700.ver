@@ -1,0 +1,6 @@
+#define __ver_NCR_700_detect	smp_8e054946
+#define NCR_700_detect	_set_ver(NCR_700_detect)
+#define __ver_NCR_700_release	smp_1e1eb160
+#define NCR_700_release	_set_ver(NCR_700_release)
+#define __ver_NCR_700_intr	smp_20c3c72c
+#define NCR_700_intr	_set_ver(NCR_700_intr)

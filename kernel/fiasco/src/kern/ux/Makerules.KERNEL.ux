@@ -1,0 +1,23 @@
+# UX Kernel Makefile
+
+shortcut.o:	$(TCBOFFSET)
+entry.o:	$(TCBOFFSET)
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(CXX) line.
+
+$(KERNEL):	$(srcdir)/kernel.ux.ld $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(LIBLMM) $(ABI) $(JABI) $(CXXLIB) $(LIBKERN)
+		$(LINK_MESSAGE)
+		$(VERBOSE)$(CXX) -Wl,--gc-sections,-T$< -static -o $@ $(filter-out $<,$+) -lutil
+		chmod 755 $@
+		ln -sf $@ fiasco
+
+Symbols:	$(KERNEL)
+		$(NM) $(KERNEL) | c++filt | sort > $@.new
+		mv $@.new $@
+
+irq0:		irq0.o
+		$(LINK_MESSAGE)
+		$(VERBOSE)$(CC) -static -o $@ $<
+		$(STRIP_MESSAGE)
+		$(VERBOSE)$(STRIP) $@

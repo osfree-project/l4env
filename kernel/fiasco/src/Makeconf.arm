@@ -1,0 +1,18 @@
+# -*- makefile -*-
+
+
+
+CFLAGS := -W -Wall
+CXXFLAGS :=  -W -Wall -fno-rtti -fno-exceptions
+
+
+
+SYSTEM_TARGET=arm-linux-
+
+CC3=	gcc
+CXX3=	g++
+
+L4ALL_INCDIR=   -nostdinc \
+		$(addprefix -I, \
+		$(PRIVATE_INCDIR) $(dir $(LIBGCC))/include)
+

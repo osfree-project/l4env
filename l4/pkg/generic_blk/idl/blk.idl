@@ -1,0 +1,263 @@
+/* -*- c -*- */ 
+/* $Id$ */
+/*****************************************************************************/
+/**
+ * \file   blk.idl
+ * \brief  DROPS Block Device Driver RPC protocol
+ *
+ * \date   01/30/2001
+ * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
+ *
+ * \note Be careful with changes of the request list size, it also requires 
+ *       adaptions in the client library, see client-lib/include/__config.h.
+ */
+/*****************************************************************************/
+
+/*****************************************************************************/
+/**
+ * DROPS Block Device Driver Interface
+ */
+/*****************************************************************************/
+module l4blk
+{
+  /**
+   * Thread id
+   */
+  typedef struct threadid
+  {
+    unsigned long low;
+    unsigned long high;
+  } threadid_t;
+      
+  /**
+   * Driver handle (-1 ... invalid driver)
+   */
+  typedef long driver_handle_t;
+
+  /***************************************************************************/
+  /**
+   * Driver Interface.
+   * This is the initial interface of a driver to its clients, it is used
+   * to create and destroy instances of the other interfaces of the driver.
+   */
+  /***************************************************************************/
+  interface driver
+    {
+      /***********************************************************************/
+      /**
+       * \brief  Open new driver instance. 
+       * 
+       * \retval driver       Handle for new instance
+       * \retval cmd_id       Id of command service thread
+       * \retval notify_id    Id of notification thread
+       * 	
+       * \return 0 on success, error code if open failed.
+       *
+       * Create a new instance of the driver. The main job is to assign 
+       * instances of the command and callback interface threads to the client. 
+       * This can either be existent or newly created interface threads, 
+       * dependent on the actual requirements of the driver.
+       */
+      /***********************************************************************/ 
+      long open(out driver_handle_t driver, 
+                out threadid_t cmd_id, 
+                out threadid_t notify_id);
+
+      /***********************************************************************/
+      /**
+       * \brief  Close driver instance.
+       * 
+       * \param  driver       Driver handle
+       *	
+       * \return 0 on success, error code if close failed.
+       *
+       * Close instance of the driver.
+       */
+      /***********************************************************************/ 
+      long close(in driver_handle_t driver);
+    };
+
+  /***************************************************************************/
+  /**
+   * Command handling interface
+   */
+  /***************************************************************************/
+  interface cmd
+    {
+      /**
+       * Stream handle (-1 ... invalid stream)
+       */
+      typedef long stream_handle_t;
+
+      /**
+       * Request structure
+       */
+      typedef struct request
+      {
+        unsigned long   req_handle;     ///< client request handle
+
+        unsigned long   cmd;            ///< command
+        unsigned long   device;         ///< device 
+        unsigned long   block;          ///< block number
+        unsigned long   count;          ///< number of blocks
+        unsigned long   buf;            ///< address of target/source buffer
+
+        // real-time stream requests
+        stream_handle_t stream;         /**< stream handle, must be set to 
+                                         *   invalid stream to mark 
+                                         *   non-real-time request */
+        unsigned long   request_no;     ///< request number
+        stream_handle_t replaces[4];    /**< list of streams the request 
+                                         *   replaces, it must be set to 
+                                         *   invalid stream for regular 
+                                         *   requests */ 
+        unsigned long   flags;          /**< flags, used to mark metadata 
+                                         *   requests for a real-time stream 
+                                         *   (\a stream must be set) */
+      } request_t;
+
+      /**
+       * Request list 
+       */
+      typedef request_t request_list_t[8];
+
+      /**
+       * Scatter-gather list element 
+       */
+      typedef struct sg_elem
+      {
+        unsigned long addr;
+        unsigned long size;
+      } sg_elem_t;
+
+      /***********************************************************************/
+      /**
+       * \brief  Create new real-time stream.
+       *
+       * \param  driver       Driver handle
+       * \param  bandwidth    Bandwidht of stream (bytes/s)
+       * \param  blk_size     Blocksize (bytes)
+       * \param  q            Quality parameter
+       * \param  meta_int     Metadata request interval (number of regular 
+       *                      requests per metadata request)
+       * \retval stream       Stream handle
+       * 
+       * \return 0 on success (created new stream, \a stream contains a valid
+       *         stream handle), error code otherwise.
+       *
+       */
+      /***********************************************************************/ 
+      long create_stream(in driver_handle_t driver, 
+                         in unsigned long bandwidth,
+                         in unsigned long blk_size, 
+                         in float q,
+                         in unsigned long meta_int, 
+                         out stream_handle_t stream);
+
+      /***********************************************************************/
+      /**
+       * \brief  Close real-time stream.
+       *
+       * \param  driver       Driver handle
+       * \param  stream       Stream handle.
+       * 
+       * \return 0 on succes (closed stream, released resources), error code
+       *         otherwise.
+       */
+      /***********************************************************************/ 
+      long close_stream(in driver_handle_t driver, 
+                        in stream_handle_t stream);
+
+      /***********************************************************************/
+      /**
+       * \brief  Set stream start time
+       * 
+       * \param  driver       Driver handle
+       * \param  stream       Stream handle.
+       * \param  time         Time (deadline) of first request (milliseconds)
+       * \param  request_no   Request number of first request
+       *
+       * \return 0 on success, error code otherwise.
+       */
+      /***********************************************************************/ 
+      long start_stream(in driver_handle_t driver, 
+                        in stream_handle_t stream,
+                        in unsigned long time, 
+                        in unsigned long request_no);
+
+      /***********************************************************************/
+      /**
+       * \brief  Send request list to driver.
+       * 
+       * \param  driver       Driver handle
+       * \param  requests     Request list
+       * \param  num          Number of requests in request list.
+       *
+       * \return 0 on success (requests enqueued into driver's request list),
+       *         error code otherwise.
+       */
+      /***********************************************************************/ 
+      long put_requests(in driver_handle_t driver, 
+                        in request_list_t requests,
+                        in unsigned long num);
+
+      /***********************************************************************/
+      /**
+       * \brief  Send scatter-gather request to driver
+       * 
+       * \param  driver       Driver handle
+       * \param  req          Request descriptor (first element of list)
+       * \param  buffers      Buffer list
+       * \param  num          Number of buffers in buffer list
+       *	
+       * \return 0 on success (requests enqueued into driver's request list),
+       *         error code otherwise.
+       */
+      /***********************************************************************/ 
+      long put_sg_request(in driver_handle_t driver,
+                          in request_list_t req,
+                          in refstring buffers,
+                          in unsigned long num);
+
+      /***********************************************************************/
+      /**
+       * \brief  Generic driver control function.
+       * 
+       * \param  driver       Driver handle
+       * \param  cmd          Control command
+       * \param  args         Argument buffer
+       *
+       * \return 0 on success, error code otherwise.
+       */
+      /***********************************************************************/ 
+      long ctrl(in driver_handle_t driver, 
+                in unsigned long cmd,
+                inout refstring args);
+    };
+
+  /***************************************************************************/
+  /**
+   * Processed notification interface
+   */
+  /***************************************************************************/
+  interface notify
+    {
+      /***********************************************************************/
+      /**
+       * \brief  Wait for processed notification
+       *
+       * \param  driver       Driver handle
+       * \retval req_handle   Client request handle
+       * \retval status       Request status
+       * \retval error        Error code (if status == BLK_ERROR)
+       * 
+       * \return 0 on succes (\a req_handle and \a status are valid), error
+       *         code otherwise.
+       */
+      /***********************************************************************/ 
+      long wait(in driver_handle_t driver, 
+                out unsigned long req_handle,
+                out unsigned long status, 
+                out long error);
+    };
+};
