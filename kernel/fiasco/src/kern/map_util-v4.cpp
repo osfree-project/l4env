@@ -1,8 +1,0 @@
-INTERFACE:
-
-//-
-
-IMPLEMENTATION[v4]:
-
-//-
-
